@@ -78,16 +78,30 @@ $js_page = [];
 $js_page[] = "
 \$(document).ready(function() {
     // Initialize DataTables
-    $('#table-1').dataTable({
+    $('#table-1').DataTable({
         \"columnDefs\": [
             { \"sortable\": false, \"targets\": [3] }
         ],
         \"paging\": true,
         \"lengthChange\": true,
         \"pageLength\": 10,
-        \"lengthMenu\": [[10, 25, 50, -1], [10, 25, 50, 'All']],
+        \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
         \"dom\": 'lfrtip',
-        \"info\": true
+        \"info\": true,
+        \"language\": {
+            \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+            \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+            \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+            \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+            \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+            \"search\": \"Cari:\",
+            \"paginate\": {
+                \"first\": \"Pertama\",
+                \"last\": \"Terakhir\",
+                \"next\": \"Selanjutnya\",
+                \"previous\": \"Sebelumnya\"
+            }
+        }
     });
     
     // Initialize Select2 for the main page

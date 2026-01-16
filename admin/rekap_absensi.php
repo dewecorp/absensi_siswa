@@ -12,12 +12,15 @@ $page_title = 'Rekap Absensi';
 
 // Define CSS libraries for this page
 $css_libs = [
-    "node_modules/select2/dist/css/select2.min.css"
+    "node_modules/select2/dist/css/select2.min.css",
+    "https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css"
 ];
 
 // Define JS libraries for this page
 $js_libs = [
-    "node_modules/select2/dist/js/select2.full.min.js"
+    "node_modules/select2/dist/js/select2.full.min.js",
+    "https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js",
+    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"
     // Removed XLSX CDN due to 403 errors
 ];
 
@@ -282,7 +285,7 @@ include '../templates/sidebar.php';
                                             </div>
                                             
                                             <div class="form-group col-md-2 d-flex align-items-end">
-                                                <button type="submit" class="btn btn-primary btn-block">
+                                                <button type="button" class="btn btn-primary btn-block" id="searchBtn" style="display: none;">
                                                     <i class="fas fa-search"></i> Cari
                                                 </button>
                                             </div>
@@ -587,7 +590,7 @@ include '../templates/sidebar.php';
                                                 
                                                 <!-- Detailed Attendance Table -->
                                                 <div class="table-responsive">
-                                                    <table class="table table-striped table-md">
+                                                    <table class="table table-striped table-md" id="studentTable">
                                                         <thead>
                                                             <tr>
                                                                 <th>No</th>
@@ -838,5 +841,278 @@ $(document).ready(function() {
         // Small delay to allow for DOM updates
         setTimeout(initStudentSelect2, 100);
     });
+    
+    // Handle filter type change - show/hide date picker and auto-submit
+    $('#filterType').on('change', function() {
+        var filterType = $(this).val();
+        
+        // Hide all filter inputs
+        $('.daily-filter, .monthly-filter, .student-filter').hide();
+        
+        // Show appropriate filter input
+        if (filterType === 'daily') {
+            $('.daily-filter').show();
+        } else if (filterType === 'monthly') {
+            $('.monthly-filter').show();
+        } else if (filterType === 'student') {
+            $('.student-filter').show();
+        }
+        
+        // Auto-submit if class is already selected
+        var classId = $('#classSelect').val();
+        if (classId && classId !== '') {
+            // Small delay to allow UI to update
+            setTimeout(function() {
+                autoSubmitForm();
+            }, 300);
+        }
+    });
+    
+    // Auto-submit when class is selected
+    $('#classSelect').on('change', function() {
+        var classId = $(this).val();
+        if (classId && classId !== '') {
+            // Small delay to allow UI to update
+            setTimeout(function() {
+                autoSubmitForm();
+            }, 300);
+        }
+    });
+    
+    // Auto-submit when date is selected (for daily filter)
+    $('#datePicker').on('change', function() {
+        var filterType = $('#filterType').val();
+        var classId = $('#classSelect').val();
+        if (filterType === 'daily' && classId && classId !== '') {
+            autoSubmitForm();
+        }
+    });
+    
+    // Auto-submit when month is selected (for monthly filter)
+    $('#monthPicker').on('change', function() {
+        var filterType = $('#filterType').val();
+        var classId = $('#classSelect').val();
+        if (filterType === 'monthly' && classId && classId !== '') {
+            autoSubmitForm();
+        }
+    });
+    
+    // Auto-submit when student is selected (for student filter)
+    $('#studentSelect').on('change', function() {
+        var filterType = $('#filterType').val();
+        var classId = $('#classSelect').val();
+        if (filterType === 'student' && classId && classId !== '') {
+            autoSubmitForm();
+        }
+    });
+    
+    // Function to auto-submit form with validation
+    function autoSubmitForm() {
+        var filterType = $('#filterType').val();
+        var classId = $('#classSelect').val();
+        var datePicker = $('#datePicker').val();
+        
+        // Check if class is selected
+        if (!classId || classId === '') {
+            return false;
+        }
+        
+        // Validate based on filter type
+        if (filterType === 'daily') {
+            if (!datePicker || datePicker === '' || datePicker === null) {
+                // Don't submit if date is not selected
+                return false;
+            }
+        } else if (filterType === 'monthly') {
+            var monthPicker = $('#monthPicker').val();
+            if (!monthPicker || monthPicker === '' || monthPicker === null) {
+                return false;
+            }
+        } else if (filterType === 'student') {
+            var studentSelect = $('#studentSelect').val();
+            if (!studentSelect || studentSelect === '' || studentSelect === null) {
+                return false;
+            }
+        }
+        
+        // If all validations pass, submit the form
+        console.log('Auto-submitting form...');
+        $('#attendanceFilterForm').submit();
+    }
+    
+    // Handle search button click with validation (using event delegation)
+    $(document).on('click', '#searchBtn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Search button clicked!');
+        
+        var filterType = $('#filterType').val();
+        var classId = $('#classSelect').val();
+        var datePicker = $('#datePicker').val();
+        
+        console.log('Filter Type:', filterType, 'Class ID:', classId, 'Date:', datePicker);
+        
+        // Check if SweetAlert is available
+        if (typeof Swal === 'undefined') {
+            console.error('SweetAlert is not loaded!');
+            alert('Untuk rekap harian, silakan pilih tanggal terlebih dahulu sebelum mencari!');
+            return false;
+        }
+        
+        console.log('SweetAlert is available');
+        
+        // Check if class is selected
+        if (!classId || classId === '') {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Silakan pilih kelas terlebih dahulu!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return false;
+        }
+        
+        // Check if date is selected for daily filter
+        if (filterType === 'daily') {
+            if (!datePicker || datePicker === '' || datePicker === null) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: 'Untuk rekap harian, silakan pilih tanggal terlebih dahulu sebelum mencari!',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                }).then(function() {
+                    // Focus on date picker after alert is closed
+                    $('#datePicker').focus();
+                });
+                return false;
+            }
+        }
+        
+        // Check if month is selected for monthly filter
+        if (filterType === 'monthly') {
+            var monthPicker = $('#monthPicker').val();
+            if (!monthPicker || monthPicker === '' || monthPicker === null) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: 'Untuk rekap bulanan, silakan pilih bulan terlebih dahulu sebelum mencari!',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                return false;
+            }
+        }
+        
+        // Check if student is selected for student filter
+        if (filterType === 'student') {
+            var studentSelect = $('#studentSelect').val();
+            if (!studentSelect || studentSelect === '' || studentSelect === null) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: 'Untuk rekap per siswa, silakan pilih siswa terlebih dahulu sebelum mencari!',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                return false;
+            }
+        }
+        
+        // If all validations pass, submit the form
+        console.log('All validations passed, submitting form...');
+        $('#attendanceFilterForm').submit();
+    });
+    
+    // Initialize DataTables for all tables with pagination
+    function initDataTables() {
+        if (typeof $.fn.DataTable === 'undefined') {
+            console.warn('DataTables library not loaded');
+            return;
+        }
+        
+        // Initialize daily results table
+        if ($('#dailyTable').length > 0 && !$.fn.DataTable.isDataTable('#dailyTable')) {
+            $('#dailyTable').DataTable({
+                \"paging\": true,
+                \"lengthChange\": true,
+                \"pageLength\": 10,
+                \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+                \"dom\": 'lfrtip',
+                \"info\": true,
+                \"language\": {
+                    \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                    \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                    \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                    \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                    \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                    \"search\": \"Cari:\",
+                    \"paginate\": {
+                        \"first\": \"Pertama\",
+                        \"last\": \"Terakhir\",
+                        \"next\": \"Selanjutnya\",
+                        \"previous\": \"Sebelumnya\"
+                    }
+                }
+            });
+        }
+        
+        // Initialize student results table
+        if ($('#studentTable').length > 0 && !$.fn.DataTable.isDataTable('#studentTable')) {
+            $('#studentTable').DataTable({
+                \"paging\": true,
+                \"lengthChange\": true,
+                \"pageLength\": 10,
+                \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+                \"dom\": 'lfrtip',
+                \"info\": true,
+                \"language\": {
+                    \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                    \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                    \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                    \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                    \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                    \"search\": \"Cari:\",
+                    \"paginate\": {
+                        \"first\": \"Pertama\",
+                        \"last\": \"Terakhir\",
+                        \"next\": \"Selanjutnya\",
+                        \"previous\": \"Sebelumnya\"
+                    }
+                }
+            });
+        }
+        
+        // Initialize semester table (if exists)
+        if ($('#semesterTable').length > 0 && !$.fn.DataTable.isDataTable('#semesterTable')) {
+            $('#semesterTable').DataTable({
+                \"paging\": true,
+                \"lengthChange\": true,
+                \"pageLength\": 10,
+                \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+                \"dom\": 'lfrtip',
+                \"info\": true,
+                \"scrollX\": true,
+                \"language\": {
+                    \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                    \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                    \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                    \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                    \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                    \"search\": \"Cari:\",
+                    \"paginate\": {
+                        \"first\": \"Pertama\",
+                        \"last\": \"Terakhir\",
+                        \"next\": \"Selanjutnya\",
+                        \"previous\": \"Sebelumnya\"
+                    }
+                }
+            });
+        }
+    }
+    
+    // Initialize DataTables when page loads
+    initDataTables();
+    
+    // Re-initialize after form submission (when new data is loaded)
+    setTimeout(initDataTables, 500);
 });
 </script>

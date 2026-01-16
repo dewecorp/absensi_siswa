@@ -67,11 +67,14 @@ $page_title = 'Dashboard Wali';
 
 // Define CSS libraries for this page (only essential ones)
 $css_libs = [
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
     // Removed JQVMap since files don't exist
 ];
 
 // Define JS libraries for this page (only essential ones)
 $js_libs = [
+    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
+    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js'
     // Removed JQVMap since files don't exist
 ];
 
@@ -370,4 +373,38 @@ include '../templates/sidebar.php';
                 </section>
             </div>
             
-    <?php include '../templates/footer.php'; ?>
+    <?php 
+    // Add DataTables initialization for table-siswa
+    if (!isset($js_page)) {
+        $js_page = [];
+    }
+    $js_page[] = "
+    $(document).ready(function() {
+        if ($.fn.DataTable && $('#table-siswa').length > 0) {
+            $('#table-siswa').DataTable({
+                \"paging\": true,
+                \"lengthChange\": true,
+                \"pageLength\": 10,
+                \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+                \"dom\": 'lfrtip',
+                \"info\": true,
+                \"language\": {
+                    \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                    \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                    \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                    \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                    \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                    \"search\": \"Cari:\",
+                    \"paginate\": {
+                        \"first\": \"Pertama\",
+                        \"last\": \"Terakhir\",
+                        \"next\": \"Selanjutnya\",
+                        \"previous\": \"Sebelumnya\"
+                    }
+                }
+            });
+        }
+    });
+    ";
+    include '../templates/footer.php'; 
+    ?>

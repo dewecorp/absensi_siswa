@@ -45,6 +45,7 @@ if ($selected_class > 0 && !empty($selected_date)) {
 <head>
     <title>Manual Daily Attendance Filter</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css">
 </head>
 <body>
     <div class="container mt-4">
@@ -99,7 +100,7 @@ if ($selected_class > 0 && !empty($selected_date)) {
                         
                         <?php if (!empty($attendance_data)): ?>
                             <div class="table-responsive">
-                                <table class="table table-striped table-bordered">
+                                <table class="table table-striped table-bordered" id="manualTable">
                                     <thead class="thead-dark">
                                         <tr>
                                             <th>Student Name</th>
@@ -183,6 +184,37 @@ if ($selected_class > 0 && !empty($selected_date)) {
         </div>
     </div>
     
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <script>
+    $(document).ready(function() {
+        if ($.fn.DataTable && $('#manualTable').length > 0) {
+            $('#manualTable').DataTable({
+                \"paging\": true,
+                \"lengthChange\": true,
+                \"pageLength\": 10,
+                \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+                \"dom\": 'lfrtip',
+                \"info\": true,
+                \"language\": {
+                    \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                    \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                    \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                    \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                    \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                    \"search\": \"Cari:\",
+                    \"paginate\": {
+                        \"first\": \"Pertama\",
+                        \"last\": \"Terakhir\",
+                        \"next\": \"Selanjutnya\",
+                        \"previous\": \"Sebelumnya\"
+                    }
+                }
+            });
+        }
+    });
+    </script>
 </body>
 </html>

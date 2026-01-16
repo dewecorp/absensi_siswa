@@ -9,14 +9,14 @@ if (!isAuthorized(['admin'])) {
 
 // Define CSS libraries for this page
 $css_libs = [
-    'node_modules/datatables.net-bs4/css/dataTables.bootstrap4.min.css',
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css'
 ];
 
 // Define JS libraries for this page
 $js_libs = [
-    'node_modules/datatables/media/js/jquery.dataTables.min.js',
-    'node_modules/datatables.net-bs4/js/dataTables.bootstrap4.min.js',
+    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
+    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js',
     'student_management_unified.js'
 ];
@@ -366,6 +366,38 @@ include '../templates/sidebar.php';
 if (!isset($js_page)) {
     $js_page = [];
 }
+$js_page[] = "
+$(document).ready(function() {
+    // Initialize DataTables with pagination and show entries
+    if ($.fn.DataTable) {
+        $('#table-1').DataTable({
+            \"columnDefs\": [
+                { \"sortable\": false, \"targets\": [5] } // Disable sorting for action column
+            ],
+            \"paging\": true,
+            \"lengthChange\": true,
+            \"pageLength\": 10,
+            \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+            \"dom\": 'lfrtip',
+            \"info\": true,
+            \"language\": {
+                \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                \"search\": \"Cari:\",
+                \"paginate\": {
+                    \"first\": \"Pertama\",
+                    \"last\": \"Terakhir\",
+                    \"next\": \"Selanjutnya\",
+                    \"previous\": \"Sebelumnya\"
+                }
+            }
+        });
+    }
+});
+";
 $js_page[] = '
 $(document).ready(function() {
     console.log("Delete handler initialized");

@@ -12,12 +12,15 @@ $page_title = 'Rekap Absensi';
 
 // Define CSS libraries for this page
 $css_libs = [
-    "node_modules/select2/dist/css/select2.min.css"
+    "node_modules/select2/dist/css/select2.min.css",
+    "https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css"
 ];
 
 // Define JS libraries for this page
 $js_libs = [
-    "node_modules/select2/dist/js/select2.full.min.js"
+    "node_modules/select2/dist/js/select2.full.min.js",
+    "https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js",
+    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"
     // Removed XLSX CDN due to 403 errors
 ];
 
@@ -326,7 +329,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                                 
                                                 <div class="table-responsive">
-                                                    <table class="table table-striped table-md">
+                                                    <table class="table table-striped table-md" id="dailyTable">
                                                         <thead>
                                                             <tr>
                                                                 <th>Nama Siswa</th>
@@ -613,7 +616,7 @@ include '../templates/sidebar.php';
                                                 
                                                 <!-- Detailed Attendance Table -->
                                                 <div class="table-responsive">
-                                                    <table class="table table-striped table-md">
+                                                    <table class="table table-striped table-md" id="studentTable">
                                                         <thead>
                                                             <tr>
                                                                 <th>No</th>
