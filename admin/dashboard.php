@@ -51,32 +51,45 @@ try {
     error_log("Error deleting old activities: " . $e->getMessage());
 }
 
-// Get recent activities from the activity log with teacher names (only last 24 hours)
+// Get recent activities from the activity log
 $activities = []; // Initialize as empty array
 $total_activities = 0;
 try {
-    // Get activities from last 24 hours with teacher names
-    $activity_stmt = $pdo->query("
-        SELECT 
-            a.username, 
-            a.action, 
-            a.description, 
-            a.created_at,
-            COALESCE(g.nama_guru, a.username) as display_name
-        FROM tb_activity_log a
-        LEFT JOIN tb_guru g ON a.username = g.nuptk OR a.username = g.nama_guru OR a.username = CAST(g.id_guru AS CHAR)
-        WHERE a.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-        ORDER BY a.created_at DESC 
-        LIMIT 10
-    ");
-    $activities = $activity_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Get total count of activities (only last 24 hours)
-    $count_stmt = $pdo->query("SELECT COUNT(*) as total FROM tb_activity_log a
-        LEFT JOIN tb_guru g ON a.username = g.nuptk OR a.username = g.nama_guru OR a.username = CAST(g.id_guru AS CHAR)
-        WHERE a.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+    // Get total count of all activities first
+    $count_stmt = $pdo->query("SELECT COUNT(*) as total FROM tb_activity_log");
     $count_result = $count_stmt->fetch(PDO::FETCH_ASSOC);
     $total_activities = isset($count_result['total']) ? (int)$count_result['total'] : 0;
+    
+    if ($total_activities > 0) {
+        // Create teacher mapping to avoid JOIN collation issues
+        $teacher_map = [];
+        $guru_stmt = $pdo->query("SELECT nuptk, nama_guru, id_guru FROM tb_guru");
+        $gurus = $guru_stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($gurus as $guru) {
+            $teacher_map[$guru['nuptk']] = $guru['nama_guru'];
+            $teacher_map[$guru['nama_guru']] = $guru['nama_guru'];
+            $teacher_map[$guru['id_guru']] = $guru['nama_guru'];
+        }
+        
+        // Get latest 20 activities
+        $activity_stmt = $pdo->query(
+            "SELECT 
+                username, 
+                action, 
+                description, 
+                created_at
+            FROM tb_activity_log 
+            ORDER BY created_at DESC 
+            LIMIT 20"
+        );
+        $activities = $activity_stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Add display_name to each activity
+        foreach ($activities as &$activity) {
+            $display_name = $teacher_map[$activity['username']] ?? $activity['username'];
+            $activity['display_name'] = $display_name;
+        }
+    }
 } catch (Exception $e) {
     // If there's an error (e.g., table doesn't exist), keep the array empty
     $activities = [];
@@ -509,9 +522,12 @@ include '../templates/sidebar.php';
                             <div class="card">
                                 <div class="card-header">
                                     <h4>Aktivitas Pengguna <span class="badge badge-primary"><?php echo $total_activities; ?></span></h4>
+                                                                <div class="card-header-action">
+                                                                    <a href="activity_log.php" class="btn btn-primary">Lihat Semua</a>
+                                                                </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="activities" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="activities" style="max-height: 600px; overflow-y: auto;">
                                         <?php 
                                         if (!empty($activities)):
                                             foreach ($activities as $activity): 
@@ -528,7 +544,7 @@ include '../templates/sidebar.php';
                                             </div>
                                             <div class="activity-detail">
                                                 <div class="mb-2">
-                                                    <span class="text-job text-primary text-capitalize"><?php echo htmlspecialchars($activity['display_name'] ?? $activity['username']); ?></span>
+                                                    <span class="text-job text-primary text-capitalize"><?php echo htmlspecialchars($activity['display_name']); ?></span>
                                                     <span class="text-muted"><?php 
                                                         if (function_exists('timeAgo')) {
                                                             echo timeAgo($activity['created_at']);

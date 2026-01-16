@@ -56,6 +56,12 @@ switch ($user_level) {
                 'active' => $current_page === 'backup_restore.php'
             ],
             [
+                'title' => 'Log Aktivitas',
+                'icon' => 'fas fa-history',
+                'url' => 'activity_log.php',
+                'active' => $current_page === 'activity_log.php'
+            ],
+            [
                 'title' => 'Logout',
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
