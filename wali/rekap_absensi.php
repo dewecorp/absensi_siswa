@@ -886,14 +886,28 @@ $(document).ready(function() {
     });
     
     // Validate form submission - check if date is selected for daily filter
-    $('#attendanceFilterForm').on('submit', function(e) {
+    // Use event delegation on document level to ensure it always works
+    $(document).on('submit', '#attendanceFilterForm', function(e) {
+        console.log('Form submit triggered - validation running');
+        
         var filterType = $('#filterType').val();
         var classId = $('#classSelect').val();
         var datePicker = $('#datePicker').val();
         
+        console.log('Validation - Filter Type:', filterType, 'Class ID:', classId, 'Date:', datePicker);
+        
+        // Check if SweetAlert is available
+        if (typeof Swal === 'undefined') {
+            console.error('SweetAlert is not loaded!');
+            alert('Untuk rekap harian, silakan pilih tanggal terlebih dahulu sebelum mencari!');
+            e.preventDefault();
+            return false;
+        }
+        
         // Check if class is selected
         if (!classId || classId === '') {
             e.preventDefault();
+            console.log('Validation failed: Class not selected');
             Swal.fire({
                 title: 'Peringatan!',
                 text: 'Silakan pilih kelas terlebih dahulu!',
@@ -907,6 +921,7 @@ $(document).ready(function() {
         if (filterType === 'daily') {
             if (!datePicker || datePicker === '' || datePicker === null) {
                 e.preventDefault();
+                console.log('Validation failed: Date not selected for daily filter');
                 Swal.fire({
                     title: 'Peringatan!',
                     text: 'Untuk rekap harian, silakan pilih tanggal terlebih dahulu sebelum mencari!',
@@ -925,6 +940,7 @@ $(document).ready(function() {
             var monthPicker = $('#monthPicker').val();
             if (!monthPicker || monthPicker === '' || monthPicker === null) {
                 e.preventDefault();
+                console.log('Validation failed: Month not selected for monthly filter');
                 Swal.fire({
                     title: 'Peringatan!',
                     text: 'Untuk rekap bulanan, silakan pilih bulan terlebih dahulu sebelum mencari!',
@@ -940,6 +956,7 @@ $(document).ready(function() {
             var studentSelect = $('#studentSelect').val();
             if (!studentSelect || studentSelect === '' || studentSelect === null) {
                 e.preventDefault();
+                console.log('Validation failed: Student not selected for student filter');
                 Swal.fire({
                     title: 'Peringatan!',
                     text: 'Untuk rekap per siswa, silakan pilih siswa terlebih dahulu sebelum mencari!',
@@ -951,6 +968,7 @@ $(document).ready(function() {
         }
         
         // If all validations pass, allow form to submit normally
+        console.log('All validations passed, allowing form submission...');
         return true;
     });
 });
