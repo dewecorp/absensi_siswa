@@ -104,7 +104,7 @@ function importTeachersFromExcelFile($filePath) {
                 $tempat_lahir_val = !empty($tempat_lahir) ? $tempat_lahir : NULL;
                 
                 // Hash password if provided
-                $default_password = 'default123';
+                $default_password = '123456';
                 $password_to_use = !empty($password) ? $password : $default_password;
                 $hashed_password = hashPassword($password_to_use);
                 $password_plain = $password_to_use; // Store plain text password
@@ -277,7 +277,7 @@ function importTeachersFromCSV($filePath) {
             $tempat_lahir_val = !empty($tempat_lahir) ? $tempat_lahir : NULL;
             
             // Hash password if provided
-            $default_password = 'default123';
+            $default_password = '123456';
             $password_to_use = !empty($password) ? $password : $default_password;
             $hashed_password = hashPassword($password_to_use);
             $password_plain = $password_to_use; // Store plain text password

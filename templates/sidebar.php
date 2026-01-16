@@ -83,6 +83,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php'])
             ],
             [
+                'title' => 'Profil & Pengaturan',
+                'icon' => 'fas fa-user-cog',
+                'url' => 'profil.php',
+                'active' => $current_page === 'profil.php'
+            ],
+            [
                 'title' => 'Logout',
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
@@ -111,6 +117,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-book',
                 'url' => 'rekap_absensi.php',
                 'active' => $current_page === 'rekap_absensi.php'
+            ],
+            [
+                'title' => 'Profil & Pengaturan',
+                'icon' => 'fas fa-user-cog',
+                'url' => 'profil.php',
+                'active' => $current_page === 'profil.php'
             ],
             [
                 'title' => 'Logout',

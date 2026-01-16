@@ -23,7 +23,7 @@ try {
 
 // Update existing teachers that don't have password_plain
 // Set default password for teachers without password_plain
-$default_password = 'default123';
+$default_password = '123456';
 
 try {
     $stmt = $pdo->prepare("UPDATE tb_guru SET password_plain = ? WHERE password_plain IS NULL OR password_plain = ''");

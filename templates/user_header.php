@@ -100,11 +100,19 @@ if (!isLoggedIn()) {
                             <div class="d-sm-none d-lg-inline-block">Hi, <?php echo htmlspecialchars($display_name); ?></div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
-                            <a href="features-profile.html" class="dropdown-item has-icon">
-                                <i class="far fa-user"></i> Profile
-                            </a>
-                            <a href="features-settings.html" class="dropdown-item has-icon">
-                                <i class="fas fa-cog"></i> Settings
+                            <?php
+                            // Determine profile URL based on user level
+                            $profile_url = '';
+                            if ($user_level === 'guru') {
+                                $profile_url = 'profil.php';
+                            } elseif ($user_level === 'wali') {
+                                $profile_url = 'profil.php';
+                            } else {
+                                $profile_url = 'features-profile.html';
+                            }
+                            ?>
+                            <a href="<?php echo $profile_url; ?>" class="dropdown-item has-icon">
+                                <i class="far fa-user"></i> Profil & Pengaturan
                             </a>
                             <div class="dropdown-divider"></div>
                             <a href="../logout.php" class="dropdown-item has-icon text-danger">
