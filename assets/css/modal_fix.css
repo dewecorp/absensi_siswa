@@ -1,0 +1,126 @@
+/* Modal backdrop and z-index fixes */
+.modal-backdrop {
+  z-index: 1040 !important;
+  opacity: 0 !important; /* Remove blur/opacity effect completely */
+  background-color: transparent !important;
+}
+
+.modal {
+  z-index: 1050 !important;
+}
+
+/* Ensure proper stacking context for modals */
+.modal.show {
+  z-index: 1050 !important;
+}
+
+/* Fix modal dialog sizing for better responsiveness */
+.modal-dialog {
+  z-index: 1051 !important;
+  max-width: 600px;
+  margin: 1.75rem auto;
+}
+
+/* For larger modals */
+.modal-lg {
+  max-width: 800px;
+  margin: 1.75rem auto;
+}
+
+/* Extra large modals */
+.modal-xl {
+  max-width: 1140px;
+  margin: 1rem auto;
+}
+
+/* Medium sized modals */
+.modal-md {
+  max-width: 500px;
+  margin: 1.75rem auto;
+}
+
+/* Small sized modals */
+.modal-sm {
+  max-width: 300px;
+  margin: 1.75rem auto;
+}
+
+/* Ensure modal content is scrollable */
+.modal-content {
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Specific handling for modals with many form elements */
+.modal-body:has(.form-group) {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+/* Improve modal header and footer behavior */
+.modal-header {
+  flex-shrink: 0;
+}
+
+.modal-footer {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Fix for multiple modals */
+.modal.fade .modal-dialog {
+  transform: translate(0, -50px);
+  transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+  transform: translate(0, 0);
+}
+
+/* Ensure backdrop doesn't interfere with other elements */
+.modal-backdrop.show {
+  opacity: 0 !important; /* Remove blur effect completely */
+}
+
+/* Fix for modal blur and disable issues */
+body.modal-open {
+  overflow: auto !important;
+  padding-right: 0 !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure page content remains interactive when modal is open */
+body:not(.modal-open) {
+  pointer-events: auto;
+}
+
+/* Prevent backdrop from blocking interactions */
+.modal-backdrop {
+  pointer-events: none;
+}
+
+/* Ensure modal content is clickable */
+.modal-content {
+  pointer-events: auto;
+}
+
+/* Ensure page content stays interactive even with modal open */
+body {
+  pointer-events: auto;
+  overflow: visible;
+}
+
+/* Override Bootstrap modal behavior */
+.modal-backdrop {
+  opacity: 0 !important; /* Remove blur effect completely */
+}
+
+/* Ensure the page behind modal is accessible */
+body.modal-open {
+  overflow-y: visible !important;
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Filter</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>Jenis Filter</label>
+                    <select class="form-control" name="filter_type" id="filterType">
+                        <option value="">Pilih Jenis Filter</option>
+                        <option value="all">Semua</option>
+                        <option value="daily">Harian</option>
+                        <option value="monthly">Bulanan</option>
+                        <option value="student">Per Siswa</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Date Picker Filter (for daily type) -->
+            <div class="col-md-3 daily-date-filter" style="display: none;">
+                <div class="form-group">
+                    <label>Tanggal</label>
+                    <input type="date" class="form-control" name="selected_date" id="selectedDateFilter">
+                </div>
+            </div>
+            
+            <!-- Submit Button for Daily Filter -->
+            <div class="col-md-12 daily-filter-button" style="display: none;">
+                <div class="form-group text-center">
+                    <button type="button" class="btn btn-primary">Tampilkan Data Harian</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            console.log('Document ready');
+            
+            $('#filterType').change(function() {
+                var filterType = $(this).val();
+                console.log('Filter type changed to:', filterType);
+                
+                $('.daily-date-filter, .daily-filter-button').hide();
+                
+                if (filterType === 'daily') {
+                    console.log('Showing daily filters');
+                    $('.daily-date-filter, .daily-filter-button').show();
+                }
+            });
+            
+            // Trigger change event on page load
+            $('#filterType').trigger('change');
+        });
+    </script>
+</body>
+</html>

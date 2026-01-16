@@ -1,0 +1,21 @@
+{
+    "name": "laragon/absen_siswa",
+    "description": "Student Attendance System with Excel Import Support",
+    "type": "project",
+    "require": {
+        "php": "^7.4 || ^8.0",
+        "phpoffice/phpspreadsheet": "^1.28",
+        "dompdf/dompdf": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Developer",
+            "email": "developer@example.com"
+        }
+    ]
+}

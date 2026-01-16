@@ -1,0 +1,373 @@
+<?php
+require_once '../config/database.php';
+require_once '../config/functions.php';
+
+// Check if user is logged in and has wali level
+if (!isAuthorized(['wali'])) {
+    redirect('../login.php');
+}
+
+// Get school profile
+$school_profile = getSchoolProfile($pdo);
+
+// Get teacher information if needed for wali dashboard
+if (isset($_SESSION['nama_guru'])) {
+    $teacher_name = $_SESSION['nama_guru'];
+} else {
+    // For traditional login via tb_pengguna, get teacher name
+    $stmt = $pdo->prepare("SELECT g.nama_guru FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher_result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $teacher_name = $teacher_result['nama_guru'] ?? $_SESSION['username'];
+}
+
+// Get the class that the wali teaches
+$wali_kelas_stmt = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ?");
+$wali_kelas_stmt->execute([$teacher_name]);
+$wali_kelas = $wali_kelas_stmt->fetch(PDO::FETCH_ASSOC);
+
+// Get student count for the wali's class
+if ($wali_kelas) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total_siswa FROM tb_siswa WHERE id_kelas = ?");
+    $stmt->execute([$wali_kelas['id_kelas']]);
+    $total_siswa = $stmt->fetch(PDO::FETCH_ASSOC)['total_siswa'];
+} else {
+    $total_siswa = 0;
+}
+
+// Get today's attendance statistics for the wali's class
+if ($wali_kelas) {
+    $stmt = $pdo->prepare("SELECT a.keterangan, COUNT(*) as jumlah FROM tb_absensi a JOIN tb_siswa s ON a.id_siswa = s.id_siswa WHERE s.id_kelas = ? AND a.tanggal = CURDATE() GROUP BY a.keterangan");
+    $stmt->execute([$wali_kelas['id_kelas']]);
+    $attendance_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $attendance_stats = [];
+}
+
+// Initialize counts
+$jumlah_hadir = $jumlah_sakit = $jumlah_izin = $jumlah_alpa = 0;
+foreach ($attendance_stats as $stat) {
+    switch ($stat['keterangan']) {
+        case 'Hadir':
+            $jumlah_hadir = $stat['jumlah'];
+            break;
+        case 'Sakit':
+            $jumlah_sakit = $stat['jumlah'];
+            break;
+        case 'Izin':
+            $jumlah_izin = $stat['jumlah'];
+            break;
+        case 'Alpa':
+            $jumlah_alpa = $stat['jumlah'];
+            break;
+    }
+}
+
+$page_title = 'Dashboard Wali';
+
+// Define CSS libraries for this page (only essential ones)
+$css_libs = [
+    // Removed JQVMap since files don't exist
+];
+
+// Define JS libraries for this page (only essential ones)
+$js_libs = [
+    // Removed JQVMap since files don't exist
+];
+
+// Define page-specific JS
+$js_page = [
+    "
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Small delay to ensure Chart.js is ready
+        setTimeout(function() {
+            // Ensure Chart.js is loaded before configuring
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js library not loaded');
+                return;
+            }
+            
+            // Configure Chart defaults if they exist (for v3.x)
+            if (typeof Chart.defaults !== 'undefined') {
+                if (typeof Chart.defaults.font !== 'undefined') {
+                    // Chart.js v3+
+                    Chart.defaults.font.family = 'Nunito, Segoe UI, Arial';
+                    Chart.defaults.font.size = 12;
+                    Chart.defaults.color = '#999';
+                } else if (typeof Chart.defaults.global !== 'undefined') {
+                    // Chart.js v2.x fallback
+                    Chart.defaults.global.defaultFontFamily = 'Nunito, Segoe UI, Arial';
+                    Chart.defaults.global.defaultFontSize = 12;
+                    Chart.defaults.global.defaultFontColor = '#999';
+                }
+            }
+            
+            // Daily Attendance Chart
+            var ctx = document.getElementById('myChart');
+            if (ctx) {
+                try {
+                    var ctx2d = ctx.getContext('2d');
+                    var myChart = new Chart(ctx2d, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'],
+                            datasets: [{
+                                label: 'Jumlah Siswa',
+                                data: [
+                                    " . $jumlah_hadir . ",
+                                    " . $jumlah_sakit . ",
+                                    " . $jumlah_izin . ",
+                                    " . $jumlah_alpa . "
+                                ],
+                                backgroundColor: [
+                                    'rgba(54, 162, 235, 0.2)',
+                                    'rgba(255, 99, 132, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)',
+                                    'rgba(153, 102, 255, 0.2)'
+                                ],
+                                borderColor: [
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255,99,132,1)',
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(153, 102, 255, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Statistik Kehadiran Harian'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            if (Number.isInteger(value)) {
+                                                return value;
+                                            }
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Jumlah Siswa'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Status Kehadiran'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error creating daily attendance chart:', e);
+                }
+            }
+        }, 500);
+    });
+    "
+];
+
+include '../templates/header.php';
+
+include '../templates/sidebar.php';
+
+// Start HTML output after including templates
+?>
+
+<!-- Main Content -->
+<div class="main-content">
+                <section class="section">
+                    <div class="section-header">
+                        <h1>Dashboard Wali</h1>
+                        <div class="section-header-breadcrumb">
+                            <div class="breadcrumb-item active"><a href="#">Dashboard</a></div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-primary">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Nama Wali</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo htmlspecialchars($teacher_name); ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-success">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Total Siswa</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $total_siswa; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Hadir</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_hadir; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-warning">
+                                    <i class="fas fa-heartbeat"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Sakit</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_sakit; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-info">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Izin</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_izin; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-danger">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Alpa</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_alpa; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Grafik Kehadiran Hari Ini</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="myChart" height="158"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Student List Section -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Data Siswa Kelas <?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas'] ?? 'Tidak Ada Kelas') : 'Tidak Ada Kelas'; ?></h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped" id="table-siswa">
+                                            <thead>
+                                                <tr>
+                                                    <th>No</th>
+                                                    <th>Nama Siswa</th>
+                                                    <th>NISN</th>
+                                                    <th>Jenis Kelamin</th>
+                                                    <th>Status Hari Ini</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php
+                                                if ($wali_kelas) {
+                                                    $siswa_stmt = $pdo->prepare("SELECT s.*, a.keterangan as attendance_status FROM tb_siswa s LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = CURDATE() WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
+                                                    $siswa_stmt->execute([$wali_kelas['id_kelas']]);
+                                                    $siswa_list = $siswa_stmt->fetchAll(PDO::FETCH_ASSOC);
+                                                    
+                                                    $no = 1;
+                                                    foreach ($siswa_list as $siswa):
+                                                ?>
+                                                <tr>
+                                                    <td><?php echo $no++; ?></td>
+                                                    <td><?php echo htmlspecialchars($siswa['nama_siswa']); ?></td>
+                                                    <td><?php echo htmlspecialchars($siswa['nisn']); ?></td>
+                                                    <td><?php echo $siswa['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($siswa['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
+                                                    <td>
+                                                        <div class="badge badge-<?php 
+                                                            switch(strtolower($siswa['attendance_status'] ?? 'Belum Absen')) {
+                                                                case 'hadir': echo 'success'; break;
+                                                                case 'sakit': echo 'warning'; break;
+                                                                case 'izin': echo 'info'; break;
+                                                                case 'alpa': echo 'danger'; break;
+                                                                default: echo 'secondary'; break;
+                                                            }
+                                                        ?>"><?php echo htmlspecialchars($siswa['attendance_status'] ?? 'Belum Absen'); ?></div>
+                                                    </td>
+                                                </tr>
+                                                <?php 
+                                                    endforeach;
+                                                } else {
+                                                ?>
+                                                <tr>
+                                                    <td colspan="5" class="text-center">Tidak ada kelas yang diajar</td>
+                                                </tr>
+                                                <?php } ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+    <?php include '../templates/footer.php'; ?>

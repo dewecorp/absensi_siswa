@@ -1,0 +1,71 @@
+===============================================
+    SISTEM ABSENSI SISWA - PETUNJUK PENGGUNAAN
+===============================================
+
+1. PERSIAPAN AWAL
+------------------
+- Pastikan XAMPP/Laragon sudah terinstall
+- Pastikan Apache dan MySQL sudah berjalan
+- Tempatkan folder ini di dalam folder htdocs/www
+
+2. INSTALASI DATABASE
+---------------------
+- Buka browser dan akses: http://localhost/absen_siswa/install.php
+- Tunggu proses instalasi selesai
+- Database dan tabel otomatis akan dibuat
+
+3. AKSES APLIKASI
+------------------
+- Buka browser dan akses: http://localhost/absen_siswa/
+- Akan otomatis diarahkan ke halaman login
+- Login dengan akun default:
+  Username: admin
+  Password: admin
+
+4. STRUKTUR MENU
+-----------------
+ADMIN:
+├── Dashboard
+├── Master Data
+│   ├── Data Guru
+│   ├── Data Kelas
+│   └── Data Siswa
+├── Absensi
+│   ├── Absensi Harian
+│   └── Rekap Absensi
+├── Pengaturan
+│   └── Profil Madrasah
+├── Pengguna
+└── Backup & Restore
+
+GURU:
+├── Dashboard
+└── Absensi
+
+WALI:
+├── Dashboard
+├── Absensi
+└── Rekap
+
+5. FUNGSI UTAMA
+---------------
+- Absensi harian per kelas
+- Rekap absensi harian/bulanan/per siswa
+- Manajemen data guru, kelas, dan siswa
+- Manajemen pengguna
+- Backup dan restore database
+- Upload logo madrasah
+- Filter absensi berdasarkan tanggal dan nama
+
+6. LOGIN SEBAGAI LEVEL LAIN
+---------------------------
+- Untuk login sebagai guru/wali, harus dibuat dulu dari menu Pengguna (admin)
+- Pilih level guru/wali saat membuat akun
+- Jika guru juga menjadi wali kelas, hubungkan dengan data guru yang sesuai
+
+7. CATATAN TAMBAHAN
+-------------------
+- Semua tabel menggunakan DataTables (sortable, searchable)
+- Bisa export ke Excel/PDF
+- Gunakan fitur backup secara berkala
+- Logo default ada di assets/img/logo.png (bisa diganti lewat menu Pengaturan)

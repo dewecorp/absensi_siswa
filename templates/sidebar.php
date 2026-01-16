@@ -1,0 +1,166 @@
+<?php
+// Sidebar template for the attendance system
+// This file should be included after the header
+
+// Determine active menu based on current page
+$current_page = basename($_SERVER['PHP_SELF']);
+
+// Define menu items based on user level
+$user_level = getUserLevel();
+$menu_items = [];
+
+switch ($user_level) {
+    case 'admin':
+        $menu_items = [
+            [
+                'title' => 'Dashboard',
+                'icon' => 'fas fa-fire',
+                'url' => 'dashboard.php',
+                'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Master Data',
+                'icon' => 'fas fa-database',
+                'submenu' => [
+                    ['title' => 'Data Guru', 'url' => 'data_guru.php', 'active' => $current_page === 'data_guru.php'],
+                    ['title' => 'Data Kelas', 'url' => 'data_kelas.php', 'active' => $current_page === 'data_kelas.php'],
+                    ['title' => 'Data Siswa', 'url' => 'data_siswa.php', 'active' => $current_page === 'data_siswa.php']
+                ],
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php'])
+            ],
+            [
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => [
+                    ['title' => 'Absensi Harian', 'url' => 'absensi_harian.php', 'active' => $current_page === 'absensi_harian.php'],
+                    ['title' => 'Rekap Absensi', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                ],
+                'active' => in_array($current_page, ['absensi_harian.php', 'rekap_absensi.php'])
+            ],
+            [
+                'title' => 'Pengaturan',
+                'icon' => 'fas fa-school',
+                'url' => 'profil_madrasah.php',
+                'active' => $current_page === 'profil_madrasah.php'
+            ],
+            [
+                'title' => 'Pengguna',
+                'icon' => 'fas fa-users',
+                'url' => 'pengguna.php',
+                'active' => $current_page === 'pengguna.php'
+            ],
+            [
+                'title' => 'Backup & Restore',
+                'icon' => 'fas fa-hdd',
+                'url' => 'backup_restore.php',
+                'active' => $current_page === 'backup_restore.php'
+            ],
+            [
+                'title' => 'Logout',
+                'icon' => 'fas fa-sign-out-alt',
+                'url' => '#',
+                'active' => false,
+                'attributes' => 'onclick="confirmLogoutInline()"'
+            ]
+        ];
+        break;
+        
+    case 'guru':
+        $menu_items = [
+            [
+                'title' => 'Dashboard',
+                'icon' => 'fas fa-fire',
+                'url' => 'dashboard.php',
+                'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => [
+                    ['title' => 'Absensi Kelas', 'url' => 'absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
+                    ['title' => 'Rekap Absensi', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                ],
+                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php'])
+            ],
+            [
+                'title' => 'Logout',
+                'icon' => 'fas fa-sign-out-alt',
+                'url' => '#',
+                'active' => false,
+                'attributes' => 'onclick="confirmLogoutInline()"'
+            ]
+        ];
+        break;
+        
+    case 'wali':
+        $menu_items = [
+            [
+                'title' => 'Dashboard',
+                'icon' => 'fas fa-fire',
+                'url' => 'dashboard.php',
+                'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Absensi Harian',
+                'icon' => 'fas fa-calendar-check',
+                'url' => 'absensi_kelas.php',
+                'active' => $current_page === 'absensi_kelas.php'
+            ],
+            [
+                'title' => 'Rekap',
+                'icon' => 'fas fa-book',
+                'url' => 'rekap_absensi.php',
+                'active' => $current_page === 'rekap_absensi.php'
+            ],
+            [
+                'title' => 'Logout',
+                'icon' => 'fas fa-sign-out-alt',
+                'url' => '#',
+                'active' => false,
+                'attributes' => 'onclick="confirmLogoutInline()"'
+            ]
+        ];
+        break;
+}
+?>
+
+<div class="main-sidebar">
+    <aside id="sidebar-wrapper">
+        <div class="sidebar-brand">
+            <a href="dashboard.php">Sistem Absensi Siswa</a>
+        </div>
+        <div class="sidebar-brand sidebar-brand-sm">
+            <a href="dashboard.php">SA</a>
+        </div>
+        <ul class="sidebar-menu">
+            <?php foreach ($menu_items as $item): ?>
+                <?php if (isset($item['submenu'])): ?>
+                    <li class="nav-item dropdown <?php echo $item['active'] ? 'active' : ''; ?>">
+                        <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span></a>
+                        <ul class="dropdown-menu">
+                            <?php foreach ($item['submenu'] as $subitem): ?>
+                                <li><a class="nav-link <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo $subitem['url']; ?>"><?php echo $subitem['title']; ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </li>
+                <?php else: ?>
+                    <li class="<?php echo $item['active'] ? 'active' : ''; ?>">
+                        <a class="nav-link" 
+                           href="<?php echo $item['url']; ?>" 
+                           <?php if (isset($item['attributes'])): ?>
+                               <?php echo $item['attributes']; ?>
+                           <?php endif; ?>>
+                            <i class="<?php echo $item['icon']; ?>"></i> 
+                            <span><?php echo $item['title']; ?></span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </ul>
+        
+        </ul>
+    </aside>
+</div>
+        
+    </aside>
+</div>

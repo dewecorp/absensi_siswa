@@ -1,0 +1,149 @@
+<?php
+// Header template for the attendance system
+if (!isset($_SESSION)) {
+    session_start();
+}
+
+// Include functions and database connection
+require_once '../config/database.php';
+require_once '../config/functions.php';
+
+// Get school profile
+$school_profile = getSchoolProfile($pdo);
+
+// Check if user is logged in
+// TEMPORARY: Bypass authentication for testing
+/*
+if (!isLoggedIn()) {
+    redirect('../login.php');
+}
+*/
+
+// Get current page title
+$page_title = isset($page_title) ? $page_title : 'Dashboard';
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
+    <title><?php echo $page_title; ?> | Sistem Absensi Siswa</title>
+
+    <!-- General CSS Files -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+
+
+
+    <!-- CSS Libraries -->
+    <?php if (isset($css_libs) && is_array($css_libs)): ?>
+        <?php foreach ($css_libs as $css): ?>
+            <?php if (strpos($css, 'http://') === 0 || strpos($css, 'https://') === 0): ?>
+                <link rel="stylesheet" href="<?php echo $css; ?>">
+            <?php else: ?>
+                <link rel="stylesheet" href="../<?php echo $css; ?>">
+            <?php endif; ?>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+    <!-- Template CSS -->
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <!-- Modal Fix CSS -->
+    <link rel="stylesheet" href="../assets/css/modal_fix.css">
+
+</head>
+
+<body>
+    <div id="app">
+        <div class="main-wrapper">
+            <div class="navbar-bg"></div>
+            <nav class="navbar navbar-expand-lg main-navbar">
+                <form class="form-inline mr-auto">
+                    <ul class="navbar-nav mr-3">
+                        <li><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
+                    </ul>
+                </form>
+                <ul class="navbar-nav mr-auto">
+                    <!-- Academic Year and Semester Info -->
+                    <li class="nav-item d-flex align-items-center">
+                        <div class="bg-primary text-white px-3 py-2 rounded small">
+                            <span class="mr-2"><?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
+                            <span class="mx-2">|</span>
+                            <span><?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
+                        </div>
+                    </li>
+                </ul>
+                <ul class="navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <?php
+// Get user data to display personalized avatar
+$user_level = getUserLevel();
+
+if ($user_level === 'guru' || $user_level === 'wali') {
+    // For guru/wali, get teacher data to show teacher avatar
+    $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
+    $teacher_stmt->execute([$_SESSION['username']]);
+    $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // If not found by name, try to get by session info
+    if (!$current_user && isset($_SESSION['nama_guru'])) {
+        $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
+        $teacher_stmt->execute([$_SESSION['nama_guru']]);
+        $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    $avatar_html = getTeacherAvatarImage($current_user ?? ['nama_guru' => $_SESSION['username']], 30);
+    $display_name = $current_user['nama_guru'] ?? $_SESSION['username'];
+} else {
+    // For admin, get user data
+    $user_stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");
+    $user_stmt->execute([$_SESSION['username']]);
+    $current_user = $user_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $avatar_html = getUserAvatarImage($current_user ?? ['username' => $_SESSION['username']], 30);
+    $display_name = $_SESSION['username'];
+}
+?>
+                        <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
+                            <?php echo $avatar_html; ?>
+                            <div class="d-sm-none d-lg-inline-block">Hi, <?php 
+                            // Display teacher's name if available (for direct NUPTK login) or username for regular login
+                            if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
+                                echo htmlspecialchars($_SESSION['nama_guru']);
+                            } else {
+                                echo htmlspecialchars($display_name);
+                            }
+                            ?></div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a href="profil_madrasah.php" class="dropdown-item has-icon">
+                                <i class="fas fa-cog"></i> Pengaturan
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="#" onclick="confirmLogoutInline()" class="dropdown-item has-icon text-danger">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                            <script>
+                            function confirmLogoutInline() {
+                                Swal.fire({
+                                    title: 'Konfirmasi Logout',
+                                    text: 'Apakah Anda yakin ingin keluar dari sistem?',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#3085d6',
+                                    cancelButtonColor: '#d33',
+                                    confirmButtonText: 'Ya, Keluar!',
+                                    cancelButtonText: 'Batal'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href = '../logout.php';
+                                    }
+                                });
+                            }
+                            </script>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
