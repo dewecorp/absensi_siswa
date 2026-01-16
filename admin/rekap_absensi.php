@@ -20,8 +20,12 @@ $css_libs = [
 $js_libs = [
     "node_modules/select2/dist/js/select2.full.min.js",
     "https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js",
-    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"
-    // Removed XLSX CDN due to 403 errors
+    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js",
+    // Using SheetJS from jsDelivr as alternative to XLSX
+    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+    // jsPDF libraries for PDF export
+    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"
 ];
 
 // Handle form submission
@@ -67,8 +71,14 @@ $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if ($class_id > 0) {
     if ($filter_type == 'daily' && !empty($selected_date)) {
         // Daily filter
+        // Get all students in the class
+        $stmt = $pdo->prepare("SELECT s.id_siswa, s.nama_siswa, s.nisn, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
+        $stmt->execute([$class_id]);
+        $all_daily_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Get attendance data for the selected date
         $stmt = $pdo->prepare("
-            SELECT s.nama_siswa, s.nisn, k.nama_kelas, a.keterangan, a.tanggal
+            SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, a.tanggal, k.nama_kelas
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa  
             LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
@@ -76,7 +86,31 @@ if ($class_id > 0) {
             ORDER BY s.nama_siswa ASC
         ");
         $stmt->execute([$class_id, $selected_date]);
-        $daily_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Organize attendance data by student ID
+        $attendance_by_student = [];
+        foreach ($attendance_records as $record) {
+            $attendance_by_student[$record['id_siswa']] = $record;
+        }
+        
+        // Combine all students with their attendance data
+        $daily_results = [];
+        foreach ($all_daily_students as $student) {
+            if (isset($attendance_by_student[$student['id_siswa']])) {
+                // Student has attendance data for this date
+                $daily_results[] = $attendance_by_student[$student['id_siswa']];
+            } else {
+                // Student has no attendance data for this date
+                $daily_results[] = [
+                    'nama_siswa' => $student['nama_siswa'],
+                    'nisn' => $student['nisn'],
+                    'keterangan' => 'Belum Absen', // Mark as not yet attended
+                    'tanggal' => $selected_date,
+                    'nama_kelas' => $student['nama_kelas'] // Include class name
+                ];
+            }
+        }
     } elseif ($filter_type == 'monthly' && !empty($selected_month)) {
         // Monthly filter
         $year = substr($selected_month, 0, 4);
@@ -85,7 +119,7 @@ if ($class_id > 0) {
         // Get all students in the class
         $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt->execute([$class_id]);
-        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Get attendance data for the month
         $stmt = $pdo->prepare("
@@ -98,23 +132,41 @@ if ($class_id > 0) {
         $stmt->execute([$class_id, $year, $month]);
         $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Organize data by student
-        $student_attendance = [];
+        // Organize attendance data by student ID
+        $attendance_by_student = [];
         foreach ($attendance_records as $record) {
             $student_id = $record['id_siswa'];
-            if (!isset($student_attendance[$student_id])) {
-                $student_attendance[$student_id] = [
-                    'nama_siswa' => $record['nama_siswa'],
-                    'nisn' => $record['nisn'],
+            if (!isset($attendance_by_student[$student_id])) {
+                $attendance_by_student[$student_id] = [
                     'days' => array_fill(1, 31, ''), // Initialize all days as empty
                     'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
                 ];
             }
             $day = (int)$record['day'];
-            $student_attendance[$student_id]['days'][$day] = $record['keterangan'];
-            if (isset($student_attendance[$student_id]['summary'][$record['keterangan']])) {
-                $student_attendance[$student_id]['summary'][$record['keterangan']]++;
+            $attendance_by_student[$student_id]['days'][$day] = $record['keterangan'];
+            if (isset($attendance_by_student[$student_id]['summary'][$record['keterangan']])) {
+                $attendance_by_student[$student_id]['summary'][$record['keterangan']]++;
             }
+        }
+        
+        // Combine all students with their attendance data
+        $student_attendance = [];
+        foreach ($all_students as $student) {
+            $student_id = $student['id_siswa'];
+            $student_data = [
+                'nama_siswa' => $student['nama_siswa'],
+                'nisn' => $student['nisn'],
+                'days' => array_fill(1, 31, ''), // Initialize all days as empty
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+            ];
+            
+            // Merge with attendance data if available
+            if (isset($attendance_by_student[$student_id])) {
+                $student_data['days'] = $attendance_by_student[$student_id]['days'];
+                $student_data['summary'] = $attendance_by_student[$student_id]['summary'];
+            }
+            
+            $student_attendance[$student_id] = $student_data;
         }
         
         // Convert to indexed array
@@ -168,7 +220,7 @@ if ($class_id > 0) {
         // Get all students in the class
         $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt->execute([$class_id]);
-        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Get attendance data for the semester
         $stmt = $pdo->prepare("
@@ -186,34 +238,59 @@ if ($class_id > 0) {
         // Debug: Log how many records found
         error_log("Found " . count($attendance_records) . " attendance records for semester filter");
         
-        // Organize data by student - calculate monthly and semester totals
-        $student_attendance = [];
+        // Organize attendance data by student ID
+        $attendance_by_student = [];
         foreach ($attendance_records as $record) {
             $student_id = $record['id_siswa'];
             $month = (int)$record['month'];
             $status = $record['keterangan'];
             
-            if (!isset($student_attendance[$student_id])) {
-                $student_attendance[$student_id] = [
-                    'nama_siswa' => $record['nama_siswa'],
-                    'nisn' => $record['nisn'],
+            if (!isset($attendance_by_student[$student_id])) {
+                $attendance_by_student[$student_id] = [
                     'monthly_totals' => [], // Initialize monthly totals array
                     'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
                 ];
                 
                 // Initialize all months in semester
                 for ($m = $start_month; $m <= $end_month; $m++) {
-                    $student_attendance[$student_id]['monthly_totals'][$m] = [
+                    $attendance_by_student[$student_id]['monthly_totals'][$m] = [
                         'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
                     ];
                 }
             }
             
             // Count attendance status for the month
-            if (isset($student_attendance[$student_id]['monthly_totals'][$month][$status])) {
-                $student_attendance[$student_id]['monthly_totals'][$month][$status]++;
-                $student_attendance[$student_id]['summary'][$status]++;
+            if (isset($attendance_by_student[$student_id]['monthly_totals'][$month][$status])) {
+                $attendance_by_student[$student_id]['monthly_totals'][$month][$status]++;
+                $attendance_by_student[$student_id]['summary'][$status]++;
             }
+        }
+        
+        // Combine all students with their attendance data
+        $student_attendance = [];
+        foreach ($all_students as $student) {
+            $student_id = $student['id_siswa'];
+            $student_data = [
+                'nama_siswa' => $student['nama_siswa'],
+                'nisn' => $student['nisn'],
+                'monthly_totals' => [],
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+            ];
+            
+            // Initialize monthly totals for all months in semester
+            for ($m = $start_month; $m <= $end_month; $m++) {
+                $student_data['monthly_totals'][$m] = [
+                    'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
+                ];
+            }
+            
+            // Merge with attendance data if available
+            if (isset($attendance_by_student[$student_id])) {
+                $student_data['monthly_totals'] = $attendance_by_student[$student_id]['monthly_totals'];
+                $student_data['summary'] = $attendance_by_student[$student_id]['summary'];
+            }
+            
+            $student_attendance[$student_id] = $student_data;
         }
         
         // Convert to indexed array
@@ -691,31 +768,121 @@ function exportToExcel() {
     }
     var newTable = table.cloneNode(true);
     
+    // Remove badges and keep only text for cleaner Excel output
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        var textNode = document.createTextNode(badge.textContent);
+        badge.parentNode.replaceChild(textNode, badge);
+    }
+    
     // Append header and table to container
     container.appendChild(headerDiv);
     container.appendChild(newTable);
     
     var html = container.innerHTML;
     
-    // Create download link
-    var a = document.createElement('a');
-    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-    a.href = data;
-    a.download = 'rekap_absensi_bulanan_' + '<?php echo htmlspecialchars($js_month_name_file, ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars($js_month_year_safe, ENT_QUOTES, "UTF-8"); ?>' + '.xls';
-    a.click();
+    // Check if SheetJS (xlsx) library is available
+    if (typeof XLSX !== 'undefined') {
+        // Convert table to worksheet using SheetJS
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
+        XLSX.writeFile(wb, 'rekap_absensi_bulanan_' + '<?php echo htmlspecialchars($js_month_name_file, ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars($js_month_year_safe, ENT_QUOTES, "UTF-8"); ?>' + '.xlsx');
+    } else {
+        // Fallback to HTML-based Excel export
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'rekap_absensi_bulanan_' + '<?php echo htmlspecialchars($js_month_name_file, ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars($js_month_year_safe, ENT_QUOTES, "UTF-8"); ?>' + '.xls';
+        a.click();
+    }
 }
 
 function exportToPDF() {
+    // Check if jsPDF library is available
+    if (typeof jsPDF !== 'undefined') {
+        var doc = new jsPDF('l', 'mm', 'a4');
+        
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Sistem Absensi Siswa', 105, 15, null, null, 'center');
+        
+        doc.setFontSize(14);
+        doc.text('<?php echo addslashes(htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8")); ?>', 105, 25, null, null, 'center');
+        
+        doc.setFontSize(12);
+        doc.text('Rekap Absensi Bulanan - <?php echo addslashes(htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8")); ?>', 105, 35, null, null, 'center');
+        
+        // Get the table element
+        var table = document.querySelector('.table-bordered');
+        if (table) {
+            // Use autoTable plugin if available
+            if (typeof doc.autoTable !== 'undefined') {
+                var columns = [];
+                var rows = [];
+                
+                // Extract headers
+                var headers = table.querySelectorAll('thead th');
+                for (var i = 0; i < headers.length; i++) {
+                    columns.push(headers[i].textContent.trim());
+                }
+                
+                // Extract rows
+                var dataRows = table.querySelectorAll('tbody tr');
+                for (var i = 0; i < dataRows.length; i++) {
+                    var rowData = [];
+                    var cells = dataRows[i].querySelectorAll('td');
+                    for (var j = 0; j < cells.length; j++) {
+                        // Extract text content, handling badges
+                        var cellText = cells[j].textContent.trim();
+                        // Remove extra spaces and clean up text
+                        cellText = cellText.replace(/\s+/g, ' ').trim();
+                        rowData.push(cellText);
+                    }
+                    rows.push(rowData);
+                }
+                
+                // Generate the table
+                doc.autoTable({
+                    head: [columns],
+                    body: rows,
+                    startY: 45,
+                    styles: {
+                        fontSize: 11,
+                        cellPadding: 3
+                    },
+                    headStyles: {
+                        fillColor: [221, 221, 221],
+                        textColor: [0, 0, 0],
+                        fontSize: 12
+                    },
+                    theme: 'grid'
+                });
+                
+                doc.save('rekap_absensi_bulanan_<?php echo addslashes(htmlspecialchars($js_month_name_file, ENT_QUOTES, "UTF-8")); ?>_<?php echo htmlspecialchars($js_month_year_safe, ENT_QUOTES, "UTF-8"); ?>.pdf');
+            } else {
+                // Fallback to print method
+                fallbackPrintPDF();
+            }
+        }
+    } else {
+        // Fallback to print method if library not loaded
+        fallbackPrintPDF();
+    }
+}
+
+function fallbackPrintPDF() {
     // Print the table as PDF with F4 landscape format
     var printWindow = window.open('', '', 'height=860,width=1118'); // F4 dimensions in pixels
     printWindow.document.write('<html><head><title>Rekap Absensi Bulanan</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: landscape; margin: 1cm; }'); // Landscape orientation
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 9px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.badge { padding: 1px 3px; border-radius: 2px; font-size: 7px; }');
+    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
     printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
     printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
@@ -733,6 +900,48 @@ function exportToPDF() {
     
     // Get the table
     var table = document.querySelector('.table-bordered');
+    if (table) {
+        printWindow.document.write(table.outerHTML);
+    }
+    
+    printWindow.document.write('</div>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
+
+function fallbackSemesterPrintPDF() {
+    // Print the semester table as PDF with F4 landscape format
+    var printWindow = window.open('', '', 'height=860,width=1118'); // F4 dimensions in pixels
+    printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: landscape; margin: 1cm; }'); // Landscape orientation
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
+    printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
+    printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
+    printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
+    printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
+    printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
+    printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
+    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
+    
+    // Get the semester table
+    var table = document.getElementById('semesterTable');
     if (table) {
         printWindow.document.write(table.outerHTML);
     }
@@ -766,31 +975,142 @@ function exportSemesterToExcel() {
     }
     var newTable = table.cloneNode(true);
     
+    // Remove badges and keep only text for cleaner Excel output
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        var textNode = document.createTextNode(badge.textContent);
+        badge.parentNode.replaceChild(textNode, badge);
+    }
+    
     // Append header and table to container
     container.appendChild(headerDiv);
     container.appendChild(newTable);
     
     var html = container.innerHTML;
     
-    // Create download link
-    var a = document.createElement('a');
-    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-    a.href = data;
-    a.download = 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xls';
-    a.click();
+    // Check if SheetJS (xlsx) library is available
+    if (typeof XLSX !== 'undefined') {
+        // Convert table to worksheet using SheetJS
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Semester");
+        XLSX.writeFile(wb, 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xlsx');
+    } else {
+        // Fallback to HTML-based Excel export
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xls';
+        a.click();
+    }
 }
 
 function exportSemesterToPDF() {
+    // Check if jsPDF library is available
+    if (typeof jsPDF !== 'undefined') {
+        var doc = new jsPDF('l', 'mm', 'a4');
+        
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Sistem Absensi Siswa', 105, 15, null, null, 'center');
+        
+        doc.setFontSize(14);
+        doc.text('<?php echo addslashes(htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8")); ?>', 105, 25, null, null, 'center');
+        
+        doc.setFontSize(12);
+        doc.text('Rekap Absensi <?php echo addslashes(htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8")); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>', 105, 35, null, null, 'center');
+        
+        // Get the semester table element
+        var table = document.getElementById('semesterTable');
+        if (table) {
+            // Use autoTable plugin if available
+            if (typeof doc.autoTable !== 'undefined') {
+                // Handle complex table with multi-row headers
+                var headRows = [];
+                var bodyRows = [];
+                
+                // Extract all header rows (multi-level headers)
+                var headerRows = table.querySelectorAll('thead tr');
+                for (var i = 0; i < headerRows.length; i++) {
+                    var headerCells = headerRows[i].querySelectorAll('th');
+                    var headerRow = [];
+                    for (var j = 0; j < headerCells.length; j++) {
+                        var cellText = headerCells[j].textContent.trim();
+                        // Handle cells with colspan by duplicating content appropriately
+                        var colspan = parseInt(headerCells[j].getAttribute('colspan')) || 1;
+                        for (var k = 0; k < colspan; k++) {
+                            headerRow.push(cellText);
+                        }
+                    }
+                    headRows.push(headerRow);
+                }
+                
+                // Extract body rows
+                var dataRows = table.querySelectorAll('tbody tr');
+                for (var i = 0; i < dataRows.length; i++) {
+                    var rowData = [];
+                    var cells = dataRows[i].querySelectorAll('td');
+                    for (var j = 0; j < cells.length; j++) {
+                        // Extract text content, handling badges and HTML
+                        var cellText = cells[j].textContent.trim();
+                        // Remove extra spaces and clean up text
+                        cellText = cellText.replace(/\s+/g, ' ').trim();
+                        // Ensure cell is not empty to display properly in PDF
+                        if (cellText === '-' || cellText === '') {
+                            cellText = ' ';
+                        }
+                        rowData.push(cellText);
+                    }
+                    bodyRows.push(rowData);
+                }
+                
+                // Generate the table with proper handling of multi-row headers
+                doc.autoTable({
+                    head: headRows,
+                    body: bodyRows,
+                    startY: 45,
+                    styles: {
+                        fontSize: 11,
+                        cellPadding: 3,
+                        valign: 'middle'
+                    },
+                    headStyles: {
+                        fillColor: [221, 221, 221],
+                        textColor: [0, 0, 0],
+                        fontStyle: 'bold',
+                        fontSize: 12
+                    },
+                    bodyStyles: {
+                        valign: 'middle'
+                    },
+                    theme: 'grid',
+                    tableWidth: 'wrap'
+                });
+                
+                doc.save('rekap_absensi_<?php echo addslashes(htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8")); ?>_<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>.pdf');
+            } else {
+                // Fallback to print method
+                fallbackSemesterPrintPDF();
+            }
+        }
+    } else {
+        // Fallback to print method if library not loaded
+        fallbackSemesterPrintPDF();
+    }
+}
+
+function fallbackSemesterPrintPDF() {
     // Print the semester table as PDF with F4 landscape format
     var printWindow = window.open('', '', 'height=860,width=1118'); // F4 dimensions in pixels
     printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: landscape; margin: 1cm; }'); // Landscape orientation
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 8px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 2px; text-align: center; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.badge { padding: 1px 2px; border-radius: 2px; font-size: 6px; }');
+    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
     printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
     printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
@@ -804,7 +1124,7 @@ function exportSemesterToPDF() {
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
+    printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
     
     // Get the semester table
     var table = document.getElementById('semesterTable');
@@ -990,7 +1310,7 @@ $(document).ready(function() {
             $('#dailyTable').DataTable({
                 "paging": true,
                 "lengthChange": true,
-                "pageLength": 10,
+                "pageLength": -1, // Show all records by default
                 "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
                 "dom": 'lfrtip',
                 "info": true,
@@ -1016,7 +1336,7 @@ $(document).ready(function() {
             $('#studentTable').DataTable({
                 "paging": true,
                 "lengthChange": true,
-                "pageLength": 10,
+                "pageLength": -1, // Show all records by default
                 "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
                 "dom": 'lfrtip',
                 "info": true,
@@ -1042,7 +1362,7 @@ $(document).ready(function() {
             $('#semesterTable').DataTable({
                 "paging": true,
                 "lengthChange": true,
-                "pageLength": 10,
+                "pageLength": -1, // Show all records by default
                 "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
                 "dom": 'lfrtip',
                 "info": true,
