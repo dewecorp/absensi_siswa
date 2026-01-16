@@ -867,5 +867,91 @@ $(document).ready(function() {
         // Small delay to allow for DOM updates
         setTimeout(initStudentSelect2, 100);
     });
+    
+    // Handle filter type change - show/hide date picker
+    $('#filterType').on('change', function() {
+        var filterType = $(this).val();
+        
+        // Hide all filter inputs
+        $('.daily-filter, .monthly-filter, .student-filter').hide();
+        
+        // Show appropriate filter input
+        if (filterType === 'daily') {
+            $('.daily-filter').show();
+        } else if (filterType === 'monthly') {
+            $('.monthly-filter').show();
+        } else if (filterType === 'student') {
+            $('.student-filter').show();
+        }
+    });
+    
+    // Validate form submission - check if date is selected for daily filter
+    $('#attendanceFilterForm').on('submit', function(e) {
+        var filterType = $('#filterType').val();
+        var classId = $('#classSelect').val();
+        var datePicker = $('#datePicker').val();
+        
+        // Check if class is selected
+        if (!classId || classId === '') {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Silakan pilih kelas terlebih dahulu!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return false;
+        }
+        
+        // Check if date is selected for daily filter
+        if (filterType === 'daily') {
+            if (!datePicker || datePicker === '' || datePicker === null) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: 'Untuk rekap harian, silakan pilih tanggal terlebih dahulu sebelum mencari!',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                }).then(function() {
+                    // Focus on date picker after alert is closed
+                    $('#datePicker').focus();
+                });
+                return false;
+            }
+        }
+        
+        // Check if month is selected for monthly filter
+        if (filterType === 'monthly') {
+            var monthPicker = $('#monthPicker').val();
+            if (!monthPicker || monthPicker === '' || monthPicker === null) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: 'Untuk rekap bulanan, silakan pilih bulan terlebih dahulu sebelum mencari!',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                return false;
+            }
+        }
+        
+        // Check if student is selected for student filter
+        if (filterType === 'student') {
+            var studentSelect = $('#studentSelect').val();
+            if (!studentSelect || studentSelect === '' || studentSelect === null) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: 'Untuk rekap per siswa, silakan pilih siswa terlebih dahulu sebelum mencari!',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                return false;
+            }
+        }
+        
+        // If all validations pass, allow form to submit normally
+        return true;
+    });
 });
 </script>

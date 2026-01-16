@@ -223,12 +223,23 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                                     </form>
                                     
                                     <script>
-                                        document.getElementById('kelasSelect').addEventListener('change', function() {
-                                            document.getElementById('filterForm').submit();
-                                        });
-                                        
-                                        document.getElementById('tanggalInput').addEventListener('change', function() {
-                                            document.getElementById('filterForm').submit();
+                                        $(document).ready(function() {
+                                            // Auto-submit when class is selected
+                                            $('#kelasSelect').on('change', function() {
+                                                var kelasId = $(this).val();
+                                                if (kelasId && kelasId !== '') {
+                                                    $('#filterForm').submit();
+                                                }
+                                            });
+                                            
+                                            // Auto-submit when date is selected
+                                            $('#tanggalInput').on('change', function() {
+                                                var tanggal = $(this).val();
+                                                var kelasId = $('#kelasSelect').val();
+                                                if (tanggal && tanggal !== '' && kelasId && kelasId !== '') {
+                                                    $('#filterForm').submit();
+                                                }
+                                            });
                                         });
                                     </script>
                                     

@@ -285,7 +285,7 @@ include '../templates/sidebar.php';
                                             </div>
                                             
                                             <div class="form-group col-md-2 d-flex align-items-end">
-                                                <button type="button" class="btn btn-primary btn-block" id="searchBtn" style="display: none;">
+                                                <button type="submit" class="btn btn-primary btn-block">
                                                     <i class="fas fa-search"></i> Cari
                                                 </button>
                                             </div>
@@ -842,7 +842,7 @@ $(document).ready(function() {
         setTimeout(initStudentSelect2, 100);
     });
     
-    // Handle filter type change - show/hide date picker and auto-submit
+    // Handle filter type change - show/hide date picker
     $('#filterType').on('change', function() {
         var filterType = $(this).val();
         
@@ -857,113 +857,17 @@ $(document).ready(function() {
         } else if (filterType === 'student') {
             $('.student-filter').show();
         }
-        
-        // Auto-submit if class is already selected
-        var classId = $('#classSelect').val();
-        if (classId && classId !== '') {
-            // Small delay to allow UI to update
-            setTimeout(function() {
-                autoSubmitForm();
-            }, 300);
-        }
     });
     
-    // Auto-submit when class is selected
-    $('#classSelect').on('change', function() {
-        var classId = $(this).val();
-        if (classId && classId !== '') {
-            // Small delay to allow UI to update
-            setTimeout(function() {
-                autoSubmitForm();
-            }, 300);
-        }
-    });
-    
-    // Auto-submit when date is selected (for daily filter)
-    $('#datePicker').on('change', function() {
-        var filterType = $('#filterType').val();
-        var classId = $('#classSelect').val();
-        if (filterType === 'daily' && classId && classId !== '') {
-            autoSubmitForm();
-        }
-    });
-    
-    // Auto-submit when month is selected (for monthly filter)
-    $('#monthPicker').on('change', function() {
-        var filterType = $('#filterType').val();
-        var classId = $('#classSelect').val();
-        if (filterType === 'monthly' && classId && classId !== '') {
-            autoSubmitForm();
-        }
-    });
-    
-    // Auto-submit when student is selected (for student filter)
-    $('#studentSelect').on('change', function() {
-        var filterType = $('#filterType').val();
-        var classId = $('#classSelect').val();
-        if (filterType === 'student' && classId && classId !== '') {
-            autoSubmitForm();
-        }
-    });
-    
-    // Function to auto-submit form with validation
-    function autoSubmitForm() {
+    // Validate form submission - check if date is selected for daily filter
+    $('#attendanceFilterForm').on('submit', function(e) {
         var filterType = $('#filterType').val();
         var classId = $('#classSelect').val();
         var datePicker = $('#datePicker').val();
         
         // Check if class is selected
         if (!classId || classId === '') {
-            return false;
-        }
-        
-        // Validate based on filter type
-        if (filterType === 'daily') {
-            if (!datePicker || datePicker === '' || datePicker === null) {
-                // Don't submit if date is not selected
-                return false;
-            }
-        } else if (filterType === 'monthly') {
-            var monthPicker = $('#monthPicker').val();
-            if (!monthPicker || monthPicker === '' || monthPicker === null) {
-                return false;
-            }
-        } else if (filterType === 'student') {
-            var studentSelect = $('#studentSelect').val();
-            if (!studentSelect || studentSelect === '' || studentSelect === null) {
-                return false;
-            }
-        }
-        
-        // If all validations pass, submit the form
-        console.log('Auto-submitting form...');
-        $('#attendanceFilterForm').submit();
-    }
-    
-    // Handle search button click with validation (using event delegation)
-    $(document).on('click', '#searchBtn', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        console.log('Search button clicked!');
-        
-        var filterType = $('#filterType').val();
-        var classId = $('#classSelect').val();
-        var datePicker = $('#datePicker').val();
-        
-        console.log('Filter Type:', filterType, 'Class ID:', classId, 'Date:', datePicker);
-        
-        // Check if SweetAlert is available
-        if (typeof Swal === 'undefined') {
-            console.error('SweetAlert is not loaded!');
-            alert('Untuk rekap harian, silakan pilih tanggal terlebih dahulu sebelum mencari!');
-            return false;
-        }
-        
-        console.log('SweetAlert is available');
-        
-        // Check if class is selected
-        if (!classId || classId === '') {
+            e.preventDefault();
             Swal.fire({
                 title: 'Peringatan!',
                 text: 'Silakan pilih kelas terlebih dahulu!',
@@ -976,6 +880,7 @@ $(document).ready(function() {
         // Check if date is selected for daily filter
         if (filterType === 'daily') {
             if (!datePicker || datePicker === '' || datePicker === null) {
+                e.preventDefault();
                 Swal.fire({
                     title: 'Peringatan!',
                     text: 'Untuk rekap harian, silakan pilih tanggal terlebih dahulu sebelum mencari!',
@@ -993,6 +898,7 @@ $(document).ready(function() {
         if (filterType === 'monthly') {
             var monthPicker = $('#monthPicker').val();
             if (!monthPicker || monthPicker === '' || monthPicker === null) {
+                e.preventDefault();
                 Swal.fire({
                     title: 'Peringatan!',
                     text: 'Untuk rekap bulanan, silakan pilih bulan terlebih dahulu sebelum mencari!',
@@ -1007,6 +913,7 @@ $(document).ready(function() {
         if (filterType === 'student') {
             var studentSelect = $('#studentSelect').val();
             if (!studentSelect || studentSelect === '' || studentSelect === null) {
+                e.preventDefault();
                 Swal.fire({
                     title: 'Peringatan!',
                     text: 'Untuk rekap per siswa, silakan pilih siswa terlebih dahulu sebelum mencari!',
@@ -1017,9 +924,8 @@ $(document).ready(function() {
             }
         }
         
-        // If all validations pass, submit the form
-        console.log('All validations passed, submitting form...');
-        $('#attendanceFilterForm').submit();
+        // If all validations pass, allow form to submit normally
+        return true;
     });
     
     // Initialize DataTables for all tables with pagination

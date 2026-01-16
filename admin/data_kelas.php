@@ -58,15 +58,15 @@ $teachers = $teacherStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Define CSS libraries for this page
 $css_libs = [
-    'node_modules/datatables.net-bs4/css/dataTables.bootstrap4.min.css',
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css',
     '../node_modules/select2/dist/css/select2.min.css'
 ];
 
 // Define JS libraries for this page
 $js_libs = [
-    'node_modules/datatables/media/js/jquery.dataTables.min.js',
-    'node_modules/datatables.net-bs4/js/dataTables.bootstrap4.min.js',
+    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
+    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js',
     '../node_modules/select2/dist/js/select2.full.min.js'
 ];
@@ -77,32 +77,49 @@ $js_page = [];
 // Add JavaScript for delete confirmation
 $js_page[] = "
 \$(document).ready(function() {
-    // Initialize DataTables
-    $('#table-1').DataTable({
-        \"columnDefs\": [
-            { \"sortable\": false, \"targets\": [3] }
-        ],
-        \"paging\": true,
-        \"lengthChange\": true,
-        \"pageLength\": 10,
-        \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-        \"dom\": 'lfrtip',
-        \"info\": true,
-        \"language\": {
-            \"lengthMenu\": \"Tampilkan _MENU_ entri\",
-            \"zeroRecords\": \"Tidak ada data yang ditemukan\",
-            \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
-            \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
-            \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
-            \"search\": \"Cari:\",
-            \"paginate\": {
-                \"first\": \"Pertama\",
-                \"last\": \"Terakhir\",
-                \"next\": \"Selanjutnya\",
-                \"previous\": \"Sebelumnya\"
-            }
+    // Initialize DataTables with pagination and show entries
+    function initDataTable() {
+        if (typeof $.fn.DataTable === 'undefined') {
+            console.warn('DataTables library not loaded, retrying...');
+            setTimeout(initDataTable, 100);
+            return;
         }
-    });
+        
+        // Check if DataTable is already initialized
+        if ($.fn.DataTable.isDataTable('#table-1')) {
+            $('#table-1').DataTable().destroy();
+        }
+        
+        $('#table-1').DataTable({
+            \"columnDefs\": [
+                { \"sortable\": false, \"targets\": [3] }
+            ],
+            \"paging\": true,
+            \"lengthChange\": true,
+            \"pageLength\": 10,
+            \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+            \"dom\": 'lfrtip',
+            \"info\": true,
+            \"language\": {
+                \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                \"search\": \"Cari:\",
+                \"paginate\": {
+                    \"first\": \"Pertama\",
+                    \"last\": \"Terakhir\",
+                    \"next\": \"Selanjutnya\",
+                    \"previous\": \"Sebelumnya\"
+                }
+            }
+        });
+        console.log('DataTables initialized for table-1');
+    }
+    
+    // Initialize DataTables
+    initDataTable();
     
     // Initialize Select2 for the main page
     if (\$('.select2').length > 0) {
