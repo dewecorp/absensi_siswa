@@ -24,33 +24,104 @@ if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// Get statistics
-$stmt = $pdo->prepare("SELECT COUNT(*) as total_kelas FROM tb_kelas WHERE wali_kelas = ?");
-$stmt->execute([$teacher['nama_guru']]);
-$total_kelas = $stmt->fetch(PDO::FETCH_ASSOC)['total_kelas'];
+// Get classes that this teacher teaches (from mengajar field)
+$teacher_class_ids = [];
+$teacher_classes = []; // Store full class data
+if (!empty($teacher['mengajar'])) {
+    $mengajar_decoded = json_decode($teacher['mengajar'], true);
+    if (is_array($mengajar_decoded) && !empty($mengajar_decoded)) {
+        // Get all classes first
+        $all_classes_stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
+        $all_classes = $all_classes_stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Filter classes based on mengajar IDs
+        foreach ($mengajar_decoded as $kelas_id) {
+            // Handle both numeric IDs and string IDs, and also class names
+            $kelas_id_int = is_numeric($kelas_id) ? (int)$kelas_id : null;
+            
+            foreach ($all_classes as $kelas) {
+                $match = false;
+                
+                // Match by ID (numeric or string)
+                if ($kelas_id_int !== null && $kelas['id_kelas'] == $kelas_id_int) {
+                    $match = true;
+                } elseif ((string)$kelas['id_kelas'] == (string)$kelas_id) {
+                    $match = true;
+                } elseif ($kelas['nama_kelas'] == $kelas_id) {
+                    // Also check if mengajar contains class names instead of IDs
+                    $match = true;
+                }
+                
+                if ($match) {
+                    if (!in_array($kelas['id_kelas'], $teacher_class_ids)) {
+                        $teacher_class_ids[] = $kelas['id_kelas'];
+                        $teacher_classes[] = $kelas; // Store full class data
+                    }
+                    break;
+                }
+            }
+        }
+    }
+}
 
-$stmt = $pdo->prepare("SELECT COUNT(*) as total_siswa FROM tb_siswa WHERE id_kelas IN (SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ?)");
-$stmt->execute([$teacher['nama_guru']]);
-$total_siswa = $stmt->fetch(PDO::FETCH_ASSOC)['total_siswa'];
+// Get students with attendance status for each class
+$class_students = [];
+$today = date('Y-m-d');
+foreach ($teacher_classes as $kelas) {
+    $stmt = $pdo->prepare("
+        SELECT s.*, a.keterangan 
+        FROM tb_siswa s 
+        LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = ? 
+        WHERE s.id_kelas = ? 
+        ORDER BY s.nama_siswa ASC
+    ");
+    $stmt->execute([$today, $kelas['id_kelas']]);
+    $class_students[$kelas['id_kelas']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
-// Get today's attendance for teacher's classes
-$stmt = $pdo->prepare("
-    SELECT keterangan, COUNT(*) as jumlah 
-    FROM tb_absensi 
-    WHERE tanggal = CURDATE() 
-    AND id_siswa IN (
-        SELECT id_siswa 
-        FROM tb_siswa 
-        WHERE id_kelas IN (
-            SELECT id_kelas 
-            FROM tb_kelas 
-            WHERE wali_kelas = ?
+// Get students with attendance status for each class
+$class_students = [];
+$today = date('Y-m-d');
+foreach ($teacher_classes as $kelas) {
+    $stmt = $pdo->prepare("
+        SELECT s.*, a.keterangan 
+        FROM tb_siswa s 
+        LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = ? 
+        WHERE s.id_kelas = ? 
+        ORDER BY s.nama_siswa ASC
+    ");
+    $stmt->execute([$today, $kelas['id_kelas']]);
+    $class_students[$kelas['id_kelas']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Get statistics based on classes that teacher teaches
+$total_kelas = count($teacher_class_ids);
+
+if (!empty($teacher_class_ids)) {
+    // Get total students from classes that teacher teaches
+    $placeholders = str_repeat('?,', count($teacher_class_ids) - 1) . '?';
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total_siswa FROM tb_siswa WHERE id_kelas IN ($placeholders)");
+    $stmt->execute($teacher_class_ids);
+    $total_siswa = $stmt->fetch(PDO::FETCH_ASSOC)['total_siswa'];
+    
+    // Get today's attendance for teacher's classes
+    $stmt = $pdo->prepare("
+        SELECT keterangan, COUNT(*) as jumlah 
+        FROM tb_absensi 
+        WHERE tanggal = CURDATE() 
+        AND id_siswa IN (
+            SELECT id_siswa 
+            FROM tb_siswa 
+            WHERE id_kelas IN ($placeholders)
         )
-    )
-    GROUP BY keterangan
-");
-$stmt->execute([$teacher['nama_guru']]);
-$attendance_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        GROUP BY keterangan
+    ");
+    $stmt->execute($teacher_class_ids);
+    $attendance_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $total_siswa = 0;
+    $attendance_stats = [];
+}
 
 // Initialize counts
 $jumlah_hadir = $jumlah_sakit = $jumlah_izin = $jumlah_alpa = 0;
@@ -74,13 +145,11 @@ foreach ($attendance_stats as $stat) {
 $page_title = 'Dashboard Guru';
 
 // Define CSS libraries for this page (only essential ones)
-$css_libs = [
-    // Removed JQVMap since files don't exist
-];
+$css_libs = [];
 
 // Define JS libraries for this page (only essential ones)
 $js_libs = [
-    // Removed JQVMap since files don't exist
+    'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js'
 ];
 
 // Define page-specific JS
@@ -188,119 +257,10 @@ $js_page = [
     "
 ];
 
+include '../templates/user_header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-    <title>Dashboard Guru | <?php echo $school_profile['nama_madrasah']; ?></title>
-
-    <!-- General CSS Files -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-
-    <!-- CSS Libraries -->
-    <link rel="stylesheet" href="../node_modules/jqvmap/dist/jqvmap.min.css">
-    <link rel="stylesheet" href="../node_modules/weathericons/css/weather-icons.min.css">
-    <link rel="stylesheet" href="../node_modules/weathericons/css/weather-icons-wind.min.css">
-    <link rel="stylesheet" href="../node_modules/summernote/dist/summernote-bs4.css">
-
-    <!-- Template CSS -->
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/components.css">
-</head>
-
-<body>
-    <div id="app">
-        <div class="main-wrapper">
-            <div class="navbar-bg"></div>
-            <nav class="navbar navbar-expand-lg main-navbar">
-                <form class="form-inline mr-auto">
-                    <ul class="navbar-nav mr-3">
-                        <li><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
-                    </ul>
-                </form>
-                <ul class="navbar-nav navbar-right">
-                    <li class="dropdown">
-                        <?php
-                        // Get user data to display personalized avatar
-                        $user_level = getUserLevel();
-                        
-                        if ($user_level === 'guru' || $user_level === 'wali') {
-                            // For guru/wali, get teacher data to show teacher avatar
-                            $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
-                            $teacher_stmt->execute([$_SESSION['username']]);
-                            $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
-                            
-                            // If not found by name, try to get by session info
-                            if (!$current_user && isset($_SESSION['nama_guru'])) {
-                                $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
-                                $teacher_stmt->execute([$_SESSION['nama_guru']]);
-                                $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
-                            }
-                            
-                            $avatar_html = getTeacherAvatarImage($current_user ?? ['nama_guru' => $_SESSION['username']], 30);
-                            $display_name = $current_user['nama_guru'] ?? $_SESSION['username'];
-                        } else {
-                            // For admin, get user data
-                            $user_stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");
-                            $user_stmt->execute([$_SESSION['username']]);
-                            $current_user = $user_stmt->fetch(PDO::FETCH_ASSOC);
-                            
-                            // Fallback if teacher logged in directly (not through tb_pengguna)
-                            if (!$current_user) {
-                                // For direct login via NUPTK, create a mock user object
-                                $current_user = ['username' => $_SESSION['username'], 'foto' => null];
-                            }
-                            
-                            $avatar_html = getUserAvatarImage($current_user, 30);
-                            $display_name = $_SESSION['username'];
-                        }
-                        ?>
-                        <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
-                            <?php echo $avatar_html; ?>
-                            <div class="d-sm-none d-lg-inline-block">Hi, <?php echo htmlspecialchars($display_name); ?></div>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <a href="features-profile.html" class="dropdown-item has-icon">
-                                <i class="far fa-user"></i> Profile
-                            </a>
-                            <a href="features-settings.html" class="dropdown-item has-icon">
-                                <i class="fas fa-cog"></i> Settings
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a href="../logout.php" class="dropdown-item has-icon text-danger">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </div>
-                    </li>
-                </ul>
-            </nav>
-            <div class="main-sidebar">
-                <aside id="sidebar-wrapper">
-                    <div class="sidebar-brand">
-                        <a href="dashboard.php">Sistem Absensi Siswa</a>
-                    </div>
-                    <div class="sidebar-brand sidebar-brand-sm">
-                        <a href="dashboard.php">SA</a>
-                    </div>
-                    <ul class="sidebar-menu">
-                        <li class="menu-header">Dashboard</li>
-                        <li class="active"><a class="nav-link" href="dashboard.php"><i class="fas fa-fire"></i> <span>Dashboard</span></a></li>
-                        
-                        <li class="menu-header">Absensi</li>
-                        <li><a class="nav-link" href="absensi_kelas.php"><i class="fas fa-calendar-check"></i> <span>Absensi</span></a></li>
-                        
-                        <li class="menu-header">Rekap</li>
-                        <li><a class="nav-link" href="rekap_absensi.php"><i class="fas fa-book"></i> <span>Rekap Absensi</span></a></li>
-                    </ul>
-                </aside>
-            </div>
-
-            <!-- Main Content -->
-            <div class="main-content">
+<div class="main-content">
                 <section class="section">
                     <div class="section-header">
                         <h1>Dashboard Guru</h1>
@@ -332,10 +292,20 @@ $js_page = [
                                 </div>
                                 <div class="card-wrap">
                                     <div class="card-header">
-                                        <h4>Data Guru</h4>
+                                        <h4>Nama Guru</h4>
                                     </div>
-                                    <div class="card-body">
-                                        <?php echo $teacher ? htmlspecialchars($teacher['nama_guru']) : 'N/A'; ?>
+                                    <div class="card-body" style="font-size: 0.9rem; line-height: 1.4;">
+                                        <?php 
+                                        if ($teacher) {
+                                            // Display teacher name - ensure it's displayed on one line
+                                            $nama_guru = trim($teacher['nama_guru']);
+                                            // Clean up any extra spaces
+                                            $nama_guru = preg_replace('/\s+/', ' ', $nama_guru);
+                                            echo htmlspecialchars($nama_guru);
+                                        } else {
+                                            echo 'N/A';
+                                        }
+                                        ?>
                                     </div>
                                 </div>
                             </div>
@@ -384,95 +354,159 @@ $js_page = [
                             </div>
                         </div>
                     </div>
+                    
+                    <?php if (!empty($teacher_classes)): ?>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Status Kehadiran Siswa Hari Ini</h4>
+                                </div>
+                                <div class="card-body">
+                                    <?php if (count($teacher_classes) > 1): ?>
+                                    <!-- Tabs for multiple classes -->
+                                    <ul class="nav nav-tabs" id="classTabs" role="tablist">
+                                        <?php foreach ($teacher_classes as $index => $kelas): ?>
+                                        <li class="nav-item">
+                                            <a class="nav-link <?php echo $index === 0 ? 'active' : ''; ?>" 
+                                               id="tab-<?php echo $kelas['id_kelas']; ?>" 
+                                               data-toggle="tab" 
+                                               href="#content-<?php echo $kelas['id_kelas']; ?>" 
+                                               role="tab">
+                                                <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
+                                            </a>
+                                        </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                    <div class="tab-content" id="classTabContent">
+                                        <?php foreach ($teacher_classes as $index => $kelas): ?>
+                                        <div class="tab-pane fade <?php echo $index === 0 ? 'show active' : ''; ?>" 
+                                             id="content-<?php echo $kelas['id_kelas']; ?>" 
+                                             role="tabpanel">
+                                            <div class="table-responsive mt-3">
+                                                <table class="table table-striped table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>No</th>
+                                                            <th>Nama Siswa</th>
+                                                            <th>NISN</th>
+                                                            <th>Status Kehadiran</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php 
+                                                        $students = $class_students[$kelas['id_kelas']] ?? [];
+                                                        if (empty($students)): ?>
+                                                        <tr>
+                                                            <td colspan="4" class="text-center">Tidak ada siswa dalam kelas ini</td>
+                                                        </tr>
+                                                        <?php else: ?>
+                                                        <?php foreach ($students as $idx => $student): ?>
+                                                        <tr>
+                                                            <td><?php echo $idx + 1; ?></td>
+                                                            <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
+                                                            <td><?php echo htmlspecialchars($student['nisn']); ?></td>
+                                                            <td>
+                                                                <?php 
+                                                                $status = $student['keterangan'] ?? 'Belum Diisi';
+                                                                $badge_class = '';
+                                                                switch($status) {
+                                                                    case 'Hadir':
+                                                                        $badge_class = 'badge-success';
+                                                                        break;
+                                                                    case 'Sakit':
+                                                                        $badge_class = 'badge-info';
+                                                                        break;
+                                                                    case 'Izin':
+                                                                        $badge_class = 'badge-warning';
+                                                                        break;
+                                                                    case 'Alpa':
+                                                                        $badge_class = 'badge-danger';
+                                                                        break;
+                                                                    default:
+                                                                        $badge_class = 'badge-secondary';
+                                                                }
+                                                                ?>
+                                                                <span class="badge <?php echo $badge_class; ?>">
+                                                                    <?php echo htmlspecialchars($status); ?>
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                        <?php endforeach; ?>
+                                                        <?php endif; ?>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <?php else: ?>
+                                    <!-- Single class - no tabs needed -->
+                                    <?php $kelas = $teacher_classes[0]; ?>
+                                    <div class="table-responsive mt-3">
+                                        <table class="table table-striped table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>No</th>
+                                                    <th>Nama Siswa</th>
+                                                    <th>NISN</th>
+                                                    <th>Status Kehadiran</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php 
+                                                $students = $class_students[$kelas['id_kelas']] ?? [];
+                                                if (empty($students)): ?>
+                                                <tr>
+                                                    <td colspan="4" class="text-center">Tidak ada siswa dalam kelas ini</td>
+                                                </tr>
+                                                <?php else: ?>
+                                                <?php foreach ($students as $idx => $student): ?>
+                                                <tr>
+                                                    <td><?php echo $idx + 1; ?></td>
+                                                    <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
+                                                    <td><?php echo htmlspecialchars($student['nisn']); ?></td>
+                                                    <td>
+                                                        <?php 
+                                                        $status = $student['keterangan'] ?? 'Belum Diisi';
+                                                        $badge_class = '';
+                                                        switch($status) {
+                                                            case 'Hadir':
+                                                                $badge_class = 'badge-success';
+                                                                break;
+                                                            case 'Sakit':
+                                                                $badge_class = 'badge-info';
+                                                                break;
+                                                            case 'Izin':
+                                                                $badge_class = 'badge-warning';
+                                                                break;
+                                                            case 'Alpa':
+                                                                $badge_class = 'badge-danger';
+                                                                break;
+                                                            default:
+                                                                $badge_class = 'badge-secondary';
+                                                        }
+                                                        ?>
+                                                        <span class="badge <?php echo $badge_class; ?>">
+                                                            <?php echo htmlspecialchars($status); ?>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </section>
             </div>
-            
-            <footer class="main-footer">
-                <div class="footer-left">
-                    Copyright &copy; <?php echo date('Y'); ?> <div class="bullet"></div> <a href="#">Sistem Absensi Siswa</a>
-                </div>
-                <div class="footer-right">
-                    2.3.0
-                </div>
-            </footer>
-        </div>
-    </div>
+</div>
 
-    <!-- General JS Scripts -->
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.nicescroll/3.7.6/jquery.nicescroll.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
-    <script src="../assets/js/stisla.js"></script>
-
-    <!-- JS Libraies -->
-    <script src="../node_modules/simple-weather/jquery.simpleWeather.min.js"></script>
-    <script src="../node_modules/chart.js/dist/Chart.min.js"></script>
-    <script src="../node_modules/jqvmap/dist/jquery.vmap.min.js"></script>
-    <script src="../node_modules/jqvmap/dist/maps/jquery.vmap.world.js"></script>
-    <script src="../node_modules/summernote/dist/summernote-bs4.js"></script>
-    <script src="../node_modules/chocolat/dist/js/jquery.chocolat.min.js"></script>
-
-    <!-- Template JS File -->
-    <script src="../assets/js/scripts.js"></script>
-    <script src="../assets/js/custom.js"></script>
-
-
-
-    <!-- Add activity timeline section -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h4>Aktivitas Terbaru</h4>
-                </div>
-                <div class="card-body">
-                    <div class="activities" style="max-height: 400px; overflow-y: auto;">
-                        <?php 
-                        // Get recent activities from the activity log
-                        $activity_stmt = $pdo->query("SELECT username, action, description, created_at FROM tb_activity_log ORDER BY created_at DESC LIMIT 10");
-                        $activities = $activity_stmt->fetchAll(PDO::FETCH_ASSOC);
-                        
-                        foreach ($activities as $activity): 
-                        ?>
-                        <div class="activity">
-                            <div class="activity-icon bg-primary text-white shadow-primary">
-                                <i class="<?php echo getActivityIcon(htmlspecialchars($activity['action'])); ?>"></i>
-                            </div>
-                            <div class="activity-detail">
-                                <div class="mb-2">
-                                    <span class="text-job text-primary text-capitalize"><?php echo htmlspecialchars($activity['username']); ?></span>
-                                    <span class="text-muted"><?php echo timeAgo($activity['created_at']); ?></span>
-                                    <span class="bullet"></span>
-                                    <a class="text-job" href="#">View</a>
-                                    <div class="float-right dropdown">
-                                      <a href="#" data-toggle="dropdown"><i class="fas fa-ellipsis-h"></i></a>
-                                      <div class="dropdown-menu">
-                                        <div class="dropdown-title">Options</div>
-                                        <a href="#" class="dropdown-item has-icon"><i class="fas fa-eye"></i> View</a>
-                                        <a href="#" class="dropdown-item has-icon"><i class="fas fa-list"></i> Detail</a>
-                                        <div class="dropdown-divider"></div>
-                                        <a href="#" class="dropdown-item has-icon text-danger" data-confirm="Wait, wait, wait...|This action can't be undone. Want to take risks?" data-confirm-text-yes="Yes, IDC"><i class="fas fa-trash-alt"></i> Archive</a>
-                                      </div>
-                                    </div>
-                                </div>
-                                <p>
-                                    <strong><?php echo htmlspecialchars($activity['action']); ?></strong>: 
-                                    <?php echo htmlspecialchars($activity['description']); ?>
-                                </p>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                        <?php if(empty($activities)): ?>
-                        <div class="text-center py-4">
-                            <p class="text-muted">Tidak ada aktivitas terbaru</p>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+<?php
+include '../templates/user_footer.php';
+?>

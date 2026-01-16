@@ -37,7 +37,11 @@ if (!isset($school_profile)) {
     <!-- JS Libraries -->
     <?php if (isset($js_libs) && is_array($js_libs)): ?>
         <?php foreach ($js_libs as $js): ?>
-            <script src="../<?php echo $js; ?>"></script>
+            <?php if (strpos($js, 'http://') === 0 || strpos($js, 'https://') === 0): ?>
+                <script src="<?php echo $js; ?>"></script>
+            <?php else: ?>
+                <script src="../<?php echo $js; ?>"></script>
+            <?php endif; ?>
         <?php endforeach; ?>
     <?php endif; ?>
 
@@ -53,6 +57,26 @@ if (!isset($school_profile)) {
             </script>
         <?php endforeach; ?>
     <?php endif; ?>
+
+    <!-- Logout Confirmation Function -->
+    <script>
+    function confirmLogoutInline() {
+        Swal.fire({
+            title: 'Konfirmasi Logout',
+            text: 'Apakah Anda yakin ingin keluar dari sistem?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, Keluar!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '../logout.php';
+            }
+        });
+    }
+    </script>
 
 </body>
 </html>

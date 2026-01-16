@@ -63,7 +63,7 @@ foreach ($attendance_stats as $stat) {
     }
 }
 
-$page_title = 'Dashboard Wali';
+$page_title = 'Dashboard Wali Kelas';
 
 // Define CSS libraries for this page (only essential ones)
 $css_libs = [
@@ -194,7 +194,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
                 <section class="section">
                     <div class="section-header">
-                        <h1>Dashboard Wali</h1>
+                        <h1>Dashboard Wali Kelas</h1>
                         <div class="section-header-breadcrumb">
                             <div class="breadcrumb-item active"><a href="#">Dashboard</a></div>
                         </div>
@@ -208,10 +208,15 @@ include '../templates/sidebar.php';
                                 </div>
                                 <div class="card-wrap">
                                     <div class="card-header">
-                                        <h4>Nama Wali</h4>
+                                        <h4>Nama Wali Kelas</h4>
                                     </div>
-                                    <div class="card-body">
-                                        <?php echo htmlspecialchars($teacher_name); ?>
+                                    <div class="card-body" style="font-size: 0.85rem; line-height: 1.3;">
+                                        <?php 
+                                        // Clean up teacher name and make it smaller
+                                        $nama_wali = trim($teacher_name);
+                                        $nama_wali = preg_replace('/\s+/', ' ', $nama_wali);
+                                        echo htmlspecialchars($nama_wali); 
+                                        ?>
                                     </div>
                                 </div>
                             </div>

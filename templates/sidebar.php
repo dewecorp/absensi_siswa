@@ -74,17 +74,14 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Absensi',
+                'title' => 'Absensi Kelas',
                 'icon' => 'fas fa-calendar-check',
-                'submenu' => [
-                    ['title' => 'Absensi Kelas', 'url' => 'absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
-                    ['title' => 'Rekap Absensi', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
-                ],
-                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php'])
+                'url' => 'absensi_kelas.php',
+                'active' => $current_page === 'absensi_kelas.php'
             ],
             [
-                'title' => 'Profil & Pengaturan',
-                'icon' => 'fas fa-user-cog',
+                'title' => 'Profil',
+                'icon' => 'fas fa-user',
                 'url' => 'profil.php',
                 'active' => $current_page === 'profil.php'
             ],
@@ -169,10 +166,6 @@ switch ($user_level) {
                 <?php endif; ?>
             <?php endforeach; ?>
         </ul>
-        
-        </ul>
     </aside>
 </div>
-        
-    </aside>
 </div>

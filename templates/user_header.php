@@ -35,7 +35,11 @@ if (!isLoggedIn()) {
     <!-- CSS Libraries -->
     <?php if (isset($css_libs) && is_array($css_libs)): ?>
         <?php foreach ($css_libs as $css): ?>
-            <link rel="stylesheet" href="../<?php echo $css; ?>">
+            <?php if (strpos($css, 'http://') === 0 || strpos($css, 'https://') === 0): ?>
+                <link rel="stylesheet" href="<?php echo $css; ?>">
+            <?php else: ?>
+                <link rel="stylesheet" href="../<?php echo $css; ?>">
+            <?php endif; ?>
         <?php endforeach; ?>
     <?php endif; ?>
 
@@ -115,11 +119,11 @@ if (!isLoggedIn()) {
                                 <i class="far fa-user"></i> Profil & Pengaturan
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a href="../logout.php" class="dropdown-item has-icon text-danger">
+                            <a href="#" onclick="confirmLogoutInline(); return false;" class="dropdown-item has-icon text-danger">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
                         </div>
                     </li>
                 </ul>
             </nav>
-</file_content>
+            <?php include 'sidebar.php'; ?>
