@@ -76,19 +76,43 @@ if (!isLoggedIn()) {
                         
                         if ($user_level === 'guru' || $user_level === 'wali') {
                             // For guru/wali, get teacher data to show teacher avatar
-                            $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
-                            $teacher_stmt->execute([$_SESSION['username']]);
-                            $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+                            $current_user = null;
+                            $display_name = '';
                             
-                            // If not found by name, try to get by session info
-                            if (!$current_user && isset($_SESSION['nama_guru'])) {
+                            // First, try to get by nama_guru from session (most reliable)
+                            if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
                                 $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
                                 $teacher_stmt->execute([$_SESSION['nama_guru']]);
                                 $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+                                $display_name = $_SESSION['nama_guru'];
                             }
                             
-                            $avatar_html = getTeacherAvatarImage($current_user ?? ['nama_guru' => $_SESSION['username']], 30);
-                            $display_name = $current_user['nama_guru'] ?? $_SESSION['username'];
+                            // If not found, try to get by user_id (id_guru)
+                            if (!$current_user && isset($_SESSION['user_id'])) {
+                                $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+                                $teacher_stmt->execute([$_SESSION['user_id']]);
+                                $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+                                if ($current_user) {
+                                    $display_name = $current_user['nama_guru'];
+                                }
+                            }
+                            
+                            // If still not found, try by NUPTK (username might be NUPTK)
+                            if (!$current_user && isset($_SESSION['username'])) {
+                                $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nuptk = ?");
+                                $teacher_stmt->execute([$_SESSION['username']]);
+                                $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+                                if ($current_user) {
+                                    $display_name = $current_user['nama_guru'];
+                                }
+                            }
+                            
+                            // Fallback: use nama_guru from session or username
+                            if (empty($display_name)) {
+                                $display_name = $_SESSION['nama_guru'] ?? $_SESSION['username'] ?? 'User';
+                            }
+                            
+                            $avatar_html = getTeacherAvatarImage($current_user ?? ['nama_guru' => $display_name], 30);
                         } else {
                             // For admin, get user data
                             $user_stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");

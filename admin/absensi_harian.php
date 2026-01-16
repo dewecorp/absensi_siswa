@@ -19,35 +19,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     $id_kelas = (int)$_POST['id_kelas'];
     $tanggal = $_POST['tanggal'];
     
-    // Get students in selected class
-    $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ?");
-    $stmt->execute([$id_kelas]);
-    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Save attendance for each student
-    foreach ($students as $student) {
-        $id_siswa = $student['id_siswa'];
-        $keterangan = $_POST['keterangan_' . $id_siswa] ?? 'Alpa'; // Default to Alpa if not selected
-        
-        // Check if attendance already exists for this student and date
-        $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
-        $check_stmt->execute([$id_siswa, $tanggal]);
-        
-        if ($check_stmt->rowCount() > 0) {
-            // Update existing record
-            $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ? WHERE id_siswa = ? AND tanggal = ?");
-            $update_stmt->execute([$keterangan, $id_siswa, $tanggal]);
-        } else {
-            // Insert new record
-            // For admin users, id_guru should be NULL since they don't have a valid teacher ID
-            $id_guru = ($_SESSION['level'] === 'admin') ? NULL : $_SESSION['user_id'];
-            $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru) VALUES (?, ?, ?, ?)");
-            $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru]);
+    // Only process students that are actually in the POST data
+    // This prevents DataTables pagination from affecting students on other pages
+    $saved_count = 0;
+    foreach ($_POST as $key => $value) {
+        // Check if this is a keterangan field (keterangan_[id_siswa])
+        if (strpos($key, 'keterangan_') === 0) {
+            $id_siswa = (int)str_replace('keterangan_', '', $key);
+            $keterangan = $value;
+            
+            // Validate keterangan value
+            if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+                continue; // Skip invalid values
+            }
+            
+            // Check if attendance already exists for this student and date
+            $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
+            $check_stmt->execute([$id_siswa, $tanggal]);
+            
+            if ($check_stmt->rowCount() > 0) {
+                // Update existing record
+                $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ? WHERE id_siswa = ? AND tanggal = ?");
+                $update_stmt->execute([$keterangan, $id_siswa, $tanggal]);
+            } else {
+                // Insert new record
+                // For admin users, id_guru should be NULL since they don't have a valid teacher ID
+                $id_guru = ($_SESSION['level'] === 'admin') ? NULL : $_SESSION['user_id'];
+                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru) VALUES (?, ?, ?, ?)");
+                $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru]);
+            }
+            $saved_count++;
         }
     }
     
-    $message = ['type' => 'success', 'text' => 'Data absensi berhasil disimpan!'];
-    logActivity($pdo, $_SESSION['username'], 'Input Absensi', "Admin " . $_SESSION['username'] . " melakukan input absensi harian kelas ID: $id_kelas");
+    $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+    logActivity($pdo, $_SESSION['username'], 'Input Absensi', "Admin " . $_SESSION['username'] . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
 }
 
 // Get students for selected class
@@ -84,100 +90,17 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
 } else {
     $tanggal = date('Y-m-d');
 }
+
+// Set page title
+$page_title = 'Absensi Harian';
+
+// Define CSS libraries for this page
+$css_libs = [
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
+];
+
+include '../templates/header.php';
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-    <title>Absensi Harian | Sistem Absensi Siswa</title>
-
-    <!-- General CSS Files -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-
-    <!-- CSS Libraries -->
-        <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css">
-
-    <!-- Template CSS -->
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/components.css">
-</head>
-
-<body>
-    <div id="app">
-        <div class="main-wrapper">
-            <div class="navbar-bg"></div>
-            <nav class="navbar navbar-expand-lg main-navbar">
-                <form class="form-inline mr-auto">
-                    <ul class="navbar-nav mr-3">
-                        <li><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
-                    </ul>
-                </form>
-                <ul class="navbar-nav navbar-right">
-                    <li class="dropdown">
-                        <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
-                            <img alt="image" src="../assets/img/avatar/avatar-1.png" class="rounded-circle mr-1">
-                            <div class="d-sm-none d-lg-inline-block">Hi, <?php echo $_SESSION['username']; ?></div>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <a href="features-profile.html" class="dropdown-item has-icon">
-                                <i class="far fa-user"></i> Profile
-                            </a>
-                            <a href="features-settings.html" class="dropdown-item has-icon">
-                                <i class="fas fa-cog"></i> Settings
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a href="../logout.php" class="dropdown-item has-icon text-danger">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </div>
-                    </li>
-                </ul>
-            </nav>
-            <div class="main-sidebar">
-                <aside id="sidebar-wrapper">
-                    <div class="sidebar-brand">
-                        <a href="dashboard.php">Sistem Absensi Siswa</a>
-                    </div>
-                    <div class="sidebar-brand sidebar-brand-sm">
-                        <a href="dashboard.php">SA</a>
-                    </div>
-                    <ul class="sidebar-menu">
-                        <li class="menu-header">Dashboard</li>
-                        <li><a class="nav-link" href="dashboard.php"><i class="fas fa-fire"></i> <span>Dashboard</span></a></li>
-                        
-                        <li class="menu-header">Master Data</li>
-                        <li class="nav-item dropdown">
-                            <a href="#" class="nav-link has-dropdown"><i class="fas fa-database"></i><span>Master Data</span></a>
-                            <ul class="dropdown-menu">
-                                <li><a class="nav-link" href="data_guru.php">Data Guru</a></li>
-                                <li><a class="nav-link" href="data_kelas.php">Data Kelas</a></li>
-                                <li><a class="nav-link" href="data_siswa.php">Data Siswa</a></li>
-                            </ul>
-                        </li>
-                        
-                        <li class="menu-header">Absensi</li>
-                        <li class="nav-item dropdown active">
-                            <a href="#" class="nav-link has-dropdown"><i class="fas fa-calendar-check"></i><span>Absensi</span></a>
-                            <ul class="dropdown-menu">
-                                <li class="active"><a class="nav-link" href="absensi_harian.php">Absensi Harian</a></li>
-                                <li><a class="nav-link" href="rekap_absensi.php">Rekap Absensi</a></li>
-                            </ul>
-                        </li>
-                        
-                        <li class="menu-header">Pengaturan</li>
-                        <li><a class="nav-link" href="profil_madrasah.php"><i class="fas fa-school"></i> <span>Profil Madrasah</span></a></li>
-                        
-                        <li class="menu-header">Pengguna</li>
-                        <li><a class="nav-link" href="pengguna.php"><i class="fas fa-users"></i> <span>Data Pengguna</span></a></li>
-                        
-                        <li class="menu-header">Backup & Restore</li>
-                        <li><a class="nav-link" href="backup_restore.php"><i class="fas fa-hdd"></i> <span>Backup & Restore</span></a></li>
-                    </ul>
-                </aside>
-            </div>
 
             <!-- Main Content -->
             <div class="main-content">
@@ -312,7 +235,7 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                                         
                                         <div class="row mt-4">
                                             <div class="col-12 text-center">
-                                                <button type="submit" class="btn btn-primary">Simpan Absensi</button>
+                                                <button type="submit" class="btn btn-primary" id="saveAttendanceBtn">Simpan Absensi</button>
                                             </div>
                                         </div>
                                     </form>
@@ -570,9 +493,144 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                 });
             }
             
-            // Start initialization when document is ready
+            // Handle form submission to ensure all inputs are sent
             $(document).ready(function() {
                 initDataTable();
+                
+                // Store all select values globally as they change
+                var globalSelectValues = {};
+                
+                // Initialize: collect all select values when page loads
+                setTimeout(function() {
+                    if ($.fn.DataTable.isDataTable('#table-1')) {
+                        var dt = $('#table-1').DataTable();
+                        var originalPage = dt.page();
+                        var originalLength = dt.page.len();
+                        
+                        // Show all rows to collect initial values
+                        dt.page.len(-1).draw(false);
+                        
+                        setTimeout(function() {
+                            $('#table-1').find('select[name^=\"keterangan_\"]').each(function() {
+                                var select = $(this);
+                                var name = select.attr('name');
+                                var value = select.val();
+                                if (name && value) {
+                                    globalSelectValues[name] = value;
+                                }
+                            });
+                            
+                            // Restore pagination
+                            dt.page.len(originalLength).page(originalPage).draw(false);
+                            
+                            console.log('Initialized with ' + Object.keys(globalSelectValues).length + ' values');
+                        }, 300);
+                    }
+                }, 1500);
+                
+                // Update global values whenever a select changes
+                $(document).on('change', '#table-1 select[name^=\"keterangan_\"]', function() {
+                    var name = $(this).attr('name');
+                    var value = $(this).val();
+                    if (name && value) {
+                        globalSelectValues[name] = value;
+                        console.log('Updated global: ' + name + ' = ' + value);
+                    }
+                });
+                
+                // Intercept form submission to collect all select values from all DataTables pages
+                $(document).on('submit', 'form', function(e) {
+                    var form = $(this);
+                    var table = $('#table-1');
+                    
+                    // Only process attendance form (has save_attendance input)
+                    if (!form.find('input[name=\"save_attendance\"]').length) {
+                        return; // Let other forms submit normally
+                    }
+                    
+                    // If DataTable is initialized, collect all select values
+                    if ($.fn.DataTable.isDataTable('#table-1')) {
+                        e.preventDefault(); // Prevent default submission
+                        e.stopPropagation(); // Stop event propagation
+                        
+                        var dt = table.DataTable();
+                        var currentPage = dt.page();
+                        var currentPageLength = dt.page.len();
+                        var pageInfo = dt.page.info();
+                        var allSelectValues = {};
+                        
+                        // Start with stored global values
+                        $.extend(allSelectValues, globalSelectValues);
+                        
+                        console.log('Starting with ' + Object.keys(allSelectValues).length + ' global values');
+                        
+                        // Temporarily show all rows to collect all current values
+                        dt.page.len(-1).draw(false);
+                        
+                        // Wait for DOM to update, then collect all values
+                        setTimeout(function() {
+                            // Collect all select values from all rows (now all visible)
+                            var collectedCount = 0;
+                            table.find('select[name^=\"keterangan_\"]').each(function() {
+                                var select = $(this);
+                                var name = select.attr('name');
+                                var value = select.val();
+                                
+                                if (name && value) {
+                                    allSelectValues[name] = value;
+                                    collectedCount++;
+                                }
+                            });
+                            
+                            console.log('Collected ' + collectedCount + ' values from DOM');
+                            console.log('Total values: ' + Object.keys(allSelectValues).length + ' (expected: ' + pageInfo.recordsTotal + ')');
+                            console.log('All values:', allSelectValues);
+                            
+                            // Verify we have all values
+                            if (Object.keys(allSelectValues).length < pageInfo.recordsTotal) {
+                                console.warn('Warning: Not all values collected! Expected ' + pageInfo.recordsTotal + ', got ' + Object.keys(allSelectValues).length);
+                            }
+                            
+                            // Restore pagination
+                            dt.page.len(currentPageLength).page(currentPage).draw(false);
+                            
+                            // Remove any existing hidden inputs with the same names
+                            form.find('input[type=\"hidden\"][name^=\"keterangan_\"]').remove();
+                            
+                            // Add hidden inputs for all select values
+                            var inputCount = 0;
+                            $.each(allSelectValues, function(name, value) {
+                                var hiddenInput = $('<input>').attr({
+                                    type: 'hidden',
+                                    name: name,
+                                    value: value
+                                });
+                                form.append(hiddenInput);
+                                inputCount++;
+                            });
+                            
+                            console.log('Added ' + inputCount + ' hidden inputs to form');
+                            
+                            // Update global values for next time
+                            $.extend(globalSelectValues, allSelectValues);
+                            
+                            // Verify form has all inputs before submitting
+                            var formInputs = form.find('input[name^=\"keterangan_\"]').length;
+                            console.log('Form now has ' + formInputs + ' keterangan inputs');
+                            
+                            // Submit the form using native submit
+                            form.off('submit'); // Remove this handler to avoid infinite loop
+                            
+                            // Use native form submit
+                            var formElement = form[0];
+                            if (formElement && formElement.submit) {
+                                formElement.submit();
+                            } else {
+                                form.submit();
+                            }
+                        }, 500);
+                    }
+                });
             });
             ";
             

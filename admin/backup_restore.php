@@ -70,6 +70,7 @@ if (isset($_POST['restore_db'])) {
             
             if ($result === 0) {
                 $message = ['type' => 'success', 'text' => 'Database berhasil direstore dari file: ' . $backup_file];
+                logActivity($pdo, $_SESSION['username'], 'Restore Database', "Admin " . $_SESSION['username'] . " melakukan restore database dari file: " . $backup_file);
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal merestore database dari file: ' . $backup_file];
             }
@@ -78,6 +79,44 @@ if (isset($_POST['restore_db'])) {
         }
     } else {
         $message = ['type' => 'danger', 'text' => 'Silakan pilih file backup untuk direstore!'];
+    }
+}
+
+// Delete backup
+if (isset($_POST['delete_backup'])) {
+    if (isset($_POST['backup_id']) && !empty($_POST['backup_id'])) {
+        $backup_id = (int)$_POST['backup_id'];
+        
+        // Get backup record
+        $stmt = $pdo->prepare("SELECT * FROM tb_backup_restore WHERE id_backup = ?");
+        $stmt->execute([$backup_id]);
+        $backup = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($backup) {
+            $backup_file = $backup['nama_file'];
+            $backup_path = '../backups/' . $backup_file;
+            
+            // Delete file if exists
+            $file_deleted = true;
+            if (file_exists($backup_path)) {
+                $file_deleted = @unlink($backup_path);
+            }
+            
+            // Delete record from database
+            $stmt = $pdo->prepare("DELETE FROM tb_backup_restore WHERE id_backup = ?");
+            $stmt->execute([$backup_id]);
+            
+            if ($stmt->rowCount() > 0) {
+                $message = ['type' => 'success', 'text' => 'Backup berhasil dihapus!'];
+                logActivity($pdo, $_SESSION['username'], 'Hapus Backup', "Admin " . $_SESSION['username'] . " menghapus backup file: " . $backup_file);
+            } else {
+                $message = ['type' => 'danger', 'text' => 'Gagal menghapus record backup dari database!'];
+            }
+        } else {
+            $message = ['type' => 'danger', 'text' => 'Record backup tidak ditemukan!'];
+        }
+    } else {
+        $message = ['type' => 'danger', 'text' => 'ID backup tidak valid!'];
     }
 }
 
@@ -95,101 +134,16 @@ function formatBytes($size, $precision = 2) {
     
     return round($size, $precision) . ' ' . $units[$i];
 }
-?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-    <title>Backup & Restore | Sistem Absensi Siswa</title>
+// Set page title
+$page_title = 'Backup & Restore';
 
-    <!-- General CSS Files -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+// Define CSS libraries for this page
+$css_libs = [
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
+];
 
-    <!-- CSS Libraries -->
-    <link rel="stylesheet" href="../node_modules/datatables.net-bs4/css/dataTables.bootstrap4.min.css">
-    <link rel="stylesheet" href="../node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css">
-
-    <!-- Template CSS -->
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/components.css">
-</head>
-
-<body>
-    <div id="app">
-        <div class="main-wrapper">
-            <div class="navbar-bg"></div>
-            <nav class="navbar navbar-expand-lg main-navbar">
-                <form class="form-inline mr-auto">
-                    <ul class="navbar-nav mr-3">
-                        <li><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
-                    </ul>
-                </form>
-                <ul class="navbar-nav navbar-right">
-                    <li class="dropdown">
-                        <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
-                            <img alt="image" src="../assets/img/avatar/avatar-1.png" class="rounded-circle mr-1">
-                            <div class="d-sm-none d-lg-inline-block">Hi, <?php echo $_SESSION['username']; ?></div>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <a href="features-profile.html" class="dropdown-item has-icon">
-                                <i class="far fa-user"></i> Profile
-                            </a>
-                            <a href="features-settings.html" class="dropdown-item has-icon">
-                                <i class="fas fa-cog"></i> Settings
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a href="../logout.php" class="dropdown-item has-icon text-danger">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </div>
-                    </li>
-                </ul>
-            </nav>
-            <div class="main-sidebar">
-                <aside id="sidebar-wrapper">
-                    <div class="sidebar-brand">
-                        <a href="dashboard.php">Sistem Absensi Siswa</a>
-                    </div>
-                    <div class="sidebar-brand sidebar-brand-sm">
-                        <a href="dashboard.php">SA</a>
-                    </div>
-                    <ul class="sidebar-menu">
-                        <li class="menu-header">Dashboard</li>
-                        <li><a class="nav-link" href="dashboard.php"><i class="fas fa-fire"></i> <span>Dashboard</span></a></li>
-                        
-                        <li class="menu-header">Master Data</li>
-                        <li class="nav-item dropdown">
-                            <a href="#" class="nav-link has-dropdown"><i class="fas fa-database"></i><span>Master Data</span></a>
-                            <ul class="dropdown-menu">
-                                <li><a class="nav-link" href="data_guru.php">Data Guru</a></li>
-                                <li><a class="nav-link" href="data_kelas.php">Data Kelas</a></li>
-                                <li><a class="nav-link" href="data_siswa.php">Data Siswa</a></li>
-                            </ul>
-                        </li>
-                        
-                        <li class="menu-header">Absensi</li>
-                        <li class="nav-item dropdown">
-                            <a href="#" class="nav-link has-dropdown"><i class="fas fa-calendar-check"></i><span>Absensi</span></a>
-                            <ul class="dropdown-menu">
-                                <li><a class="nav-link" href="absensi_harian.php">Absensi Harian</a></li>
-                                <li><a class="nav-link" href="rekap_absensi.php">Rekap Absensi</a></li>
-                            </ul>
-                        </li>
-                        
-                        <li class="menu-header">Pengaturan</li>
-                        <li><a class="nav-link" href="profil_madrasah.php"><i class="fas fa-school"></i> <span>Profil Madrasah</span></a></li>
-                        
-                        <li class="menu-header">Pengguna</li>
-                        <li><a class="nav-link" href="pengguna.php"><i class="fas fa-users"></i> <span>Data Pengguna</span></a></li>
-                        
-                        <li class="menu-header">Backup & Restore</li>
-                        <li class="active"><a class="nav-link" href="backup_restore.php"><i class="fas fa-hdd"></i> <span>Backup & Restore</span></a></li>
-                    </ul>
-                </aside>
-            </div>
+include '../templates/header.php';
 
             <!-- Main Content -->
             <div class="main-content">
@@ -289,9 +243,12 @@ function formatBytes($size, $precision = 2) {
                                                     <td><?php echo $record['ukuran_file']; ?></td>
                                                     <td><?php echo htmlspecialchars($record['keterangan'] ?? '-'); ?></td>
                                                     <td>
-                                                        <a href="../backups/<?php echo $record['nama_file']; ?>" class="btn btn-success btn-sm" target="_blank">
+                                                        <a href="../backups/<?php echo $record['nama_file']; ?>" class="btn btn-success btn-sm" target="_blank" title="Download">
                                                             <i class="fas fa-download"></i>
                                                         </a>
+                                                        <button type="button" class="btn btn-danger btn-sm delete-backup-btn ml-1" data-id="<?php echo $record['id_backup']; ?>" data-file="<?php echo htmlspecialchars($record['nama_file']); ?>" title="Hapus">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
                                                     </td>
                                                 </tr>
                                                 <?php endforeach; ?>
@@ -342,6 +299,46 @@ function formatBytes($size, $precision = 2) {
                         }
                     });
                 }
+                
+                // Handle delete backup button click
+                $(document).on('click', '.delete-backup-btn', function() {
+                    var backupId = $(this).data('id');
+                    var backupFile = $(this).data('file');
+                    
+                    Swal.fire({
+                        title: 'Hapus Backup?',
+                        html: 'Apakah Anda yakin ingin menghapus backup file:<br><strong>' + backupFile + '</strong>?<br><br>File yang dihapus tidak dapat dikembalikan!',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Ya, Hapus!',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Create form and submit
+                            var form = $('<form>', {
+                                'method': 'POST',
+                                'action': ''
+                            });
+                            
+                            form.append($('<input>', {
+                                'type': 'hidden',
+                                'name': 'delete_backup',
+                                'value': '1'
+                            }));
+                            
+                            form.append($('<input>', {
+                                'type': 'hidden',
+                                'name': 'backup_id',
+                                'value': backupId
+                            }));
+                            
+                            $('body').append(form);
+                            form.submit();
+                        }
+                    });
+                });
             });
             ";
             

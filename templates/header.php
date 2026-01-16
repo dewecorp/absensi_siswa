@@ -82,72 +82,72 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                 <ul class="navbar-nav navbar-right">
                     <li class="dropdown">
                         <?php
-// Get user data to display personalized avatar
-$user_level = getUserLevel();
-
-if ($user_level === 'guru' || $user_level === 'wali') {
-    // For guru/wali, get teacher data to show teacher avatar
-    $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
-    $teacher_stmt->execute([$_SESSION['username']]);
-    $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // If not found by name, try to get by session info
-    if (!$current_user && isset($_SESSION['nama_guru'])) {
-        $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
-        $teacher_stmt->execute([$_SESSION['nama_guru']]);
-        $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
-    }
-    
-    $avatar_html = getTeacherAvatarImage($current_user ?? ['nama_guru' => $_SESSION['username']], 30);
-    $display_name = $current_user['nama_guru'] ?? $_SESSION['username'];
-} else {
-    // For admin, get user data
-    $user_stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");
-    $user_stmt->execute([$_SESSION['username']]);
-    $current_user = $user_stmt->fetch(PDO::FETCH_ASSOC);
-    
-    $avatar_html = getUserAvatarImage($current_user ?? ['username' => $_SESSION['username']], 30);
-    $display_name = $_SESSION['username'];
-}
-?>
+                        // Get user data to display personalized avatar
+                        $user_level = getUserLevel();
+                        
+                        if ($user_level === 'guru' || $user_level === 'wali') {
+                            // For guru/wali, get teacher data to show teacher avatar
+                            $current_user = null;
+                            $display_name = '';
+                            
+                            // First, try to get by nama_guru from session (most reliable)
+                            if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
+                                $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ?");
+                                $teacher_stmt->execute([$_SESSION['nama_guru']]);
+                                $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+                                $display_name = $_SESSION['nama_guru'];
+                            }
+                            
+                            // If not found, try to get by user_id (id_guru)
+                            if (!$current_user && isset($_SESSION['user_id'])) {
+                                $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+                                $teacher_stmt->execute([$_SESSION['user_id']]);
+                                $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+                                if ($current_user) {
+                                    $display_name = $current_user['nama_guru'];
+                                }
+                            }
+                            
+                            // If still not found, try by NUPTK (username might be NUPTK)
+                            if (!$current_user && isset($_SESSION['username'])) {
+                                $teacher_stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nuptk = ?");
+                                $teacher_stmt->execute([$_SESSION['username']]);
+                                $current_user = $teacher_stmt->fetch(PDO::FETCH_ASSOC);
+                                if ($current_user) {
+                                    $display_name = $current_user['nama_guru'];
+                                }
+                            }
+                            
+                            // Fallback: use nama_guru from session or username
+                            if (empty($display_name)) {
+                                $display_name = $_SESSION['nama_guru'] ?? $_SESSION['username'] ?? 'User';
+                            }
+                            
+                            $avatar_html = getTeacherAvatarImage($current_user ?? ['nama_guru' => $display_name], 30);
+                        } else {
+                            // For admin, get user data
+                            $user_stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");
+                            $user_stmt->execute([$_SESSION['username']]);
+                            $current_user = $user_stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            $avatar_html = getUserAvatarImage($current_user ?? ['username' => $_SESSION['username']], 30);
+                            $display_name = $_SESSION['username'];
+                        }
+                        ?>
                         <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
                             <?php echo $avatar_html; ?>
-                            <div class="d-sm-none d-lg-inline-block">Hi, <?php 
-                            // Display teacher's name if available (for direct NUPTK login) or username for regular login
-                            if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
-                                echo htmlspecialchars($_SESSION['nama_guru']);
-                            } else {
-                                echo htmlspecialchars($display_name);
-                            }
-                            ?></div>
+                            <div class="d-sm-none d-lg-inline-block">Hi, <?php echo htmlspecialchars($display_name); ?></div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a href="profil_madrasah.php" class="dropdown-item has-icon">
                                 <i class="fas fa-cog"></i> Pengaturan
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a href="#" onclick="confirmLogoutInline()" class="dropdown-item has-icon text-danger">
+                            <a href="#" onclick="confirmLogoutInline(); return false;" class="dropdown-item has-icon text-danger">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
-                            <script>
-                            function confirmLogoutInline() {
-                                Swal.fire({
-                                    title: 'Konfirmasi Logout',
-                                    text: 'Apakah Anda yakin ingin keluar dari sistem?',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonColor: '#3085d6',
-                                    cancelButtonColor: '#d33',
-                                    confirmButtonText: 'Ya, Keluar!',
-                                    cancelButtonText: 'Batal'
-                                }).then((result) => {
-                                    if (result.isConfirmed) {
-                                        window.location.href = '../logout.php';
-                                    }
-                                });
-                            }
-                            </script>
                         </div>
                     </li>
                 </ul>
             </nav>
+            <?php include 'sidebar.php'; ?>

@@ -28,6 +28,11 @@ if (!$teacher) {
     die('Error: Teacher data not found');
 }
 
+// Ensure nama_guru is set in session for consistent navbar display
+if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
+    $_SESSION['nama_guru'] = $teacher['nama_guru'];
+}
+
 // Get classes that this teacher teaches (from mengajar field)
 $classes = [];
 if (!empty($teacher['mengajar'])) {
@@ -87,34 +92,40 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     $id_kelas = (int)$_POST['id_kelas'];
     $tanggal = $_POST['tanggal'];
     
-    // Get students in selected class
-    $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ?");
-    $stmt->execute([$id_kelas]);
-    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Save attendance for each student
-    foreach ($students as $student) {
-        $id_siswa = $student['id_siswa'];
-        $keterangan = $_POST['keterangan_' . $id_siswa] ?? 'Alpa'; // Default to Alpa if not selected
-        
-        // Check if attendance already exists for this student and date
-        $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
-        $check_stmt->execute([$id_siswa, $tanggal]);
-        
-        if ($check_stmt->rowCount() > 0) {
-            // Update existing record
-            $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ? WHERE id_siswa = ? AND tanggal = ?");
-            $update_stmt->execute([$keterangan, $id_siswa, $tanggal]);
-        } else {
-            // Insert new record
-            $id_guru = $_SESSION['user_id'];
-            $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru) VALUES (?, ?, ?, ?)");
-            $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru]);
+    // Only process students that are actually in the POST data
+    // This prevents DataTables pagination from affecting students on other pages
+    $saved_count = 0;
+    foreach ($_POST as $key => $value) {
+        // Check if this is a keterangan field (keterangan_[id_siswa])
+        if (strpos($key, 'keterangan_') === 0) {
+            $id_siswa = (int)str_replace('keterangan_', '', $key);
+            $keterangan = $value;
+            
+            // Validate keterangan value
+            if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+                continue; // Skip invalid values
+            }
+            
+            // Check if attendance already exists for this student and date
+            $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
+            $check_stmt->execute([$id_siswa, $tanggal]);
+            
+            if ($check_stmt->rowCount() > 0) {
+                // Update existing record
+                $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ? WHERE id_siswa = ? AND tanggal = ?");
+                $update_stmt->execute([$keterangan, $id_siswa, $tanggal]);
+            } else {
+                // Insert new record
+                $id_guru = $_SESSION['user_id'];
+                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru) VALUES (?, ?, ?, ?)");
+                $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru]);
+            }
+            $saved_count++;
         }
     }
     
-    $message = ['type' => 'success', 'text' => 'Data absensi berhasil disimpan!'];
-    logActivity($pdo, $teacher['nuptk'], 'Input Absensi', "Guru " . $teacher['nama_guru'] . " melakukan input absensi kelas ID: $id_kelas");
+    $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+    logActivity($pdo, $teacher['nuptk'], 'Input Absensi', "Guru " . $teacher['nama_guru'] . " melakukan input absensi kelas ID: $id_kelas untuk $saved_count siswa");
 }
 
 // Get students for selected class
@@ -330,6 +341,88 @@ function initDataTable() {
 }
 $(document).ready(function() {
     initDataTable();
+    
+    // Handle form submission to ensure all inputs are sent
+    // Intercept form submission to collect all select values from all DataTables pages
+    $(document).on('submit', 'form', function(e) {
+        var form = $(this);
+        var table = $('#table-1');
+        
+        // Only process attendance form (has save_attendance input)
+        if (!form.find('input[name=\"save_attendance\"]').length) {
+            return; // Let other forms submit normally
+        }
+        
+        // If DataTable is initialized, collect all select values
+        if ($.fn.DataTable.isDataTable('#table-1')) {
+            e.preventDefault(); // Prevent default submission
+            e.stopPropagation(); // Stop event propagation
+            
+            var dt = table.DataTable();
+            var currentPage = dt.page();
+            var currentPageLength = dt.page.len();
+            var pageInfo = dt.page.info();
+            var allSelectValues = {};
+            
+            // Temporarily show all rows to collect all current values
+            dt.page.len(-1).draw(false);
+            
+            // Wait for DOM to update, then collect all values
+            setTimeout(function() {
+                // Collect all select values from all rows (now all visible)
+                var collectedCount = 0;
+                table.find('tbody select[name^=\"keterangan_\"]').each(function() {
+                    var select = $(this);
+                    var name = select.attr('name');
+                    var value = select.val();
+                    
+                    if (name && value) {
+                        allSelectValues[name] = value;
+                        collectedCount++;
+                    }
+                });
+                
+                console.log('Collected ' + collectedCount + ' values from DOM');
+                console.log('Total values: ' + Object.keys(allSelectValues).length + ' (expected: ' + pageInfo.recordsTotal + ')');
+                
+                // Verify we have all values
+                if (Object.keys(allSelectValues).length < pageInfo.recordsTotal) {
+                    console.warn('Warning: Not all values collected! Expected ' + pageInfo.recordsTotal + ', got ' + Object.keys(allSelectValues).length);
+                }
+                
+                // Restore pagination
+                dt.page.len(currentPageLength).page(currentPage).draw(false);
+                
+                // Remove any existing hidden inputs with the same names
+                form.find('input[type=\"hidden\"][name^=\"keterangan_\"]').remove();
+                
+                // Add hidden inputs for all select values
+                var inputCount = 0;
+                $.each(allSelectValues, function(name, value) {
+                    var hiddenInput = $('<input>').attr({
+                        type: 'hidden',
+                        name: name,
+                        value: value
+                    });
+                    form.append(hiddenInput);
+                    inputCount++;
+                });
+                
+                console.log('Added ' + inputCount + ' hidden inputs to form');
+                
+                // Submit the form using native submit
+                form.off('submit'); // Remove this handler to avoid infinite loop
+                
+                // Use native form submit
+                var formElement = form[0];
+                if (formElement && formElement.submit) {
+                    formElement.submit();
+                } else {
+                    form.submit();
+                }
+            }, 500);
+        }
+    });
 });
 ";
 

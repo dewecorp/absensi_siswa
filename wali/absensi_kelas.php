@@ -11,14 +11,26 @@ if (!isAuthorized(['admin', 'wali', 'guru'])) {
 $school_profile = getSchoolProfile($pdo);
 
 // Get teacher information
-if (isset($_SESSION['nama_guru'])) {
+if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
     $teacher_name = $_SESSION['nama_guru'];
 } else {
     // For traditional login via tb_pengguna, get teacher name
-    $stmt = $pdo->prepare("SELECT g.nama_guru FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
+    if ($_SESSION['level'] == 'wali' || $_SESSION['level'] == 'guru') {
+        // Direct login via NUPTK, user_id is actually the id_guru
+        $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+    } else {
+        // Traditional login via tb_pengguna
+        $stmt = $pdo->prepare("SELECT g.nama_guru FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+    }
     $teacher_result = $stmt->fetch(PDO::FETCH_ASSOC);
     $teacher_name = $teacher_result['nama_guru'] ?? $_SESSION['username'];
+    
+    // Ensure nama_guru is set in session for consistent navbar display
+    if ($teacher_result && isset($teacher_result['nama_guru'])) {
+        $_SESSION['nama_guru'] = $teacher_result['nama_guru'];
+    }
 }
 
 // Get the class that the wali teaches
@@ -31,35 +43,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     $id_kelas = (int)$wali_kelas['id_kelas']; // Use the wali's class
     $tanggal = $_POST['tanggal'];
     
-    // Get students in the wali's class
-    $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ?");
-    $stmt->execute([$id_kelas]);
-    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Save attendance for each student
-    foreach ($students as $student) {
-        $id_siswa = $student['id_siswa'];
-        $keterangan = $_POST['keterangan_' . $id_siswa] ?? 'Alpa'; // Default to Alpa if not selected
-        
-        // Check if attendance already exists for this student and date
-        $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
-        $check_stmt->execute([$id_siswa, $tanggal]);
-        
-        if ($check_stmt->rowCount() > 0) {
-            // Update existing record
-            $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ? WHERE id_siswa = ? AND tanggal = ?");
-            $update_stmt->execute([$keterangan, $id_siswa, $tanggal]);
-        } else {
-            // Insert new record
-            // For admin users logging in as wali, id_guru should be NULL
-            $id_guru = ($_SESSION['level'] === 'admin') ? NULL : $_SESSION['user_id'];
-            $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru) VALUES (?, ?, ?, ?)");
-            $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru]);
+    // Only process students that are actually in the POST data
+    // This prevents DataTables pagination from affecting students on other pages
+    $saved_count = 0;
+    foreach ($_POST as $key => $value) {
+        // Check if this is a keterangan field (keterangan_[id_siswa])
+        if (strpos($key, 'keterangan_') === 0) {
+            $id_siswa = (int)str_replace('keterangan_', '', $key);
+            $keterangan = $value;
+            
+            // Validate keterangan value
+            if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+                continue; // Skip invalid values
+            }
+            
+            // Check if attendance already exists for this student and date
+            $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
+            $check_stmt->execute([$id_siswa, $tanggal]);
+            
+            if ($check_stmt->rowCount() > 0) {
+                // Update existing record
+                $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ? WHERE id_siswa = ? AND tanggal = ?");
+                $update_stmt->execute([$keterangan, $id_siswa, $tanggal]);
+            } else {
+                // Insert new record
+                // For admin users logging in as wali, id_guru should be NULL
+                $id_guru = ($_SESSION['level'] === 'admin') ? NULL : $_SESSION['user_id'];
+                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru) VALUES (?, ?, ?, ?)");
+                $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru]);
+            }
+            $saved_count++;
         }
     }
     
-    $message = ['type' => 'success', 'text' => 'Data absensi berhasil disimpan!'];
-    logActivity($pdo, $_SESSION['username'], 'Input Absensi', "Wali " . $_SESSION['username'] . " melakukan input absensi harian kelas ID: $id_kelas");
+    $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+    logActivity($pdo, $_SESSION['username'], 'Input Absensi', "Wali " . $_SESSION['username'] . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
 }
 
 // Get students for the wali's class
@@ -74,90 +92,17 @@ if ($wali_kelas) {
 } else {
     $tanggal = date('Y-m-d');
 }
+
+// Set page title
+$page_title = 'Absensi Harian';
+
+// Define CSS libraries for this page
+$css_libs = [
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
+];
+
+include '../templates/user_header.php';
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-    <title>Absensi Harian | Sistem Absensi Siswa</title>
-
-    <!-- General CSS Files -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-
-    <!-- CSS Libraries -->
-        <link rel="stylesheet" href="../node_modules/datatables.net-bs4/css/dataTables.bootstrap4.min.css">
-        <link rel="stylesheet" href="../node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css">
-
-    <!-- Template CSS -->
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/components.css">
-</head>
-
-<body>
-    <div id="app">
-        <div class="main-wrapper">
-            <div class="navbar-bg"></div>
-            <nav class="navbar navbar-expand-lg main-navbar">
-                <form class="form-inline mr-auto">
-                    <ul class="navbar-nav mr-3">
-                        <li><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
-                    </ul>
-                </form>
-                <ul class="navbar-nav navbar-right">
-                    <li class="dropdown">
-                        <?php
-                        // Get user data to display personalized avatar
-                        $user_stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");
-                        $user_stmt->execute([$_SESSION['username']]);
-                        $current_user = $user_stmt->fetch(PDO::FETCH_ASSOC);
-                        
-                        // Fallback if teacher logged in directly (not through tb_pengguna)
-                        if (!$current_user) {
-                            // For direct login via NUPTK, create a mock user object
-                            $current_user = ['username' => $_SESSION['username'], 'foto' => null];
-                        }
-                        ?>
-                        <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
-                            <?php echo getUserAvatarImage($current_user, 30); ?>
-                            <div class="d-sm-none d-lg-inline-block">Hi, <?php echo $_SESSION['username']; ?></div>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <a href="features-profile.html" class="dropdown-item has-icon">
-                                <i class="far fa-user"></i> Profile
-                            </a>
-                            <a href="features-settings.html" class="dropdown-item has-icon">
-                                <i class="fas fa-cog"></i> Settings
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a href="../logout.php" class="dropdown-item has-icon text-danger">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </div>
-                    </li>
-                </ul>
-            </nav>
-            <div class="main-sidebar">
-                <aside id="sidebar-wrapper">
-                    <div class="sidebar-brand">
-                        <a href="dashboard.php">Sistem Absensi Siswa</a>
-                    </div>
-                    <div class="sidebar-brand sidebar-brand-sm">
-                        <a href="dashboard.php">SA</a>
-                    </div>
-                    <ul class="sidebar-menu">
-                        <li class="menu-header">Dashboard</li>
-                        <li><a class="nav-link" href="dashboard.php"><i class="fas fa-fire"></i> <span>Dashboard</span></a></li>
-                        
-                        <li><a class="nav-link" href="absensi_kelas.php"><i class="fas fa-calendar-check"></i> <span>Absensi Harian</span></a></li>
-                        
-                        <li class="menu-header">Rekap</li>
-                        <li><a class="nav-link" href="rekap_absensi.php"><i class="fas fa-book"></i> <span>Rekap Absensi</span></a></li>
-                    </ul>
-                </aside>
-            </div>
 
             <!-- Main Content -->
             <div class="main-content">
@@ -471,6 +416,88 @@ if ($wali_kelas) {
                             "next": "Selanjutnya",
                             "previous": "Sebelumnya"
                         }
+                    }
+                });
+                
+                // Handle form submission to ensure all inputs are sent
+                // Intercept form submission to collect all select values from all DataTables pages
+                $(document).on('submit', 'form', function(e) {
+                    var form = $(this);
+                    var table = $('#table-1');
+                    
+                    // Only process attendance form (has save_attendance input)
+                    if (!form.find('input[name=\"save_attendance\"]').length) {
+                        return; // Let other forms submit normally
+                    }
+                    
+                    // If DataTable is initialized, collect all select values
+                    if ($.fn.DataTable.isDataTable('#table-1')) {
+                        e.preventDefault(); // Prevent default submission
+                        e.stopPropagation(); // Stop event propagation
+                        
+                        var dt = table.DataTable();
+                        var currentPage = dt.page();
+                        var currentPageLength = dt.page.len();
+                        var pageInfo = dt.page.info();
+                        var allSelectValues = {};
+                        
+                        // Temporarily show all rows to collect all current values
+                        dt.page.len(-1).draw(false);
+                        
+                        // Wait for DOM to update, then collect all values
+                        setTimeout(function() {
+                            // Collect all select values from all rows (now all visible)
+                            var collectedCount = 0;
+                            table.find('tbody select[name^=\"keterangan_\"]').each(function() {
+                                var select = $(this);
+                                var name = select.attr('name');
+                                var value = select.val();
+                                
+                                if (name && value) {
+                                    allSelectValues[name] = value;
+                                    collectedCount++;
+                                }
+                            });
+                            
+                            console.log('Collected ' + collectedCount + ' values from DOM');
+                            console.log('Total values: ' + Object.keys(allSelectValues).length + ' (expected: ' + pageInfo.recordsTotal + ')');
+                            
+                            // Verify we have all values
+                            if (Object.keys(allSelectValues).length < pageInfo.recordsTotal) {
+                                console.warn('Warning: Not all values collected! Expected ' + pageInfo.recordsTotal + ', got ' + Object.keys(allSelectValues).length);
+                            }
+                            
+                            // Restore pagination
+                            dt.page.len(currentPageLength).page(currentPage).draw(false);
+                            
+                            // Remove any existing hidden inputs with the same names
+                            form.find('input[type=\"hidden\"][name^=\"keterangan_\"]').remove();
+                            
+                            // Add hidden inputs for all select values
+                            var inputCount = 0;
+                            $.each(allSelectValues, function(name, value) {
+                                var hiddenInput = $('<input>').attr({
+                                    type: 'hidden',
+                                    name: name,
+                                    value: value
+                                });
+                                form.append(hiddenInput);
+                                inputCount++;
+                            });
+                            
+                            console.log('Added ' + inputCount + ' hidden inputs to form');
+                            
+                            // Submit the form using native submit
+                            form.off('submit'); // Remove this handler to avoid infinite loop
+                            
+                            // Use native form submit
+                            var formElement = form[0];
+                            if (formElement && formElement.submit) {
+                                formElement.submit();
+                            } else {
+                                form.submit();
+                            }
+                        }, 500);
                     }
                 });
             });

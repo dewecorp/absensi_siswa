@@ -27,6 +27,11 @@ if (!$teacher) {
     redirect('../login.php');
 }
 
+// Ensure nama_guru is set in session for consistent navbar display
+if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
+    $_SESSION['nama_guru'] = $teacher['nama_guru'];
+}
+
 $message = null;
 
 // Handle password change

@@ -24,6 +24,11 @@ if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+// Ensure nama_guru is set in session for consistent navbar display
+if ($teacher && (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru']))) {
+    $_SESSION['nama_guru'] = $teacher['nama_guru'];
+}
+
 // Get classes that this teacher teaches (from mengajar field)
 $teacher_class_ids = [];
 $teacher_classes = []; // Store full class data
