@@ -223,6 +223,28 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                                         </div>
                                     </form>
                                     
+                                    <script>
+                                        // Auto-submit handler - attach immediately, not waiting for document ready
+                                        $(document).on('change', 'select[name="kelas"]', function() {
+                                            var kelasId = $(this).val();
+                                            console.log('Class selected:', kelasId);
+                                            if (kelasId && kelasId !== '') {
+                                                console.log('Auto-submitting form...');
+                                                $(this).closest('form').submit();
+                                            }
+                                        });
+                                        
+                                        $(document).on('change', 'input[name="tanggal"]', function() {
+                                            var tanggal = $(this).val();
+                                            var kelasId = $('select[name="kelas"]').val();
+                                            console.log('Date changed:', tanggal, 'Class:', kelasId);
+                                            if (tanggal && tanggal !== '' && kelasId && kelasId !== '') {
+                                                console.log('Auto-submitting form...');
+                                                $(this).closest('form').submit();
+                                            }
+                                        });
+                                    </script>
+                                    
                                     <?php if (!empty($students)): ?>
                                     <form method="POST" action="">
                                         <input type="hidden" name="id_kelas" value="<?php echo $_GET['kelas']; ?>">

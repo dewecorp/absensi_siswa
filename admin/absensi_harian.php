@@ -52,13 +52,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
 
 // Get students for selected class
 $students = [];
+$debug_info = [];
 if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     $id_kelas = (int)$_GET['kelas'];
-    $tanggal = $_GET['tanggal'] ?? date('Y-m-d');
+    $tanggal = isset($_GET['tanggal']) && !empty($_GET['tanggal']) ? $_GET['tanggal'] : date('Y-m-d');
     
-    $stmt = $pdo->prepare("SELECT s.*, a.keterangan FROM tb_siswa s LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = ? WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
-    $stmt->execute([$tanggal, $id_kelas]);
-    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Debug: Check if class has students
+    $check_stmt = $pdo->prepare("SELECT COUNT(*) as total FROM tb_siswa WHERE id_kelas = ?");
+    $check_stmt->execute([$id_kelas]);
+    $class_check = $check_stmt->fetch(PDO::FETCH_ASSOC);
+    $debug_info['total_students_in_class'] = $class_check['total'];
+    
+    // Get all students in the class, with their attendance status if exists
+    try {
+        $stmt = $pdo->prepare("SELECT s.*, a.keterangan 
+                               FROM tb_siswa s 
+                               LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = ? 
+                               WHERE s.id_kelas = ? 
+                               ORDER BY s.nama_siswa ASC");
+        $stmt->execute([$tanggal, $id_kelas]);
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $debug_info['students_found'] = count($students);
+        $debug_info['id_kelas'] = $id_kelas;
+        $debug_info['tanggal'] = $tanggal;
+        $debug_info['query_success'] = true;
+    } catch (Exception $e) {
+        $debug_info['query_error'] = $e->getMessage();
+        $debug_info['query_success'] = false;
+        $students = [];
+    }
 } else {
     $tanggal = date('Y-m-d');
 }
@@ -76,8 +98,7 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
     <!-- CSS Libraries -->
-        <link rel="stylesheet" href="../node_modules/datatables.net-bs4/css/dataTables.bootstrap4.min.css">
-        <link rel="stylesheet" href="../node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css">
 
     <!-- Template CSS -->
     <link rel="stylesheet" href="../assets/css/style.css">
@@ -191,7 +212,7 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                                     <h4>Form Absensi Harian</h4>
                                 </div>
                                 <div class="card-body">
-                                    <form method="GET" action="" id="filterForm">
+                                    <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" id="filterForm">
                                         <div class="row">
                                             <div class="col-md-4">
                                                 <div class="form-group">
@@ -222,27 +243,14 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                                         </div>
                                     </form>
                                     
-                                    <script>
-                                        $(document).ready(function() {
-                                            // Auto-submit when class is selected
-                                            $('#kelasSelect').on('change', function() {
-                                                var kelasId = $(this).val();
-                                                if (kelasId && kelasId !== '') {
-                                                    $('#filterForm').submit();
-                                                }
-                                            });
-                                            
-                                            // Auto-submit when date is selected
-                                            $('#tanggalInput').on('change', function() {
-                                                var tanggal = $(this).val();
-                                                var kelasId = $('#kelasSelect').val();
-                                                if (tanggal && tanggal !== '' && kelasId && kelasId !== '') {
-                                                    $('#filterForm').submit();
-                                                }
-                                            });
-                                        });
-                                    </script>
-                                    
+                                    <?php 
+                                    // Debug output
+                                    if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
+                                        echo '<!-- Debug: GET kelas = ' . htmlspecialchars($_GET['kelas']) . ' -->';
+                                        echo '<!-- Debug: Students count = ' . count($students) . ' -->';
+                                        echo '<!-- Debug: Total students in class = ' . ($debug_info['total_students_in_class'] ?? 'N/A') . ' -->';
+                                    }
+                                    ?>
                                     <?php if (!empty($students)): ?>
                                     <form method="POST" action="">
                                         <input type="hidden" name="id_kelas" value="<?php echo $_GET['kelas']; ?>">
@@ -308,9 +316,34 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                                             </div>
                                         </div>
                                     </form>
-                                    <?php elseif (isset($_GET['kelas'])): ?>
+                                    <?php elseif (isset($_GET['kelas']) && !empty($_GET['kelas'])): ?>
                                     <div class="alert alert-info">
-                                        <p class="text-center mb-0">Belum ada siswa dalam kelas ini.</p>
+                                        <p class="text-center mb-0">
+                                            <?php 
+                                            // Check if class exists and has students
+                                            $check_class = $pdo->prepare("SELECT COUNT(*) as total FROM tb_siswa WHERE id_kelas = ?");
+                                            $check_class->execute([(int)$_GET['kelas']]);
+                                            $class_info = $check_class->fetch(PDO::FETCH_ASSOC);
+                                            
+                                            if ($class_info['total'] == 0) {
+                                                echo 'Belum ada siswa dalam kelas ini.';
+                                            } else {
+                                                echo 'Data siswa ditemukan (' . $class_info['total'] . ' siswa), tetapi query tidak mengembalikan hasil. ';
+                                                echo 'Kelas ID: ' . (int)$_GET['kelas'] . ', Tanggal: ' . htmlspecialchars($tanggal);
+                                            }
+                                            ?>
+                                        </p>
+                                    </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($debug_info)): ?>
+                                    <!-- Debug Info -->
+                                    <div class="alert alert-warning" style="display: none;">
+                                        <strong>Debug Info:</strong><br>
+                                        Total siswa di kelas: <?php echo $debug_info['total_students_in_class']; ?><br>
+                                        Siswa ditemukan: <?php echo $debug_info['students_found']; ?><br>
+                                        Kelas ID: <?php echo $debug_info['id_kelas']; ?><br>
+                                        Tanggal: <?php echo $debug_info['tanggal']; ?>
                                     </div>
                                     <?php endif; ?>
                                 </div>
@@ -320,36 +353,62 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                 </section>
             </div>
             
-            <footer class="main-footer">
-                <div class="footer-left">
-                    Copyright &copy; <?php echo date('Y'); ?> <div class="bullet"></div> <a href="#"><?php echo $school_profile['nama_madrasah']; ?></a>
-                </div>
-                <div class="footer-right">
-                    2.3.0
-                </div>
-            </footer>
-        </div>
-    </div>
-
-    <!-- General JS Scripts -->
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.nicescroll/3.7.6/jquery.nicescroll.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
-    <script src="../assets/js/stisla.js"></script>
-
-    <!-- JS Libraies -->
-        <script src="../node_modules/datatables/media/js/jquery.dataTables.min.js"></script>
-        <script src="../node_modules/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
-        <script src="../node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js"></script>
-
-    <!-- Template JS File -->
-    <script src="../assets/js/scripts.js"></script>
-    <script src="../assets/js/custom.js"></script>
-
-    <!-- Page Specific JS File -->
-        <script>
+            <?php
+            // Add DataTables JS libraries
+            $js_libs = [];
+            $js_libs[] = 'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js';
+            $js_libs[] = 'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js';
+            
+            // Prepare school name for JavaScript (escape it properly)
+            $school_name_js = htmlspecialchars($school_profile['nama_madrasah'], ENT_QUOTES, 'UTF-8');
+            
+            // Prepare school name for JavaScript (escape it properly)
+            $school_name_js = htmlspecialchars($school_profile['nama_madrasah'], ENT_QUOTES, 'UTF-8');
+            
+            // Add page-specific JavaScript
+            $js_page = [];
+            $js_page[] = "
+            // Auto-submit handler - ensure jQuery is loaded first
+            $(document).ready(function() {
+                console.log('=== Absensi Harian Page Loaded ===');
+                console.log('jQuery loaded:', typeof $ !== 'undefined');
+                console.log('Form exists:', $('#filterForm').length > 0);
+                console.log('Class select exists:', $('#kelasSelect').length > 0);
+                console.log('Date input exists:', $('#tanggalInput').length > 0);
+                console.log('Current GET kelas:', '" . (isset($_GET['kelas']) ? htmlspecialchars($_GET['kelas'], ENT_QUOTES, 'UTF-8') : '') . "');
+                console.log('Current students count:', " . count($students) . ");
+                
+                // Auto-submit when class is selected
+                $('#kelasSelect').on('change', function() {
+                    var kelasId = $(this).val();
+                    console.log('=== Class selected:', kelasId, '===');
+                    if (kelasId && kelasId !== '') {
+                        console.log('Auto-submitting form...');
+                        var form = $('#filterForm');
+                        if (form.length > 0) {
+                            console.log('Form found, submitting...');
+                            form.submit();
+                        } else {
+                            console.error('Form not found!');
+                        }
+                    }
+                });
+                
+                // Auto-submit when date is selected
+                $('#tanggalInput').on('change', function() {
+                    var tanggal = $(this).val();
+                    var kelasId = $('#kelasSelect').val();
+                    console.log('=== Date changed:', tanggal, 'Class:', kelasId, '===');
+                    if (tanggal && tanggal !== '' && kelasId && kelasId !== '') {
+                        console.log('Auto-submitting form...');
+                        $('#filterForm').submit();
+                    }
+                });
+            });
+            ";
+            
+            // Add other page-specific functions
+            $js_page[] = "
             function updateBadge(selectElement) {
                 // Get the selected option text and value
                 var selectedOption = selectElement.options[selectElement.selectedIndex].text;
@@ -391,9 +450,9 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                 
                 // Add application name and school info
                 var headerDiv = document.createElement('div');
-                headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
-                headerDiv.innerHTML += '<h3><?php echo $school_profile['nama_madrasah']; ?></h3>';
-                headerDiv.innerHTML += '<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style="clear: both;">';
+                headerDiv.innerHTML = '<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\"><div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>';
+                headerDiv.innerHTML += '<h3>" . $school_name_js . "</h3>';
+                headerDiv.innerHTML += '<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">';
                 
                 // Create a copy of the table to modify
                 var table = document.getElementById('table-1');
@@ -435,11 +494,11 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                 printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
                 printWindow.document.write('</style>');
                 printWindow.document.write('</head><body>');
-                printWindow.document.write('<div style="text-align: center;">');
-                printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin: 0 20px 20px 0;">');
-                printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-                printWindow.document.write('<h3><?php echo $school_profile['nama_madrasah']; ?></h3>');
-                printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style="clear: both;">');
+                printWindow.document.write('<div style=\"text-align: center;\">');
+                printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin: 0 20px 20px 0;\">');
+                printWindow.document.write('<div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>');
+                printWindow.document.write('<h3>" . $school_name_js . "</h3>');
+                printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">');
                 
                 // Create a copy of the table to modify
                 var table = document.getElementById('table-1').cloneNode(true);
@@ -464,33 +523,58 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
                 printWindow.print();
             }
             
-            $(document).ready(function() {
+            // Initialize DataTable with retry mechanism
+            function initDataTable() {
+                if (typeof $ === 'undefined' || typeof jQuery === 'undefined') {
+                    console.warn('jQuery not loaded, retrying...');
+                    setTimeout(initDataTable, 100);
+                    return;
+                }
+                
+                if (typeof $.fn.DataTable === 'undefined') {
+                    console.warn('DataTables library not loaded, retrying...');
+                    setTimeout(initDataTable, 100);
+                    return;
+                }
+                
+                // Destroy existing DataTable if it exists
+                if ($.fn.DataTable.isDataTable('#table-1')) {
+                    $('#table-1').DataTable().destroy();
+                }
+                
+                // Initialize DataTable
                 $('#table-1').DataTable({
-                    "columnDefs": [
-                        { "orderable": false, "targets": [3] }
+                    \"columnDefs\": [
+                        { \"orderable\": false, \"targets\": [3] }
                     ],
-                    "paging": true,
-                    "lengthChange": true,
-                    "pageLength": 10,
-                    "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-                    "dom": 'lfrtip',
-                    "info": true,
-                    "language": {
-                        "lengthMenu": "Tampilkan _MENU_ entri",
-                        "zeroRecords": "Tidak ada data yang ditemukan",
-                        "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
-                        "infoEmpty": "Menampilkan 0 sampai 0 dari 0 entri",
-                        "infoFiltered": "(disaring dari _MAX_ total entri)",
-                        "search": "Cari:",
-                        "paginate": {
-                            "first": "Pertama",
-                            "last": "Terakhir",
-                            "next": "Selanjutnya",
-                            "previous": "Sebelumnya"
+                    \"paging\": true,
+                    \"lengthChange\": true,
+                    \"pageLength\": 10,
+                    \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+                    \"dom\": 'lfrtip',
+                    \"info\": true,
+                    \"language\": {
+                        \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                        \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                        \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                        \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                        \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                        \"search\": \"Cari:\",
+                        \"paginate\": {
+                            \"first\": \"Pertama\",
+                            \"last\": \"Terakhir\",
+                            \"next\": \"Selanjutnya\",
+                            \"previous\": \"Sebelumnya\"
                         }
                     }
                 });
+            }
+            
+            // Start initialization when document is ready
+            $(document).ready(function() {
+                initDataTable();
             });
-        </script>
-</body>
-</html>
+            ";
+            
+            include '../templates/footer.php';
+            ?>
