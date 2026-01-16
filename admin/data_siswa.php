@@ -113,6 +113,119 @@ if ($_POST['update_siswa'] ?? false) {
     }
 }
 
+// Handle bulk edit form submission FIRST (before any output)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_siswa'])) {
+    $ids = $_POST['bulk_edit_ids'] ?? [];
+    $names = $_POST['bulk_edit_nama'] ?? [];
+    $nisns = $_POST['bulk_edit_nisn'] ?? [];
+    $jenis_kelamins = $_POST['bulk_edit_jenis_kelamin'] ?? [];
+    $id_kelass = $_POST['bulk_edit_id_kelas'] ?? [];
+    
+    if (!empty($ids) && is_array($ids)) {
+        $updatedCount = 0;
+        $errors = [];
+        
+        for ($i = 0; $i < count($ids); $i++) {
+            if (isset($ids[$i]) && !empty($ids[$i])) {
+                $id = (int)$ids[$i];
+                $nama = sanitizeInput($names[$i] ?? '');
+                $nisn = sanitizeInput($nisns[$i] ?? '');
+                $jenis_kelamin = sanitizeInput($jenis_kelamins[$i] ?? '');
+                $id_kelas = (int)($id_kelass[$i] ?? 0);
+                
+                // Validate
+                if (empty($nama) || empty($nisn) || empty($jenis_kelamin) || empty($id_kelas)) {
+                    $errors[] = "Data ke-" . ($i + 1) . " tidak lengkap";
+                    continue;
+                }
+                
+                // Check if NISN already exists for another student
+                $check_stmt = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE nisn = ? AND id_siswa != ?");
+                $check_stmt->execute([$nisn, $id]);
+                
+                if ($check_stmt->rowCount() > 0) {
+                    $errors[] = "NISN " . $nisn . " sudah terdaftar oleh siswa lain";
+                    continue;
+                }
+                
+                // Update
+                $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, nisn=?, jenis_kelamin=?, id_kelas=? WHERE id_siswa=?");
+                if ($stmt->execute([$nama, $nisn, $jenis_kelamin, $id_kelas, $id])) {
+                    $updatedCount++;
+                }
+            }
+        }
+        
+        header('Content-Type: application/json');
+        if ($updatedCount > 0) {
+            $message = "Berhasil memperbarui $updatedCount data siswa!";
+            if (!empty($errors)) {
+                $message .= " " . count($errors) . " data gagal: " . implode(', ', $errors);
+            }
+            echo json_encode([
+                'success' => true,
+                'message' => $message
+            ]);
+            logActivity($pdo, $_SESSION['username'], 'Bulk Edit Siswa', "Bulk memperbarui $updatedCount data siswa");
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Gagal memperbarui data siswa! ' . (!empty($errors) ? implode(', ', $errors) : '')
+            ]);
+        }
+        exit;
+    }
+}
+
+// Handle bulk delete via AJAX
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_delete_siswa'])) {
+    $ids = json_decode($_POST['ids'] ?? '[]', true);
+    
+    if (!empty($ids) && is_array($ids)) {
+        $deletedCount = 0;
+        $errors = [];
+        
+        foreach ($ids as $id) {
+            $id = (int)$id;
+            if ($id > 0) {
+                // Get student name for logging
+                $stmt = $pdo->prepare("SELECT nama_siswa FROM tb_siswa WHERE id_siswa = ?");
+                $stmt->execute([$id]);
+                $student = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($student) {
+                    // Check if student has attendance records
+                    $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM tb_absensi WHERE id_siswa = ?");
+                    $check_stmt->execute([$id]);
+                    $absensi_count = $check_stmt->fetchColumn();
+                    
+                    if ($absensi_count > 0) {
+                        $errors[] = "Siswa {$student['nama_siswa']} memiliki data absensi dan tidak dapat dihapus";
+                        continue;
+                    }
+                    
+                    $stmt = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
+                    if ($stmt->execute([$id])) {
+                        $deletedCount++;
+                        logActivity($pdo, $_SESSION['username'], 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']}");
+                    }
+                }
+            }
+        }
+        
+        header('Content-Type: application/json');
+        $message = "Berhasil menghapus $deletedCount data siswa!";
+        if (!empty($errors)) {
+            $message .= " " . count($errors) . " data gagal: " . implode(', ', $errors);
+        }
+        echo json_encode([
+            'success' => $deletedCount > 0,
+            'message' => $message
+        ]);
+        exit;
+    }
+}
+
 // Handle deleting student
 if ($_POST['delete_siswa'] ?? false) {
     $id_siswa = (int)($_POST['id_siswa'] ?? 0);
@@ -146,6 +259,16 @@ $selected_kelas_id = isset($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : 0;
 // Get class list for the dropdown
 $kelas_list = getAllKelas();
 
+// Prepare kelas options for JavaScript (for bulk edit modal)
+$kelas_options_js_array = [];
+foreach ($kelas_list as $kelas) {
+    $kelas_options_js_array[] = [
+        'id' => $kelas['id_kelas'],
+        'nama' => htmlspecialchars($kelas['nama_kelas'], ENT_QUOTES, 'UTF-8')
+    ];
+}
+$kelas_options_js = json_encode($kelas_options_js_array);
+
 // Get students if a class is selected
 $students = [];
 if ($selected_kelas_id > 0) {
@@ -178,6 +301,8 @@ include '../templates/sidebar.php';
                                 <?php if ($selected_kelas_id > 0): ?>
                                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">Tambah Siswa</button>
                                 <button type="button" class="btn btn-info" data-toggle="modal" data-target="#importModal" onclick="setImportType('siswa')"><i class="fas fa-file-import"></i> Impor Excel</button>
+                                <button type="button" class="btn btn-warning" id="bulk-edit-btn" disabled><i class="fas fa-edit"></i> Edit Terpilih</button>
+                                <button type="button" class="btn btn-danger" id="bulk-delete-btn" disabled><i class="fas fa-trash"></i> Hapus Terpilih</button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -220,6 +345,12 @@ include '../templates/sidebar.php';
                                 <table class="table table-striped" id="table-1">
                                     <thead>
                                         <tr>
+                                            <th>
+                                                <div class="custom-checkbox custom-control">
+                                                    <input type="checkbox" data-checkboxes="siswa" data-checkbox-role="dad" class="custom-control-input" id="checkbox-all">
+                                                    <label for="checkbox-all" class="custom-control-label">&nbsp;</label>
+                                                </div>
+                                            </th>
                                             <th>No</th>
                                             <th>Nama Siswa</th>
                                             <th>NISN</th>
@@ -230,7 +361,13 @@ include '../templates/sidebar.php';
                                     </thead>
                                     <tbody>
                                         <?php foreach ($students as $index => $student): ?>
-                                        <tr>
+                                        <tr data-id-kelas="<?php echo $student['id_kelas'] ?? ''; ?>">
+                                            <td>
+                                                <div class="custom-checkbox custom-control">
+                                                    <input type="checkbox" data-checkboxes="siswa" class="custom-control-input" id="checkbox-<?php echo $student['id_siswa']; ?>" value="<?php echo $student['id_siswa']; ?>">
+                                                    <label for="checkbox-<?php echo $student['id_siswa']; ?>" class="custom-control-label">&nbsp;</label>
+                                                </div>
+                                            </td>
                                             <td><?php echo $index + 1; ?></td>
                                             <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
                                             <td><?php echo htmlspecialchars($student['nisn']); ?></td>
@@ -434,6 +571,386 @@ $(document).on("click", ".delete-btn", function(e) {
 
 // Include the import modal
 include '../templates/import_modal.php';
+?>
+
+<!-- Bulk Edit Modal -->
+<div class="modal fade" id="bulkEditModal" tabindex="-1" role="dialog" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkEditModalLabel">Edit Data Terpilih</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="bulkEditForm" method="POST" action="">
+                <div class="modal-body">
+                    <input type="hidden" name="bulk_edit_siswa" value="1">
+                    <p class="mb-3">Edit data untuk <strong id="bulkEditCount">0</strong> data siswa yang dipilih:</p>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead>
+                                <tr>
+                                    <th width="5%">No</th>
+                                    <th width="20%">Nama Siswa</th>
+                                    <th width="20%">Nama Baru</th>
+                                    <th width="20%">NISN Baru</th>
+                                    <th width="15%">Jenis Kelamin</th>
+                                    <th width="20%">Kelas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data akan diisi oleh JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-whitesmoke br">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<?php
+// Add JavaScript for bulk operations
+$js_page[] = "
+// Define bulk functions globally
+window.bulkEdit = function() {
+    console.log('bulkEdit function called!');
+    if (typeof jQuery === 'undefined' || typeof $ === 'undefined') {
+        console.error('jQuery is not loaded!');
+        Swal.fire({
+            title: 'Error!',
+            text: 'jQuery tidak dimuat. Silakan refresh halaman.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+    var checkedBoxes = $('input[type=\"checkbox\"][data-checkboxes=\"siswa\"]:checked').not('[data-checkbox-role=\"dad\"]');
+    var selectedIds = [];
+    
+    checkedBoxes.each(function() {
+        var id = $(this).val();
+        if (id && id !== 'on') {
+            selectedIds.push(id);
+        }
+    });
+    
+    if (selectedIds.length === 0) {
+        Swal.fire({
+            title: 'Tidak ada data terpilih',
+            text: 'Silakan pilih setidaknya satu data siswa untuk diedit.',
+            icon: 'warning'
+        });
+        return;
+    }
+    
+    // Get selected student data
+    var selectedStudents = [];
+    checkedBoxes.each(function() {
+        var id = $(this).val();
+        if (id && id !== 'on') {
+            var row = $(this).closest('tr');
+            var cells = row.find('td');
+            selectedStudents.push({
+                id: id,
+                nama: cells.eq(2).text().trim(),
+                nisn: cells.eq(3).text().trim(),
+                jenis_kelamin: cells.eq(4).text().trim(),
+                id_kelas: row.data('id-kelas') || ''
+            });
+        }
+    });
+    
+    // Populate modal table
+    var tableBody = $('#bulkEditModal tbody');
+    tableBody.empty();
+    
+    selectedStudents.forEach(function(student, index) {
+        var jenisKelaminOptions = '';
+        if (student.jenis_kelamin === 'Laki-laki') {
+            jenisKelaminOptions = '<option value=\"L\" selected>Laki-laki</option><option value=\"P\">Perempuan</option>';
+        } else if (student.jenis_kelamin === 'Perempuan') {
+            jenisKelaminOptions = '<option value=\"L\">Laki-laki</option><option value=\"P\" selected>Perempuan</option>';
+        } else {
+            jenisKelaminOptions = '<option value=\"L\">Laki-laki</option><option value=\"P\">Perempuan</option>';
+        }
+        
+        var kelasOptionsArray = " . $kelas_options_js . ";
+        var kelasSelectHtml = '<select class=\"form-control form-control-sm\" name=\"bulk_edit_id_kelas[]\" required><option value=\"\">Pilih Kelas</option>';
+        for (var k = 0; k < kelasOptionsArray.length; k++) {
+            var kelas = kelasOptionsArray[k];
+            var selected = (student.id_kelas && (kelas.id == student.id_kelas || kelas.id === parseInt(student.id_kelas) || parseInt(kelas.id) === parseInt(student.id_kelas))) ? ' selected' : '';
+            kelasSelectHtml += '<option value=\"' + kelas.id + '\"' + selected + '>' + kelas.nama + '</option>';
+        }
+        kelasSelectHtml += '</select>';
+        
+        var row = '<tr>' +
+            '<td>' + (index + 1) + '</td>' +
+            '<td>' + student.nama + '</td>' +
+            '<td><input type=\"text\" class=\"form-control form-control-sm\" name=\"bulk_edit_nama[]\" value=\"' + student.nama + '\" required></td>' +
+            '<td><input type=\"text\" class=\"form-control form-control-sm\" name=\"bulk_edit_nisn[]\" value=\"' + student.nisn + '\" required></td>' +
+            '<td><select class=\"form-control form-control-sm\" name=\"bulk_edit_jenis_kelamin[]\" required>' + jenisKelaminOptions + '</select></td>' +
+            '<td>' + kelasSelectHtml + '</td>' +
+            '<input type=\"hidden\" name=\"bulk_edit_ids[]\" value=\"' + student.id + '\">' +
+            '</tr>';
+        tableBody.append(row);
+    });
+    
+    // Update count
+    $('#bulkEditCount').text(selectedStudents.length);
+    
+    // Show modal
+    $('#bulkEditModal').modal('show');
+};
+
+window.bulkDelete = function() {
+    if (typeof jQuery === 'undefined' || typeof $ === 'undefined') {
+        console.error('jQuery is not loaded!');
+        Swal.fire({
+            title: 'Error!',
+            text: 'jQuery tidak dimuat. Silakan refresh halaman.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+    console.log('bulkDelete function called!');
+    var checkedBoxes = $('input[type=\"checkbox\"][data-checkboxes=\"siswa\"]:checked').not('[data-checkbox-role=\"dad\"]');
+    var selectedIds = [];
+    var selectedNames = [];
+    
+    checkedBoxes.each(function() {
+        var id = $(this).val();
+        if (id && id !== 'on') {
+            selectedIds.push(id);
+            var row = $(this).closest('tr');
+            var nameCell = row.find('td').eq(2); // Nama Siswa column
+            var name = nameCell.text().trim();
+            if (name) {
+                selectedNames.push(name);
+            }
+        }
+    });
+    
+    if (selectedIds.length === 0) {
+        Swal.fire({
+            title: 'Tidak ada data terpilih',
+            text: 'Silakan pilih setidaknya satu data siswa untuk dihapus.',
+            icon: 'warning'
+        });
+        return;
+    }
+    
+    var deleteMessage = 'Apakah Anda yakin ingin menghapus <strong>' + selectedIds.length + ' data siswa</strong>?';
+    if (selectedNames.length > 0 && selectedNames.length <= 5) {
+        deleteMessage += '<br><br>Data yang akan dihapus:<br>' + selectedNames.join('<br>');
+    }
+    
+    Swal.fire({
+        title: 'Konfirmasi Hapus',
+        html: deleteMessage,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: {
+                    bulk_delete_siswa: '1',
+                    ids: JSON.stringify(selectedIds)
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: response.message,
+                            icon: 'success',
+                            timer: 3000,
+                            timerProgressBar: true
+                        }).then(function() {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Terjadi kesalahan saat menghapus data.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        }
+    });
+};
+
+// Handle bulk edit form submission
+$(document).ready(function() {
+    $('#bulkEditForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: '',
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: response.message,
+                        icon: 'success',
+                        timer: 3000,
+                        timerProgressBar: true
+                    }).then(function() {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: response.message,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function() {
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Terjadi kesalahan saat memperbarui data.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    });
+    
+    // Update bulk buttons state
+    function updateBulkButtons() {
+        var checkedCount = $('input[type=\"checkbox\"][data-checkboxes=\"siswa\"]:checked').not('[data-checkbox-role=\"dad\"]').length;
+        var totalCount = $('input[type=\"checkbox\"][data-checkboxes=\"siswa\"]:not([data-checkbox-role=\"dad\"])').length;
+        
+        // Check visible checkboxes (for DataTables pagination)
+        var visibleCheckboxes = $('#table-1 tbody tr:visible input[data-checkboxes=\"siswa\"]:not([data-checkbox-role=\"dad\"])');
+        var visibleChecked = visibleCheckboxes.filter(':checked').length;
+        var allVisibleChecked = visibleCheckboxes.length > 0 && visibleChecked === visibleCheckboxes.length;
+        
+        $('#bulk-edit-btn').prop('disabled', checkedCount === 0);
+        $('#bulk-delete-btn').prop('disabled', checkedCount === 0);
+        
+        // Update select all checkbox state based on visible checkboxes
+        $('#checkbox-all').prop('checked', allVisibleChecked && totalCount > 0);
+        $('#checkbox-all').prop('indeterminate', checkedCount > 0 && checkedCount < totalCount);
+    }
+    
+    // Handle select all checkbox
+    $(document).on('change', '#checkbox-all', function() {
+        const isChecked = $(this).is(':checked');
+        // Only check/uncheck visible checkboxes (current page)
+        $('#table-1 tbody tr:visible input[data-checkboxes=\"siswa\"]:not([data-checkbox-role=\"dad\"])').prop('checked', isChecked);
+        updateBulkButtons();
+    });
+    
+    // Use event delegation to handle individual checkbox changes
+    $(document).on('change', 'input[data-checkboxes=\"siswa\"]:not([data-checkbox-role=\"dad\"])', function() {
+        updateBulkButtons();
+    });
+    
+    // Attach click handlers to bulk action buttons
+    $('#bulk-edit-btn').on('click', function(e) {
+        e.preventDefault();
+        if (typeof window.bulkEdit === 'function') {
+            window.bulkEdit();
+        } else {
+            console.error('bulkEdit function is not available');
+            Swal.fire({
+                title: 'Error!',
+                text: 'Fungsi edit belum dimuat. Silakan refresh halaman.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+    });
+    
+    $('#bulk-delete-btn').on('click', function(e) {
+        e.preventDefault();
+        if (typeof window.bulkDelete === 'function') {
+            window.bulkDelete();
+        } else {
+            console.error('bulkDelete function is not available');
+            Swal.fire({
+                title: 'Error!',
+                text: 'Fungsi hapus belum dimuat. Silakan refresh halaman.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+    });
+    
+    // Initialize DataTables with pagination and show entries
+    function initDataTable() {
+        if (typeof $.fn.DataTable !== 'undefined') {
+            if ($.fn.DataTable.isDataTable('#table-1')) {
+                $('#table-1').DataTable().destroy();
+            }
+            
+            $('#table-1').DataTable({
+                \"columnDefs\": [
+                    { \"sortable\": false, \"targets\": [0, 6] } // Disable sorting for checkbox (col 0) and action (col 6) columns
+                ],
+                \"paging\": true,
+                \"lengthChange\": true,
+                \"pageLength\": 10,
+                \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+                \"dom\": 'lfrtip',
+                \"info\": true,
+                \"language\": {
+                    \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                    \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                    \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                    \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                    \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                    \"search\": \"Cari:\",
+                    \"paginate\": {
+                        \"first\": \"Pertama\",
+                        \"last\": \"Terakhir\",
+                        \"next\": \"Selanjutnya\",
+                        \"previous\": \"Sebelumnya\"
+                    }
+                },
+                \"drawCallback\": function(settings) {
+                    setTimeout(updateBulkButtons, 100);
+                }
+            });
+            console.log('DataTables initialized successfully');
+        } else {
+            console.warn('DataTables library not loaded, retrying...');
+            setTimeout(initDataTable, 100);
+        }
+    }
+    
+    initDataTable();
+});
+";
 
 include '../templates/footer.php'; 
 ?>
