@@ -15,7 +15,9 @@ $_SESSION = array();
 session_destroy();
 
 // Log logout activity
-logActivity($pdo, $current_user, 'Logout', 'User logged out from ' . $user_level . ' session');
+$username = !empty($current_user) && $current_user !== 'Unknown' ? $current_user : 'system';
+$log_result = logActivity($pdo, $username, 'Logout', 'User logged out from ' . $user_level . ' session');
+if (!$log_result) error_log("Failed to log activity for Logout: $username");
 
 // Redirect to login page
 header("Location: login.php");

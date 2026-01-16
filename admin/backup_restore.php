@@ -70,7 +70,9 @@ if (isset($_POST['restore_db'])) {
             
             if ($result === 0) {
                 $message = ['type' => 'success', 'text' => 'Database berhasil direstore dari file: ' . $backup_file];
-                logActivity($pdo, $_SESSION['username'], 'Restore Database', "Admin " . $_SESSION['username'] . " melakukan restore database dari file: " . $backup_file);
+                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $log_result = logActivity($pdo, $username, 'Restore Database', "Admin " . $username . " melakukan restore database dari file: " . $backup_file);
+                if (!$log_result) error_log("Failed to log activity for Restore Database: $backup_file");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal merestore database dari file: ' . $backup_file];
             }
@@ -108,7 +110,9 @@ if (isset($_POST['delete_backup'])) {
             
             if ($stmt->rowCount() > 0) {
                 $message = ['type' => 'success', 'text' => 'Backup berhasil dihapus!'];
-                logActivity($pdo, $_SESSION['username'], 'Hapus Backup', "Admin " . $_SESSION['username'] . " menghapus backup file: " . $backup_file);
+                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $log_result = logActivity($pdo, $username, 'Hapus Backup', "Admin " . $username . " menghapus backup file: " . $backup_file);
+                if (!$log_result) error_log("Failed to log activity for Hapus Backup: $backup_file");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal menghapus record backup dari database!'];
             }

@@ -173,15 +173,42 @@ function getActivityIcon($action) {
 
 // Function to log admin activity
 function logActivity($pdo, $username, $action, $description = '') {
-    if (!isset($_SESSION['user_id'])) {
-        return false; // Don't log if not logged in
+    // Check if session is started
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Always allow logging - don't check user_id anymore
+    // The username parameter is already provided, so we can log regardless of session state
+    if (empty($username)) {
+        error_log("logActivity: Username is empty. Action: $action");
+        return false;
+    }
+    
+    // Sanitize username to prevent SQL injection (though PDO prepare should handle this)
+    $username = trim($username);
+    if (empty($username)) {
+        error_log("logActivity: Username is empty after trim. Action: $action");
+        return false;
     }
     
     $ip_address = $_SERVER['REMOTE_ADDR'] ?? '';
     
-    // Don't clean up here - let dashboard handle it to avoid race conditions
-    $stmt = $pdo->prepare("INSERT INTO tb_activity_log (username, action, description, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
-    return $stmt->execute([$username, $action, $description, $ip_address]);
+    try {
+        // Don't clean up here - let dashboard handle it to avoid race conditions
+        $stmt = $pdo->prepare("INSERT INTO tb_activity_log (username, action, description, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
+        $result = $stmt->execute([$username, $action, $description, $ip_address]);
+        
+        if (!$result) {
+            $errorInfo = $stmt->errorInfo();
+            error_log("logActivity: Failed to insert activity. Username: $username, Action: $action, Description: $description, Error: " . print_r($errorInfo, true));
+        }
+        
+        return $result;
+    } catch (Exception $e) {
+        error_log("logActivity: Exception - " . $e->getMessage() . " | Username: $username, Action: $action, Description: $description");
+        return false;
+    }
 }
 
 // Function to get all classes

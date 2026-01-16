@@ -38,7 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['nama_guru'] = $guru_user['nama_guru'];
             
             // Log login activity
-            logActivity($pdo, $guru_user['nuptk'], 'Login', 'Teacher logged in successfully using NUPTK');
+            $username = isset($guru_user['nuptk']) ? $guru_user['nuptk'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Login', 'Teacher logged in successfully using NUPTK');
+            if (!$log_result) error_log("Failed to log activity for Login: Teacher");
             
             // Redirect based on level
             switch ($level) {
@@ -63,7 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['level'] = $user['level'];
             
             // Log login activity
-            logActivity($pdo, $user['username'], 'Login', 'User logged in successfully');
+            $username = isset($user['username']) ? $user['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Login', 'User logged in successfully');
+            if (!$log_result) error_log("Failed to log activity for Login: User");
             
             // Redirect based on user level
             switch ($user['level']) {

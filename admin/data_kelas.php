@@ -20,7 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("INSERT INTO tb_kelas (nama_kelas, wali_kelas) VALUES (?, ?)");
         if ($stmt->execute([$nama_kelas, $wali_kelas])) {
             $message = ['type' => 'success', 'text' => 'Data kelas berhasil ditambahkan!'];
-            logActivity($pdo, $_SESSION['username'], 'Tambah Kelas', "Menambahkan data kelas: $nama_kelas");
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Tambah Kelas', "Menambahkan data kelas: $nama_kelas");
+            if (!$log_result) error_log("Failed to log activity for Tambah Kelas: $nama_kelas");
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data kelas!'];
         }
@@ -32,16 +34,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("UPDATE tb_kelas SET nama_kelas=?, wali_kelas=? WHERE id_kelas=?");
         if ($stmt->execute([$nama_kelas, $wali_kelas, $id_kelas])) {
             $message = ['type' => 'success', 'text' => 'Data kelas berhasil diupdate!'];
-            logActivity($pdo, $_SESSION['username'], 'Update Kelas', "Memperbarui data kelas: $nama_kelas");
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Update Kelas', "Memperbarui data kelas: $nama_kelas");
+            if (!$log_result) error_log("Failed to log activity for Update Kelas: $nama_kelas");
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal mengupdate data kelas!'];
         }
     } elseif (isset($_POST['delete_kelas'])) {
         $id_kelas = (int)$_POST['id_kelas'];
+        // Get class name before deletion
+        $name_stmt = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+        $name_stmt->execute([$id_kelas]);
+        $nama_kelas = $name_stmt->fetchColumn();
+        
         $stmt = $pdo->prepare("DELETE FROM tb_kelas WHERE id_kelas=?");
         if ($stmt->execute([$id_kelas])) {
             $message = ['type' => 'success', 'text' => 'Data kelas berhasil dihapus!'];
-            logActivity($pdo, $_SESSION['username'], 'Hapus Kelas', "Menghapus data kelas: $nama_kelas");
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Hapus Kelas', "Menghapus data kelas: $nama_kelas");
+            if (!$log_result) error_log("Failed to log activity for Hapus Kelas: $nama_kelas");
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus data kelas!'];
         }

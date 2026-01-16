@@ -56,7 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute($params)) {
                 $message = ['type' => 'success', 'text' => 'Data pengguna berhasil ditambahkan!'];
-                logActivity($pdo, $_SESSION['username'], 'Tambah Pengguna', "Menambahkan pengguna baru: $username (level: $level)");
+                $log_username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $log_result = logActivity($pdo, $log_username, 'Tambah Pengguna', "Menambahkan pengguna baru: $username (level: $level)");
+                if (!$log_result) error_log("Failed to log activity for Tambah Pengguna: $username");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data pengguna!'];
             }
@@ -122,7 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             if ($stmt->execute($params)) {
                 $message = ['type' => 'success', 'text' => 'Data pengguna berhasil diupdate!'];
-                logActivity($pdo, $_SESSION['username'], 'Update Pengguna', "Memperbarui data pengguna: $username (level: $level)");
+                $log_username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $log_result = logActivity($pdo, $log_username, 'Update Pengguna', "Memperbarui data pengguna: $username (level: $level)");
+                if (!$log_result) error_log("Failed to log activity for Update Pengguna: $username");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengupdate data pengguna!'];
             }
@@ -141,7 +145,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("DELETE FROM tb_pengguna WHERE id_pengguna=?");
         if ($stmt->execute([$id_pengguna])) {
             $message = ['type' => 'success', 'text' => 'Data pengguna berhasil dihapus!'];
-            logActivity($pdo, $_SESSION['username'], 'Hapus Pengguna', "Menghapus pengguna ID: $id_pengguna");
+            $log_username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $log_username, 'Hapus Pengguna', "Menghapus pengguna ID: $id_pengguna");
+            if (!$log_result) error_log("Failed to log activity for Hapus Pengguna: $id_pengguna");
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus data pengguna!'];
         }

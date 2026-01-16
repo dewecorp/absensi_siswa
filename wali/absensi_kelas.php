@@ -77,7 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     }
     
     $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
-    logActivity($pdo, $_SESSION['username'], 'Input Absensi', "Wali " . $_SESSION['username'] . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
+    $username = isset($_SESSION['username']) ? $_SESSION['username'] : (isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system');
+    $log_result = logActivity($pdo, $username, 'Input Absensi', "Wali " . $username . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
+    if (!$log_result) error_log("Failed to log activity for Input Absensi: kelas ID $id_kelas");
 }
 
 // Get students for the wali's class

@@ -138,7 +138,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
     
     $stmt = $pdo->prepare($sql);
     if ($stmt->execute($params)) {
-        logActivity($pdo, $_SESSION['username'], 'Update Guru', "Memperbarui data guru: $nama_guru");
+        // Log activity - ensure session is available
+        $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+        $log_result = logActivity($pdo, $username, 'Update Guru', "Memperbarui data guru: $nama_guru");
+        
+        if (!$log_result) {
+            error_log("Failed to log activity for Update Guru: $nama_guru");
+        }
+        
         echo json_encode(['success' => true, 'message' => 'Data guru berhasil diperbarui!']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Gagal memperbarui data guru!']);
@@ -197,9 +204,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_guru'])) {
                 'success' => true,
                 'message' => $message
             ]);
-            if (isset($_SESSION['username'])) {
-                logActivity($pdo, $_SESSION['username'], 'Bulk Edit Guru', "Memperbarui $updatedCount data guru");
-            }
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Bulk Edit Guru', "Memperbarui $updatedCount data guru");
+            if (!$log_result) error_log("Failed to log activity for Bulk Edit Guru: $updatedCount data");
         } else {
             echo json_encode([
                 'success' => false,
@@ -278,7 +285,14 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 
         
         if ($updated_count > 0) {
             $message = ['type' => 'success', 'text' => "Berhasil memperbarui $updated_count data guru!"];
-            logActivity($pdo, $_SESSION['username'], 'Bulk Update Guru', "Bulk memperbarui $updated_count data guru");
+            
+            // Log activity - ensure session is available
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Bulk Update Guru', "Bulk memperbarui $updated_count data guru");
+            
+            if (!$log_result) {
+                error_log("Failed to log activity for Bulk Update Guru: $updated_count data");
+            }
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal memperbarui data guru!'];
         }
@@ -306,7 +320,14 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 
             $stmt = $pdo->prepare("DELETE FROM tb_guru WHERE id_guru = ?");
             if ($stmt->execute([$id_guru])) {
                 $message = ['type' => 'success', 'text' => 'Data guru berhasil dihapus!'];
-                logActivity($pdo, $_SESSION['username'], 'Hapus Guru', "Menghapus data guru: $teacher_name");
+                
+                // Log activity - ensure session is available
+                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $log_result = logActivity($pdo, $username, 'Hapus Guru', "Menghapus data guru: $teacher_name");
+                
+                if (!$log_result) {
+                    error_log("Failed to log activity for Hapus Guru: $teacher_name");
+                }
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal menghapus data guru!'];
             }
@@ -338,7 +359,14 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 
         
         if ($deleted_count > 0) {
             $message = ['type' => 'success', 'text' => "Berhasil menghapus $deleted_count data guru!"];
-            logActivity($pdo, $_SESSION['username'], 'Bulk Hapus Guru', "Bulk menghapus $deleted_count data guru");
+            
+            // Log activity - ensure session is available
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Bulk Hapus Guru', "Bulk menghapus $deleted_count data guru");
+            
+            if (!$log_result) {
+                error_log("Failed to log activity for Bulk Hapus Guru: $deleted_count data");
+            }
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus data guru!'];
         }
@@ -405,7 +433,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
             $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, mengajar, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             if ($stmt->execute([$nama_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $mengajar, $hashed_password, $password_plain, $foto])) {
                 $message = ['type' => 'success', 'text' => 'Data guru berhasil ditambahkan!'];
-                logActivity($pdo, $_SESSION['username'], 'Tambah Guru', "Menambahkan data guru: $nama_guru");
+                
+                // Log activity - ensure session is available
+                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $log_result = logActivity($pdo, $username, 'Tambah Guru', "Menambahkan data guru: $nama_guru");
+                
+                if (!$log_result) {
+                    error_log("Failed to log activity for Tambah Guru: $nama_guru");
+                }
+                
                 // Refresh data
                 $teachers = fetchTeachersWithWaliKelas($pdo);
             } else {
@@ -501,7 +537,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !iss
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute($params)) {
                 $message = ['type' => 'success', 'text' => 'Data guru berhasil diperbarui!'];
-                logActivity($pdo, $_SESSION['username'], 'Update Guru', "Memperbarui data guru: $nama_guru");
+                
+                // Log activity - ensure session is available
+                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $log_result = logActivity($pdo, $username, 'Update Guru', "Memperbarui data guru: $nama_guru");
+                
+                if (!$log_result) {
+                    error_log("Failed to log activity for Update Guru: $nama_guru");
+                }
+                
                 // Refresh data
                 $teachers = fetchTeachersWithWaliKelas($pdo);
             } else {

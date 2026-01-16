@@ -55,7 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ubah_password'])) {
             $stmt = $pdo->prepare("UPDATE tb_guru SET password = ?, password_plain = ? WHERE id_guru = ?");
             if ($stmt->execute([$hashed_password, $new_password, $teacher['id_guru']])) {
                 $message = ['type' => 'success', 'text' => 'Password berhasil diubah!'];
-                logActivity($pdo, $teacher['nuptk'], 'Ubah Password', 'Wali mengubah password sendiri');
+                $username = isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system';
+                $log_result = logActivity($pdo, $username, 'Ubah Password', 'Wali mengubah password sendiri');
+                if (!$log_result) error_log("Failed to log activity for Ubah Password: Wali");
                 // Refresh teacher data
                 $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
                 $stmt->execute([$teacher['id_guru']]);

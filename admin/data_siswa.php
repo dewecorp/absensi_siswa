@@ -42,7 +42,9 @@ if ($_POST['add_siswa'] ?? false) {
         $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
         if ($stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $id_kelas])) {
             $message = ['type' => 'success', 'text' => 'Data siswa berhasil ditambahkan!'];
-            logActivity($pdo, $_SESSION['username'], 'Tambah Siswa', "Menambahkan siswa baru: $nama_siswa");
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Tambah Siswa', "Menambahkan siswa baru: $nama_siswa");
+            if (!$log_result) error_log("Failed to log activity for Tambah Siswa: $nama_siswa");
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data siswa!'];
         }
@@ -90,11 +92,14 @@ if ($_POST['update_siswa'] ?? false) {
                 $new_kelas_name = $new_class ? $new_class['nama_kelas'] : 'Kelas tidak ditemukan';
                 
                 // Log the transfer if class changed
+                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
                 if ($current_id_kelas != $new_id_kelas) {
-                    logActivity($pdo, $_SESSION['username'], 'Transfer Siswa', "Memindahkan siswa {$nama_siswa} dari kelas {$current_kelas_name} ke kelas {$new_kelas_name}");
+                    $log_result = logActivity($pdo, $username, 'Transfer Siswa', "Memindahkan siswa {$nama_siswa} dari kelas {$current_kelas_name} ke kelas {$new_kelas_name}");
+                    if (!$log_result) error_log("Failed to log activity for Transfer Siswa: $nama_siswa");
                     $message = ['type' => 'success', 'text' => "Data siswa berhasil diupdate dan dipindahkan dari kelas {$current_kelas_name} ke kelas {$new_kelas_name}!"];
                 } else {
-                    logActivity($pdo, $_SESSION['username'], 'Edit Siswa', "Mengupdate data siswa: $nama_siswa");
+                    $log_result = logActivity($pdo, $username, 'Edit Siswa', "Mengupdate data siswa: $nama_siswa");
+                    if (!$log_result) error_log("Failed to log activity for Edit Siswa: $nama_siswa");
                     $message = ['type' => 'success', 'text' => 'Data siswa berhasil diupdate!'];
                 }
                 
@@ -166,7 +171,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_siswa'])) {
                 'success' => true,
                 'message' => $message
             ]);
-            logActivity($pdo, $_SESSION['username'], 'Bulk Edit Siswa', "Bulk memperbarui $updatedCount data siswa");
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $log_result = logActivity($pdo, $username, 'Bulk Edit Siswa', "Bulk memperbarui $updatedCount data siswa");
+            if (!$log_result) error_log("Failed to log activity for Bulk Edit Siswa: $updatedCount data");
         } else {
             echo json_encode([
                 'success' => false,
@@ -207,7 +214,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_delete_siswa'])) 
                     $stmt = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
                     if ($stmt->execute([$id])) {
                         $deletedCount++;
-                        logActivity($pdo, $_SESSION['username'], 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']}");
+                        $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                        $log_result = logActivity($pdo, $username, 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']}");
+                        if (!$log_result) error_log("Failed to log activity for Hapus Siswa: {$student['nama_siswa']}");
                     }
                 }
             }
@@ -241,7 +250,9 @@ if ($_POST['delete_siswa'] ?? false) {
             $stmt = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
             if ($stmt->execute([$id_siswa])) {
                 $message = ['type' => 'success', 'text' => 'Data siswa berhasil dihapus!'];
-                logActivity($pdo, $_SESSION['username'], 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']}");
+                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $log_result = logActivity($pdo, $username, 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']}");
+                if (!$log_result) error_log("Failed to log activity for Hapus Siswa: {$student['nama_siswa']}");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal menghapus data siswa!'];
             }
