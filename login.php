@@ -95,6 +95,10 @@ $school_profile = getSchoolProfile($pdo);
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
     <title>Login | Sistem Absensi Siswa</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
     <!-- General CSS Files -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -136,7 +140,8 @@ $school_profile = getSchoolProfile($pdo);
                             <form method="POST" action="">
                                 <div class="form-group">
                                     <label for="username">Username atau NUPTK</label>
-                                    <input id="username" type="text" class="form-control" name="username" tabindex="1" required autofocus>
+                                    <input id="username" type="text" class="form-control" name="username" placeholder="Admin: Username | Guru/Wali: NUPTK" tabindex="1" required autofocus>
+                                    <small class="form-text text-muted">Guru dan Wali Kelas menggunakan NUPTK untuk login</small>
                                 </div>
 
                                 <div class="form-group">

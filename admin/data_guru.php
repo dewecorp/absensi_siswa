@@ -122,8 +122,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
     // Add password to update if provided
     if (!empty($password)) {
         $hashed_password = hashPassword($password);
-        $sql .= ", password=?";
+        $sql .= ", password=?, password_plain=?";
         $params[] = $hashed_password;
+        $params[] = $password; // Store plain text password
     }
     
     // Add foto to update if provided
@@ -256,14 +257,16 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 
                 
                 if (!empty($passwords[$i])) {
                     $data['password'] = hashPassword($passwords[$i]);
+                    $data['password_plain'] = $passwords[$i]; // Store plain text password
                 }
                 
                 $stmt = $pdo->prepare("UPDATE tb_guru SET nama_guru = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?, jenis_kelamin = ?, wali_kelas = ?" . 
-                    (!empty($passwords[$i]) ? ", password = ?" : "") . " WHERE id_guru = ?");
+                    (!empty($passwords[$i]) ? ", password = ?, password_plain = ?" : "") . " WHERE id_guru = ?");
                 
                 $params = [$data['nama_guru'], $data['nuptk'], $data['tempat_lahir'], $data['tanggal_lahir'], $data['jenis_kelamin'], $data['wali_kelas']];
                 if (!empty($passwords[$i])) {
                     $params[] = $data['password'];
+                    $params[] = $data['password_plain'];
                 }
                 $params[] = $id;
                 
@@ -394,10 +397,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
             $message = ['type' => 'danger', 'text' => 'NUPTK sudah terdaftar!'];
         } else {
             // Hash password if provided, otherwise use default
-            $hashed_password = !empty($password) ? hashPassword($password) : password_hash('default123', PASSWORD_DEFAULT);
+            $default_password = 'default123';
+            $password_to_use = !empty($password) ? $password : $default_password;
+            $hashed_password = hashPassword($password_to_use);
+            $password_plain = $password_to_use; // Store plain text password
             
-            $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, mengajar, password, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            if ($stmt->execute([$nama_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $mengajar, $hashed_password, $foto])) {
+            $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, mengajar, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            if ($stmt->execute([$nama_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $mengajar, $hashed_password, $password_plain, $foto])) {
                 $message = ['type' => 'success', 'text' => 'Data guru berhasil ditambahkan!'];
                 logActivity($pdo, $_SESSION['username'], 'Tambah Guru', "Menambahkan data guru: $nama_guru");
                 // Refresh data
@@ -478,8 +484,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !iss
             // Add password to update if provided
             if (!empty($password)) {
                 $hashed_password = hashPassword($password);
-                $sql .= ", password=?";
+                $sql .= ", password=?, password_plain=?";
                 $params[] = $hashed_password;
+                $params[] = $password; // Store plain text password
             }
             
             // Add foto to update if provided
@@ -1048,7 +1055,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                     <td><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></td>
                                                     <td><?php echo htmlspecialchars($mengajar_display ?: '-'); ?></td>
                                                     <td><?php echo htmlspecialchars($teacher['kelas_wali'] ?? '-'); ?></td>
-                                                    <td><?php echo $teacher['password'] ? 'Sudah Diatur' : 'Belum Diatur'; ?></td>
+                                                    <td><?php echo !empty($teacher['password_plain']) ? htmlspecialchars($teacher['password_plain']) : ($teacher['password'] ? '***' : 'Belum Diatur'); ?></td>
                                                     <td>
                                                         <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $teacher['id_guru']; ?>"><i class="fas fa-edit"></i></a>
                                                         <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $teacher['id_guru']; ?>" data-name="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" data-action="delete_guru"><i class="fas fa-trash"></i></a>

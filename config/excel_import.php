@@ -104,7 +104,10 @@ function importTeachersFromExcelFile($filePath) {
                 $tempat_lahir_val = !empty($tempat_lahir) ? $tempat_lahir : NULL;
                 
                 // Hash password if provided
-                $hashed_password = !empty($password) ? hashPassword($password) : password_hash('default123', PASSWORD_DEFAULT);
+                $default_password = 'default123';
+                $password_to_use = !empty($password) ? $password : $default_password;
+                $hashed_password = hashPassword($password_to_use);
+                $password_plain = $password_to_use; // Store plain text password
                 
                 // Check if teacher with same NUPTK already exists
                 $checkStmt = $pdo->prepare("SELECT id_guru FROM tb_guru WHERE nuptk = ?");
@@ -114,8 +117,8 @@ function importTeachersFromExcelFile($filePath) {
                 if ($existingTeacher) {
                     // Update existing teacher (overwrite duplicate)
                     try {
-                        $updateStmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, wali_kelas=?, password=? WHERE nuptk=?");
-                        $updateStmt->execute([$nama_guru, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $nuptk]);
+                        $updateStmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, wali_kelas=?, password=?, password_plain=? WHERE nuptk=?");
+                        $updateStmt->execute([$nama_guru, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $password_plain, $nuptk]);
                         $rowCount++; // Count as updated/saved
                         $duplicateCount++; // Track duplicate records that were overwritten
                     } catch (PDOException $e) {
@@ -124,8 +127,8 @@ function importTeachersFromExcelFile($filePath) {
                 } else {
                     // Insert new teacher
                     try {
-                        $insertStmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, wali_kelas, password) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                        $insertStmt->execute([$nama_guru, $nuptk, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password]);
+                        $insertStmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, wali_kelas, password, password_plain) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                        $insertStmt->execute([$nama_guru, $nuptk, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $password_plain]);
                         $rowCount++;
                     } catch (PDOException $e) {
                         $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
@@ -274,7 +277,10 @@ function importTeachersFromCSV($filePath) {
             $tempat_lahir_val = !empty($tempat_lahir) ? $tempat_lahir : NULL;
             
             // Hash password if provided
-            $hashed_password = !empty($password) ? hashPassword($password) : password_hash('default123', PASSWORD_DEFAULT);
+            $default_password = 'default123';
+            $password_to_use = !empty($password) ? $password : $default_password;
+            $hashed_password = hashPassword($password_to_use);
+            $password_plain = $password_to_use; // Store plain text password
             
             // Check if teacher with same NUPTK already exists
             $checkStmt = $pdo->prepare("SELECT id_guru FROM tb_guru WHERE nuptk = ?");
@@ -284,8 +290,8 @@ function importTeachersFromCSV($filePath) {
             if ($existingTeacher) {
                 // Update existing teacher (overwrite duplicate)
                 try {
-                    $updateStmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, wali_kelas=?, password=? WHERE nuptk=?");
-                    $updateStmt->execute([$nama_guru, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $nuptk]);
+                    $updateStmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, wali_kelas=?, password=?, password_plain=? WHERE nuptk=?");
+                    $updateStmt->execute([$nama_guru, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $password_plain, $nuptk]);
                     $rowCount++; // Count as updated/saved
                     $duplicateCount++; // Track duplicate records that were overwritten
                 } catch (PDOException $e) {
@@ -294,8 +300,8 @@ function importTeachersFromCSV($filePath) {
             } else {
                 // Insert new teacher
                 try {
-                    $insertStmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, wali_kelas, password) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                    $insertStmt->execute([$nama_guru, $nuptk, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password]);
+                    $insertStmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, wali_kelas, password, password_plain) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    $insertStmt->execute([$nama_guru, $nuptk, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $password_plain]);
                     $rowCount++;
                 } catch (PDOException $e) {
                     $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();
