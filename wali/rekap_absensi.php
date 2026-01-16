@@ -239,8 +239,7 @@ if ($class_id > 0) {
     }
 }
 
-include '../templates/header.php';
-include '../templates/sidebar.php';
+include '../templates/user_header.php';
 ?>
 
             <!-- Main Content -->
@@ -688,7 +687,7 @@ include '../templates/sidebar.php';
                 </section>
             </div>
 
-<?php include '../templates/footer.php'; ?>
+<?php include '../templates/user_footer.php'; ?>
 
 <!-- Export Functions from absensi_harian.php -->
 <script>

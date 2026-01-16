@@ -144,6 +144,7 @@ $css_libs = [
 ];
 
 include '../templates/header.php';
+?>
 
             <!-- Main Content -->
             <div class="main-content">

@@ -17,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $username = sanitizeInput($_POST['username']);
         $password = hashPassword($_POST['password']);
         $level = sanitizeInput($_POST['level']);
-        $id_guru = !empty($_POST['id_guru']) ? (int)$_POST['id_guru'] : null;
         
         // Handle photo upload
         $foto = null;
@@ -40,15 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         if (!$message || $message['type'] !== 'danger') {
-            $sql = "INSERT INTO tb_pengguna (username, password, level, id_guru";
-            $params = [$username, $password, $level, $id_guru];
+            $sql = "INSERT INTO tb_pengguna (username, password, level";
+            $params = [$username, $password, $level];
             
             if ($foto !== null) {
                 $sql .= ", foto";
                 $params[] = $foto;
             }
             
-            $sql .= ") VALUES (?, ?, ?, ?";
+            $sql .= ") VALUES (?, ?, ?";
             if ($foto !== null) {
                 $sql .= ", ?";
             }
@@ -66,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $id_pengguna = (int)$_POST['id_pengguna'];
         $username = sanitizeInput($_POST['username']);
         $level = sanitizeInput($_POST['level']);
-        $id_guru = !empty($_POST['id_guru']) ? (int)$_POST['id_guru'] : null;
         
         // Handle photo upload
         $foto = null;
@@ -105,20 +103,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $password = hashPassword($_POST['password']);
                 
                 if ($update_foto) {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, password=?, level=?, id_guru=?, foto=? WHERE id_pengguna=?");
-                    $params = [$username, $password, $level, $id_guru, $foto, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, password=?, level=?, foto=? WHERE id_pengguna=?");
+                    $params = [$username, $password, $level, $foto, $id_pengguna];
                 } else {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, password=?, level=?, id_guru=? WHERE id_pengguna=?");
-                    $params = [$username, $password, $level, $id_guru, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, password=?, level=? WHERE id_pengguna=?");
+                    $params = [$username, $password, $level, $id_pengguna];
                 }
             } else {
                 // Update without changing password
                 if ($update_foto) {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, level=?, id_guru=?, foto=? WHERE id_pengguna=?");
-                    $params = [$username, $level, $id_guru, $foto, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, level=?, foto=? WHERE id_pengguna=?");
+                    $params = [$username, $level, $foto, $id_pengguna];
                 } else {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, level=?, id_guru=? WHERE id_pengguna=?");
-                    $params = [$username, $level, $id_guru, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, level=? WHERE id_pengguna=?");
+                    $params = [$username, $level, $id_pengguna];
                 }
             }
             
@@ -150,18 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Get all users with teacher information
+// Get all users
 $stmt = $pdo->query("
-    SELECT p.*, g.nama_guru 
+    SELECT p.*
     FROM tb_pengguna p 
-    LEFT JOIN tb_guru g ON p.id_guru = g.id_guru 
     ORDER BY p.username ASC
 ");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get all teachers for dropdown
-$stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
-$teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -249,7 +242,7 @@ $js_page = [
         // Initialize DataTable
         \$('#table-1').DataTable({
             \"columnDefs\": [
-                { \"sortable\": false, \"targets\": [4] }
+                { \"sortable\": false, \"targets\": [3] }
             ],
             \"paging\": true,
             \"lengthChange\": true,
@@ -346,7 +339,6 @@ include '../templates/sidebar.php';
                                                     <th class="text-center">#</th>
                                                     <th>Username</th>
                                                     <th>Level</th>
-                                                    <th>Nama Guru</th>
                                                     <th>Foto</th>
                                                     <th>Aksi</th>
                                                 </tr>
@@ -373,7 +365,6 @@ include '../templates/sidebar.php';
                                                         ?>
                                                         <div class="badge <?php echo $badge_class; ?>"><?php echo ucfirst($user['level']); ?></div>
                                                     </td>
-                                                    <td><?php echo htmlspecialchars($user['nama_guru'] ?? '-'); ?></td>
                                                     <td>
                                                         <?php if ($user['foto']): ?>
                                                         <img src="../assets/img/<?php echo $user['foto']; ?>" alt="Foto" width="40" height="40" class="rounded-circle">
@@ -415,17 +406,6 @@ include '../templates/sidebar.php';
                                                                             <option value="admin" <?php echo $user['level'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
                                                                             <option value="guru" <?php echo $user['level'] === 'guru' ? 'selected' : ''; ?>>Guru</option>
                                                                             <option value="wali" <?php echo $user['level'] === 'wali' ? 'selected' : ''; ?>>Wali</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label>Nama Guru (opsional)</label>
-                                                                        <select class="form-control" name="id_guru">
-                                                                            <option value="">Pilih Guru</option>
-                                                                            <?php foreach ($teachers as $teacher): ?>
-                                                                            <option value="<?php echo $teacher['id_guru']; ?>" <?php echo $user['id_guru'] == $teacher['id_guru'] ? 'selected' : ''; ?>>
-                                                                                <?php echo htmlspecialchars($teacher['nama_guru']); ?>
-                                                                            </option>
-                                                                            <?php endforeach; ?>
                                                                         </select>
                                                                     </div>
                                                                     <div class="form-group">
@@ -489,17 +469,6 @@ include '../templates/sidebar.php';
                                         <option value="admin">Admin</option>
                                         <option value="guru">Guru</option>
                                         <option value="wali">Wali</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Nama Guru (opsional)</label>
-                                    <select class="form-control" name="id_guru">
-                                        <option value="">Pilih Guru</option>
-                                        <?php foreach ($teachers as $teacher): ?>
-                                        <option value="<?php echo $teacher['id_guru']; ?>">
-                                            <?php echo htmlspecialchars($teacher['nama_guru']); ?>
-                                        </option>
-                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="form-group">

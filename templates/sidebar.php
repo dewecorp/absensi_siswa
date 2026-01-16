@@ -60,7 +60,7 @@ switch ($user_level) {
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
                 'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline()"'
+                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
             ]
         ];
         break;
@@ -90,7 +90,7 @@ switch ($user_level) {
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
                 'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline()"'
+                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
             ]
         ];
         break;
@@ -126,7 +126,7 @@ switch ($user_level) {
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
                 'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline()"'
+                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
             ]
         ];
         break;

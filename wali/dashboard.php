@@ -195,7 +195,7 @@ $js_page = [
     "
 ];
 
-include '../templates/header.php';
+include '../templates/user_header.php';
 
 include '../templates/sidebar.php';
 
@@ -423,5 +423,5 @@ include '../templates/sidebar.php';
         }
     });
     ";
-    include '../templates/footer.php'; 
+    include '../templates/user_footer.php'; 
     ?>

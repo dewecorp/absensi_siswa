@@ -140,7 +140,7 @@ if (!isLoggedIn()) {
                             }
                             ?>
                             <a href="<?php echo $profile_url; ?>" class="dropdown-item has-icon">
-                                <i class="far fa-user"></i> Profil & Pengaturan
+                                <i class="fas fa-cog"></i> Pengaturan
                             </a>
                             <div class="dropdown-divider"></div>
                             <a href="#" onclick="confirmLogoutInline(); return false;" class="dropdown-item has-icon text-danger">
