@@ -241,6 +241,11 @@
             }
         });
     }
+    
+    // Also provide confirmLogoutInline function for consistency
+    function confirmLogoutInline() {
+        confirmLogout();
+    }
     </script>
     
 </body>

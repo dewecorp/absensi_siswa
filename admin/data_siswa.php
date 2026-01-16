@@ -2,6 +2,11 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
+// Ensure session is started for activity logging
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Check if user is logged in and has admin level
 if (!isAuthorized(['admin'])) {
     redirect('../login.php');

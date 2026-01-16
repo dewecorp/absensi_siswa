@@ -154,7 +154,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                                 <i class="fas fa-cog"></i> Pengaturan
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a href="#" onclick="confirmLogoutInline(); return false;" class="dropdown-item has-icon text-danger">
+                            <a href="#" onclick="confirmLogout(); return false;" class="dropdown-item has-icon text-danger">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
                         </div>

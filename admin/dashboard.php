@@ -45,7 +45,7 @@ $jumlah_alpa = isset($result['alpa']) ? (int)$result['alpa'] : 0;
 
 // Delete old activities first (older than 25 hours to avoid deleting recent activities)
 try {
-    $delete_stmt = $pdo->prepare("DELETE FROM tb_activity_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 25 HOUR)");
+    $delete_stmt = $pdo->prepare("DELETE FROM tb_activity_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
     $delete_stmt->execute();
 } catch (Exception $e) {
     error_log("Error deleting old activities: " . $e->getMessage());
@@ -64,7 +64,7 @@ try {
             a.created_at,
             COALESCE(g.nama_guru, a.username) as display_name
         FROM tb_activity_log a
-        LEFT JOIN tb_guru g ON a.username = g.nuptk
+        LEFT JOIN tb_guru g ON a.username = g.nuptk OR a.username = g.nama_guru OR a.username = CAST(g.id_guru AS CHAR)
         WHERE a.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
         ORDER BY a.created_at DESC 
         LIMIT 10
@@ -72,7 +72,9 @@ try {
     $activities = $activity_stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Get total count of activities (only last 24 hours)
-    $count_stmt = $pdo->query("SELECT COUNT(*) as total FROM tb_activity_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+    $count_stmt = $pdo->query("SELECT COUNT(*) as total FROM tb_activity_log a
+        LEFT JOIN tb_guru g ON a.username = g.nuptk OR a.username = g.nama_guru OR a.username = CAST(g.id_guru AS CHAR)
+        WHERE a.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)");
     $count_result = $count_stmt->fetch(PDO::FETCH_ASSOC);
     $total_activities = isset($count_result['total']) ? (int)$count_result['total'] : 0;
 } catch (Exception $e) {

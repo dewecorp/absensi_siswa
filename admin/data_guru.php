@@ -2,13 +2,15 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Check if user is logged in and has admin level
-// TEMPORARY: Bypass authentication for testing
-/*
 if (!isAuthorized(['admin'])) {
     redirect('../login.php');
 }
-*/
 
 // Set page title
 $page_title = 'Data Guru';
