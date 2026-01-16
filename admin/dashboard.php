@@ -43,14 +43,42 @@ $stmt->execute();
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $jumlah_alpa = isset($result['alpa']) ? (int)$result['alpa'] : 0;
 
-// Get recent activities from the activity log
-$activities = []; // Initialize as empty array
+// Delete old activities first (older than 25 hours to avoid deleting recent activities)
 try {
-    $activity_stmt = $pdo->query("SELECT username, action, description, created_at FROM tb_activity_log ORDER BY created_at DESC LIMIT 10");
+    $delete_stmt = $pdo->prepare("DELETE FROM tb_activity_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 25 HOUR)");
+    $delete_stmt->execute();
+} catch (Exception $e) {
+    error_log("Error deleting old activities: " . $e->getMessage());
+}
+
+// Get recent activities from the activity log with teacher names (only last 24 hours)
+$activities = []; // Initialize as empty array
+$total_activities = 0;
+try {
+    // Get activities from last 24 hours with teacher names
+    $activity_stmt = $pdo->query("
+        SELECT 
+            a.username, 
+            a.action, 
+            a.description, 
+            a.created_at,
+            COALESCE(g.nama_guru, a.username) as display_name
+        FROM tb_activity_log a
+        LEFT JOIN tb_guru g ON a.username = g.nuptk
+        WHERE a.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        ORDER BY a.created_at DESC 
+        LIMIT 10
+    ");
     $activities = $activity_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Get total count of activities (only last 24 hours)
+    $count_stmt = $pdo->query("SELECT COUNT(*) as total FROM tb_activity_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+    $count_result = $count_stmt->fetch(PDO::FETCH_ASSOC);
+    $total_activities = isset($count_result['total']) ? (int)$count_result['total'] : 0;
 } catch (Exception $e) {
     // If there's an error (e.g., table doesn't exist), keep the array empty
     $activities = [];
+    $total_activities = 0;
     error_log("Error fetching activity log: " . $e->getMessage());
 }
 
@@ -478,7 +506,7 @@ include '../templates/sidebar.php';
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Aktivitas Pengguna</h4>
+                                    <h4>Aktivitas Pengguna <span class="badge badge-primary"><?php echo $total_activities; ?></span></h4>
                                 </div>
                                 <div class="card-body">
                                     <div class="activities" style="max-height: 400px; overflow-y: auto;">
@@ -498,7 +526,7 @@ include '../templates/sidebar.php';
                                             </div>
                                             <div class="activity-detail">
                                                 <div class="mb-2">
-                                                    <span class="text-job text-primary text-capitalize"><?php echo htmlspecialchars($activity['username']); ?></span>
+                                                    <span class="text-job text-primary text-capitalize"><?php echo htmlspecialchars($activity['display_name'] ?? $activity['username']); ?></span>
                                                     <span class="text-muted"><?php 
                                                         if (function_exists('timeAgo')) {
                                                             echo timeAgo($activity['created_at']);
@@ -506,18 +534,6 @@ include '../templates/sidebar.php';
                                                             echo $activity['created_at'];
                                                         }
                                                     ?></span>
-                                                    <span class="bullet"></span>
-                                                    <a class="text-job" href="#">View</a>
-                                                    <div class="float-right dropdown">
-                                                      <a href="#" data-toggle="dropdown"><i class="fas fa-ellipsis-h"></i></a>
-                                                      <div class="dropdown-menu">
-                                                        <div class="dropdown-title">Options</div>
-                                                        <a href="#" class="dropdown-item has-icon"><i class="fas fa-eye"></i> View</a>
-                                                        <a href="#" class="dropdown-item has-icon"><i class="fas fa-list"></i> Detail</a>
-                                                        <div class="dropdown-divider"></div>
-                                                        <a href="#" class="dropdown-item has-icon text-danger" data-confirm="Wait, wait, wait...|This action can't be undone. Want to take risks?" data-confirm-text-yes="Yes, IDC"><i class="fas fa-trash-alt"></i> Archive</a>
-                                                      </div>
-                                                    </div>
                                                 </div>
                                                 <p>
                                                     <strong><?php echo htmlspecialchars($activity['action']); ?></strong>: 

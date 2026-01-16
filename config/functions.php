@@ -179,10 +179,7 @@ function logActivity($pdo, $username, $action, $description = '') {
     
     $ip_address = $_SERVER['REMOTE_ADDR'] ?? '';
     
-    // Clean up old activity logs (older than 24 hours) before inserting new one
-    $cleanup_stmt = $pdo->prepare("DELETE FROM tb_activity_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
-    $cleanup_stmt->execute();
-    
+    // Don't clean up here - let dashboard handle it to avoid race conditions
     $stmt = $pdo->prepare("INSERT INTO tb_activity_log (username, action, description, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
     return $stmt->execute([$username, $action, $description, $ip_address]);
 }
