@@ -1005,15 +1005,15 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('<div style="margin-top: 50px; display: flex; justify-content: space-between; width: 100%;">');
     printWindow.document.write('<div style="text-align: left; width: 45%;">');
     printWindow.document.write('<p>Wali Kelas,</p>');
-    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<br><br><br><br><br>');
     printWindow.document.write('<p>' + classTeacherName + '</p>');
     printWindow.document.write('</div>');printWindow.document.write('</div>');
     
     printWindow.document.write('<div style="text-align: right; width: 45%;">');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<br><br><br><br><br>');
     printWindow.document.write('<p>' + madrasahHeadName + '</p>');
-       printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('</div>');
