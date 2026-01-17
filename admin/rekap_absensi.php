@@ -67,6 +67,14 @@ $active_semester = $school_profile['semester'] ?? 'Semester 1';
 $stmt = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get class information
+$class_info = [];
+if ($class_id > 0) {
+    $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
+    $stmt->execute([$class_id]);
+    $class_info = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+}
+
 // Process search based on filter type
 if ($class_id > 0) {
     if ($filter_type == 'daily' && !empty($selected_date)) {
@@ -749,7 +757,16 @@ include '../templates/sidebar.php';
 <?php include '../templates/footer.php'; ?>
 
 <!-- Export Functions from absensi_harian.php -->
+<?php 
+// Prepare data for JavaScript
+$madrasah_head = addslashes(htmlspecialchars($school_profile['kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8'));
+$class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8'));
+?>
 <script>
+// Pass actual names to JavaScript
+var madrasahHeadName = '<?php echo $madrasah_head; ?>';
+var classTeacherName = '<?php echo $class_teacher; ?>';
+
 function exportToExcel() {
     // Create a container for the full report
     var container = document.createElement('div');
@@ -860,6 +877,27 @@ function exportToPDF() {
                     theme: 'grid'
                 });
                 
+                // Add signatures below the table
+                var finalY = doc.lastAutoTable.finalY + 20;
+                
+                // Add class teacher information
+                doc.setFontSize(12);
+                doc.text('Wali Kelas,', 30, finalY);
+                
+                doc.setFontSize(10);
+                doc.text(classTeacherName, 30, finalY + 70);
+                
+                // Add Madrasah Head information on the right side
+                var pageWidth = doc.internal.pageSize.width;
+                var textWidth = doc.getTextWidth('Kepala Madrasah,');
+                var xPosition = pageWidth - 30 - textWidth; // Right align with 30mm margin
+                
+                doc.setFontSize(12);
+                doc.text('Kepala Madrasah,', xPosition, finalY);
+                
+                doc.setFontSize(10);
+                doc.text(madrasahHeadName, xPosition, finalY + 70);
+                
                 doc.save('rekap_absensi_bulanan_<?php echo addslashes(htmlspecialchars($js_month_name_file, ENT_QUOTES, "UTF-8")); ?>_<?php echo htmlspecialchars($js_month_year_safe, ENT_QUOTES, "UTF-8"); ?>.pdf');
             } else {
                 // Fallback to print method
@@ -904,6 +942,21 @@ function fallbackPrintPDF() {
         printWindow.document.write(table.outerHTML);
     }
     
+    // Add signatures below the table
+    printWindow.document.write('<div style="margin-top: 50px; display: flex; justify-content: space-between; width: 100%;">');
+    printWindow.document.write('<div style="text-align: left; width: 45%;">');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<p>' + classTeacherName + '</p>');
+    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div style="text-align: right; width: 45%;">');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<p>' + madrasahHeadName + '</p>');
+    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
     printWindow.document.write('</div>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
@@ -945,6 +998,21 @@ function fallbackSemesterPrintPDF() {
     if (table) {
         printWindow.document.write(table.outerHTML);
     }
+    
+    // Add signatures below the table
+    printWindow.document.write('<div style="margin-top: 50px; display: flex; justify-content: space-between; width: 100%;">');
+    printWindow.document.write('<div style="text-align: left; width: 45%;">');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<p>' + classTeacherName + '</p>');
+    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div style="text-align: right; width: 45%;">');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<p>' + madrasahHeadName + '</p>');
+    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
     
     printWindow.document.write('</div>');
     printWindow.document.write('</body></html>');
@@ -1088,6 +1156,27 @@ function exportSemesterToPDF() {
                     tableWidth: 'wrap'
                 });
                 
+                // Add signatures below the table
+                var finalY = doc.lastAutoTable.finalY + 20;
+                
+                // Add class teacher information
+                doc.setFontSize(12);
+                doc.text('Wali Kelas,', 30, finalY);
+                
+                doc.setFontSize(10);
+                doc.text(classTeacherName, 30, finalY + 70);
+                
+                // Add Madrasah Head information on the right side
+                var pageWidth = doc.internal.pageSize.width;
+                var textWidth = doc.getTextWidth('Kepala Madrasah,');
+                var xPosition = pageWidth - 30 - textWidth; // Right align with 30mm margin
+                
+                doc.setFontSize(12);
+                doc.text('Kepala Madrasah,', xPosition, finalY);
+                
+                doc.setFontSize(10);
+                doc.text(madrasahHeadName, xPosition, finalY + 70);
+                
                 doc.save('rekap_absensi_<?php echo addslashes(htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8")); ?>_<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>.pdf');
             } else {
                 // Fallback to print method
@@ -1131,6 +1220,21 @@ function fallbackSemesterPrintPDF() {
     if (table) {
         printWindow.document.write(table.outerHTML);
     }
+    
+    // Add signatures below the table
+    printWindow.document.write('<div style="margin-top: 50px; display: flex; justify-content: space-between; width: 100%;">');
+    printWindow.document.write('<div style="text-align: left; width: 45%;">');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<p>' + classTeacherName + '</p>');
+    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div style="text-align: right; width: 45%;">');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<p>' + madrasahHeadName + '</p>');
+    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
     
     printWindow.document.write('</div>');
     printWindow.document.write('</body></html>');
