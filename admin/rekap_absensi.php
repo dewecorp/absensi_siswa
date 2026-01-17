@@ -315,15 +315,29 @@ include '../templates/sidebar.php';
 
             <!-- Custom CSS for semester table -->
             <style>
+            #semesterTable {
+                font-size: 10pt;
+                color: black;
+                table-layout: auto;
+            }
             #semesterTable thead th {
                 text-align: center;
                 vertical-align: middle;
                 background-color: #f8f9fa;
                 font-weight: bold;
+                color: black;
+            }
+            #semesterTable thead th:nth-child(2) { /* Nama Siswa column */
+                white-space: normal;
+                text-align: center;
+            }
+            #semesterTable tbody td {
+                color: black;
                 white-space: nowrap;
             }
-            #semesterTable td {
-                white-space: nowrap;
+            #semesterTable tbody td:nth-child(2) { /* Nama Siswa column */
+                white-space: normal;
+                text-align: left;
             }
             </style>
             
@@ -486,7 +500,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                                 
                                                 <div style="overflow-x: auto; width: 100%;">
-                                                    <table class="table table-bordered" id="semesterTable" style="min-width: 1000px; font-size: 11px;">
+                                                    <table class="table table-bordered" id="semesterTable" style="min-width: 1400px; font-size: 10pt; color: black;">
                                                         <thead>
                                                             <tr>
                                                                 <th rowspan="2">No</th>
@@ -530,17 +544,17 @@ include '../templates/sidebar.php';
                                                                         $izin = $student['monthly_totals'][$m]['Izin'] ?? 0;
                                                                         $alpa = $student['monthly_totals'][$m]['Alpa'] ?? 0;
                                                                         
-                                                                        echo '<td class="text-center">' . ($hadir > 0 ? '<span class="badge badge-success">' . $hadir . '</span>' : '-') . '</td>';
-                                                                        echo '<td class="text-center">' . ($sakit > 0 ? '<span class="badge badge-warning">' . $sakit . '</span>' : '-') . '</td>';
-                                                                        echo '<td class="text-center">' . ($izin > 0 ? '<span class="badge badge-info">' . $izin . '</span>' : '-') . '</td>';
-                                                                        echo '<td class="text-center">' . ($alpa > 0 ? '<span class="badge badge-danger">' . $alpa . '</span>' : '-') . '</td>';
+                                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($hadir > 0 ? $hadir : '-') . '</td>';
+                                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($sakit > 0 ? $sakit : '-') . '</td>';
+                                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($izin > 0 ? $izin : '-') . '</td>';
+                                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($alpa > 0 ? $alpa : '-') . '</td>';
                                                                     endfor;
                                                                     
                                                                     // Display semester totals
-                                                                    echo '<td class="text-center"><span class="badge badge-success">' . $student['summary']['Hadir'] . '</span></td>';
-                                                                    echo '<td class="text-center"><span class="badge badge-warning">' . $student['summary']['Sakit'] . '</span></td>';
-                                                                    echo '<td class="text-center"><span class="badge badge-info">' . $student['summary']['Izin'] . '</span></td>';
-                                                                    echo '<td class="text-center"><span class="badge badge-danger">' . $student['summary']['Alpa'] . '</span></td>';
+                                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Hadir'] . '</td>';
+                                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Sakit'] . '</td>';
+                                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Izin'] . '</td>';
+                                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Alpa'] . '</td>';
                                                                     ?>
                                                                 </tr>
                                                             <?php endforeach; ?>
@@ -616,15 +630,15 @@ include '../templates/sidebar.php';
                                                                                     case 'Alpa': $status_class = 'badge-danger'; break;
                                                                                     default: $status_class = 'badge-secondary'; break;
                                                                                 }
-                                                                                echo '<span class="badge ' . $status_class . ' badge-sm">' . substr($status, 0, 1) . '</span>';
+                                                                                echo '<span style="font-size: 10pt;">' . substr($status, 0, 1) . '</span>';
                                                                             }
                                                                             ?>
                                                                         </td>
                                                                     <?php endfor; ?>
-                                                                    <td class="text-center"><span class="badge badge-success"><?php echo $student['summary']['Hadir']; ?></span></td>
-                                                                    <td class="text-center"><span class="badge badge-warning"><?php echo $student['summary']['Sakit']; ?></span></td>
-                                                                    <td class="text-center"><span class="badge badge-info"><?php echo $student['summary']['Izin']; ?></span></td>
-                                                                    <td class="text-center"><span class="badge badge-danger"><?php echo $student['summary']['Alpa']; ?></span></td>
+                                                                    <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Hadir']; ?></span></td>
+                                                                    <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Sakit']; ?></span></td>
+                                                                    <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Izin']; ?></span></td>
+                                                                    <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Alpa']; ?></span></td>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>
@@ -1108,14 +1122,25 @@ function exportSemesterToPDF() {
         // Get the semester table element
         var table = document.getElementById('semesterTable');
         if (table) {
+            // Create a clone to modify for export
+            var clonedTable = table.cloneNode(true);
+            
+            // Convert badges to text for better PDF visibility
+            var badges = clonedTable.querySelectorAll('.badge');
+            for (var i = 0; i < badges.length; i++) {
+                var badge = badges[i];
+                var textNode = document.createTextNode(badge.textContent);
+                badge.parentNode.replaceChild(textNode, badge);
+            }
+            
             // Use autoTable plugin if available
             if (typeof doc.autoTable !== 'undefined') {
                 // Handle complex table with multi-row headers
                 var headRows = [];
                 var bodyRows = [];
                 
-                // Extract all header rows (multi-level headers)
-                var headerRows = table.querySelectorAll('thead tr');
+                // Extract all header rows (multi-level headers) from cloned table
+                var headerRows = clonedTable.querySelectorAll('thead tr');
                 for (var i = 0; i < headerRows.length; i++) {
                     var headerCells = headerRows[i].querySelectorAll('th');
                     var headerRow = [];
@@ -1130,8 +1155,8 @@ function exportSemesterToPDF() {
                     headRows.push(headerRow);
                 }
                 
-                // Extract body rows
-                var dataRows = table.querySelectorAll('tbody tr');
+                // Extract body rows from cloned table
+                var dataRows = clonedTable.querySelectorAll('tbody tr');
                 for (var i = 0; i < dataRows.length; i++) {
                     var rowData = [];
                     var cells = dataRows[i].querySelectorAll('td');
@@ -1157,19 +1182,21 @@ function exportSemesterToPDF() {
                     styles: {
                         fontSize: 11,
                         cellPadding: 3,
-                        valign: 'middle'
+                        textColor: [0, 0, 0], // Black text
+                        lineColor: [0, 0, 0]  // Black borders
                     },
                     headStyles: {
                         fillColor: [221, 221, 221],
                         textColor: [0, 0, 0],
                         fontStyle: 'bold',
-                        fontSize: 12
+                        fontSize: 12,
+                        lineColor: [0, 0, 0]  // Black header borders
                     },
                     bodyStyles: {
-                        valign: 'middle'
+                        textColor: [0, 0, 0],  // Black body text
+                        lineColor: [0, 0, 0]   // Black body borders
                     },
-                    theme: 'grid',
-                    tableWidth: 'wrap'
+                    theme: 'plain' // Use plain theme for better control over colors
                 });
                 
                 // Add signatures below the table
