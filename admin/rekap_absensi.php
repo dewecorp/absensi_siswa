@@ -313,6 +313,20 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+            <!-- Custom CSS for semester table -->
+            <style>
+            #semesterTable thead th {
+                text-align: center;
+                vertical-align: middle;
+                background-color: #f8f9fa;
+                font-weight: bold;
+                white-space: nowrap;
+            }
+            #semesterTable td {
+                white-space: nowrap;
+            }
+            </style>
+            
             <!-- Main Content -->
             <div class="main-content">
                 <section class="section">
@@ -471,8 +485,8 @@ include '../templates/sidebar.php';
                                                     </div>
                                                 </div>
                                                 
-                                                <div class="table-responsive">
-                                                    <table class="table table-bordered table-md" id="semesterTable">
+                                                <div style="overflow-x: auto; width: 100%;">
+                                                    <table class="table table-bordered" id="semesterTable" style="min-width: 1000px; font-size: 11px;">
                                                         <thead>
                                                             <tr>
                                                                 <th rowspan="2">No</th>
