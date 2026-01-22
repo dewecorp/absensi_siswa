@@ -7,7 +7,7 @@
             
             <footer class="main-footer">
                 <div class="footer-left">
-                    Copyright &copy; <?php echo date('Y'); ?> <div class="bullet"></div> Sistem Absensi Siswa
+                    Copyright &copy; <?php echo date('Y'); ?> <div class="bullet"></div> Sistem Informasi Madrasah
                 </div>
                 <div class="footer-right">
                     <?php echo $school_profile['nama_madrasah']; ?>
