@@ -12,6 +12,12 @@ try {
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '+07:00'"
     ]);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    // Set Timezone PHP
+    date_default_timezone_set('Asia/Jakarta');
+    
+    // Set Timezone MySQL
+    $pdo->exec("SET time_zone = '+07:00'");
 } catch(PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }

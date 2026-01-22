@@ -14,63 +14,71 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Get the table data from POST
 $table_data = $_POST['table_data'] ?? '';
 $export_type = $_POST['export_type'] ?? '';
+$report_title = $_POST['report_title'] ?? 'Data Guru';
+$filename = $_POST['filename'] ?? 'data_guru';
 
 // For debugging - uncomment to log the received data
 // error_log('Received table data: ' . substr($table_data, 0, 200));
 
 if (empty($table_data)) {
     // If no table data, fetch from database and create basic table
-    $stmt = $pdo->query("
-        SELECT g.*, 
-               GROUP_CONCAT(k.nama_kelas ORDER BY k.nama_kelas SEPARATOR ', ') as kelas_wali
-        FROM tb_guru g
-        LEFT JOIN tb_kelas k ON k.wali_kelas = g.nama_guru
-        GROUP BY g.id_guru
-        ORDER BY g.nama_guru ASC
-    ");
-    $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Decode mengajar JSON
-    $classes_stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
-    $classes = $classes_stmt->fetchAll(PDO::FETCH_ASSOC);
-    $class_lookup = [];
-    foreach ($classes as $kelas) {
-        $class_lookup[$kelas['id_kelas']] = $kelas['nama_kelas'];
-    }
-    
-    // Build a basic HTML table
-    $table_data = '<table><thead><tr><th>No</th><th>Nama Guru</th><th>NUPTK</th><th>Tempat Lahir</th><th>Tanggal Lahir</th><th>Jenis Kelamin</th><th>Mengajar</th><th>Wali Kelas</th></tr></thead><tbody>';
-    $no = 1;
-    foreach ($teachers as $teacher) {
-        // Decode mengajar JSON and get class names
-        $mengajar_names = [];
-        if (!empty($teacher['mengajar'])) {
-            $decoded = json_decode($teacher['mengajar'], true);
-            if (is_array($decoded)) {
-                foreach ($decoded as $kelas_id) {
-                    $kelas_id = (string)$kelas_id;
-                    if (isset($class_lookup[(int)$kelas_id])) {
-                        $mengajar_names[] = $class_lookup[(int)$kelas_id];
-                    } elseif (isset($class_lookup[$kelas_id])) {
-                        $mengajar_names[] = $class_lookup[$kelas_id];
+    // Only execute this fallback if we are actually exporting data guru (default behavior)
+    if ($report_title === 'Data Guru' || $report_title === 'Data Guru') {
+        $stmt = $pdo->query("
+            SELECT g.*, 
+                   GROUP_CONCAT(k.nama_kelas ORDER BY k.nama_kelas SEPARATOR ', ') as kelas_wali
+            FROM tb_guru g
+            LEFT JOIN tb_kelas k ON k.wali_kelas = g.nama_guru
+            GROUP BY g.id_guru
+            ORDER BY g.nama_guru ASC
+        ");
+        $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Decode mengajar JSON
+        $classes_stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
+        $classes = $classes_stmt->fetchAll(PDO::FETCH_ASSOC);
+        $class_lookup = [];
+        foreach ($classes as $kelas) {
+            $class_lookup[$kelas['id_kelas']] = $kelas['nama_kelas'];
+        }
+        
+        // Build a basic HTML table
+        $table_data = '<table><thead><tr><th>No</th><th>Nama Guru</th><th>NUPTK</th><th>Tempat Lahir</th><th>Tanggal Lahir</th><th>Jenis Kelamin</th><th>Mengajar</th><th>Wali Kelas</th></tr></thead><tbody>';
+        $no = 1;
+        foreach ($teachers as $teacher) {
+            // Decode mengajar JSON and get class names
+            $mengajar_names = [];
+            if (!empty($teacher['mengajar'])) {
+                $decoded = json_decode($teacher['mengajar'], true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $kelas_id) {
+                        $kelas_id = (string)$kelas_id;
+                        if (isset($class_lookup[(int)$kelas_id])) {
+                            $mengajar_names[] = $class_lookup[(int)$kelas_id];
+                        } elseif (isset($class_lookup[$kelas_id])) {
+                            $mengajar_names[] = $class_lookup[$kelas_id];
+                        }
                     }
                 }
             }
+            $mengajar_display = !empty($mengajar_names) ? implode(', ', $mengajar_names) : '-';
+            
+            $table_data .= '<tr>';
+            $table_data .= '<td>' . $no++ . '</td>';
+            $table_data .= '<td>' . htmlspecialchars($teacher['nama_guru']) . '</td>';
+            $table_data .= '<td>' . htmlspecialchars($teacher['nuptk']) . '</td>';
+            $table_data .= '<td>' . htmlspecialchars($teacher['tempat_lahir']) . '</td>';
+            $table_data .= '<td>' . ($teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-') . '</td>';
+            $table_data .= '<td>' . htmlspecialchars($teacher['jenis_kelamin']) . '</td>';
+            $table_data .= '<td>' . htmlspecialchars($mengajar_display) . '</td>';
+            $table_data .= '<td>' . htmlspecialchars($teacher['kelas_wali'] ?? '-') . '</td>';
+            $table_data .= '</tr>';
         }
-        $mengajar_display = !empty($mengajar_names) ? implode(', ', $mengajar_names) : '-';
-        
-        $table_data .= '<tr>';
-        $table_data .= '<td>' . $no++ . '</td>';
-        $table_data .= '<td>' . htmlspecialchars($teacher['nama_guru']) . '</td>';
-        $table_data .= '<td>' . htmlspecialchars($teacher['nuptk']) . '</td>';
-        $table_data .= '<td>' . htmlspecialchars($teacher['tempat_lahir']) . '</td>';
-        $table_data .= '<td>' . ($teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-') . '</td>';
-        $table_data .= '<td>' . htmlspecialchars($teacher['jenis_kelamin']) . '</td>';
-        $table_data .= '<td>' . htmlspecialchars($mengajar_display) . '</td>';
-        $table_data .= '<td>' . htmlspecialchars($teacher['kelas_wali'] ?? '-') . '</td>';
-        $table_data .= '</tr>';
+        $table_data .= '</tbody></table>';
+    } else {
+        // If no table data provided and not data guru, we can't do anything
+        die("No data provided for export.");
     }
-    $table_data .= '</tbody></table>';
 }
 
 // Include PhpSpreadsheet
@@ -86,9 +94,9 @@ $spreadsheet = new Spreadsheet();
 $spreadsheet->getProperties()
     ->setCreator("Sistem Absensi Siswa")
     ->setLastModifiedBy("Sistem Absensi Siswa")
-    ->setTitle("Data Guru - " . date('Y-m-d'))
-    ->setSubject("Data Guru")
-    ->setDescription("Data guru dari sistem absensi siswa");
+    ->setTitle($report_title . " - " . date('Y-m-d'))
+    ->setSubject($report_title)
+    ->setDescription("Data dari sistem absensi siswa");
 
 // Add some basic styles
 $headerStyle = [
@@ -106,7 +114,9 @@ $headerStyle = [
 ];
 
 // Set worksheet title
-$spreadsheet->getActiveSheet()->setTitle('Data Guru');
+// Excel sheet title has limit of 31 chars
+$sheetTitle = substr($report_title, 0, 31);
+$spreadsheet->getActiveSheet()->setTitle($sheetTitle);
 
 // Extract data from HTML table
 $dom = new DOMDocument();

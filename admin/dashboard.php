@@ -135,6 +135,89 @@ $sakit_data_json = json_encode($sakit_data);
 $izin_data_json = json_encode($izin_data);
 $alpa_data_json = json_encode($alpa_data);
 
+// Get teacher attendance stats
+$stmt = $pdo->prepare("SELECT COUNT(*) as hadir FROM tb_absensi_guru WHERE status = 'Hadir' AND tanggal = CURDATE()");
+$stmt->execute();
+$result = $stmt->fetch(PDO::FETCH_ASSOC);
+$guru_hadir = isset($result['hadir']) ? (int)$result['hadir'] : 0;
+
+$stmt = $pdo->prepare("SELECT COUNT(*) as sakit FROM tb_absensi_guru WHERE status = 'Sakit' AND tanggal = CURDATE()");
+$stmt->execute();
+$result = $stmt->fetch(PDO::FETCH_ASSOC);
+$guru_sakit = isset($result['sakit']) ? (int)$result['sakit'] : 0;
+
+$stmt = $pdo->prepare("SELECT COUNT(*) as izin FROM tb_absensi_guru WHERE status = 'Izin' AND tanggal = CURDATE()");
+$stmt->execute();
+$result = $stmt->fetch(PDO::FETCH_ASSOC);
+$guru_izin = isset($result['izin']) ? (int)$result['izin'] : 0;
+
+$stmt = $pdo->prepare("SELECT COUNT(*) as alpa FROM tb_absensi_guru WHERE status = 'Alpa' AND tanggal = CURDATE()");
+$stmt->execute();
+$result = $stmt->fetch(PDO::FETCH_ASSOC);
+$guru_alpa_recorded = isset($result['alpa']) ? (int)$result['alpa'] : 0;
+
+// Calculate total Alpa (including those not yet recorded)
+// Logic: Total Guru - (Hadir + Sakit + Izin)
+// This assumes that any guru not marked as Hadir/Sakit/Izin is effectively Alpa/Belum Absen
+$guru_alpa = $total_guru - ($guru_hadir + $guru_sakit + $guru_izin);
+// Ensure non-negative (just in case of data inconsistency)
+if ($guru_alpa < 0) $guru_alpa = 0;
+
+// Get teacher attendance trend data for the last 7 days
+$stmt = $pdo->prepare(
+    "SELECT 
+        DATE(tanggal) as tanggal,
+        SUM(CASE WHEN status = 'Hadir' THEN 1 ELSE 0 END) as hadir,
+        SUM(CASE WHEN status = 'Sakit' THEN 1 ELSE 0 END) as sakit,
+        SUM(CASE WHEN status = 'Izin' THEN 1 ELSE 0 END) as izin,
+        SUM(CASE WHEN status = 'Alpa' THEN 1 ELSE 0 END) as alpa
+    FROM tb_absensi_guru 
+    WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    GROUP BY DATE(tanggal)
+    ORDER BY tanggal ASC"
+);
+$stmt->execute();
+$guru_trends = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$guru_dates = [];
+$guru_hadir_data = [];
+$guru_sakit_data = [];
+$guru_izin_data = [];
+$guru_alpa_data = [];
+
+// Helper to fill missing dates if needed, but for now we trust the query returns dates with activity
+// If we want to show strict last 7 days including empty days, we might need a loop.
+// However, let's stick to the query result but fix the Alpa calculation.
+// Since we can't easily get "Total Guru" history without a log, we will stick to recorded Alpa for history,
+// OR we assume Total Guru is constant and calculate remainder.
+// Let's assume Total Guru is constant ($total_guru) for the trend graph to be consistent with today's stats.
+
+foreach ($guru_trends as $trend) {
+    $guru_dates[] = $trend['tanggal'] ? date('d M', strtotime($trend['tanggal'])) : '';
+    $h = isset($trend['hadir']) ? (int)$trend['hadir'] : 0;
+    $s = isset($trend['sakit']) ? (int)$trend['sakit'] : 0;
+    $i = isset($trend['izin']) ? (int)$trend['izin'] : 0;
+    
+    // Recorded Alpa
+    $a_recorded = isset($trend['alpa']) ? (int)$trend['alpa'] : 0;
+    
+    // Calculated Alpa (Remainder)
+    // Use current total_guru as proxy for historical total (limitation: if teachers changed, this might be slightly off)
+    $a_calculated = $total_guru - ($h + $s + $i);
+    if ($a_calculated < 0) $a_calculated = 0;
+    
+    $guru_hadir_data[] = $h;
+    $guru_sakit_data[] = $s;
+    $guru_izin_data[] = $i;
+    $guru_alpa_data[] = $a_calculated; // Use calculated Alpa for consistency
+}
+
+$guru_dates_json = json_encode($guru_dates);
+$guru_hadir_data_json = json_encode($guru_hadir_data);
+$guru_sakit_data_json = json_encode($guru_sakit_data);
+$guru_izin_data_json = json_encode($guru_izin_data);
+$guru_alpa_data_json = json_encode($guru_alpa_data);
+
 // Define CSS libraries for this page (only essential ones)
 $css_libs = [
     // Removed JQVMap since files don't exist
@@ -311,6 +394,148 @@ $js_page = [
                     console.error('Error creating trend chart:', e);
                 }
             }
+            
+            // Guru Daily Chart
+            var guruDailyCtx = document.getElementById('guruDailyChart');
+            if (guruDailyCtx) {
+                try {
+                    var guruDailyCtx2d = guruDailyCtx.getContext('2d');
+                    var guruDailyChart = new Chart(guruDailyCtx2d, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'],
+                            datasets: [{
+                                label: 'Jumlah Guru',
+                                data: [
+                                    " . $guru_hadir . ",
+                                    " . $guru_sakit . ",
+                                    " . $guru_izin . ",
+                                    " . $guru_alpa . "
+                                ],
+                                backgroundColor: [
+                                    'rgba(54, 162, 235, 0.2)',
+                                    'rgba(255, 99, 132, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)',
+                                    'rgba(153, 102, 255, 0.2)'
+                                ],
+                                borderColor: [
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255,99,132,1)',
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(153, 102, 255, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Statistik Kehadiran Guru Hari Ini'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Jumlah Guru'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Status Kehadiran'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error creating guru daily chart:', e);
+                }
+            }
+            
+            // Guru Trend Chart
+            var guruCtx = document.getElementById('guruChart');
+            if (guruCtx) {
+                try {
+                    var guruCtx2d = guruCtx.getContext('2d');
+                    var guruChart = new Chart(guruCtx2d, {
+                        type: 'line',
+                        data: {
+                            labels: " . $guru_dates_json . ",
+                            datasets: [{
+                                label: 'Hadir',
+                                data: " . $guru_hadir_data_json . ",
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                fill: false,
+                                tension: 0.4
+                            }, {
+                                label: 'Sakit',
+                                data: " . $guru_sakit_data_json . ",
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                fill: false,
+                                tension: 0.4
+                            }, {
+                                label: 'Izin',
+                                data: " . $guru_izin_data_json . ",
+                                borderColor: 'rgb(255, 206, 86)',
+                                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                                fill: false,
+                                tension: 0.4
+                            }, {
+                                label: 'Alpa',
+                                data: " . $guru_alpa_data_json . ",
+                                borderColor: 'rgb(153, 102, 255)',
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                fill: false,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Trend Kehadiran Guru 7 Hari Terakhir'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Jumlah Guru'
+                                    },
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Tanggal'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error creating guru trend chart:', e);
+                }
+            }
         }, 500);
     });
     "
@@ -442,23 +667,106 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h4>Grafik Kehadiran Hari Ini</h4>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-success">
+                                    <i class="fas fa-user-check"></i>
                                 </div>
-                                <div class="card-body">
-                                    <canvas id="myChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Guru Hadir</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $guru_hadir; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-danger">
+                                    <i class="fas fa-user-injured"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Guru Sakit</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $guru_sakit; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-warning">
+                                    <i class="fas fa-user-clock"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Guru Izin</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $guru_izin; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-secondary">
+                                    <i class="fas fa-user-times"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Guru Alpa</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $guru_alpa; ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="row">
-                        <div class="col-12">
+                        <div class="col-lg-6 col-md-12 col-12 col-sm-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Grafik Trend Kehadiran 7 Hari Terakhir</h4>
+                                    <h4>Grafik Kehadiran Guru Hari Ini</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="guruDailyChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 col-md-12 col-12 col-sm-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Grafik Trend Kehadiran Guru (7 Hari Terakhir)</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="guruChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-6 col-md-12 col-12 col-sm-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Grafik Kehadiran Siswa Hari Ini</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="myChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 col-md-12 col-12 col-sm-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Grafik Trend Kehadiran Siswa (7 Hari Terakhir)</h4>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="trendChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
@@ -467,55 +775,7 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h4>Ringkasan Kehadiran</h4>
-                                </div>
-                                <div class="card-body">
-                                    <div class="alert alert-info">
-                                        <strong>Statistik Hari Ini (<?php echo date('d M Y'); ?>):</strong><br>
-                                        Hadir: <?php echo $jumlah_hadir; ?> siswa<br>
-                                        Sakit: <?php echo $jumlah_sakit; ?> siswa<br>
-                                        Izin: <?php echo $jumlah_izin; ?> siswa<br>
-                                        Alpa: <?php echo $jumlah_alpa; ?> siswa
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h4>Statistik Minggu Ini</h4>
-                                </div>
-                                <div class="card-body">
-                                    <div class="alert alert-light">
-                                        <?php
-                                        $stmt = $pdo->prepare("
-                                            SELECT 
-                                                SUM(CASE WHEN keterangan = 'Hadir' THEN 1 ELSE 0 END) as total_hadir,
-                                                SUM(CASE WHEN keterangan = 'Sakit' THEN 1 ELSE 0 END) as total_sakit,
-                                                SUM(CASE WHEN keterangan = 'Izin' THEN 1 ELSE 0 END) as total_izin,
-                                                SUM(CASE WHEN keterangan = 'Alpa' THEN 1 ELSE 0 END) as total_alpa
-                                            FROM tb_absensi 
-                                            WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                                        ");
-                                        $stmt->execute();
-                                        $weekly_stats = $stmt->fetch(PDO::FETCH_ASSOC);
-                                        
-                                        echo "7 hari terakhir:<br>";
-                                        echo "Hadir: " . (isset($weekly_stats['total_hadir']) ? $weekly_stats['total_hadir'] : 0) . " siswa<br>";
-                                        echo "Sakit: " . (isset($weekly_stats['total_sakit']) ? $weekly_stats['total_sakit'] : 0) . " siswa<br>";
-                                        echo "Izin: " . (isset($weekly_stats['total_izin']) ? $weekly_stats['total_izin'] : 0) . " siswa<br>";
-                                        echo "Alpa: " . (isset($weekly_stats['total_alpa']) ? $weekly_stats['total_alpa'] : 0) . " siswa";
-                                        ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
                     
                     <div class="row">
                         <div class="col-12">

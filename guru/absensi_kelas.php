@@ -224,6 +224,10 @@ $(document).ready(function() {
 
 // Add other page-specific functions
 $js_page[] = "
+// Pass actual names to JavaScript
+var madrasahHeadName = '" . addslashes(htmlspecialchars($school_profile['nama_kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8')) . "';
+var classTeacherName = '" . addslashes(htmlspecialchars($teacher['nama_guru'] ?? 'Guru Kelas', ENT_QUOTES, 'UTF-8')) . "';
+
 function updateBadge(selectElement) {
     var selectedOption = selectElement.options[selectElement.selectedIndex].text;
     var selectedValue = selectElement.options[selectElement.selectedIndex].value;
@@ -269,18 +273,29 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    var printWindow = window.open('', '', 'height=600,width=800');
+    var printWindow = window.open('', '', 'height=860,width=1300');
     printWindow.document.write('<html><head><title>Export PDF</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
+    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
+    printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
+    printWindow.document.write('h2, h3, h4 { margin: 5px 0; text-align: center; }');
+    printWindow.document.write('.header-container { text-align: center; margin-bottom: 20px; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
-    printWindow.document.write('<div style=\"text-align: center;\">');
-    printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin: 0 20px 20px 0;\">');
+    printWindow.document.write('<div class=\"header-container\">');
+    printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\">');
     printWindow.document.write('<div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3>" . $school_name_js . "</h3>');
     printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">');
+    printWindow.document.write('</div>');
+    
     var table = document.getElementById('table-1').cloneNode(true);
     var rows = table.querySelectorAll('tr');
     for (var i = 1; i < rows.length; i++) {
@@ -293,7 +308,21 @@ function exportToPDF() {
         }
     }
     printWindow.document.write(table.outerHTML);
+
+    // Add signatures below the table
+    printWindow.document.write('<div class=\"signature-wrapper\">');
+    printWindow.document.write('<div class=\"signature-box\">');
+    printWindow.document.write('<p>Guru Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
+    printWindow.document.write('<div class=\"signature-box\">');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.print();

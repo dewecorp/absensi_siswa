@@ -845,108 +845,20 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    // Check if jsPDF library is available
-    if (typeof jsPDF !== 'undefined') {
-        var doc = new jsPDF('l', 'mm', 'a4');
-        
-        // Add title
-        doc.setFontSize(16);
-        doc.text('Sistem Absensi Siswa', 105, 15, null, null, 'center');
-        
-        doc.setFontSize(14);
-        doc.text('<?php echo addslashes(htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8")); ?>', 105, 25, null, null, 'center');
-        
-        doc.setFontSize(12);
-        doc.text('Rekap Absensi Bulanan - <?php echo addslashes(htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8")); ?>', 105, 35, null, null, 'center');
-        
-        // Get the table element
-        var table = document.querySelector('.table-bordered');
-        if (table) {
-            // Use autoTable plugin if available
-            if (typeof doc.autoTable !== 'undefined') {
-                var columns = [];
-                var rows = [];
-                
-                // Extract headers
-                var headers = table.querySelectorAll('thead th');
-                for (var i = 0; i < headers.length; i++) {
-                    columns.push(headers[i].textContent.trim());
-                }
-                
-                // Extract rows
-                var dataRows = table.querySelectorAll('tbody tr');
-                for (var i = 0; i < dataRows.length; i++) {
-                    var rowData = [];
-                    var cells = dataRows[i].querySelectorAll('td');
-                    for (var j = 0; j < cells.length; j++) {
-                        // Extract text content, handling badges
-                        var cellText = cells[j].textContent.trim();
-                        // Remove extra spaces and clean up text
-                        cellText = cellText.replace(/\s+/g, ' ').trim();
-                        rowData.push(cellText);
-                    }
-                    rows.push(rowData);
-                }
-                
-                // Generate the table
-                doc.autoTable({
-                    head: [columns],
-                    body: rows,
-                    startY: 45,
-                    styles: {
-                        fontSize: 11,
-                        cellPadding: 3
-                    },
-                    headStyles: {
-                        fillColor: [221, 221, 221],
-                        textColor: [0, 0, 0],
-                        fontSize: 12
-                    },
-                    theme: 'grid'
-                });
-                
-                // Add signatures below the table
-                var finalY = doc.lastAutoTable.finalY + 20;
-                
-                // Add class teacher information
-                doc.setFontSize(12);
-                doc.text('Wali Kelas,', 30, finalY);
-                
-                doc.setFontSize(10);
-                doc.text(classTeacherName, 30, finalY + 70);
-                
-                // Add Madrasah Head information on the right side
-                var pageWidth = doc.internal.pageSize.width;
-                var textWidth = doc.getTextWidth('Kepala Madrasah,');
-                var xPosition = pageWidth - 30 - textWidth; // Right align with 30mm margin
-                
-                doc.setFontSize(12);
-                doc.text('Kepala Madrasah,', xPosition, finalY);
-                
-                doc.setFontSize(10);
-                doc.text(madrasahHeadName, xPosition, finalY + 70);
-                
-                doc.save('rekap_absensi_bulanan_<?php echo addslashes(htmlspecialchars($js_month_name_file, ENT_QUOTES, "UTF-8")); ?>_<?php echo htmlspecialchars($js_month_year_safe, ENT_QUOTES, "UTF-8"); ?>.pdf');
-            } else {
-                // Fallback to print method
-                fallbackPrintPDF();
-            }
-        }
-    } else {
-        // Fallback to print method if library not loaded
-        fallbackPrintPDF();
-    }
+    fallbackPrintPDF();
 }
 
 function fallbackPrintPDF() {
     // Print the table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1118'); // F4 dimensions in pixels
+    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
     printWindow.document.write('<html><head><title>Rekap Absensi Bulanan</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: landscape; margin: 1cm; }'); // Landscape orientation
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
+    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
@@ -956,6 +868,8 @@ function fallbackPrintPDF() {
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
     printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
     printWindow.document.write('<div class="header">');
@@ -971,19 +885,17 @@ function fallbackPrintPDF() {
     }
     
     // Add signatures below the table
-    printWindow.document.write('<div style="margin-top: 50px; display: flex; justify-content: space-between; width: 100%;">');
-    printWindow.document.write('<div style="text-align: left; width: 45%;">');
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>Wali Kelas,</p>');
     printWindow.document.write('<br><br><br>');
-    printWindow.document.write('<p>' + classTeacherName + '</p>');
-    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     
-    printWindow.document.write('<div style="text-align: right; width: 45%;">');
+    printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-     printWindow.document.write('<br><br><br>');
-    printWindow.document.write('<p>' + madrasahHeadName + '</p>');
-    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
     
@@ -993,19 +905,21 @@ function fallbackPrintPDF() {
     printWindow.focus();
     setTimeout(function() {
         printWindow.print();
-        printWindow.close();
+        // printWindow.close();
     }, 500);
 }
 
 function fallbackSemesterPrintPDF() {
     // Print the semester table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1118'); // F4 dimensions in pixels
+    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
     printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: landscape; margin: 1cm; }'); // Landscape orientation
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
+    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
@@ -1015,6 +929,8 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
     printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
     printWindow.document.write('<div class="header">');
@@ -1030,17 +946,17 @@ function fallbackSemesterPrintPDF() {
     }
     
     // Add signatures below the table
-    printWindow.document.write('<div style="margin-top: 50px; display: flex; justify-content: space-between; width: 100%;">');
-    printWindow.document.write('<div style="text-align: left; width: 45%;">');
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>Wali Kelas,</p>');
-    printWindow.document.write('<br><br><br><br><br>');
-    printWindow.document.write('<p>' + classTeacherName + '</p>');
-    printWindow.document.write('</div>');printWindow.document.write('</div>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
     
-    printWindow.document.write('<div style="text-align: right; width: 45%;">');
+    printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<br><br><br><br><br>');
-    printWindow.document.write('<p>' + madrasahHeadName + '</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
     
@@ -1050,7 +966,7 @@ function fallbackSemesterPrintPDF() {
     printWindow.focus();
     setTimeout(function() {
         printWindow.print();
-        printWindow.close();
+        // printWindow.close();
     }, 500);
 }
 
@@ -1105,142 +1021,20 @@ function exportSemesterToExcel() {
 }
 
 function exportSemesterToPDF() {
-    // Check if jsPDF library is available
-    if (typeof jsPDF !== 'undefined') {
-        var doc = new jsPDF('l', 'mm', 'a4');
-        
-        // Add title
-        doc.setFontSize(16);
-        doc.text('Sistem Absensi Siswa', 105, 15, null, null, 'center');
-        
-        doc.setFontSize(14);
-        doc.text('<?php echo addslashes(htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8")); ?>', 105, 25, null, null, 'center');
-        
-        doc.setFontSize(12);
-        doc.text('Rekap Absensi <?php echo addslashes(htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8")); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>', 105, 35, null, null, 'center');
-        
-        // Get the semester table element
-        var table = document.getElementById('semesterTable');
-        if (table) {
-            // Create a clone to modify for export
-            var clonedTable = table.cloneNode(true);
-            
-            // Convert badges to text for better PDF visibility
-            var badges = clonedTable.querySelectorAll('.badge');
-            for (var i = 0; i < badges.length; i++) {
-                var badge = badges[i];
-                var textNode = document.createTextNode(badge.textContent);
-                badge.parentNode.replaceChild(textNode, badge);
-            }
-            
-            // Use autoTable plugin if available
-            if (typeof doc.autoTable !== 'undefined') {
-                // Handle complex table with multi-row headers
-                var headRows = [];
-                var bodyRows = [];
-                
-                // Extract all header rows (multi-level headers) from cloned table
-                var headerRows = clonedTable.querySelectorAll('thead tr');
-                for (var i = 0; i < headerRows.length; i++) {
-                    var headerCells = headerRows[i].querySelectorAll('th');
-                    var headerRow = [];
-                    for (var j = 0; j < headerCells.length; j++) {
-                        var cellText = headerCells[j].textContent.trim();
-                        // Handle cells with colspan by duplicating content appropriately
-                        var colspan = parseInt(headerCells[j].getAttribute('colspan')) || 1;
-                        for (var k = 0; k < colspan; k++) {
-                            headerRow.push(cellText);
-                        }
-                    }
-                    headRows.push(headerRow);
-                }
-                
-                // Extract body rows from cloned table
-                var dataRows = clonedTable.querySelectorAll('tbody tr');
-                for (var i = 0; i < dataRows.length; i++) {
-                    var rowData = [];
-                    var cells = dataRows[i].querySelectorAll('td');
-                    for (var j = 0; j < cells.length; j++) {
-                        // Extract text content, handling badges and HTML
-                        var cellText = cells[j].textContent.trim();
-                        // Remove extra spaces and clean up text
-                        cellText = cellText.replace(/\s+/g, ' ').trim();
-                        // Ensure cell is not empty to display properly in PDF
-                        if (cellText === '-' || cellText === '') {
-                            cellText = ' ';
-                        }
-                        rowData.push(cellText);
-                    }
-                    bodyRows.push(rowData);
-                }
-                
-                // Generate the table with proper handling of multi-row headers
-                doc.autoTable({
-                    head: headRows,
-                    body: bodyRows,
-                    startY: 45,
-                    styles: {
-                        fontSize: 11,
-                        cellPadding: 3,
-                        textColor: [0, 0, 0], // Black text
-                        lineColor: [0, 0, 0]  // Black borders
-                    },
-                    headStyles: {
-                        fillColor: [221, 221, 221],
-                        textColor: [0, 0, 0],
-                        fontStyle: 'bold',
-                        fontSize: 12,
-                        lineColor: [0, 0, 0]  // Black header borders
-                    },
-                    bodyStyles: {
-                        textColor: [0, 0, 0],  // Black body text
-                        lineColor: [0, 0, 0]   // Black body borders
-                    },
-                    theme: 'plain' // Use plain theme for better control over colors
-                });
-                
-                // Add signatures below the table
-                var finalY = doc.lastAutoTable.finalY + 20;
-                
-                // Add class teacher information
-                doc.setFontSize(12);
-                doc.text('Wali Kelas,', 30, finalY);
-                
-                doc.setFontSize(10);
-                doc.text(classTeacherName, 30, finalY + 70);
-                
-                // Add Madrasah Head information on the right side
-                var pageWidth = doc.internal.pageSize.width;
-                var textWidth = doc.getTextWidth('Kepala Madrasah,');
-                var xPosition = pageWidth - 30 - textWidth; // Right align with 30mm margin
-                
-                doc.setFontSize(12);
-                doc.text('Kepala Madrasah,', xPosition, finalY);
-                
-                doc.setFontSize(10);
-                doc.text(madrasahHeadName, xPosition, finalY + 70);
-                
-                doc.save('rekap_absensi_<?php echo addslashes(htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8")); ?>_<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>.pdf');
-            } else {
-                // Fallback to print method
-                fallbackSemesterPrintPDF();
-            }
-        }
-    } else {
-        // Fallback to print method if library not loaded
-        fallbackSemesterPrintPDF();
-    }
+    fallbackSemesterPrintPDF();
 }
 
 function fallbackSemesterPrintPDF() {
     // Print the semester table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1118'); // F4 dimensions in pixels
+    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
     printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: landscape; margin: 1cm; }'); // Landscape orientation
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
+    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
@@ -1250,6 +1044,8 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
     printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
     printWindow.document.write('<div class="header">');
@@ -1265,17 +1061,17 @@ function fallbackSemesterPrintPDF() {
     }
     
     // Add signatures below the table
-    printWindow.document.write('<div style="margin-top: 50px; display: flex; justify-content: space-between; width: 100%;">');
-    printWindow.document.write('<div style="text-align: left; width: 45%;">');
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>Wali Kelas,</p>');
-    printWindow.document.write('<p>' + classTeacherName + '</p>');
-    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     
-    printWindow.document.write('<div style="text-align: right; width: 45%;">');
+    printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<p>' + madrasahHeadName + '</p>');
-    printWindow.document.write('<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
     
@@ -1285,7 +1081,7 @@ function fallbackSemesterPrintPDF() {
     printWindow.focus();
     setTimeout(function() {
         printWindow.print();
-        printWindow.close();
+        // printWindow.close();
     }, 500);
 }
 
