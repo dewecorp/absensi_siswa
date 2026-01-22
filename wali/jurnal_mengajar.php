@@ -223,10 +223,22 @@ $js_libs = [
 $js_page = [
     "
     $(document).ready(function() {
-        $('#table-jurnal').DataTable({
+        var t = $('#table-jurnal').DataTable({
             'language': { 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
-            'order': [[ 1, 'desc' ]]
+            'order': [[ 6, 'desc' ]],
+            'columnDefs': [ {
+                'searchable': false,
+                'orderable': false,
+                'targets': 0
+            } ]
         });
+
+        t.on( 'order.dt search.dt', function () {
+            t.column(0, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+                cell.innerHTML = i+1;
+            } );
+        } ).draw();
+
         $('.select2').select2({
             width: '100%'
         });
@@ -370,18 +382,21 @@ include '../templates/header.php';
                             <table class="table table-striped" id="table-jurnal">
                                 <thead>
                                     <tr>
+                                        <th>No</th>
                                         <th>Tanggal</th>
                                         <th>Jam Ke</th>
                                         <th>Waktu</th>
                                         <th>Mapel</th>
                                         <th>Materi</th>
+                                        <th>Dibuat Pada</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($journal_entries as $journal): ?>
+                                    <?php $no = 1; foreach ($journal_entries as $journal): ?>
                                     <tr>
-                                        <td><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
+                                        <td><?php echo $no++; ?></td>
+                                        <td data-order="<?php echo $journal['tanggal']; ?>"><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
                                         <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
                                         <td>
                                             <?php 
@@ -400,6 +415,7 @@ include '../templates/header.php';
                                         </td>
                                         <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                         <td><?php echo htmlspecialchars($journal['materi']); ?></td>
+                                        <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>
                                         <td>
                                             <?php if ($journal['id_guru'] == $teacher['id_guru']): ?>
                                             <button class="btn btn-warning btn-sm" onclick='openModal("edit", <?php echo json_encode($journal); ?>)'><i class="fas fa-edit"></i></button>

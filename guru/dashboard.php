@@ -183,13 +183,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                  $notif_msg = "$nama_guru telah mengirim kehadiran pada pukul $waktu tanggal $tanggal";
                  createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
                  
+                 // Log activity
+                 $log_desc = "$nama_guru memperbarui kehadiran: $attendance_status";
+                 if ($attendance_note) $log_desc .= " ($attendance_note)";
+                 logActivity($pdo, $nama_guru, 'Absensi Guru', $log_desc);
+                 
                  echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({
                             title: 'Berhasil!',
                             text: 'Absensi berhasil diperbarui.',
                             icon: 'success',
-                            confirmButtonText: 'OK'
+                            timer: 3000,
+                            timerProgressBar: true,
+                            showConfirmButton: false
                         });
                     });
                  </script>";
@@ -206,13 +213,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                  $notif_msg = "$nama_guru telah mengirim kehadiran pada pukul $waktu tanggal $tanggal";
                  createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
                  
+                 // Log activity
+                 $log_desc = "$nama_guru mengisi kehadiran: $attendance_status";
+                 if ($attendance_note) $log_desc .= " ($attendance_note)";
+                 logActivity($pdo, $nama_guru, 'Absensi Guru', $log_desc);
+                 
                  echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({
                             title: 'Berhasil!',
                             text: 'Absensi berhasil disimpan.',
                             icon: 'success',
-                            confirmButtonText: 'OK'
+                            timer: 3000,
+                            timerProgressBar: true,
+                            showConfirmButton: false
                         });
                     });
                  </script>";

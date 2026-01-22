@@ -120,7 +120,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                             title: 'Berhasil!',
                             text: 'Absensi berhasil diperbarui.',
                             icon: 'success',
-                            confirmButtonText: 'OK'
+                            timer: 3000,
+                            timerProgressBar: true,
+                            showConfirmButton: false
                         });
                     });
                  </script>";
@@ -148,7 +150,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                             title: 'Berhasil!',
                             text: 'Absensi berhasil disimpan.',
                             icon: 'success',
-                            confirmButtonText: 'OK'
+                            timer: 3000,
+                            timerProgressBar: true,
+                            showConfirmButton: false
                         });
                     });
                  </script>";

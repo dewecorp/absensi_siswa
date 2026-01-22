@@ -107,6 +107,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         if ($check_stmt->rowCount() > 0) {
             $stmt = $pdo->prepare("UPDATE tb_jurnal SET id_kelas=?, jam_ke=?, mapel=?, materi=?, tanggal=? WHERE id=?");
             $stmt->execute([$id_kelas, $jam_ke, $mapel, $materi, $tanggal, $id_jurnal]);
+
+            // Notification
+            $nama_guru = $teacher['nama_guru'];
+            $nama_kelas_log = $id_kelas;
+            foreach ($classes as $c) {
+                if ($c['id_kelas'] == $id_kelas) {
+                    $nama_kelas_log = $c['nama_kelas'];
+                    break;
+                }
+            }
+            
+            $notif_msg = "$nama_guru memperbarui jurnal $mapel kelas $nama_kelas_log";
+            createNotification($pdo, $notif_msg, 'jurnal_mengajar.php?kelas=' . $id_kelas, 'jurnal_mengajar');
+
+            // Log activity
+            $log_desc = "$nama_guru memperbarui jurnal mengajar kelas $nama_kelas_log ($mapel)";
+            logActivity($pdo, $teacher['nama_guru'], 'Edit Jurnal', $log_desc);
+
             $message = ['type' => 'success', 'text' => 'Jurnal berhasil diperbarui!'];
         } else {
             $message = ['type' => 'error', 'text' => 'Anda tidak memiliki akses untuk mengedit jurnal ini.'];
@@ -123,6 +141,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         $notif_msg = "$nama_guru telah membuat jurnal $mapel pada pukul $waktu tanggal $tanggal_notif";
         createNotification($pdo, $notif_msg, 'jurnal_mengajar.php?kelas=' . $id_kelas, 'jurnal_mengajar');
         
+        // Log activity
+        $log_desc = "$nama_guru menambahkan jurnal mengajar kelas " . ($class_info['nama_kelas'] ?? $id_kelas) . " ($mapel)";
+        logActivity($pdo, $teacher['nama_guru'], 'Tambah Jurnal', $log_desc);
+        
         $message = ['type' => 'success', 'text' => 'Jurnal berhasil ditambahkan!'];
     }
 }
@@ -138,6 +160,10 @@ if (isset($_POST['delete_journal'])) {
     if ($check_stmt->rowCount() > 0) {
         $stmt = $pdo->prepare("DELETE FROM tb_jurnal WHERE id = ?");
         $stmt->execute([$id_jurnal]);
+        
+        // Log activity
+        logActivity($pdo, $teacher['nama_guru'], 'Hapus Jurnal', "Menghapus jurnal mengajar ID: $id_jurnal");
+        
         $message = ['type' => 'success', 'text' => 'Jurnal berhasil dihapus!'];
     } else {
         $message = ['type' => 'error', 'text' => 'Anda tidak memiliki akses untuk menghapus jurnal ini.'];
@@ -200,10 +226,22 @@ $js_libs = [
 $js_page = [
     "
     $(document).ready(function() {
-        $('#table-jurnal').DataTable({
+        var t = $('#table-jurnal').DataTable({
             'language': { 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
-            'order': [[ 1, 'desc' ]]
+            'order': [[ 6, 'desc' ]],
+            'columnDefs': [ {
+                'searchable': false,
+                'orderable': false,
+                'targets': 0
+            } ]
         });
+
+        t.on( 'order.dt search.dt', function () {
+            t.column(0, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+                cell.innerHTML = i+1;
+            } );
+        } ).draw();
+
         $('.select2').select2({
             width: '100%'
         });
@@ -347,18 +385,21 @@ include '../templates/header.php';
                             <table class="table table-striped" id="table-jurnal">
                                 <thead>
                                     <tr>
+                                        <th>No</th>
                                         <th>Tanggal</th>
                                         <th>Jam Ke</th>
                                         <th>Waktu</th>
                                         <th>Mapel</th>
                                         <th>Materi</th>
+                                        <th>Dibuat Pada</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($journal_entries as $journal): ?>
+                                    <?php $no = 1; foreach ($journal_entries as $journal): ?>
                                     <tr>
-                                        <td><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
+                                        <td><?php echo $no++; ?></td>
+                                        <td data-order="<?php echo $journal['tanggal']; ?>"><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
                                         <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
                                         <td>
                                             <?php 
@@ -377,6 +418,7 @@ include '../templates/header.php';
                                         </td>
                                         <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                         <td><?php echo htmlspecialchars($journal['materi']); ?></td>
+                                        <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>
                                         <td>
                                             <?php if ($journal['id_guru'] == $teacher['id_guru']): ?>
                                             <button class="btn btn-warning btn-sm" onclick='openModal("edit", <?php echo json_encode($journal); ?>)'><i class="fas fa-edit"></i></button>

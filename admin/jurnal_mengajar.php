@@ -85,12 +85,23 @@ $js_libs = [
 $js_page = [
     "
     $(document).ready(function() {
-        $('#table-jurnal').DataTable({
+        var t = $('#table-jurnal').DataTable({
             'language': {
                 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
             },
-            'order': [[ 4, 'desc' ]] // Sort by date (hidden column or visible)
+            'order': [[ 7, 'desc' ]],
+            'columnDefs': [ {
+                'searchable': false,
+                'orderable': false,
+                'targets': 0
+            } ]
         });
+
+        t.on( 'order.dt search.dt', function () {
+            t.column(0, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+                cell.innerHTML = i+1;
+            } );
+        } ).draw();
     });
 
     function confirmDelete(id) {
@@ -205,14 +216,15 @@ include '../templates/header.php';
                                         <th>Mata Pelajaran</th>
                                         <th>Materi Pokok</th>
                                         <th>Guru</th>
+                                        <th>Dibuat Pada</th>
                                         <th style="width: 100px;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (count($journal_entries) > 0): ?>
-                                        <?php $no = 1; foreach ($journal_entries as $journal): ?>
+                                        <?php foreach ($journal_entries as $journal): ?>
                                         <tr>
-                                            <td class="text-center"><?php echo $no++; ?></td>
+                                            <td class="text-center"></td>
                                             <td><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
                                             <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
                                             <td>
@@ -248,6 +260,7 @@ include '../templates/header.php';
                                             <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['nama_guru'] ?? '-'); ?></td>
+                                            <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>
                                             <td>
                                                 <button onclick="confirmDelete(<?php echo $journal['id']; ?>)" class="btn btn-danger btn-sm">
                                                     <i class="fas fa-trash"></i> Hapus
