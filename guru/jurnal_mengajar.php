@@ -76,10 +76,23 @@ if ($homeroom_class) {
     }
 }
 
+// Auto-select class if only one class available
+if (count($classes) == 1 && (!isset($_GET['kelas']) || empty($_GET['kelas']))) {
+    $_GET['kelas'] = $classes[0]['id_kelas'];
+}
+
 // Handle Form Submission (Add/Edit)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $id_kelas = (int)$_POST['id_kelas'];
-    $jam_ke = $_POST['jam_ke'];
+    
+    // Handle jam_ke array
+    $jam_ke_input = isset($_POST['jam_ke']) ? $_POST['jam_ke'] : [];
+    if (is_array($jam_ke_input)) {
+        $jam_ke = implode(',', $jam_ke_input);
+    } else {
+        $jam_ke = $jam_ke_input;
+    }
+
     $mapel = $_POST['mapel'];
     $materi = $_POST['materi'];
     $tanggal = $_POST['tanggal'];
@@ -146,14 +159,34 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     }
 }
 
+// Fetch Reference Data
+$jam_mengajar_stmt = $pdo->query("SELECT * FROM tb_jam_mengajar ORDER BY jam_ke ASC");
+$jam_mengajar_list = $jam_mengajar_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Create mapping for time calculation
+$jam_map = [];
+foreach ($jam_mengajar_list as $jam) {
+    $jam_map[$jam['jam_ke']] = [
+        'mulai' => date('H:i', strtotime($jam['waktu_mulai'])),
+        'selesai' => date('H:i', strtotime($jam['waktu_selesai']))
+    ];
+}
+
+$mapel_stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+$mapel_list = $mapel_stmt->fetchAll(PDO::FETCH_ASSOC);
+
 $page_title = 'Jurnal Mengajar';
 
 // Libraries
-$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
+$css_libs = [
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
+];
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-    'https://cdn.jsdelivr.net/npm/sweetalert2@11'
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js'
 ];
 
 $js_page = [
@@ -163,6 +196,9 @@ $js_page = [
             'language': { 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
             'order': [[ 1, 'desc' ]]
         });
+        $('.select2').select2({
+            width: '100%'
+        });
     });
 
     function openModal(type, data = null) {
@@ -170,6 +206,8 @@ $js_page = [
             $('#modalTitle').text('Tambah Jurnal');
             $('#formJurnal')[0].reset();
             $('#id_jurnal').val('');
+            $('select[name=\"jam_ke[]\"]').val(null).trigger('change');
+            $('select[name=\"mapel\"]').val('').trigger('change');
             
             // Set default date to today
             var today = new Date().toISOString().split('T')[0];
@@ -185,8 +223,13 @@ $js_page = [
             $('#id_jurnal').val(data.id);
             $('select[name=\"id_kelas\"]').val(data.id_kelas);
             $('input[name=\"tanggal\"]').val(data.tanggal);
-            $('input[name=\"jam_ke\"]').val(data.jam_ke);
-            $('input[name=\"mapel\"]').val(data.mapel);
+            
+            // Handle multiselect jam_ke
+            var jamKeValues = data.jam_ke.toString().split(',');
+            jamKeValues = jamKeValues.map(function(item) { return item.trim(); });
+            $('select[name=\"jam_ke[]\"]').val(jamKeValues).trigger('change');
+            
+            $('select[name=\"mapel\"]').val(data.mapel).trigger('change');
             $('textarea[name=\"materi\"]').val(data.materi);
         }
         $('#jurnalModal').modal('show');
@@ -253,6 +296,7 @@ include '../templates/header.php';
             <div class="col-12">
                 <div class="card">
                     <div class="card-body">
+                        <?php if (count($classes) > 1): ?>
                         <form method="GET" action="">
                             <div class="form-group row mb-4">
                                 <label class="col-form-label text-md-right col-12 col-md-3 col-lg-3">Pilih Kelas</label>
@@ -268,6 +312,13 @@ include '../templates/header.php';
                                 </div>
                             </div>
                         </form>
+                        <?php else: ?>
+                            <?php if (!empty($classes)): ?>
+                            <div class="alert alert-info mb-0">
+                                Menampilkan jurnal untuk kelas <strong><?php echo htmlspecialchars($classes[0]['nama_kelas']); ?></strong>
+                            </div>
+                            <?php endif; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -290,6 +341,7 @@ include '../templates/header.php';
                                     <tr>
                                         <th>Tanggal</th>
                                         <th>Jam Ke</th>
+                                        <th>Waktu</th>
                                         <th>Mapel</th>
                                         <th>Materi</th>
                                         <th>Aksi</th>
@@ -300,6 +352,21 @@ include '../templates/header.php';
                                     <tr>
                                         <td><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
                                         <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
+                                        <td>
+                                            <?php 
+                                            $jam_ke_arr = explode(',', $journal['jam_ke']);
+                                            $jam_ke_arr = array_map('trim', $jam_ke_arr);
+                                            sort($jam_ke_arr, SORT_NUMERIC);
+                                            $first_jam = $jam_ke_arr[0];
+                                            $last_jam = end($jam_ke_arr);
+                                            
+                                            $waktu_str = '';
+                                            if (isset($jam_map[$first_jam]) && isset($jam_map[$last_jam])) {
+                                                $waktu_str = $jam_map[$first_jam]['mulai'] . ' - ' . $jam_map[$last_jam]['selesai'];
+                                            }
+                                            echo htmlspecialchars($waktu_str);
+                                            ?>
+                                        </td>
                                         <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                         <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                         <td>
@@ -352,12 +419,25 @@ include '../templates/header.php';
                     
                     <div class="form-group">
                         <label>Jam Ke</label>
-                        <input type="text" name="jam_ke" class="form-control" placeholder="Contoh: 1-2" required>
+                        <select name="jam_ke[]" class="form-control select2" multiple required>
+                            <?php foreach ($jam_mengajar_list as $jam): ?>
+                                <option value="<?php echo $jam['jam_ke']; ?>">
+                                    <?php echo $jam['jam_ke'] . ' (' . date('H:i', strtotime($jam['waktu_mulai'])) . ' - ' . date('H:i', strtotime($jam['waktu_selesai'])) . ')'; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     
                     <div class="form-group">
                         <label>Mata Pelajaran</label>
-                        <input type="text" name="mapel" class="form-control" required>
+                        <select name="mapel" class="form-control select2" required>
+                            <option value="">-- Pilih Mata Pelajaran --</option>
+                            <?php foreach ($mapel_list as $mpl): ?>
+                                <option value="<?php echo htmlspecialchars($mpl['nama_mapel']); ?>">
+                                    <?php echo htmlspecialchars($mpl['nama_mapel']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     
                     <div class="form-group">

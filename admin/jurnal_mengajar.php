@@ -29,6 +29,17 @@ if (isset($_POST['delete_journal'])) {
 $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get teaching hours mapping
+$stmt_jam = $pdo->query("SELECT * FROM tb_jam_mengajar");
+$jam_mengajar_rows = $stmt_jam->fetchAll(PDO::FETCH_ASSOC);
+$jam_map = [];
+foreach ($jam_mengajar_rows as $row) {
+    $jam_map[$row['jam_ke']] = [
+        'mulai' => date('H:i', strtotime($row['waktu_mulai'])),
+        'selesai' => date('H:i', strtotime($row['waktu_selesai']))
+    ];
+}
+
 // Get journal entries if class is selected
 $journal_entries = [];
 $class_info = [];
@@ -190,6 +201,7 @@ include '../templates/header.php';
                                         <th class="text-center" style="width: 50px;">No</th>
                                         <th>Tanggal</th>
                                         <th>Jam Ke</th>
+                                        <th>Waktu</th>
                                         <th>Mata Pelajaran</th>
                                         <th>Materi Pokok</th>
                                         <th>Guru</th>
@@ -203,6 +215,36 @@ include '../templates/header.php';
                                             <td class="text-center"><?php echo $no++; ?></td>
                                             <td><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
                                             <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
+                                            <td>
+                                                <?php 
+                                                $jam_list = explode(',', $journal['jam_ke']);
+                                                $waktu_str = '-';
+                                                if (!empty($jam_list)) {
+                                                    // Clean and convert to int
+                                                    $jam_list = array_map(function($val) {
+                                                        return (int)trim($val);
+                                                    }, $jam_list);
+                                                    
+                                                    // Filter out 0 or invalid numbers if any
+                                                    $jam_list = array_filter($jam_list);
+                                                    
+                                                    if (!empty($jam_list)) {
+                                                        $jam_start = min($jam_list);
+                                                        $jam_end = max($jam_list);
+                                                        
+                                                        $start_time = isset($jam_map[$jam_start]) ? $jam_map[$jam_start]['mulai'] : '';
+                                                        $end_time = isset($jam_map[$jam_end]) ? $jam_map[$jam_end]['selesai'] : '';
+                                                        
+                                                        if ($start_time && $end_time) {
+                                                            $waktu_str = $start_time . ' - ' . $end_time;
+                                                        } elseif ($start_time) {
+                                                            $waktu_str = $start_time;
+                                                        }
+                                                    }
+                                                }
+                                                echo $waktu_str;
+                                                ?>
+                                            </td>
                                             <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['nama_guru'] ?? '-'); ?></td>

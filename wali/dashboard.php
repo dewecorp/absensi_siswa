@@ -10,28 +10,40 @@ if (!isAuthorized(['wali'])) {
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
 
-// Get teacher information if needed for wali dashboard
-if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
-    $teacher_name = $_SESSION['nama_guru'];
+// Get teacher information
+$teacher = null;
+if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_guru') {
+    // Direct login via NUPTK
+    $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+} elseif (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+    // Login via tb_pengguna
+    $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 } else {
-    // For traditional login via tb_pengguna, get teacher name
-    if ($_SESSION['level'] == 'wali' || $_SESSION['level'] == 'guru') {
-        // Direct login via NUPTK, user_id is actually the id_guru
-        $stmt = $pdo->prepare("SELECT id_guru, nama_guru FROM tb_guru WHERE id_guru = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-    } else {
-        // Traditional login via tb_pengguna
-        $stmt = $pdo->prepare("SELECT g.id_guru, g.nama_guru FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-    }
-    $teacher_result = $stmt->fetch(PDO::FETCH_ASSOC);
-    $teacher = $teacher_result; // Store in $teacher for consistency
-    $teacher_name = $teacher_result['nama_guru'] ?? $_SESSION['username'];
+    // Fallback for sessions without login_source (legacy/existing sessions)
+    // Try direct first
+    $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    // Ensure nama_guru is set in session for consistent navbar display
-    if ($teacher_result && isset($teacher_result['nama_guru'])) {
-        $_SESSION['nama_guru'] = $teacher_result['nama_guru'];
+    // If not found, try join
+    if (!$teacher) {
+        $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
     }
+}
+
+if ($teacher) {
+    $teacher_name = $teacher['nama_guru'];
+    if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
+        $_SESSION['nama_guru'] = $teacher['nama_guru'];
+    }
+} else {
+    $teacher_name = $_SESSION['username'];
 }
 
 // Get the class that the wali teaches
@@ -452,7 +464,7 @@ include '../templates/sidebar.php';
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Grafik Kehadiran Hari Ini</h4>
+                                    <h4>Grafik Kehadiran Siswa Hari Ini</h4>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="myChart" height="158"></canvas>

@@ -11,17 +11,30 @@ if (!isAuthorized(['guru'])) {
 $school_profile = getSchoolProfile($pdo);
 
 // Get teacher information
-// Check if user logged in directly via NUPTK (using id_guru as user_id) or via tb_pengguna
-if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {
-    // Direct login via NUPTK, user_id is actually the id_guru
+$teacher = null;
+if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_guru') {
+    // Direct login via NUPTK
     $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
-} else {
-    // Traditional login via tb_pengguna
+} elseif (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+    // Login via tb_pengguna
     $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+} else {
+    // Fallback for sessions without login_source (legacy/existing sessions)
+    // Try direct first
+    $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // If not found, try join
+    if (!$teacher) {
+        $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
 
 // Ensure nama_guru is set in session for consistent navbar display
@@ -84,19 +97,18 @@ foreach ($teacher_classes as $kelas) {
     $class_students[$kelas['id_kelas']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Get students with attendance status for each class
-$class_students = [];
-$today = date('Y-m-d');
-foreach ($teacher_classes as $kelas) {
-    $stmt = $pdo->prepare("
-        SELECT s.*, a.keterangan 
-        FROM tb_siswa s 
-        LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = ? 
-        WHERE s.id_kelas = ? 
-        ORDER BY s.nama_siswa ASC
-    ");
-    $stmt->execute([$today, $kelas['id_kelas']]);
-    $class_students[$kelas['id_kelas']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Calculate attendance stats from loaded data
+$hadir_count = 0;
+$total_marked_count = 0;
+foreach ($class_students as $class_id => $students) {
+    foreach ($students as $student) {
+        if (isset($student['keterangan']) && !empty($student['keterangan'])) {
+            $total_marked_count++;
+            if ($student['keterangan'] == 'Hadir') {
+                $hadir_count++;
+            }
+        }
+    }
 }
 
 // Get statistics based on classes that teacher teaches
@@ -109,43 +121,20 @@ if (!empty($teacher_class_ids)) {
     $stmt->execute($teacher_class_ids);
     $total_siswa = $stmt->fetch(PDO::FETCH_ASSOC)['total_siswa'];
     
-    // Get today's attendance for teacher's classes
-    $stmt = $pdo->prepare("
-        SELECT keterangan, COUNT(*) as jumlah 
-        FROM tb_absensi 
-        WHERE tanggal = CURDATE() 
-        AND id_siswa IN (
-            SELECT id_siswa 
-            FROM tb_siswa 
-            WHERE id_kelas IN ($placeholders)
-        )
-        GROUP BY keterangan
-    ");
-    $stmt->execute($teacher_class_ids);
-    $attendance_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
     $total_siswa = 0;
-    $attendance_stats = [];
 }
 
-// Initialize counts
-$jumlah_hadir = $jumlah_sakit = $jumlah_izin = $jumlah_alpa = 0;
-foreach ($attendance_stats as $stat) {
-    switch ($stat['keterangan']) {
-        case 'Hadir':
-            $jumlah_hadir = $stat['jumlah'];
-            break;
-        case 'Sakit':
-            $jumlah_sakit = $stat['jumlah'];
-            break;
-        case 'Izin':
-            $jumlah_izin = $stat['jumlah'];
-            break;
-        case 'Alpa':
-            $jumlah_alpa = $stat['jumlah'];
-            break;
-    }
+// Calculate percentage
+$persentase_hadir = 0;
+if ($total_marked_count > 0) {
+    $persentase_hadir = round(($hadir_count / $total_marked_count) * 100, 1);
 }
+
+// Initialize counts (kept for backward compatibility if used elsewhere, though seemingly unused now)
+$jumlah_hadir = $hadir_count; 
+$jumlah_sakit = $jumlah_izin = $jumlah_alpa = 0; // simplified
+
 
 $page_title = 'Dashboard Guru';
 
@@ -153,114 +142,10 @@ $page_title = 'Dashboard Guru';
 $css_libs = [];
 
 // Define JS libraries for this page (only essential ones)
-$js_libs = [
-    'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js'
-];
+$js_libs = [];
 
 // Define page-specific JS
-$js_page = [
-    "
-    // Wait for DOM to be fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        // Small delay to ensure Chart.js is ready
-        setTimeout(function() {
-            // Ensure Chart.js is loaded before configuring
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js library not loaded');
-                return;
-            }
-            
-            // Configure Chart defaults if they exist (for v3.x)
-            if (typeof Chart.defaults !== 'undefined') {
-                if (typeof Chart.defaults.font !== 'undefined') {
-                    // Chart.js v3+
-                    Chart.defaults.font.family = 'Nunito, Segoe UI, Arial';
-                    Chart.defaults.font.size = 12;
-                    Chart.defaults.color = '#999';
-                } else if (typeof Chart.defaults.global !== 'undefined') {
-                    // Chart.js v2.x fallback
-                    Chart.defaults.global.defaultFontFamily = 'Nunito, Segoe UI, Arial';
-                    Chart.defaults.global.defaultFontSize = 12;
-                    Chart.defaults.global.defaultFontColor = '#999';
-                }
-            }
-            
-            // Daily Attendance Chart
-            var ctx = document.getElementById('myChart');
-            if (ctx) {
-                try {
-                    var ctx2d = ctx.getContext('2d');
-                    var myChart = new Chart(ctx2d, {
-                        type: 'bar',
-                        data: {
-                            labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'],
-                            datasets: [{
-                                label: 'Jumlah Siswa',
-                                data: [
-                                    " . $jumlah_hadir . ",
-                                    " . $jumlah_sakit . ",
-                                    " . $jumlah_izin . ",
-                                    " . $jumlah_alpa . "
-                                ],
-                                backgroundColor: [
-                                    'rgba(54, 162, 235, 0.2)',
-                                    'rgba(255, 99, 132, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)',
-                                    'rgba(153, 102, 255, 0.2)'
-                                ],
-                                borderColor: [
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255,99,132,1)',
-                                    'rgba(255, 206, 86, 1)',
-                                    'rgba(153, 102, 255, 1)'
-                                ],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Statistik Kehadiran Harian'
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        callback: function(value) {
-                                            if (Number.isInteger(value)) {
-                                                return value;
-                                            }
-                                        }
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: 'Jumlah Siswa'
-                                    }
-                                },
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: 'Status Kehadiran'
-                                    }
-                                }
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.error('Error creating daily attendance chart:', e);
-                }
-            }
-        }, 500);
-    });
-    "
-];
+$js_page = [];
 
 include '../templates/user_header.php';
 include '../templates/sidebar.php';
@@ -396,7 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                                         <h4>Kehadiran Hari Ini</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_hadir; ?>
+                                        <?php echo $persentase_hadir; ?>%
                                     </div>
                                 </div>
                             </div>
@@ -434,21 +319,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                                             <label class="d-block font-weight-bold">Status Kehadiran Hari Ini (<?php echo date('d-m-Y'); ?>)</label>
                                             <div class="selectgroup selectgroup-pills">
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'hadir') ? 'checked' : ''; ?> required>
+                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
                                                     <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-check"></i> Hadir</span>
                                                 </label>
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'sakit') ? 'checked' : ''; ?>>
+                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
                                                     <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-procedures"></i> Sakit</span>
                                                 </label>
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'checked' : ''; ?>>
+                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
                                                     <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
                                         </div>
 
-                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'block' : 'none'; ?>;">
+                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'block' : 'none'; ?>;">
                                             <label>Keterangan Izin</label>
                                             <textarea name="attendance_note" class="form-control" placeholder="Masukkan alasan izin..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
@@ -481,19 +366,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                         });
                     });
                     </script>
-                    
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h4>Grafik Kehadiran Hari Ini</h4>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="myChart" height="158"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     
                     <?php if (!empty($teacher_classes)): ?>
                     <div class="row">

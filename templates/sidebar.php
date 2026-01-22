@@ -90,13 +90,10 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Absensi',
+                'title' => 'Absensi Kelas',
                 'icon' => 'fas fa-calendar-check',
-                'submenu' => [
-                    ['title' => 'Absensi Harian', 'url' => 'absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
-                    ['title' => 'Rekap Absensi', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
-                ],
-                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php'])
+                'url' => 'absensi_kelas.php',
+                'active' => $current_page === 'absensi_kelas.php'
             ],
             [
                 'title' => 'Jurnal Mengajar',
@@ -129,7 +126,7 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Absensi',
+                'title' => 'Absensi Siswa',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => [
                     ['title' => 'Absensi Harian', 'url' => 'absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],

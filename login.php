@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['user_id'] = $user['id_pengguna'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['level'] = $user['level'];
+            $_SESSION['login_source'] = 'tb_pengguna';
             
             // Log login activity
             $username = isset($user['username']) ? $user['username'] : 'system';
