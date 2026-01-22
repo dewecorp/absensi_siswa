@@ -263,6 +263,62 @@ $js_page = [
 ];
 
 include '../templates/user_header.php';
+include '../templates/sidebar.php';
+
+// Handle Attendance Submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance'])) {
+    $attendance_status = $_POST['attendance_status'];
+    $attendance_note = $_POST['attendance_note'] ?? '';
+    
+    // Determine teacher ID based on session
+    $current_teacher_id = 0;
+    if (isset($teacher['id_guru'])) {
+        $current_teacher_id = $teacher['id_guru'];
+    } elseif (isset($_SESSION['user_id']) && ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali')) {
+         // Fallback if $teacher not set but user is guru/wali directly
+         $current_teacher_id = $_SESSION['user_id'];
+    }
+    
+    if ($current_teacher_id > 0) {
+        $current_date = date('Y-m-d');
+        
+        // Check if already attended
+        $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+        $check_stmt->execute([$current_teacher_id, $current_date]);
+        
+        if ($check_stmt->rowCount() > 0) {
+            // Update existing
+             $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ? WHERE id_guru = ? AND tanggal = ?");
+             if ($update_stmt->execute([$attendance_status, $attendance_note, $current_teacher_id, $current_date])) {
+                 echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Absensi berhasil diperbarui.',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+                 </script>";
+             }
+        } else {
+            // Insert new
+            $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan) VALUES (?, ?, ?, ?)");
+            if ($insert_stmt->execute([$current_teacher_id, $current_date, $attendance_status, $attendance_note])) {
+                 echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Absensi berhasil disimpan.',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+                 </script>";
+            }
+        }
+    }
+}
 ?>
 
 <div class="main-content">
@@ -346,6 +402,85 @@ include '../templates/user_header.php';
                             </div>
                         </div>
                     </div>
+
+                    <!-- Attendance Box for Teacher -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Absensi Harian & Jurnal Mengajar</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-light alert-has-icon">
+                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
+                                        <div class="alert-body">
+                                            <div class="alert-title">Penting</div>
+                                            Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda dan <b>Jurnal Mengajar</b> hari ini.
+                                        </div>
+                                    </div>
+
+                                    <?php
+                                    // Check current attendance status
+                                    $today_attendance = null;
+                                    if (isset($teacher['id_guru'])) {
+                                        $stmt_check = $pdo->prepare("SELECT * FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = CURDATE()");
+                                        $stmt_check->execute([$teacher['id_guru']]);
+                                        $today_attendance = $stmt_check->fetch(PDO::FETCH_ASSOC);
+                                    }
+                                    ?>
+
+                                    <form method="POST" action="" id="attendanceForm">
+                                        <div class="form-group">
+                                            <label class="d-block font-weight-bold">Status Kehadiran Hari Ini (<?php echo date('d-m-Y'); ?>)</label>
+                                            <div class="selectgroup selectgroup-pills">
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'hadir') ? 'checked' : ''; ?> required>
+                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-check"></i> Hadir</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'sakit') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-procedures"></i> Sakit</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'block' : 'none'; ?>;">
+                                            <label>Keterangan Izin</label>
+                                            <textarea name="attendance_note" class="form-control" placeholder="Masukkan alasan izin..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-icon icon-left"><i class="fas fa-save"></i> Simpan Absensi</button>
+                                            <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-icon icon-left ml-2"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
+                        const keteranganBox = document.getElementById('keterangan_box');
+                        
+                        radioButtons.forEach(radio => {
+                            radio.addEventListener('change', function() {
+                                if (this.value === 'izin') {
+                                    keteranganBox.style.display = 'block';
+                                    keteranganBox.querySelector('textarea').required = true;
+                                } else {
+                                    keteranganBox.style.display = 'none';
+                                    keteranganBox.querySelector('textarea').required = false;
+                                }
+                            });
+                        });
+                    });
+                    </script>
                     
                     <div class="row">
                         <div class="col-12">
