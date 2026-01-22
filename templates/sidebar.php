@@ -42,6 +42,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php'])
             ],
             [
+                'title' => 'Jurnal Mengajar',
+                'icon' => 'fas fa-book-open',
+                'url' => 'jurnal_mengajar.php',
+                'active' => $current_page === 'jurnal_mengajar.php'
+            ],
+            [
                 'title' => 'Pengaturan',
                 'icon' => 'fas fa-school',
                 'url' => 'profil_madrasah.php',
@@ -84,10 +90,19 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Absensi Kelas',
+                'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
-                'url' => 'absensi_kelas.php',
-                'active' => $current_page === 'absensi_kelas.php'
+                'submenu' => [
+                    ['title' => 'Absensi Harian', 'url' => 'absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
+                    ['title' => 'Rekap Absensi', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                ],
+                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php'])
+            ],
+            [
+                'title' => 'Jurnal Mengajar',
+                'icon' => 'fas fa-book-open',
+                'url' => 'jurnal_mengajar.php',
+                'active' => $current_page === 'jurnal_mengajar.php'
             ],
             [
                 'title' => 'Profil',
@@ -114,16 +129,19 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Absensi Harian',
+                'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
-                'url' => 'absensi_kelas.php',
-                'active' => $current_page === 'absensi_kelas.php'
+                'submenu' => [
+                    ['title' => 'Absensi Harian', 'url' => 'absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
+                    ['title' => 'Rekap Absensi', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                ],
+                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php'])
             ],
             [
-                'title' => 'Rekap',
-                'icon' => 'fas fa-book',
-                'url' => 'rekap_absensi.php',
-                'active' => $current_page === 'rekap_absensi.php'
+                'title' => 'Jurnal Mengajar',
+                'icon' => 'fas fa-book-open',
+                'url' => 'jurnal_mengajar.php',
+                'active' => $current_page === 'jurnal_mengajar.php'
             ],
             [
                 'title' => 'Profil & Pengaturan',
@@ -146,10 +164,10 @@ switch ($user_level) {
 <div class="main-sidebar">
     <aside id="sidebar-wrapper">
         <div class="sidebar-brand">
-            <a href="dashboard.php">Sistem Absensi Siswa</a>
+            <a href="dashboard.php" style="line-height: 1.2; display: inline-block; padding: 12px 0;">Sistem Informasi Madrasah</a>
         </div>
         <div class="sidebar-brand sidebar-brand-sm">
-            <a href="dashboard.php">SA</a>
+            <a href="dashboard.php">SIM</a>
         </div>
         <ul class="sidebar-menu">
             <?php foreach ($menu_items as $item): ?>

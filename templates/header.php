@@ -28,7 +28,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-    <title><?php echo $page_title; ?> | Sistem Absensi Siswa</title>
+    <title><?php echo $page_title; ?> | Sistem Informasi Madrasah</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">

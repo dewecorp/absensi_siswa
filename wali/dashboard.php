@@ -17,14 +17,15 @@ if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
     // For traditional login via tb_pengguna, get teacher name
     if ($_SESSION['level'] == 'wali' || $_SESSION['level'] == 'guru') {
         // Direct login via NUPTK, user_id is actually the id_guru
-        $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
+        $stmt = $pdo->prepare("SELECT id_guru, nama_guru FROM tb_guru WHERE id_guru = ?");
         $stmt->execute([$_SESSION['user_id']]);
     } else {
         // Traditional login via tb_pengguna
-        $stmt = $pdo->prepare("SELECT g.nama_guru FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+        $stmt = $pdo->prepare("SELECT g.id_guru, g.nama_guru FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
         $stmt->execute([$_SESSION['user_id']]);
     }
     $teacher_result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $teacher = $teacher_result; // Store in $teacher for consistency
     $teacher_name = $teacher_result['nama_guru'] ?? $_SESSION['username'];
     
     // Ensure nama_guru is set in session for consistent navbar display
@@ -72,6 +73,61 @@ foreach ($attendance_stats as $stat) {
         case 'Alpa':
             $jumlah_alpa = $stat['jumlah'];
             break;
+    }
+}
+
+// Handle Attendance Submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance'])) {
+    $attendance_status = $_POST['attendance_status'];
+    $attendance_note = $_POST['attendance_note'] ?? '';
+    
+    // Determine teacher ID based on session
+    $current_teacher_id = 0;
+    if (isset($teacher['id_guru'])) {
+        $current_teacher_id = $teacher['id_guru'];
+    } elseif (isset($_SESSION['user_id']) && ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali')) {
+         // Fallback if $teacher not set but user is guru/wali directly
+         $current_teacher_id = $_SESSION['user_id'];
+    }
+    
+    if ($current_teacher_id > 0) {
+        $current_date = date('Y-m-d');
+        
+        // Check if already attended
+        $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+        $check_stmt->execute([$current_teacher_id, $current_date]);
+        
+        if ($check_stmt->rowCount() > 0) {
+            // Update existing
+             $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ? WHERE id_guru = ? AND tanggal = ?");
+             if ($update_stmt->execute([$attendance_status, $attendance_note, $current_teacher_id, $current_date])) {
+                 echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Absensi berhasil diperbarui.',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+                 </script>";
+             }
+        } else {
+            // Insert new
+            $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan) VALUES (?, ?, ?, ?)");
+            if ($insert_stmt->execute([$current_teacher_id, $current_date, $attendance_status, $attendance_note])) {
+                 echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Absensi berhasil disimpan.',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+                 </script>";
+            }
+        }
     }
 }
 
