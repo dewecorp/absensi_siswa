@@ -62,8 +62,9 @@ if ($wali_kelas) {
 
 // Get today's attendance statistics for the wali's class
 if ($wali_kelas) {
-    $stmt = $pdo->prepare("SELECT a.keterangan, COUNT(*) as jumlah FROM tb_absensi a JOIN tb_siswa s ON a.id_siswa = s.id_siswa WHERE s.id_kelas = ? AND a.tanggal = CURDATE() GROUP BY a.keterangan");
-    $stmt->execute([$wali_kelas['id_kelas']]);
+    $today = date('Y-m-d');
+    $stmt = $pdo->prepare("SELECT a.keterangan, COUNT(*) as jumlah FROM tb_absensi a JOIN tb_siswa s ON a.id_siswa = s.id_siswa WHERE s.id_kelas = ? AND a.tanggal = ? GROUP BY a.keterangan");
+    $stmt->execute([$wali_kelas['id_kelas'], $today]);
     $attendance_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
     $attendance_stats = [];
@@ -128,6 +129,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
             // Insert new
             $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan) VALUES (?, ?, ?, ?)");
             if ($insert_stmt->execute([$current_teacher_id, $current_date, $attendance_status, $attendance_note])) {
+                 
+                 // Send notification to admin
+                 $nama_guru = $_SESSION['nama_guru'] ?? 'Wali Kelas';
+                 $waktu = date('H:i');
+                 $tanggal_indo = date('d-m-Y');
+                 $notif_msg = "$nama_guru (Wali) telah mengirim kehadiran pada pukul $waktu tanggal $tanggal_indo";
+                 createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
+
+                 // Log activity
+                 $log_desc = "$nama_guru (Wali) memperbarui kehadiran: $attendance_status";
+                 if ($attendance_note) $log_desc .= " ($attendance_note)";
+                 logActivity($pdo, $nama_guru, 'Absensi Guru', $log_desc);
+
                  echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({

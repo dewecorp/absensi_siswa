@@ -239,6 +239,20 @@ $(document).ready(function() {
 });
 ";
 
+// Add SweetAlert if message exists
+if (isset($message)) {
+    $js_page[] = "
+    Swal.fire({
+        title: '" . ($message['type'] === 'success' ? 'Sukses!' : 'Info!') . "',
+        text: '" . addslashes($message['text']) . "',
+        icon: '" . $message['type'] . "',
+        timer: " . ($message['type'] === 'success' ? '3000' : '5000') . ",
+        timerProgressBar: true,
+        showConfirmButton: false
+    });
+    ";
+}
+
 // Add other page-specific functions
 $js_page[] = "
 // Pass actual names to JavaScript

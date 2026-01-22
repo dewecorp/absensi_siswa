@@ -77,6 +77,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     }
     
     $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+    
+    // Send notification to admin
+    if ($saved_count > 0) {
+        $nama_wali = $_SESSION['nama_guru'] ?? 'Wali Kelas';
+        $nama_kelas_notif = $wali_kelas ? $wali_kelas['nama_kelas'] : 'Kelas';
+        $notif_msg = "$nama_wali telah melakukan input absensi siswa $nama_kelas_notif ($saved_count siswa)";
+        createNotification($pdo, $notif_msg, 'rekap_absensi.php', 'absensi_siswa');
+    }
+
     $username = isset($_SESSION['username']) ? $_SESSION['username'] : (isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system');
     $log_result = logActivity($pdo, $username, 'Input Absensi', "Wali " . $username . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
     if (!$log_result) error_log("Failed to log activity for Input Absensi: kelas ID $id_kelas");
@@ -117,20 +126,7 @@ include '../templates/user_header.php';
                         </div>
                     </div>
 
-                    <?php if (isset($message)): ?>
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            Swal.fire({
-                                title: '<?php echo $message['type'] === 'success' ? 'Sukses!' : 'Info!'; ?>',
-                                text: '<?php echo addslashes($message['text']); ?>',
-                                icon: '<?php echo $message['type']; ?>',
-                                timer: <?php echo $message['type'] === 'success' ? '3000' : '5000'; ?>,
-                                timerProgressBar: true,
-                                showConfirmButton: false
-                            });
-                        });
-                    </script>
-                    <?php endif; ?>
+
 
                     <div class="row">
                         <div class="col-12">
@@ -249,288 +245,286 @@ include '../templates/user_header.php';
                     </div>
                 </section>
             </div>
+
+<?php
+// Prepare JS Libraries
+$js_libs = [
+    'node_modules/datatables/media/js/jquery.dataTables.min.js',
+    'node_modules/datatables.net-bs4/js/dataTables.bootstrap4.min.js',
+    'node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js'
+];
+
+// Prepare Page Specific JS
+$js_page = [];
+
+// SweetAlert logic
+if (isset($message)) {
+    $js_page[] = "
+    Swal.fire({
+        title: '" . ($message['type'] === 'success' ? 'Sukses!' : 'Info!') . "',
+        text: '" . addslashes($message['text']) . "',
+        icon: '" . $message['type'] . "',
+        timer: " . ($message['type'] === 'success' ? '3000' : '5000') . ",
+        timerProgressBar: true,
+        showConfirmButton: false
+    });
+    ";
+}
+
+// Main Page JS
+$js_page[] = "
+    // Pass actual names to JavaScript
+    var madrasahHeadName = '" . addslashes(htmlspecialchars($school_profile['nama_kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8')) . "';
+    var classTeacherName = '" . addslashes(htmlspecialchars($teacher_name ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8')) . "';
+
+    function updateBadge(selectElement) {
+        // Get the selected option text and value
+        var selectedOption = selectElement.options[selectElement.selectedIndex].text;
+        var selectedValue = selectElement.options[selectElement.selectedIndex].value;
+        
+        // Get the student ID from the select name (extract from keterangan_[id])
+        var studentId = selectElement.name.replace('keterangan_', '');
+        
+        // Find the specific badge by ID
+        var badge = $('#badge_' + studentId);
+        
+        // Update the badge text
+        badge.text(selectedOption);
+        
+        // Update the badge class based on the selected value
+        badge.removeClass('badge-success badge-info badge-warning badge-danger badge-secondary');
+        
+        switch(selectedValue) {
+            case 'Hadir':
+                badge.addClass('badge-success');
+                break;
+            case 'Sakit':
+                badge.addClass('badge-info');
+                break;
+            case 'Izin':
+                badge.addClass('badge-warning');
+                break;
+            case 'Alpa':
+                badge.addClass('badge-danger');
+                break;
+            default:
+                badge.addClass('badge-secondary');
+        }
+    }
+    
+    function exportToExcel() {
+        // Create a container for the full report
+        var container = document.createElement('div');
+        
+        // Add application name and school info
+        var headerDiv = document.createElement('div');
+        headerDiv.innerHTML = '<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\"><div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>';
+        headerDiv.innerHTML += '<h3>" . addslashes($school_profile['nama_madrasah']) . "</h3>';
+        headerDiv.innerHTML += '<h4>Absensi Kelas " . ($wali_kelas ? addslashes($wali_kelas['nama_kelas']) : 'Tidak Diketahui') . " - Tanggal " . $tanggal . "</h4></div><br style=\"clear: both;\">';
+        
+        // Create a copy of the table to modify
+        var table = document.getElementById('table-1');
+        var newTable = table.cloneNode(true);
+        
+        // Update the select elements to show their selected values in the cells
+        var rows = newTable.querySelectorAll('tr');
+        for (var i = 1; i < rows.length; i++) { // Start from 1 to skip header
+            var row = rows[i];
+            var selectCell = row.cells[3]; // Status Kehadiran column (index 3)
+            var selectElement = selectCell.querySelector('select');
             
-            <footer class="main-footer">
-                <div class="footer-left">
-                    Copyright &copy; <?php echo date('Y'); ?> <div class="bullet"></div> <a href="#"><?php echo $school_profile['nama_madrasah']; ?></a>
-                </div>
-                <div class="footer-right">
-                    2.3.0
-                </div>
-            </footer>
-        </div>
-    </div>
-
-    <!-- General JS Scripts -->
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.nicescroll/3.7.6/jquery.nicescroll.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
-    <script src="../assets/js/stisla.js"></script>
-
-    <!-- JS Libraies -->
-        <script src="../node_modules/datatables/media/js/jquery.dataTables.min.js"></script>
-        <script src="../node_modules/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
-        <script src="../node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js"></script>
-
-    <!-- Template JS File -->
-    <script src="../assets/js/scripts.js"></script>
-    <script src="../assets/js/custom.js"></script>
-
-    <!-- Page Specific JS File -->
-        <script>
-            // Pass actual names to JavaScript
-            var madrasahHeadName = '<?php echo addslashes(htmlspecialchars($school_profile['nama_kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8')); ?>';
-            var classTeacherName = '<?php echo addslashes(htmlspecialchars($teacher_name ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8')); ?>';
-
-            function updateBadge(selectElement) {
-                // Get the selected option text and value
-                var selectedOption = selectElement.options[selectElement.selectedIndex].text;
-                var selectedValue = selectElement.options[selectElement.selectedIndex].value;
-                
-                // Get the student ID from the select name (extract from keterangan_[id])
-                var studentId = selectElement.name.replace('keterangan_', '');
-                
-                // Find the specific badge by ID
-                var badge = $('#badge_' + studentId);
-                
-                // Update the badge text
-                badge.text(selectedOption);
-                
-                // Update the badge class based on the selected value
-                badge.removeClass('badge-success badge-info badge-warning badge-danger badge-secondary');
-                
-                switch(selectedValue) {
-                    case 'Hadir':
-                        badge.addClass('badge-success');
-                        break;
-                    case 'Sakit':
-                        badge.addClass('badge-info');
-                        break;
-                    case 'Izin':
-                        badge.addClass('badge-warning');
-                        break;
-                    case 'Alpa':
-                        badge.addClass('badge-danger');
-                        break;
-                    default:
-                        badge.addClass('badge-secondary');
+            if (selectElement) {
+                var selectedText = selectElement.options[selectElement.selectedIndex].text;
+                selectCell.innerHTML = selectedText;
+            }
+        }
+        
+        // Append header and table to container
+        container.appendChild(headerDiv);
+        container.appendChild(newTable);
+        
+        var html = container.innerHTML;
+        
+        // Create download link
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'absensi_kelas_" . ($wali_kelas ? str_replace("'", "", $wali_kelas['nama_kelas']) : 'tidak_diketahui') . "_' + new Date().toISOString().slice(0,10) + '.xls';
+        a.click();
+    }
+    
+    function exportToPDF() {
+        // Print the table as PDF (since we don't have jsPDF in this project)
+        var printWindow = window.open('', '', 'height=860,width=1300');
+        printWindow.document.write('<html><head><title>Export PDF</title>');
+        printWindow.document.write('<style>');
+        printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+        printWindow.document.write('body { font-family: Arial, sans-serif; }');
+        printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
+        printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
+        printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
+        printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+        printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
+        printWindow.document.write('h2, h3, h4 { margin: 5px 0; text-align: center; }');
+        printWindow.document.write('.header-container { text-align: center; margin-bottom: 20px; }');
+        printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+        printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+        printWindow.document.write('</style>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write('<div class=\"header-container\">');
+        printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\">');
+        printWindow.document.write('<div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>');
+        printWindow.document.write('<h3>" . addslashes($school_profile['nama_madrasah']) . "</h3>');
+        printWindow.document.write('<h4>Absensi Kelas " . ($wali_kelas ? addslashes($wali_kelas['nama_kelas']) : 'Tidak Diketahui') . " - Tanggal " . $tanggal . "</h4></div><br style=\"clear: both;\">');
+        printWindow.document.write('</div>');
+        
+        // Create a copy of the table to modify
+        var table = document.getElementById('table-1').cloneNode(true);
+        
+        // Update the select elements to show their selected values in the cells
+        var rows = table.querySelectorAll('tr');
+        for (var i = 1; i < rows.length; i++) { // Start from 1 to skip header
+            var row = rows[i];
+            var selectCell = row.cells[3]; // Status Kehadiran column (index 3)
+            var selectElement = selectCell.querySelector('select');
+            
+            if (selectElement) {
+                var selectedText = selectElement.options[selectElement.selectedIndex].text;
+                selectCell.innerHTML = selectedText;
+            }
+        }
+        
+        printWindow.document.write(table.outerHTML);
+        
+        // Add signatures below the table
+        printWindow.document.write('<div class=\"signature-wrapper\">');
+        printWindow.document.write('<div class=\"signature-box\">');
+        printWindow.document.write('<p>Wali Kelas,</p>');
+        printWindow.document.write('<br><br><br>');
+        printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+        printWindow.document.write('</div>');
+        printWindow.document.write('<div class=\"signature-box\">');
+        printWindow.document.write('<p>Kepala Madrasah,</p>');
+        printWindow.document.write('<br><br><br>');
+        printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+        printWindow.document.write('</div>');
+        printWindow.document.write('</div>');
+        
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+    }
+    
+    $(document).ready(function() {
+        $('#table-1').DataTable({
+            \"columnDefs\": [
+                { \"orderable\": false, \"targets\": [3] }
+            ],
+            \"paging\": true,
+            \"lengthChange\": true,
+            \"pageLength\": 10,
+            \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+            \"dom\": 'lfrtip',
+            \"info\": true,
+            \"language\": {
+                \"lengthMenu\": \"Tampilkan _MENU_ entri\",
+                \"zeroRecords\": \"Tidak ada data yang ditemukan\",
+                \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+                \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
+                \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
+                \"search\": \"Cari:\",
+                \"paginate\": {
+                    \"first\": \"Pertama\",
+                    \"last\": \"Terakhir\",
+                    \"next\": \"Selanjutnya\",
+                    \"previous\": \"Sebelumnya\"
                 }
             }
+        });
+        
+        // Handle form submission to ensure all inputs are sent
+        // Intercept form submission to collect all select values from all DataTables pages
+        $(document).on('submit', 'form', function(e) {
+            var form = $(this);
+            var table = $('#table-1');
             
-            function exportToExcel() {
-                // Create a container for the full report
-                var container = document.createElement('div');
-                
-                // Add application name and school info
-                var headerDiv = document.createElement('div');
-                headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
-                headerDiv.innerHTML += '<h3><?php echo $school_profile['nama_madrasah']; ?></h3>';
-                headerDiv.innerHTML += '<h4>Absensi Kelas <?php echo $wali_kelas ? $wali_kelas['nama_kelas'] : 'Tidak Diketahui'; ?> - Tanggal <?php echo $tanggal; ?></h4></div><br style="clear: both;">';
-                
-                // Create a copy of the table to modify
-                var table = document.getElementById('table-1');
-                var newTable = table.cloneNode(true);
-                
-                // Update the select elements to show their selected values in the cells
-                var rows = newTable.querySelectorAll('tr');
-                for (var i = 1; i < rows.length; i++) { // Start from 1 to skip header
-                    var row = rows[i];
-                    var selectCell = row.cells[3]; // Status Kehadiran column (index 3)
-                    var selectElement = selectCell.querySelector('select');
-                    
-                    if (selectElement) {
-                        var selectedText = selectElement.options[selectElement.selectedIndex].text;
-                        selectCell.innerHTML = selectedText;
-                    }
-                }
-                
-                // Append header and table to container
-                container.appendChild(headerDiv);
-                container.appendChild(newTable);
-                
-                var html = container.innerHTML;
-                
-                // Create download link
-                var a = document.createElement('a');
-                var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-                a.href = data;
-                a.download = 'absensi_kelas_<?php echo $wali_kelas ? str_replace("'", "", $wali_kelas['nama_kelas']) : 'tidak_diketahui'; ?>_' + new Date().toISOString().slice(0,10) + '.xls';
-                a.click();
+            // Only process attendance form (has save_attendance input)
+            if (!form.find('input[name=\"save_attendance\"]').length) {
+                return; // Let other forms submit normally
             }
             
-            function exportToPDF() {
-                // Print the table as PDF (since we don't have jsPDF in this project)
-                var printWindow = window.open('', '', 'height=860,width=1300');
-                printWindow.document.write('<html><head><title>Export PDF</title>');
-                printWindow.document.write('<style>');
-                printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
-                printWindow.document.write('body { font-family: Arial, sans-serif; }');
-                printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
-                printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
-                printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
-                printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-                printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
-                printWindow.document.write('h2, h3, h4 { margin: 5px 0; text-align: center; }');
-                printWindow.document.write('.header-container { text-align: center; margin-bottom: 20px; }');
-                printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
-                printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
-                printWindow.document.write('</style>');
-                printWindow.document.write('</head><body>');
-                printWindow.document.write('<div class="header-container">');
-                printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;">');
-                printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-                printWindow.document.write('<h3><?php echo $school_profile['nama_madrasah']; ?></h3>');
-                printWindow.document.write('<h4>Absensi Kelas <?php echo $wali_kelas ? $wali_kelas['nama_kelas'] : 'Tidak Diketahui'; ?> - Tanggal <?php echo $tanggal; ?></h4></div><br style="clear: both;">');
-                printWindow.document.write('</div>');
+            // If DataTable is initialized, collect all select values
+            if ($.fn.DataTable.isDataTable('#table-1')) {
+                e.preventDefault(); // Prevent default submission
+                e.stopPropagation(); // Stop event propagation
                 
-                // Create a copy of the table to modify
-                var table = document.getElementById('table-1').cloneNode(true);
+                var dt = table.DataTable();
+                var currentPage = dt.page();
+                var currentPageLength = dt.page.len();
+                var pageInfo = dt.page.info();
+                var allSelectValues = {};
                 
-                // Update the select elements to show their selected values in the cells
-                var rows = table.querySelectorAll('tr');
-                for (var i = 1; i < rows.length; i++) { // Start from 1 to skip header
-                    var row = rows[i];
-                    var selectCell = row.cells[3]; // Status Kehadiran column (index 3)
-                    var selectElement = selectCell.querySelector('select');
-                    
-                    if (selectElement) {
-                        var selectedText = selectElement.options[selectElement.selectedIndex].text;
-                        selectCell.innerHTML = selectedText;
-                    }
-                }
+                // Temporarily show all rows to collect all current values
+                dt.page.len(-1).draw(false);
                 
-                printWindow.document.write(table.outerHTML);
-                
-                // Add signatures below the table
-                printWindow.document.write('<div class="signature-wrapper">');
-                printWindow.document.write('<div class="signature-box">');
-                printWindow.document.write('<p>Wali Kelas,</p>');
-                printWindow.document.write('<br><br><br>');
-                printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
-                printWindow.document.write('</div>');
-                printWindow.document.write('<div class="signature-box">');
-                printWindow.document.write('<p>Kepala Madrasah,</p>');
-                printWindow.document.write('<br><br><br>');
-                printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
-                printWindow.document.write('</div>');
-                printWindow.document.write('</div>');
-                
-                printWindow.document.write('</body></html>');
-                printWindow.document.close();
-                printWindow.print();
-            }
-            
-            $(document).ready(function() {
-                $('#table-1').DataTable({
-                    "columnDefs": [
-                        { "orderable": false, "targets": [3] }
-                    ],
-                    "paging": true,
-                    "lengthChange": true,
-                    "pageLength": 10,
-                    "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-                    "dom": 'lfrtip',
-                    "info": true,
-                    "language": {
-                        "lengthMenu": "Tampilkan _MENU_ entri",
-                        "zeroRecords": "Tidak ada data yang ditemukan",
-                        "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
-                        "infoEmpty": "Menampilkan 0 sampai 0 dari 0 entri",
-                        "infoFiltered": "(disaring dari _MAX_ total entri)",
-                        "search": "Cari:",
-                        "paginate": {
-                            "first": "Pertama",
-                            "last": "Terakhir",
-                            "next": "Selanjutnya",
-                            "previous": "Sebelumnya"
+                // Wait for DOM to update, then collect all values
+                setTimeout(function() {
+                    // Collect all select values from all rows (now all visible)
+                    var collectedCount = 0;
+                    table.find('tbody select[name^=\"keterangan_\"]').each(function() {
+                        var select = $(this);
+                        var name = select.attr('name');
+                        var value = select.val();
+                        
+                        if (name && value) {
+                            allSelectValues[name] = value;
+                            collectedCount++;
                         }
-                    }
-                });
-                
-                // Handle form submission to ensure all inputs are sent
-                // Intercept form submission to collect all select values from all DataTables pages
-                $(document).on('submit', 'form', function(e) {
-                    var form = $(this);
-                    var table = $('#table-1');
+                    });
                     
-                    // Only process attendance form (has save_attendance input)
-                    if (!form.find('input[name=\"save_attendance\"]').length) {
-                        return; // Let other forms submit normally
+                    console.log('Collected ' + collectedCount + ' values from DOM');
+                    console.log('Total values: ' + Object.keys(allSelectValues).length + ' (expected: ' + pageInfo.recordsTotal + ')');
+                    
+                    // Verify we have all values
+                    if (Object.keys(allSelectValues).length < pageInfo.recordsTotal) {
+                        console.warn('Warning: Not all values collected! Expected ' + pageInfo.recordsTotal + ', got ' + Object.keys(allSelectValues).length);
                     }
                     
-                    // If DataTable is initialized, collect all select values
-                    if ($.fn.DataTable.isDataTable('#table-1')) {
-                        e.preventDefault(); // Prevent default submission
-                        e.stopPropagation(); // Stop event propagation
-                        
-                        var dt = table.DataTable();
-                        var currentPage = dt.page();
-                        var currentPageLength = dt.page.len();
-                        var pageInfo = dt.page.info();
-                        var allSelectValues = {};
-                        
-                        // Temporarily show all rows to collect all current values
-                        dt.page.len(-1).draw(false);
-                        
-                        // Wait for DOM to update, then collect all values
-                        setTimeout(function() {
-                            // Collect all select values from all rows (now all visible)
-                            var collectedCount = 0;
-                            table.find('tbody select[name^=\"keterangan_\"]').each(function() {
-                                var select = $(this);
-                                var name = select.attr('name');
-                                var value = select.val();
-                                
-                                if (name && value) {
-                                    allSelectValues[name] = value;
-                                    collectedCount++;
-                                }
-                            });
-                            
-                            console.log('Collected ' + collectedCount + ' values from DOM');
-                            console.log('Total values: ' + Object.keys(allSelectValues).length + ' (expected: ' + pageInfo.recordsTotal + ')');
-                            
-                            // Verify we have all values
-                            if (Object.keys(allSelectValues).length < pageInfo.recordsTotal) {
-                                console.warn('Warning: Not all values collected! Expected ' + pageInfo.recordsTotal + ', got ' + Object.keys(allSelectValues).length);
-                            }
-                            
-                            // Restore pagination
-                            dt.page.len(currentPageLength).page(currentPage).draw(false);
-                            
-                            // Remove any existing hidden inputs with the same names
-                            form.find('input[type=\"hidden\"][name^=\"keterangan_\"]').remove();
-                            
-                            // Add hidden inputs for all select values
-                            var inputCount = 0;
-                            $.each(allSelectValues, function(name, value) {
-                                var hiddenInput = $('<input>').attr({
-                                    type: 'hidden',
-                                    name: name,
-                                    value: value
-                                });
-                                form.append(hiddenInput);
-                                inputCount++;
-                            });
-                            
-                            console.log('Added ' + inputCount + ' hidden inputs to form');
-                            
-                            // Submit the form using native submit
-                            form.off('submit'); // Remove this handler to avoid infinite loop
-                            
-                            // Use native form submit
-                            var formElement = form[0];
-                            if (formElement && formElement.submit) {
-                                formElement.submit();
-                            } else {
-                                form.submit();
-                            }
-                        }, 500);
+                    // Restore pagination
+                    dt.page.len(currentPageLength).page(currentPage).draw(false);
+                    
+                    // Remove any existing hidden inputs with the same names
+                    form.find('input[type=\"hidden\"][name^=\"keterangan_\"]').remove();
+                    
+                    // Add hidden inputs for all select values
+                    var inputCount = 0;
+                    $.each(allSelectValues, function(name, value) {
+                        var hiddenInput = $('<input>').attr({
+                            type: 'hidden',
+                            name: name,
+                            value: value
+                        });
+                        form.append(hiddenInput);
+                        inputCount++;
+                    });
+                    
+                    console.log('Added ' + inputCount + ' hidden inputs to form');
+                    
+                    // Submit the form using native submit
+                    form.off('submit'); // Remove this handler to avoid infinite loop
+                    
+                    // Use native form submit
+                    var formElement = form[0];
+                    if (formElement && formElement.submit) {
+                        formElement.submit();
+                    } else {
+                        form.submit();
                     }
-                });
-            });
-        </script>
-</body>
-</html>
+                }, 500);
+            }
+        });
+    });
+";
+
+include '../templates/user_footer.php';
+?>

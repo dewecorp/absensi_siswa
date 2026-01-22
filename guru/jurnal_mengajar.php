@@ -218,7 +218,7 @@ $js_page = [
             $('select[name=\"mapel\"]').val('').trigger('change');
             
             // Set default date to today
-            var today = new Date().toISOString().split('T')[0];
+            var today = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' });
             $('input[name=\"tanggal\"]').val(today);
             
             // Set class if selected

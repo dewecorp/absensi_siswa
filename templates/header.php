@@ -78,6 +78,25 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                             <span><?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
                         </div>
                     </li>
+                    <!-- Date and Time Info -->
+                    <li class="nav-item d-flex align-items-center ml-2">
+                        <div class="text-white small font-weight-bold">
+                            <i class="far fa-calendar-alt mr-1"></i>
+                            <span id="header-date-time"></span>
+                        </div>
+                        <script>
+                            function updateHeaderDateTime() {
+                                const now = new Date();
+                                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                                const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+                                const dateStr = now.toLocaleDateString('id-ID', dateOptions);
+                                const timeStr = now.toLocaleTimeString('id-ID', timeOptions).replace(/\./g, ':');
+                                document.getElementById('header-date-time').textContent = `${dateStr} - ${timeStr}`;
+                            }
+                            setInterval(updateHeaderDateTime, 1000);
+                            document.addEventListener('DOMContentLoaded', updateHeaderDateTime);
+                        </script>
+                    </li>
                 </ul>
                 <ul class="navbar-nav navbar-right">
                     

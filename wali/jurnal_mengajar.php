@@ -108,6 +108,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         if ($check_stmt->rowCount() > 0) {
             $stmt = $pdo->prepare("UPDATE tb_jurnal SET id_kelas=?, jam_ke=?, mapel=?, materi=?, tanggal=? WHERE id=?");
             $stmt->execute([$id_kelas, $jam_ke, $mapel, $materi, $tanggal, $id_jurnal]);
+
+            $nama_guru_notif = $teacher['nama_guru'];
+            $nama_kelas_notif = '';
+            foreach ($classes as $c) {
+                if ($c['id_kelas'] == $id_kelas) {
+                    $nama_kelas_notif = $c['nama_kelas'];
+                    break;
+                }
+            }
+
+            $notif_msg = "$nama_guru_notif telah memperbarui jurnal mengajar kelas $nama_kelas_notif";
+            createNotification($pdo, $notif_msg, 'jurnal_mengajar.php', 'jurnal');
+
+            // Log activity
+            $log_desc = "$nama_guru_notif memperbarui jurnal mengajar kelas $nama_kelas_notif ($mapel)";
+            logActivity($pdo, $teacher['nama_guru'], 'Edit Jurnal', $log_desc);
+
             $message = ['type' => 'success', 'text' => 'Jurnal berhasil diperbarui!'];
         } else {
             $message = ['type' => 'error', 'text' => 'Anda tidak memiliki akses untuk mengedit jurnal ini.'];
@@ -116,6 +133,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         // Add
         $stmt = $pdo->prepare("INSERT INTO tb_jurnal (id_kelas, id_guru, jam_ke, mapel, materi, tanggal) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([$id_kelas, $id_guru, $jam_ke, $mapel, $materi, $tanggal]);
+        
+        // Send notification to admin
+        $nama_guru_notif = $teacher['nama_guru'];
+        $nama_kelas_notif = '';
+        foreach ($classes as $c) {
+            if ($c['id_kelas'] == $id_kelas) {
+                $nama_kelas_notif = $c['nama_kelas'];
+                break;
+            }
+        }
+        $notif_msg = "$nama_guru_notif telah mengisi jurnal mengajar kelas $nama_kelas_notif";
+        createNotification($pdo, $notif_msg, 'jurnal_mengajar.php', 'jurnal');
+
         $message = ['type' => 'success', 'text' => 'Jurnal berhasil ditambahkan!'];
     }
 }
@@ -211,7 +241,7 @@ $js_page = [
             $('select[name=\"mapel\"]').val('').trigger('change');
             
             // Set default date to today
-            var today = new Date().toISOString().split('T')[0];
+            var today = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' });
             $('input[name=\"tanggal\"]').val(today);
             
             // Set class if selected

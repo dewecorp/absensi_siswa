@@ -122,20 +122,7 @@ include '../templates/header.php';
                         </div>
                     </div>
 
-                    <?php if (isset($message)): ?>
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            Swal.fire({
-                                title: '<?php echo $message['type'] === 'success' ? 'Sukses!' : 'Info!'; ?>',
-                                text: '<?php echo addslashes($message['text']); ?>',
-                                icon: '<?php echo $message['type']; ?>',
-                                timer: <?php echo $message['type'] === 'success' ? '3000' : '5000'; ?>,
-                                timerProgressBar: true,
-                                showConfirmButton: false
-                            });
-                        });
-                    </script>
-                    <?php endif; ?>
+
 
                     <div class="row">
                         <div class="col-12">
@@ -301,6 +288,20 @@ $class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali 
 
 // Add page-specific JavaScript
 $js_page = [];
+
+// SweetAlert logic
+if (isset($message)) {
+    $js_page[] = "
+    Swal.fire({
+        title: '" . ($message['type'] === 'success' ? 'Sukses!' : 'Info!') . "',
+        text: '" . addslashes($message['text']) . "',
+        icon: '" . $message['type'] . "',
+        timer: " . ($message['type'] === 'success' ? '3000' : '5000') . ",
+        timerProgressBar: true,
+        showConfirmButton: false
+    });
+    ";
+}
 $js_page[] = "
 // Pass actual names to JavaScript
 var madrasahHeadName = '$madrasah_head';
