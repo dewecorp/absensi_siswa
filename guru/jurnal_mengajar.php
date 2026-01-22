@@ -115,6 +115,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         // Add
         $stmt = $pdo->prepare("INSERT INTO tb_jurnal (id_kelas, id_guru, jam_ke, mapel, materi, tanggal) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([$id_kelas, $id_guru, $jam_ke, $mapel, $materi, $tanggal]);
+        
+        // Send notification to admin
+        $nama_guru = $teacher['nama_guru'];
+        $waktu = date('H:i');
+        $tanggal_notif = date('d-m-Y');
+        $notif_msg = "$nama_guru telah membuat jurnal $mapel pada pukul $waktu tanggal $tanggal_notif";
+        createNotification($pdo, $notif_msg, 'jurnal_mengajar.php?kelas=' . $id_kelas, 'jurnal_mengajar');
+        
         $message = ['type' => 'success', 'text' => 'Jurnal berhasil ditambahkan!'];
     }
 }

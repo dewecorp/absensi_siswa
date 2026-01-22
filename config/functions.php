@@ -93,6 +93,60 @@ function sanitizeInput($input) {
     return htmlspecialchars(strip_tags(trim($input)));
 }
 
+// === NOTIFICATION SYSTEM ===
+
+// Function to create a new notification
+function createNotification($pdo, $message, $link = '#', $type = 'info') {
+    try {
+        // Use Asia/Jakarta timezone
+        date_default_timezone_set('Asia/Jakarta');
+        
+        $stmt = $pdo->prepare("INSERT INTO tb_notifikasi (message, link, created_at) VALUES (?, ?, NOW())");
+        $result = $stmt->execute([$message, $link]);
+        
+        // Auto cleanup old notifications (older than 24 hours)
+        cleanupNotifications($pdo);
+        
+        return $result;
+    } catch (PDOException $e) {
+        error_log("Error creating notification: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Function to get unread notifications for admin
+function getUnreadNotifications($pdo) {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM tb_notifikasi ORDER BY created_at DESC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error fetching notifications: " . $e->getMessage());
+        return [];
+    }
+}
+
+// Function to delete notifications older than 24 hours
+function cleanupNotifications($pdo) {
+    try {
+        $stmt = $pdo->prepare("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+        $stmt->execute();
+    } catch (PDOException $e) {
+        error_log("Error cleaning up notifications: " . $e->getMessage());
+    }
+}
+
+// Function to mark notification as read
+function markNotificationAsRead($pdo, $id) {
+    try {
+        $stmt = $pdo->prepare("UPDATE tb_notifikasi SET is_read = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    } catch (PDOException $e) {
+        error_log("Error marking notification as read: " . $e->getMessage());
+        return false;
+    }
+}
+
 // Function to convert timestamp to relative time in Indonesian
 function timeAgo($datetime) {
     $now = new DateTime();

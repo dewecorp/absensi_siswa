@@ -80,6 +80,86 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                     </li>
                 </ul>
                 <ul class="navbar-nav navbar-right">
+                    
+                    <?php if (getUserLevel() === 'admin'): ?>
+                    <?php 
+                        $unread_notifs = getUnreadNotifications($pdo);
+                        $unread_count = 0;
+                        foreach($unread_notifs as $n) {
+                            if(!$n['is_read']) $unread_count++;
+                        }
+                    ?>
+                    <li class="dropdown dropdown-list-toggle">
+                        <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg message-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
+                            <i class="far fa-bell"></i>
+                            <?php if ($unread_count > 0): ?>
+                                <span class="badge badge-danger" style="position: absolute; top: 0; right: 0; padding: 3px 6px; font-size: 10px;"><?php echo $unread_count; ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <div class="dropdown-menu dropdown-list dropdown-menu-right">
+                            <div class="dropdown-header">Notifikasi
+                                <div class="float-right">
+                                    <a href="#" id="mark-all-read">Tandai semua dibaca</a>
+                                </div>
+                            </div>
+                            <div class="dropdown-list-content dropdown-list-icons" style="height: 300px; overflow-y: auto;">
+                                <?php if (count($unread_notifs) > 0): ?>
+                                    <?php foreach ($unread_notifs as $notif): ?>
+                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif['link']; ?>'); return false;" class="dropdown-item dropdown-item-unread" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; background-color: #f9f9f9;'; ?>">
+                                            <div class="dropdown-item-icon bg-primary text-white">
+                                                <i class="fas fa-info"></i>
+                                            </div>
+                                            <div class="dropdown-item-desc">
+                                                <span style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; color: #333;'; ?>">
+                                                    <?php echo htmlspecialchars($notif['message']); ?>
+                                                </span>
+                                                <div class="time text-primary"><?php echo timeAgo($notif['created_at']); ?></div>
+                                            </div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="p-3 text-center text-muted">
+                                        Tidak ada notifikasi baru
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </li>
+                    <script>
+                    function readNotification(id, link) {
+                        // Mark as read via AJAX
+                        $.ajax({
+                            url: '../admin/mark_notification_read.php',
+                            type: 'POST',
+                            data: { id: id },
+                            success: function(response) {
+                                // Redirect to link
+                                if (link && link !== '#') {
+                                    window.location.href = link;
+                                } else {
+                                    // Just reload or update UI
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    }
+                    
+                    $(document).ready(function() {
+                        $('#mark-all-read').click(function(e) {
+                            e.preventDefault();
+                            $.ajax({
+                                url: '../admin/mark_notification_read.php',
+                                type: 'POST',
+                                data: { action: 'mark_all' },
+                                success: function(response) {
+                                    window.location.reload();
+                                }
+                            });
+                        });
+                    });
+                    </script>
+                    <?php endif; ?>
+
                     <li class="dropdown">
                         <?php
                         // Get user data to display personalized avatar

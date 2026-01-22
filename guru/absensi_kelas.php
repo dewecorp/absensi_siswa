@@ -126,6 +126,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     
     $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
     logActivity($pdo, $teacher['nuptk'], 'Input Absensi', "Guru " . $teacher['nama_guru'] . " melakukan input absensi kelas ID: $id_kelas untuk $saved_count siswa");
+
+    // Send notification to admin if data was saved
+    if ($saved_count > 0) {
+        $nama_guru = $teacher['nama_guru'];
+        
+        // Get class name
+        $stmt_kelas = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+        $stmt_kelas->execute([$id_kelas]);
+        $kelas_data = $stmt_kelas->fetch(PDO::FETCH_ASSOC);
+        $nama_kelas = $kelas_data ? $kelas_data['nama_kelas'] : 'Kelas ID ' . $id_kelas;
+        
+        $waktu = date('H:i');
+        $tanggal_notif = date('d-m-Y');
+        
+        $notif_msg = "$nama_guru telah mengirim kehadiran siswa kelas $nama_kelas pada pukul $waktu tanggal $tanggal_notif";
+        createNotification($pdo, $notif_msg, 'absensi_harian.php?kelas=' . $id_kelas . '&tanggal=' . $tanggal, 'absensi_siswa');
+    }
 }
 
 // Get students for selected class

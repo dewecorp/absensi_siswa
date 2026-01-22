@@ -175,6 +175,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
             // Update existing
              $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ? WHERE id_guru = ? AND tanggal = ?");
              if ($update_stmt->execute([$attendance_status, $attendance_note, $current_teacher_id, $current_date])) {
+                 
+                 // Send notification to admin
+                 $nama_guru = isset($_SESSION['nama_guru']) ? $_SESSION['nama_guru'] : 'Guru';
+                 $waktu = date('H:i');
+                 $tanggal = date('d-m-Y');
+                 $notif_msg = "$nama_guru telah mengirim kehadiran pada pukul $waktu tanggal $tanggal";
+                 createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
+                 
                  echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({
@@ -190,6 +198,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
             // Insert new
             $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan) VALUES (?, ?, ?, ?)");
             if ($insert_stmt->execute([$current_teacher_id, $current_date, $attendance_status, $attendance_note])) {
+                 
+                 // Send notification to admin
+                 $nama_guru = isset($_SESSION['nama_guru']) ? $_SESSION['nama_guru'] : 'Guru';
+                 $waktu = date('H:i');
+                 $tanggal = date('d-m-Y');
+                 $notif_msg = "$nama_guru telah mengirim kehadiran pada pukul $waktu tanggal $tanggal";
+                 createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
+                 
                  echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({
