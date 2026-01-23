@@ -316,14 +316,18 @@ include '../templates/sidebar.php';
                     </div>
 
                     <?php if ($message): ?>
-                    <div class="alert alert-<?php echo $message['type']; ?> alert-dismissible show fade">
-                        <div class="alert-body">
-                            <button class="close" data-dismiss="alert">
-                                <span>&times;</span>
-                            </button>
-                            <?php echo $message['text']; ?>
-                        </div>
-                    </div>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            Swal.fire({
+                                title: '<?php echo $message['type'] == 'success' ? 'Berhasil' : 'Gagal'; ?>',
+                                text: '<?php echo $message['text']; ?>',
+                                icon: '<?php echo $message['type'] == 'danger' ? 'error' : $message['type']; ?>',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            });
+                        });
+                    </script>
                     <?php endif; ?>
 
                     <div class="row">
@@ -394,7 +398,7 @@ include '../templates/sidebar.php';
                                                                     <span aria-hidden="true">&times;</span>
                                                                 </button>
                                                             </div>
-                                                            <form method="POST" action="">
+                                                            <form method="POST" action="" enctype="multipart/form-data">
                                                                 <div class="modal-body">
                                                                     <input type="hidden" name="id_pengguna" value="<?php echo $user['id_pengguna']; ?>">
                                                                     <input type="hidden" name="update_user" value="1">
@@ -458,7 +462,7 @@ include '../templates/sidebar.php';
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
-                        <form method="POST" action="">
+                        <form method="POST" action="" enctype="multipart/form-data">
                             <div class="modal-body">
                                 <input type="hidden" name="add_user" value="1">
                                 <div class="form-group">
