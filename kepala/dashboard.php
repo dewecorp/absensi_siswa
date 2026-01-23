@@ -171,7 +171,7 @@ $stmt_journal = $pdo->prepare("
     LEFT JOIN tb_guru g ON j.id_guru = g.id_guru 
     LEFT JOIN tb_kelas k ON j.id_kelas = k.id_kelas 
     ORDER BY j.tanggal DESC, j.jam_ke ASC 
-    LIMIT 10");
+    LIMIT 50");
 $stmt_journal->execute();
 $recent_journals = $stmt_journal->fetchAll(PDO::FETCH_ASSOC);
 

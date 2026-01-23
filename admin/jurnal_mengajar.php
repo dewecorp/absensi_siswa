@@ -25,6 +25,26 @@ if (isset($_POST['delete_journal'])) {
     }
 }
 
+// Handle Multiple Delete Action
+if (isset($_POST['delete_multiple_journal'])) {
+    $ids = $_POST['ids'] ?? [];
+    if (!empty($ids)) {
+        try {
+            $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+            $stmt = $pdo->prepare("DELETE FROM tb_jurnal WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+            
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $count = count($ids);
+            logActivity($pdo, $username, 'Hapus Jurnal Massal', "Admin menghapus $count jurnal");
+            
+            $message = ['type' => 'success', 'text' => "$count data jurnal berhasil dihapus!"];
+        } catch (Exception $e) {
+            $message = ['type' => 'error', 'text' => 'Gagal menghapus data: ' . $e->getMessage()];
+        }
+    }
+}
+
 // Get all classes
 $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -89,20 +109,86 @@ $js_page = [
             'language': {
                 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
             },
-            'order': [[ 7, 'desc' ]],
+            'order': [[ 8, 'desc' ]],
             'columnDefs': [ {
                 'searchable': false,
                 'orderable': false,
-                'targets': 0
+                'targets': [0, 1]
             } ]
         });
 
         t.on( 'order.dt search.dt', function () {
-            t.column(0, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+            t.column(1, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
                 cell.innerHTML = i+1;
             } );
         } ).draw();
+
+        // Check all functionality
+        $('#check-all').click(function() {
+            $('.check-item').prop('checked', this.checked);
+            toggleBulkDeleteBtn();
+        });
+
+        $(document).on('change', '.check-item', function() {
+            toggleBulkDeleteBtn();
+            if ($('.check-item:checked').length == $('.check-item').length) {
+                $('#check-all').prop('checked', true);
+            } else {
+                $('#check-all').prop('checked', false);
+            }
+        });
     });
+
+    function toggleBulkDeleteBtn() {
+        if ($('.check-item:checked').length > 0) {
+            $('#btn-bulk-delete').show();
+        } else {
+            $('#btn-bulk-delete').hide();
+        }
+    }
+
+    function bulkDelete() {
+        var ids = [];
+        $('.check-item:checked').each(function() {
+            ids.push($(this).val());
+        });
+
+        if (ids.length > 0) {
+            Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: ids.length + ' data jurnal akan dihapus permanen!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = window.location.href;
+
+                    ids.forEach(function(id) {
+                        var input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'ids[]';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+
+                    var inputAction = document.createElement('input');
+                    inputAction.type = 'hidden';
+                    inputAction.name = 'delete_multiple_journal';
+                    inputAction.value = '1';
+                    form.appendChild(inputAction);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        }
+    }
 
     function confirmDelete(id) {
         Swal.fire({
@@ -203,12 +289,23 @@ include '../templates/header.php';
                 <div class="card">
                     <div class="card-header">
                         <h4>Data Jurnal Mengajar - <?php echo isset($class_info['nama_kelas']) ? htmlspecialchars($class_info['nama_kelas']) : ''; ?></h4>
+                        <div class="card-header-action">
+                            <button id="btn-bulk-delete" class="btn btn-danger" style="display: none;" onclick="bulkDelete()">
+                                <i class="fas fa-trash"></i> Hapus Terpilih
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-striped" id="table-jurnal">
                                 <thead>
                                     <tr>
+                                        <th class="text-center" style="width: 40px;">
+                                            <div class="custom-checkbox custom-control">
+                                                <input type="checkbox" class="custom-control-input" id="check-all">
+                                                <label class="custom-control-label" for="check-all"></label>
+                                            </div>
+                                        </th>
                                         <th class="text-center" style="width: 50px;">No</th>
                                         <th>Tanggal</th>
                                         <th>Jam Ke</th>
@@ -226,6 +323,12 @@ include '../templates/header.php';
                                     <?php if (count($journal_entries) > 0): ?>
                                         <?php foreach ($journal_entries as $journal): ?>
                                         <tr>
+                                            <td class="text-center">
+                                                <div class="custom-checkbox custom-control">
+                                                    <input type="checkbox" class="custom-control-input check-item" id="checkbox-<?php echo $journal['id']; ?>" value="<?php echo $journal['id']; ?>">
+                                                    <label class="custom-control-label" for="checkbox-<?php echo $journal['id']; ?>"></label>
+                                                </div>
+                                            </td>
                                             <td class="text-center"></td>
                                             <td><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
                                             <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
