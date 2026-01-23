@@ -5,6 +5,24 @@
 
             <!-- Main Content will be inserted here by individual pages -->
             
+            <style>
+            @media (max-width: 768px) {
+                .main-footer .footer-left, 
+                .main-footer .footer-right {
+                    float: none !important;
+                    text-align: center !important;
+                    display: block !important;
+                    width: 100% !important;
+                    margin-bottom: 10px;
+                    white-space: normal !important;
+                    line-height: 1.5;
+                }
+                .main-footer .footer-left .bullet {
+                    display: none !important;
+                }
+            }
+            </style>
+            
             <footer class="main-footer">
                 <div class="footer-left">
                     Copyright &copy; <?php echo date('Y'); ?> <div class="bullet"></div> Sistem Informasi Madrasah
@@ -13,6 +31,76 @@
                     <?php echo $school_profile['nama_madrasah']; ?>
                 </div>
             </footer>
+            
+            <?php
+            // Determine profile URL for bottom nav
+            $bottom_profile_url = 'profil.php';
+            $bottom_user_level = getUserLevel();
+            if ($bottom_user_level === 'admin' || $bottom_user_level === 'kepala_madrasah') {
+                $bottom_profile_url = 'profil_madrasah.php';
+            }
+            ?>
+            
+            <!-- Spacer for Bottom Navbar (Mobile Only) -->
+            <div class="d-block d-lg-none" style="height: 70px;"></div>
+
+            <!-- Bottom Navbar (Mobile Only) -->
+            <nav class="navbar navbar-expand navbar-light bg-white d-block d-lg-none border-top shadow-lg" style="position: fixed; bottom: 0; left: 0; right: 0; height: 60px; padding: 0; z-index: 1030;">
+                <div class="container-fluid h-100">
+                    <div class="row w-100 mx-0 h-100">
+                        <!-- Hamburger / Menu -->
+                        <div class="col-4 px-0 h-100">
+                            <a href="#" data-toggle="sidebar" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
+                                <i class="fas fa-bars fa-lg mb-1"></i>
+                                <span style="font-size: 10px;">Menu</span>
+                            </a>
+                        </div>
+                        
+                        <!-- Home / Dashboard -->
+                        <div class="col-4 px-0 h-100">
+                            <a href="dashboard.php" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-primary">
+                                <i class="fas fa-home fa-lg mb-1"></i>
+                                <span style="font-size: 10px;">Home</span>
+                            </a>
+                        </div>
+                        
+                        <!-- User / Profile -->
+                        <div class="col-4 px-0 h-100">
+                            <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
+                                <i class="fas fa-user fa-lg mb-1"></i>
+                                <span style="font-size: 10px;">Akun</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Mobile User Menu Modal -->
+            <div class="modal fade" id="mobileUserMenu" tabindex="-1" role="dialog" aria-labelledby="mobileUserMenuLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="mobileUserMenuLabel">Menu Pengguna</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="list-group list-group-flush">
+                                <a href="<?php echo $bottom_profile_url; ?>" class="list-group-item list-group-item-action d-flex align-items-center">
+                                    <i class="fas fa-user-circle fa-lg mr-3 text-primary"></i> Profil Saya
+                                </a>
+                                <a href="#" onclick="confirmLogout(); return false;" class="list-group-item list-group-item-action d-flex align-items-center text-danger">
+                                    <i class="fas fa-sign-out-alt fa-lg mr-3"></i> Logout
+                                </a>
+                            </div>
+                        </div>
+                        <div class="modal-footer p-2">
+                            <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

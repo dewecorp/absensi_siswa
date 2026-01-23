@@ -57,6 +57,17 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
     <!-- Modal Fix CSS -->
     <link rel="stylesheet" href="../assets/css/modal_fix.css">
 
+    <!-- Custom Mobile Layout CSS -->
+    <style>
+        @media (max-width: 991.98px) {
+            .main-navbar, .navbar-bg {
+                display: none !important;
+            }
+            .main-content {
+                padding-top: 10px !important;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -66,20 +77,20 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
             <nav class="navbar navbar-expand-lg main-navbar">
                 <form class="form-inline mr-auto">
                     <ul class="navbar-nav mr-3">
-                        <li><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
+                        <li class="d-none d-lg-block"><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
                     </ul>
                 </form>
                 <ul class="navbar-nav mr-auto">
                     <!-- Academic Year and Semester Info -->
-                    <li class="nav-item d-flex align-items-center">
-                        <div class="bg-primary text-white px-3 py-2 rounded small">
+                    <li class="nav-item d-none d-lg-flex align-items-center">
+                        <div class="text-white small font-weight-bold">
                             <span class="mr-2"><?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
                             <span class="mx-2">|</span>
                             <span><?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
                         </div>
                     </li>
                     <!-- Date and Time Info -->
-                    <li class="nav-item d-flex align-items-center ml-2">
+                    <li class="nav-item d-none d-lg-flex align-items-center ml-2">
                         <div class="text-white small font-weight-bold">
                             <i class="far fa-calendar-alt mr-1"></i>
                             <span id="header-date-time"></span>
@@ -108,7 +119,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                             if(!$n['is_read']) $unread_count++;
                         }
                     ?>
-                    <li class="dropdown dropdown-list-toggle">
+                    <li class="dropdown dropdown-list-toggle d-none d-lg-block">
                         <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg message-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
                             <i class="far fa-bell"></i>
                             <?php if ($unread_count > 0): ?>
@@ -179,7 +190,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                     </script>
                     <?php endif; ?>
 
-                    <li class="dropdown">
+                    <li class="dropdown d-none d-lg-block">
                         <?php
                         // Get user data to display personalized avatar
                         $user_level = getUserLevel();
@@ -235,7 +246,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                         ?>
                         <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
                             <?php echo $avatar_html; ?>
-                            <div class="d-sm-none d-lg-inline-block">Hi, <?php echo htmlspecialchars($display_name); ?></div>
+                            <div class="d-none d-lg-inline-block">Hi, <?php echo htmlspecialchars($display_name); ?></div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <?php

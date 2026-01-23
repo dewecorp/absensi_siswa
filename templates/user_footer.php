@@ -9,6 +9,24 @@ if (!isset($school_profile)) {
 
             <!-- Main Content will be inserted here by individual pages -->
 
+            <style>
+            @media (max-width: 768px) {
+                .main-footer .footer-left, 
+                .main-footer .footer-right {
+                    float: none !important;
+                    text-align: center !important;
+                    display: block !important;
+                    width: 100% !important;
+                    margin-bottom: 10px;
+                    white-space: normal !important;
+                    line-height: 1.5;
+                }
+                .main-footer .footer-left .bullet {
+                    display: none !important;
+                }
+            }
+            </style>
+
             <footer class="main-footer">
                 <div class="footer-left">
                     Copyright &copy; <?php echo date('Y'); ?> <div class="bullet"></div> Sistem Informasi Madrasah
