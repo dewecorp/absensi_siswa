@@ -100,7 +100,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                 </ul>
                 <ul class="navbar-nav navbar-right">
                     
-                    <?php if (getUserLevel() === 'admin'): ?>
+                    <?php if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah'): ?>
                     <?php 
                         $unread_notifs = getUnreadNotifications($pdo);
                         $unread_count = 0;

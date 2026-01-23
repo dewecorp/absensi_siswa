@@ -365,26 +365,24 @@ include '../templates/sidebar.php';
                                                             case 'admin':
                                                                 $badge_class = 'badge-primary';
                                                                 break;
-                                                            case 'guru':
+                                                            case 'kepala_madrasah':
                                                                 $badge_class = 'badge-success';
                                                                 break;
-                                                            case 'wali':
-                                                                $badge_class = 'badge-warning';
+                                                            default:
+                                                                $badge_class = 'badge-secondary';
                                                                 break;
                                                         }
                                                         ?>
-                                                        <div class="badge <?php echo $badge_class; ?>"><?php echo ucfirst($user['level']); ?></div>
+                                                        <div class="badge <?php echo $badge_class; ?>"><?php echo ucwords(str_replace('_', ' ', $user['level'])); ?></div>
                                                     </td>
                                                     <td>
-                                                        <?php if ($user['foto']): ?>
-                                                        <img src="../assets/img/<?php echo $user['foto']; ?>" alt="Foto" width="40" height="40" class="rounded-circle">
-                                                        <?php else: ?>
-                                                        <span class="badge badge-secondary">No Photo</span>
-                                                        <?php endif; ?>
+                                                        <?php echo getUserAvatarImage($user, 40); ?>
                                                     </td>
                                                     <td>
                                                         <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $user['id_pengguna']; ?>"><i class="fas fa-edit"></i></a>
+                                                        <?php if (strtolower($user['username']) !== 'admin' && $user['id_pengguna'] != 1): ?>
                                                         <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $user['id_pengguna']; ?>" data-name="<?php echo htmlspecialchars($user['username']); ?>" data-action="delete_user"><i class="fas fa-trash"></i></a>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                                 
@@ -416,15 +414,12 @@ include '../templates/sidebar.php';
                                                                             <option value="admin" <?php echo $user['level'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
                                                                             <option value="guru" <?php echo $user['level'] === 'guru' ? 'selected' : ''; ?>>Guru</option>
                                                                             <option value="wali" <?php echo $user['level'] === 'wali' ? 'selected' : ''; ?>>Wali</option>
+                                                                            <option value="kepala_madrasah" <?php echo $user['level'] === 'kepala_madrasah' ? 'selected' : ''; ?>>Kepala Madrasah</option>
                                                                         </select>
                                                                     </div>
                                                                     <div class="form-group">
                                                                         <label>Foto Saat Ini</label><br>
-                                                                        <?php if ($user['foto']): ?>
-                                                                        <img src="../assets/img/<?php echo $user['foto']; ?>" alt="Foto Pengguna" width="100" height="100" class="img-thumbnail mb-2">
-                                                                        <?php else: ?>
-                                                                        <p class="text-muted">Tidak ada foto</p>
-                                                                        <?php endif; ?>
+                                                                        <?php echo getUserAvatarImage($user, 100); ?>
                                                                     </div>
                                                                     <div class="form-group">
                                                                         <label>Upload Foto Baru (opsional)</label>
@@ -479,6 +474,7 @@ include '../templates/sidebar.php';
                                         <option value="admin">Admin</option>
                                         <option value="guru">Guru</option>
                                         <option value="wali">Wali</option>
+                                        <option value="kepala_madrasah">Kepala Madrasah</option>
                                     </select>
                                 </div>
                                 <div class="form-group">

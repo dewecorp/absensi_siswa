@@ -81,6 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 case 'wali':
                     redirect('wali/dashboard.php');
                     break;
+                case 'kepala_madrasah':
+                    redirect('kepala/dashboard.php');
+                    break;
                 default:
                     $error = "Invalid user level";
             }

@@ -3,7 +3,7 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is logged in and has admin level
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
@@ -217,7 +217,9 @@ include '../templates/header.php';
                                         <th>Materi Pokok</th>
                                         <th>Guru</th>
                                         <th>Dibuat Pada</th>
+                                        <?php if (getUserLevel() === 'admin'): ?>
                                         <th style="width: 100px;">Aksi</th>
+                                        <?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -261,11 +263,13 @@ include '../templates/header.php';
                                             <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['nama_guru'] ?? '-'); ?></td>
                                             <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>
+                                            <?php if (getUserLevel() === 'admin'): ?>
                                             <td>
                                                 <button onclick="confirmDelete(<?php echo $journal['id']; ?>)" class="btn btn-danger btn-sm">
                                                     <i class="fas fa-trash"></i> Hapus
                                                 </button>
                                             </td>
+                                            <?php endif; ?>
                                         </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>

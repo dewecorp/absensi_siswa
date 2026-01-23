@@ -80,6 +80,39 @@ switch ($user_level) {
             ]
         ];
         break;
+
+    case 'kepala_madrasah':
+        $menu_items = [
+            [
+                'title' => 'Dashboard',
+                'icon' => 'fas fa-fire',
+                'url' => '../kepala/dashboard.php',
+                'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Rekap Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => [
+                    ['title' => 'Absensi Guru', 'url' => '../admin/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
+                    ['title' => 'Absensi Siswa', 'url' => '../admin/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                ],
+                'active' => in_array($current_page, ['rekap_absensi_guru.php', 'rekap_absensi.php'])
+            ],
+            [
+                'title' => 'Jurnal Mengajar',
+                'icon' => 'fas fa-book-open',
+                'url' => '../admin/jurnal_mengajar.php',
+                'active' => $current_page === 'jurnal_mengajar.php'
+            ],
+            [
+                'title' => 'Logout',
+                'icon' => 'fas fa-sign-out-alt',
+                'url' => '#',
+                'active' => false,
+                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+            ]
+        ];
+        break;
         
     case 'guru':
         $menu_items = [
