@@ -45,10 +45,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $message = ['type' => 'danger', 'text' => 'Format file logo tidak didukung!'];
         }
     }
+
+    // Handle hero image upload
+    $hero_image = $school_profile['dashboard_hero_image'];
+    if (isset($_FILES['hero_image']) && $_FILES['hero_image']['error'] == 0) {
+        $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+        $file_extension = strtolower(pathinfo($_FILES['hero_image']['name'], PATHINFO_EXTENSION));
+        
+        if (in_array($file_extension, $allowed_extensions)) {
+            $new_hero_name = 'hero_' . time() . '.' . $file_extension;
+            $target_dir = '../assets/img/';
+            $target_file = $target_dir . $new_hero_name;
+            
+            if (move_uploaded_file($_FILES['hero_image']['tmp_name'], $target_file)) {
+                // Delete old hero image if it exists
+                if (!empty($school_profile['dashboard_hero_image']) && file_exists($target_dir . $school_profile['dashboard_hero_image'])) {
+                    unlink($target_dir . $school_profile['dashboard_hero_image']);
+                }
+                $hero_image = $new_hero_name;
+            } else {
+                $message = ['type' => 'danger', 'text' => 'Gagal mengupload background hero!'];
+            }
+        } else {
+            $message = ['type' => 'danger', 'text' => 'Format file background tidak didukung!'];
+        }
+    }
     
     if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, logo=? WHERE id=1");
-        if ($stmt->execute([$nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $logo])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, logo=?, dashboard_hero_image=? WHERE id=1");
+        if ($stmt->execute([$nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $logo, $hero_image])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
