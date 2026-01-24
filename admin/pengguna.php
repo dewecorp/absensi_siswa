@@ -73,10 +73,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $update_foto = false;
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] == 0) {
             $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
             $file_extension = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
             
-            if (in_array($file_extension, $allowed_extensions)) {
-                $foto_filename = 'user_' . time() . '_' . basename($_FILES['foto']['name']);
+            // Validate MIME type
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime_type = $finfo->file($_FILES['foto']['tmp_name']);
+            
+            if (in_array($file_extension, $allowed_extensions) && in_array($mime_type, $allowed_mimes)) {
+                // Use safe filename
+                $foto_filename = 'user_' . time() . '_' . uniqid() . '.' . $file_extension;
                 $target_path = '../assets/img/' . $foto_filename;
                 
                 if (move_uploaded_file($_FILES['foto']['tmp_name'], $target_path)) {
@@ -95,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $message = ['type' => 'danger', 'text' => 'Gagal mengunggah foto!'];
                 }
             } else {
-                $message = ['type' => 'danger', 'text' => 'Format foto tidak didukung!'];
+                $message = ['type' => 'danger', 'text' => 'Format foto tidak didukung atau file korup!'];
             }
         }
         

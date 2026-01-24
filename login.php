@@ -65,6 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['level'] = $user['level'];
             $_SESSION['login_source'] = 'tb_pengguna';
             
+            // Prevent Session Fixation
+            session_regenerate_id(true);
+
             // Log login activity
             $username = isset($user['username']) ? $user['username'] : 'system';
             $log_result = logActivity($pdo, $username, 'Login', 'User logged in successfully');

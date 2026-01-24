@@ -33,11 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['foto'])) {
     }
 
     $file = $_FILES['foto'];
-    $allowed_types = ['image/jpeg', 'image/png', 'image/jpg'];
+    
+    // Validate file using finfo (Server-side MIME check)
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime_type = $finfo->file($file['tmp_name']);
+    $allowed_mimes = ['image/jpeg', 'image/png', 'image/jpg'];
+    
+    // Strict extension whitelist
+    $allowed_extensions = ['jpg', 'jpeg', 'png'];
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    
     $max_size = 2 * 1024 * 1024; // 2MB
 
-    // Validate file
-    if (!in_array($file['type'], $allowed_types)) {
+    // Validate file type and extension
+    if (!in_array($mime_type, $allowed_mimes) || !in_array($extension, $allowed_extensions)) {
         echo json_encode(['success' => false, 'message' => 'Hanya file JPG, JPEG, dan PNG yang diperbolehkan.']);
         exit;
     }
@@ -48,7 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['foto'])) {
     }
 
     // Generate unique filename
-    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
     $filename = 'guru_' . $teacher_id . '_' . time() . '.' . $extension;
     $upload_dir = '../uploads/';
     $target_file = $upload_dir . $filename;

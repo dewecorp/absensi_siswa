@@ -19,6 +19,8 @@ try {
     // Set Timezone MySQL
     $pdo->exec("SET time_zone = '+07:00'");
 } catch(PDOException $e) {
-    die("Connection failed: " . $e->getMessage());
+    // Log error instead of showing it to user
+    error_log("Connection failed: " . $e->getMessage());
+    die("Koneksi database gagal. Silakan hubungi administrator.");
 }
 ?>

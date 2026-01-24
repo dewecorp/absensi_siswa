@@ -62,20 +62,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
     // Handle photo upload
     if (isset($_FILES['foto']) && $_FILES['foto']['error'] == 0) {
         $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+        $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
         $max_file_size = 2 * 1024 * 1024; // 2MB
         $file_extension = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
+        
+        // Validate MIME type
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime_type = $finfo->file($_FILES['foto']['tmp_name']);
         
         // Check file size
         if ($_FILES['foto']['size'] > $max_file_size) {
             $error_message = 'Ukuran foto terlalu besar! Maksimal 2MB.';
-        } elseif (in_array($file_extension, $allowed_extensions)) {
+        } elseif (in_array($file_extension, $allowed_extensions) && in_array($mime_type, $allowed_mimes)) {
             // Create uploads directory if it doesn't exist
             $upload_dir = '../uploads/';
             if (!file_exists($upload_dir)) {
                 mkdir($upload_dir, 0755, true);
             }
             
-            $foto_filename = 'guru_' . time() . '_' . basename($_FILES['foto']['name']);
+            // Use safe filename
+            $foto_filename = 'guru_' . time() . '_' . uniqid() . '.' . $file_extension;
             $target_path = $upload_dir . $foto_filename;
             
             if (move_uploaded_file($_FILES['foto']['tmp_name'], $target_path)) {
@@ -94,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
                 $error_message = 'Gagal mengunggah foto!';
             }
         } else {
-            $error_message = 'Format foto tidak didukung! Hanya JPG, JPEG, PNG, dan GIF yang diperbolehkan.';
+            $error_message = 'Format foto tidak didukung atau file korup! Hanya JPG, JPEG, PNG, dan GIF yang diperbolehkan.';
         }
     }
     
@@ -469,20 +475,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !iss
     $update_foto = false;
     if (isset($_FILES['foto']) && $_FILES['foto']['error'] == 0) {
         $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+        $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
         $max_file_size = 2 * 1024 * 1024; // 2MB
         $file_extension = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
+        
+        // Validate MIME type
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime_type = $finfo->file($_FILES['foto']['tmp_name']);
         
         // Check file size
         if ($_FILES['foto']['size'] > $max_file_size) {
             $message = ['type' => 'danger', 'text' => 'Ukuran foto terlalu besar! Maksimal 2MB.'];
-        } elseif (in_array($file_extension, $allowed_extensions)) {
+        } elseif (in_array($file_extension, $allowed_extensions) && in_array($mime_type, $allowed_mimes)) {
             // Create uploads directory if it doesn't exist
             $upload_dir = '../uploads/';
             if (!file_exists($upload_dir)) {
                 mkdir($upload_dir, 0755, true);
             }
             
-            $foto_filename = 'guru_' . time() . '_' . basename($_FILES['foto']['name']);
+            // Use safe filename
+            $foto_filename = 'guru_' . time() . '_' . uniqid() . '.' . $file_extension;
             $target_path = $upload_dir . $foto_filename;
             
             if (move_uploaded_file($_FILES['foto']['tmp_name'], $target_path)) {
@@ -501,7 +513,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !iss
                 $message = ['type' => 'danger', 'text' => 'Gagal mengunggah foto!'];
             }
         } else {
-            $message = ['type' => 'danger', 'text' => 'Format foto tidak didukung! Hanya JPG, JPEG, PNG, dan GIF yang diperbolehkan.'];
+            $message = ['type' => 'danger', 'text' => 'Format foto tidak didukung atau file korup! Hanya JPG, JPEG, PNG, dan GIF yang diperbolehkan.'];
         }
     }
     
