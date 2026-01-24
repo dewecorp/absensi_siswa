@@ -14,14 +14,32 @@ $page_title = 'Profil Madrasah';
 $school_profile = getSchoolProfile($pdo);
 
 // Handle form submission
-$message = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
-    $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
-    $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
-    $semester = sanitizeInput($_POST['semester']);
-    
-    // Handle logo upload
+    $message = '';
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
+        $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
+        $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
+        $semester = sanitizeInput($_POST['semester']);
+        
+        // Handle reset data (Annual Reset)
+        if (isset($_POST['reset_data']) && $_POST['reset_data'] == '1') {
+            try {
+                // Delete all attendance data
+                $pdo->exec("TRUNCATE TABLE tb_absensi");
+                $pdo->exec("TRUNCATE TABLE tb_absensi_guru");
+                
+                // Log the action
+                if (function_exists('logActivity')) {
+                    logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Hapus Data Tahunan', 'Mereset data kehadiran untuk tahun ajaran baru ' . $tahun_ajaran);
+                }
+            } catch (Exception $e) {
+                // If TRUNCATE fails (e.g. FK constraints), try DELETE
+                $pdo->exec("DELETE FROM tb_absensi");
+                $pdo->exec("DELETE FROM tb_absensi_guru");
+            }
+        }
+        
+        // Handle logo upload
     $logo = $school_profile['logo']; // Keep existing logo if no new file is uploaded
     if (isset($_FILES['logo']) && $_FILES['logo']['error'] == 0) {
         $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
@@ -150,6 +168,18 @@ include '../templates/sidebar.php';
                                                         <option value="Semester 1" <?php echo (isset($school_profile['semester']) && $school_profile['semester'] == 'Semester 1') ? 'selected' : ''; ?>>Semester 1</option>
                                                         <option value="Semester 2" <?php echo (isset($school_profile['semester']) && $school_profile['semester'] == 'Semester 2') ? 'selected' : ''; ?>>Semester 2</option>
                                                     </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div class="alert alert-warning">
+                                                    <div class="custom-control custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input" id="reset_data" name="reset_data" value="1">
+                                                        <label class="custom-control-label font-weight-bold" for="reset_data">Reset Data Kehadiran (Pergantian Tahun Ajaran)</label>
+                                                        <small class="d-block mt-1">Centang opsi ini <b>HANYA</b> jika Anda ingin menghapus seluruh data kehadiran Siswa dan Guru (misal: saat memulai tahun ajaran baru). Data yang dihapus tidak dapat dikembalikan.</small>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
