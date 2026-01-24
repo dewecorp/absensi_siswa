@@ -130,7 +130,7 @@ include '../templates/sidebar.php';
                                         </div>
                                         
                                         <div class="row mt-3">
-                                            <div class="col-12">
+                                            <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Logo Madrasah</label>
                                                     <div class="mb-2">
@@ -142,6 +142,21 @@ include '../templates/sidebar.php';
                                                     </div>
                                                     <input type="file" class="form-control" name="logo">
                                                     <small class="text-muted">Format: JPG, PNG, GIF. Ukuran maksimal: 2MB</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Background Dashboard Guru/Wali</label>
+                                                    <div class="mb-2">
+                                                        <?php if (!empty($school_profile['dashboard_hero_image'])): ?>
+                                                        <img src="../assets/img/<?php echo $school_profile['dashboard_hero_image']; ?>" alt="Hero Image" height="100" class="img-thumbnail" style="object-fit: cover; width: 100%;">
+                                                        <?php else: ?>
+                                                        <img src="../assets/img/unsplash/eberhard-grossgasteiger-1207565-unsplash.jpg" alt="Default Hero" height="100" class="img-thumbnail" style="object-fit: cover; width: 100%;">
+                                                        <p class="text-muted small">Menggunakan gambar default</p>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <input type="file" class="form-control" name="hero_image">
+                                                    <small class="text-muted">Format: JPG, PNG, GIF. Ukuran maksimal: 2MB. Disarankan gambar landscape.</small>
                                                 </div>
                                             </div>
                                         </div>

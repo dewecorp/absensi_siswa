@@ -89,6 +89,20 @@ foreach ($attendance_stats as $stat) {
     }
 }
 
+// Calculate total classes taught by this wali (as a teacher)
+$total_kelas_ajar = 0;
+if ($teacher && !empty($teacher['mengajar'])) {
+    $mengajar_decoded = json_decode($teacher['mengajar'], true);
+    if (is_array($mengajar_decoded)) {
+        $total_kelas_ajar = count($mengajar_decoded);
+    }
+}
+
+// Background Image
+$hero_bg = !empty($school_profile['dashboard_hero_image']) 
+    ? '../assets/img/' . $school_profile['dashboard_hero_image'] 
+    : '../assets/img/unsplash/eberhard-grossgasteiger-1207565-unsplash.jpg';
+
 // Handle Attendance Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance'])) {
     $attendance_status = $_POST['attendance_status'];
@@ -298,23 +312,155 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
 
+                    <!-- Profile Box -->
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <div class="hero text-white hero-bg-image hero-bg-parallax" style="background-image: url('<?php echo $hero_bg; ?>'); background-position: center; background-size: cover; position: relative;">
+                                <div class="hero-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);"></div>
+                                <div class="hero-inner" style="position: relative; z-index: 1;">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3 text-center position-relative">
+                                            <div class="d-inline-block position-relative my-3">
+                                                <?php 
+                                                // Wrapper to ensure image style
+                                                $avatar_img = getTeacherAvatarImage($teacher, 120);
+                                                // Add border and shadow to image
+                                                $avatar_img = str_replace('class=\'rounded-circle\'', 'class=\'rounded-circle shadow-lg border border-white\' style=\'border-width: 3px !important;\'', $avatar_img);
+                                                echo $avatar_img; 
+                                                ?>
+                                                <div class="camera-icon-overlay" onclick="document.getElementById('foto_upload').click()">
+                                                    <i class="fas fa-camera"></i>
+                                                </div>
+                                                <input type="file" id="foto_upload" name="foto" style="display: none;" accept="image/*">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-9">
+                                            <h2>Selamat Datang, <?php echo htmlspecialchars($teacher_name); ?></h2>
+                                            <p class="lead">Anda login sebagai Wali Kelas <b><?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '-'; ?></b>.</p>
+                                            
+                                            <div class="mt-4">
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <div class="font-weight-bold text-white-50">NUPTK</div>
+                                                        <div><?php echo !empty($teacher['nuptk']) ? htmlspecialchars($teacher['nuptk']) : '-'; ?></div>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <div class="font-weight-bold text-white-50">Tempat, Tanggal Lahir</div>
+                                                        <div>
+                                                            <?php 
+                                                            $ttl = [];
+                                                            if (!empty($teacher['tempat_lahir'])) $ttl[] = $teacher['tempat_lahir'];
+                                                            if (!empty($teacher['tanggal_lahir'])) $ttl[] = date('d-m-Y', strtotime($teacher['tanggal_lahir']));
+                                                            echo !empty($ttl) ? implode(', ', $ttl) : '-';
+                                                            ?>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <div class="font-weight-bold text-white-50">Status</div>
+                                                        <div><?php echo !empty($teacher['status_kepegawaian']) ? htmlspecialchars($teacher['status_kepegawaian']) : 'Aktif'; ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <style>
+                    .camera-icon-overlay {
+                        position: absolute;
+                        bottom: 5px;
+                        right: 5px;
+                        background: #fff;
+                        color: #6777ef;
+                        border-radius: 50%;
+                        width: 36px;
+                        height: 36px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                        transition: all 0.3s;
+                        z-index: 10;
+                    }
+                    .camera-icon-overlay:hover {
+                        background: #6777ef;
+                        color: #fff;
+                        transform: scale(1.1);
+                    }
+                    </style>
+
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const fotoUpload = document.getElementById('foto_upload');
+                        if(fotoUpload) {
+                            fotoUpload.addEventListener('change', function() {
+                                if (this.files && this.files[0]) {
+                                    var formData = new FormData();
+                                    formData.append('foto', this.files[0]);
+                                    
+                                    Swal.fire({
+                                        title: 'Mengupload...',
+                                        text: 'Mohon tunggu sebentar',
+                                        allowOutsideClick: false,
+                                        didOpen: () => {
+                                            Swal.showLoading();
+                                        }
+                                    });
+
+                                    fetch('../ajax/update_foto_guru.php', {
+                                        method: 'POST',
+                                        body: formData
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Berhasil',
+                                                text: data.message,
+                                                timer: 2000,
+                                                showConfirmButton: false
+                                            }).then(() => {
+                                                location.reload();
+                                            });
+                                        } else {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Gagal',
+                                                text: data.message
+                                            });
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error',
+                                            text: 'Terjadi kesalahan saat mengupload foto.'
+                                        });
+                                    });
+                                }
+                            });
+                        }
+                    });
+                    </script>
+
                     <div class="row">
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
-                                    <i class="fas fa-user"></i>
+                                    <i class="fas fa-chalkboard"></i>
                                 </div>
                                 <div class="card-wrap">
                                     <div class="card-header">
-                                        <h4>Nama Wali Kelas</h4>
+                                        <h4>Total Kelas Ajar</h4>
                                     </div>
-                                    <div class="card-body" style="font-size: 0.85rem; line-height: 1.3;">
-                                        <?php 
-                                        // Clean up teacher name and make it smaller
-                                        $nama_wali = trim($teacher_name);
-                                        $nama_wali = preg_replace('/\s+/', ' ', $nama_wali);
-                                        echo htmlspecialchars($nama_wali); 
-                                        ?>
+                                    <div class="card-body">
+                                        <?php echo $total_kelas_ajar; ?>
                                     </div>
                                 </div>
                             </div>
@@ -411,7 +557,7 @@ include '../templates/sidebar.php';
                                         <div class="alert-icon"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title">Penting</div>
-                                            Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda dan <b>Jurnal Mengajar</b> hari ini.
+                                            Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda, <b>Absensi Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
                                         </div>
                                     </div>
 
@@ -444,9 +590,9 @@ include '../templates/sidebar.php';
                                             </div>
                                         </div>
 
-                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'block' : 'none'; ?>;">
-                                            <label>Keterangan Izin</label>
-                                            <textarea name="attendance_note" class="form-control" placeholder="Masukkan alasan izin..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
+                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && in_array($today_attendance['status'], ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
+                                            <label>Keterangan</label>
+                                            <textarea name="attendance_note" class="form-control" placeholder="Masukkan keterangan..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
 
                                         <div class="form-group">
@@ -463,17 +609,27 @@ include '../templates/sidebar.php';
                     document.addEventListener('DOMContentLoaded', function() {
                         const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
                         const keteranganBox = document.getElementById('keterangan_box');
+                        const keteranganTextarea = keteranganBox.querySelector('textarea');
                         
-                        radioButtons.forEach(radio => {
-                            radio.addEventListener('change', function() {
-                                if (this.value === 'izin') {
+                        function updateKeteranganBox() {
+                            const selectedRadio = document.querySelector('input[name="attendance_status"]:checked');
+                            if (selectedRadio) {
+                                const status = selectedRadio.value;
+                                if (status === 'izin' || status === 'sakit') {
                                     keteranganBox.style.display = 'block';
-                                    keteranganBox.querySelector('textarea').required = true;
+                                    keteranganTextarea.required = (status === 'izin');
                                 } else {
                                     keteranganBox.style.display = 'none';
-                                    keteranganBox.querySelector('textarea').required = false;
+                                    keteranganTextarea.required = false;
                                 }
-                            });
+                            }
+                        }
+
+                        // Run on load to set initial state
+                        updateKeteranganBox();
+                        
+                        radioButtons.forEach(radio => {
+                            radio.addEventListener('change', updateKeteranganBox);
                         });
                     });
                     </script>
