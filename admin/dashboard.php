@@ -793,7 +793,11 @@ include '../templates/sidebar.php';
                                             foreach ($activities as $activity): 
                                         ?>
                                         <div class="activity">
-                                            <div class="activity-icon bg-primary text-white shadow-primary">
+                                            <?php 
+                                                $actColor = function_exists('getActivityColor') ? getActivityColor(htmlspecialchars($activity['action'])) : 'bg-primary';
+                                                $actShadow = str_replace('bg-', 'shadow-', $actColor);
+                                            ?>
+                                            <div class="activity-icon <?php echo $actColor; ?> text-white <?php echo $actShadow; ?>">
                                                 <i class="<?php 
                                                     if (function_exists('getActivityIcon')) {
                                                         echo getActivityIcon(htmlspecialchars($activity['action']));

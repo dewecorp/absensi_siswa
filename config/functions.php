@@ -228,6 +228,37 @@ function getActivityIcon($action) {
     }
 }
 
+// Function to get activity color based on action
+function getActivityColor($action) {
+    // Convert action to lowercase for comparison
+    $action_lower = strtolower($action);
+    
+    if (strpos($action_lower, 'login') !== false || strpos($action_lower, 'masuk') !== false) {
+        return 'bg-primary';
+    } elseif (strpos($action_lower, 'logout') !== false || strpos($action_lower, 'keluar') !== false) {
+        return 'bg-secondary';
+    } elseif (strpos($action_lower, 'tambah') !== false || strpos($action_lower, 'add') !== false || strpos($action_lower, 'create') !== false) {
+        return 'bg-success';
+    } elseif (strpos($action_lower, 'edit') !== false || strpos($action_lower, 'ubah') !== false || strpos($action_lower, 'update') !== false) {
+        return 'bg-warning';
+    } elseif (strpos($action_lower, 'hapus') !== false || strpos($action_lower, 'delete') !== false || strpos($action_lower, 'remove') !== false) {
+        return 'bg-danger';
+    } elseif (strpos($action_lower, 'cetak') !== false || strpos($action_lower, 'print') !== false || strpos($action_lower, 'export') !== false) {
+        return 'bg-info';
+    } elseif (strpos($action_lower, 'upload') !== false || strpos($action_lower, 'import') !== false) {
+        return 'bg-info';
+    } elseif (strpos($action_lower, 'download') !== false || strpos($action_lower, 'ambil') !== false) {
+        return 'bg-success';
+    } elseif (strpos($action_lower, 'setting') !== false || strpos($action_lower, 'profil') !== false || strpos($action_lower, 'profile') !== false) {
+        return 'bg-dark';
+    } elseif (strpos($action_lower, 'absen') !== false || strpos($action_lower, 'kehadiran') !== false || strpos($action_lower, 'attendance') !== false) {
+        return 'bg-success';
+    } else {
+        // Default color
+        return 'bg-primary';
+    }
+}
+
 // Function to log admin activity
 function logActivity($pdo, $username, $action, $description = '') {
     // Check if session is started

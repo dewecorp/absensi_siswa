@@ -152,7 +152,7 @@ include '../templates/sidebar.php';
                                             <td><?php echo date('d M Y H:i:s', strtotime($activity['created_at'])); ?></td>
                                             <td><?php echo htmlspecialchars($activity['display_name']); ?></td>
                                             <td>
-                                                <span class="badge badge-info"><?php echo htmlspecialchars($activity['action']); ?></span>
+                                                <span class="badge <?php echo function_exists('getActivityColor') ? str_replace('bg-', 'badge-', getActivityColor(htmlspecialchars($activity['action']))) : 'badge-info'; ?>"><?php echo htmlspecialchars($activity['action']); ?></span>
                                             </td>
                                             <td><?php echo htmlspecialchars($activity['description']); ?></td>
                                             <td><?php echo htmlspecialchars(isset($activity['ip_address']) ? $activity['ip_address'] : '-'); ?></td>
