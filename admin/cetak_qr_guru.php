@@ -54,13 +54,13 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             display: flex;
             flex-wrap: wrap;
             justify-content: flex-start;
-            margin: 0 -0.4cm;
+            margin: 0 -0.6cm;
         }
         .qr-col {
-            width: 6.2cm;
-            padding: 0 0.4cm;
-            margin-bottom: 25px;
-            flex: 0 0 6.2cm;
+            width: 6.6cm;
+            padding: 0 0.6cm;
+            margin-bottom: 45px;
+            flex: 0 0 6.6cm;
         }
         .qr-card {
             width: 5.4cm;
