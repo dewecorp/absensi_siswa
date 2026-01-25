@@ -93,7 +93,7 @@ CREATE TABLE `tb_activity_log` (
   `ip_address` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=348 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=350 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -102,7 +102,7 @@ CREATE TABLE `tb_activity_log` (
 
 LOCK TABLES `tb_activity_log` WRITE;
 /*!40000 ALTER TABLE `tb_activity_log` DISABLE KEYS */;
-INSERT INTO `tb_activity_log` VALUES (325,'Admin','Login','User logged in successfully','127.0.0.1','2026-01-24 11:53:59'),(326,'Admin','Login','User logged in successfully','127.0.0.1','2026-01-24 12:36:15'),(327,'Admin','Hapus Backup','Admin Admin menghapus backup file: backup_2026-01-13_10-59-31.sql','127.0.0.1','2026-01-24 12:37:01'),(328,'Admin','Hapus Backup','Admin Admin menghapus backup file: backup_2026-01-16_21-05-12.sql','127.0.0.1','2026-01-24 12:37:11'),(329,'Admin','Input Absensi Guru','Menyimpan absensi guru untuk tanggal 2026-01-24','127.0.0.1','2026-01-24 12:38:59'),(330,'Admin','Input Absensi','Admin Admin melakukan input absensi harian kelas ID: 6 untuk 19 siswa','127.0.0.1','2026-01-24 12:39:17'),(331,'Admin','Input Absensi','Admin Admin melakukan input absensi harian kelas ID: 6 untuk 19 siswa','127.0.0.1','2026-01-24 12:40:30'),(332,'Admin','Logout','User logged out from admin session','127.0.0.1','2026-01-24 12:41:05'),(333,'5436757658200002','Login','Teacher logged in successfully using NUPTK','127.0.0.1','2026-01-24 12:41:09'),(334,'5436757658200002','Logout','User logged out from wali session','127.0.0.1','2026-01-24 13:24:18'),(335,'7841746648200002','Login','Teacher logged in successfully using NUPTK','127.0.0.1','2026-01-24 13:24:24'),(336,'Ah. Mustaqim Isom, A.Ma.','Absensi Guru','Ah. Mustaqim Isom, A.Ma. memperbarui kehadiran: hadir','127.0.0.1','2026-01-24 13:24:46'),(337,'7841746648200002','Logout','User logged out from guru session','127.0.0.1','2026-01-24 13:25:11'),(338,'5436757658200002','Login','Teacher logged in successfully using NUPTK','127.0.0.1','2026-01-24 13:25:14'),(339,'5436757658200002','Logout','User logged out from wali session','127.0.0.1','2026-01-24 13:25:20'),(340,'Admin','Login','User logged in successfully','127.0.0.1','2026-01-24 13:25:23'),(341,'Admin','Input Absensi Guru','Menyimpan absensi guru untuk tanggal 2026-01-24','127.0.0.1','2026-01-24 13:30:41'),(342,'Admin','Input Absensi','Admin Admin melakukan input absensi harian kelas ID: 6 untuk 19 siswa','127.0.0.1','2026-01-24 21:26:54'),(343,'Admin','Input Absensi Guru','Menyimpan absensi guru untuk tanggal 2026-01-25','127.0.0.1','2026-01-24 21:27:26'),(344,'Admin','Logout','User logged out from admin session','127.0.0.1','2026-01-24 21:57:04'),(345,'5436757658200002','Login','Teacher logged in successfully using NUPTK','127.0.0.1','2026-01-24 21:57:08'),(346,'5436757658200002','Logout','User logged out from wali session','127.0.0.1','2026-01-24 21:57:26'),(347,'Admin','Login','User logged in successfully','127.0.0.1','2026-01-24 21:57:29');
+INSERT INTO `tb_activity_log` VALUES (325,'Admin','Login','User logged in successfully','127.0.0.1','2026-01-24 11:53:59'),(326,'Admin','Login','User logged in successfully','127.0.0.1','2026-01-24 12:36:15'),(327,'Admin','Hapus Backup','Admin Admin menghapus backup file: backup_2026-01-13_10-59-31.sql','127.0.0.1','2026-01-24 12:37:01'),(328,'Admin','Hapus Backup','Admin Admin menghapus backup file: backup_2026-01-16_21-05-12.sql','127.0.0.1','2026-01-24 12:37:11'),(329,'Admin','Input Absensi Guru','Menyimpan absensi guru untuk tanggal 2026-01-24','127.0.0.1','2026-01-24 12:38:59'),(330,'Admin','Input Absensi','Admin Admin melakukan input absensi harian kelas ID: 6 untuk 19 siswa','127.0.0.1','2026-01-24 12:39:17'),(331,'Admin','Input Absensi','Admin Admin melakukan input absensi harian kelas ID: 6 untuk 19 siswa','127.0.0.1','2026-01-24 12:40:30'),(332,'Admin','Logout','User logged out from admin session','127.0.0.1','2026-01-24 12:41:05'),(333,'5436757658200002','Login','Teacher logged in successfully using NUPTK','127.0.0.1','2026-01-24 12:41:09'),(334,'5436757658200002','Logout','User logged out from wali session','127.0.0.1','2026-01-24 13:24:18'),(335,'7841746648200002','Login','Teacher logged in successfully using NUPTK','127.0.0.1','2026-01-24 13:24:24'),(336,'Ah. Mustaqim Isom, A.Ma.','Absensi Guru','Ah. Mustaqim Isom, A.Ma. memperbarui kehadiran: hadir','127.0.0.1','2026-01-24 13:24:46'),(337,'7841746648200002','Logout','User logged out from guru session','127.0.0.1','2026-01-24 13:25:11'),(338,'5436757658200002','Login','Teacher logged in successfully using NUPTK','127.0.0.1','2026-01-24 13:25:14'),(339,'5436757658200002','Logout','User logged out from wali session','127.0.0.1','2026-01-24 13:25:20'),(340,'Admin','Login','User logged in successfully','127.0.0.1','2026-01-24 13:25:23'),(341,'Admin','Input Absensi Guru','Menyimpan absensi guru untuk tanggal 2026-01-24','127.0.0.1','2026-01-24 13:30:41'),(342,'Admin','Input Absensi','Admin Admin melakukan input absensi harian kelas ID: 6 untuk 19 siswa','127.0.0.1','2026-01-24 21:26:54'),(343,'Admin','Input Absensi Guru','Menyimpan absensi guru untuk tanggal 2026-01-25','127.0.0.1','2026-01-24 21:27:26'),(344,'Admin','Logout','User logged out from admin session','127.0.0.1','2026-01-24 21:57:04'),(345,'5436757658200002','Login','Teacher logged in successfully using NUPTK','127.0.0.1','2026-01-24 21:57:08'),(346,'5436757658200002','Logout','User logged out from wali session','127.0.0.1','2026-01-24 21:57:26'),(347,'Admin','Login','User logged in successfully','127.0.0.1','2026-01-24 21:57:29'),(348,'Admin','Hapus Backup','Admin Admin menghapus backup file: backup_2026-01-22_19-37-05.sql','127.0.0.1','2026-01-24 22:07:59'),(349,'Admin','Hapus Backup','Admin Admin menghapus backup file: backup_2026-01-25_05-07-36.sql','127.0.0.1','2026-01-24 22:53:54');
 /*!40000 ALTER TABLE `tb_activity_log` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -120,7 +120,7 @@ CREATE TABLE `tb_backup_restore` (
   `ukuran_file` varchar(20) NOT NULL,
   `keterangan` text,
   PRIMARY KEY (`id_backup`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -129,7 +129,7 @@ CREATE TABLE `tb_backup_restore` (
 
 LOCK TABLES `tb_backup_restore` WRITE;
 /*!40000 ALTER TABLE `tb_backup_restore` DISABLE KEYS */;
-INSERT INTO `tb_backup_restore` VALUES (3,'backup_2026-01-22_19-37-05.sql','2026-01-22 19:37:05','35.93 KB','Backup manual');
+INSERT INTO `tb_backup_restore` VALUES (5,'backup_2026-01-25_05-07-51.sql','2026-01-25 05:07:51','39.44 KB','Backup manual');
 /*!40000 ALTER TABLE `tb_backup_restore` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -400,4 +400,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-01-25  5:07:41
+-- Dump completed on 2026-01-25  5:54:20

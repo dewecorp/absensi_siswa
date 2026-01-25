@@ -234,6 +234,11 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                             }
                             
                             $avatar_html = getTeacherAvatarImage($current_user ?? ['nama_guru' => $display_name], 30);
+                        } elseif ($user_level === 'siswa') {
+                            // Siswa logic
+                            $display_name = $_SESSION['nama_siswa'] ?? $_SESSION['username'] ?? 'Siswa';
+                            // Use generic avatar or student avatar if available
+                            $avatar_html = '<img alt="image" src="../assets/img/avatar/avatar-1.png" class="rounded-circle mr-1">'; 
                         } else {
                             // For admin, get user data
                             $user_stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");

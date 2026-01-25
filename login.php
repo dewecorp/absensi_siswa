@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // If not found in tb_pengguna, try to find in tb_guru using NUPTK
     if (!$user) {
+        // Try Guru first
         $stmt = $pdo->prepare("SELECT *, 'guru' as level FROM tb_guru WHERE nuptk = ?");
         $stmt->execute([$login_identifier]);
         $guru_user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -54,7 +55,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $error = "Invalid user level";
             }
         } else {
-            $error = "NUPTK atau password salah!";
+            // If not found in tb_guru, try tb_siswa using NISN
+            $stmt = $pdo->prepare("SELECT *, 'siswa' as level FROM tb_siswa WHERE nisn = ?");
+            $stmt->execute([$login_identifier]);
+            $siswa_user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($siswa_user && $siswa_user['password'] && password_verify($password, $siswa_user['password'])) {
+                // Set session variables
+                $_SESSION['user_id'] = $siswa_user['id_siswa'];
+                $_SESSION['username'] = $siswa_user['nisn'];
+                $_SESSION['level'] = 'siswa';
+                $_SESSION['nama_siswa'] = $siswa_user['nama_siswa'];
+                $_SESSION['id_kelas'] = $siswa_user['id_kelas'];
+
+                // Log login activity
+                $username = isset($siswa_user['nisn']) ? $siswa_user['nisn'] : 'system';
+                // logActivity might fail if user is not in expected format, but let's try
+                // Actually logActivity takes username, action, description.
+                if (function_exists('logActivity')) {
+                    logActivity($pdo, $username, 'Login', 'Student logged in successfully using NISN');
+                }
+
+                redirect('siswa/dashboard.php');
+            } else {
+                $error = "Username/NUPTK/NISN atau password salah!";
+            }
         }
     } else {
         // User found in tb_pengguna, verify password

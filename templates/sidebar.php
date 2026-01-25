@@ -34,12 +34,13 @@ switch ($user_level) {
                 'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => [
+                    ['title' => 'Scan Absensi', 'url' => 'scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
                     ['title' => 'Absensi Guru', 'url' => 'absensi_guru.php', 'active' => $current_page === 'absensi_guru.php'],
                     ['title' => 'Rekap Absensi Guru', 'url' => 'rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
                     ['title' => 'Absensi Siswa', 'url' => 'absensi_harian.php', 'active' => $current_page === 'absensi_harian.php'],
                     ['title' => 'Rekap Absensi Siswa', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
                 ],
-                'active' => in_array($current_page, ['absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php'])
+                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php'])
             ],
             [
                 'title' => 'Jurnal Mengajar',
@@ -155,28 +156,28 @@ switch ($user_level) {
             [
                 'title' => 'Dashboard',
                 'icon' => 'fas fa-fire',
-                'url' => 'dashboard.php',
+                'url' => '../wali/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
             ],
             [
                 'title' => 'Absensi Siswa',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => [
-                    ['title' => 'Absensi Harian', 'url' => 'absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
-                    ['title' => 'Rekap Absensi', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                    ['title' => 'Absensi Harian', 'url' => '../wali/absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
+                    ['title' => 'Rekap Absensi', 'url' => '../wali/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
                 ],
                 'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php'])
             ],
             [
                 'title' => 'Jurnal Mengajar',
                 'icon' => 'fas fa-book-open',
-                'url' => 'jurnal_mengajar.php',
+                'url' => '../wali/jurnal_mengajar.php',
                 'active' => $current_page === 'jurnal_mengajar.php'
             ],
             [
                 'title' => 'Profil & Pengaturan',
                 'icon' => 'fas fa-user-cog',
-                'url' => 'profil.php',
+                'url' => '../wali/profil.php',
                 'active' => $current_page === 'profil.php'
             ],
             [
@@ -187,6 +188,34 @@ switch ($user_level) {
                 'attributes' => 'onclick="confirmLogoutInline(); return false;"'
             ]
         ];
+        break;
+
+    case 'siswa':
+        $menu_items = [
+            [
+                'title' => 'Dashboard',
+                'icon' => 'fas fa-fire',
+                'url' => '../siswa/dashboard.php',
+                'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Rekap Absensi',
+                'icon' => 'fas fa-chart-bar',
+                'url' => '../siswa/rekap_absensi.php',
+                'active' => $current_page === 'rekap_absensi.php'
+            ],
+            [
+                'title' => 'Logout',
+                'icon' => 'fas fa-sign-out-alt',
+                'url' => '#',
+                'active' => false,
+                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+            ]
+        ];
+        break;
+
+    default:
+        $menu_items = [];
         break;
 }
 ?>

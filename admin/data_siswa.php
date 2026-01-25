@@ -317,6 +317,7 @@ include '../templates/sidebar.php';
                                 <?php if ($selected_kelas_id > 0): ?>
                                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">Tambah Siswa</button>
                                 <button type="button" class="btn btn-info" data-toggle="modal" data-target="#importModal" onclick="setImportType('siswa')"><i class="fas fa-file-import"></i> Impor Excel</button>
+                                <a href="cetak_qr_siswa.php?kelas=<?php echo $selected_kelas_id; ?>" target="_blank" class="btn btn-dark"><i class="fas fa-print"></i> Cetak QR Kelas</a>
                                 <button type="button" class="btn btn-warning" id="bulk-edit-btn" disabled><i class="fas fa-edit"></i> Edit Terpilih</button>
                                 <button type="button" class="btn btn-danger" id="bulk-delete-btn" disabled><i class="fas fa-trash"></i> Hapus Terpilih</button>
                                 <?php endif; ?>
@@ -390,6 +391,7 @@ include '../templates/sidebar.php';
                                             <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
                                             <td><?php echo htmlspecialchars($student['nama_kelas'] ?? '-'); ?></td>
                                             <td>
+                                                <a href="cetak_qr_siswa.php?id=<?php echo $student['id_siswa']; ?>" target="_blank" class="btn btn-dark btn-sm" title="Cetak QR Code"><i class="fas fa-qrcode"></i></a>
                                                 <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $student['id_siswa']; ?>"><i class="fas fa-edit"></i></a>
                                                 <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $student['id_siswa']; ?>" data-name="<?php echo htmlspecialchars($student['nama_siswa']); ?>" data-action="delete_siswa"><i class="fas fa-trash"></i></a>
                                             </td>
