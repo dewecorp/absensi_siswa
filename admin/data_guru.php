@@ -1012,6 +1012,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                         <a href="#" class="btn btn-info" data-toggle="modal" data-target="#importModal" onclick="setImportType('guru')"><i class="fas fa-file-import"></i> Impor Excel</a>
                                         <button type="button" class="btn btn-success" onclick="exportGuruToExcel()"><i class="fas fa-file-excel"></i> Ekspor Excel</button>
                                         <button type="button" class="btn btn-danger" onclick="exportGuruToPDF()"><i class="fas fa-file-pdf"></i> Ekspor PDF</button>
+                                        <a href="cetak_qr_guru.php?all=1" target="_blank" class="btn btn-dark"><i class="fas fa-qrcode"></i> Cetak Semua QR</a>
                                         <button type="button" class="btn btn-warning" id="bulk-edit-btn" disabled><i class="fas fa-edit"></i> Edit Terpilih</button>
                                         <button type="button" class="btn btn-danger" id="bulk-delete-btn" disabled><i class="fas fa-trash"></i> Hapus Terpilih</button>
                                     </div>
@@ -1115,6 +1116,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                     <td><?php echo htmlspecialchars($teacher['kelas_wali'] ?? '-'); ?></td>
                                                     <td><?php echo !empty($teacher['password_plain']) ? htmlspecialchars($teacher['password_plain']) : ($teacher['password'] ? '***' : 'Belum Diatur'); ?></td>
                                                     <td>
+                                                        <a href="cetak_qr_guru.php?id=<?php echo $teacher['id_guru']; ?>" target="_blank" class="btn btn-info btn-sm" title="Cetak QR"><i class="fas fa-qrcode"></i></a>
                                                         <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $teacher['id_guru']; ?>"><i class="fas fa-edit"></i></a>
                                                         <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $teacher['id_guru']; ?>" data-name="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" data-action="delete_guru"><i class="fas fa-trash"></i></a>
                                                     </td>

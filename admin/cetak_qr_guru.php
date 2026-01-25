@@ -3,38 +3,33 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check authorization
-if (!isAuthorized(['admin', 'guru', 'wali', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
-$students = [];
-$title = "Cetak QR Code Siswa";
+$teachers = [];
+$title = "Cetak QR Code Guru";
 
-// Case 1: Print Single Student
+// Case 1: Print Single Teacher
 if (isset($_GET['id'])) {
-    $id_siswa = (int)$_GET['id'];
-    $stmt = $pdo->prepare("SELECT s.*, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ?");
-    $stmt->execute([$id_siswa]);
-    $student = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($student) {
-        $students[] = $student;
-        $title = "QR Code - " . $student['nama_siswa'];
+    $id_guru = (int)$_GET['id'];
+    $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$id_guru]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($teacher) {
+        $teachers[] = $teacher;
+        $title = "QR Code - " . $teacher['nama_guru'];
     }
 } 
-// Case 2: Print All Students in a Class
-elseif (isset($_GET['kelas'])) {
-    $id_kelas = (int)$_GET['kelas'];
-    $stmt = $pdo->prepare("SELECT s.*, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
-    $stmt->execute([$id_kelas]);
-    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    if (!empty($students)) {
-        $title = "QR Code Kelas " . $students[0]['nama_kelas'];
-    }
+// Case 2: Print All Teachers
+elseif (isset($_GET['all'])) {
+    $stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
+    $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $title = "QR Code Semua Guru";
 }
 
-if (empty($students)) {
-    die("Data siswa tidak ditemukan.");
+if (empty($teachers)) {
+    die("Data guru tidak ditemukan.");
 }
 
 // Get school profile for header
@@ -68,21 +63,16 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             height: 150px;
             margin: 10px auto;
         }
-        .student-name {
+        .teacher-name {
             font-size: 16px;
             font-weight: bold;
             margin-top: 10px;
             margin-bottom: 5px;
         }
-        .student-nisn {
+        .teacher-nuptk {
             font-size: 14px;
             color: #666;
             margin-bottom: 5px;
-        }
-        .student-class {
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
         }
         .school-name {
             font-size: 12px;
@@ -113,31 +103,26 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
     </style>
 </head>
 <body>
-
-    <div class="container py-4">
-        <div class="row mb-4 no-print">
+    <div class="container mt-4">
+        <div class="row no-print mb-4">
             <div class="col-12 text-center">
                 <button onclick="window.print()" class="btn btn-primary btn-lg"><i class="fas fa-print"></i> Cetak QR Code</button>
                 <button onclick="window.close()" class="btn btn-secondary btn-lg ml-2">Tutup</button>
             </div>
         </div>
-
+        
         <div class="row">
-            <?php foreach ($students as $student): ?>
+            <?php foreach ($teachers as $teacher): ?>
             <div class="col-md-4 col-sm-6">
                 <div class="qr-card">
                     <div class="school-name"><?php echo htmlspecialchars($school_name); ?></div>
-                    
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?php echo $student['nisn']; ?>" alt="QR Code" class="qr-code">
-                    
-                    <div class="student-name"><?php echo htmlspecialchars($student['nama_siswa']); ?></div>
-                    <div class="student-nisn">NISN: <?php echo htmlspecialchars($student['nisn']); ?></div>
-                    <div class="student-class"><?php echo htmlspecialchars($student['nama_kelas']); ?></div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?php echo $teacher['nuptk']; ?>" alt="QR Code" class="qr-code">
+                    <div class="teacher-name"><?php echo htmlspecialchars($teacher['nama_guru']); ?></div>
+                    <div class="teacher-nuptk">NUPTK: <?php echo htmlspecialchars($teacher['nuptk']); ?></div>
                 </div>
             </div>
             <?php endforeach; ?>
         </div>
     </div>
-
 </body>
 </html>

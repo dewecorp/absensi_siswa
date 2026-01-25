@@ -541,6 +541,19 @@ $js_page = [
     "
 ];
 
+// Check for old data (suggestion for cleanup)
+$show_cleanup_alert = false;
+$cleanup_date_threshold = date('Y-m-d', strtotime('-1 year'));
+try {
+    $check_old_stmt = $pdo->prepare("SELECT COUNT(*) FROM tb_absensi WHERE tanggal < ?");
+    $check_old_stmt->execute([$cleanup_date_threshold]);
+    if ($check_old_stmt->fetchColumn() > 0) {
+        $show_cleanup_alert = true;
+    }
+} catch (Exception $e) {
+    // Ignore error
+}
+
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
@@ -554,6 +567,18 @@ include '../templates/sidebar.php';
                             <div class="breadcrumb-item active"><a href="#">Dashboard</a></div>
                         </div>
                     </div>
+
+                    <?php if (isset($show_cleanup_alert) && $show_cleanup_alert): ?>
+                    <div class="alert alert-warning alert-dismissible show fade">
+                        <div class="alert-body">
+                            <button class="close" data-dismiss="alert">
+                                <span>&times;</span>
+                            </button>
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Terdeteksi data absensi lama (lebih dari 1 tahun). Disarankan untuk melakukan <a href="kenaikan_kelas.php" class="text-dark font-weight-bold"><u>Pembersihan Data</u></a> untuk menjaga performa sistem.
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="row">
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">

@@ -87,28 +87,17 @@ $selected_kelas_id = isset($_GET['kelas_id']) ? $_GET['kelas_id'] : '';
 $teachers = [];
 
 if ($selected_kelas_id) {
-    // Get teachers assigned to this class (assuming 'mengajar' column in tb_guru stores class info, OR we list all teachers if not specific)
-    // Based on user request "jika dipilh kelas maka muncul data guru di kelas terpilih"
-    // Assuming tb_guru has a way to link to classes. 
-    // Looking at data_guru.php, there is a 'mengajar' column which might be JSON or text.
-    // However, for simplicity and typical school structure, maybe we just list all teachers or filter if possible.
-    // Let's check tb_guru structure from data_guru.php read result. 
-    // Line 56: $mengajar = isset($_POST['mengajar']) ? json_encode($_POST['mengajar']) : null;
-    // So 'mengajar' column stores JSON of classes/subjects.
-    
-    // We need to fetch teachers where 'mengajar' JSON contains the selected class ID or Name?
-    // Let's assume we filter by searching the class ID/Name in the JSON string for now, or fetch all if structure is complex.
-    // But user said "data guru di kelas terpilih", implies a relationship.
-    
-    // Alternative: If 'mengajar' is not reliable for this filter, maybe just list all teachers?
-    // But request is specific. Let's try to match class ID/Name in 'mengajar' column.
-    
-    // Get class data including wali_kelas
-    $stmt_cls = $pdo->prepare("SELECT nama_kelas, wali_kelas FROM tb_kelas WHERE id_kelas = ?");
-    $stmt_cls->execute([$selected_kelas_id]);
-    $cls_data = $stmt_cls->fetch(PDO::FETCH_ASSOC);
-    $selected_kelas_nama = $cls_data ? $cls_data['nama_kelas'] : '';
-    $selected_wali_kelas = $cls_data ? $cls_data['wali_kelas'] : '';
+    $selected_kelas_nama = '';
+    $selected_wali_kelas = '';
+
+    // Only fetch class data if a specific class is selected (not 'all')
+    if ($selected_kelas_id != 'all') {
+        $stmt_cls = $pdo->prepare("SELECT nama_kelas, wali_kelas FROM tb_kelas WHERE id_kelas = ?");
+        $stmt_cls->execute([$selected_kelas_id]);
+        $cls_data = $stmt_cls->fetch(PDO::FETCH_ASSOC);
+        $selected_kelas_nama = $cls_data ? $cls_data['nama_kelas'] : '';
+        $selected_wali_kelas = $cls_data ? $cls_data['wali_kelas'] : '';
+    }
 
     // Query to get teachers
     $stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
@@ -117,28 +106,51 @@ if ($selected_kelas_id) {
     foreach ($all_teachers as $teacher) {
         $include = false;
         
-        // Check 1: Is teacher the wali kelas?
-        if ($selected_wali_kelas && $teacher['nama_guru'] === $selected_wali_kelas) {
+        // If 'all' is selected, include everyone
+        if ($selected_kelas_id == 'all') {
             $include = true;
-        }
-
-        // Check 2: Does teacher teach in this class? (mengajar column)
-        if (!$include) {
-            $mengajar_list = json_decode($teacher['mengajar'] ?? '[]', true);
+        } else {
+            // Check 1: Is teacher the wali kelas?
+            // Normalize strings for comparison (trim and lowercase) to handle whitespace issues
+            $norm_wali = trim(strtolower($selected_wali_kelas));
+            $norm_guru = trim(strtolower($teacher['nama_guru']));
             
-            if (is_array($mengajar_list)) {
-                // Check against ID (loose check to handle string/int)
-                if (in_array($selected_kelas_id, $mengajar_list)) {
-                    $include = true;
-                }
-                // Check against Name
-                if (!$include && in_array($selected_kelas_nama, $mengajar_list)) {
-                    $include = true;
-                }
-            } else {
-                // Fallback for non-JSON string (simple search)
-                if (strpos($teacher['mengajar'] ?? '', $selected_kelas_nama) !== false) {
-                    $include = true;
+            if ($norm_wali && $norm_wali === $norm_guru) {
+                $include = true;
+            }
+
+            // Check 2: Does teacher teach in this class? (mengajar column)
+            if (!$include) {
+                // Simplified Logic: Check if Class ID or Class Name exists in 'mengajar' column
+                // This covers JSON array, comma-separated string, or single value
+                $mengajar_raw = $teacher['mengajar'] ?? '';
+                
+                if (!empty($mengajar_raw)) {
+                    // Normalize inputs
+                    $search_id = (string)$selected_kelas_id;
+                    $search_name = trim($selected_kelas_nama);
+                    
+                    // Decode JSON if possible
+                    $mengajar_list = json_decode($mengajar_raw, true);
+                    
+                    if (is_array($mengajar_list)) {
+                        // Iterate through array items
+                        foreach ($mengajar_list as $item) {
+                            $item_str = trim((string)$item);
+                            // Exact match for ID or case-insensitive match for Name
+                            if ($item_str === $search_id || strcasecmp($item_str, $search_name) === 0) {
+                                $include = true;
+                                break;
+                            }
+                        }
+                    } else {
+                        // Raw string search (robust fallback)
+                        // Check if ID exists as a standalone word/token (to avoid '1' matching '10', '11')
+                        // Or check if Name exists
+                        if (strpos($mengajar_raw, $search_id) !== false || stripos($mengajar_raw, $search_name) !== false) {
+                            $include = true;
+                        }
+                    }
                 }
             }
         }
@@ -160,16 +172,16 @@ if ($selected_kelas_id) {
 // Define CSS libraries
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-    'node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css',
-    '../node_modules/select2/dist/css/select2.min.css'
+    'https://cdn.datatables.net/select/1.3.3/css/select.bootstrap4.min.css', // CDN for datatables-select
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css' // CDN for Select2
 ];
 
 // Define JS libraries
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-    'node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js',
-    '../node_modules/select2/dist/js/select2.full.min.js'
+    'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js', // CDN for datatables-select
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js' // CDN for Select2
 ];
 
 // Define page-specific JS
@@ -295,6 +307,7 @@ include '../templates/sidebar.php';
                                         <label>Pilih Kelas</label>
                                         <select class="form-control select2" id="filter_kelas">
                                             <option value="">-- Pilih Kelas --</option>
+                                            <option value="all" <?= $selected_kelas_id == 'all' ? 'selected' : '' ?>>Semua Guru</option>
                                             <?php foreach ($kelas_list as $kelas): ?>
                                                 <option value="<?= $kelas['id_kelas'] ?>" <?= $selected_kelas_id == $kelas['id_kelas'] ? 'selected' : '' ?>>
                                                     <?= htmlspecialchars($kelas['nama_kelas']) ?>

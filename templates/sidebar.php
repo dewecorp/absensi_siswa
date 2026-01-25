@@ -26,9 +26,10 @@ switch ($user_level) {
                     ['title' => 'Data Kelas', 'url' => 'data_kelas.php', 'active' => $current_page === 'data_kelas.php'],
                     ['title' => 'Data Siswa', 'url' => 'data_siswa.php', 'active' => $current_page === 'data_siswa.php'],
                     ['title' => 'Mata Pelajaran', 'url' => 'mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
-                    ['title' => 'Jam Mengajar', 'url' => 'jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php']
+                    ['title' => 'Jam Mengajar', 'url' => 'jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
+                    ['title' => 'Kenaikan Kelas', 'url' => 'kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php']
                 ],
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'mata_pelajaran.php', 'jam_mengajar.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php'])
             ],
             [
                 'title' => 'Absensi',
