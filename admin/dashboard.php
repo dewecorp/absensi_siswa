@@ -834,13 +834,9 @@ include '../templates/sidebar.php';
                                             <div class="activity-detail">
                                                 <div class="mb-2">
                                                     <span class="text-job text-primary text-capitalize"><?php echo htmlspecialchars($activity['display_name']); ?></span>
-                                                    <span class="text-muted"><?php 
-                                                        if (function_exists('timeAgo')) {
-                                                            echo timeAgo($activity['created_at']);
-                                                        } else {
-                                                            echo $activity['created_at'];
-                                                        }
-                                                    ?></span>
+                                                    <span class="text-muted small ml-2">
+                                                        <i class="far fa-clock"></i> <?php echo timeAgo($activity['created_at']); ?> <span class="bullet"></span> <?php echo date('d M Y', strtotime($activity['created_at'])); ?> <span class="bullet"></span> <?php echo date('H:i:s', strtotime($activity['created_at'])); ?>
+                                                    </span>
                                                 </div>
                                                 <p>
                                                     <strong><?php echo htmlspecialchars($activity['action']); ?></strong>: 

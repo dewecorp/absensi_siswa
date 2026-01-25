@@ -3,7 +3,7 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is logged in and has admin level
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+if (!isAuthorized(['admin', 'tata_usaha', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
@@ -139,7 +139,8 @@ include '../templates/sidebar.php';
                                 <table class="table table-striped" id="activity-log-table">
                                     <thead>
                                         <tr>
-                                            <th>Tanggal & Waktu</th>
+                                            <th>Tanggal</th>
+                                            <th>Waktu</th>
                                             <th>Username</th>
                                             <th>Aksi</th>
                                             <th>Deskripsi</th>
@@ -149,7 +150,8 @@ include '../templates/sidebar.php';
                                     <tbody>
                                         <?php foreach ($activities as $activity): ?>
                                         <tr>
-                                            <td><?php echo date('d M Y H:i:s', strtotime($activity['created_at'])); ?></td>
+                                            <td><?php echo date('d M Y', strtotime($activity['created_at'])); ?></td>
+                                            <td><?php echo date('H:i:s', strtotime($activity['created_at'])); ?></td>
                                             <td><?php echo htmlspecialchars($activity['display_name']); ?></td>
                                             <td>
                                                 <span class="badge <?php echo function_exists('getActivityColor') ? str_replace('bg-', 'badge-', getActivityColor(htmlspecialchars($activity['action']))) : 'badge-info'; ?>"><?php echo htmlspecialchars($activity['action']); ?></span>

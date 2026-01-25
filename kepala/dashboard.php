@@ -175,6 +175,52 @@ $stmt_journal = $pdo->prepare("
 $stmt_journal->execute();
 $recent_journals = $stmt_journal->fetchAll(PDO::FETCH_ASSOC);
 
+// Get recent activities from the activity log
+$activities = []; // Initialize as empty array
+$total_activities = 0;
+try {
+    // Get total count of all activities first
+    $count_stmt = $pdo->query("SELECT COUNT(*) as total FROM tb_activity_log");
+    $count_result = $count_stmt->fetch(PDO::FETCH_ASSOC);
+    $total_activities = isset($count_result['total']) ? (int)$count_result['total'] : 0;
+    
+    if ($total_activities > 0) {
+        // Create teacher mapping to avoid JOIN collation issues
+        $teacher_map = [];
+        $guru_stmt = $pdo->query("SELECT nuptk, nama_guru, id_guru FROM tb_guru");
+        $gurus = $guru_stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($gurus as $guru) {
+            $teacher_map[$guru['nuptk']] = $guru['nama_guru'];
+            $teacher_map[$guru['nama_guru']] = $guru['nama_guru'];
+            $teacher_map[$guru['id_guru']] = $guru['nama_guru'];
+        }
+        
+        // Get latest 20 activities
+        $activity_stmt = $pdo->query(
+            "SELECT 
+                username, 
+                action, 
+                description, 
+                created_at
+            FROM tb_activity_log 
+            ORDER BY created_at DESC 
+            LIMIT 20"
+        );
+        $activities = $activity_stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Add display_name to each activity
+        foreach ($activities as &$activity) {
+            $display_name = $teacher_map[$activity['username']] ?? $activity['username'];
+            $activity['display_name'] = $display_name;
+        }
+    }
+} catch (Exception $e) {
+    // If there's an error (e.g., table doesn't exist), keep the array empty
+    $activities = [];
+    $total_activities = 0;
+    error_log("Error fetching activity log: " . $e->getMessage());
+}
+
 // Define CSS libraries for this page (only essential ones)
 $css_libs = [
     // Removed JQVMap since files don't exist
@@ -774,6 +820,61 @@ include '../templates/sidebar.php';
                                                 <?php endif; ?>
                                             </tbody>
                                         </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Aktivitas Pengguna <span class="badge badge-primary"><?php echo $total_activities; ?></span></h4>
+                                                                <div class="card-header-action">
+                                                                    <a href="../admin/activity_log.php" class="btn btn-primary">Lihat Semua</a>
+                                                                </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="activities" style="max-height: 600px; overflow-y: auto;">
+                                        <?php 
+                                        if (!empty($activities)):
+                                            foreach ($activities as $activity): 
+                                        ?>
+                                        <div class="activity">
+                                            <?php 
+                                                $actColor = function_exists('getActivityColor') ? getActivityColor(htmlspecialchars($activity['action'])) : 'bg-primary';
+                                                $actShadow = str_replace('bg-', 'shadow-', $actColor);
+                                            ?>
+                                            <div class="activity-icon <?php echo $actColor; ?> text-white <?php echo $actShadow; ?>">
+                                                <i class="<?php 
+                                                    if (function_exists('getActivityIcon')) {
+                                                        echo getActivityIcon(htmlspecialchars($activity['action']));
+                                                    } else {
+                                                        echo 'fas fa-info-circle';
+                                                    }
+                                                ?>"></i>
+                                            </div>
+                                            <div class="activity-detail">
+                                                <div class="mb-2">
+                                                    <span class="text-job text-primary text-capitalize"><?php echo htmlspecialchars($activity['display_name']); ?></span>
+                                                    <span class="text-muted small ml-2">
+                                                        <i class="far fa-clock"></i> <?php echo timeAgo($activity['created_at']); ?> <span class="bullet"></span> <?php echo date('d M Y', strtotime($activity['created_at'])); ?> <span class="bullet"></span> <?php echo date('H:i:s', strtotime($activity['created_at'])); ?>
+                                                    </span>
+                                                </div>
+                                                <p>
+                                                    <?php echo htmlspecialchars($activity['description']); ?>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <?php 
+                                            endforeach;
+                                        else:
+                                        ?>
+                                        <div class="text-center p-3">
+                                            <p class="text-muted">Belum ada aktivitas tercatat.</p>
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
