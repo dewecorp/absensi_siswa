@@ -71,7 +71,7 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
         .qr-code {
             width: 3.5cm;
             height: 3.5cm;
-            margin: 75px auto 10px auto;
+            margin: 45px auto 10px auto;
             object-fit: contain;
         }
         .teacher-name {
