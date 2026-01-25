@@ -141,6 +141,41 @@
             </script>
         <?php endforeach; ?>
     <?php endif; ?>
+
+    <!-- Notification JS -->
+    <script>
+    function readNotification(id, link) {
+        // Mark as read via AJAX
+        $.ajax({
+            url: '../admin/mark_notification_read.php',
+            type: 'POST',
+            data: { id: id },
+            success: function(response) {
+                // Redirect to link
+                if (link && link !== '#') {
+                    window.location.href = link;
+                } else {
+                    // Just reload or update UI
+                    window.location.reload();
+                }
+            }
+        });
+    }
+    
+    $(document).ready(function() {
+        $('#mark-all-read').click(function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: '../admin/mark_notification_read.php',
+                type: 'POST',
+                data: { action: 'mark_all' },
+                success: function(response) {
+                    window.location.reload();
+                }
+            });
+        });
+    });
+    </script>
     
     <!-- Import Modal JavaScript -->
     <script>
