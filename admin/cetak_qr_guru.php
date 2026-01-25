@@ -48,6 +48,7 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
         body {
             background-color: #f4f6f9;
             -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
         .qr-card {
             width: 5.4cm;
@@ -114,9 +115,6 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
                 padding: 0 !important;
                 margin: 0 !important;
             }
-            .no-print {
-                display: none;
-            }
             .row {
                 display: flex;
                 flex-wrap: wrap;
@@ -135,6 +133,11 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
                 margin-bottom: 15px;
                 page-break-inside: avoid;
                 break-inside: avoid;
+            }
+
+            #print-controls, .no-print {
+                display: none !important;
+                visibility: hidden !important;
             }
         }
     </style>

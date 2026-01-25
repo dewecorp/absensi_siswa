@@ -27,7 +27,7 @@ $js_libs = [
 // Handle form submission
 $class_id = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
 $filter_type = $_POST['filter_type'] ?? 'daily';
-$selected_date = isset($_POST['attendance_date']) ? $_POST['attendance_date'] : '';
+$selected_date = isset($_POST['attendance_date']) ? $_POST['attendance_date'] : date('Y-m-d');
 $selected_month = isset($_POST['month_picker']) ? $_POST['month_picker'] : date('Y-m');
 $selected_student = isset($_POST['student_id']) ? (int)$_POST['student_id'] : 0;
 $semester_results = [];
@@ -82,16 +82,41 @@ $classes = $wali_kelas ? [$wali_kelas] : [];
 if ($class_id > 0) {
     if ($filter_type == 'daily' && !empty($selected_date)) {
         // Daily filter
+        // Get all students in the class
+        $stmt = $pdo->prepare("SELECT s.id_siswa, s.nama_siswa, s.nisn, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
+        $stmt->execute([$class_id]);
+        $all_daily_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Get attendance data for the selected date
         $stmt = $pdo->prepare("
-            SELECT s.nama_siswa, s.nisn, k.nama_kelas, a.keterangan, a.tanggal
+            SELECT s.id_siswa, a.keterangan, a.tanggal
             FROM tb_absensi a
-            LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa  
-            LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
+            LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa
             WHERE s.id_kelas = ? AND a.tanggal = ?
-            ORDER BY s.nama_siswa ASC
         ");
         $stmt->execute([$class_id, $selected_date]);
-        $daily_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Organize attendance data by student ID
+        $attendance_by_student = [];
+        foreach ($attendance_records as $record) {
+            $attendance_by_student[$record['id_siswa']] = $record;
+        }
+        
+        // Combine all students with their attendance data
+        $daily_results = [];
+        foreach ($all_daily_students as $student) {
+            if (isset($attendance_by_student[$student['id_siswa']])) {
+                // Student has attendance data for this date
+                $daily_results[] = array_merge($student, $attendance_by_student[$student['id_siswa']]);
+            } else {
+                // Student has no attendance data for this date
+                $daily_results[] = array_merge($student, [
+                    'keterangan' => 'Belum Absen', // Mark as not yet attended
+                    'tanggal' => $selected_date
+                ]);
+            }
+        }
     } elseif ($filter_type == 'monthly' && !empty($selected_month)) {
         // Monthly filter
         $year = substr($selected_month, 0, 4);

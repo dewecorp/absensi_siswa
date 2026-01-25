@@ -598,6 +598,7 @@ include '../templates/sidebar.php';
                                         <div class="form-group">
                                             <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-icon icon-left"><i class="fas fa-save"></i> Simpan Absensi</button>
                                             <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-icon icon-left ml-2"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
+                                            <button type="button" class="btn btn-warning btn-lg btn-icon icon-left ml-2" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
                                         </div>
                                     </form>
                                 </div>
@@ -744,5 +745,33 @@ include '../templates/sidebar.php';
         }
     });
     ";
+    ?>
+    <!-- Modal QR Code -->
+    <div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="qrCodeModalLabel">QR Code Guru</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-center">
+                    <p>Gunakan QR Code ini untuk absensi kehadiran.</p>
+                    <?php if (!empty($teacher['nuptk'])): ?>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=<?php echo $teacher['nuptk']; ?>" alt="QR Code" class="img-fluid" style="width: 250px; height: 250px;">
+                        <h5 class="mt-3"><?php echo htmlspecialchars($teacher['nama_guru']); ?></h5>
+                        <p class="text-muted">NUPTK: <?php echo htmlspecialchars($teacher['nuptk']); ?></p>
+                    <?php else: ?>
+                        <div class="alert alert-warning">NUPTK belum tersedia. Silakan hubungi admin.</div>
+                    <?php endif; ?>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php
     include '../templates/user_footer.php'; 
     ?>

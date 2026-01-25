@@ -31,7 +31,7 @@ $js_libs = [
 // Handle form submission
 $class_id = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
 $filter_type = $_POST['filter_type'] ?? 'daily';
-$selected_date = isset($_POST['attendance_date']) ? $_POST['attendance_date'] : '';
+$selected_date = isset($_POST['attendance_date']) ? $_POST['attendance_date'] : date('Y-m-d');
 $selected_month = isset($_POST['month_picker']) ? $_POST['month_picker'] : date('Y-m');
 $selected_student = isset($_POST['student_id']) ? (int)$_POST['student_id'] : 0;
 $semester_results = [];
