@@ -3,7 +3,7 @@ require_once 'database.php';
 require_once 'functions.php';
 
 // Check if user is logged in and authorized
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 

@@ -5,7 +5,7 @@ require_once '../config/functions.php';
 header('Content-Type: application/json');
 
 // Check authorization
-if (!isAuthorized(['admin', 'guru', 'wali', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Unauthorized access'

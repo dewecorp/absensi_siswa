@@ -116,6 +116,48 @@ switch ($user_level) {
         ];
         break;
         
+    case 'tata_usaha':
+        $menu_items = [
+            [
+                'title' => 'Dashboard',
+                'icon' => 'fas fa-fire',
+                'url' => '../tata_usaha/dashboard.php',
+                'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => [
+                    ['title' => 'Scan Absensi', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
+                    ['title' => 'Absensi Guru', 'url' => '../admin/absensi_guru.php', 'active' => $current_page === 'absensi_guru.php'],
+                    ['title' => 'Rekap Absensi Guru', 'url' => '../admin/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
+                    ['title' => 'Absensi Siswa', 'url' => '../admin/absensi_harian.php', 'active' => $current_page === 'absensi_harian.php'],
+                    ['title' => 'Rekap Absensi Siswa', 'url' => '../admin/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                ],
+                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php'])
+            ],
+            [
+                'title' => 'Backup & Restore',
+                'icon' => 'fas fa-hdd',
+                'url' => '../admin/backup_restore.php',
+                'active' => $current_page === 'backup_restore.php'
+            ],
+            [
+                'title' => 'Log Aktivitas',
+                'icon' => 'fas fa-history',
+                'url' => '../admin/activity_log.php',
+                'active' => $current_page === 'activity_log.php'
+            ],
+            [
+                'title' => 'Logout',
+                'icon' => 'fas fa-sign-out-alt',
+                'url' => '#',
+                'active' => false,
+                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+            ]
+        ];
+        break;
+
     case 'guru':
         $menu_items = [
             [

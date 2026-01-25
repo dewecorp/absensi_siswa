@@ -3,7 +3,7 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is logged in and has admin level
-if (!isAuthorized(['admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 

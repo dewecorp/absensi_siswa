@@ -3,7 +3,7 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is logged in and has admin, wali, or guru level
-if (!isAuthorized(['admin', 'wali', 'guru'])) {
+if (!isAuthorized(['admin', 'wali', 'guru', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
@@ -43,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                 $update_stmt->execute([$keterangan, $id_siswa, $tanggal]);
             } else {
                 // Insert new record
-                // For admin users, id_guru should be NULL since they don't have a valid teacher ID
-                $id_guru = ($_SESSION['level'] === 'admin') ? NULL : $_SESSION['user_id'];
+                // For admin and tata_usaha users, id_guru should be NULL since they don't have a valid teacher ID
+                $id_guru = ($_SESSION['level'] === 'admin' || $_SESSION['level'] === 'tata_usaha') ? NULL : $_SESSION['user_id'];
                 $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru) VALUES (?, ?, ?, ?)");
                 $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru]);
             }
