@@ -50,6 +50,18 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
+        .qr-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            margin: 0 -0.4cm;
+        }
+        .qr-col {
+            width: 6.2cm;
+            padding: 0 0.4cm;
+            margin-bottom: 25px;
+            flex: 0 0 6.2cm;
+        }
         .qr-card {
             width: 5.4cm;
             height: 8.6cm;
@@ -58,7 +70,7 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             border-radius: 8px;
             padding: 10px 5px;
             text-align: center;
-            margin: 0 auto 20px auto;
+            margin: 0 auto;
             page-break-inside: avoid;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             display: flex;
@@ -115,24 +127,17 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
                 padding: 0 !important;
                 margin: 0 !important;
             }
-            .row {
-                display: flex;
-                flex-wrap: wrap;
-                margin: 0 !important;
+            .qr-grid {
+                display: block !important;
             }
-            .col-md-3 {
-                width: 25%;
-                flex: 0 0 25%;
-                max-width: 25%;
-                float: left;
-                padding: 5px;
+            .qr-col {
+                float: left !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
             .qr-card {
                 border: 1px solid #000;
                 box-shadow: none;
-                margin-bottom: 15px;
-                page-break-inside: avoid;
-                break-inside: avoid;
             }
 
             #print-controls, .no-print {
@@ -149,9 +154,9 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             <button onclick="window.close()" class="btn btn-secondary btn-lg ml-2">Tutup</button>
         </div>
         
-        <div class="row">
+        <div class="qr-grid">
             <?php foreach ($teachers as $teacher): ?>
-            <div class="col-md-3 col-sm-6">
+            <div class="qr-col">
                 <div class="qr-card">
                     <div class="school-name"><?php echo htmlspecialchars($school_name); ?></div>
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?php echo $teacher['nuptk']; ?>" alt="QR Code" class="qr-code">

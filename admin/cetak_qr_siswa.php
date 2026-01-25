@@ -55,6 +55,18 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
+        .qr-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            margin: 0 -0.4cm;
+        }
+        .qr-col {
+            width: 6.2cm;
+            padding: 0 0.4cm;
+            margin-bottom: 25px;
+            flex: 0 0 6.2cm;
+        }
         .qr-card {
             width: 5.4cm;
             height: 8.6cm;
@@ -63,7 +75,7 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             border-radius: 8px;
             padding: 10px 5px;
             text-align: center;
-            margin: 0 auto 20px auto;
+            margin: 0 auto; /* Center in column */
             page-break-inside: avoid;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             display: flex;
@@ -93,19 +105,12 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             color: #333;
             margin-bottom: 0;
         }
-        .student-class {
-            font-size: 9pt;
-            font-weight: 600;
-            color: #333;
-            margin-top: 2px;
-        }
         .school-name {
             font-size: 8pt;
             font-weight: bold;
             text-transform: uppercase;
             margin-bottom: 5px;
             color: #333;
-            border-bottom: 2px solid #333;
             padding-bottom: 5px;
             width: 100%;
             line-height: 1.2;
@@ -126,24 +131,17 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
                 padding: 0 !important;
                 margin: 0 !important;
             }
-            .row {
-                display: flex;
-                flex-wrap: wrap;
-                margin: 0 !important;
+            .qr-grid {
+                display: block !important;
             }
-            .col-md-3 {
-                width: 25%;
-                flex: 0 0 25%;
-                max-width: 25%;
-                float: left;
-                padding: 5px;
+            .qr-col {
+                float: left !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
             .qr-card {
                 border: 1px solid #000;
                 box-shadow: none;
-                margin-bottom: 15px;
-                page-break-inside: avoid;
-                break-inside: avoid;
             }
             #print-controls, .no-print {
                 display: none !important;
@@ -160,9 +158,9 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             <button onclick="window.close()" class="btn btn-secondary btn-lg ml-2">Tutup</button>
         </div>
 
-        <div class="row">
+        <div class="qr-grid">
             <?php foreach ($students as $student): ?>
-            <div class="col-md-3 col-sm-6">
+            <div class="qr-col">
                 <div class="qr-card">
                     <div class="school-name"><?php echo htmlspecialchars($school_name); ?></div>
                     
@@ -170,7 +168,6 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
                     
                     <div class="student-name"><?php echo htmlspecialchars($student['nama_siswa']); ?></div>
                     <div class="student-nisn">NISN: <?php echo htmlspecialchars($student['nisn']); ?></div>
-                    <div class="student-class"><?php echo htmlspecialchars($student['nama_kelas']); ?></div>
                 </div>
             </div>
             <?php endforeach; ?>
