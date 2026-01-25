@@ -374,6 +374,9 @@ include '../templates/sidebar.php';
                                                             case 'kepala_madrasah':
                                                                 $badge_class = 'badge-success';
                                                                 break;
+                                                            case 'tata_usaha':
+                                                                $badge_class = 'badge-info';
+                                                                break;
                                                             default:
                                                                 $badge_class = 'badge-secondary';
                                                                 break;
@@ -421,6 +424,7 @@ include '../templates/sidebar.php';
                                                                             <option value="guru" <?php echo $user['level'] === 'guru' ? 'selected' : ''; ?>>Guru</option>
                                                                             <option value="wali" <?php echo $user['level'] === 'wali' ? 'selected' : ''; ?>>Wali</option>
                                                                             <option value="kepala_madrasah" <?php echo $user['level'] === 'kepala_madrasah' ? 'selected' : ''; ?>>Kepala Madrasah</option>
+                                                                            <option value="tata_usaha" <?php echo $user['level'] === 'tata_usaha' ? 'selected' : ''; ?>>Tata Usaha</option>
                                                                         </select>
                                                                     </div>
                                                                     <div class="form-group">
@@ -481,6 +485,7 @@ include '../templates/sidebar.php';
                                         <option value="guru">Guru</option>
                                         <option value="wali">Wali</option>
                                         <option value="kepala_madrasah">Kepala Madrasah</option>
+                                        <option value="tata_usaha">Tata Usaha</option>
                                     </select>
                                 </div>
                                 <div class="form-group">

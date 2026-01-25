@@ -185,6 +185,13 @@ $guru_sakit_data = [];
 $guru_izin_data = [];
 $guru_alpa_data = [];
 
+// Helper to fill missing dates if needed, but for now we trust the query returns dates with activity
+// If we want to show strict last 7 days including empty days, we might need a loop.
+// However, let's stick to the query result but fix the Alpa calculation.
+// Since we can't easily get "Total Guru" history without a log, we will stick to recorded Alpa for history,
+// OR we assume Total Guru is constant and calculate remainder.
+// Let's assume Total Guru is constant ($total_guru) for the trend graph to be consistent with today's stats.
+
 foreach ($guru_trends as $trend) {
     $guru_dates[] = $trend['tanggal'] ? date('d M', strtotime($trend['tanggal'])) : '';
     $h = isset($trend['hadir']) ? (int)$trend['hadir'] : 0;
@@ -195,6 +202,7 @@ foreach ($guru_trends as $trend) {
     $a_recorded = isset($trend['alpa']) ? (int)$trend['alpa'] : 0;
     
     // Calculated Alpa (Remainder)
+    // Use current total_guru as proxy for historical total (limitation: if teachers changed, this might be slightly off)
     $a_calculated = $total_guru - ($h + $s + $i);
     if ($a_calculated < 0) $a_calculated = 0;
     
@@ -559,18 +567,6 @@ include '../templates/sidebar.php';
                             <div class="breadcrumb-item active"><a href="#">Dashboard</a></div>
                         </div>
                     </div>
-
-                    <?php if (isset($show_cleanup_alert) && $show_cleanup_alert): ?>
-                    <div class="alert alert-warning alert-dismissible show fade">
-                        <div class="alert-body">
-                            <button class="close" data-dismiss="alert">
-                                <span>&times;</span>
-                            </button>
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            Terdeteksi data absensi lama (lebih dari 1 tahun). Disarankan untuk melakukan <a href="../admin/kenaikan_kelas.php" class="text-dark font-weight-bold"><u>Pembersihan Data</u></a> untuk menjaga performa sistem.
-                        </div>
-                    </div>
-                    <?php endif; ?>
 
                     <div class="row">
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
