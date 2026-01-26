@@ -16,10 +16,12 @@ $school_profile = getSchoolProfile($pdo);
 // Handle form submission
     $message = '';
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
         $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
         $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
         $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
         $semester = sanitizeInput($_POST['semester']);
+        $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
         
         // Handle reset data (Annual Reset)
         if (isset($_POST['reset_data']) && $_POST['reset_data'] == '1') {
@@ -90,8 +92,8 @@ $school_profile = getSchoolProfile($pdo);
     }
     
     if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, logo=?, dashboard_hero_image=? WHERE id=1");
-        if ($stmt->execute([$nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $logo, $hero_image])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, logo=?, dashboard_hero_image=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $tanggal_jadwal, $logo, $hero_image])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
@@ -139,6 +141,15 @@ include '../templates/sidebar.php';
                                 <div class="card-body">
                                     <form method="POST" action="" enctype="multipart/form-data">
                                         <div class="row">
+                                            <div class="col-12">
+                                                <div class="form-group">
+                                                    <label>Nama Yayasan</label>
+                                                    <input type="text" class="form-control" name="nama_yayasan" value="<?php echo htmlspecialchars($school_profile['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN ISLAM'); ?>" placeholder="Contoh: YAYASAN PENDIDIKAN ISLAM">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Nama Madrasah</label>
@@ -168,6 +179,16 @@ include '../templates/sidebar.php';
                                                         <option value="Semester 1" <?php echo (isset($school_profile['semester']) && $school_profile['semester'] == 'Semester 1') ? 'selected' : ''; ?>>Semester 1</option>
                                                         <option value="Semester 2" <?php echo (isset($school_profile['semester']) && $school_profile['semester'] == 'Semester 2') ? 'selected' : ''; ?>>Semester 2</option>
                                                     </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Tanggal Jadwal Pelajaran</label>
+                                                    <input type="date" class="form-control" name="tanggal_jadwal" value="<?php echo htmlspecialchars($school_profile['tanggal_jadwal'] ?? ''); ?>">
+                                                    <small class="text-muted">Tanggal yang akan muncul pada cetakan jadwal pelajaran.</small>
                                                 </div>
                                             </div>
                                         </div>

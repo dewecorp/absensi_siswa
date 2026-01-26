@@ -58,7 +58,7 @@ foreach ($gurus as &$g) {
 unset($g);
 
 // Get teaching hours (Ramadhan)
-$stmt = $pdo->prepare("SELECT * FROM tb_jam_mengajar WHERE jenis = 'Ramadhan' ORDER BY jam_ke ASC");
+$stmt = $pdo->prepare("SELECT * FROM tb_jam_mengajar WHERE jenis = 'Ramadhan' ORDER BY waktu_mulai ASC");
 $stmt->execute();
 $jam_mengajar = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -85,13 +85,16 @@ if ($selected_kelas_id) {
 $class_schedule = [];
 if ($selected_kelas_id) {
     $stmt = $pdo->prepare("
-        SELECT * FROM tb_jadwal_pelajaran 
-        WHERE kelas_id = ? AND jenis = 'Ramadhan'
+        SELECT j.*, jm.waktu_mulai 
+        FROM tb_jadwal_pelajaran j
+        LEFT JOIN tb_jam_mengajar jm ON j.jam_ke = jm.jam_ke AND jm.jenis = 'Ramadhan'
+        WHERE j.kelas_id = ? AND j.jenis = 'Ramadhan'
+        ORDER BY jm.waktu_mulai ASC, j.jam_ke ASC
     ");
     $stmt->execute([$selected_kelas_id]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     foreach ($rows as $row) {
-        $class_schedule[$row['hari']][$row['jam_ke']] = $row;
+        $class_schedule[$row['hari']][] = $row;
     }
 }
 
@@ -102,9 +105,17 @@ $stmt = $pdo->query("
 ");
 $all_schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $main_schedule = [];
+$used_jam_ke = [];
 foreach ($all_schedules as $row) {
     $main_schedule[$row['hari']][$row['jam_ke']][$row['kelas_id']] = $row;
+    $used_jam_ke[$row['jam_ke']] = true;
 }
+
+// Filter jam_mengajar for Main Schedule to only show used slots
+$main_schedule_rows = array_filter($jam_mengajar, function($jam) use ($used_jam_ke) {
+    return isset($used_jam_ke[$jam['jam_ke']]);
+});
+
 
 // Define days
 $days = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis'];
@@ -123,6 +134,26 @@ require_once '../templates/sidebar.php';
     .select2-results__option {
         white-space: nowrap;         /* Prevent text wrapping */
     }
+    
+    /* KM Column Layout Fix */
+    .km-col-container .select2-container {
+        width: 100% !important;
+        max-width: 100%;
+        display: block;
+    }
+    .km-col-container .select2-selection {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;      /* Center the code */
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+    }
+    .km-col-container .select2-selection__rendered {
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+        font-weight: bold;
+    }
 </style>
 
 <div class="main-content">
@@ -136,17 +167,38 @@ require_once '../templates/sidebar.php';
             <!-- Filter Section -->
             <div class="card">
                 <div class="card-body">
-                    <form method="GET" action="" class="form-inline">
-                        <label class="mr-2">Pilih Kelas:</label>
-                        <select name="kelas_id" class="form-control mr-2" onchange="this.form.submit()">
-                            <option value="">-- Tampilkan Semua --</option>
-                            <?php foreach ($classes as $kelas): ?>
-                                <option value="<?= $kelas['id_kelas'] ?>" <?= $selected_kelas_id == $kelas['id_kelas'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($kelas['nama_kelas']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </form>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <form method="GET" action="" class="form-inline">
+                            <label class="mr-2">Pilih Kelas:</label>
+                            <select name="kelas_id" class="form-control mr-2" onchange="this.form.submit()">
+                                <option value="">-- Tampilkan Semua --</option>
+                                <?php foreach ($classes as $kelas): ?>
+                                    <option value="<?= $kelas['id_kelas'] ?>" <?= $selected_kelas_id == $kelas['id_kelas'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($kelas['nama_kelas']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </form>
+                        
+                        <!-- Export Buttons -->
+                        <div>
+                            <form method="GET" action="../config/export_jadwal_pdf.php" target="_blank" class="d-inline">
+                                <input type="hidden" name="kelas_id" value="<?= $selected_kelas_id ?? '' ?>">
+                                <input type="hidden" name="jenis" value="Ramadhan">
+                                <button type="submit" class="btn btn-danger btn-icon icon-left">
+                                    <i class="fas fa-file-pdf"></i> Export PDF
+                                </button>
+                            </form>
+                            
+                            <form method="POST" action="../config/export_jadwal_excel.php" target="_blank" class="d-inline ml-2">
+                                <input type="hidden" name="kelas_id" value="<?= $selected_kelas_id ?? '' ?>">
+                                <input type="hidden" name="jenis" value="Ramadhan">
+                                <button type="submit" class="btn btn-success btn-icon icon-left">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -238,12 +290,13 @@ require_once '../templates/sidebar.php';
                                             <tbody id="schedule-body-<?= $day ?>">
                                                 <?php 
                                                 $day_schedule = $class_schedule[$day] ?? [];
-                                                ksort($day_schedule);
+                                                // ksort($day_schedule);
                                                 
                                                 if (empty($day_schedule)): ?>
                                                     <tr><td colspan="5" class="text-center text-muted p-3">Belum ada jadwal</td></tr>
                                                 <?php else:
-                                                    foreach ($day_schedule as $jam_ke => $sched): 
+                                                    foreach ($day_schedule as $sched): 
+                                                        $jam_ke = $sched['jam_ke'];
                                                         $jam = $jam_map[$jam_ke] ?? null;
                                                         $waktu = $jam ? date('H.i', strtotime($jam['waktu_mulai'])) . '-' . date('H.i', strtotime($jam['waktu_selesai'])) : '-';
                                                         $current_mapel = $sched['mapel_id'] ?? '';
@@ -260,7 +313,7 @@ require_once '../templates/sidebar.php';
                                                     <td class="text-center align-middle" style="font-size: 0.75rem;"><?= $waktu ?></td>
                                                     
                                                     <!-- KM (Kode Mapel) -->
-                                                    <td class="p-1">
+                                                    <td class="p-1 km-col-container">
                                                         <select class="form-control form-control-sm schedule-select mapel-select select2-custom p-1" 
                                                                 data-id="<?= $sched['id_jadwal'] ?>"
                                                                 data-field="mapel"
@@ -322,58 +375,96 @@ require_once '../templates/sidebar.php';
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-sm text-center" style="font-size: 0.8rem;">
+                        <table class="table table-bordered table-sm text-center table-hover" style="font-size: 0.7rem; min-width: 2000px;">
                             <thead>
-                                <tr>
-                                    <th rowspan="2" class="align-middle">Hari</th>
-                                    <th rowspan="2" class="align-middle">Jam</th>
-                                    <th rowspan="2" class="align-middle">Waktu</th>
-                                    <th colspan="<?= count($classes) ?>">Kelas</th>
+                                <!-- Row 1: Days -->
+                                <tr class="bg-light">
+                                    <th rowspan="3" class="align-middle" style="width: 50px;">JAM<br>KE</th>
+                                    <th rowspan="3" class="align-middle" style="width: 100px;">WAKTU</th>
+                                    <?php foreach ($days as $day): ?>
+                                        <th colspan="<?= count($classes) ?>" class="text-uppercase border-bottom-0" style="border-width: 2px;"><?= $day ?></th>
+                                    <?php endforeach; ?>
                                 </tr>
-                                <tr>
-                                    <?php foreach ($classes as $kelas): ?>
-                                        <th><?= htmlspecialchars($kelas['nama_kelas']) ?></th>
+                                <!-- Row 2: Classes -->
+                                <tr class="bg-light">
+                                    <?php foreach ($days as $day): ?>
+                                        <?php foreach ($classes as $kelas): ?>
+                                            <th style="min-width: 40px;"><?= htmlspecialchars($kelas['nama_kelas']) ?></th>
+                                        <?php endforeach; ?>
+                                    <?php endforeach; ?>
+                                </tr>
+                                <!-- Row 3: Teacher Codes -->
+                                <tr class="bg-white">
+                                    <?php foreach ($days as $day): ?>
+                                        <?php foreach ($classes as $kelas): 
+                                            // Find teacher for this day/class
+                                            $day_guru_code = '-';
+                                            if (isset($main_schedule[$day])) {
+                                                foreach ($main_schedule[$day] as $jam_scheds) {
+                                                    if (isset($jam_scheds[$kelas['id_kelas']])) {
+                                                        $sched = $jam_scheds[$kelas['id_kelas']];
+                                                        if (!empty($sched['guru_id']) && isset($guru_map[$sched['guru_id']])) {
+                                                            $g = $guru_map[$sched['guru_id']];
+                                                            $day_guru_code = $g['kode_guru'] ?? substr($g['nama_guru'], 0, 3);
+                                                            break; // Found the teacher, break (assuming same teacher for the day)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        ?>
+                                            <th class="font-weight-bold" style="border-bottom: 2px solid #dee2e6;"><?= htmlspecialchars($day_guru_code) ?></th>
+                                        <?php endforeach; ?>
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($days as $day): ?>
-                                    <?php 
-                                    // Check if there are any classes on this day (optional, but let's show all rows for structure)
-                                    $first_row = true;
-                                    foreach ($jam_mengajar as $jam): 
-                                    ?>
-                                    <tr>
-                                        <?php if ($first_row): ?>
-                                            <td rowspan="<?= count($jam_mengajar) ?>" class="align-middle font-weight-bold"><?= $day ?></td>
-                                        <?php endif; ?>
-                                        <td><?= $jam['jam_ke'] ?></td>
-                                        <td><?= date('H:i', strtotime($jam['waktu_mulai'])) ?> - <?= date('H:i', strtotime($jam['waktu_selesai'])) ?></td>
-                                        
-                                        <?php foreach ($classes as $kelas): ?>
-                                            <td>
-                                                <?php 
-                                                if (isset($main_schedule[$day][$jam['jam_ke']][$kelas['id_kelas']])) {
-                                                    $sched = $main_schedule[$day][$jam['jam_ke']][$kelas['id_kelas']];
-                                                    // Show Code if available, else Name
-                                                    $mapel = $mapel_map[$sched['mapel_id']] ?? null;
-                                                    $guru = $guru_map[$sched['guru_id']] ?? null;
-                                                    
-                                                    $mapel_display = $mapel ? ($mapel['kode_mapel'] ?: $mapel['nama_mapel']) : '?';
-                                                    $guru_display = $guru ? ($guru['kode_guru'] ?? substr($guru['nama_guru'], 0, 3)) : '?'; // Assuming no kode_guru yet, use name
-                                                    
-                                                    echo htmlspecialchars($mapel_display);
-                                                    // echo "<br><small>" . htmlspecialchars($guru_display) . "</small>";
+                                <?php foreach ($main_schedule_rows as $jam): 
+                                    $jam_label = $jam['jam_ke'];
+                                    $is_special = in_array(strtoupper((string)$jam_label), ['A', 'B', 'C', 'D']);
+                                    $waktu = date('H.i', strtotime($jam['waktu_mulai'])) . '-' . date('H.i', strtotime($jam['waktu_selesai']));
+                                ?>
+                                <tr>
+                                    <td class="font-weight-bold"><?= $jam_label ?></td>
+                                    <td><?= $waktu ?></td>
+                                    
+                                    <?php foreach ($days as $day): ?>
+                                        <?php 
+                                        // Check content for this day/jam (for Special Slots logic)
+                                        $special_text = '';
+                                        if ($is_special) {
+                                            // Find any text for this special slot in this day
+                                            if (isset($main_schedule[$day][$jam_label])) {
+                                                foreach ($main_schedule[$day][$jam_label] as $sched) {
+                                                    if (isset($mapel_map[$sched['mapel_id']])) {
+                                                        $special_text = $mapel_map[$sched['mapel_id']]['nama_mapel'];
+                                                        break;
+                                                    }
                                                 }
-                                                ?>
+                                            }
+                                            // if (!$special_text) $special_text = 'ISTIRAHAT'; // Default fallback removed as per user request
+                                        }
+
+                                        if ($is_special): 
+                                        ?>
+                                            <td colspan="<?= count($classes) ?>" class="bg-light font-weight-bold text-uppercase" style="letter-spacing: 1px;">
+                                                <?= htmlspecialchars($special_text) ?>
                                             </td>
-                                        <?php endforeach; ?>
-                                    </tr>
-                                    <?php 
-                                    $first_row = false;
-                                    endforeach; ?>
-                                    <!-- Separator row between days -->
-                                    <tr class="bg-light"><td colspan="<?= 3 + count($classes) ?>"></td></tr>
+                                        <?php else: ?>
+                                            <?php foreach ($classes as $kelas): 
+                                                $cell_content = '';
+                                                if (isset($main_schedule[$day][$jam_label][$kelas['id_kelas']])) {
+                                                    $sched = $main_schedule[$day][$jam_label][$kelas['id_kelas']];
+                                                    if (isset($mapel_map[$sched['mapel_id']])) {
+                                                        $m = $mapel_map[$sched['mapel_id']];
+                                                        $cell_content = $m['kode_mapel'] ?: $m['nama_mapel'];
+                                                    }
+                                                }
+                                            ?>
+                                                <td><?= htmlspecialchars($cell_content) ?></td>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
@@ -408,7 +499,7 @@ require_once '../templates/sidebar.php';
                     $(this).select2({
                         width: '100%',
                         placeholder: "- Pilih -",
-                        allowClear: true,
+                        allowClear: false, // Disabled to prevent accidental deletion and fix layout
                         templateSelection: function (data) {
                             if (!data.id) { return data.text; }
                             

@@ -83,6 +83,31 @@ function getCurrentDateIndonesia() {
     return "$day, $date $month $year";
 }
 
+// Function to format specific date in Indonesian format
+function formatDateIndonesia($date_string) {
+    $bulan = array(
+        'January' => 'Januari',
+        'February' => 'Februari',
+        'March' => 'Maret',
+        'April' => 'April',
+        'May' => 'Mei',
+        'June' => 'Juni',
+        'July' => 'Juli',
+        'August' => 'Agustus',
+        'September' => 'September',
+        'October' => 'Oktober',
+        'November' => 'November',
+        'December' => 'Desember'
+    );
+    
+    $timestamp = strtotime($date_string);
+    $date = date('d', $timestamp);
+    $month = $bulan[date('F', $timestamp)];
+    $year = date('Y', $timestamp);
+    
+    return "$date $month $year";
+}
+
 // Function to get current time
 function getCurrentTime() {
     return date('H:i:s');
