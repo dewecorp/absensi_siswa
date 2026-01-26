@@ -704,11 +704,14 @@ require_once '../templates/sidebar.php';
                     dataType: 'json',
                     success: function(response) {
                         if (response.status === 'success') {
-                            Swal.fire(
-                                'Terhapus!',
-                                'Jadwal berhasil dihapus.',
-                                'success'
-                            ).then(() => {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Terhapus!',
+                                text: 'Jadwal berhasil dihapus.',
+                                timer: 1500,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            }).then(() => {
                                 location.reload();
                             });
                         } else {

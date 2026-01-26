@@ -163,7 +163,7 @@ if ($logo_path) {
 $html .= '
         <h3>' . strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN ISLAM') . '</h3>
         <h2>' . strtoupper($school_profile['nama_madrasah']) . '</h2>
-        <p>Tahun Ajaran: ' . ($school_profile['tahun_ajaran'] ?? '') . '</p>
+        <p style="font-size: 12pt; font-weight: bold;">Tahun Ajaran: ' . ($school_profile['tahun_ajaran'] ?? '') . '</p>
     </div>
 
     <h3 style="text-align: center;">' . $display_title . '</h3>

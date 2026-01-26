@@ -307,17 +307,28 @@ if ($message) {
     $swal_icon = $message['type'] == 'success' ? 'success' : 'error';
     $swal_title = $message['type'] == 'success' ? 'Berhasil!' : 'Gagal!';
     $swal_text = json_encode($message['text']); // Encode to ensure safe JS string
-    $swal_timer = $message['type'] == 'success' ? 1500 : 'null';
-    $swal_show_confirm = $message['type'] == 'success' ? 'false' : 'true';
     
-    $js_page[] = "
-    Swal.fire({
-        icon: '$swal_icon',
-        title: '$swal_title',
-        text: $swal_text,
-        timer: $swal_timer,
-        showConfirmButton: $swal_show_confirm
-    });";
+    // Auto close for success messages
+    if ($message['type'] == 'success') {
+        $js_page[] = "
+        Swal.fire({
+            icon: '$swal_icon',
+            title: '$swal_title',
+            text: $swal_text,
+            timer: 1500,
+            timerProgressBar: true,
+            showConfirmButton: false
+        });";
+    } else {
+        // Require manual close for errors
+        $js_page[] = "
+        Swal.fire({
+            icon: '$swal_icon',
+            title: '$swal_title',
+            text: $swal_text,
+            showConfirmButton: true
+        });";
+    }
 }
 
 include '../templates/header.php';
