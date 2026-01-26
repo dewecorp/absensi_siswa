@@ -919,6 +919,25 @@ $(document).ready(function() {
             });
         }
     });
+
+    // Mobile buttons handlers
+    $(document).on('click', '#bulk-edit-btn-mobile', function(e) {
+        e.preventDefault();
+        if ($(this).hasClass('disabled')) return;
+        
+        if (typeof window.bulkEdit === 'function') {
+            window.bulkEdit();
+        }
+    });
+
+    $(document).on('click', '#bulk-delete-btn-mobile', function(e) {
+        e.preventDefault();
+        if ($(this).hasClass('disabled')) return;
+        
+        if (typeof window.bulkDelete === 'function') {
+            window.bulkDelete();
+        }
+    });
     
     // Initialize DataTables with pagination and show entries
     // Wait for DataTables library to be fully loaded
@@ -1008,13 +1027,34 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                 <div class="card-header">
                                     <h4>Daftar Guru</h4>
                                     <div class="card-header-action">
-                                        <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah Guru</a>
-                                        <a href="#" class="btn btn-info" data-toggle="modal" data-target="#importModal" onclick="setImportType('guru')"><i class="fas fa-file-import"></i> Impor Excel</a>
-                                        <button type="button" class="btn btn-success" onclick="exportGuruToExcel()"><i class="fas fa-file-excel"></i> Ekspor Excel</button>
-                                        <button type="button" class="btn btn-danger" onclick="exportGuruToPDF()"><i class="fas fa-file-pdf"></i> Ekspor PDF</button>
-                                        <a href="cetak_qr_guru.php?all=1" target="_blank" class="btn btn-dark"><i class="fas fa-qrcode"></i> Cetak Semua QR</a>
-                                        <button type="button" class="btn btn-warning" id="bulk-edit-btn" disabled><i class="fas fa-edit"></i> Edit Terpilih</button>
-                                        <button type="button" class="btn btn-danger" id="bulk-delete-btn" disabled><i class="fas fa-trash"></i> Hapus Terpilih</button>
+                                        <!-- Desktop View -->
+                                        <div class="d-none d-md-block">
+                                            <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah Guru</a>
+                                            <a href="#" class="btn btn-info" data-toggle="modal" data-target="#importModal" onclick="setImportType('guru')"><i class="fas fa-file-import"></i> Impor Excel</a>
+                                            <button type="button" class="btn btn-success" onclick="exportGuruToExcel()"><i class="fas fa-file-excel"></i> Ekspor Excel</button>
+                                            <button type="button" class="btn btn-danger" onclick="exportGuruToPDF()"><i class="fas fa-file-pdf"></i> Ekspor PDF</button>
+                                            <a href="cetak_qr_guru.php?all=1" target="_blank" class="btn btn-dark"><i class="fas fa-qrcode"></i> Cetak Semua QR</a>
+                                            <button type="button" class="btn btn-warning" id="bulk-edit-btn" disabled><i class="fas fa-edit"></i> Edit Terpilih</button>
+                                            <button type="button" class="btn btn-danger" id="bulk-delete-btn" disabled><i class="fas fa-trash"></i> Hapus Terpilih</button>
+                                        </div>
+                                        <!-- Mobile View -->
+                                        <div class="d-block d-md-none">
+                                            <div class="dropdown">
+                                                <button class="btn btn-primary dropdown-toggle btn-block" type="button" id="actionMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <i class="fas fa-cogs"></i> Menu Aksi
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu-right w-100" aria-labelledby="actionMenuButton">
+                                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus mr-2"></i> Tambah Guru</a>
+                                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#importModal" onclick="setImportType('guru')"><i class="fas fa-file-import mr-2"></i> Impor Excel</a>
+                                                    <a class="dropdown-item" href="#" onclick="exportGuruToExcel()"><i class="fas fa-file-excel mr-2"></i> Ekspor Excel</a>
+                                                    <a class="dropdown-item" href="#" onclick="exportGuruToPDF()"><i class="fas fa-file-pdf mr-2"></i> Ekspor PDF</a>
+                                                    <a class="dropdown-item" href="cetak_qr_guru.php?all=1" target="_blank"><i class="fas fa-qrcode mr-2"></i> Cetak Semua QR</a>
+                                                    <div class="dropdown-divider"></div>
+                                                    <a class="dropdown-item text-warning disabled" href="#" id="bulk-edit-btn-mobile"><i class="fas fa-edit mr-2"></i> Edit Terpilih</a>
+                                                    <a class="dropdown-item text-danger disabled" href="#" id="bulk-delete-btn-mobile"><i class="fas fa-trash mr-2"></i> Hapus Terpilih</a>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="card-body">

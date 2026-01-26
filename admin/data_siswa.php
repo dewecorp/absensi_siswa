@@ -315,11 +315,29 @@ include '../templates/sidebar.php';
                             <div class="card-header-action">
                                 <!-- Show add button only when class is selected -->
                                 <?php if ($selected_kelas_id > 0): ?>
-                                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">Tambah Siswa</button>
-                                <button type="button" class="btn btn-info" data-toggle="modal" data-target="#importModal" onclick="setImportType('siswa')"><i class="fas fa-file-import"></i> Impor Excel</button>
-                                <a href="cetak_qr_siswa.php?kelas=<?php echo $selected_kelas_id; ?>" target="_blank" class="btn btn-dark"><i class="fas fa-print"></i> Cetak QR Kelas</a>
-                                <button type="button" class="btn btn-warning" id="bulk-edit-btn" disabled><i class="fas fa-edit"></i> Edit Terpilih</button>
-                                <button type="button" class="btn btn-danger" id="bulk-delete-btn" disabled><i class="fas fa-trash"></i> Hapus Terpilih</button>
+                                <div class="d-none d-md-block">
+                                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">Tambah Siswa</button>
+                                    <button type="button" class="btn btn-info" data-toggle="modal" data-target="#importModal" onclick="setImportType('siswa')"><i class="fas fa-file-import"></i> Impor Excel</button>
+                                    <a href="cetak_qr_siswa.php?kelas=<?php echo $selected_kelas_id; ?>" target="_blank" class="btn btn-dark"><i class="fas fa-print"></i> Cetak QR Kelas</a>
+                                    <button type="button" class="btn btn-warning" id="bulk-edit-btn" disabled><i class="fas fa-edit"></i> Edit Terpilih</button>
+                                    <button type="button" class="btn btn-danger" id="bulk-delete-btn" disabled><i class="fas fa-trash"></i> Hapus Terpilih</button>
+                                </div>
+                                <!-- Mobile View for Buttons -->
+                                <div class="d-block d-md-none">
+                                    <div class="dropdown">
+                                        <button class="btn btn-primary dropdown-toggle btn-block" type="button" id="actionMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-cogs"></i> Menu Aksi
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-right w-100" aria-labelledby="actionMenuButton">
+                                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus mr-2"></i> Tambah Siswa</a>
+                                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#importModal" onclick="setImportType('siswa')"><i class="fas fa-file-import mr-2"></i> Impor Excel</a>
+                                            <a class="dropdown-item" href="cetak_qr_siswa.php?kelas=<?php echo $selected_kelas_id; ?>" target="_blank"><i class="fas fa-print mr-2"></i> Cetak QR Kelas</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item text-warning disabled" href="#" id="bulk-edit-btn-mobile"><i class="fas fa-edit mr-2"></i> Edit Terpilih</a>
+                                            <a class="dropdown-item text-danger disabled" href="#" id="bulk-delete-btn-mobile"><i class="fas fa-trash mr-2"></i> Hapus Terpilih</a>
+                                        </div>
+                                    </div>
+                                </div>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -872,8 +890,18 @@ $(document).ready(function() {
         var visibleChecked = visibleCheckboxes.filter(':checked').length;
         var allVisibleChecked = visibleCheckboxes.length > 0 && visibleChecked === visibleCheckboxes.length;
         
+        // Desktop buttons
         $('#bulk-edit-btn').prop('disabled', checkedCount === 0);
         $('#bulk-delete-btn').prop('disabled', checkedCount === 0);
+        
+        // Mobile buttons
+        if (checkedCount === 0) {
+            $('#bulk-edit-btn-mobile').addClass('disabled');
+            $('#bulk-delete-btn-mobile').addClass('disabled');
+        } else {
+            $('#bulk-edit-btn-mobile').removeClass('disabled');
+            $('#bulk-delete-btn-mobile').removeClass('disabled');
+        }
         
         // Update select all checkbox state based on visible checkboxes
         $('#checkbox-all').prop('checked', allVisibleChecked && totalCount > 0);
@@ -921,6 +949,25 @@ $(document).ready(function() {
                 icon: 'error',
                 confirmButtonText: 'OK'
             });
+        }
+    });
+
+    // Mobile buttons handlers
+    $(document).on('click', '#bulk-edit-btn-mobile', function(e) {
+        e.preventDefault();
+        if ($(this).hasClass('disabled')) return;
+        
+        if (typeof window.bulkEdit === 'function') {
+            window.bulkEdit();
+        }
+    });
+
+    $(document).on('click', '#bulk-delete-btn-mobile', function(e) {
+        e.preventDefault();
+        if ($(this).hasClass('disabled')) return;
+        
+        if (typeof window.bulkDelete === 'function') {
+            window.bulkDelete();
         }
     });
     
