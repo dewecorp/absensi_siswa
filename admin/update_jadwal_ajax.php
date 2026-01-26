@@ -23,13 +23,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($id_jadwal) {
         // Update by ID (Direct update)
         try {
-            $column = ($field == 'mapel') ? 'mapel_id' : 'guru_id';
+            if ($field == 'jam_ke') {
+                $column = 'jam_ke';
+            } else {
+                $column = ($field == 'mapel') ? 'mapel_id' : 'guru_id';
+            }
+            
             $stmt = $pdo->prepare("UPDATE tb_jadwal_pelajaran SET $column = ? WHERE id_jadwal = ?");
             $stmt->execute([$val, $id_jadwal]);
             echo json_encode(['status' => 'success']);
         } catch (PDOException $e) {
-            http_response_code(500);
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            // Check for duplicate entry (SQLSTATE 23000)
+            if ($e->getCode() == 23000) {
+                http_response_code(400);
+                echo json_encode(['status' => 'error', 'message' => 'Jadwal untuk jam tersebut sudah ada!']);
+            } else {
+                http_response_code(500);
+                echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            }
         }
         exit;
     }
