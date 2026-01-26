@@ -48,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
     
     $id_guru = (int)$_POST['id_guru'];
     $nama_guru = sanitizeInput($_POST['nama_guru']);
+    $kode_guru = sanitizeInput($_POST['kode_guru'] ?? '');
     $nuptk = sanitizeInput($_POST['nuptk']);
     $tempat_lahir = sanitizeInput($_POST['tempat_lahir']);
     $tanggal_lahir = !empty($_POST['tanggal_lahir']) ? $_POST['tanggal_lahir'] : null;
@@ -123,9 +124,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
         echo json_encode(['success' => false, 'message' => 'NUPTK sudah terdaftar oleh guru lain!']);
         exit;
     }
+
+    // Check if Kode Guru already exists for another teacher
+    if (!empty($kode_guru)) {
+        $check_kode = $pdo->prepare("SELECT id_guru FROM tb_guru WHERE kode_guru = ? AND id_guru != ?");
+        $check_kode->execute([$kode_guru, $id_guru]);
+        
+        if ($check_kode->rowCount() > 0) {
+            echo json_encode(['success' => false, 'message' => 'Kode Guru sudah terdaftar oleh guru lain!']);
+            exit;
+        }
+    }
     
-    $params = [$nama_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $mengajar];
-    $sql = "UPDATE tb_guru SET nama_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, mengajar=?";
+    $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $mengajar];
+    $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, mengajar=?";
     
     // Add password to update if provided
     if (!empty($password)) {
@@ -165,6 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_guru'])) {
     $ids = $_POST['bulk_edit_ids'] ?? [];
     $names = $_POST['bulk_edit_nama'] ?? [];
+    $kode_gurus = $_POST['bulk_edit_kode_guru'] ?? [];
     $nuptks = $_POST['bulk_edit_nuptk'] ?? [];
     $jenis_kelamins = $_POST['bulk_edit_jenis_kelamin'] ?? [];
     
@@ -176,6 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_guru'])) {
             if (isset($ids[$i]) && !empty($ids[$i])) {
                 $id = (int)$ids[$i];
                 $nama = sanitizeInput($names[$i] ?? '');
+                $kode_guru = sanitizeInput($kode_gurus[$i] ?? '');
                 $nuptk = sanitizeInput($nuptks[$i] ?? '');
                 $jenis_kelamin = sanitizeInput($jenis_kelamins[$i] ?? '');
                 
@@ -193,10 +207,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_guru'])) {
                     $errors[] = "NUPTK " . $nuptk . " sudah terdaftar oleh guru lain";
                     continue;
                 }
+
+                // Check if Kode Guru already exists for another teacher (if not empty)
+                if (!empty($kode_guru)) {
+                    $check_kode = $pdo->prepare("SELECT id_guru FROM tb_guru WHERE kode_guru = ? AND id_guru != ?");
+                    $check_kode->execute([$kode_guru, $id]);
+                    
+                    if ($check_kode->rowCount() > 0) {
+                        $errors[] = "Kode Guru " . $kode_guru . " sudah terdaftar oleh guru lain";
+                        continue;
+                    }
+                }
                 
                 // Update
-                $stmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, nuptk=?, jenis_kelamin=? WHERE id_guru=?");
-                if ($stmt->execute([$nama, $nuptk, $jenis_kelamin, $id])) {
+                $stmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, jenis_kelamin=? WHERE id_guru=?");
+                if ($stmt->execute([$nama, $kode_guru, $nuptk, $jenis_kelamin, $id])) {
                     $updatedCount++;
                 }
             }
@@ -249,6 +274,7 @@ if (isset($_POST['get_teacher_data'])) {
 if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 'POST' && isset($_POST['bulk_update_guru'])) {
     $ids = $_POST['id_guru'] ?? [];
     $names = $_POST['nama_guru'] ?? [];
+    $kode_gurus = $_POST['kode_guru'] ?? [];
     $nuptks = $_POST['nuptk'] ?? [];
     $tempat_lahir = $_POST['tempat_lahir'] ?? [];
     $tanggal_lahir = $_POST['tanggal_lahir'] ?? [];
@@ -263,6 +289,7 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 
                 $id = $ids[$i];
                 $data = [
                     'nama_guru' => isset($names[$i]) ? sanitizeInput($names[$i]) : '',
+                    'kode_guru' => isset($kode_gurus[$i]) ? sanitizeInput($kode_gurus[$i]) : '',
                     'nuptk' => isset($nuptks[$i]) ? sanitizeInput($nuptks[$i]) : '',
                     'tempat_lahir' => isset($tempat_lahir[$i]) ? sanitizeInput($tempat_lahir[$i]) : '',
                     'tanggal_lahir' => isset($tanggal_lahir[$i]) ? sanitizeInput($tanggal_lahir[$i]) : '',
@@ -275,10 +302,10 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 
                     $data['password_plain'] = $passwords[$i]; // Store plain text password
                 }
                 
-                $stmt = $pdo->prepare("UPDATE tb_guru SET nama_guru = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?, jenis_kelamin = ?, wali_kelas = ?" . 
+                $stmt = $pdo->prepare("UPDATE tb_guru SET nama_guru = ?, kode_guru = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?, jenis_kelamin = ?, wali_kelas = ?" . 
                     (!empty($passwords[$i]) ? ", password = ?, password_plain = ?" : "") . " WHERE id_guru = ?");
                 
-                $params = [$data['nama_guru'], $data['nuptk'], $data['tempat_lahir'], $data['tanggal_lahir'], $data['jenis_kelamin'], $data['wali_kelas']];
+                $params = [$data['nama_guru'], $data['kode_guru'], $data['nuptk'], $data['tempat_lahir'], $data['tanggal_lahir'], $data['jenis_kelamin'], $data['wali_kelas']];
                 if (!empty($passwords[$i])) {
                     $params[] = $data['password'];
                     $params[] = $data['password_plain'];
@@ -384,6 +411,7 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 
 // Handle add teacher form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
     $nama_guru = sanitizeInput($_POST['nama_guru']);
+    $kode_guru = sanitizeInput($_POST['kode_guru'] ?? '');
     $nuptk = sanitizeInput($_POST['nuptk']);
     $tempat_lahir = sanitizeInput($_POST['tempat_lahir']);
     $tanggal_lahir = !empty($_POST['tanggal_lahir']) ? $_POST['tanggal_lahir'] : null;
@@ -432,28 +460,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
         if ($check_stmt->rowCount() > 0) {
             $message = ['type' => 'danger', 'text' => 'NUPTK sudah terdaftar!'];
         } else {
-            // Hash password if provided, otherwise use default
-            $default_password = '123456';
-            $password_to_use = !empty($password) ? $password : $default_password;
-            $hashed_password = hashPassword($password_to_use);
-            $password_plain = $password_to_use; // Store plain text password
-            
-            $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, mengajar, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            if ($stmt->execute([$nama_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $mengajar, $hashed_password, $password_plain, $foto])) {
-                $message = ['type' => 'success', 'text' => 'Data guru berhasil ditambahkan!'];
-                
-                // Log activity - ensure session is available
-                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                $log_result = logActivity($pdo, $username, 'Tambah Guru', "Menambahkan data guru: $nama_guru");
-                
-                if (!$log_result) {
-                    error_log("Failed to log activity for Tambah Guru: $nama_guru");
+            // Check if Kode Guru already exists
+            $kode_exists = false;
+            if (!empty($kode_guru)) {
+                $check_kode = $pdo->prepare("SELECT id_guru FROM tb_guru WHERE kode_guru = ?");
+                $check_kode->execute([$kode_guru]);
+                if ($check_kode->rowCount() > 0) {
+                    $message = ['type' => 'danger', 'text' => 'Kode Guru sudah terdaftar!'];
+                    $kode_exists = true;
                 }
+            }
+
+            if (!$kode_exists) {
+                // Hash password if provided, otherwise use default
+                $default_password = '123456';
+                $password_to_use = !empty($password) ? $password : $default_password;
+                $hashed_password = hashPassword($password_to_use);
+                $password_plain = $password_to_use; // Store plain text password
                 
-                // Refresh data
-                $teachers = fetchTeachersWithWaliKelas($pdo);
-            } else {
-                $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data guru!'];
+                $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, kode_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, mengajar, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                if ($stmt->execute([$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $mengajar, $hashed_password, $password_plain, $foto])) {
+                    $message = ['type' => 'success', 'text' => 'Data guru berhasil ditambahkan!'];
+                    
+                    // Log activity - ensure session is available
+                    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                    $log_result = logActivity($pdo, $username, 'Tambah Guru', "Menambahkan data guru: $nama_guru");
+                    
+                    if (!$log_result) {
+                        error_log("Failed to log activity for Tambah Guru: $nama_guru");
+                    }
+                    
+                    // Refresh data
+                    $teachers = fetchTeachersWithWaliKelas($pdo);
+                } else {
+                    $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data guru!'];
+                }
             }
         }
     }
@@ -463,6 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !isset($_POST['ajax'])) {
     $id_guru = (int)$_POST['id_guru'];
     $nama_guru = sanitizeInput($_POST['nama_guru']);
+    $kode_guru = sanitizeInput($_POST['kode_guru'] ?? '');
     $nuptk = sanitizeInput($_POST['nuptk']);
     $tempat_lahir = sanitizeInput($_POST['tempat_lahir']);
     $tanggal_lahir = !empty($_POST['tanggal_lahir']) ? $_POST['tanggal_lahir'] : null;
@@ -583,7 +625,7 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') ===
                 
                 foreach ($fields as $field) {
                     // Validate field name to prevent SQL injection
-                    $allowedFields = ['nama_guru', 'nuptk', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'wali_kelas'];
+                    $allowedFields = ['nama_guru', 'kode_guru', 'nuptk', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'wali_kelas'];
                     if (!in_array($field, $allowedFields)) {
                         continue; // Skip invalid fields
                     }
@@ -737,8 +779,9 @@ window.bulkEdit = function() {
             selectedTeachers.push({
                 id: id,
                 nama: cells.eq(3).text().trim(),
-                nuptk: cells.eq(4).text().trim(),
-                jenis_kelamin: cells.eq(6).text().trim()
+                kode_guru: cells.eq(4).text().trim(),
+                nuptk: cells.eq(5).text().trim(),
+                jenis_kelamin: cells.eq(7).text().trim()
             });
         }
     });
@@ -752,6 +795,7 @@ window.bulkEdit = function() {
             '<td>' + (index + 1) + '</td>' +
             '<td>' + teacher.nama + '</td>' +
             '<td><input type=\"text\" class=\"form-control form-control-sm\" name=\"bulk_edit_nama[]\" value=\"' + teacher.nama.replace(/\"/g, '&quot;') + '\" required></td>' +
+            '<td><input type=\"text\" class=\"form-control form-control-sm\" name=\"bulk_edit_kode_guru[]\" value=\"' + teacher.kode_guru.replace(/\"/g, '&quot;') + '\" required></td>' +
             '<td><input type=\"text\" class=\"form-control form-control-sm\" name=\"bulk_edit_nuptk[]\" value=\"' + teacher.nuptk.replace(/\"/g, '&quot;') + '\" required></td>' +
             '<td>' +
             '<select class=\"form-control form-control-sm\" name=\"bulk_edit_jenis_kelamin[]\" required>' +
@@ -951,7 +995,7 @@ $(document).ready(function() {
             
             $('#table-1').DataTable({
                 \"columnDefs\": [
-                    { \"sortable\": false, \"targets\": [1, 2, 9] } // Disable sorting for checkbox, foto, and action columns
+                    { \"sortable\": false, \"targets\": [1, 2, 11] } // Disable sorting for checkbox, foto, and action columns
                 ],
                 \"paging\": true,
                 \"lengthChange\": true,
@@ -1091,6 +1135,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                     </th>
                                                     <th>Foto</th>
                                                     <th>Nama Guru</th>
+                                                    <th>Kode Guru</th>
                                                     <th>NUPTK</th>
                                                     <th>Tempat Tanggal Lahir</th>
                                                     <th>Jenis Kelamin</th>
@@ -1149,6 +1194,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                     </td>
                                                     <td><?php echo getTeacherAvatarImage($teacher, 30); ?></td>
                                                     <td><?php echo htmlspecialchars($teacher['nama_guru']); ?></td>
+                                                    <td><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></td>
                                                     <td><?php echo htmlspecialchars($teacher['nuptk']); ?></td>
                                                     <td><?php echo htmlspecialchars($teacher['tempat_lahir']); ?>, <?php echo $teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-'; ?></td>
                                                     <td><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></td>
@@ -1258,6 +1304,10 @@ function setImportType(type) {
                                     <input type="text" class="form-control" name="nama_guru" required>
                                 </div>
                                 <div class="form-group">
+                                    <label>Kode Guru</label>
+                                    <input type="text" class="form-control" name="kode_guru" required>
+                                </div>
+                                <div class="form-group">
                                     <label>NUPTK</label>
                                     <input type="text" class="form-control" name="nuptk" required>
                                 </div>
@@ -1355,6 +1405,10 @@ function setImportType(type) {
                                     <div class="form-group">
                                         <label>Nama Guru</label>
                                         <input type="text" class="form-control" name="nama_guru" value="' . htmlspecialchars($teacher['nama_guru']) . '" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Kode Guru</label>
+                                        <input type="text" class="form-control" name="kode_guru" value="' . htmlspecialchars($teacher['kode_guru'] ?? '') . '" required>
                                     </div>
                                     <div class="form-group">
                                         <label>NUPTK</label>
@@ -1465,9 +1519,10 @@ function setImportType(type) {
                                         <thead>
                                             <tr>
                                                 <th width="5%">No</th>
-                                                <th width="25%">Nama Guru</th>
-                                                <th width="25%">Nama Baru</th>
-                                                <th width="25%">NUPTK Baru</th>
+                                                <th width="20%">Nama Guru</th>
+                                                <th width="20%">Nama Baru</th>
+                                                <th width="15%">Kode Guru Baru</th>
+                                                <th width="20%">NUPTK Baru</th>
                                                 <th width="20%">Jenis Kelamin</th>
                                             </tr>
                                         </thead>
