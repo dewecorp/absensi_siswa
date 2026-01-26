@@ -17,8 +17,9 @@ if (!isAuthorized(['admin'])) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $kelas_id = (int)$_POST['kelas_id'];
     $hari = $_POST['hari'];
-    $jam_ke = (int)$_POST['jam_ke'];
+    $jam_ke = $_POST['jam_ke']; // Removed (int) cast to support alphanumeric
     $jenis = $_POST['jenis'];
+    $guru_id = isset($_POST['guru_id']) && !empty($_POST['guru_id']) ? (int)$_POST['guru_id'] : null;
 
     if (empty($kelas_id) || empty($hari) || empty($jam_ke) || empty($jenis)) {
         http_response_code(400);
@@ -37,8 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         // Insert
-        $insert = $pdo->prepare("INSERT INTO tb_jadwal_pelajaran (kelas_id, hari, jam_ke, jenis) VALUES (?, ?, ?, ?)");
-        $insert->execute([$kelas_id, $hari, $jam_ke, $jenis]);
+        $insert = $pdo->prepare("INSERT INTO tb_jadwal_pelajaran (kelas_id, hari, jam_ke, jenis, guru_id) VALUES (?, ?, ?, ?, ?)");
+        $insert->execute([$kelas_id, $hari, $jam_ke, $jenis, $guru_id]);
         $id = $pdo->lastInsertId();
 
         echo json_encode(['status' => 'success', 'id_jadwal' => $id]);

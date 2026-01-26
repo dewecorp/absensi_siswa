@@ -14,6 +14,14 @@ if (!isAuthorized(['admin'])) {
 
 $page_title = 'Jadwal Reguler';
 
+// Add Select2 libs
+$css_libs = [
+    'node_modules/select2/dist/css/select2.min.css'
+];
+$js_libs = [
+    'node_modules/select2/dist/js/select2.full.min.js'
+];
+
 // Get all classes
 $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -30,9 +38,24 @@ foreach ($mapels as $m) {
 $stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
 $gurus = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $guru_map = [];
-foreach ($gurus as $g) {
+foreach ($gurus as &$g) {
     $guru_map[$g['id_guru']] = $g;
+    
+    // Process subjects (Mapel)
+    $mapel_names = [];
+    if (!empty($g['mengajar'])) {
+        $teaching_ids = json_decode($g['mengajar'], true);
+        if (is_array($teaching_ids)) {
+            foreach ($teaching_ids as $mid) {
+                if (isset($mapel_map[$mid])) {
+                    $mapel_names[] = $mapel_map[$mid]['nama_mapel'];
+                }
+            }
+        }
+    }
+    $g['mapel_display'] = !empty($mapel_names) ? implode(', ', $mapel_names) : '-';
 }
+unset($g);
 
 // Get teaching hours (Reguler)
 $stmt = $pdo->prepare("SELECT * FROM tb_jam_mengajar WHERE jenis = 'Reguler' ORDER BY jam_ke ASC");
@@ -84,11 +107,23 @@ foreach ($all_schedules as $row) {
 }
 
 // Define days
-$days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Ahad'];
+$days = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis'];
 
 require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
 ?>
+
+<style>
+    /* Fix for Select2 dropdown width */
+    .select2-dropdown {
+        min-width: 300px !important; /* Force wider dropdown */
+        width: auto !important;      /* Allow it to grow */
+    }
+    
+    .select2-results__option {
+        white-space: nowrap;         /* Prevent text wrapping */
+    }
+</style>
 
 <div class="main-content">
     <section class="section">
@@ -145,68 +180,123 @@ require_once '../templates/sidebar.php';
                         <?php foreach ($chunk as $day): ?>
                             <div class="col-md-4 mb-4">
                                 <div class="card h-100 border shadow-sm">
-                                    <div class="card-header bg-light py-2">
-                                        <div class="d-flex justify-content-between align-items-center w-100">
-                                            <h6 class="mb-0 font-weight-bold"><?= strtoupper($day) ?></h6>
-                                            <small class="text-muted"><?= $selected_kelas['nama_kelas'] ?></small>
-                                        </div>
+                                    <div class="card-header bg-light py-2 justify-content-center">
+                                        <h6 class="mb-0 font-weight-bold"><?= strtoupper($day) ?></h6>
                                     </div>
                                     <div class="card-body p-0">
                                         <table class="table table-sm table-bordered mb-0" style="font-size: 0.85rem;">
                                             <thead class="bg-light">
+                                                <!-- Teacher Header Row -->
+                                                <tr>
+                                                    <th colspan="2" class="p-1" style="width: 25%">
+                                                        <select class="form-control form-control-sm day-guru-select select2-custom" 
+                                                                data-day="<?= $day ?>"
+                                                                data-kelas="<?= $selected_kelas['id_kelas'] ?>"
+                                                                style="width: 100%;">
+                                                            <option value="">- Kode -</option>
+                                                            <?php 
+                                                            // Determine default teacher for the day
+                                                            $current_day_guru = null;
+                                                            $current_day_guru_name = '';
+                                                            if (!empty($class_schedule[$day])) {
+                                                                $first_sched = reset($class_schedule[$day]);
+                                                                $current_day_guru = $first_sched['guru_id'];
+                                                                if ($current_day_guru && isset($guru_map[$current_day_guru])) {
+                                                                    $current_day_guru_name = $guru_map[$current_day_guru]['nama_guru'];
+                                                                }
+                                                            }
+                                                            
+                                                            foreach ($gurus as $g): 
+                                                                $kode = $g['kode_guru'] ?? $g['id_guru'];
+                                                                $nama = $g['nama_guru'];
+                                                            ?>
+                                                                <option value="<?= $g['id_guru'] ?>" 
+                                                                        data-nama="<?= htmlspecialchars($nama) ?>"
+                                                                        data-kode="<?= htmlspecialchars($kode) ?>"
+                                                                        <?= $current_day_guru == $g['id_guru'] ? 'selected' : '' ?>>
+                                                                    <?= htmlspecialchars($kode . ' | ' . $nama) ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </th>
+                                                    <th colspan="3" class="p-1">
+                                                        <input type="text" class="form-control form-control-sm day-guru-name-display" 
+                                                               value="<?= htmlspecialchars($current_day_guru_name) ?>" 
+                                                               readonly 
+                                                               placeholder="Nama Guru..."
+                                                               style="font-weight: bold; background-color: #f9f9f9; border-left: 3px solid #007bff;">
+                                                    </th>
+                                                </tr>
                                                 <tr class="text-center">
-                                                    <th style="width: 10%">No</th>
-                                                    <th style="width: 25%">Waktu</th>
-                                                    <th style="width: 20%">KM</th>
-                                                    <th style="width: 40%">Mata Pelajaran</th>
+                                                    <th style="width: 5%">Jam Ke</th>
+                                                    <th style="width: 20%">Waktu</th>
+                                                    <th style="width: 15%">KM</th>
+                                                    <th style="width: 55%">Mata Pelajaran</th>
                                                     <th style="width: 5%"></th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody id="schedule-body-<?= $day ?>">
                                                 <?php 
                                                 $day_schedule = $class_schedule[$day] ?? [];
                                                 ksort($day_schedule);
                                                 
                                                 if (empty($day_schedule)): ?>
-                                                    <tr><td colspan="5" class="text-center text-muted p-3">Belum ada jadwal</td></tr>
+                                                    <tr><td colspan="7" class="text-center text-muted p-3">Belum ada jadwal</td></tr>
                                                 <?php else:
                                                     foreach ($day_schedule as $jam_ke => $sched): 
                                                         $jam = $jam_map[$jam_ke] ?? null;
                                                         $waktu = $jam ? date('H.i', strtotime($jam['waktu_mulai'])) . '-' . date('H.i', strtotime($jam['waktu_selesai'])) : '-';
                                                         $current_mapel = $sched['mapel_id'] ?? '';
                                                         $current_guru = $sched['guru_id'] ?? '';
+                                                        
+                                                        // Get names for display
+                                                        $guru_name = '';
+                                                        if ($current_guru && isset($guru_map[$current_guru])) {
+                                                            $guru_name = $guru_map[$current_guru]['nama_guru'];
+                                                        }
+
+                                                        $mapel_name = '';
+                                                        if ($current_mapel && isset($mapel_map[$current_mapel])) {
+                                                            $mapel_name = $mapel_map[$current_mapel]['nama_mapel'];
+                                                        }
                                                 ?>
                                                 <tr>
                                                     <td class="text-center align-middle font-weight-bold"><?= $jam_ke ?></td>
                                                     <td class="text-center align-middle" style="font-size: 0.75rem;"><?= $waktu ?></td>
+                                                    
+                                                    <!-- KM (Kode Mapel) -->
                                                     <td class="p-1">
-                                                        <select class="form-control form-control-sm schedule-select p-1" 
-                                                                data-id="<?= $sched['id_jadwal'] ?>"
-                                                                data-field="guru"
-                                                                style="height: 30px; font-size: 0.8rem;">
-                                                            <option value=""></option>
-                                                            <?php foreach ($gurus as $g): 
-                                                                $kode = $g['kode_guru'] ?? $g['id_guru'];
-                                                            ?>
-                                                                <option value="<?= $g['id_guru'] ?>" <?= $current_guru == $g['id_guru'] ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($kode) ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </td>
-                                                    <td class="p-1">
-                                                        <select class="form-control form-control-sm schedule-select p-1" 
+                                                        <select class="form-control form-control-sm schedule-select mapel-select select2-custom p-1" 
                                                                 data-id="<?= $sched['id_jadwal'] ?>"
                                                                 data-field="mapel"
-                                                                style="height: 30px; font-size: 0.8rem;">
-                                                            <option value="">- Mapel -</option>
-                                                            <?php foreach ($mapels as $m): ?>
-                                                                <option value="<?= $m['id_mapel'] ?>" <?= $current_mapel == $m['id_mapel'] ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($m['nama_mapel']) ?>
+                                                                style="width: 100%; font-size: 0.8rem;">
+                                                            <option value="">- Pilih Mapel -</option>
+                                                            <?php foreach ($mapels as $m): 
+                                                                $kode_mp = $m['kode_mapel'] ?: '-';
+                                                                $nama_mp = $m['nama_mapel'];
+                                                                $display = $kode_mp . ' | ' . $nama_mp;
+                                                            ?>
+                                                                <option value="<?= $m['id_mapel'] ?>" 
+                                                                        data-kode="<?= htmlspecialchars($kode_mp) ?>"
+                                                                        <?= $current_mapel == $m['id_mapel'] ? 'selected' : '' ?>>
+                                                                    <?= htmlspecialchars($display) ?>
                                                                 </option>
                                                             <?php endforeach; ?>
                                                         </select>
+                                                        <!-- Hidden Guru Input -->
+                                                        <input type="hidden" class="schedule-guru-id" 
+                                                               data-id="<?= $sched['id_jadwal'] ?>" 
+                                                               value="<?= $sched['guru_id'] ?>">
                                                     </td>
+                                                    
+                                                    <!-- Nama Mapel -->
+                                                    <td class="p-1">
+                                                        <input type="text" class="form-control form-control-sm mapel-name-display p-1" 
+                                                               value="<?= htmlspecialchars($mapel_name) ?>" 
+                                                               readonly 
+                                                               style="height: 30px; font-size: 0.8rem; background-color: #f9f9f9;">
+                                                    </td>
+                                                    
                                                     <td class="text-center align-middle p-1">
                                                         <button type="button" class="btn btn-danger btn-sm p-0" style="width: 24px; height: 24px; line-height: 24px;" onclick="deleteSchedule(<?= $sched['id_jadwal'] ?>)" title="Hapus">
                                                             <i class="fas fa-times" style="font-size: 12px;"></i>
@@ -306,9 +396,145 @@ require_once '../templates/sidebar.php';
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     var allSlots = <?= json_encode($jam_mengajar) ?>;
+    var mapelMap = <?= json_encode($mapel_map) ?>;
+    var guruMap = <?= json_encode($guru_map) ?>;
+
+    // Initialize Select2 with Custom Template
+    // Use window.load and setTimeout to ensure it runs after all other scripts (including Stisla/scripts.js)
+    document.addEventListener("DOMContentLoaded", function() {
+        $(window).on('load', function() {
+            setTimeout(function() {
+                $('.select2-custom').each(function() {
+                    // Destroy existing instance if any (to prevent conflict)
+                    if ($(this).hasClass("select2-hidden-accessible")) {
+                        $(this).select2('destroy');
+                    }
+                    
+                    $(this).select2({
+                        width: '100%',
+                        placeholder: "- Pilih -",
+                        allowClear: true,
+                        templateSelection: function (data) {
+                            if (!data.id) { return data.text; }
+                            
+                            // Try to get data-kode
+                            var $element = $(data.element);
+                            var kode = $element.data('kode');
+                            
+                            if (kode) {
+                                return kode;
+                            }
+                            
+                            // Fallback: Try to extract code from text (Format: Kode | Nama)
+                            if (data.text.indexOf('|') !== -1) {
+                                return data.text.split('|')[0].trim();
+                            }
+                            
+                            return data.text;
+                        }
+                    });
+                });
+            }, 100);
+        });
+
+        // Auto-update Mapel Name
+        $(document).on('change', '.mapel-select', function() {
+            var mapelId = $(this).val();
+            var $row = $(this).closest('tr');
+            var $nameInput = $row.find('.mapel-name-display');
+            
+            if (mapelId && mapelMap[mapelId]) {
+                $nameInput.val(mapelMap[mapelId].nama_mapel);
+            } else {
+                $nameInput.val('');
+            }
+        });
+
+        // Handle Top Guru Change
+        $(document).on('change', '.day-guru-select', function() {
+            console.log('Guru changed');
+            var $this = $(this);
+            var day = $this.data('day');
+            var kelasId = $this.data('kelas');
+            var guruId = $this.val();
+            var $headerRow = $this.closest('tr');
+            var $nameDisplay = $headerRow.find('.day-guru-name-display');
+            var namaGuru = $this.find(':selected').data('nama');
+            
+            console.log('Selected:', guruId, namaGuru);
+
+            // Auto-fill Name using data attribute (more reliable)
+            if (guruId && namaGuru) {
+                $nameDisplay.val(namaGuru);
+            } else if (guruId && guruMap[guruId]) {
+                // Fallback to map if data attribute fails
+                $nameDisplay.val(guruMap[guruId].nama_guru);
+            } else {
+                $nameDisplay.val('');
+            }
+
+            $.ajax({
+                url: 'update_day_guru_ajax.php',
+                type: 'POST',
+                data: {
+                    kelas_id: kelasId,
+                    hari: day,
+                    guru_id: guruId,
+                    jenis: 'Reguler'
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Update hidden inputs for consistency (optional, as reload/autosave handles it)
+                        $('#schedule-body-' + day).find('.schedule-guru-id').val(guruId);
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Guru Diupdate',
+                            text: 'Guru untuk hari ' + day + ' berhasil diperbarui',
+                            timer: 1000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire('Gagal', response.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'Gagal menghubungi server', 'error');
+                }
+            });
+        });
+
+        // Autosave for Mapel
+        $(document).on('change', '.schedule-select', function() {
+            var $this = $(this);
+            var idJadwal = $this.data('id');
+            var field = $this.data('field');
+            var value = $this.val();
+            
+            // Skip if it's the day-guru-select (handled separately)
+            if ($this.hasClass('day-guru-select')) return;
+
+            $.ajax({
+                url: 'update_jadwal_ajax.php',
+                type: 'POST',
+                data: {
+                    id_jadwal: idJadwal,
+                    field: field,
+                    value: value
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status !== 'success') {
+                        console.error('Autosave failed:', response.message);
+                    }
+                }
+            });
+        });
+    });
 
     // Add Schedule
-    function addSchedule(day, kelasId) {
+    window.addSchedule = function(day, kelasId) {
         // Generate options
         let options = {};
         allSlots.forEach(slot => {
@@ -317,6 +543,9 @@ require_once '../templates/sidebar.php';
             let end = slot.waktu_selesai ? slot.waktu_selesai.substring(0,5) : '';
             options[slot.jam_ke] = 'Jam ke-' + slot.jam_ke + ' (' + start + ' - ' + end + ')';
         });
+
+        // Get current selected guru for this day
+        let currentGuruId = $('.day-guru-select[data-day="' + day + '"]').val();
 
         Swal.fire({
             title: 'Tambah Jadwal - ' + day,
@@ -339,7 +568,8 @@ require_once '../templates/sidebar.php';
                         kelas_id: kelasId,
                         hari: day,
                         jam_ke: jamKe,
-                        jenis: 'Reguler'
+                        jenis: 'Reguler',
+                        guru_id: currentGuruId // Pass the selected guru
                     },
                     dataType: 'json'
                 }).catch(error => {
@@ -364,7 +594,7 @@ require_once '../templates/sidebar.php';
     }
 
     // Delete Schedule
-    function deleteSchedule(idJadwal) {
+    window.deleteSchedule = function(idJadwal) {
         Swal.fire({
             title: 'Hapus Jadwal?',
             text: "Data yang dihapus tidak dapat dikembalikan!",
@@ -401,45 +631,6 @@ require_once '../templates/sidebar.php';
             }
         });
     }
-
-    // Autosave
-    $(document).ready(function() {
-        // Initialize Select2 if needed (optional for simple selects, but good for search)
-        // $('.schedule-select').select2(); // If using select2, need to bind change event differently
-
-        $('.schedule-select').on('change', function() {
-            var $this = $(this);
-            var idJadwal = $this.data('id');
-            var field = $this.data('field');
-            var value = $this.val();
-            
-            // Show saving indicator (optional)
-            $('#save-status').hide();
-            $('#save-error').hide();
-
-            $.ajax({
-                url: 'update_jadwal_ajax.php',
-                type: 'POST',
-                data: {
-                    id_jadwal: idJadwal,
-                    field: field,
-                    value: value
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.status === 'success') {
-                        // Flash success
-                        $('#save-status').fadeIn().delay(1000).fadeOut();
-                    } else {
-                        $('#save-error').text('Gagal: ' + response.message).fadeIn().delay(2000).fadeOut();
-                    }
-                },
-                error: function() {
-                    $('#save-error').text('Gagal menghubungi server').fadeIn().delay(2000).fadeOut();
-                }
-            });
-        });
-    });
 </script>
 
 <?php

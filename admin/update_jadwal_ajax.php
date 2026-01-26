@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $kelas_id = (int)$_POST['kelas_id'];
     $hari = $_POST['hari'];
-    $jam_ke = (int)$_POST['jam_ke'];
+    $jam_ke = $_POST['jam_ke']; // Removed (int) cast
     $jenis = $_POST['jenis']; // Reguler or Ramadhan
     $field = $_POST['field']; // 'mapel' or 'guru'
     $value = $_POST['value'];
