@@ -44,6 +44,15 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php'])
             ],
             [
+                'title' => 'Jadwal Pelajaran',
+                'icon' => 'fas fa-calendar-alt',
+                'submenu' => [
+                    ['title' => 'Jadwal Reguler', 'url' => 'jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => 'jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
+                ],
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
+            ],
+            [
                 'title' => 'Jurnal Mengajar',
                 'icon' => 'fas fa-book-open',
                 'url' => 'jurnal_mengajar.php',
