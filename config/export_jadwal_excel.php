@@ -29,7 +29,12 @@ if ($kelas_id) {
 } else {
     $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $page_title = "JADWAL UTAMA PELAJARAN " . $title_jenis;
+    // For Main Schedule
+    if ($jenis === 'Ramadhan') {
+        $page_title = "JADWAL PELAJARAN RAMADHAN";
+    } else {
+        $page_title = "JADWAL PELAJARAN";
+    }
 }
 
 // Get Mapel Map

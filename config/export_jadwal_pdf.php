@@ -33,7 +33,11 @@ if ($kelas_id) {
     $classes = [$kelas_data];
     
     // For Class Schedule
-    $display_title = "JADWAL PELAJARAN KELAS " . strtoupper($kelas_data['nama_kelas']);
+    if ($jenis === 'Ramadhan') {
+        $display_title = "JADWAL PELAJARAN RAMADHAN KELAS " . strtoupper($kelas_data['nama_kelas']);
+    } else {
+        $display_title = "JADWAL PELAJARAN KELAS " . strtoupper($kelas_data['nama_kelas']);
+    }
     $tahun_file = isset($school_profile['tahun_ajaran']) ? str_replace(['/', ' '], ['-', '_'], $school_profile['tahun_ajaran']) : date('Y');
     $page_title = "jadwal_kelas_" . strtolower($jenis) . "_" . str_replace(['/', ' '], ['-', '_'], $kelas_data['nama_kelas']) . "_" . $tahun_file;
     
@@ -43,7 +47,11 @@ if ($kelas_id) {
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // For Main Schedule
-    $display_title = "JADWAL PELAJARAN";
+    if ($jenis === 'Ramadhan') {
+        $display_title = "JADWAL PELAJARAN RAMADHAN";
+    } else {
+        $display_title = "JADWAL PELAJARAN";
+    }
     $tahun_file = isset($school_profile['tahun_ajaran']) ? str_replace(['/', ' '], ['-', '_'], $school_profile['tahun_ajaran']) : date('Y');
     $page_title = "jadwal_utama_" . strtolower($jenis) . "_" . $tahun_file;
 }

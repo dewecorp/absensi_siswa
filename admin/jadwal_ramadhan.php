@@ -250,8 +250,8 @@ require_once '../templates/sidebar.php';
                                                             // Determine default teacher for the day
                                                             $current_day_guru = null;
                                                             $current_day_guru_name = '';
-                                                            if (!empty($day_schedule)) {
-                                                                $first_sched = reset($day_schedule);
+                                                            if (!empty($class_schedule[$day])) {
+                                                                $first_sched = reset($class_schedule[$day]);
                                                                 $current_day_guru = $first_sched['guru_id'];
                                                                 if ($current_day_guru && isset($guru_map[$current_day_guru])) {
                                                                     $current_day_guru_name = $guru_map[$current_day_guru]['nama_guru'];
