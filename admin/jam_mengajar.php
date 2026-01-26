@@ -27,44 +27,46 @@ $page_title = 'Jam Mengajar';
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_jam'])) {
-        $jam_ke = (int)$_POST['jam_ke'];
+        $jam_ke = $_POST['jam_ke'];
+        $jenis = $_POST['jenis'];
         // Convert to 24-hour format for database
         $waktu_mulai = date("H:i", strtotime($_POST['waktu_mulai']));
         $waktu_selesai = date("H:i", strtotime($_POST['waktu_selesai']));
         
-        // Cek duplikasi jam ke
-        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_jam_mengajar WHERE jam_ke = ?");
-        $check->execute([$jam_ke]);
+        // Cek duplikasi jam ke pada jenis yang sama
+        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_jam_mengajar WHERE jam_ke = ? AND jenis = ?");
+        $check->execute([$jam_ke, $jenis]);
         if ($check->fetchColumn() > 0) {
-            $message = ['type' => 'danger', 'text' => 'Jam ke-' . $jam_ke . ' sudah ada!'];
+            $message = ['type' => 'danger', 'text' => "Jam ke-$jam_ke untuk $jenis sudah ada!"];
         } else {
-            $stmt = $pdo->prepare("INSERT INTO tb_jam_mengajar (jam_ke, waktu_mulai, waktu_selesai) VALUES (?, ?, ?)");
-            if ($stmt->execute([$jam_ke, $waktu_mulai, $waktu_selesai])) {
+            $stmt = $pdo->prepare("INSERT INTO tb_jam_mengajar (jam_ke, waktu_mulai, waktu_selesai, jenis) VALUES (?, ?, ?, ?)");
+            if ($stmt->execute([$jam_ke, $waktu_mulai, $waktu_selesai, $jenis])) {
                 $message = ['type' => 'success', 'text' => 'Jam mengajar berhasil ditambahkan!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                logActivity($pdo, $username, 'Tambah Jam Mengajar', "Menambahkan jam ke-$jam_ke ($waktu_mulai - $waktu_selesai)");
+                logActivity($pdo, $username, 'Tambah Jam Mengajar', "Menambahkan jam ke-$jam_ke ($waktu_mulai - $waktu_selesai) [$jenis]");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal menambahkan jam mengajar!'];
             }
         }
     } elseif (isset($_POST['update_jam'])) {
         $id_jam = (int)$_POST['id_jam'];
-        $jam_ke = (int)$_POST['jam_ke'];
+        $jam_ke = $_POST['jam_ke'];
+        $jenis = $_POST['jenis'];
         // Convert to 24-hour format for database
         $waktu_mulai = date("H:i", strtotime($_POST['waktu_mulai']));
         $waktu_selesai = date("H:i", strtotime($_POST['waktu_selesai']));
         
-        // Cek duplikasi jam ke selain ID ini
-        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_jam_mengajar WHERE jam_ke = ? AND id_jam != ?");
-        $check->execute([$jam_ke, $id_jam]);
+        // Cek duplikasi jam ke selain ID ini pada jenis yang sama
+        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_jam_mengajar WHERE jam_ke = ? AND jenis = ? AND id_jam != ?");
+        $check->execute([$jam_ke, $jenis, $id_jam]);
         if ($check->fetchColumn() > 0) {
-            $message = ['type' => 'danger', 'text' => 'Jam ke-' . $jam_ke . ' sudah ada!'];
+            $message = ['type' => 'danger', 'text' => "Jam ke-$jam_ke untuk $jenis sudah ada!"];
         } else {
-            $stmt = $pdo->prepare("UPDATE tb_jam_mengajar SET jam_ke=?, waktu_mulai=?, waktu_selesai=? WHERE id_jam=?");
-            if ($stmt->execute([$jam_ke, $waktu_mulai, $waktu_selesai, $id_jam])) {
+            $stmt = $pdo->prepare("UPDATE tb_jam_mengajar SET jam_ke=?, waktu_mulai=?, waktu_selesai=?, jenis=? WHERE id_jam=?");
+            if ($stmt->execute([$jam_ke, $waktu_mulai, $waktu_selesai, $jenis, $id_jam])) {
                 $message = ['type' => 'success', 'text' => 'Jam mengajar berhasil diupdate!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                logActivity($pdo, $username, 'Update Jam Mengajar', "Update jam ke-$jam_ke ($waktu_mulai - $waktu_selesai)");
+                logActivity($pdo, $username, 'Update Jam Mengajar', "Update jam ke-$jam_ke ($waktu_mulai - $waktu_selesai) [$jenis]");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengupdate jam mengajar!'];
             }
@@ -73,16 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $id_jam = (int)$_POST['id_jam'];
         
         // Ambil data sebelum hapus untuk log
-        $stmt = $pdo->prepare("SELECT jam_ke FROM tb_jam_mengajar WHERE id_jam = ?");
+        $stmt = $pdo->prepare("SELECT jam_ke, jenis FROM tb_jam_mengajar WHERE id_jam = ?");
         $stmt->execute([$id_jam]);
         $jam_data = $stmt->fetch(PDO::FETCH_ASSOC);
         $jam_ke = $jam_data ? $jam_data['jam_ke'] : '?';
+        $jenis_log = $jam_data ? $jam_data['jenis'] : '?';
 
         $stmt = $pdo->prepare("DELETE FROM tb_jam_mengajar WHERE id_jam=?");
         if ($stmt->execute([$id_jam])) {
             $message = ['type' => 'success', 'text' => 'Jam mengajar berhasil dihapus!'];
             $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-            logActivity($pdo, $username, 'Hapus Jam Mengajar', "Menghapus jam ke-$jam_ke");
+            logActivity($pdo, $username, 'Hapus Jam Mengajar', "Menghapus jam ke-$jam_ke [$jenis_log]");
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus jam mengajar!'];
         }
@@ -91,7 +94,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Get all teaching hours
 $stmt = $pdo->query("SELECT * FROM tb_jam_mengajar ORDER BY jam_ke ASC");
-$jam_mengajar = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$all_jam = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$jam_reguler = [];
+$jam_ramadhan = [];
+
+foreach ($all_jam as $row) {
+    if ($row['jenis'] == 'Ramadhan') {
+        $jam_ramadhan[] = $row;
+    } else {
+        $jam_reguler[] = $row;
+    }
+}
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -121,8 +135,8 @@ echo '<style>
 // Add JavaScript
 $js_page[] = "
 $(document).ready(function() {
-    // Initialize DataTable
-    $('#table-1').DataTable({
+    // Initialize DataTables
+    var tableOptions = {
         \"columnDefs\": [
             { \"sortable\": false, \"targets\": [3] }
         ],
@@ -140,7 +154,10 @@ $(document).ready(function() {
                 \"previous\": \"Sebelumnya\"
             }
         }
-    });
+    };
+
+    $('#table-reguler').DataTable(tableOptions);
+    $('#table-ramadhan').DataTable(tableOptions);
 
     // Initialize Timepicker
     $('.timepicker').timepicker({
@@ -155,30 +172,51 @@ $(document).ready(function() {
     // Ensure inputs are not readonly to allow manual typing
     $('.timepicker').removeAttr('readonly');
 
-    // Handle Edit Button
-    $('.edit-btn').on('click', function() {
+    // Handle Add Button (Auto-detect Tab)
+    $('#btn-add-jam').on('click', function() {
+        var activeTab = $('.nav-pills .active').attr('id');
+        var jenis = 'Reguler'; // Default
+        if (activeTab === 'pills-ramadhan-tab') {
+            jenis = 'Ramadhan';
+        }
+        
+        $('#add_jenis_hidden').val(jenis);
+        $('#add_jenis_view').val(jenis);
+        $('#add_jenis_view').val(jenis);
+        $('#addModalLabel').text('Tambah Jam Mengajar (' + jenis + ')');
+        $('#addModal').modal('show');
+    });
+
+    // Handle Edit Button (Delegate to document for both tables)
+    $(document).on('click', '.edit-btn', function() {
         var id = $(this).data('id');
         var jam = $(this).data('jam');
         var mulai = $(this).data('mulai');
         var selesai = $(this).data('selesai');
+        var jenis = $(this).data('jenis');
 
         $('#edit_id_jam').val(id);
         $('#edit_jam_ke').val(jam);
         $('#edit_waktu_mulai').val(mulai);
         $('#edit_waktu_selesai').val(selesai);
         
+        $('#edit_jenis_view').val(jenis);
+        $('#edit_jenis_hidden').val(jenis);
+        $('#editModalLabel').text('Edit Jam Mengajar (' + jenis + ')');
+        
         $('#editModal').modal('show');
     });
 
-    // Handle Delete Button
-    $('.delete-btn').on('click', function(e) {
+    // Handle Delete Button (Delegate to document)
+    $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
         var id = $(this).data('id');
         var jam = $(this).data('jam');
+        var jenis = $(this).data('jenis');
         
         Swal.fire({
             title: 'Konfirmasi Hapus',
-            text: 'Apakah Anda yakin ingin menghapus Jam Ke-' + jam + '?',
+            text: 'Apakah Anda yakin ingin menghapus Jam Ke-' + jam + ' (' + jenis + ')?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
@@ -202,8 +240,12 @@ $(document).ready(function() {
         e.preventDefault();
         var type = $(this).data('type');
         
+        // Determine active tab
+        var activeTabId = $('.tab-pane.active table').attr('id');
+        var jenisTitle = activeTabId === 'table-ramadhan' ? 'Bulan Ramadhan' : 'Reguler';
+        
         // Clone table to remove action column
-        var table = $('#table-1').clone();
+        var table = $('#' + activeTabId).clone();
         table.find('th:last-child, td:last-child').remove();
         
         // Replace badges with text for export
@@ -213,7 +255,7 @@ $(document).ready(function() {
         
         if (type === 'pdf') {
             var printWindow = window.open('', '_blank');
-            printWindow.document.write('<html><head><title>Data Jam Mengajar</title>');
+            printWindow.document.write('<html><head><title>Data Jam Mengajar - ' + jenisTitle + '</title>');
             printWindow.document.write('<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\">');
             printWindow.document.write('<style>body { padding: 20px; } .table { width: 100%; margin-bottom: 1rem; color: #212529; } .table th, .table td { padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6; } .table thead th { vertical-align: bottom; border-bottom: 2px solid #dee2e6; } .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(0, 0, 0, 0.05); } @media print { .no-print { display: none; } }</style>');
             printWindow.document.write('</head><body>');
@@ -224,7 +266,7 @@ $(document).ready(function() {
                 '</div>' +
                 '<div class=\"col-10 text-center\">' +
                 '<h2 style=\"margin: 0; font-weight: bold; font-family: Arial, sans-serif;\">$school_name</h2>' +
-                '<h4 style=\"margin: 5px 0 0; font-weight: normal;\">DATA JAM MENGAJAR</h4>' +
+                '<h4 style=\"margin: 5px 0 0; font-weight: normal;\">DATA JAM MENGAJAR (' + jenisTitle.toUpperCase() + ')</h4>' +
                 '</div>' +
                 '</div>';
                 
@@ -237,8 +279,8 @@ $(document).ready(function() {
             var url = '../config/excel_export.php';
             var form = $('<form method=\"POST\" action=\"' + url + '\" target=\"_blank\">' +
                 '<input type=\"hidden\" name=\"table_data\" value=\"\">' +
-                '<input type=\"hidden\" name=\"report_title\" value=\"Data Jam Mengajar\">' +
-                '<input type=\"hidden\" name=\"filename\" value=\"data_jam_mengajar\">' +
+                '<input type=\"hidden\" name=\"report_title\" value=\"Data Jam Mengajar (' + jenisTitle + ')\">' +
+                '<input type=\"hidden\" name=\"filename\" value=\"data_jam_mengajar_' + jenisTitle.toLowerCase().replace(' ', '_') + '\">' +
                 '</form>');
                 
             form.find('input[name=\"table_data\"]').val(table[0].outerHTML);
@@ -247,6 +289,16 @@ $(document).ready(function() {
             form.remove();
         }
     });
+
+    // Persist Tab
+    $('a[data-toggle=\"pill\"]').on('shown.bs.tab', function (e) {
+        localStorage.setItem('activeTab_jam', $(e.target).attr('id'));
+    });
+
+    var activeTab = localStorage.getItem('activeTab_jam');
+    if(activeTab){
+        $('#' + activeTab).tab('show');
+    }
 });
 ";
 
@@ -291,7 +343,7 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Data Jam Mengajar</h4>
                             <div class="card-header-action">
-                                <button class="btn btn-primary" data-toggle="modal" data-target="#addModal">
+                                <button class="btn btn-primary" id="btn-add-jam">
                                     <i class="fas fa-plus"></i> Tambah Jam
                                 </button>
                                 <div class="dropdown d-inline mr-2">
@@ -306,47 +358,108 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped" id="table-1">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center" width="5%">No</th>
-                                            <th width="15%">Jam Ke</th>
-                                            <th>Waktu</th>
-                                            <th width="15%">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php 
-                                        $no = 1;
-                                        foreach ($jam_mengajar as $row): 
-                                        ?>
-                                        <tr>
-                                            <td class="text-center"><?= $no++ ?></td>
-                                            <td><?= $row['jam_ke'] ?></td>
-                                            <td>
-                                                <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_mulai'])) ?></span> 
-                                                s/d 
-                                                <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_selesai'])) ?></span>
-                                            </td>
-                                            <td>
-                                                <button class="btn btn-warning btn-sm edit-btn" 
-                                                        data-id="<?= $row['id_jam'] ?>"
-                                                        data-jam="<?= $row['jam_ke'] ?>"
-                                                        data-mulai="<?= date('H:i', strtotime($row['waktu_mulai'])) ?>"
-                                                        data-selesai="<?= date('H:i', strtotime($row['waktu_selesai'])) ?>">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm delete-btn" 
-                                                        data-id="<?= $row['id_jam'] ?>"
-                                                        data-jam="<?= $row['jam_ke'] ?>">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                            <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="pills-reguler-tab" data-toggle="pill" href="#pills-reguler" role="tab" aria-controls="pills-reguler" aria-selected="true">Reguler</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="pills-ramadhan-tab" data-toggle="pill" href="#pills-ramadhan" role="tab" aria-controls="pills-ramadhan" aria-selected="false">Ramadhan</a>
+                                </li>
+                            </ul>
+                            
+                            <div class="tab-content" id="pills-tabContent">
+                                <div class="tab-pane fade show active" id="pills-reguler" role="tabpanel" aria-labelledby="pills-reguler-tab">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped" id="table-reguler" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-center" width="5%">No</th>
+                                                    <th width="15%">Jam Ke</th>
+                                                    <th>Waktu</th>
+                                                    <th width="15%">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php 
+                                                $no = 1;
+                                                foreach ($jam_reguler as $row): 
+                                                ?>
+                                                <tr>
+                                                    <td class="text-center"><?= $no++ ?></td>
+                                                    <td><?= $row['jam_ke'] ?></td>
+                                                    <td>
+                                                        <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_mulai'])) ?></span> 
+                                                        s/d 
+                                                        <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_selesai'])) ?></span>
+                                                    </td>
+                                                    <td>
+                                                        <button class="btn btn-warning btn-sm edit-btn" 
+                                                                data-id="<?= $row['id_jam'] ?>"
+                                                                data-jam="<?= $row['jam_ke'] ?>"
+                                                                data-mulai="<?= date('H:i', strtotime($row['waktu_mulai'])) ?>"
+                                                                data-selesai="<?= date('H:i', strtotime($row['waktu_selesai'])) ?>"
+                                                                data-jenis="Reguler">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm delete-btn" 
+                                                                data-id="<?= $row['id_jam'] ?>"
+                                                                data-jam="<?= $row['jam_ke'] ?>"
+                                                                data-jenis="Reguler">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade" id="pills-ramadhan" role="tabpanel" aria-labelledby="pills-ramadhan-tab">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped" id="table-ramadhan" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-center" width="5%">No</th>
+                                                    <th width="15%">Jam Ke</th>
+                                                    <th>Waktu</th>
+                                                    <th width="15%">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php 
+                                                $no = 1;
+                                                foreach ($jam_ramadhan as $row): 
+                                                ?>
+                                                <tr>
+                                                    <td class="text-center"><?= $no++ ?></td>
+                                                    <td><?= $row['jam_ke'] ?></td>
+                                                    <td>
+                                                        <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_mulai'])) ?></span> 
+                                                        s/d 
+                                                        <span class="badge badge-info"><?= date('H:i', strtotime($row['waktu_selesai'])) ?></span>
+                                                    </td>
+                                                    <td>
+                                                        <button class="btn btn-warning btn-sm edit-btn" 
+                                                                data-id="<?= $row['id_jam'] ?>"
+                                                                data-jam="<?= $row['jam_ke'] ?>"
+                                                                data-mulai="<?= date('H:i', strtotime($row['waktu_mulai'])) ?>"
+                                                                data-selesai="<?= date('H:i', strtotime($row['waktu_selesai'])) ?>"
+                                                                data-jenis="Ramadhan">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm delete-btn" 
+                                                                data-id="<?= $row['id_jam'] ?>"
+                                                                data-jam="<?= $row['jam_ke'] ?>"
+                                                                data-jenis="Ramadhan">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -368,9 +481,10 @@ include '../templates/sidebar.php';
             </div>
             <form method="POST" action="">
                 <div class="modal-body">
+                    <input type="hidden" name="jenis" id="add_jenis_hidden">
                     <div class="form-group">
                         <label>Jam Ke</label>
-                        <input type="number" class="form-control" name="jam_ke" required min="0">
+                        <input type="text" class="form-control" name="jam_ke" required>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -423,9 +537,10 @@ include '../templates/sidebar.php';
             <form method="POST" action="">
                 <input type="hidden" name="id_jam" id="edit_id_jam">
                 <div class="modal-body">
+                    <input type="hidden" name="jenis" id="edit_jenis_hidden">
                     <div class="form-group">
                         <label>Jam Ke</label>
-                        <input type="number" class="form-control" name="jam_ke" id="edit_jam_ke" required min="0">
+                        <input type="text" class="form-control" name="jam_ke" id="edit_jam_ke" required>
                     </div>
                     <div class="row">
                         <div class="col-md-6">

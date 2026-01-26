@@ -130,7 +130,7 @@ $(document).ready(function() {
     });
 
     // Handle Edit Button
-    $('#table-1').on('click', '.edit-btn', function() {
+    $(document).on('click', '.edit-btn', function() {
         var id = $(this).data('id');
         var nama = $(this).data('nama');
         var kode = $(this).data('kode');
@@ -143,7 +143,7 @@ $(document).ready(function() {
     });
 
     // Handle Delete Button
-    $('#table-1').on('click', '.delete-btn', function(e) {
+    $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
         var id = $(this).data('id');
         var nama = $(this).data('nama');
