@@ -28,18 +28,19 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_mapel'])) {
         $nama_mapel = trim($_POST['nama_mapel']);
+        $kode_mapel = trim($_POST['kode_mapel']);
         
         // Cek duplikasi mata pelajaran
-        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE nama_mapel = ?");
-        $check->execute([$nama_mapel]);
+        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE nama_mapel = ? OR kode_mapel = ?");
+        $check->execute([$nama_mapel, $kode_mapel]);
         if ($check->fetchColumn() > 0) {
-            $message = ['type' => 'danger', 'text' => 'Mata pelajaran ' . $nama_mapel . ' sudah ada!'];
+            $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
         } else {
-            $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel) VALUES (?)");
-            if ($stmt->execute([$nama_mapel])) {
+            $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel) VALUES (?, ?)");
+            if ($stmt->execute([$nama_mapel, $kode_mapel])) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil ditambahkan!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                logActivity($pdo, $username, 'Tambah Mata Pelajaran', "Menambahkan mapel $nama_mapel");
+                logActivity($pdo, $username, 'Tambah Mata Pelajaran', "Menambahkan mapel $nama_mapel ($kode_mapel)");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal menambahkan mata pelajaran!'];
             }
@@ -47,18 +48,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } elseif (isset($_POST['update_mapel'])) {
         $id_mapel = (int)$_POST['id_mapel'];
         $nama_mapel = trim($_POST['nama_mapel']);
+        $kode_mapel = trim($_POST['kode_mapel']);
         
         // Cek duplikasi mata pelajaran selain ID ini
-        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE nama_mapel = ? AND id_mapel != ?");
-        $check->execute([$nama_mapel, $id_mapel]);
+        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE (nama_mapel = ? OR kode_mapel = ?) AND id_mapel != ?");
+        $check->execute([$nama_mapel, $kode_mapel, $id_mapel]);
         if ($check->fetchColumn() > 0) {
-            $message = ['type' => 'danger', 'text' => 'Mata pelajaran ' . $nama_mapel . ' sudah ada!'];
+            $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
         } else {
-            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=? WHERE id_mapel=?");
-            if ($stmt->execute([$nama_mapel, $id_mapel])) {
+            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=? WHERE id_mapel=?");
+            if ($stmt->execute([$nama_mapel, $kode_mapel, $id_mapel])) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil diupdate!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                logActivity($pdo, $username, 'Update Mata Pelajaran', "Update mapel ID $id_mapel menjadi $nama_mapel");
+                logActivity($pdo, $username, 'Update Mata Pelajaran', "Update mapel ID $id_mapel menjadi $nama_mapel ($kode_mapel)");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengupdate mata pelajaran!'];
             }
@@ -109,7 +111,7 @@ $(document).ready(function() {
     // Initialize DataTable
     $('#table-1').DataTable({
         \"columnDefs\": [
-            { \"sortable\": false, \"targets\": [2] }
+            { \"sortable\": false, \"targets\": [3] }
         ],
         \"language\": {
             \"lengthMenu\": \"Tampilkan _MENU_ entri\",
@@ -128,18 +130,20 @@ $(document).ready(function() {
     });
 
     // Handle Edit Button
-    $('.edit-btn').on('click', function() {
+    $('#table-1').on('click', '.edit-btn', function() {
         var id = $(this).data('id');
         var nama = $(this).data('nama');
+        var kode = $(this).data('kode');
 
         $('#edit_id_mapel').val(id);
         $('#edit_nama_mapel').val(nama);
+        $('#edit_kode_mapel').val(kode);
         
         $('#editModal').modal('show');
     });
 
     // Handle Delete Button
-    $('.delete-btn').on('click', function(e) {
+    $('#table-1').on('click', '.delete-btn', function(e) {
         e.preventDefault();
         var id = $(this).data('id');
         var nama = $(this).data('nama');
@@ -274,6 +278,7 @@ include '../templates/sidebar.php';
                                     <thead>
                                         <tr>
                                             <th class="text-center" width="5%">No</th>
+                                            <th>Kode Mapel</th>
                                             <th>Mata Pelajaran</th>
                                             <th width="15%">Aksi</th>
                                         </tr>
@@ -285,11 +290,13 @@ include '../templates/sidebar.php';
                                         ?>
                                         <tr>
                                             <td class="text-center"><?= $no++ ?></td>
+                                            <td><?= htmlspecialchars($row['kode_mapel'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['nama_mapel']) ?></td>
                                             <td>
                                                 <button class="btn btn-warning btn-sm edit-btn" 
                                                         data-id="<?= $row['id_mapel'] ?>"
-                                                        data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>">
+                                                        data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>"
+                                                        data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button class="btn btn-danger btn-sm delete-btn" 
@@ -324,6 +331,10 @@ include '../templates/sidebar.php';
             <form method="POST" action="">
                 <div class="modal-body">
                     <div class="form-group">
+                        <label>Kode Mapel</label>
+                        <input type="text" class="form-control" name="kode_mapel" required>
+                    </div>
+                    <div class="form-group">
                         <label>Nama Mata Pelajaran</label>
                         <input type="text" class="form-control" name="nama_mapel" required>
                     </div>
@@ -350,6 +361,10 @@ include '../templates/sidebar.php';
             <form method="POST" action="">
                 <input type="hidden" name="id_mapel" id="edit_id_mapel">
                 <div class="modal-body">
+                    <div class="form-group">
+                        <label>Kode Mapel</label>
+                        <input type="text" class="form-control" name="kode_mapel" id="edit_kode_mapel" required>
+                    </div>
                     <div class="form-group">
                         <label>Nama Mata Pelajaran</label>
                         <input type="text" class="form-control" name="nama_mapel" id="edit_nama_mapel" required>

@@ -1226,7 +1226,7 @@ if (!isset($js_page)) {
 ob_start(); ?>
 
 $(document).ready(function() {
-    $('.delete-btn').on('click', function(e) {
+    $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
         
         var id = $(this).data('id');
