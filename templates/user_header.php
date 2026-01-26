@@ -56,6 +56,16 @@ if (!isLoggedIn()) {
         <?php endforeach; ?>
     <?php endif; ?>
 
+    <style>
+        @media (max-width: 991.98px) {
+            .main-navbar, .navbar-bg {
+                display: none !important;
+            }
+            .main-content {
+                padding-top: 10px !important;
+            }
+        }
+    </style>
 </head>
 
 <body>

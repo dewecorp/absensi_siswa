@@ -89,6 +89,50 @@ foreach ($attendance_stats as $stat) {
     }
 }
 
+// Get attendance trend data for the last 7 days
+$trend_stmt = null;
+$attendance_trends = [];
+
+if ($wali_kelas) {
+    $trend_stmt = $pdo->prepare(
+        "SELECT 
+            DATE(a.tanggal) as tanggal,
+            SUM(CASE WHEN a.keterangan = 'Hadir' THEN 1 ELSE 0 END) as hadir,
+            SUM(CASE WHEN a.keterangan = 'Sakit' THEN 1 ELSE 0 END) as sakit,
+            SUM(CASE WHEN a.keterangan = 'Izin' THEN 1 ELSE 0 END) as izin,
+            SUM(CASE WHEN a.keterangan = 'Alpa' THEN 1 ELSE 0 END) as alpa
+        FROM tb_absensi a
+        JOIN tb_siswa s ON a.id_siswa = s.id_siswa
+        WHERE s.id_kelas = ? AND a.tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        GROUP BY DATE(a.tanggal)
+        ORDER BY DATE(a.tanggal) ASC"
+    );
+    $trend_stmt->execute([$wali_kelas['id_kelas']]);
+    $attendance_trends = $trend_stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Prepare data for chart
+$dates = [];
+$hadir_data = [];
+$sakit_data = [];
+$izin_data = [];
+$alpa_data = [];
+
+foreach ($attendance_trends as $trend) {
+    $dates[] = $trend['tanggal'] ? date('d M', strtotime($trend['tanggal'])) : '';
+    $hadir_data[] = isset($trend['hadir']) ? (int)$trend['hadir'] : 0;
+    $sakit_data[] = isset($trend['sakit']) ? (int)$trend['sakit'] : 0;
+    $izin_data[] = isset($trend['izin']) ? (int)$trend['izin'] : 0;
+    $alpa_data[] = isset($trend['alpa']) ? (int)$trend['alpa'] : 0;
+}
+
+// Convert arrays to JSON-safe format
+$dates_json = json_encode($dates);
+$hadir_data_json = json_encode($hadir_data);
+$sakit_data_json = json_encode($sakit_data);
+$izin_data_json = json_encode($izin_data);
+$alpa_data_json = json_encode($alpa_data);
+
 // Calculate total classes taught by this wali (as a teacher)
 $total_kelas_ajar = 0;
 if ($teacher && !empty($teacher['mengajar'])) {
@@ -288,6 +332,72 @@ $js_page = [
                     });
                 } catch (e) {
                     console.error('Error creating daily attendance chart:', e);
+                }
+            }
+            
+            // Trend Chart
+            var trendCtx = document.getElementById('trendChart');
+            if (trendCtx) {
+                try {
+                    var trendCtx2d = trendCtx.getContext('2d');
+                    var trendChart = new Chart(trendCtx2d, {
+                        type: 'line',
+                        data: {
+                            labels: " . $dates_json . ",
+                            datasets: [{
+                                label: 'Hadir',
+                                data: " . $hadir_data_json . ",
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                fill: false
+                            }, {
+                                label: 'Sakit',
+                                data: " . $sakit_data_json . ",
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                fill: false
+                            }, {
+                                label: 'Izin',
+                                data: " . $izin_data_json . ",
+                                borderColor: 'rgb(255, 206, 86)',
+                                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                                fill: false
+                            }, {
+                                label: 'Alpa',
+                                data: " . $alpa_data_json . ",
+                                borderColor: 'rgb(153, 102, 255)',
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Trend Kehadiran 7 Hari Terakhir'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Jumlah Siswa'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Tanggal'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error creating trend chart:', e);
                 }
             }
         }, 500);
@@ -596,9 +706,17 @@ include '../templates/sidebar.php';
                                         </div>
 
                                         <div class="form-group">
-                                            <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-icon icon-left"><i class="fas fa-save"></i> Simpan Absensi</button>
-                                            <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-icon icon-left ml-2"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
-                                            <button type="button" class="btn btn-warning btn-lg btn-icon icon-left ml-2" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
+                                            <div class="row">
+                                                <div class="col-12 col-md-4 mb-2">
+                                                    <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block btn-icon icon-left"><i class="fas fa-save"></i> Simpan Absensi</button>
+                                                </div>
+                                                <div class="col-12 col-md-4 mb-2">
+                                                    <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
+                                                </div>
+                                                <div class="col-12 col-md-4 mb-2">
+                                                    <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </form>
                                 </div>
@@ -643,6 +761,19 @@ include '../templates/sidebar.php';
                                 </div>
                                 <div class="card-body">
                                     <canvas id="myChart" height="158"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Trend Kehadiran 7 Hari Terakhir</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="trendChart" height="158"></canvas>
                                 </div>
                             </div>
                         </div>
