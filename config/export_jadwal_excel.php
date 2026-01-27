@@ -199,9 +199,11 @@ header("Expires: 0");
 
     <br><br>
     <?php 
-    $date_str = !empty($school_profile['tanggal_jadwal']) 
+    $tempat = !empty($school_profile['tempat_jadwal']) ? $school_profile['tempat_jadwal'] : 'Jakarta';
+    $tanggal = !empty($school_profile['tanggal_jadwal']) 
         ? formatDateIndonesia($school_profile['tanggal_jadwal']) 
         : formatDateIndonesia(date('Y-m-d'));
+    $date_str = $tempat . ', ' . $tanggal;
     ?>
     <table style="border: none;">
         <tr style="border: none;">
@@ -213,7 +215,7 @@ header("Expires: 0");
                 <b><u><?= htmlspecialchars($kepala_madrasah) ?></u></b>
             </td>
             <td style="border: none; text-align: center;" width="50%">
-                Jepara, <?= $date_str ?><br>
+                <?= $date_str ?><br>
                 Wali Kelas <?= $classes[0]['nama_kelas'] ?><br>
                 <br><br><br><br>
                 <b><u><?= htmlspecialchars($wali_kelas) ?></u></b>
@@ -221,7 +223,7 @@ header("Expires: 0");
             <?php else: ?>
             <td style="border: none;" width="50%"></td>
             <td style="border: none; text-align: center;" width="50%">
-                Jepara, <?= $date_str ?><br>
+                <?= $date_str ?><br>
                 Kepala Madrasah<br>
                 <br><br><br><br>
                 <b><u><?= htmlspecialchars($kepala_madrasah) ?></u></b>

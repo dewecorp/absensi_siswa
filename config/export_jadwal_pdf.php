@@ -292,9 +292,11 @@ $html .= '
         <tr>';
 
 // Signatures
-$date_str = !empty($school_profile['tanggal_jadwal']) 
+$tempat = !empty($school_profile['tempat_jadwal']) ? $school_profile['tempat_jadwal'] : 'Jakarta';
+$tanggal = !empty($school_profile['tanggal_jadwal']) 
     ? formatDateIndonesia($school_profile['tanggal_jadwal']) 
     : formatDateIndonesia(date('Y-m-d'));
+$date_str = $tempat . ', ' . $tanggal;
 
 if ($kelas_id) {
     // Jadwal Kelas: Mengetahui (Kepala), Tanggal & Wali Kelas
@@ -306,7 +308,7 @@ if ($kelas_id) {
                 <b>' . htmlspecialchars($kepala_madrasah) . '</b>
             </td>
             <td width="50%">
-                Jepara, ' . $date_str . '<br>
+                ' . $date_str . '<br>
                 Wali Kelas ' . $classes[0]['nama_kelas'] . '<br>
                 <br><br><br><br>
                 <b>' . htmlspecialchars($wali_kelas) . '</b>
@@ -316,7 +318,7 @@ if ($kelas_id) {
     $html .= '
             <td width="50%"></td> <!-- Empty Left -->
             <td width="50%">
-                Jepara, ' . $date_str . '<br>
+                ' . $date_str . '<br>
                 Kepala Madrasah<br>
                 <br><br><br><br>
                 <b>' . htmlspecialchars($kepala_madrasah) . '</b>

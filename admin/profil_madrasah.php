@@ -22,6 +22,7 @@ $school_profile = getSchoolProfile($pdo);
         $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
         $semester = sanitizeInput($_POST['semester']);
         $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
+        $tempat_jadwal = sanitizeInput($_POST['tempat_jadwal']);
         
         // Handle reset data (Annual Reset)
         if (isset($_POST['reset_data']) && $_POST['reset_data'] == '1') {
@@ -92,8 +93,8 @@ $school_profile = getSchoolProfile($pdo);
     }
     
     if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, logo=?, dashboard_hero_image=? WHERE id=1");
-        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $tanggal_jadwal, $logo, $hero_image])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, logo=?, dashboard_hero_image=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $logo, $hero_image])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
@@ -189,6 +190,13 @@ include '../templates/sidebar.php';
                                                     <label>Tanggal Jadwal Pelajaran</label>
                                                     <input type="date" class="form-control" name="tanggal_jadwal" value="<?php echo htmlspecialchars($school_profile['tanggal_jadwal'] ?? ''); ?>">
                                                     <small class="text-muted">Tanggal yang akan muncul pada cetakan jadwal pelajaran.</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Tempat Jadwal</label>
+                                                    <input type="text" class="form-control" name="tempat_jadwal" value="<?php echo htmlspecialchars($school_profile['tempat_jadwal'] ?? ''); ?>" placeholder="Contoh: Jakarta">
+                                                    <small class="text-muted">Tempat yang akan muncul pada cetakan jadwal pelajaran.</small>
                                                 </div>
                                             </div>
                                         </div>
