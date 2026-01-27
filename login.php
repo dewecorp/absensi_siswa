@@ -152,16 +152,16 @@ $school_profile = getSchoolProfile($pdo);
 
 </head>
 
-<body style="height: 100vh; margin: 0;">
+<body style="height: 100vh; margin: 0; overflow: hidden;">
     <div id="app">
-        <section class="section d-flex align-items-center justify-content-center" style="min-height: 100vh; padding: 2rem 0;">
+        <section class="section d-flex align-items-center justify-content-center" style="min-height: 100vh; padding: 0;">
                 <div class="col-12 col-sm-8 col-md-6 col-lg-4">
                     <div class="card shadow mt-3 mb-3">
                         <div class="card-header text-center bg-primary text-white pt-4 pb-4">
                             <div class="mx-auto text-center">
                                 <img src="assets/img/<?php echo $school_profile['logo'] ?: 'logo.png'; ?>" alt="Logo Madrasah" width="80" height="80" class="mb-3 d-block mx-auto">
-                                <h5 class="mb-2"><?php echo $school_profile['nama_madrasah']; ?></h5>
-                                <h6 class="mb-0">Sistem Absensi Siswa</h6>
+                                <h5 class="mb-2"><?php echo strtoupper($school_profile['nama_madrasah']); ?></h5>
+                                <h6 class="mb-0">SISTEM INFORMASI MADRASAH</h6>
                             </div>
                         </div>
                         <div class="card-body">
