@@ -287,6 +287,12 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
+                'title' => 'Jadwal Pelajaran',
+                'icon' => 'fas fa-calendar-alt',
+                'url' => '../siswa/jadwal_pelajaran.php',
+                'active' => $current_page === 'jadwal_pelajaran.php'
+            ],
+            [
                 'title' => 'Rekap Absensi',
                 'icon' => 'fas fa-chart-bar',
                 'url' => '../siswa/rekap_absensi.php',

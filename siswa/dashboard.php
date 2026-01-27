@@ -192,7 +192,9 @@ if (isset($swal_message)): ?>
             title: '<?php echo $swal_message['title']; ?>',
             text: '<?php echo $swal_message['text']; ?>',
             icon: '<?php echo $swal_message['icon']; ?>',
-            confirmButtonText: 'OK'
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false
         });
     });
 </script>
