@@ -15,15 +15,26 @@ if (!isAuthorized($allowed_roles)) {
 
 $user_role = getUserLevel();
 $is_editable = ($user_role === 'admin');
-$guru_id_session = $_SESSION['user_id'] ?? null; // For guru role
-$wali_kelas_id = null; // For wali role
+$guru_id_session = null;
+$wali_kelas_id = null;
 
-// If role is wali, get class ID
+// Resolve teacher ID from session reliably
+if ($user_role === 'guru' || $user_role === 'wali') {
+    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_guru') {
+        $guru_id_session = $_SESSION['user_id'];
+    } elseif (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_pengguna') {
+        $stmt_gid = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+        $stmt_gid->execute([$_SESSION['user_id']]);
+        $guru_id_session = (int)$stmt_gid->fetchColumn();
+    } else {
+        $guru_id_session = $_SESSION['user_id'];
+    }
+}
+
+// If role is wali, get class ID (supports wali_kelas stored as id_guru atau nama_guru)
 if ($user_role === 'wali' && $guru_id_session) {
-    // Assuming wali is linked via tb_kelas.wali_kelas (guru_id)
-    // We need to fetch the class where this teacher is wali
-    $stmt_wali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ?");
-    $stmt_wali->execute([$guru_id_session]);
+    $stmt_wali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
+    $stmt_wali->execute([$guru_id_session, $guru_id_session]);
     $wali_class = $stmt_wali->fetch(PDO::FETCH_ASSOC);
     if ($wali_class) {
         $wali_kelas_id = $wali_class['id_kelas'];
