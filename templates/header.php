@@ -243,4 +243,77 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                     </li>
                 </ul>
             </nav>
+            <?php if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah'): ?>
+            <!-- Mobile Floating Notification Button -->
+            <a href="#" data-toggle="modal" data-target="#mobileNotificationModal" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                <i class="far fa-bell fa-lg"></i>
+                <?php if ($unread_count > 0): ?>
+                    <span class="badge badge-danger rounded-circle" style="position: absolute; top: 0; right: 0; border: 2px solid white;"><?php echo $unread_count; ?></span>
+                <?php endif; ?>
+            </a>
+
+            <!-- Mobile Notification Modal -->
+            <div class="modal fade" id="mobileNotificationModal" tabindex="-1" role="dialog" aria-labelledby="mobileNotificationModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="mobileNotificationModalLabel">Notifikasi</h5>
+                            <div class="ml-auto">
+                                <a href="#" id="mark-all-read-mobile" class="text-small">Tandai semua dibaca</a>
+                            </div>
+                            <button type="button" class="close ml-2" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                                <?php if (count($unread_notifs) > 0): ?>
+                                    <?php foreach ($unread_notifs as $notif): ?>
+                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif['link']; ?>'); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1 text-primary"><i class="fas fa-info-circle mr-1"></i> Info</h6>
+                                                <small class="text-muted"><?php echo timeAgo($notif['created_at']); ?></small>
+                                            </div>
+                                            <p class="mb-1" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold;'; ?>"><?php echo htmlspecialchars($notif['message']); ?></p>
+                                        </a>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="p-4 text-center text-muted">
+                                        <i class="far fa-bell-slash fa-3x mb-3"></i><br>
+                                        Tidak ada notifikasi baru
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handle mobile mark all read
+                const markAllReadMobile = document.getElementById('mark-all-read-mobile');
+                if(markAllReadMobile) {
+                    markAllReadMobile.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        // Use jQuery as existing project uses it
+                        if(typeof $ !== 'undefined') {
+                            $.ajax({
+                                url: '../admin/mark_notification_read.php',
+                                type: 'POST',
+                                data: { action: 'mark_all' },
+                                success: function(response) {
+                                    window.location.reload();
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            </script>
+            <?php endif; ?>
+
             <?php include 'sidebar.php'; ?>
