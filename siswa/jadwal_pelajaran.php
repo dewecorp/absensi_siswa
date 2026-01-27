@@ -109,11 +109,9 @@ function getDisplayDayName($day) {
                                     <li class="nav-item">
                                         <a class="nav-link active" id="reguler-tab" data-toggle="tab" href="#reguler" role="tab" aria-controls="reguler" aria-selected="true">Jadwal Reguler</a>
                                     </li>
-                                    <?php if (isset($grouped_schedules['Ramadhan'])): ?>
                                     <li class="nav-item">
                                         <a class="nav-link" id="ramadhan-tab" data-toggle="tab" href="#ramadhan" role="tab" aria-controls="ramadhan" aria-selected="false">Jadwal Ramadhan</a>
                                     </li>
-                                    <?php endif; ?>
                                 </ul>
                             </div>
                         </div>
@@ -191,7 +189,6 @@ function getDisplayDayName($day) {
                                 </div>
 
                                 <!-- Jadwal Ramadhan Tab -->
-                                <?php if (isset($grouped_schedules['Ramadhan'])): ?>
                                 <div class="tab-pane fade" id="ramadhan" role="tabpanel" aria-labelledby="ramadhan-tab">
                                     <div class="mb-3 text-right">
                                         <a href="../config/export_jadwal_pdf.php?kelas_id=<?php echo $id_kelas; ?>&jenis=Ramadhan" target="_blank" class="btn btn-danger btn-icon icon-left"><i class="fas fa-file-pdf"></i> Export PDF</a>
@@ -259,7 +256,6 @@ function getDisplayDayName($day) {
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
-                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
