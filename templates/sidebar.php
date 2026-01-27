@@ -104,8 +104,8 @@ switch ($user_level) {
                 'title' => 'Jadwal Pelajaran',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
-                    ['title' => 'Jadwal Reguler', 'url' => '../admin/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
+                    ['title' => 'Jadwal Reguler', 'url' => '../kepala/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../kepala/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
@@ -146,8 +146,8 @@ switch ($user_level) {
                 'title' => 'Jadwal Pelajaran',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
-                    ['title' => 'Jadwal Reguler', 'url' => '../admin/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
+                    ['title' => 'Jadwal Reguler', 'url' => '../tata_usaha/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../tata_usaha/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
@@ -190,34 +190,34 @@ switch ($user_level) {
             [
                 'title' => 'Dashboard',
                 'icon' => 'fas fa-fire',
-                'url' => 'dashboard.php',
+                'url' => '../guru/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
             ],
             [
                 'title' => 'Absensi Kelas',
                 'icon' => 'fas fa-calendar-check',
-                'url' => 'absensi_kelas.php',
+                'url' => '../guru/absensi_kelas.php',
                 'active' => $current_page === 'absensi_kelas.php'
             ],
             [
                 'title' => 'Jadwal Pelajaran',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
-                    ['title' => 'Jadwal Reguler', 'url' => '../admin/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
+                    ['title' => 'Jadwal Reguler', 'url' => '../guru/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../guru/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
             [
                 'title' => 'Jurnal Mengajar',
                 'icon' => 'fas fa-book-open',
-                'url' => 'jurnal_mengajar.php',
+                'url' => '../guru/jurnal_mengajar.php',
                 'active' => $current_page === 'jurnal_mengajar.php'
             ],
             [
                 'title' => 'Profil',
                 'icon' => 'fas fa-user',
-                'url' => 'profil.php',
+                'url' => '../guru/profil.php',
                 'active' => $current_page === 'profil.php'
             ],
             [
@@ -242,8 +242,8 @@ switch ($user_level) {
                 'title' => 'Jadwal Pelajaran',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
-                    ['title' => 'Jadwal Reguler', 'url' => '../admin/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
+                    ['title' => 'Jadwal Reguler', 'url' => '../wali/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../wali/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],

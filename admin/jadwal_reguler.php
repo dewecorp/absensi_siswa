@@ -46,8 +46,7 @@ if ($user_role === 'wali' && $wali_kelas_id) {
     $stmt->execute([$wali_kelas_id]);
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } elseif ($user_role === 'guru' && $guru_id_session) {
-    // Get classes where teacher teaches (Reguler or Ramadhan? Usually consistent. Use General/Reguler logic)
-    // Using distinct query
+    // 1) Classes from schedule entries
     $stmt = $pdo->prepare("
         SELECT DISTINCT k.* 
         FROM tb_kelas k 
@@ -57,6 +56,40 @@ if ($user_role === 'wali' && $wali_kelas_id) {
     ");
     $stmt->execute([$guru_id_session]);
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // 2) Union with classes from tb_guru.mengajar (robust mapping by ID or Name)
+    $stmtG = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
+    $stmtG->execute([$guru_id_session]);
+    $mengajar_raw = $stmtG->fetchColumn();
+    if (!empty($mengajar_raw)) {
+        $all_classes = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $list = json_decode($mengajar_raw, true);
+        if (!is_array($list)) {
+            $list = array_map('trim', explode(',', (string)$mengajar_raw));
+        }
+        foreach ($list as $item) {
+            foreach ($all_classes as $kelas) {
+                $match = false;
+                if (is_numeric($item) && (int)$item === (int)$kelas['id_kelas']) {
+                    $match = true;
+                } elseif (strcasecmp((string)$item, (string)$kelas['id_kelas']) === 0) {
+                    $match = true;
+                } elseif (strcasecmp((string)$item, (string)$kelas['nama_kelas']) === 0) {
+                    $match = true;
+                }
+                if ($match) {
+                    $exists = false;
+                    foreach ($classes as $c) {
+                        if ((int)$c['id_kelas'] === (int)$kelas['id_kelas']) { $exists = true; break; }
+                    }
+                    if (!$exists) {
+                        $classes[] = $kelas;
+                    }
+                    break;
+                }
+            }
+        }
+    }
 } else {
     // Admin, Kepala, TU -> All classes
     $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");

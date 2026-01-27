@@ -2,8 +2,8 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-// Check if user is logged in and has guru level
-if (!isAuthorized(['guru'])) {
+// Check if user is logged in and has guru or wali level
+if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
 }
 
