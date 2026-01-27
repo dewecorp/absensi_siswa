@@ -372,7 +372,7 @@ require_once '../templates/sidebar.php';
                                                             <div class="p-1 text-center font-weight-bold" style="background: #f0f0f0; border-radius: 4px;"><?= htmlspecialchars($current_day_guru_code) ?></div>
                                                         <?php endif; ?>
                                                     </th>
-                                                    <th colspan="3" class="p-1">
+                                                    <th colspan="<?= $user_role == 'admin' ? 3 : 2 ?>" class="p-1">
                                                         <input type="text" class="form-control form-control-sm day-guru-name-display" 
                                                                value="<?= htmlspecialchars($current_day_guru_name) ?>" 
                                                                readonly 
@@ -383,9 +383,13 @@ require_once '../templates/sidebar.php';
                                                 <tr class="text-center">
                                                     <th style="width: 5%">Jam Ke</th>
                                                     <th style="width: 20%">Waktu</th>
+                                                    <?php if ($user_role == 'admin'): ?>
                                                     <th style="width: 15%">KM</th>
-                                                    <th style="width: 55%">Mata Pelajaran</th>
+                                                    <?php endif; ?>
+                                                    <th style="width: <?= $user_role == 'admin' ? '55%' : '75%' ?>">Mata Pelajaran</th>
+                                                    <?php if ($user_role == 'admin'): ?>
                                                     <th style="width: 5%"></th>
+                                                    <?php endif; ?>
                                                 </tr>
                                             </thead>
                                             <tbody id="schedule-body-<?= $day ?>">
@@ -394,7 +398,7 @@ require_once '../templates/sidebar.php';
                                                 // ksort($day_schedule); // Removed ksort as we now rely on query order
                                                 
                                                 if (empty($day_schedule)): ?>
-                                                    <tr><td colspan="7" class="text-center text-muted p-3">Belum ada jadwal</td></tr>
+                                                    <tr><td colspan="<?= $user_role == 'admin' ? 5 : 3 ?>" class="text-center text-muted p-3">Belum ada jadwal</td></tr>
                                                 <?php else:
                                                     foreach ($day_schedule as $sched): 
                                                         $jam_ke = $sched['jam_ke'];
@@ -439,6 +443,7 @@ require_once '../templates/sidebar.php';
                                                     </td>
                                                     <td class="text-center align-middle waktu-display" style="font-size: 0.75rem;"><?= $waktu ?></td>
                                                     
+                                                    <?php if ($user_role == 'admin'): ?>
                                                     <!-- KM (Kode Mapel) -->
                                                     <td class="p-1 km-col-container">
                                                         <?php if ($is_editable): ?>
@@ -475,15 +480,17 @@ require_once '../templates/sidebar.php';
                                                             </div>
                                                         <?php endif; ?>
                                                     </td>
+                                                    <?php endif; ?>
                                                     
-                                                    <!-- Nama Mapel -->
+                                                    <!-- Mata Pelajaran -->
                                                     <td class="p-1">
                                                         <input type="text" class="form-control form-control-sm mapel-name-display p-1" 
                                                                value="<?= htmlspecialchars($mapel_name) ?>" 
                                                                readonly 
-                                                               style="height: 30px; font-size: 0.8rem; background-color: #f9f9f9;">
+                                                               style="height: 30px; font-size: 0.8rem; background-color: #f9f9f9; border: 1px solid #ced4da;">
                                                     </td>
                                                     
+                                                    <?php if ($user_role == 'admin'): ?>
                                                     <td class="text-center align-middle p-1">
                                                         <?php if ($is_editable): ?>
                                                         <button type="button" class="btn btn-danger btn-sm p-0" style="width: 24px; height: 24px; line-height: 24px;" onclick="deleteSchedule(<?= $sched['id_jadwal'] ?>)" title="Hapus">
@@ -491,6 +498,7 @@ require_once '../templates/sidebar.php';
                                                         </button>
                                                         <?php endif; ?>
                                                     </td>
+                                                    <?php endif; ?>
                                                 </tr>
                                                 <?php endforeach; endif; ?>
                                             </tbody>

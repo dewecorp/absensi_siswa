@@ -121,6 +121,14 @@ function getDisplayDayName($day) {
                             <div class="tab-content tab-bordered" id="myTab3Content">
                                 <!-- Jadwal Reguler Tab -->
                                 <div class="tab-pane fade show active" id="reguler" role="tabpanel" aria-labelledby="reguler-tab">
+                                    <div class="mb-3 text-right">
+                                        <a href="../config/export_jadwal_pdf.php?kelas_id=<?php echo $id_kelas; ?>&jenis=Reguler" target="_blank" class="btn btn-danger btn-icon icon-left"><i class="fas fa-file-pdf"></i> Export PDF</a>
+                                        <form method="POST" action="../config/export_jadwal_excel.php" target="_blank" class="d-inline">
+                                            <input type="hidden" name="kelas_id" value="<?php echo $id_kelas; ?>">
+                                            <input type="hidden" name="jenis" value="Reguler">
+                                            <button type="submit" class="btn btn-success btn-icon icon-left"><i class="fas fa-file-excel"></i> Export Excel</button>
+                                        </form>
+                                    </div>
                                     <div class="row">
                                         <?php foreach ($display_days as $hari): ?>
                                             <?php 
@@ -144,8 +152,9 @@ function getDisplayDayName($day) {
                                                                 <table class="table table-striped table-sm mb-0">
                                                                     <thead>
                                                                         <tr>
-                                                                            <th class="text-center" width="20%">Jam</th>
-                                                                            <th>Mapel & Guru</th>
+                                                                            <th class="text-center" width="10%">Jam Ke</th>
+                                                                            <th class="text-center" width="20%">Waktu</th>
+                                                                            <th>Mata Pelajaran</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -155,15 +164,18 @@ function getDisplayDayName($day) {
                                                                                     <span class="badge badge-light">
                                                                                         <?php echo htmlspecialchars($item['jam_ke']); ?>
                                                                                     </span>
+                                                                                </td>
+                                                                                <td class="text-center align-middle">
                                                                                     <?php if (!empty($item['waktu_mulai']) && !empty($item['waktu_selesai'])): ?>
-                                                                                    <div class="small text-muted mt-1">
+                                                                                    <div class="small text-muted">
                                                                                         <?php echo date('H:i', strtotime($item['waktu_mulai'])); ?> - <?php echo date('H:i', strtotime($item['waktu_selesai'])); ?>
                                                                                     </div>
+                                                                                    <?php else: ?>
+                                                                                        -
                                                                                     <?php endif; ?>
                                                                                 </td>
                                                                                 <td class="align-middle">
                                                                                     <div class="font-weight-bold text-primary"><?php echo htmlspecialchars($item['nama_mapel'] ?? '-'); ?></div>
-                                                                                    <div class="small text-muted"><i class="fas fa-chalkboard-teacher"></i> <?php echo htmlspecialchars($item['nama_guru'] ?? '-'); ?></div>
                                                                                 </td>
                                                                             </tr>
                                                                         <?php endforeach; ?>
@@ -181,6 +193,14 @@ function getDisplayDayName($day) {
                                 <!-- Jadwal Ramadhan Tab -->
                                 <?php if (isset($grouped_schedules['Ramadhan'])): ?>
                                 <div class="tab-pane fade" id="ramadhan" role="tabpanel" aria-labelledby="ramadhan-tab">
+                                    <div class="mb-3 text-right">
+                                        <a href="../config/export_jadwal_pdf.php?kelas_id=<?php echo $id_kelas; ?>&jenis=Ramadhan" target="_blank" class="btn btn-danger btn-icon icon-left"><i class="fas fa-file-pdf"></i> Export PDF</a>
+                                        <form method="POST" action="../config/export_jadwal_excel.php" target="_blank" class="d-inline">
+                                            <input type="hidden" name="kelas_id" value="<?php echo $id_kelas; ?>">
+                                            <input type="hidden" name="jenis" value="Ramadhan">
+                                            <button type="submit" class="btn btn-success btn-icon icon-left"><i class="fas fa-file-excel"></i> Export Excel</button>
+                                        </form>
+                                    </div>
                                     <div class="row">
                                         <?php foreach ($display_days as $hari): ?>
                                             <?php 
@@ -202,8 +222,9 @@ function getDisplayDayName($day) {
                                                                 <table class="table table-striped table-sm mb-0">
                                                                     <thead>
                                                                         <tr>
-                                                                            <th class="text-center" width="20%">Jam</th>
-                                                                            <th>Mapel & Guru</th>
+                                                                            <th class="text-center" width="10%">Jam Ke</th>
+                                                                            <th class="text-center" width="20%">Waktu</th>
+                                                                            <th>Mata Pelajaran</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -213,15 +234,18 @@ function getDisplayDayName($day) {
                                                                                     <span class="badge badge-light">
                                                                                         <?php echo htmlspecialchars($item['jam_ke']); ?>
                                                                                     </span>
+                                                                                </td>
+                                                                                <td class="text-center align-middle">
                                                                                     <?php if (!empty($item['waktu_mulai']) && !empty($item['waktu_selesai'])): ?>
-                                                                                    <div class="small text-muted mt-1">
+                                                                                    <div class="small text-muted">
                                                                                         <?php echo date('H:i', strtotime($item['waktu_mulai'])); ?> - <?php echo date('H:i', strtotime($item['waktu_selesai'])); ?>
                                                                                     </div>
+                                                                                    <?php else: ?>
+                                                                                        -
                                                                                     <?php endif; ?>
                                                                                 </td>
                                                                                 <td class="align-middle">
                                                                                     <div class="font-weight-bold text-success"><?php echo htmlspecialchars($item['nama_mapel'] ?? '-'); ?></div>
-                                                                                    <div class="small text-muted"><i class="fas fa-chalkboard-teacher"></i> <?php echo htmlspecialchars($item['nama_guru'] ?? '-'); ?></div>
                                                                                 </td>
                                                                             </tr>
                                                                         <?php endforeach; ?>

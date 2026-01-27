@@ -3,7 +3,7 @@ require_once 'database.php';
 require_once 'functions.php';
 
 // Check auth
-if (!isAuthorized(['admin', 'tata_usaha', 'guru', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'tata_usaha', 'guru', 'kepala_madrasah', 'wali', 'siswa'])) {
     die("Unauthorized access");
 }
 

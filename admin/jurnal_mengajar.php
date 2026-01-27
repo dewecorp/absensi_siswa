@@ -49,6 +49,10 @@ if (isset($_POST['delete_multiple_journal'])) {
 $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get all teachers
+$stmt_guru = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
+$teachers = $stmt_guru->fetchAll(PDO::FETCH_ASSOC);
+
 // Get teaching hours mapping
 $stmt_jam = $pdo->query("SELECT * FROM tb_jam_mengajar");
 $jam_mengajar_rows = $stmt_jam->fetchAll(PDO::FETCH_ASSOC);
@@ -60,31 +64,60 @@ foreach ($jam_mengajar_rows as $row) {
     ];
 }
 
-// Get journal entries if class is selected
+// Get journal entries
 $journal_entries = [];
 $class_info = [];
+$filter_title = '';
+
+// Get unique jam_ke options
+$jam_ke_options = [];
+foreach ($jam_mengajar_rows as $row) {
+    if (!in_array($row['jam_ke'], ['A', 'B', 'C'])) {
+        $jam_ke_options[] = $row['jam_ke'];
+    }
+}
+$jam_ke_options = array_unique($jam_ke_options);
+sort($jam_ke_options, SORT_NUMERIC);
+
+$where_clauses = ["j.mapel NOT IN ('Istirahat I', 'Istirahat II', 'Upacara Bendera', 'Asmaul Husna')", "j.jam_ke NOT IN ('A', 'B', 'C')"];
+$params = [];
 
 if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
-    $id_kelas = (int)$_GET['kelas'];
+    $where_clauses[] = "j.id_kelas = ?";
+    $params[] = $_GET['kelas'];
     
-    // Get class info
     $stmt_class = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
-    $stmt_class->execute([$id_kelas]);
+    $stmt_class->execute([$_GET['kelas']]);
     $class_info = $stmt_class->fetch(PDO::FETCH_ASSOC);
+    $filter_title .= ($filter_title ? ' - ' : '') . ($class_info['nama_kelas'] ?? '');
+}
+
+if (isset($_GET['guru']) && !empty($_GET['guru'])) {
+    $where_clauses[] = "j.id_guru = ?";
+    $params[] = $_GET['guru'];
     
-    // Get journal entries
-    // Joining with tb_guru to get teacher name if needed, though not requested in columns
-    // Columns requested: No, Jam Ke, Mata Pelajaran, Materi Pokok, Aksi
-    $query = "SELECT j.*, g.nama_guru 
+    $stmt_g = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
+    $stmt_g->execute([$_GET['guru']]);
+    $guru_name = $stmt_g->fetchColumn();
+    $filter_title .= ($filter_title ? ' - ' : '') . $guru_name;
+}
+
+if (isset($_GET['jam_ke']) && !empty($_GET['jam_ke'])) {
+    $where_clauses[] = "FIND_IN_SET(?, j.jam_ke)";
+    $params[] = $_GET['jam_ke'];
+    $filter_title .= ($filter_title ? ' - ' : '') . 'Jam Ke-' . $_GET['jam_ke'];
+}
+
+if (!empty($params)) {
+    $query = "SELECT j.*, g.nama_guru, k.nama_kelas 
               FROM tb_jurnal j 
               LEFT JOIN tb_guru g ON j.id_guru = g.id_guru 
-              WHERE j.id_kelas = ? 
-              AND j.mapel NOT IN ('Istirahat I', 'Istirahat II', 'Upacara Bendera', 'Asmaul Husna')
-              AND j.jam_ke NOT IN ('A', 'B', 'C')
+              LEFT JOIN tb_kelas k ON j.id_kelas = k.id_kelas
+              WHERE " . implode(' AND ', $where_clauses) . "
               ORDER BY j.tanggal DESC, j.jam_ke ASC";
               
     $stmt = $pdo->prepare($query);
-    $stmt->execute([$id_kelas]);
+    $stmt->execute($params);
     $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -266,17 +299,45 @@ include '../templates/header.php';
                     </div>
                     <div class="card-body">
                         <form method="GET" action="">
-                            <div class="form-group row mb-4">
-                                <label class="col-form-label text-md-right col-12 col-md-3 col-lg-3">Pilih Kelas</label>
-                                <div class="col-sm-12 col-md-7">
-                                    <select class="form-control select2" name="kelas" onchange="this.form.submit()">
-                                        <option value="">-- Pilih Kelas --</option>
-                                        <?php foreach ($classes as $class): ?>
-                                            <option value="<?php echo $class['id_kelas']; ?>" <?php echo (isset($_GET['kelas']) && $_GET['kelas'] == $class['id_kelas']) ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($class['nama_kelas']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Pilih Kelas</label>
+                                        <select class="form-control select2" name="kelas" onchange="this.form.submit()">
+                                            <option value="">-- Semua Kelas --</option>
+                                            <?php foreach ($classes as $class): ?>
+                                                <option value="<?php echo $class['id_kelas']; ?>" <?php echo (isset($_GET['kelas']) && $_GET['kelas'] == $class['id_kelas']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($class['nama_kelas']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Pilih Guru</label>
+                                        <select class="form-control select2" name="guru" onchange="this.form.submit()">
+                                            <option value="">-- Semua Guru --</option>
+                                            <?php foreach ($teachers as $teacher): ?>
+                                                <option value="<?php echo $teacher['id_guru']; ?>" <?php echo (isset($_GET['guru']) && $_GET['guru'] == $teacher['id_guru']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($teacher['nama_guru']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Pilih Jam Ke</label>
+                                        <select class="form-control select2" name="jam_ke" onchange="this.form.submit()">
+                                            <option value="">-- Semua Jam --</option>
+                                            <?php foreach ($jam_ke_options as $jam): ?>
+                                                <option value="<?php echo $jam; ?>" <?php echo (isset($_GET['jam_ke']) && $_GET['jam_ke'] == $jam) ? 'selected' : ''; ?>>
+                                                    <?php echo $jam; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -285,12 +346,12 @@ include '../templates/header.php';
             </div>
         </div>
 
-        <?php if (isset($_GET['kelas']) && !empty($_GET['kelas'])): ?>
+        <?php if (!empty($params)): ?>
         <div class="row">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4>Data Jurnal Mengajar - <?php echo isset($class_info['nama_kelas']) ? htmlspecialchars($class_info['nama_kelas']) : ''; ?></h4>
+                        <h4>Data Jurnal Mengajar <?php echo $filter_title ? '- ' . htmlspecialchars($filter_title) : ''; ?></h4>
                         <div class="card-header-action">
                             <button id="btn-bulk-delete" class="btn btn-danger" style="display: none;" onclick="bulkDelete()">
                                 <i class="fas fa-trash"></i> Hapus Terpilih
