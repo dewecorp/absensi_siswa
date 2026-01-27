@@ -79,6 +79,8 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
               FROM tb_jurnal j 
               LEFT JOIN tb_guru g ON j.id_guru = g.id_guru 
               WHERE j.id_kelas = ? 
+              AND j.mapel NOT IN ('Istirahat I', 'Istirahat II', 'Upacara Bendera', 'Asmaul Husna')
+              AND j.jam_ke NOT IN ('A', 'B', 'C')
               ORDER BY j.tanggal DESC, j.jam_ke ASC";
               
     $stmt = $pdo->prepare($query);

@@ -97,6 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $mapel = $_POST['mapel'];
     $materi = $_POST['materi'];
     $tanggal = $_POST['tanggal'];
+    $jenis = $_POST['jenis'] ?? 'Reguler'; // Capture jenis input
     $id_guru = $teacher['id_guru'];
     
     if (isset($_POST['id_jurnal']) && !empty($_POST['id_jurnal'])) {
@@ -106,8 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         $check_stmt = $pdo->prepare("SELECT id FROM tb_jurnal WHERE id = ? AND id_guru = ?");
         $check_stmt->execute([$id_jurnal, $id_guru]);
         if ($check_stmt->rowCount() > 0) {
-            $stmt = $pdo->prepare("UPDATE tb_jurnal SET id_kelas=?, jam_ke=?, mapel=?, materi=?, tanggal=? WHERE id=?");
-            $stmt->execute([$id_kelas, $jam_ke, $mapel, $materi, $tanggal, $id_jurnal]);
+            $stmt = $pdo->prepare("UPDATE tb_jurnal SET id_kelas=?, jam_ke=?, mapel=?, materi=?, tanggal=?, jenis=? WHERE id=?");
+            $stmt->execute([$id_kelas, $jam_ke, $mapel, $materi, $tanggal, $jenis, $id_jurnal]);
 
             $nama_guru_notif = $teacher['nama_guru'];
             $nama_kelas_notif = '';
@@ -131,8 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         }
     } else {
         // Add
-        $stmt = $pdo->prepare("INSERT INTO tb_jurnal (id_kelas, id_guru, jam_ke, mapel, materi, tanggal) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$id_kelas, $id_guru, $jam_ke, $mapel, $materi, $tanggal]);
+        $stmt = $pdo->prepare("INSERT INTO tb_jurnal (id_kelas, id_guru, jam_ke, mapel, materi, tanggal, jenis) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$id_kelas, $id_guru, $jam_ke, $mapel, $materi, $tanggal, $jenis]);
         
         // Send notification to admin
         $nama_guru_notif = $teacher['nama_guru'];
@@ -256,6 +257,32 @@ $js_libs = [
 
 $js_page = [
     "
+    var jamMengajarList = " . json_encode($jam_mengajar_list) . ";
+
+    function updateJamOptions(selectedJenis, selectedValues = []) {
+        var \$jamSelect = $('select[name=\"jam_ke[]\"]');
+        \$jamSelect.empty();
+        
+        jamMengajarList.forEach(function(jam) {
+            if (jam.jenis === selectedJenis) {
+                if (['A', 'B', 'C'].includes(jam.jam_ke)) return;
+                
+                var startTime = jam.waktu_mulai.substring(0, 5);
+                var endTime = jam.waktu_selesai.substring(0, 5);
+                var label = jam.jam_ke + ' (' + startTime + ' - ' + endTime + ')';
+                
+                var option = new Option(label, jam.jam_ke, false, false);
+                \$jamSelect.append(option);
+            }
+        });
+        
+        if (selectedValues.length > 0) {
+            \$jamSelect.val(selectedValues).trigger('change');
+        } else {
+            \$jamSelect.trigger('change');
+        }
+    }
+
     $(document).ready(function() {
         var t = $('#table-jurnal').DataTable({
             'language': { 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
@@ -275,6 +302,10 @@ $js_page = [
 
         $('.select2').select2({
             width: '100%'
+        });
+        
+        $('#jenis_jadwal').change(function() {
+            updateJamOptions($(this).val());
         });
 
         // Check all functionality
@@ -349,7 +380,11 @@ $js_page = [
             $('#modalTitle').text('Tambah Jurnal');
             $('#formJurnal')[0].reset();
             $('#id_jurnal').val('');
-            $('select[name=\"jam_ke[]\"]').val(null).trigger('change');
+            
+            // Default jenis and dynamic update
+            $('#jenis_jadwal').val('Reguler');
+            updateJamOptions('Reguler');
+            
             $('select[name=\"mapel\"]').val('').trigger('change');
             
             // Set default date to today
@@ -367,10 +402,15 @@ $js_page = [
             $('select[name=\"id_kelas\"]').val(data.id_kelas);
             $('input[name=\"tanggal\"]').val(data.tanggal);
             
+            // Set jenis and update options
+            var jenis = data.jenis || 'Reguler';
+            $('#jenis_jadwal').val(jenis);
+            
             // Handle multiselect jam_ke
             var jamKeValues = data.jam_ke.toString().split(',');
             jamKeValues = jamKeValues.map(function(item) { return item.trim(); });
-            $('select[name=\"jam_ke[]\"]').val(jamKeValues).trigger('change');
+            
+            updateJamOptions(jenis, jamKeValues);
             
             $('select[name=\"mapel\"]').val(data.mapel).trigger('change');
             $('textarea[name=\"materi\"]').val(data.materi);
@@ -580,11 +620,20 @@ include '../templates/header.php';
                         <label>Tanggal</label>
                         <input type="date" name="tanggal" class="form-control" required>
                     </div>
+
+                    <div class="form-group">
+                        <label>Jenis Jadwal</label>
+                        <select name="jenis" id="jenis_jadwal" class="form-control" required>
+                            <option value="Reguler">Reguler</option>
+                            <option value="Ramadhan">Ramadhan</option>
+                        </select>
+                    </div>
                     
                     <div class="form-group">
                         <label>Jam Ke</label>
                         <select name="jam_ke[]" class="form-control select2" multiple required>
                             <?php foreach ($jam_mengajar_list as $jam): ?>
+                                <?php if (in_array($jam['jam_ke'], ['A', 'B', 'C'])) continue; ?>
                                 <option value="<?php echo $jam['jam_ke']; ?>">
                                     <?php echo $jam['jam_ke'] . ' (' . date('H:i', strtotime($jam['waktu_mulai'])) . ' - ' . date('H:i', strtotime($jam['waktu_selesai'])) . ')'; ?>
                                 </option>
@@ -597,6 +646,7 @@ include '../templates/header.php';
                         <select name="mapel" class="form-control select2" required>
                             <option value="">-- Pilih Mata Pelajaran --</option>
                             <?php foreach ($mapel_list as $mpl): ?>
+                                <?php if (in_array($mpl['nama_mapel'], ['Istirahat I', 'Istirahat II', 'Upacara Bendera', 'Asmaul Husna'])) continue; ?>
                                 <option value="<?php echo htmlspecialchars($mpl['nama_mapel']); ?>">
                                     <?php echo htmlspecialchars($mpl['nama_mapel']); ?>
                                 </option>
