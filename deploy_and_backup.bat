@@ -26,7 +26,26 @@ git push origin main
 :: 4. Create ZIP Backup
 echo [4/4] Creating ZIP Backup (absensi_siswa_backup.zip)...
 echo This might take a while...
-powershell -Command "Get-ChildItem -Path . -Exclude '.git','*.zip' | Compress-Archive -DestinationPath absensi_siswa_backup.zip -Force"
+
+:: Create temp directory to avoid file lock errors
+set "TEMP_DIR=backup_staging_temp"
+if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
+mkdir "%TEMP_DIR%"
+
+echo Copying files to staging area (including vendor)...
+:: Robocopy is robust and can read files that might be read-locked by web server
+:: /E : Copy subdirectories, including Empty ones
+:: /XD : Exclude Directories (.git and the temp dir itself)
+:: /XF : Exclude Files (the target zip file)
+:: /R:1 /W:1 : Retry once, wait 1 second on error
+:: /NFL /NDL /NJH /NJS : Reduce log output
+robocopy . "%TEMP_DIR%" /E /XD .git "%TEMP_DIR%" /XF absensi_siswa_backup.zip /R:1 /W:1 /NFL /NDL /NJH /NJS
+
+echo Compressing files...
+powershell -Command "Compress-Archive -Path '%TEMP_DIR%\*' -DestinationPath absensi_siswa_backup.zip -Force"
+
+echo Cleaning up staging files...
+rmdir /s /q "%TEMP_DIR%"
 
 echo.
 echo ==========================================
