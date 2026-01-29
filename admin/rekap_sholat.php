@@ -458,6 +458,8 @@ include '../templates/sidebar.php';
                                                 <span class="badge badge-success">Hadir</span>
                                             <?php elseif ($r['keterangan'] == 'Tidak Hadir'): ?>
                                                 <span class="badge badge-danger">Tidak Hadir</span>
+                                            <?php elseif ($r['keterangan'] == 'Berhalangan'): ?>
+                                                <span class="badge badge-danger">Berhalangan</span>
                                             <?php else: ?>
                                                 <span class="badge badge-secondary">Belum Absen</span>
                                             <?php endif; ?>
@@ -497,6 +499,7 @@ include '../templates/sidebar.php';
                                         <?php for($d=1; $d<=31; $d++) echo "<th>$d</th>"; ?>
                                         <th>H</th>
                                         <th>TH</th>
+                                        <th>B</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -508,13 +511,15 @@ include '../templates/sidebar.php';
                                             <td>
                                                 <?php 
                                                     $s = $r['days'][$d];
-                                                    if ($s === 'Hadir') echo '<i class="fas fa-check text-success"></i>';
-                                                    elseif ($s === 'Tidak Hadir') echo '<i class="fas fa-times text-danger"></i>';
+                                                    if ($s === 'Hadir' || $s === 'Melaksanakan') echo '<i class="fas fa-check text-success"></i>';
+                                                    elseif ($s === 'Tidak Hadir' || $s === 'Tidak Melaksanakan') echo '<i class="fas fa-times text-danger"></i>';
+                                                    elseif ($s === 'Berhalangan') echo '<i class="fas fa-ban text-danger"></i>';
                                                 ?>
                                             </td>
                                         <?php endfor; ?>
                                         <td><?php echo $r['summary']['Hadir']; ?></td>
                                         <td><?php echo $r['summary']['Tidak Hadir']; ?></td>
+                                        <td><?php echo $r['summary']['Berhalangan'] ?? 0; ?></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -573,6 +578,7 @@ include '../templates/sidebar.php';
                                             }
                                             echo '<td class="text-center font-weight-bold">' . $r['summary']['Hadir'] . '</td>';
                                             echo '<td class="text-center font-weight-bold">' . $r['summary']['Tidak Hadir'] . '</td>';
+                                            echo '<td class="text-center font-weight-bold">' . ($r['summary']['Berhalangan'] ?? 0) . '</td>';
                                         ?>
                                     </tr>
                                     <?php endforeach; ?>
@@ -604,9 +610,13 @@ include '../templates/sidebar.php';
                                         <h3 class="mb-0"><?php echo $student_attendance_summary['Hadir']; ?></h3>
                                         <small>Total Hadir</small>
                                     </div>
-                                    <div class="d-inline-block p-2 bg-danger text-white rounded text-center" style="min-width: 100px;">
+                                    <div class="d-inline-block p-2 bg-danger text-white rounded text-center mr-3" style="min-width: 100px;">
                                         <h3 class="mb-0"><?php echo $student_attendance_summary['Tidak Hadir']; ?></h3>
                                         <small>Total Tidak Hadir</small>
+                                    </div>
+                                    <div class="d-inline-block p-2 bg-danger text-white rounded text-center" style="min-width: 100px;">
+                                        <h3 class="mb-0"><?php echo $student_attendance_summary['Berhalangan'] ?? 0; ?></h3>
+                                        <small>Berhalangan</small>
                                     </div>
                                 </div>
                             </div>
@@ -642,7 +652,7 @@ include '../templates/sidebar.php';
                                                 <?php if ($r['keterangan'] == 'Hadir'): ?>
                                                     <span class="badge badge-success">Hadir</span>
                                                 <?php elseif ($r['keterangan'] == 'Berhalangan'): ?>
-                                                    <span class="badge badge-warning">Berhalangan</span>
+                                                    <span class="badge badge-danger">Berhalangan</span>
                                                 <?php elseif ($r['keterangan'] == 'Tidak Hadir'): ?>
                                                     <span class="badge badge-danger">Tidak Hadir</span>
                                                 <?php endif; ?>

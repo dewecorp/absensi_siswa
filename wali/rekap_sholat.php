@@ -359,6 +359,9 @@ echo "<script>
     var studentName = " . json_encode($student_info['nama_siswa'] ?? '') . ";
     var selectedDate = " . json_encode($selected_date) . ";
     var schoolLogo = " . json_encode($school_profile['logo'] ?? 'logo.png') . ";
+    var schoolName = " . json_encode($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang') . ";
+    var classTeacherName = " . json_encode($teacher_name ?? '') . ";
+    var madrasahHeadName = " . json_encode($school_profile['nama_kepala_madrasah'] ?? 'Kepala Madrasah') . ";
 
     function updateStatus(studentId, status) {
         Swal.fire({
@@ -496,6 +499,8 @@ echo "<script>
                                                 <span class="badge badge-success">Melaksanakan</span>
                                             <?php elseif ($r['keterangan'] == 'Tidak Melaksanakan'): ?>
                                                 <span class="badge badge-danger">Tidak Melaksanakan</span>
+                                            <?php elseif ($r['keterangan'] == 'Berhalangan'): ?>
+                                                <span class="badge badge-danger">Berhalangan</span>
                                             <?php else: ?>
                                                 <span class="badge badge-secondary"><?php echo htmlspecialchars($r['keterangan']); ?></span>
                                             <?php endif; ?>
@@ -580,6 +585,11 @@ echo "<script>
                                     <div class="col-md-3">
                                         <div class="alert alert-danger">
                                             Tidak Hadir/Melaksanakan: <strong><?php echo $student_attendance_summary['Tidak Hadir']; ?></strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="alert alert-danger">
+                                            Berhalangan: <strong><?php echo $student_attendance_summary['Berhalangan'] ?? 0; ?></strong>
                                         </div>
                                     </div>
                                 </div>
@@ -695,27 +705,53 @@ function exportDailyToExcel() {
 }
 
 function exportDailyToPDF() {
-    const { jsPDF } = window.jspdf;
-    var doc = new jsPDF('p', 'mm', 'a4');
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Harian Sholat Berjamaah</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: A4 portrait; margin: 1cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; }');
+    printWindow.document.write('.badge { padding: 0; color: black !important; background-color: transparent !important; border: none; font-weight: bold; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
     
-    // Add Header
-    doc.setFontSize(16);
-    doc.text('<?php echo addslashes($school_profile["nama_madrasah"] ?? "Sistem Absensi"); ?>', 105, 15, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text('Rekap Harian Sholat Berjamaah', 105, 25, { align: 'center' });
-    doc.text('Tanggal: ' + selectedDate.split('-').reverse().join('-'), 105, 32, { align: 'center' });
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Harian Sholat Berjamaah - ' + selectedDate.split('-').reverse().join('-') + '</h4>');
+    printWindow.document.write('</div></div>');
     
-    doc.autoTable({ 
-        html: '#dailyTable',
-        startY: 40,
-        theme: 'grid',
-        headStyles: { fillColor: [22, 160, 133] },
-        didParseCell: function(data) {
-            // Clean up badge text
-        }
-    });
+    var table = document.getElementById('dailyTable');
+    if (table) {
+        var tableHTML = table.outerHTML;
+        printWindow.document.write(tableHTML);
+    }
     
-    doc.save('rekap_sholat_harian_' + selectedDate + '.pdf');
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>Padang, ' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 500);
 }
 
 function exportStudentToExcel() {
@@ -741,21 +777,53 @@ function exportStudentToExcel() {
 }
 
 function exportStudentToPDF() {
-    const { jsPDF } = window.jspdf;
-    var doc = new jsPDF('p', 'mm', 'a4');
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Sholat Berjamaah</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: A4 portrait; margin: 1cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; }');
+    printWindow.document.write('.badge { padding: 0; color: black !important; background-color: transparent !important; border: none; font-weight: bold; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
     
-    doc.setFontSize(14);
-    doc.text('Rekap Sholat Berjamaah', 105, 15, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text('Nama: ' + studentName, 105, 25, { align: 'center' });
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Berjamaah - ' + studentName + '</h4>');
+    printWindow.document.write('</div></div>');
     
-    doc.autoTable({ 
-        html: '#studentTable',
-        startY: 35,
-        theme: 'grid'
-    });
+    var table = document.getElementById('studentTable');
+    if (table) {
+        var tableHTML = table.outerHTML;
+        printWindow.document.write(tableHTML);
+    }
     
-    doc.save('rekap_sholat_siswa_' + studentName.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf');
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>Padang, ' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 500);
 }
 </script>
 
