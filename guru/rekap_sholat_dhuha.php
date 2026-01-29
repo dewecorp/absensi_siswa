@@ -431,6 +431,13 @@ echo "<script>
     var studentName = " . json_encode($student_info['nama_siswa'] ?? '') . ";
     var selectedDate = " . json_encode($selected_date) . ";
     var schoolLogo = " . json_encode($school_profile['logo'] ?? 'logo.png') . ";
+    var schoolName = " . json_encode($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang') . ";
+    var classTeacherName = " . json_encode($class_info['wali_kelas'] ?? '') . ";
+    var madrasahHeadName = " . json_encode($school_profile['kepala_madrasah'] ?? '') . ";
+    var jsMonthName = " . json_encode($js_month_name) . ";
+    var jsMonthYear = " . json_encode($js_month_year) . ";
+    var activeSemester = " . json_encode($active_semester) . ";
+    var academicYear = " . json_encode($school_profile['tahun_ajaran'] ?? '') . ";
 
     function updateStatus(studentId, status) {
         Swal.fire({
@@ -704,6 +711,20 @@ echo "<script>
                             </div>
                         </div>
                     <?php elseif (!empty($semester_results)): ?>
+                        <!-- Export Buttons -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="btn-group float-right" role="group">
+                                    <button type="button" class="btn btn-success" onclick="exportSemesterToExcel()">
+                                        <i class="fas fa-file-excel"></i> Ekspor Excel
+                                    </button>
+                                    <button type="button" class="btn btn-warning" onclick="exportSemesterToPDF()">
+                                        <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="table-responsive mt-4">
                             <table class="table table-bordered table-sm" id="semesterTable">
                                 <thead>
@@ -751,16 +772,16 @@ echo "<script>
 
 <!-- Include Export Scripts (Same as admin) -->
 <script>
-// Copy export functions from admin/rekap_sholat.php
-// Simplified for brevity, assume consistency
 function exportDailyToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
-    headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
     headerDiv.innerHTML += '<h4>Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
+    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    
     var newTable = table.cloneNode(true);
     
     // Convert badges to text
@@ -783,27 +804,204 @@ function exportDailyToExcel() {
 }
 
 function exportDailyToPDF() {
-    const { jsPDF } = window.jspdf;
-    var doc = new jsPDF('p', 'mm', 'a4');
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Harian Sholat Dhuha</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: A4 portrait; margin: 1cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; }');
+    printWindow.document.write('.badge { padding: 0; color: black !important; background-color: transparent !important; border: none; font-weight: bold; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
     
-    // Add Header
-    doc.setFontSize(16);
-    doc.text('<?php echo addslashes($school_profile["nama_madrasah"] ?? "Sistem Absensi"); ?>', 105, 15, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text('Rekap Harian Sholat Dhuha', 105, 25, { align: 'center' });
-    doc.text('Tanggal: ' + selectedDate.split('-').reverse().join('-'), 105, 32, { align: 'center' });
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4>');
+    printWindow.document.write('</div></div>');
     
-    doc.autoTable({ 
-        html: '#dailyTable',
-        startY: 40,
-        theme: 'grid',
-        headStyles: { fillColor: [22, 160, 133] },
-        didParseCell: function(data) {
-            // Clean up badge text
-        }
-    });
+    var table = document.getElementById('dailyTable');
+    if (table) {
+        var tableHTML = table.outerHTML;
+        printWindow.document.write(tableHTML);
+    }
     
-    doc.save('rekap_sholat_dhuha_harian_' + selectedDate + '.pdf');
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>&nbsp;</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 500);
+}
+
+function exportMonthlyToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha - ' + jsMonthName + ' ' + jsMonthYear + '</h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('monthlyTable');
+    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    
+    var newTable = table.cloneNode(true);
+    
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Bulanan");
+        XLSX.writeFile(wb, 'rekap_sholat_dhuha_bulanan_' + jsMonthName + '_' + jsMonthYear + '.xlsx');
+    }
+}
+
+function exportMonthlyToPDF() {
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Sholat Dhuha</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.bg-success { background-color: #28a745 !important; color: white !important; }');
+    printWindow.document.write('.bg-danger { background-color: #dc3545 !important; color: white !important; }');
+    printWindow.document.write('.bg-warning { background-color: #ffc107 !important; color: black !important; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha - ' + jsMonthName + ' ' + jsMonthYear + '</h4>');
+    printWindow.document.write('</div></div>');
+    
+    var table = document.getElementById('monthlyTable');
+    if (table) {
+        var tableHTML = table.outerHTML;
+        printWindow.document.write(tableHTML);
+    }
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>&nbsp;</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 500);
+}
+
+function exportSemesterToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha - ' + activeSemester + ' ' + academicYear + '</h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('semesterTable');
+    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    
+    var newTable = table.cloneNode(true);
+    
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Semester");
+        XLSX.writeFile(wb, 'rekap_sholat_dhuha_semester_' + activeSemester.replace(/ /g, '_') + '.xlsx');
+    }
+}
+
+function exportSemesterToPDF() {
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Sholat Dhuha</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 10px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 3px; text-align: center; }');
+    printWindow.document.write('td:nth-child(1) { text-align: left; white-space: nowrap; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha - ' + activeSemester + ' ' + academicYear + '</h4>');
+    printWindow.document.write('</div></div>');
+    
+    var table = document.getElementById('semesterTable');
+    if (table) {
+        printWindow.document.write(table.outerHTML);
+    }
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>&nbsp;</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 500);
 }
 
 function exportStudentToExcel() {
@@ -812,6 +1010,8 @@ function exportStudentToExcel() {
     headerDiv.innerHTML = '<h3>Rekap Sholat Dhuha - ' + studentName + '</h3>';
     
     var table = document.getElementById('studentTable');
+    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    
     var newTable = table.cloneNode(true);
     
     var badges = newTable.querySelectorAll('.badge');
@@ -829,21 +1029,54 @@ function exportStudentToExcel() {
 }
 
 function exportStudentToPDF() {
-    const { jsPDF } = window.jspdf;
-    var doc = new jsPDF('p', 'mm', 'a4');
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Sholat Dhuha</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: A4 portrait; margin: 1cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 12px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; }');
+    printWindow.document.write('.badge { padding: 0; color: black !important; background-color: transparent !important; border: none; font-weight: bold; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
     
-    doc.setFontSize(14);
-    doc.text('Rekap Sholat Dhuha', 105, 15, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text('Nama: ' + studentName, 105, 25, { align: 'center' });
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha - ' + studentName + '</h4>');
+    printWindow.document.write('</div></div>');
     
-    doc.autoTable({ 
-        html: '#studentTable',
-        startY: 35,
-        theme: 'grid'
-    });
+    var table = document.getElementById('studentTable');
+    if (table) {
+        var tableHTML = table.outerHTML;
+        printWindow.document.write(tableHTML);
+    }
     
-    doc.save('rekap_sholat_dhuha_siswa_' + studentName.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf');
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>&nbsp;</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 500);
 }
 </script>
 

@@ -813,12 +813,13 @@ function exportDailyToPDF() {
     
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>&nbsp;</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
     printWindow.document.write('<br><br><br>');
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>Padang, ' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
     printWindow.document.write('<br><br><br>');
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
@@ -885,12 +886,13 @@ function exportStudentToPDF() {
     
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>&nbsp;</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
     printWindow.document.write('<br><br><br>');
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>Padang, ' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
     printWindow.document.write('<br><br><br>');
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
