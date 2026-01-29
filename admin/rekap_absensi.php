@@ -147,7 +147,7 @@ if ($class_id > 0) {
             if (!isset($attendance_by_student[$student_id])) {
                 $attendance_by_student[$student_id] = [
                     'days' => array_fill(1, 31, ''), // Initialize all days as empty
-                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
                 ];
             }
             $day = (int)$record['day'];
@@ -256,13 +256,13 @@ if ($class_id > 0) {
             if (!isset($attendance_by_student[$student_id])) {
                 $attendance_by_student[$student_id] = [
                     'monthly_totals' => [], // Initialize monthly totals array
-                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
                 ];
                 
                 // Initialize all months in semester
                 for ($m = $start_month; $m <= $end_month; $m++) {
                     $attendance_by_student[$student_id]['monthly_totals'][$m] = [
-                        'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
+                        'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0
                     ];
                 }
             }
@@ -458,9 +458,10 @@ include '../templates/sidebar.php';
                                                                         switch ($status_text) {
                                                                             case 'Hadir': $status_class = 'badge-success'; break;
                                                                             case 'Sakit': $status_class = 'badge-warning'; break;
-                                                                            case 'Izin': $status_class = 'badge-info'; break;
-                                                                            case 'Alpa': $status_class = 'badge-danger'; break;
-                                                                            default: $status_class = 'badge-secondary'; break;
+                                                                    case 'Izin': $status_class = 'badge-info'; break;
+                                                                    case 'Alpa': $status_class = 'badge-danger'; break;
+                                                                    case 'Berhalangan': $status_class = 'badge-danger'; break;
+                                                                    default: $status_class = 'badge-secondary'; break;
                                                                         }
                                                                         ?>
                                                                         <div class="badge <?php echo $status_class; ?>">
@@ -513,9 +514,9 @@ include '../templates/sidebar.php';
                                                                 
                                                                 for ($m = $start_month; $m <= $end_month; $m++):
                                                                 ?>
-                                                                    <th colspan="4" class="text-center"><?php echo $month_names[$m]; ?></th>
+                                                                    <th colspan="5" class="text-center"><?php echo $month_names[$m]; ?></th>
                                                                 <?php endfor; ?>
-                                                                <th colspan="4" class="text-center">Total Semester</th>
+                                                                <th colspan="5" class="text-center">Total Semester</th>
                                                             </tr>
                                                             <tr>
                                                                 <?php 
@@ -527,6 +528,7 @@ include '../templates/sidebar.php';
                                                                     <th>S</th>
                                                                     <th>I</th>
                                                                     <th>A</th>
+                                                                    <th>B</th>
                                                                 <?php endfor; ?>
                                                             </tr>
                                                         </thead>
@@ -542,20 +544,23 @@ include '../templates/sidebar.php';
                                                                         $hadir = $student['monthly_totals'][$m]['Hadir'] ?? 0;
                                                                         $sakit = $student['monthly_totals'][$m]['Sakit'] ?? 0;
                                                                         $izin = $student['monthly_totals'][$m]['Izin'] ?? 0;
-                                                                        $alpa = $student['monthly_totals'][$m]['Alpa'] ?? 0;
-                                                                        
-                                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($hadir > 0 ? $hadir : '-') . '</td>';
-                                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($sakit > 0 ? $sakit : '-') . '</td>';
-                                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($izin > 0 ? $izin : '-') . '</td>';
-                                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($alpa > 0 ? $alpa : '-') . '</td>';
-                                                                    endfor;
-                                                                    
-                                                                    // Display semester totals
-                                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Hadir'] . '</td>';
-                                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Sakit'] . '</td>';
-                                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Izin'] . '</td>';
-                                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Alpa'] . '</td>';
-                                                                    ?>
+                                                        $alpa = $student['monthly_totals'][$m]['Alpa'] ?? 0;
+                                                        $berhalangan = $student['monthly_totals'][$m]['Berhalangan'] ?? 0;
+                                                        
+                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($hadir > 0 ? $hadir : '-') . '</td>';
+                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($sakit > 0 ? $sakit : '-') . '</td>';
+                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($izin > 0 ? $izin : '-') . '</td>';
+                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($alpa > 0 ? $alpa : '-') . '</td>';
+                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($berhalangan > 0 ? $berhalangan : '-') . '</td>';
+                                                    endfor;
+                                                    
+                                                    // Display semester totals
+                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Hadir'] . '</td>';
+                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Sakit'] . '</td>';
+                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Izin'] . '</td>';
+                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Alpa'] . '</td>';
+                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Berhalangan'] . '</td>';
+                                                    ?>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>
@@ -600,7 +605,7 @@ include '../templates/sidebar.php';
                                                                     echo $month_names[$month_num] . ' ' . substr($selected_month, 0, 4);
                                                                     ?>
                                                                 </th>
-                                                                <th colspan="4" class="text-center">Total</th>
+                                                                <th colspan="5" class="text-center">Total</th>
                                                             </tr>
                                                             <tr>
                                                                 <?php for ($day = 1; $day <= 31; $day++): ?>
@@ -610,6 +615,7 @@ include '../templates/sidebar.php';
                                                                 <th>Sakit</th>
                                                                 <th>Izin</th>
                                                                 <th>Alpa</th>
+                                                                <th>Berhalangan</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -628,6 +634,7 @@ include '../templates/sidebar.php';
                                                                                     case 'Sakit': $status_class = 'badge-warning'; break;
                                                                                     case 'Izin': $status_class = 'badge-info'; break;
                                                                                     case 'Alpa': $status_class = 'badge-danger'; break;
+                                                                                    case 'Berhalangan': $status_class = 'badge-danger'; break;
                                                                                     default: $status_class = 'badge-secondary'; break;
                                                                                 }
                                                                                 echo '<span style="font-size: 10pt;">' . substr($status, 0, 1) . '</span>';
@@ -639,6 +646,7 @@ include '../templates/sidebar.php';
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Sakit']; ?></span></td>
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Izin']; ?></span></td>
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Alpa']; ?></span></td>
+                                                                    <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Berhalangan']; ?></span></td>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>
@@ -718,6 +726,21 @@ include '../templates/sidebar.php';
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card card-statistic-1">
+                                                            <div class="card-icon bg-danger">
+                                                                <i class="fas fa-ban"></i>
+                                                            </div>
+                                                            <div class="card-wrap">
+                                                                <div class="card-header">
+                                                                    <h4>Total Berhalangan</h4>
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <?php echo $student_attendance_summary['Berhalangan'] ?? 0; ?>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                                 
                                                 <!-- Detailed Attendance Table -->
@@ -745,6 +768,7 @@ include '../templates/sidebar.php';
                                                                             case 'Sakit': $status_class = 'badge-warning'; break;
                                                                             case 'Izin': $status_class = 'badge-info'; break;
                                                                             case 'Alpa': $status_class = 'badge-danger'; break;
+                                                                            case 'Berhalangan': $status_class = 'badge-danger'; break;
                                                                             default: $status_class = 'badge-secondary'; break;
                                                                         }
                                                                         ?>

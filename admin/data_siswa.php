@@ -273,7 +273,7 @@ if ($_POST['delete_siswa'] ?? false) {
 $selected_kelas_id = isset($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : 0;
 
 // Get class list for the dropdown
-$kelas_list = getAllKelas();
+$kelas_list = getAllKelas($pdo);
 
 // Prepare kelas options for JavaScript (for bulk edit modal)
 $kelas_options_js_array = [];
@@ -288,7 +288,7 @@ $kelas_options_js = json_encode($kelas_options_js_array);
 // Get students if a class is selected
 $students = [];
 if ($selected_kelas_id > 0) {
-    $students = getStudentsByClass($selected_kelas_id);
+    $students = getStudentsByClass($pdo, $selected_kelas_id);
 }
 
 include '../templates/header.php';

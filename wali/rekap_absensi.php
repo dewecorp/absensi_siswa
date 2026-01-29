@@ -390,7 +390,8 @@ include '../templates/user_header.php';
                                                                             case 'Sakit': $status_class = 'badge-warning'; break;
                                                                             case 'Izin': $status_class = 'badge-info'; break;
                                                                             case 'Alpa': $status_class = 'badge-danger'; break;
-                                                                            default: $status_class = 'badge-secondary'; break;
+                                                                    case 'Berhalangan': $status_class = 'badge-danger'; break;
+                                                                    default: $status_class = 'badge-secondary'; break;
                                                                         }
                                                                         ?>
                                                                         <div class="badge <?php echo $status_class; ?>">
@@ -443,13 +444,13 @@ include '../templates/user_header.php';
                                                                 
                                                                 for ($m = $start_month; $m <= $end_month; $m++):
                                                                 ?>
-                                                                    <th colspan="4" class="text-center"><?php echo $month_names[$m]; ?></th>
+                                                                    <th colspan="5" class="text-center"><?php echo $month_names[$m]; ?></th>
                                                                 <?php endfor; ?>
-                                                                <th colspan="4" class="text-center">Total Semester</th>
+                                                                <th colspan="5" class="text-center">Total Semester</th>
                                                             </tr>
                                                             <tr>
                                                                 <?php 
-                                                                // Sub-headers for each month: Hadir, Sakit, Izin, Alpa
+                                                                // Sub-headers for each month: Hadir, Sakit, Izin, Alpa, Berhalangan
                                                                 $total_months = ($end_month - $start_month) + 1;
                                                                 for ($i = 0; $i < $total_months + 1; $i++): // +1 for semester total
                                                                 ?>
@@ -457,6 +458,7 @@ include '../templates/user_header.php';
                                                                     <th>S</th>
                                                                     <th>I</th>
                                                                     <th>A</th>
+                                                                    <th>B</th>
                                                                 <?php endfor; ?>
                                                             </tr>
                                                         </thead>
@@ -473,11 +475,13 @@ include '../templates/user_header.php';
                                                                         $sakit = $student['monthly_totals'][$m]['Sakit'] ?? 0;
                                                                         $izin = $student['monthly_totals'][$m]['Izin'] ?? 0;
                                                                         $alpa = $student['monthly_totals'][$m]['Alpa'] ?? 0;
+                                                                        $berhalangan = $student['monthly_totals'][$m]['Berhalangan'] ?? 0;
                                                                         
                                                                         echo '<td class="text-center">' . ($hadir > 0 ? '<span class="badge badge-success">' . $hadir . '</span>' : '-') . '</td>';
                                                                         echo '<td class="text-center">' . ($sakit > 0 ? '<span class="badge badge-warning">' . $sakit . '</span>' : '-') . '</td>';
                                                                         echo '<td class="text-center">' . ($izin > 0 ? '<span class="badge badge-info">' . $izin . '</span>' : '-') . '</td>';
                                                                         echo '<td class="text-center">' . ($alpa > 0 ? '<span class="badge badge-danger">' . $alpa . '</span>' : '-') . '</td>';
+                                                                        echo '<td class="text-center">' . ($berhalangan > 0 ? '<span class="badge badge-danger">' . $berhalangan . '</span>' : '-') . '</td>';
                                                                     endfor;
                                                                     
                                                                     // Display semester totals
@@ -485,6 +489,7 @@ include '../templates/user_header.php';
                                                                     echo '<td class="text-center"><span class="badge badge-warning">' . $student['summary']['Sakit'] . '</span></td>';
                                                                     echo '<td class="text-center"><span class="badge badge-info">' . $student['summary']['Izin'] . '</span></td>';
                                                                     echo '<td class="text-center"><span class="badge badge-danger">' . $student['summary']['Alpa'] . '</span></td>';
+                                                                    echo '<td class="text-center"><span class="badge badge-danger">' . $student['summary']['Berhalangan'] . '</span></td>';
                                                                     ?>
                                                                 </tr>
                                                             <?php endforeach; ?>
@@ -540,6 +545,7 @@ include '../templates/user_header.php';
                                                                 <th>Sakit</th>
                                                                 <th>Izin</th>
                                                                 <th>Alpa</th>
+                                                                <th>Berhalangan</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -558,7 +564,8 @@ include '../templates/user_header.php';
                                                                                     case 'Sakit': $status_class = 'badge-warning'; break;
                                                                                     case 'Izin': $status_class = 'badge-info'; break;
                                                                                     case 'Alpa': $status_class = 'badge-danger'; break;
-                                                                                    default: $status_class = 'badge-secondary'; break;
+                                                                    case 'Berhalangan': $status_class = 'badge-danger'; break;
+                                                                    default: $status_class = 'badge-secondary'; break;
                                                                                 }
                                                                                 echo '<span class="badge ' . $status_class . ' badge-sm">' . substr($status, 0, 1) . '</span>';
                                                                             }
@@ -644,6 +651,21 @@ include '../templates/user_header.php';
                                                                 </div>
                                                                 <div class="card-body">
                                                                     <?php echo $student_attendance_summary['Alpa'] ?? 0; ?>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card card-statistic-1">
+                                                            <div class="card-icon bg-danger">
+                                                                <i class="fas fa-ban"></i>
+                                                            </div>
+                                                            <div class="card-wrap">
+                                                                <div class="card-header">
+                                                                    <h4>Total Berhalangan</h4>
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <?php echo $student_attendance_summary['Berhalangan'] ?? 0; ?>
                                                                 </div>
                                                             </div>
                                                         </div>

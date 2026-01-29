@@ -27,6 +27,63 @@ $stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal =
 $stmt->execute([$id_siswa, $today]);
 $attendance = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Get sholat status for female students
+$sholat_status = '';
+if ($student['jenis_kelamin'] == 'P') {
+    $stmt = $pdo->prepare("SELECT status FROM tb_sholat WHERE id_siswa = ? AND tanggal = ?");
+    $stmt->execute([$id_siswa, $today]);
+    $sholat_data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $sholat_status = $sholat_data ? $sholat_data['status'] : '';
+}
+
+// Handle Berhalangan (Menstruation) Toggle
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['toggle_berhalangan']) && $student['jenis_kelamin'] == 'P') {
+    $action = $_POST['toggle_berhalangan']; // 'set' or 'unset'
+    
+    if ($action == 'set') {
+        $new_status = 'Berhalangan';
+        $swal_message = [
+            'title' => 'Berhasil!',
+            'text' => 'Status berhalangan berhasil dicatat.',
+            'icon' => 'success'
+        ];
+    } else {
+        // Revert status based on attendance
+        $new_status = 'Tidak Melaksanakan'; // Default
+        if ($attendance) {
+            if (in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])) {
+                $new_status = 'Melaksanakan';
+            }
+        }
+        $swal_message = [
+            'title' => 'Berhasil!',
+            'text' => 'Status berhalangan dibatalkan.',
+            'icon' => 'success'
+        ];
+    }
+
+    // Update tb_sholat
+    $stmt = $pdo->prepare("SELECT id_sholat FROM tb_sholat WHERE id_siswa = ? AND tanggal = ?");
+    $stmt->execute([$id_siswa, $today]);
+    if ($stmt->fetch()) {
+        $pdo->prepare("UPDATE tb_sholat SET status = ? WHERE id_siswa = ? AND tanggal = ?")->execute([$new_status, $id_siswa, $today]);
+    } else {
+        $pdo->prepare("INSERT INTO tb_sholat (id_siswa, tanggal, status) VALUES (?, ?, ?)")->execute([$id_siswa, $today, $new_status]);
+    }
+
+    // Update tb_sholat_dhuha
+    $stmt = $pdo->prepare("SELECT id_sholat FROM tb_sholat_dhuha WHERE id_siswa = ? AND tanggal = ?");
+    $stmt->execute([$id_siswa, $today]);
+    if ($stmt->fetch()) {
+        $pdo->prepare("UPDATE tb_sholat_dhuha SET status = ? WHERE id_siswa = ? AND tanggal = ?")->execute([$new_status, $id_siswa, $today]);
+    } else {
+        $pdo->prepare("INSERT INTO tb_sholat_dhuha (id_siswa, tanggal, status) VALUES (?, ?, ?)")->execute([$id_siswa, $today, $new_status]);
+    }
+    
+    // Refresh status variable
+    $sholat_status = $new_status;
+}
+
 // Handle Manual Attendance
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['absen_status'])) {
@@ -159,6 +216,33 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
+
+            <?php if ($student['jenis_kelamin'] == 'P'): ?>
+            <div class="card card-danger mt-4">
+                <div class="card-header">
+                    <h4>Laporan Berhalangan (Haid)</h4>
+                </div>
+                <div class="card-body text-center">
+                    <?php if ($sholat_status == 'Berhalangan'): ?>
+                        <div class="alert alert-info mb-4">
+                            Status saat ini: <b>Sedang Berhalangan</b>
+                        </div>
+                        <form method="POST" action="">
+                            <button type="submit" name="toggle_berhalangan" value="unset" class="btn btn-outline-danger btn-lg btn-block">
+                                <i class="fas fa-check-circle mr-2"></i> Saya sudah suci / Batalkan
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <p class="mb-4">Jika Anda sedang berhalangan (haid), silakan klik tombol di bawah ini:</p>
+                        <form method="POST" action="">
+                            <button type="submit" name="toggle_berhalangan" value="set" class="btn btn-danger btn-lg btn-block">
+                                <i class="fas fa-female mr-2"></i> Saya sedang berhalangan
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
 
         <div class="row">

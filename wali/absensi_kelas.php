@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             $keterangan = $value;
             
             // Validate keterangan value
-            if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+            if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Berhalangan'])) {
                 continue; // Skip invalid values
             }
             
@@ -216,6 +216,7 @@ include '../templates/user_header.php';
                                                                 <option value="Sakit" <?php echo ($student['keterangan'] ?? '') === 'Sakit' ? 'selected' : ''; ?>>Sakit</option>
                                                                 <option value="Izin" <?php echo ($student['keterangan'] ?? '') === 'Izin' ? 'selected' : ''; ?>>Izin</option>
                                                                 <option value="Alpa" <?php echo ($student['keterangan'] ?? '') === 'Alpa' ? 'selected' : ''; ?>>Alpa</option>
+                                                                <option value="Berhalangan" <?php echo ($student['keterangan'] ?? '') === 'Berhalangan' ? 'selected' : ''; ?>>Berhalangan</option>
                                                             </select>
                                                         </td>
                                                     </tr>

@@ -2,17 +2,50 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-// Check if user is logged in and has admin, wali, or guru level
-if (!isAuthorized(['admin', 'wali', 'guru', 'tata_usaha'])) {
+// Check if user is logged in and has guru level
+if (!isAuthorized(['guru'])) {
     redirect('../login.php');
 }
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
 
-// Get all classes
-$stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
-$classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get teacher information
+if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {
+    // Direct login via NUPTK, user_id is actually the id_guru
+    $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+} else {
+    // Traditional login via tb_pengguna
+    $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Check if teacher was found
+if (!$teacher) {
+    die('Error: Teacher data not found');
+}
+
+// Ensure nama_guru is set in session
+if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
+    $_SESSION['nama_guru'] = $teacher['nama_guru'];
+}
+
+// Get classes that this teacher teaches
+$classes = [];
+if (!empty($teacher['mengajar'])) {
+    $mengajar_decoded = json_decode($teacher['mengajar'], true);
+    
+    if (is_array($mengajar_decoded) && !empty($mengajar_decoded)) {
+        // Build placeholders for IN clause
+        $placeholders = implode(',', array_fill(0, count($mengajar_decoded), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
+        $stmt->execute($mengajar_decoded);
+        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
 
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
@@ -33,31 +66,48 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             }
             
             // Check if attendance already exists for this student and date
-            $check_stmt = $pdo->prepare("SELECT * FROM tb_sholat_dhuha WHERE id_siswa = ? AND tanggal = ?");
+            $check_stmt = $pdo->prepare("SELECT * FROM tb_sholat WHERE id_siswa = ? AND tanggal = ?");
             $check_stmt->execute([$id_siswa, $tanggal]);
             
             if ($check_stmt->rowCount() > 0) {
                 // Update existing record
-                $update_stmt = $pdo->prepare("UPDATE tb_sholat_dhuha SET status = ? WHERE id_siswa = ? AND tanggal = ?");
+                $update_stmt = $pdo->prepare("UPDATE tb_sholat SET status = ? WHERE id_siswa = ? AND tanggal = ?");
                 $update_stmt->execute([$status, $id_siswa, $tanggal]);
             } else {
                 // Insert new record
-                $insert_stmt = $pdo->prepare("INSERT INTO tb_sholat_dhuha (id_siswa, tanggal, status) VALUES (?, ?, ?)");
+                $insert_stmt = $pdo->prepare("INSERT INTO tb_sholat (id_siswa, tanggal, status) VALUES (?, ?, ?)");
                 $insert_stmt->execute([$id_siswa, $tanggal, $status]);
             }
+            
+            // Sync with Sholat Dhuha if Berhalangan
+            if ($status == 'Berhalangan') {
+                $check_dhuha = $pdo->prepare("SELECT * FROM tb_sholat_dhuha WHERE id_siswa = ? AND tanggal = ?");
+                $check_dhuha->execute([$id_siswa, $tanggal]);
+                if ($check_dhuha->rowCount() > 0) {
+                     $update_dhuha = $pdo->prepare("UPDATE tb_sholat_dhuha SET status = 'Berhalangan' WHERE id_siswa = ? AND tanggal = ?");
+                     $update_dhuha->execute([$id_siswa, $tanggal]);
+                } else {
+                     $insert_dhuha = $pdo->prepare("INSERT INTO tb_sholat_dhuha (id_siswa, tanggal, status) VALUES (?, ?, 'Berhalangan')");
+                     $insert_dhuha->execute([$id_siswa, $tanggal]);
+                }
+            }
+            
             $saved_count++;
         }
     }
     
-    $message = ['type' => 'success', 'text' => "Data sholat dhuha berhasil disimpan untuk $saved_count siswa!"];
-    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-    logActivity($pdo, $username, 'Input Sholat Dhuha', "Admin " . $username . " melakukan input sholat dhuha kelas ID: $id_kelas untuk $saved_count siswa");
+    $message = ['type' => 'success', 'text' => "Data sholat berjamaah berhasil disimpan untuk $saved_count siswa!"];
+    $username = isset($_SESSION['nama_guru']) ? $_SESSION['nama_guru'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'Guru');
+    // Using simple logActivity wrapper if available, or manual insert if needed. 
+    // Assuming logActivity is globally available from functions.php
+    if (function_exists('logActivity')) {
+        logActivity($pdo, $_SESSION['user_id'], 'Input Sholat Berjamaah', "Guru $username melakukan input sholat berjamaah kelas ID: $id_kelas untuk $saved_count siswa");
+    }
 }
 
 // Get students for selected class
 $students = [];
-$debug_info = [];
-$class_info = []; // Initialize class info
+$class_info = [];
 if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     $id_kelas = (int)$_GET['kelas'];
     
@@ -68,21 +118,17 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     
     $tanggal = isset($_GET['tanggal']) && !empty($_GET['tanggal']) ? $_GET['tanggal'] : date('Y-m-d');
     
-    // Get all students in the class, with their attendance status if exists
+    // Get all students in the class
     try {
         $stmt = $pdo->prepare("SELECT s.*, sh.status as status_sholat, ab.keterangan as status_absensi 
                                FROM tb_siswa s 
-                               LEFT JOIN tb_sholat_dhuha sh ON s.id_siswa = sh.id_siswa AND sh.tanggal = ? 
+                               LEFT JOIN tb_sholat sh ON s.id_siswa = sh.id_siswa AND sh.tanggal = ? 
                                LEFT JOIN tb_absensi ab ON s.id_siswa = ab.id_siswa AND ab.tanggal = ?
                                WHERE s.id_kelas = ? 
                                ORDER BY s.nama_siswa ASC");
         $stmt->execute([$tanggal, $tanggal, $id_kelas]);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $debug_info['students_found'] = count($students);
-        $debug_info['id_kelas'] = $id_kelas;
-        $debug_info['tanggal'] = $tanggal;
     } catch (Exception $e) {
-        $debug_info['query_error'] = $e->getMessage();
         $students = [];
     }
 } else {
@@ -90,9 +136,9 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
 }
 
 // Set page title
-$page_title = 'Sholat Dhuha';
+$page_title = 'Sholat Berjamaah';
 
-// Define CSS libraries for this page
+// Define CSS libraries
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
 ];
@@ -104,11 +150,11 @@ include '../templates/header.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Sholat Dhuha</h1>
+            <h1>Sholat Berjamaah</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
                 <div class="breadcrumb-item">Absensi</div>
-                <div class="breadcrumb-item">Sholat Dhuha</div>
+                <div class="breadcrumb-item">Sholat Berjamaah</div>
             </div>
         </div>
 
@@ -116,7 +162,7 @@ include '../templates/header.php';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4>Form Absensi Sholat Dhuha</h4>
+                        <h4>Form Absensi Sholat Berjamaah</h4>
                     </div>
                     <div class="card-body">
                         <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" id="filterForm">
@@ -162,11 +208,6 @@ include '../templates/header.php';
                                     <tbody>
                                         <?php foreach ($students as $index => $student): ?>
                                         <?php
-                                            // Determine status logic
-                                            // Priority 1: Daily attendance (Sakit/Izin/Alpa -> Tidak Hadir)
-                                            // Priority 2: Existing sholat record
-                                            // Priority 3: Default 'Hadir'
-                                            
                                             $status_sholat = $student['status_sholat'] ?? null;
                                             $status_absensi = $student['status_absensi'] ?? null;
                                             $is_absent_daily = in_array($status_absensi, ['Sakit', 'Izin', 'Alpa']);
@@ -185,7 +226,7 @@ include '../templates/header.php';
                                                 <?php echo htmlspecialchars($student['nama_siswa']); ?>
                                                 <span class="ml-2 badge <?php 
                                                     if ($current_status == 'Hadir') echo 'badge-success';
-                                                    elseif ($current_status == 'Berhalangan') echo 'badge-warning';
+                                                    elseif ($current_status == 'Berhalangan') echo 'badge-danger';
                                                     else echo 'badge-danger';
                                                 ?>" id="badge_<?php echo $student['id_siswa']; ?>">
                                                     <?php echo $current_status; ?>
@@ -231,6 +272,10 @@ include '../templates/header.php';
                         <?php elseif (isset($_GET['kelas']) && !empty($_GET['kelas'])): ?>
                         <div class="alert alert-info">
                             <p class="text-center mb-0">Belum ada siswa dalam kelas ini.</p>
+                        </div>
+                        <?php else: ?>
+                        <div class="alert alert-info">
+                            <p class="text-center mb-0">Silakan pilih kelas terlebih dahulu.</p>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -297,7 +342,7 @@ function updateBadgeLocal(id, status) {
     if (status === 'Hadir') {
         badge.addClass('badge-success').text('Hadir');
     } else if (status === 'Berhalangan') {
-        badge.addClass('badge-warning').text('Berhalangan');
+        badge.addClass('badge-danger').text('Berhalangan');
     } else {
         badge.addClass('badge-danger').text('Tidak Hadir');
     }

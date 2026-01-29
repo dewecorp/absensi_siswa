@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             $status = $value;
             
             // Validate status value
-            if (!in_array($status, ['Hadir', 'Tidak Hadir'])) {
+            if (!in_array($status, ['Hadir', 'Tidak Hadir', 'Berhalangan'])) {
                 continue; // Skip invalid values
             }
             
@@ -184,7 +184,9 @@ include '../templates/header.php';
                                             <td>
                                                 <?php echo htmlspecialchars($student['nama_siswa']); ?>
                                                 <span class="ml-2 badge <?php 
-                                                    echo ($current_status == 'Hadir') ? 'badge-success' : 'badge-danger';
+                                                    if ($current_status == 'Hadir') echo 'badge-success';
+                                                    elseif ($current_status == 'Berhalangan') echo 'badge-warning';
+                                                    else echo 'badge-danger';
                                                 ?>" id="badge_<?php echo $student['id_siswa']; ?>">
                                                     <?php echo $current_status; ?>
                                                 </span>
@@ -205,6 +207,13 @@ include '../templates/header.php';
                                                         <input type="radio" name="status_<?php echo $student['id_siswa']; ?>" value="Tidak Hadir" 
                                                                <?php echo $current_status === 'Tidak Hadir' ? 'checked' : ''; ?>> Tidak Hadir
                                                     </label>
+                                                    <?php if ($student['jenis_kelamin'] == 'P'): ?>
+                                                    <label class="btn btn-outline-warning <?php echo $current_status === 'Berhalangan' ? 'active' : ''; ?>"
+                                                           onclick="updateBadgeLocal(<?php echo $student['id_siswa']; ?>, 'Berhalangan')">
+                                                        <input type="radio" name="status_<?php echo $student['id_siswa']; ?>" value="Berhalangan" 
+                                                               <?php echo $current_status === 'Berhalangan' ? 'checked' : ''; ?>> Berhalangan
+                                                    </label>
+                                                    <?php endif; ?>
                                                 </div>
                                             </td>
                                         </tr>
@@ -284,10 +293,13 @@ $(document).ready(function() {
 
 function updateBadgeLocal(id, status) {
     var badge = $('#badge_' + id);
+    badge.removeClass('badge-danger badge-success badge-warning');
     if (status === 'Hadir') {
-        badge.removeClass('badge-danger').addClass('badge-success').text('Hadir');
+        badge.addClass('badge-success').text('Hadir');
+    } else if (status === 'Berhalangan') {
+        badge.addClass('badge-warning').text('Berhalangan');
     } else {
-        badge.removeClass('badge-success').addClass('badge-danger').text('Tidak Hadir');
+        badge.addClass('badge-danger').text('Tidak Hadir');
     }
 }
 ";

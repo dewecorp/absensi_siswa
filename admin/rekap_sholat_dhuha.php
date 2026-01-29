@@ -312,10 +312,10 @@ if ($class_id > 0) {
         foreach ($all_students as $student) {
             $sid = $student['id_siswa'];
             $monthly_totals = [];
-            $sem_summary = ['Hadir' => 0, 'Tidak Hadir' => 0];
+            $sem_summary = ['Hadir' => 0, 'Tidak Hadir' => 0, 'Berhalangan' => 0];
             
             for ($m = $start_month; $m <= $end_month; $m++) {
-                $monthly_totals[$m] = ['Hadir' => 0, 'Tidak Hadir' => 0];
+                $monthly_totals[$m] = ['Hadir' => 0, 'Tidak Hadir' => 0, 'Berhalangan' => 0];
                 // Loop through days 1-31
                 for ($d = 1; $d <= 31; $d++) {
                     $abs = $absensi_map[$sid][$m][$d] ?? null;
@@ -337,6 +337,9 @@ if ($class_id > 0) {
                     } elseif ($st === 'Tidak Hadir') {
                         $monthly_totals[$m]['Tidak Hadir']++;
                         $sem_summary['Tidak Hadir']++;
+                    } elseif ($st === 'Berhalangan') {
+                        $monthly_totals[$m]['Berhalangan']++;
+                        $sem_summary['Berhalangan']++;
                     }
                 }
             }
@@ -453,6 +456,8 @@ include '../templates/sidebar.php';
                                         <td>
                                             <?php if ($r['keterangan'] == 'Hadir'): ?>
                                                 <span class="badge badge-success">Hadir</span>
+                                            <?php elseif ($r['keterangan'] == 'Berhalangan'): ?>
+                                                <span class="badge badge-warning">Berhalangan</span>
                                             <?php elseif ($r['keterangan'] == 'Tidak Hadir'): ?>
                                                 <span class="badge badge-danger">Tidak Hadir</span>
                                             <?php else: ?>
@@ -488,12 +493,13 @@ include '../templates/sidebar.php';
                                         <th rowspan="2" style="vertical-align: middle;">No</th>
                                         <th rowspan="2" style="vertical-align: middle; text-align: left;">Nama Siswa</th>
                                         <th colspan="31">Tanggal</th>
-                                        <th colspan="2">Total</th>
+                                        <th colspan="3">Total</th>
                                     </tr>
                                     <tr>
                                         <?php for($d=1; $d<=31; $d++) echo "<th>$d</th>"; ?>
                                         <th>H</th>
                                         <th>TH</th>
+                                        <th>B</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -506,12 +512,14 @@ include '../templates/sidebar.php';
                                                 <?php 
                                                     $s = $r['days'][$d];
                                                     if ($s === 'Hadir') echo '<i class="fas fa-check text-success"></i>';
+                                                    elseif ($s === 'Berhalangan') echo '<i class="fas fa-ban text-warning"></i>';
                                                     elseif ($s === 'Tidak Hadir') echo '<i class="fas fa-times text-danger"></i>';
                                                 ?>
                                             </td>
                                         <?php endfor; ?>
                                         <td><?php echo $r['summary']['Hadir']; ?></td>
                                         <td><?php echo $r['summary']['Tidak Hadir']; ?></td>
+                                        <td><?php echo $r['summary']['Berhalangan']; ?></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -546,13 +554,16 @@ include '../templates/sidebar.php';
                                                 echo "<th colspan='2' class='text-center'>{$month_names[$m]}</th>";
                                             }
                                         ?>
-                                        <th colspan="2" class="text-center">Total</th>
+                                        <th colspan="3" class="text-center">Total</th>
                                     </tr>
                                     <tr>
-                                        <?php for ($m = $start_month; $m <= $end_month + 1; $m++): ?>
+                                        <?php for ($m = $start_month; $m <= $end_month; $m++): ?>
                                             <th>H</th>
                                             <th>TH</th>
                                         <?php endfor; ?>
+                                        <th>H</th>
+                                        <th>TH</th>
+                                        <th>B</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -615,6 +626,10 @@ include '../templates/sidebar.php';
                                     <div class="d-inline-block p-2 bg-danger text-white rounded text-center" style="min-width: 100px;">
                                         <h3 class="mb-0"><?php echo $student_attendance_summary['Tidak Hadir']; ?></h3>
                                         <small>Total Tidak Hadir</small>
+                                    </div>
+                                    <div class="d-inline-block p-2 bg-warning text-white rounded text-center ml-3" style="min-width: 100px;">
+                                        <h3 class="mb-0"><?php echo $student_attendance_summary['Berhalangan']; ?></h3>
+                                        <small>Total Berhalangan</small>
                                     </div>
                                 </div>
                             </div>
@@ -750,6 +765,7 @@ function exportToPDF() {
         // Let's replace icons with characters for simplicity in print view
         tableHTML = tableHTML.replace(/<i class="fas fa-check[^"]*"><\/i>/g, 'v');
         tableHTML = tableHTML.replace(/<i class="fas fa-times[^"]*"><\/i>/g, 'x');
+        tableHTML = tableHTML.replace(/<i class="fas fa-ban[^"]*"><\/i>/g, 'b');
         printWindow.document.write(tableHTML);
     }
     

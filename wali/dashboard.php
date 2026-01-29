@@ -71,7 +71,7 @@ if ($wali_kelas) {
 }
 
 // Initialize counts
-$jumlah_hadir = $jumlah_sakit = $jumlah_izin = $jumlah_alpa = 0;
+$jumlah_hadir = $jumlah_sakit = $jumlah_izin = $jumlah_alpa = $jumlah_berhalangan = 0;
 foreach ($attendance_stats as $stat) {
     switch ($stat['keterangan']) {
         case 'Hadir':
@@ -85,6 +85,9 @@ foreach ($attendance_stats as $stat) {
             break;
         case 'Alpa':
             $jumlah_alpa = $stat['jumlah'];
+            break;
+        case 'Berhalangan':
+            $jumlah_berhalangan = $stat['jumlah'];
             break;
     }
 }
@@ -100,7 +103,8 @@ if ($wali_kelas) {
             SUM(CASE WHEN a.keterangan = 'Hadir' THEN 1 ELSE 0 END) as hadir,
             SUM(CASE WHEN a.keterangan = 'Sakit' THEN 1 ELSE 0 END) as sakit,
             SUM(CASE WHEN a.keterangan = 'Izin' THEN 1 ELSE 0 END) as izin,
-            SUM(CASE WHEN a.keterangan = 'Alpa' THEN 1 ELSE 0 END) as alpa
+            SUM(CASE WHEN a.keterangan = 'Alpa' THEN 1 ELSE 0 END) as alpa,
+            SUM(CASE WHEN a.keterangan = 'Berhalangan' THEN 1 ELSE 0 END) as berhalangan
         FROM tb_absensi a
         JOIN tb_siswa s ON a.id_siswa = s.id_siswa
         WHERE s.id_kelas = ? AND a.tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
@@ -117,6 +121,7 @@ $hadir_data = [];
 $sakit_data = [];
 $izin_data = [];
 $alpa_data = [];
+$berhalangan_data = [];
 
 foreach ($attendance_trends as $trend) {
     $dates[] = $trend['tanggal'] ? date('d M', strtotime($trend['tanggal'])) : '';
@@ -124,6 +129,7 @@ foreach ($attendance_trends as $trend) {
     $sakit_data[] = isset($trend['sakit']) ? (int)$trend['sakit'] : 0;
     $izin_data[] = isset($trend['izin']) ? (int)$trend['izin'] : 0;
     $alpa_data[] = isset($trend['alpa']) ? (int)$trend['alpa'] : 0;
+    $berhalangan_data[] = isset($trend['berhalangan']) ? (int)$trend['berhalangan'] : 0;
 }
 
 // Convert arrays to JSON-safe format
@@ -132,6 +138,7 @@ $hadir_data_json = json_encode($hadir_data);
 $sakit_data_json = json_encode($sakit_data);
 $izin_data_json = json_encode($izin_data);
 $alpa_data_json = json_encode($alpa_data);
+$berhalangan_data_json = json_encode($berhalangan_data);
 
 // Calculate total classes taught by this wali (as a teacher)
 $total_kelas_ajar = 0;
@@ -270,26 +277,29 @@ $js_page = [
                     var myChart = new Chart(ctx2d, {
                         type: 'bar',
                         data: {
-                            labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'],
+                            labels: ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Berhalangan'],
                             datasets: [{
                                 label: 'Jumlah Siswa',
                                 data: [
                                     " . $jumlah_hadir . ",
                                     " . $jumlah_sakit . ",
                                     " . $jumlah_izin . ",
-                                    " . $jumlah_alpa . "
+                                    " . $jumlah_alpa . ",
+                                    " . $jumlah_berhalangan . "
                                 ],
                                 backgroundColor: [
                                     'rgba(54, 162, 235, 0.2)',
                                     'rgba(255, 99, 132, 0.2)',
                                     'rgba(255, 206, 86, 0.2)',
-                                    'rgba(153, 102, 255, 0.2)'
+                                    'rgba(153, 102, 255, 0.2)',
+                                    'rgba(220, 53, 69, 0.2)'
                                 ],
                                 borderColor: [
                                     'rgba(54, 162, 235, 1)',
                                     'rgba(255,99,132,1)',
                                     'rgba(255, 206, 86, 1)',
-                                    'rgba(153, 102, 255, 1)'
+                                    'rgba(153, 102, 255, 1)',
+                                    'rgba(220, 53, 69, 1)'
                                 ],
                                 borderWidth: 1
                             }]
@@ -367,6 +377,12 @@ $js_page = [
                                 data: " . $alpa_data_json . ",
                                 borderColor: 'rgb(153, 102, 255)',
                                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                fill: false
+                            }, {
+                                label: 'Berhalangan',
+                                data: " . $berhalangan_data_json . ",
+                                borderColor: 'rgb(220, 53, 69)',
+                                backgroundColor: 'rgba(220, 53, 69, 0.2)',
                                 fill: false
                             }]
                         },
@@ -653,6 +669,21 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-danger">
+                                    <i class="fas fa-ban"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Berhalangan</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_berhalangan; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Attendance Box for Teacher -->
@@ -820,6 +851,7 @@ include '../templates/sidebar.php';
                                                                 case 'sakit': echo 'warning'; break;
                                                                 case 'izin': echo 'info'; break;
                                                                 case 'alpa': echo 'danger'; break;
+                                                                case 'berhalangan': echo 'danger'; break;
                                                                 default: echo 'secondary'; break;
                                                             }
                                                         ?>"><?php echo htmlspecialchars($siswa['attendance_status'] ?? 'Belum Absen'); ?></div>

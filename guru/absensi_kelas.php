@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             $keterangan = $value;
             
             // Validate keterangan value
-            if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+            if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Berhalangan'])) {
                 continue; // Skip invalid values
             }
             
@@ -602,6 +602,9 @@ include '../templates/user_header.php';
                                                             echo 'badge-warning';
                                                             break;
                                                         case 'Alpa':
+                                                            echo 'badge-danger';
+                                                            break;
+                                                        case 'Berhalangan':
                                                             echo 'badge-danger';
                                                             break;
                                                         default:

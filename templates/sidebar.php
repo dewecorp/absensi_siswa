@@ -198,10 +198,17 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Absensi Kelas',
+                'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
-                'url' => '../guru/absensi_kelas.php',
-                'active' => $current_page === 'absensi_kelas.php'
+                'submenu' => [
+                    ['title' => 'Absensi Harian', 'url' => '../guru/absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
+                    ['title' => 'Rekap Absensi Harian', 'url' => '../guru/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+                    ['title' => 'Sholat Berjamaah', 'url' => '../guru/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
+                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../guru/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
+                    ['title' => 'Sholat Dhuha', 'url' => '../guru/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
+                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../guru/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
+                ],
+                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Jadwal Pelajaran',
@@ -256,9 +263,13 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => [
                     ['title' => 'Absensi Harian', 'url' => '../wali/absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
-                    ['title' => 'Rekap Absensi', 'url' => '../wali/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                    ['title' => 'Rekap Absensi', 'url' => '../wali/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+                    ['title' => 'Sholat Berjamaah', 'url' => '../wali/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
+                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../wali/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
+                    ['title' => 'Sholat Dhuha', 'url' => '../wali/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
+                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../wali/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
                 ],
-                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php'])
+                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Jurnal Mengajar',
@@ -297,10 +308,14 @@ switch ($user_level) {
                 'active' => $current_page === 'jadwal_pelajaran.php'
             ],
             [
-                'title' => 'Rekap Absensi',
-                'icon' => 'fas fa-chart-bar',
-                'url' => '../siswa/rekap_absensi.php',
-                'active' => $current_page === 'rekap_absensi.php'
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => [
+                    ['title' => 'Rekap Absensi Harian', 'url' => '../siswa/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../siswa/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
+                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../siswa/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
+                ],
+                'active' => in_array($current_page, ['rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Logout',

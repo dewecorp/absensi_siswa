@@ -34,6 +34,32 @@ if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
 
 $message = null;
 
+// Handle profile update
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+    
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) && !empty($email)) {
+        $message = ['type' => 'warning', 'text' => 'Format email tidak valid!'];
+    } else {
+        // Update email
+        $stmt = $pdo->prepare("UPDATE tb_guru SET email = ? WHERE id_guru = ?");
+        if ($stmt->execute([$email, $teacher['id_guru']])) {
+            $message = ['type' => 'success', 'text' => 'Profil berhasil diperbarui!'];
+            
+            // Log activity
+            $username = isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system';
+            logActivity($pdo, $username, 'Update Profil', 'Wali memperbarui email profil');
+            
+            // Refresh teacher data
+            $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+            $stmt->execute([$teacher['id_guru']]);
+            $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+        } else {
+            $message = ['type' => 'danger', 'text' => 'Gagal memperbarui profil!'];
+        }
+    }
+}
+
 // Handle password change
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ubah_password'])) {
     $current_password = $_POST['current_password'] ?? '';
@@ -96,24 +122,36 @@ include '../templates/user_header.php';
                             <h4>Informasi Profil</h4>
                         </div>
                         <div class="card-body">
-                            <div class="form-group">
-                                <label>Nama Guru</label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>NUPTK</label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['nuptk']); ?>" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>Jenis Kelamin</label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['jenis_kelamin']); ?>" readonly>
-                            </div>
-                            <?php if (!empty($teacher['tempat_lahir']) || !empty($teacher['tanggal_lahir'])): ?>
-                            <div class="form-group">
-                                <label>Tempat, Tanggal Lahir</label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['tempat_lahir']); ?><?php echo !empty($teacher['tempat_lahir']) && !empty($teacher['tanggal_lahir']) ? ', ' : ''; ?><?php echo $teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : ''; ?>" readonly>
-                            </div>
-                            <?php endif; ?>
+                            <form method="POST" action="">
+                                <div class="form-group">
+                                    <label>Nama Guru</label>
+                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>NUPTK</label>
+                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['nuptk']); ?>" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email (untuk reset password)</label>
+                                    <input type="email" class="form-control" name="email" value="<?php echo htmlspecialchars($teacher['email'] ?? ''); ?>" placeholder="Masukkan email aktif">
+                                </div>
+                                <div class="form-group">
+                                    <label>Jenis Kelamin</label>
+                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['jenis_kelamin']); ?>" readonly>
+                                </div>
+                                <?php if (!empty($teacher['tempat_lahir']) || !empty($teacher['tanggal_lahir'])): ?>
+                                <div class="form-group">
+                                    <label>Tempat, Tanggal Lahir</label>
+                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['tempat_lahir']); ?><?php echo !empty($teacher['tempat_lahir']) && !empty($teacher['tanggal_lahir']) ? ', ' : ''; ?><?php echo $teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : ''; ?>" readonly>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <div class="form-group text-right">
+                                    <button type="submit" name="update_profile" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Simpan Profil
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
