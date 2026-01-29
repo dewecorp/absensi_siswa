@@ -15,6 +15,7 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_user'])) {
         $username = sanitizeInput($_POST['username']);
+        $nama = sanitizeInput($_POST['nama']);
         $password = hashPassword($_POST['password']);
         $level = sanitizeInput($_POST['level']);
         
@@ -39,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         if (!$message || $message['type'] !== 'danger') {
-            $sql = "INSERT INTO tb_pengguna (username, password, level";
-            $params = [$username, $password, $level];
+            $sql = "INSERT INTO tb_pengguna (username, nama, password, level";
+            $params = [$username, $nama, $password, $level];
             
             if ($foto !== null) {
                 $sql .= ", foto";
@@ -66,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } elseif (isset($_POST['update_user'])) {
         $id_pengguna = (int)$_POST['id_pengguna'];
         $username = sanitizeInput($_POST['username']);
+        $nama = sanitizeInput($_POST['nama']);
         $level = sanitizeInput($_POST['level']);
         
         // Handle photo upload
@@ -111,20 +113,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $password = hashPassword($_POST['password']);
                 
                 if ($update_foto) {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, password=?, level=?, foto=? WHERE id_pengguna=?");
-                    $params = [$username, $password, $level, $foto, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, password=?, level=?, foto=? WHERE id_pengguna=?");
+                    $params = [$username, $nama, $password, $level, $foto, $id_pengguna];
                 } else {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, password=?, level=? WHERE id_pengguna=?");
-                    $params = [$username, $password, $level, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, password=?, level=? WHERE id_pengguna=?");
+                    $params = [$username, $nama, $password, $level, $id_pengguna];
                 }
             } else {
                 // Update without changing password
                 if ($update_foto) {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, level=?, foto=? WHERE id_pengguna=?");
-                    $params = [$username, $level, $foto, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, level=?, foto=? WHERE id_pengguna=?");
+                    $params = [$username, $nama, $level, $foto, $id_pengguna];
                 } else {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, level=? WHERE id_pengguna=?");
-                    $params = [$username, $level, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, level=? WHERE id_pengguna=?");
+                    $params = [$username, $nama, $level, $id_pengguna];
                 }
             }
             
@@ -353,6 +355,7 @@ include '../templates/sidebar.php';
                                             <thead>
                                                 <tr>
                                                     <th class="text-center">#</th>
+                                                    <th>Nama</th>
                                                     <th>Username</th>
                                                     <th>Level</th>
                                                     <th>Foto</th>
@@ -363,6 +366,7 @@ include '../templates/sidebar.php';
                                                 <?php $no = 1; foreach ($users as $user): ?>
                                                 <tr>
                                                     <td class="text-center"><?php echo $no++; ?></td>
+                                                    <td><?php echo htmlspecialchars($user['nama']); ?></td>
                                                     <td><?php echo htmlspecialchars($user['username']); ?></td>
                                                     <td>
                                                         <?php 
@@ -409,6 +413,10 @@ include '../templates/sidebar.php';
                                                                 <div class="modal-body">
                                                                     <input type="hidden" name="id_pengguna" value="<?php echo $user['id_pengguna']; ?>">
                                                                     <input type="hidden" name="update_user" value="1">
+                                                                    <div class="form-group">
+                                                                        <label>Nama Lengkap</label>
+                                                                        <input type="text" class="form-control" name="nama" value="<?php echo htmlspecialchars($user['nama']); ?>" required>
+                                                                    </div>
                                                                     <div class="form-group">
                                                                         <label>Username</label>
                                                                         <input type="text" class="form-control" name="username" value="<?php echo htmlspecialchars($user['username']); ?>" required>
@@ -470,6 +478,10 @@ include '../templates/sidebar.php';
                         <form method="POST" action="" enctype="multipart/form-data">
                             <div class="modal-body">
                                 <input type="hidden" name="add_user" value="1">
+                                <div class="form-group">
+                                    <label>Nama Lengkap</label>
+                                    <input type="text" class="form-control" name="nama" required>
+                                </div>
                                 <div class="form-group">
                                     <label>Username</label>
                                     <input type="text" class="form-control" name="username" required>

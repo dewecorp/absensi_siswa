@@ -71,29 +71,27 @@ $(function() {
 
       $(".main-sidebar .sidebar-menu li a.has-dropdown").off('click').on('click', function() {
         var me     = $(this);
-        var active = false;
-        if(me.parent().hasClass("active")){
-          active = true;
-        }
+        var parent = me.parent();
+        var active = parent.hasClass("active");
 
-        $('.main-sidebar .sidebar-menu li.active > .dropdown-menu').slideUp(500, function() {
-          update_sidebar_nicescroll();
-          return false;
+        // Close all other active menus
+        $('.main-sidebar .sidebar-menu li.active').not(parent).each(function() {
+          $(this).removeClass('active');
+          $(this).find('> .dropdown-menu').slideUp(500, function() {
+            update_sidebar_nicescroll();
+          });
         });
 
-        $('.main-sidebar .sidebar-menu li.active.dropdown').removeClass('active');
-
-        if(active==true) {
-          me.parent().removeClass('active');
-          me.parent().find('> .dropdown-menu').slideUp(500, function() {
+        // Toggle the clicked menu
+        if(active) {
+          parent.removeClass('active');
+          parent.find('> .dropdown-menu').slideUp(500, function() {
             update_sidebar_nicescroll();
-            return false;
           });
         }else{
-          me.parent().addClass('active');
-          me.parent().find('> .dropdown-menu').slideDown(500, function() {
+          parent.addClass('active');
+          parent.find('> .dropdown-menu').slideDown(500, function() {
             update_sidebar_nicescroll();
-            return false;
           });
         }
 
