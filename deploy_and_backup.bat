@@ -33,26 +33,37 @@ if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
 mkdir "%TEMP_DIR%"
 
 echo Copying files to staging area (including vendor)...
-:: Robocopy is robust and can read files that might be read-locked by web server
-:: /E : Copy subdirectories, including Empty ones
-:: /XD : Exclude Directories (.git and the temp dir itself)
-:: /XF : Exclude Files (the target zip file)
-:: /R:1 /W:1 : Retry once, wait 1 second on error
-:: /NFL /NDL /NJH /NJS : Reduce log output
+:: Robocopy exit codes: 0-7 are success (0=no change, 1=copied, etc)
 robocopy . "%TEMP_DIR%" /E /XD .git "%TEMP_DIR%" /XF absensi_siswa_backup.zip /R:1 /W:1 /NFL /NDL /NJH /NJS
+set "ROBO_EXIT=%ERRORLEVEL%"
 
-echo Compressing files...
-powershell -Command "Compress-Archive -Path '%TEMP_DIR%\*' -DestinationPath absensi_siswa_backup.zip -Force"
+if %ROBO_EXIT% geq 8 (
+    echo ROBOCP ERROR: %ROBO_EXIT%
+    goto :error
+)
+
+echo Compressing files using TAR...
+:: Use tar (built-in Windows 10/11) which is faster and more reliable
+tar -a -c -f absensi_siswa_backup.zip -C "%TEMP_DIR%" .
+if %errorlevel% neq 0 (
+    echo TAR ERROR: %errorlevel%
+    goto :error
+)
 
 echo Cleaning up staging files...
 rmdir /s /q "%TEMP_DIR%"
 
 echo.
 echo ==========================================
-if %errorlevel% equ 0 (
-    echo      SUCCESSFULLY DEPLOYED AND BACKED UP!
-) else (
-    echo      ERROR: SOMETHING WENT WRONG!
-)
+echo      SUCCESSFULLY DEPLOYED AND BACKED UP!
 echo ==========================================
+pause
+goto :eof
+
+:error
+echo.
+echo ==========================================
+echo      ERROR: BACKUP FAILED!
+echo ==========================================
+if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
 pause
