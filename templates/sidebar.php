@@ -114,18 +114,20 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
             [
-                'title' => 'Rekap Absensi',
-                'icon' => 'fas fa-calendar-check',
+                'title' => 'Laporan & Rekap',
+                'icon' => 'fas fa-file-alt',
                 'submenu' => [
-                    ['title' => 'Absensi Guru', 'url' => '../admin/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
-                    ['title' => 'Absensi Siswa', 'url' => '../admin/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php']
+                    ['title' => 'Rekap Absensi Guru', 'url' => '../kepala/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
+                    ['title' => 'Rekap Absensi Siswa', 'url' => '../kepala/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../kepala/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
+                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../kepala/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
                 ],
-                'active' => in_array($current_page, ['rekap_absensi_guru.php', 'rekap_absensi.php'])
+                'active' => in_array($current_page, ['rekap_absensi_guru.php', 'rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Jurnal Mengajar',
                 'icon' => 'fas fa-book-open',
-                'url' => '../admin/jurnal_mengajar.php',
+                'url' => '../kepala/jurnal_mengajar.php',
                 'active' => $current_page === 'jurnal_mengajar.php'
             ],
             [
