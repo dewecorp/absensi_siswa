@@ -17,9 +17,6 @@ $export_type = $_POST['export_type'] ?? '';
 $report_title = $_POST['report_title'] ?? 'Data Guru';
 $filename = $_POST['filename'] ?? 'data_guru';
 
-// For debugging - uncomment to log the received data
-// error_log('Received table data: ' . substr($table_data, 0, 200));
-
 if (empty($table_data)) {
     // If no table data, fetch from database and create basic table
     // Only execute this fallback if we are actually exporting data guru
@@ -80,27 +77,30 @@ if (empty($table_data)) {
     }
 }
 
-// Include DomPDF
-require_once __DIR__ . '/../vendor/autoload.php';
-
-use Dompdf\Dompdf;
-use Dompdf\Options;
-
-// Create new Dompdf instance
-$options = new Options();
-$options->set('defaultFont', 'Courier');
-$options->set('isRemoteEnabled', true);
-
-$dompdf = new Dompdf($options);
-
 // Get school profile for header
 $school_profile = getSchoolProfile($pdo);
 
 // HTML content with school information
 $html = '
+<!DOCTYPE html>
 <html>
 <head>
+    <title>' . htmlspecialchars($report_title) . '</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
+        @page {
+            size: landscape;
+            margin: 10mm;
+        }
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
@@ -128,8 +128,8 @@ $html = '
             text-align: left;
         }
         th {
-            background-color: #368DBC;
-            color: white;
+            background-color: #368DBC !important; /* Important for print */
+            color: white !important;
             font-weight: bold;
             text-align: center;
         }
@@ -142,9 +142,33 @@ $html = '
             font-size: 12px;
             color: #666;
         }
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 9999;
+            font-size: 14px;
+        }
+        .print-btn:hover {
+            background: #0056b3;
+        }
+        .print-btn i {
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
+    <button class="print-btn no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Cetak / Simpan PDF
+    </button>
+
     <div class="header">
         <h2>' . strtoupper($report_title) . '</h2>
         <p>' . ($school_profile['nama_madrasah'] ?? 'Sistem Absensi Siswa') . '</p>
@@ -159,20 +183,14 @@ $html .= '
     <div class="footer">
         Laporan ' . $report_title . ' - Sistem Absensi Siswa
     </div>
+
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
 </body>
 </html>';
 
-// Load HTML to Dompdf
-$dompdf->loadHtml($html);
-
-// Set paper size and orientation
-$dompdf->setPaper('A4', 'landscape');
-
-// Render PDF
-$dompdf->render();
-
-// Output the PDF
-$dompdf->stream($filename . '_' . date('Y-m-d_H-i-s') . '.pdf', ['Attachment' => true]);
-
-exit();
+echo $html;
 ?>

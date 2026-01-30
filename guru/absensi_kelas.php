@@ -304,10 +304,11 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    var printWindow = window.open('', '', 'height=860,width=1300');
+    var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Export PDF</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
     printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
@@ -318,13 +319,16 @@ function exportToPDF() {
     printWindow.document.write('.header-container { text-align: center; margin-bottom: 20px; }');
     printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
-    printWindow.document.write('<div class=\"header-container\">');
-    printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\">');
-    printWindow.document.write('<div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
+    printWindow.document.write('<div class="header-container">');
+    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;">');
+    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3>" . $school_name_js . "</h3>');
-    printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">');
+    printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style="clear: both;">');
     printWindow.document.write('</div>');
     
     var table = document.getElementById('table-1').cloneNode(true);
@@ -341,22 +345,22 @@ function exportToPDF() {
     printWindow.document.write(table.outerHTML);
 
     // Add signatures below the table
-    printWindow.document.write('<div class=\"signature-wrapper\">');
-    printWindow.document.write('<div class=\"signature-box\">');
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>Guru Kelas,</p>');
     printWindow.document.write('<br><br><br>');
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
-    printWindow.document.write('<div class=\"signature-box\">');
+    printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
     printWindow.document.write('<br><br><br>');
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
 
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
-    printWindow.print();
 }
 
 function initDataTable() {

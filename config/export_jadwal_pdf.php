@@ -331,9 +331,9 @@ $html .= '
     
     <script>
         // Auto print when loaded
-        // window.onload = function() {
-        //    window.print();
-        // }
+        window.onload = function() {
+           window.print();
+        }
     </script>
 </body>
 </html>';

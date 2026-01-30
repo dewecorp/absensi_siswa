@@ -734,10 +734,11 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    var printWindow = window.open('', '', 'height=860,width=1300');
+    var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Dhuha</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
@@ -748,8 +749,13 @@ function exportToPDF() {
     printWindow.document.write('.fa-times { color: red; font-family: sans-serif; font-style: normal; } .fa-times:before { content: "x"; }');
     printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
     printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
+    
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -774,10 +780,9 @@ function exportToPDF() {
     printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(function() { printWindow.print(); }, 500);
 }
 
 function exportSemesterToExcel() {

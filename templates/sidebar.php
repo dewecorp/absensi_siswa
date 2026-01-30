@@ -114,7 +114,7 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
             [
-                'title' => 'Laporan & Rekap',
+                'title' => 'Rekap Absensi',
                 'icon' => 'fas fa-file-alt',
                 'submenu' => [
                     ['title' => 'Rekap Absensi Guru', 'url' => '../kepala/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
@@ -196,6 +196,60 @@ switch ($user_level) {
         break;
 
     case 'guru':
+        $is_grade_6_guru = false;
+        if (isset($_SESSION['user_id'])) {
+            $id_guru_check = $_SESSION['user_id'];
+            if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+                $stmt_uid = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+                $stmt_uid->execute([$_SESSION['user_id']]);
+                $id_guru_check = $stmt_uid->fetchColumn();
+            }
+            
+            if ($id_guru_check) {
+                $stmt_g = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
+                $stmt_g->execute([$id_guru_check]);
+                $mengajar_json = $stmt_g->fetchColumn();
+                $mengajar_arr = json_decode($mengajar_json, true) ?? [];
+                
+                if (!empty($mengajar_arr)) {
+                    // Check if any class is grade 6
+                    $placeholders = str_repeat('?,', count($mengajar_arr) - 1) . '?';
+                    // We need to check both IDs and Names because mengajar might contain either
+                    // Ideally we fetch all classes and check
+                    // For simplicity, let's fetch classes that match IDs or Names
+                    $params = array_merge($mengajar_arr, $mengajar_arr);
+                    $stmt_cls = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders)");
+                    $stmt_cls->execute($params);
+                    $classes_taught = $stmt_cls->fetchAll(PDO::FETCH_COLUMN);
+                    
+                    foreach ($classes_taught as $nk) {
+                        $nk = strtoupper($nk);
+                        if (strpos($nk, '6') !== false || strpos($nk, 'VI') !== false) {
+                            $is_grade_6_guru = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        $nilai_submenu_guru = [
+            ['title' => 'Nilai Harian', 'url' => '../guru/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
+            ['title' => 'Nilai Tengah Semester', 'url' => '../guru/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
+            ['title' => 'Nilai Akhir Semester', 'url' => '../guru/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
+            ['title' => 'Nilai Akhir Tahun', 'url' => '../guru/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
+            ['title' => 'Nilai Kokurikuler', 'url' => '../guru/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php']
+        ];
+
+        if ($is_grade_6_guru) {
+            $nilai_submenu_guru[] = ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'];
+            $nilai_submenu_guru[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'];
+        }
+        
+        $nilai_urls_guru = array_map(function($item) {
+            return basename($item['url']);
+        }, $nilai_submenu_guru);
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -215,6 +269,12 @@ switch ($user_level) {
                     ['title' => 'Rekap Sholat Dhuha', 'url' => '../guru/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
                 ],
                 'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Nilai Siswa',
+                'icon' => 'fas fa-graduation-cap',
+                'submenu' => $nilai_submenu_guru,
+                'active' => in_array($current_page, $nilai_urls_guru)
             ],
             [
                 'title' => 'Jadwal Pelajaran',
@@ -248,6 +308,72 @@ switch ($user_level) {
         break;
         
     case 'wali':
+        $is_grade_6 = false;
+        
+        // Cek jika Wali Kelas 6
+        if (isset($_SESSION['nama_guru'])) {
+            $stmt_cls = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE wali_kelas = ?");
+            $stmt_cls->execute([$_SESSION['nama_guru']]);
+            $cls = $stmt_cls->fetch(PDO::FETCH_ASSOC);
+            if ($cls) {
+                $nk = strtoupper($cls['nama_kelas']);
+                if (strpos($nk, '6') !== false || strpos($nk, 'VI') !== false) {
+                    $is_grade_6 = true;
+                }
+            }
+        }
+
+        // Cek jika Guru Mapel Kelas 6 (Wali juga Guru)
+        if (!$is_grade_6 && isset($_SESSION['user_id'])) {
+            $id_guru_check = $_SESSION['user_id'];
+            if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+                $stmt_uid = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+                $stmt_uid->execute([$_SESSION['user_id']]);
+                $id_guru_check = $stmt_uid->fetchColumn();
+            }
+            
+            if ($id_guru_check) {
+                $stmt_g = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
+                $stmt_g->execute([$id_guru_check]);
+                $mengajar_json = $stmt_g->fetchColumn();
+                $mengajar_arr = json_decode($mengajar_json, true) ?? [];
+                
+                if (!empty($mengajar_arr)) {
+                    $placeholders = str_repeat('?,', count($mengajar_arr) - 1) . '?';
+                    $params = array_merge($mengajar_arr, $mengajar_arr);
+                    $stmt_cls = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders)");
+                    $stmt_cls->execute($params);
+                    $classes_taught = $stmt_cls->fetchAll(PDO::FETCH_COLUMN);
+                    
+                    foreach ($classes_taught as $nk) {
+                        $nk = strtoupper($nk);
+                        if (strpos($nk, '6') !== false || strpos($nk, 'VI') !== false) {
+                            $is_grade_6 = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Gunakan file guru agar wali bisa input nilai sebagai guru mapel
+        $nilai_submenu = [
+             ['title' => 'Nilai Harian', 'url' => '../guru/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
+             ['title' => 'Nilai Tengah Semester', 'url' => '../guru/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
+             ['title' => 'Nilai Akhir Semester', 'url' => '../guru/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
+             ['title' => 'Nilai Akhir Tahun', 'url' => '../guru/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
+             ['title' => 'Nilai Kokurikuler', 'url' => '../guru/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php']
+        ];
+        
+        if ($is_grade_6) {
+             $nilai_submenu[] = ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'];
+             $nilai_submenu[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'];
+        }
+        
+        $nilai_urls = array_map(function($item) {
+            return basename($item['url']);
+        }, $nilai_submenu);
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -276,6 +402,12 @@ switch ($user_level) {
                     ['title' => 'Rekap Sholat Dhuha', 'url' => '../wali/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
                 ],
                 'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Nilai Siswa',
+                'icon' => 'fas fa-graduation-cap',
+                'submenu' => $nilai_submenu,
+                'active' => in_array($current_page, $nilai_urls)
             ],
             [
                 'title' => 'Jurnal Mengajar',

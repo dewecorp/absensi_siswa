@@ -1630,6 +1630,7 @@ function setImportType(type) {
                 var form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '../config/pdf_export.php';
+                form.target = '_blank'; // Open in new tab
                 
                 // Get table HTML
                 var table = document.getElementById('table-1');

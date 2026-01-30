@@ -874,17 +874,18 @@ function exportToPDF() {
 
 function fallbackPrintPDF() {
     // Print the table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
+    var printWindow = window.open('', '_blank'); // Open in new tab
     printWindow.document.write('<html><head><title>Rekap Absensi Bulanan</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
     printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
+    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; border: 1px solid #000; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
     printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
     printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
@@ -894,8 +895,11 @@ function fallbackPrintPDF() {
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
     printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
@@ -924,28 +928,26 @@ function fallbackPrintPDF() {
     printWindow.document.write('</div>');
     
     printWindow.document.write('</div>');
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(function() {
-        printWindow.print();
-        // printWindow.close();
-    }, 500);
 }
 
 function fallbackSemesterPrintPDF() {
     // Print the semester table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
+    var printWindow = window.open('', '_blank'); // Open in new tab
     printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
     printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
+    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; border: 1px solid #000; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
     printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
     printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
@@ -955,8 +957,11 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
     printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
@@ -985,13 +990,10 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('</div>');
     
     printWindow.document.write('</div>');
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(function() {
-        printWindow.print();
-        // printWindow.close();
-    }, 500);
 }
 
 // Semester Export Functions

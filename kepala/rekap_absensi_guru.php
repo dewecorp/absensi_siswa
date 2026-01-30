@@ -713,11 +713,8 @@ include '../templates/sidebar.php';
                     XLSX.writeFile(wb, fileName + '.xlsx');
                 });
                 
-                // PDF Export using jsPDF
+                // PDF Export using window.print() in new tab
                 $('#exportPdfBtn').click(function() {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
-                    
                     var filterType = '<?php echo $filter_type; ?>';
                     var title = 'Rekap Absensi Guru';
                     var tableId = '';
@@ -736,23 +733,48 @@ include '../templates/sidebar.php';
                         tableId = '#teacherTable';
                     }
                     
-                    // Add header
-                    doc.setFontSize(16);
-                    doc.text(title, 14, 15);
-                    doc.setFontSize(10);
-                    doc.text('<?php echo $school_profile["nama_madrasah"] ?? ""; ?>', 14, 22);
+                    var table = document.querySelector(tableId);
+                    if (!table) {
+                        alert('Tabel tidak ditemukan!');
+                        return;
+                    }
+
+                    // Clone table to avoid modifying original
+                    var tableClone = table.cloneNode(true);
                     
-                    // Generate table
-                    doc.autoTable({
-                        html: tableId,
-                        startY: 30,
-                        theme: 'grid',
-                        headStyles: { fillColor: [66, 66, 66] },
-                        styles: { fontSize: 8, cellPadding: 2 },
-                        columnStyles: { 0: { cellWidth: 10 } } // First column (No) width
-                    });
+                    // Create new window
+                    var printWindow = window.open('', '_blank');
+                    printWindow.document.write('<!DOCTYPE html><html><head><title>' + title + '</title>');
+                    printWindow.document.write('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">');
+                    printWindow.document.write('<style>');
+                    printWindow.document.write('@page { size: landscape; margin: 10mm; }');
+                    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
+                    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; }');
+                    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; }');
+                    printWindow.document.write('.header h2 { margin: 0; color: #333; }');
+                    printWindow.document.write('.header p { margin: 5px 0; color: #666; }');
+                    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10px; }'); // Smaller font for big tables
+                    printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
+                    printWindow.document.write('th { background-color: #368DBC !important; color: white !important; font-weight: bold; }');
+                    printWindow.document.write('tr:nth-child(even) { background-color: #f2f2f2; }');
+                    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 9999; }');
+                    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
+                    printWindow.document.write('</style>');
+                    printWindow.document.write('</head><body>');
                     
-                    doc.save(title.replace(/\s+/g, '_') + '.pdf');
+                    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
+                    
+                    printWindow.document.write('<div class="header">');
+                    printWindow.document.write('<h2>' + title + '</h2>');
+                    printWindow.document.write('<p><?php echo $school_profile["nama_madrasah"] ?? "Sistem Absensi Siswa"; ?></p>');
+                    printWindow.document.write('<p>Dicetak pada: ' + new Date().toLocaleString('id-ID') + '</p>');
+                    printWindow.document.write('</div>');
+                    
+                    printWindow.document.write(tableClone.outerHTML);
+                    
+                    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
                 });
             });
             </script>
