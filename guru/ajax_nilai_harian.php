@@ -29,8 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $nama = $_POST['nama_penilaian'];
             $materi = $_POST['materi'] ?? null;
             
-            $stmt = $pdo->prepare("INSERT INTO tb_nilai_harian_header (id_guru, id_kelas, id_mapel, nama_penilaian, materi) VALUES (?, ?, ?, ?, ?)");
-            if ($stmt->execute([$id_guru, $id_kelas, $id_mapel, $nama, $materi])) {
+            // Get active semester info
+            $school_profile = getSchoolProfile($pdo);
+            $tahun_ajaran = $school_profile['tahun_ajaran'];
+            $semester = $school_profile['semester'];
+            
+            $stmt = $pdo->prepare("INSERT INTO tb_nilai_harian_header (id_guru, id_kelas, id_mapel, nama_penilaian, materi, tahun_ajaran, semester) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            if ($stmt->execute([$id_guru, $id_kelas, $id_mapel, $nama, $materi, $tahun_ajaran, $semester])) {
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Database error']);

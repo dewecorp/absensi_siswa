@@ -79,9 +79,10 @@ foreach ($students as $student) {
                 FROM tb_nilai_harian_detail d
                 JOIN tb_nilai_harian_header h ON d.id_header = h.id_header
                 WHERE h.id_kelas = ? AND h.id_mapel = ?
+                AND h.tahun_ajaran = ? AND h.semester = ?
                 AND d.id_siswa = ?
             ");
-            $stmt->execute([$selected_class_id, $mapel['id_mapel'], $student['id_siswa']]);
+            $stmt->execute([$selected_class_id, $mapel['id_mapel'], $tahun_ajaran, $semester_aktif, $student['id_siswa']]);
             $details = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             if (!empty($details)) {

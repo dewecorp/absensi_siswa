@@ -3,7 +3,7 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is logged in and has admin level
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
     http_response_code(403);
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit();

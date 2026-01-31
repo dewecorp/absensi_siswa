@@ -2,50 +2,68 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
 $page_title = 'Nilai Akhir Semester';
 $jenis_semester = 'UAS'; // Set this based on the file type
+$user_role = $_SESSION['level'];
+$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha']);
+$can_edit = !$is_admin_view;
 
 // Get teacher data
-$id_guru = $_SESSION['user_id'];
-if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
-    $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    $id_guru = $stmt->fetchColumn();
+$id_guru = null;
+if (!$is_admin_view) {
+    $id_guru = $_SESSION['user_id'];
+    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+        $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $id_guru = $stmt->fetchColumn();
+    }
 }
 
-// Get teacher's classes
-$stmt = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
-$stmt->execute([$id_guru]);
-$mengajar_json = $stmt->fetchColumn();
-$mengajar_ids = json_decode($mengajar_json, true) ?? [];
-
+// Fetch classes
 $classes = [];
-if (!empty($mengajar_ids)) {
-    $placeholders = str_repeat('?,', count($mengajar_ids) - 1) . '?';
-    $params = array_merge($mengajar_ids, $mengajar_ids);
-    $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
-    $stmt->execute($params);
+if ($is_admin_view) {
+    $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    // Get teacher's classes
+    $stmt = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$id_guru]);
+    $mengajar_json = $stmt->fetchColumn();
+    $mengajar_ids = json_decode($mengajar_json, true) ?? [];
+
+    if (!empty($mengajar_ids)) {
+        $placeholders = str_repeat('?,', count($mengajar_ids) - 1) . '?';
+        $params = array_merge($mengajar_ids, $mengajar_ids);
+        $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
+        $stmt->execute($params);
+        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 // Fetch subjects
-$stmt = $pdo->prepare("
-    SELECT DISTINCT mp.* 
-    FROM tb_mata_pelajaran mp
-    JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
-    WHERE jp.guru_id = ?
-    AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
-    AND mp.nama_mapel NOT LIKE '%Upacara%'
-    AND mp.nama_mapel NOT LIKE '%Istirahat%'
-    AND mp.nama_mapel NOT LIKE '%Kepramukaan%'
-    ORDER BY mp.nama_mapel ASC
-");
-$stmt->execute([$id_guru]);
-$subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$subjects = [];
+if ($is_admin_view) {
+    $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT mp.* 
+        FROM tb_mata_pelajaran mp
+        JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
+        WHERE jp.guru_id = ?
+        AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
+        AND mp.nama_mapel NOT LIKE '%Upacara%'
+        AND mp.nama_mapel NOT LIKE '%Istirahat%'
+        AND mp.nama_mapel NOT LIKE '%Kepramukaan%'
+        ORDER BY mp.nama_mapel ASC
+    ");
+    $stmt->execute([$id_guru]);
+    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
@@ -213,7 +231,9 @@ require_once '../templates/sidebar.php';
                                         <th width="15%" class="text-center">Remidi</th>
                                         <th width="15%" class="text-center">Nilai Jadi</th>
                                         <th width="15%" class="text-center">Rerata</th>
+                                        <?php if ($can_edit): ?>
                                         <th width="10%" class="text-center">Aksi</th>
+                                        <?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -273,6 +293,7 @@ require_once '../templates/sidebar.php';
                                             <td class="text-center bg-light">
                                                 <span class="display-rerata"><?= $rerata > 0 ? (float)number_format($rerata, 1) : '-' ?></span>
                                             </td>
+                                            <?php if ($can_edit): ?>
                                             <td class="text-center">
                                                 <button class="btn btn-sm btn-warning btn-edit" title="Edit">
                                                     <i class="fas fa-edit"></i>
@@ -281,6 +302,7 @@ require_once '../templates/sidebar.php';
                                                     <i class="fas fa-save"></i>
                                                 </button>
                                             </td>
+                                            <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                     
@@ -291,7 +313,9 @@ require_once '../templates/sidebar.php';
                                         <td class="text-center text-success" id="max-remidi"><?= $max_remidi !== null ? (float)$max_remidi : '-' ?></td>
                                         <td class="text-center text-success" id="max-jadi"><?= $max_jadi !== null ? (float)$max_jadi : '-' ?></td>
                                         <td class="text-center text-success" id="max-rerata"><?= $max_rerata !== null ? (float)number_format($max_rerata, 1) : '-' ?></td>
+                                        <?php if ($can_edit): ?>
                                         <td></td>
+                                        <?php endif; ?>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right">Nilai Terendah</td>
@@ -299,7 +323,9 @@ require_once '../templates/sidebar.php';
                                         <td class="text-center text-danger" id="min-remidi"><?= $min_remidi !== null ? (float)$min_remidi : '-' ?></td>
                                         <td class="text-center text-danger" id="min-jadi"><?= $min_jadi !== null ? (float)$min_jadi : '-' ?></td>
                                         <td class="text-center text-danger" id="min-rerata"><?= $min_rerata !== null ? (float)number_format($min_rerata, 1) : '-' ?></td>
+                                        <?php if ($can_edit): ?>
                                         <td></td>
+                                        <?php endif; ?>
                                     </tr>
                                 </tbody>
                             </table>

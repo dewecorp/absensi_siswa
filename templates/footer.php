@@ -144,7 +144,31 @@
 
     <!-- Notification JS -->
     <script>
-    function readNotification(id, link) {
+    function readNotification(id, link, element) {
+        // Optimistic UI updates
+        if (element) {
+            var $el = $(element);
+            
+            // Unbold text and remove background
+            $el.css('font-weight', 'normal').css('background-color', 'white');
+            $el.find('span, p').css('font-weight', 'normal');
+            $el.removeClass('bg-light'); // For mobile list item
+            
+            // Update badge count
+            var $badges = $('.dropdown-list-toggle .badge, .btn-lg .badge');
+            $badges.each(function() {
+                var count = parseInt($(this).text());
+                if (!isNaN(count)) {
+                    if (count > 1) {
+                        $(this).text(count - 1);
+                    } else {
+                        $(this).remove();
+                        $('.dropdown-list-toggle').removeClass('beep');
+                    }
+                }
+            });
+        }
+
         // Mark as read via AJAX
         $.ajax({
             url: '../admin/mark_notification_read.php',
@@ -154,9 +178,16 @@
                 // Redirect to link
                 if (link && link !== '#') {
                     window.location.href = link;
-                } else {
-                    // Just reload or update UI
+                } else if (!element) {
+                    // Only reload if no element passed (manual call?)
                     window.location.reload();
+                }
+            },
+            error: function() {
+                // Fallback redirect even if mark read fails
+                console.error("Failed to mark notification as read");
+                if (link && link !== '#') {
+                    window.location.href = link;
                 }
             }
         });

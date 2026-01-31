@@ -2,43 +2,54 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
 $page_title = 'Rekap Nilai Siswa';
+$user_role = $_SESSION['level'];
+$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha']);
 
 // Get teacher data
-$id_guru = $_SESSION['user_id'];
-if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
-    $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    $id_guru = $stmt->fetchColumn();
+$id_guru = null;
+if (!$is_admin_view) {
+    $id_guru = $_SESSION['user_id'];
+    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+        $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $id_guru = $stmt->fetchColumn();
+    }
 }
 
-// Get teacher name and teaching assignments
-$stmt = $pdo->prepare("SELECT nama_guru, mengajar FROM tb_guru WHERE id_guru = ?");
-$stmt->execute([$id_guru]);
-$guru_data = $stmt->fetch(PDO::FETCH_ASSOC);
-$nama_guru = $guru_data['nama_guru'] ?? '';
-$mengajar_json = $guru_data['mengajar'] ?? '[]';
-$mengajar_ids = json_decode($mengajar_json, true) ?? [];
-
-// Check if user is Wali Kelas
-$stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE wali_kelas = ?");
-$stmt->execute([$nama_guru]);
-$wali_classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$wali_class_ids = array_column($wali_classes, 'id_kelas');
-
-// Merge classes
-$all_class_ids = array_unique(array_merge($mengajar_ids, $wali_class_ids));
-
+// Fetch classes
 $classes = [];
-if (!empty($all_class_ids)) {
-    $placeholders = str_repeat('?,', count($all_class_ids) - 1) . '?';
-    $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
-    $stmt->execute($all_class_ids);
+if ($is_admin_view) {
+    $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    // Get teacher name and teaching assignments
+    $stmt = $pdo->prepare("SELECT nama_guru, mengajar FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$id_guru]);
+    $guru_data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $nama_guru = $guru_data['nama_guru'] ?? '';
+    $mengajar_json = $guru_data['mengajar'] ?? '[]';
+    $mengajar_ids = json_decode($mengajar_json, true) ?? [];
+
+    // Check if user is Wali Kelas
+    $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE wali_kelas = ?");
+    $stmt->execute([$nama_guru]);
+    $wali_classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $wali_class_ids = array_column($wali_classes, 'id_kelas');
+
+    // Merge classes
+    $all_class_ids = array_unique(array_merge($mengajar_ids, $wali_class_ids));
+
+    if (!empty($all_class_ids)) {
+        $placeholders = str_repeat('?,', count($all_class_ids) - 1) . '?';
+        $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
+        $stmt->execute($all_class_ids);
+        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 // Parameters
@@ -97,9 +108,10 @@ if ($selected_class && $selected_jenis) {
                     FROM tb_nilai_harian_detail d
                     JOIN tb_nilai_harian_header h ON d.id_header = h.id_header
                     WHERE h.id_kelas = ? AND h.id_mapel = ?
+                    AND h.tahun_ajaran = ? AND h.semester = ?
                     AND d.id_siswa = ?
                 ");
-                $stmt->execute([$selected_class_id, $mapel['id_mapel'], $student['id_siswa']]);
+                $stmt->execute([$selected_class_id, $mapel['id_mapel'], $tahun_ajaran, $semester_aktif, $student['id_siswa']]);
                 $details = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 if (!empty($details)) {

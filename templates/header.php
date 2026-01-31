@@ -135,7 +135,15 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                             <div class="dropdown-list-content dropdown-list-icons" style="height: 300px; overflow-y: auto;">
                                 <?php if (count($unread_notifs) > 0): ?>
                                     <?php foreach ($unread_notifs as $notif): ?>
-                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif['link']; ?>'); return false;" class="dropdown-item dropdown-item-unread" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; background-color: #f9f9f9;'; ?>">
+                                        <?php
+                                            $notif_link = $notif['link'];
+                                            if (getUserLevel() === 'kepala_madrasah') {
+                                                if ($notif_link === 'absensi_guru.php') {
+                                                    $notif_link = 'rekap_absensi_guru.php';
+                                                }
+                                            }
+                                        ?>
+                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="dropdown-item dropdown-item-unread" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; background-color: #f9f9f9;'; ?>">
                                             <div class="dropdown-item-icon bg-primary text-white">
                                                 <i class="fas fa-info"></i>
                                             </div>
@@ -269,7 +277,15 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                             <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
                                 <?php if (count($unread_notifs) > 0): ?>
                                     <?php foreach ($unread_notifs as $notif): ?>
-                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif['link']; ?>'); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>">
+                                        <?php
+                                            $notif_link = $notif['link'];
+                                            if (getUserLevel() === 'kepala_madrasah') {
+                                                if ($notif_link === 'absensi_guru.php') {
+                                                    $notif_link = 'rekap_absensi_guru.php';
+                                                }
+                                            }
+                                        ?>
+                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>">
                                             <div class="d-flex w-100 justify-content-between">
                                                 <h6 class="mb-1 text-primary"><i class="fas fa-info-circle mr-1"></i> Info</h6>
                                                 <small class="text-muted"><?php echo timeAgo($notif['created_at']); ?></small>

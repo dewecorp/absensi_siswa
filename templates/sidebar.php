@@ -125,6 +125,21 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['rekap_absensi_guru.php', 'rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php'])
             ],
             [
+                'title' => 'Nilai Siswa',
+                'icon' => 'fas fa-chart-bar',
+                'submenu' => [
+                    ['title' => 'Nilai Harian', 'url' => '../guru/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
+                    ['title' => 'Nilai Tengah Semester', 'url' => '../guru/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
+                    ['title' => 'Nilai Akhir Semester', 'url' => '../guru/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
+                    ['title' => 'Nilai Akhir Tahun', 'url' => '../guru/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
+                    ['title' => 'Nilai Kokurikuler', 'url' => '../guru/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
+                    ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
+                    ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
+                ],
+                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
+            ],
+            [
                 'title' => 'Jurnal Mengajar',
                 'icon' => 'fas fa-book-open',
                 'url' => '../kepala/jurnal_mengajar.php',
@@ -172,6 +187,21 @@ switch ($user_level) {
                     ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
                 ],
                 'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Nilai Siswa',
+                'icon' => 'fas fa-chart-bar',
+                'submenu' => [
+                    ['title' => 'Nilai Harian', 'url' => '../guru/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
+                    ['title' => 'Nilai Tengah Semester', 'url' => '../guru/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
+                    ['title' => 'Nilai Akhir Semester', 'url' => '../guru/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
+                    ['title' => 'Nilai Akhir Tahun', 'url' => '../guru/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
+                    ['title' => 'Nilai Kokurikuler', 'url' => '../guru/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
+                    ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
+                    ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
+                ],
+                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
             ],
             [
                 'title' => 'Backup & Restore',

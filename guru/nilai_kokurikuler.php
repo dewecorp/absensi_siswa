@@ -2,54 +2,77 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
 $page_title = 'Nilai Kokurikuler';
+$user_role = $_SESSION['level'];
+$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha']);
+$can_edit = !$is_admin_view;
 
 // Get teacher data
-$id_guru = $_SESSION['user_id'];
-if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
-    $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    $id_guru = $stmt->fetchColumn();
+$id_guru = null;
+if (!$is_admin_view) {
+    $id_guru = $_SESSION['user_id'];
+    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+        $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $id_guru = $stmt->fetchColumn();
+    }
 }
 
-// Get teacher's classes
-$stmt = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
-$stmt->execute([$id_guru]);
-$mengajar_json = $stmt->fetchColumn();
-$mengajar_ids = json_decode($mengajar_json, true) ?? [];
-
+// Fetch classes
 $classes = [];
-if (!empty($mengajar_ids)) {
-    $placeholders = str_repeat('?,', count($mengajar_ids) - 1) . '?';
-    $params = array_merge($mengajar_ids, $mengajar_ids);
-    $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
-    $stmt->execute($params);
+if ($is_admin_view) {
+    $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    // Get teacher's classes
+    $stmt = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$id_guru]);
+    $mengajar_json = $stmt->fetchColumn();
+    $mengajar_ids = json_decode($mengajar_json, true) ?? [];
+
+    if (!empty($mengajar_ids)) {
+        $placeholders = str_repeat('?,', count($mengajar_ids) - 1) . '?';
+        $params = array_merge($mengajar_ids, $mengajar_ids);
+        $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
+        $stmt->execute($params);
+        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 // Fetch subjects
-$stmt = $pdo->prepare("
-    SELECT DISTINCT mp.* 
-    FROM tb_mata_pelajaran mp
-    JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
-    WHERE jp.guru_id = ?
-    AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
-    AND mp.nama_mapel NOT LIKE '%Upacara%'
-    AND mp.nama_mapel NOT LIKE '%Istirahat%'
-    AND mp.nama_mapel NOT LIKE '%Kepramukaan%'
-    ORDER BY mp.nama_mapel ASC
-");
-$stmt->execute([$id_guru]);
-$subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$subjects = [];
+if ($is_admin_view) {
+    $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT mp.* 
+        FROM tb_mata_pelajaran mp
+        JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
+        WHERE jp.guru_id = ?
+        AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
+        AND mp.nama_mapel NOT LIKE '%Upacara%'
+        AND mp.nama_mapel NOT LIKE '%Istirahat%'
+        AND mp.nama_mapel NOT LIKE '%Kepramukaan%'
+        ORDER BY mp.nama_mapel ASC
+    ");
+    $stmt->execute([$id_guru]);
+    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
 $selected_class = null;
 $selected_mapel = null;
+
+// Get active semester info
+$school_profile = getSchoolProfile($pdo);
+$tahun_ajaran = $school_profile['tahun_ajaran'];
+$semester_aktif = $school_profile['semester'];
 
 if (count($classes) == 1 && !$selected_class_id) {
     $selected_class_id = $classes[0]['id_kelas'];
@@ -85,8 +108,13 @@ if ($selected_class && $selected_mapel) {
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get grade headers
-    $stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_guru = ? AND id_kelas = ? AND id_mapel = ? ORDER BY created_at ASC");
-    $stmt->execute([$id_guru, $selected_class_id, $selected_mapel_id]);
+    if ($is_admin_view) {
+        $stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_kelas = ? AND id_mapel = ? ORDER BY created_at ASC");
+        $stmt->execute([$selected_class_id, $selected_mapel_id]);
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_guru = ? AND id_kelas = ? AND id_mapel = ? ORDER BY created_at ASC");
+        $stmt->execute([$id_guru, $selected_class_id, $selected_mapel_id]);
+    }
     $grade_headers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get grade values
@@ -209,9 +237,11 @@ require_once '../templates/sidebar.php';
                                 <i class="fas fa-file-pdf"></i> Export PDF
                             </a>
                         </div>
+                        <?php if ($can_edit): ?>
                         <button class="btn btn-primary" data-toggle="modal" data-target="#addColumnModal">
                             <i class="fas fa-plus"></i> Tambah Kolom Nilai
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="card-body">
@@ -223,6 +253,7 @@ require_once '../templates/sidebar.php';
                                     <th class="sticky-col sticky-col-2" style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
                                     <?php foreach ($grade_headers as $header): ?>
                                         <th class="text-center position-relative" colspan="2" style="min-width: 200px;">
+                                            <?php if ($can_edit): ?>
                                             <div class="mb-2">
                                                 <button class="btn btn-sm btn-icon btn-warning edit-col-btn" data-header-id="<?= $header['id_header'] ?>" title="Edit Nilai">
                                                     <i class="fas fa-edit"></i>
@@ -237,6 +268,7 @@ require_once '../templates/sidebar.php';
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
+                                            <?php endif; ?>
                                             <?= htmlspecialchars($header['nama_penilaian']) ?>
                                         </th>
                                     <?php endforeach; ?>
