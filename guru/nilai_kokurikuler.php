@@ -544,9 +544,12 @@ $(document).ready(function() {
                             nilaiJadi = kktp;
                         } else {
                             // Curve logic similar to nilai_harian
-                            var range = 100 - kktp;
+                            var maxVal = 99;
+                            var range = maxVal - kktp;
+                            var inputRange = 100 - kktp;
+                            
                             if (range > 0) {
-                                var ratio = (nilaiAwal - kktp) / range;
+                                var ratio = (nilaiAwal - kktp) / inputRange;
                                 var ratioBoosted = 1 - Math.pow(1 - ratio, 2);
                                 nilaiJadi = kktp + (range * ratioBoosted);
                             } else {
@@ -554,7 +557,7 @@ $(document).ready(function() {
                             }
                         }
                         nilaiJadi = Math.round(nilaiJadi);
-                        if (nilaiJadi > 100) nilaiJadi = 100;
+                        if (nilaiJadi > 99) nilaiJadi = 99;
                         
                         // Always update, even if 0
                         $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val(nilaiJadi);

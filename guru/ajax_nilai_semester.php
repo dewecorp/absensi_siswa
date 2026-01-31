@@ -48,16 +48,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $nilai_jadi = $kktp;
             } else {
                 // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
-                $range = 100 - $kktp;
+                $maxVal = 99;
+                $range = $maxVal - $kktp;
+                $inputRange = 100 - $kktp;
+                
                 if ($range > 0) {
-                    $ratio = ($temp_jadi - $kktp) / $range; // 0 to 1
+                    $ratio = ($temp_jadi - $kktp) / $inputRange; // 0 to 1
                     $ratioBoosted = 1 - pow(1 - $ratio, 2);
                     $nilai_jadi = $kktp + ($range * $ratioBoosted);
                 }
             }
-            // Round to nearest integer and ensure max 100
+            // Round to nearest integer and ensure max 99
             $nilai_jadi = round($nilai_jadi);
-            if ($nilai_jadi > 100) $nilai_jadi = 100;
+            if ($nilai_jadi > 99) $nilai_jadi = 99;
         }
 
         try {

@@ -22,13 +22,45 @@ if (!$selected_class_id || !$selected_mapel_id || !$jenis_semester) {
     die('Parameter tidak lengkap');
 }
 
-// Get teacher data
-$id_guru = $_SESSION['user_id'];
-if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
-    $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
+// Get Active Semester
+$school_profile = getSchoolProfile($pdo);
+$tahun_ajaran = $school_profile['tahun_ajaran'];
+$semester_aktif = $school_profile['semester'];
+
+// Determine Guru for Header
+// Logic: Try to find the actual teacher of the subject from Schedule -> Daily Grades -> Kokurikuler
+// If all fail, and user is a guru, fallback to current user.
+
+// 1. Try Jadwal Pelajaran (Most reliable)
+$stmt = $pdo->prepare("SELECT DISTINCT guru_id FROM tb_jadwal_pelajaran WHERE kelas_id = ? AND mapel_id = ? LIMIT 1");
+$stmt->execute([$selected_class_id, $selected_mapel_id]);
+$id_guru = $stmt->fetchColumn();
+
+// 2. If not found, try Daily Grades
+if (!$id_guru) {
+    $stmt = $pdo->prepare("SELECT DISTINCT id_guru FROM tb_nilai_harian_header WHERE id_kelas = ? AND id_mapel = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1");
+    $stmt->execute([$selected_class_id, $selected_mapel_id, $tahun_ajaran, $semester_aktif]);
     $id_guru = $stmt->fetchColumn();
 }
+
+// 3. If not found, try Kokurikuler
+if (!$id_guru) {
+    $stmt = $pdo->prepare("SELECT DISTINCT id_guru FROM tb_nilai_kokurikuler_header WHERE id_kelas = ? AND id_mapel = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1");
+    $stmt->execute([$selected_class_id, $selected_mapel_id, $tahun_ajaran, $semester_aktif]);
+    $id_guru = $stmt->fetchColumn();
+}
+
+// 4. Fallback for Guru user if still not found
+if (!$id_guru && isset($_SESSION['level']) && $_SESSION['level'] == 'guru') {
+    $id_guru = $_SESSION['user_id'];
+    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+        $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $id_guru = $stmt->fetchColumn();
+    }
+}
+
+$id_guru = $id_guru ? $id_guru : 0;
 
 // Get Class Info
 $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
@@ -40,10 +72,16 @@ $stmt = $pdo->prepare("SELECT * FROM tb_mata_pelajaran WHERE id_mapel = ?");
 $stmt->execute([$selected_mapel_id]);
 $mapel_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Get active semester info
-$school_profile = getSchoolProfile($pdo);
-$tahun_ajaran = $school_profile['tahun_ajaran'];
-$semester_aktif = $school_profile['semester'];
+// Check if mapel is non-academic
+if (strpos($mapel_info['nama_mapel'], 'Asmaul Husna') !== false || 
+    strpos($mapel_info['nama_mapel'], 'Upacara') !== false ||
+    strpos($mapel_info['nama_mapel'], 'Istirahat') !== false ||
+    strpos($mapel_info['nama_mapel'], 'Kepramukaan') !== false ||
+    strpos($mapel_info['nama_mapel'], 'Ekstrakurikuler') !== false) {
+    die('Mata pelajaran Non-Akademik tidak dapat diekspor.');
+}
+
+// School profile already fetched above
 
 // Get Students
 $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
@@ -91,7 +129,7 @@ $sheet->setCellValue('A1', $title);
 $sheet->setCellValue('A2', 'KELAS: ' . $class_info['nama_kelas']);
 $sheet->setCellValue('A3', 'MATA PELAJARAN: ' . $mapel_info['nama_mapel']);
 $sheet->setCellValue('A4', 'TAHUN AJARAN: ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
-$sheet->setCellValue('A5', 'GURU: ' . getGuruName($pdo, $id_guru));
+$sheet->setCellValue('A5', 'GURU: ' . (getGuruName($pdo, $id_guru) ?: '.........................'));
 
 // Merge Header Cells
 $sheet->mergeCells('A1:F1');
@@ -164,12 +202,13 @@ foreach (range('A', 'F') as $col) {
     $sheet->getColumnDimension($col)->setAutoSize(true);
 }
 
-// Helper function
-function getGuruName($pdo, $id) {
-    $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
-    $stmt->execute([$id]);
-    return $stmt->fetchColumn();
-}
+// Signatures
+$row += 2;
+$sheet->setCellValue('E' . $row, 'Jepara, ' . date('d F Y'));
+$row++;
+$sheet->setCellValue('E' . $row, 'Guru Mata Pelajaran');
+$row += 4;
+$sheet->setCellValue('E' . $row, getGuruName($pdo, $id_guru) ?: '.........................');
 
 // Output
 $filename = str_replace(' ', '_', $title) . '_' . str_replace(' ', '_', $class_info['nama_kelas']) . '_' . str_replace(' ', '_', $mapel_info['nama_mapel']) . '_' . date('Y-m-d') . '.xlsx';

@@ -23,23 +23,13 @@ if (!$selected_class_id || !$selected_jenis) {
     die('Parameter tidak lengkap');
 }
 
-// Get teacher data (for header info)
-$id_guru = $_SESSION['user_id'];
-if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
-    $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    $id_guru = $stmt->fetchColumn();
-}
-// Get Guru Name
-$stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
-$stmt->execute([$id_guru]);
-$nama_guru = $stmt->fetchColumn();
-
-
 // Get Class Info
 $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
 $stmt->execute([$selected_class_id]);
 $class_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Use Wali Kelas name for signature
+$nama_guru = $class_info['wali_kelas'];
 
 // Get All Subjects
 $subjects = [];
@@ -335,12 +325,14 @@ $sheet->getStyle('A6:A' . $lastRow)->getAlignment()->setHorizontal(Alignment::HO
 
 // Footer
 $row += 2;
-$sheet->setCellValue('B' . $row, 'Jepara, ' . date('d F Y'));
+// Use last column for signature to be on the right
+$sheet->setCellValue($lastCol . $row, 'Jepara, ' . date('d F Y'));
 $row++;
-$sheet->setCellValue('B' . $row, 'Wali Kelas / Guru');
+$sheet->setCellValue($lastCol . $row, 'Wali Kelas');
 $row += 4;
-$sheet->setCellValue('B' . $row, $nama_guru);
-$sheet->getStyle('B' . ($row-4) . ':B' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->setCellValue($lastCol . $row, $nama_guru);
+// Center align the signature block
+$sheet->getStyle($lastCol . ($row-4) . ':' . $lastCol . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
 
 // Output

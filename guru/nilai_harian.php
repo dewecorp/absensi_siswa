@@ -524,7 +524,7 @@ $(document).ready(function() {
         
         Swal.fire({
             title: 'Hitung Nilai Jadi Otomatis',
-            text: 'Rumus Baru: Nilai di bawah KKTP otomatis menjadi KKTP. Nilai di atas KKTP akan dinaikkan secara proporsional (kurva progresif) hingga maksimal 100.',
+            text: 'Rumus Baru: Nilai di bawah KKTP otomatis menjadi KKTP. Nilai di atas KKTP akan dinaikkan secara proporsional (kurva progresif) hingga maksimal 99.',
             icon: 'info',
             showCancelButton: true,
             confirmButtonText: 'Ya, Hitung!',
@@ -543,10 +543,13 @@ $(document).ready(function() {
                             nilaiJadi = kktp;
                         } else {
                             // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
-                            // Logic: Map [KKTP, 100] to [KKTP, 100] with a boost curve
-                            var range = 100 - kktp;
+                            // Logic: Map [KKTP, 100] to [KKTP, 99] with a boost curve
+                            var maxVal = 99;
+                            var range = maxVal - kktp;
+                            var inputRange = 100 - kktp;
+                            
                             if (range > 0) {
-                                var ratio = (nilaiAwal - kktp) / range; // 0 to 1
+                                var ratio = (nilaiAwal - kktp) / inputRange; // 0 to 1
                                 // Apply ease-out curve: f(t) = 1 - (1-t)^2
                                 // This makes the boost stronger near KKTP and taper off near 100
                                 var ratioBoosted = 1 - Math.pow(1 - ratio, 2);
@@ -559,8 +562,8 @@ $(document).ready(function() {
                         // Round to nearest integer
                         nilaiJadi = Math.round(nilaiJadi);
                         
-                        // Ensure max 100 (safety)
-                        if (nilaiJadi > 100) nilaiJadi = 100;
+                        // Ensure max 99 (safety)
+                        if (nilaiJadi > 99) nilaiJadi = 99;
                         
                         // Set value to corresponding 'nilai jadi' input
                         $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val(nilaiJadi);

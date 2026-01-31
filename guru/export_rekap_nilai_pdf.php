@@ -16,22 +16,13 @@ if (!$selected_class_id || !$selected_jenis) {
     die('Parameter tidak lengkap');
 }
 
-// Get teacher data
-$id_guru = $_SESSION['user_id'];
-if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
-    $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    $id_guru = $stmt->fetchColumn();
-}
-// Get Guru Name
-$stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
-$stmt->execute([$id_guru]);
-$nama_guru = $stmt->fetchColumn();
-
 // Get Class Info
 $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
 $stmt->execute([$selected_class_id]);
 $class_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Use Wali Kelas name for signature
+$nama_guru = $class_info['wali_kelas'];
 
 // Get All Subjects
 $subjects = [];
@@ -211,9 +202,9 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
     
     <div class="no-break" style="margin-top: 30px; text-align: right; margin-right: 50px;">
         <p>Jepara, <?= date('d F Y') ?></p>
-        <p>Wali Kelas / Guru</p>
+        <p>Wali Kelas</p>
         <br><br><br>
-        <p><b><?= htmlspecialchars($nama_guru) ?></b></p>
+        <p><b><?= htmlspecialchars($nama_guru ?? '.........................') ?></b></p>
     </div>
 
     <script>

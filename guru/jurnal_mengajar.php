@@ -241,7 +241,7 @@ foreach ($jam_mengajar_list as $jam) {
     ];
 }
 
-$mapel_stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran WHERE nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC");
+$mapel_stmt = $pdo->query("SELECT DISTINCT nama_mapel FROM tb_mata_pelajaran WHERE nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC");
 $mapel_list = $mapel_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = 'Jurnal Mengajar';
@@ -649,7 +649,6 @@ include '../templates/header.php';
                         <select name="mapel" class="form-control select2" required>
                             <option value="">-- Pilih Mata Pelajaran --</option>
                             <?php foreach ($mapel_list as $mpl): ?>
-                                <?php if (in_array($mpl['nama_mapel'], ['Istirahat I', 'Istirahat II', 'Upacara Bendera', 'Asmaul Husna'])) continue; ?>
                                 <option value="<?php echo htmlspecialchars($mpl['nama_mapel']); ?>">
                                     <?php echo htmlspecialchars($mpl['nama_mapel']); ?>
                                 </option>

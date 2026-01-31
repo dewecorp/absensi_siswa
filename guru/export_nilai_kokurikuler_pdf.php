@@ -15,13 +15,45 @@ if (!$selected_class_id || !$selected_mapel_id) {
     die('Parameter tidak lengkap');
 }
 
+// Get Active Semester
+$school_profile = getSchoolProfile($pdo);
+$tahun_ajaran = $school_profile['tahun_ajaran'];
+$semester_aktif = $school_profile['semester'];
+
 // Get teacher data
-$id_guru = $_SESSION['user_id'];
-if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
-    $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
+// Logic: Try to find the actual teacher of the subject from Schedule -> Daily Grades -> Kokurikuler
+// If all fail, and user is a guru, fallback to current user.
+
+// 1. Try Jadwal Pelajaran (Most reliable)
+$stmt = $pdo->prepare("SELECT DISTINCT guru_id FROM tb_jadwal_pelajaran WHERE kelas_id = ? AND mapel_id = ? LIMIT 1");
+$stmt->execute([$selected_class_id, $selected_mapel_id]);
+$id_guru = $stmt->fetchColumn();
+
+// 2. If not found, try Daily Grades
+if (!$id_guru) {
+    $stmt = $pdo->prepare("SELECT DISTINCT id_guru FROM tb_nilai_harian_header WHERE id_kelas = ? AND id_mapel = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1");
+    $stmt->execute([$selected_class_id, $selected_mapel_id, $tahun_ajaran, $semester_aktif]);
     $id_guru = $stmt->fetchColumn();
 }
+
+// 3. If not found, try Kokurikuler
+if (!$id_guru) {
+    $stmt = $pdo->prepare("SELECT DISTINCT id_guru FROM tb_nilai_kokurikuler_header WHERE id_kelas = ? AND id_mapel = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1");
+    $stmt->execute([$selected_class_id, $selected_mapel_id, $tahun_ajaran, $semester_aktif]);
+    $id_guru = $stmt->fetchColumn();
+}
+
+// 4. Fallback for Guru user if still not found
+if (!$id_guru && isset($_SESSION['level']) && $_SESSION['level'] == 'guru') {
+    $id_guru = $_SESSION['user_id'];
+    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+        $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $id_guru = $stmt->fetchColumn();
+    }
+}
+
+$id_guru = $id_guru ? $id_guru : 0;
 
 // Get Class Info
 $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
@@ -39,14 +71,20 @@ $stmt->execute([$selected_class_id]);
 $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get Grade Headers
-// Get active semester info
-$school_profile = getSchoolProfile($pdo);
-$tahun_ajaran = $school_profile['tahun_ajaran'];
-$semester_aktif = $school_profile['semester'];
+// School profile already fetched above
 
-$stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_guru = ? AND id_kelas = ? AND id_mapel = ? AND tahun_ajaran = ? AND semester = ? ORDER BY created_at ASC");
-$stmt->execute([$id_guru, $selected_class_id, $selected_mapel_id, $tahun_ajaran, $semester_aktif]);
+// Fetch headers without id_guru first to ensure we get data if it exists (especially for Admin view)
+$stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_kelas = ? AND id_mapel = ? AND tahun_ajaran = ? AND semester = ? ORDER BY created_at ASC");
+$stmt->execute([$selected_class_id, $selected_mapel_id, $tahun_ajaran, $semester_aktif]);
 $grade_headers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// If headers exist, update id_guru from the actual data
+if (!empty($grade_headers)) {
+    $id_guru_from_data = $grade_headers[0]['id_guru'];
+    if ($id_guru == 0 || $id_guru != $id_guru_from_data) {
+        $id_guru = $id_guru_from_data;
+    }
+}
 
 // Get Grades
 $grades_data = [];
@@ -66,12 +104,6 @@ if (!empty($grade_headers)) {
     }
 }
 
-// Helper function
-function getGuruName($pdo, $id) {
-    $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
-    $stmt->execute([$id]);
-    return $stmt->fetchColumn();
-}
 ?>
 <!DOCTYPE html>
 <html>
@@ -121,7 +153,8 @@ function getGuruName($pdo, $id) {
     <div class="header">
         <h2>DAFTAR NILAI KOKURIKULER</h2>
         <h3><?= htmlspecialchars($class_info['nama_kelas'] ?? '') ?> - <?= htmlspecialchars($mapel_info['nama_mapel'] ?? '') ?></h3>
-        <p>Guru: <?= htmlspecialchars(getGuruName($pdo, $id_guru) ?: '') ?></p>
+        <p>Guru: <?= htmlspecialchars(getGuruName($pdo, $id_guru) ?: '.........................') ?></p>
+        <p>Wali Kelas: <?= htmlspecialchars($class_info['wali_kelas'] ?? '-') ?></p>
     </div>
 
     <table>
@@ -190,11 +223,20 @@ function getGuruName($pdo, $id) {
         </tbody>
     </table>
     
-    <div class="no-break" style="margin-top: 30px; text-align: right; margin-right: 50px;">
-        <p>Jepara, <?= date('d F Y') ?></p>
-        <p>Guru Mata Pelajaran</p>
-        <br><br><br>
-        <p><b><?= htmlspecialchars(getGuruName($pdo, $id_guru) ?: '') ?></b></p>
+    <div class="no-break" style="margin-top: 30px;">
+        <table style="width: 100%; border: none;">
+            <tr style="border: none;">
+                <td style="border: none; text-align: center; width: 50%; vertical-align: top;">
+                    <!-- Left side empty -->
+                </td>
+                <td style="border: none; text-align: center; width: 50%; vertical-align: top;">
+                    Jepara, <?= date('d F Y') ?><br>
+                    Guru Mata Pelajaran
+                    <br><br><br><br>
+                    <b><?= htmlspecialchars(getGuruName($pdo, $id_guru) ?: '.........................') ?></b>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <script>

@@ -321,6 +321,13 @@ function getStudentsByClass($pdo, $kelas_id) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+// Function to get guru name by id
+function getGuruName($pdo, $id) {
+    $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$id]);
+    return $stmt->fetchColumn();
+}
+
 // Function to get activity color based on action
 function getActivityColor($action) {
     $action = strtolower($action);

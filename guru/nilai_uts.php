@@ -384,16 +384,19 @@ $(document).ready(function() {
                 n_jadi = kktp;
             } else {
                 // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
-                var range = 100 - kktp;
+                var maxVal = 99;
+                var range = maxVal - kktp;
+                var inputRange = 100 - kktp;
+                
                 if (range > 0) {
-                    var ratio = (n_temp_jadi - kktp) / range;
+                    var ratio = (n_temp_jadi - kktp) / inputRange;
                     var ratioBoosted = 1 - Math.pow(1 - ratio, 2);
                     n_jadi = kktp + (range * ratioBoosted);
                 }
             }
-            // Round to nearest integer and ensure max 100
+            // Round to nearest integer and ensure max 99
             n_jadi = Math.round(n_jadi);
-            if (n_jadi > 100) n_jadi = 100;
+            if (n_jadi > 99) n_jadi = 99;
         }
         
         // User said: "jka remidi kosong maka tetap ambil nilai asli untuk diangkat"
