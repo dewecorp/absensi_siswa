@@ -246,6 +246,9 @@ switch ($user_level) {
             $nilai_submenu_guru[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'];
         }
         
+        // Menu Rekap Nilai untuk semua guru
+        $nilai_submenu_guru[] = ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php'];
+        
         $nilai_urls_guru = array_map(function($item) {
             return basename($item['url']);
         }, $nilai_submenu_guru);
@@ -369,6 +372,9 @@ switch ($user_level) {
              $nilai_submenu[] = ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'];
              $nilai_submenu[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'];
         }
+
+        // Menu Rekap Nilai untuk wali kelas
+        $nilai_submenu[] = ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php'];
         
         $nilai_urls = array_map(function($item) {
             return basename($item['url']);

@@ -113,6 +113,44 @@ require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
 ?>
 
+<style>
+    /* Sticky Columns and Header */
+    .table-responsive {
+        max-height: 80vh;
+        overflow: auto;
+    }
+    .sticky-col {
+        position: sticky !important;
+        background-color: #fff !important;
+        z-index: 10;
+        border-right: 1px solid #dee2e6;
+    }
+    .sticky-col-1 {
+        left: 0;
+        width: 50px;
+        min-width: 50px;
+    }
+    .sticky-col-2 {
+        left: 50px;
+        min-width: 200px;
+        max-width: 250px;
+    }
+    
+    /* Sticky Header */
+    thead th {
+        position: sticky !important;
+        top: 0;
+        background-color: #f8f9fa !important;
+        z-index: 15;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Sticky Header + Sticky Column Intersection */
+    thead th.sticky-col {
+        z-index: 25 !important;
+    }
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -155,12 +193,22 @@ require_once '../templates/sidebar.php';
                     </form>
 
                     <?php if ($selected_class && $selected_mapel): ?>
+                        <div class="mb-3 text-right">
+                            <div class="btn-group">
+                                <a href="export_nilai_semester_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-success">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </a>
+                                <a href="export_nilai_semester_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-danger">
+                                    <i class="fas fa-file-pdf"></i> Export PDF
+                                </a>
+                            </div>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
-                                        <th width="5%" class="text-center">No</th>
-                                        <th class="text-center">Nama Siswa</th>
+                                        <th class="text-center sticky-col sticky-col-1" width="5%">No</th>
+                                        <th class="text-center sticky-col sticky-col-2">Nama Siswa</th>
                                         <th width="15%" class="text-center">Nilai Asli</th>
                                         <th width="15%" class="text-center">Remidi</th>
                                         <th width="15%" class="text-center">Nilai Jadi</th>
@@ -207,8 +255,8 @@ require_once '../templates/sidebar.php';
                                         }
                                     ?>
                                         <tr data-id-siswa="<?= $id_siswa ?>">
-                                            <td class="text-center"><?= $no++ ?></td>
-                                            <td><?= htmlspecialchars($student['nama_siswa']) ?></td>
+                                            <td class="text-center sticky-col sticky-col-1"><?= $no++ ?></td>
+                                            <td class="sticky-col sticky-col-2"><?= htmlspecialchars($student['nama_siswa']) ?></td>
                                             <td class="text-center">
                                                 <span class="display-nilai-asli"><?= $nilai_asli > 0 ? (float)$nilai_asli : '-' ?></span>
                                                 <input type="number" class="form-control form-control-sm input-nilai-asli d-none" 

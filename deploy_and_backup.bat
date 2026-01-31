@@ -121,33 +121,34 @@ if %errorlevel% neq 0 (
 
 :: 7. Create ZIP Backup
 echo.
-echo [Backup] Creating ZIP Backup (absensi_siswa_backup.zip)...
+echo [Backup] Preparing backup...
+
+:: Generate Timestamp (Locale Independent)
+for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
+set "TIMESTAMP=%datetime:~0,4%-%datetime:~4,2%-%datetime:~6,2%_%datetime:~8,2%-%datetime:~10,2%-%datetime:~12,2%"
+
+:: Define Backup Filename
+set "BACKUP_DIR=backups"
+if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
+set "BACKUP_FILE=%BACKUP_DIR%\source_backup_%TIMESTAMP%.zip"
+
+echo [Backup] Creating ZIP: %BACKUP_FILE%
 echo This might take a while...
 
-:: Create temp directory to avoid file lock errors
-set "TEMP_DIR=backup_staging_temp"
-if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
-mkdir "%TEMP_DIR%"
+:: Create backup using tar (Windows 10/11 built-in)
+:: Exclude .git folder, the backups folder itself, and node_modules (optional, but recommended to save space)
+:: Using "tar" directly is faster and cleaner than robocopy+temp
+tar -a -c -f "%BACKUP_FILE%" --exclude ".git" --exclude "backups" --exclude "node_modules" *
 
-echo Copying files to staging area...
-:: Robocopy exit codes: 0-7 are success
-robocopy . "%TEMP_DIR%" /E /XD .git "%TEMP_DIR%" /XF absensi_siswa_backup.zip /R:1 /W:1 /NFL /NDL /NJH /NJS
-set "ROBO_EXIT=%errorlevel%"
-
-if %ROBO_EXIT% geq 8 (
-    echo ROBOCP ERROR: %ROBO_EXIT%
-    goto :error
-)
-
-echo Compressing files...
-tar -a -c -f absensi_siswa_backup.zip -C "%TEMP_DIR%" .
 if %errorlevel% neq 0 (
-    echo TAR ERROR: %errorlevel%
-    goto :error
+    echo.
+    echo [Warning] Tar command returned error code %errorlevel%.
+    echo Some files might be locked or inaccessible.
+    echo Backup might be partial.
+) else (
+    echo.
+    echo [Success] Backup saved to: %BACKUP_FILE%
 )
-
-echo Cleaning up staging files...
-rmdir /s /q "%TEMP_DIR%"
 
 echo.
 echo ==========================================

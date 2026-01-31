@@ -119,6 +119,44 @@ require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
 ?>
 
+<style>
+    /* Sticky Columns and Header */
+    .table-responsive {
+        max-height: 80vh;
+        overflow: auto;
+    }
+    .sticky-col {
+        position: sticky !important;
+        background-color: #fff !important;
+        z-index: 10;
+        border-right: 1px solid #dee2e6;
+    }
+    .sticky-col-1 {
+        left: 0;
+        width: 50px;
+        min-width: 50px;
+    }
+    .sticky-col-2 {
+        left: 50px;
+        min-width: 200px;
+        max-width: 250px;
+    }
+    
+    /* Sticky Header */
+    thead th {
+        position: sticky !important;
+        top: 0;
+        background-color: #f8f9fa !important;
+        z-index: 15;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Sticky Header + Sticky Column Intersection */
+    thead th.sticky-col {
+        z-index: 25 !important;
+    }
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -178,8 +216,8 @@ require_once '../templates/sidebar.php';
                         <table class="table table-bordered table-striped table-sm" id="gradesTable">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
-                                    <th style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
+                                    <th class="sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
+                                    <th class="sticky-col sticky-col-2" style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
                                     <?php foreach ($grade_headers as $header): ?>
                                         <th class="text-center position-relative" colspan="2" style="min-width: 200px;">
                                             <div class="mb-2">
@@ -229,8 +267,8 @@ require_once '../templates/sidebar.php';
                                     ?>
                                     <?php foreach ($students as $student): ?>
                                         <tr>
-                                            <td class="text-center"><?= $i++ ?></td>
-                                            <td><?= htmlspecialchars($student['nama_siswa']) ?></td>
+                                            <td class="text-center sticky-col sticky-col-1"><?= $i++ ?></td>
+                                            <td class="sticky-col sticky-col-2"><?= htmlspecialchars($student['nama_siswa']) ?></td>
                                             <?php 
                                             $total_score = 0;
                                             $count_score = 0;
