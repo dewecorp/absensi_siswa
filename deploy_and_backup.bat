@@ -119,13 +119,24 @@ if %errorlevel% neq 0 (
     goto :error
 )
 
-:: 7. Create ZIP Backup
 echo.
+echo [Git] Push successful.
+echo.
+
+:: 7. Create ZIP Backup
 echo [Backup] Preparing backup...
 
-:: Generate Timestamp (Locale Independent)
-for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
-set "TIMESTAMP=%datetime:~0,4%-%datetime:~4,2%-%datetime:~6,2%_%datetime:~8,2%-%datetime:~10,2%-%datetime:~12,2%"
+:: Generate Timestamp (Safe Method)
+set "datetime="
+for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set "datetime=%%I"
+
+:: Check if datetime was retrieved
+if "%datetime%"=="" (
+    echo Warning: Could not retrieve date/time via WMIC. Using 'unknown_date'
+    set "TIMESTAMP=unknown_date"
+) else (
+    set "TIMESTAMP=%datetime:~0,4%-%datetime:~4,2%-%datetime:~6,2%_%datetime:~8,2%-%datetime:~10,2%-%datetime:~12,2%"
+)
 
 :: Define Backup Filename
 set "BACKUP_DIR=backups"
@@ -135,9 +146,8 @@ set "BACKUP_FILE=%BACKUP_DIR%\source_backup_%TIMESTAMP%.zip"
 echo [Backup] Creating ZIP: %BACKUP_FILE%
 echo This might take a while...
 
-:: Create backup using tar (Windows 10/11 built-in)
-:: Exclude .git folder, the backups folder itself, and node_modules (optional, but recommended to save space)
-:: Using "tar" directly is faster and cleaner than robocopy+temp
+:: Create backup using tar
+:: We use explicit file inclusion to be safer, but * is usually fine.
 tar -a -c -f "%BACKUP_FILE%" --exclude ".git" --exclude "backups" --exclude "node_modules" *
 
 if %errorlevel% neq 0 (
