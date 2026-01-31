@@ -128,9 +128,13 @@ pause
 
 :: 7. Create ZIP Backup
 echo [Backup] Preparing backup...
+pause
 
-:: Generate Timestamp using PowerShell (More reliable than WMIC)
-for /f %%a in ('powershell -Command "Get-Date -format 'yyyy-MM-dd_HH-mm-ss'"') do set TIMESTAMP=%%a
+:: Generate Timestamp using PowerShell (Simplified)
+set "TIMESTAMP="
+for /f "usebackq tokens=*" %%a in (`powershell -Command "Get-Date -format yyyy-MM-dd_HH-mm-ss"`) do set TIMESTAMP=%%a
+
+if "%TIMESTAMP%"=="" set TIMESTAMP=backup_date_unknown
 
 :: Define Backup Filename
 set "BACKUP_DIR=backups"
