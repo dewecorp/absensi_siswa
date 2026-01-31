@@ -882,10 +882,15 @@ window.bulkDelete = function() {
                 dataType: 'json',
                 success: function(response) {
                     if (response && response.success) {
-                        Swal.fire('Dihapus!', response.message, 'success');
-                        setTimeout(function() {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Dihapus!',
+                            text: response.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
                             location.reload();
-                        }, 1500);
+                        });
                     } else {
                         Swal.fire('Gagal!', response ? response.message : 'Terjadi kesalahan', 'error');
                     }

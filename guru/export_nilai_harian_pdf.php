@@ -54,7 +54,10 @@ if (!empty($grade_headers)) {
     $all_grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     foreach ($all_grades as $g) {
-        $grades_data[$g['id_siswa']][$g['id_header']] = $g['nilai'];
+        $grades_data[$g['id_siswa']][$g['id_header']] = [
+            'nilai' => $g['nilai'],
+            'nilai_jadi' => $g['nilai_jadi']
+        ];
     }
 }
 
@@ -75,12 +78,12 @@ function getGuruName($pdo, $id) {
         .header h2, .header h3, .header p { margin: 2px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #000; padding: 5px; text-align: center; font-size: 11px; }
-        th { background-color: #f2f2f2; -webkit-print-color-adjust: exact; }
+        th { background-color: #f2f2f2; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .text-left { text-align: left; }
         
         @media print {
             @page { size: landscape; margin: 10mm; }
-            body { -webkit-print-color-adjust: exact; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none; }
         }
         
@@ -113,12 +116,18 @@ function getGuruName($pdo, $id) {
     <table>
         <thead>
             <tr>
-                <th width="5%">NO</th>
-                <th width="30%">NAMA SISWA</th>
+                <th width="5%" rowspan="2">NO</th>
+                <th width="30%" rowspan="2">NAMA SISWA</th>
                 <?php foreach ($grade_headers as $header): ?>
-                    <th><?= htmlspecialchars($header['nama_penilaian']) ?></th>
+                    <th colspan="2"><?= htmlspecialchars($header['nama_penilaian']) ?></th>
                 <?php endforeach; ?>
-                <th width="10%">RERATA</th>
+                <th width="10%" rowspan="2">RERATA</th>
+            </tr>
+            <tr>
+                <?php foreach ($grade_headers as $header): ?>
+                    <th>Nilai</th>
+                    <th>Jadi</th>
+                <?php endforeach; ?>
             </tr>
         </thead>
         <tbody>
@@ -135,11 +144,21 @@ function getGuruName($pdo, $id) {
                 $count = 0;
                 
                 foreach ($grade_headers as $header) {
-                    $val = isset($grades_data[$student['id_siswa']][$header['id_header']]) ? $grades_data[$student['id_siswa']][$header['id_header']] : '';
-                    echo '<td>' . htmlspecialchars($val) . '</td>';
+                    $data = isset($grades_data[$student['id_siswa']][$header['id_header']]) 
+                            ? $grades_data[$student['id_siswa']][$header['id_header']] 
+                            : ['nilai' => '', 'nilai_jadi' => ''];
                     
-                    if ($val !== '') {
-                        $total += (float)$val;
+                    $nilai = $data['nilai'];
+                    $nilai_jadi = $data['nilai_jadi'];
+                    
+                    echo '<td>' . htmlspecialchars($nilai) . '</td>';
+                    echo '<td>' . htmlspecialchars($nilai_jadi) . '</td>';
+                    
+                    // For average, prefer nilai_jadi, else nilai
+                    $valForAvg = $nilai_jadi !== '' && $nilai_jadi !== null ? $nilai_jadi : $nilai;
+                    
+                    if ($valForAvg !== '' && $valForAvg !== null) {
+                        $total += (float)$valForAvg;
                         $count++;
                     }
                 }

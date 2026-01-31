@@ -60,7 +60,10 @@ if (!empty($grade_headers)) {
     $all_grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     foreach ($all_grades as $g) {
-        $grades_data[$g['id_siswa']][$g['id_header']] = $g['nilai'];
+        $grades_data[$g['id_siswa']][$g['id_header']] = [
+            'nilai' => $g['nilai'],
+            'nilai_jadi' => $g['nilai_jadi']
+        ];
     }
 }
 
@@ -80,35 +83,53 @@ $sheet->setCellValue('A3', 'MATA PELAJARAN: ' . $mapel_info['nama_mapel']);
 $sheet->setCellValue('A4', 'GURU: ' . getGuruName($pdo, $id_guru));
 
 // Merge Header Cells
-$sheet->mergeCells('A1:E1');
-$sheet->mergeCells('A2:E2');
-$sheet->mergeCells('A3:E3');
-$sheet->mergeCells('A4:E4');
+$sheet->mergeCells('A1:H1');
+$sheet->mergeCells('A2:H2');
+$sheet->mergeCells('A3:H3');
+$sheet->mergeCells('A4:H4');
 
 // Table Headers
 $row = 6;
 $sheet->setCellValue('A' . $row, 'NO');
+$sheet->mergeCells('A' . $row . ':A' . ($row + 1));
 $sheet->setCellValue('B' . $row, 'NAMA SISWA');
+$sheet->mergeCells('B' . $row . ':B' . ($row + 1));
 
 $col = 'C';
 foreach ($grade_headers as $header) {
-    $sheet->setCellValue($col . $row, $header['nama_penilaian']);
-    $col++;
+    // Determine next column letter for merge
+    $currentCol = $col;
+    $nextCol = ++$col; // This increments $col, so $col is now D (if start was C)
+    
+    // Merge for Title (e.g., UH 1)
+    $sheet->setCellValue($currentCol . $row, $header['nama_penilaian']);
+    $sheet->mergeCells($currentCol . $row . ':' . $nextCol . $row);
+    
+    // Sub-headers
+    $sheet->setCellValue($currentCol . ($row + 1), 'Nilai');
+    $sheet->setCellValue($nextCol . ($row + 1), 'Jadi');
+    
+    $col++; // Move to next available column for next loop (e.g., E)
 }
-$sheet->setCellValue($col . $row, 'RERATA');
 
-// Style Table Header
+$sheet->setCellValue($col . $row, 'RERATA');
+$sheet->mergeCells($col . $row . ':' . $col . ($row + 1));
 $lastCol = $col;
+
+// Style for Headers
 $headerStyle = [
     'font' => ['bold' => true],
-    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-    'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E0E0E0']]
+    'alignment' => [
+        'horizontal' => Alignment::HORIZONTAL_CENTER,
+        'vertical' => Alignment::VERTICAL_CENTER
+    ],
+    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
 ];
-$sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray($headerStyle);
 
-// Data
-$row++;
+$sheet->getStyle('A' . $row . ':' . $lastCol . ($row + 1))->applyFromArray($headerStyle);
+
+// Data Rows
+$row += 2; // Move past the 2 header rows
 $no = 1;
 foreach ($students as $student) {
     $sheet->setCellValue('A' . $row, $no++);
@@ -119,32 +140,55 @@ foreach ($students as $student) {
     $count = 0;
     
     foreach ($grade_headers as $header) {
-        $val = isset($grades_data[$student['id_siswa']][$header['id_header']]) ? $grades_data[$student['id_siswa']][$header['id_header']] : '';
-        $sheet->setCellValue($col . $row, $val);
+        $data = isset($grades_data[$student['id_siswa']][$header['id_header']]) 
+                ? $grades_data[$student['id_siswa']][$header['id_header']] 
+                : ['nilai' => '', 'nilai_jadi' => ''];
         
-        if ($val !== '') {
-            $total += (float)$val;
+        $nilai = $data['nilai'];
+        $nilai_jadi = $data['nilai_jadi'];
+        
+        // Output Nilai
+        $sheet->setCellValue($col . $row, $nilai);
+        $col++;
+        
+        // Output Nilai Jadi
+        $sheet->setCellValue($col . $row, $nilai_jadi);
+        $col++;
+        
+        // For average, prefer nilai_jadi, else nilai
+        $valForAvg = $nilai_jadi !== '' && $nilai_jadi !== null ? $nilai_jadi : $nilai;
+        
+        if ($valForAvg !== '' && $valForAvg !== null) {
+            $total += (float)$valForAvg;
             $count++;
         }
-        $col++;
     }
     
     $avg = $count > 0 ? round($total / $count, 1) : '-';
     $sheet->setCellValue($col . $row, $avg);
-    
     $row++;
 }
 
-// Style Data Table
+// Style for Data
 $dataStyle = [
     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
 ];
-$sheet->getStyle('A6:' . $lastCol . ($row - 1))->applyFromArray($dataStyle);
+$sheet->getStyle('A' . ($row - $no) . ':' . $lastCol . ($row - 1))->applyFromArray($dataStyle);
 
 // Auto Size Columns
-foreach (range('A', $lastCol) as $colID) {
+foreach (range('A', 'B') as $colID) {
     $sheet->getColumnDimension($colID)->setAutoSize(true);
 }
+// For data columns, maybe set fixed width or auto
+// Since range() only works for single characters A-Z, we need a smarter loop if columns exceed Z
+// But for now let's just loop a bit or let it be.
+// Better:
+$curr = 'A';
+while ($curr != $lastCol) {
+    $sheet->getColumnDimension($curr)->setAutoSize(true);
+    $curr++;
+}
+$sheet->getColumnDimension($lastCol)->setAutoSize(true);
 
 // Helper function
 function getGuruName($pdo, $id) {

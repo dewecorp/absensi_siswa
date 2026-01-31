@@ -742,10 +742,11 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    var printWindow = window.open('', '', 'height=860,width=1300');
+    var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Berjamaah</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
@@ -755,10 +756,13 @@ function exportToPDF() {
     printWindow.document.write('.fa-check { color: green; font-family: sans-serif; font-style: normal; } .fa-check:before { content: "v"; }');
     printWindow.document.write('.fa-times { color: red; font-family: sans-serif; font-style: normal; } .fa-times:before { content: "x"; }');
     printWindow.document.write('.fa-ban { color: orange; font-family: sans-serif; font-style: normal; } .fa-ban:before { content: "b"; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -783,10 +787,10 @@ function exportToPDF() {
     printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(function() { printWindow.print(); }, 500);
 }
 
 function exportSemesterToExcel() {
@@ -822,20 +826,24 @@ function exportSemesterToExcel() {
 }
 
 function exportSemesterToPDF() {
-    var printWindow = window.open('', '', 'height=860,width=1300');
+    var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Semester</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -854,10 +862,10 @@ function exportSemesterToPDF() {
     printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(function() { printWindow.print(); }, 500);
 }
 
 function exportDailyToExcel() {
@@ -898,10 +906,11 @@ function exportDailyToExcel() {
 }
 
 function exportDailyToPDF() {
-    var printWindow = window.open('', '', 'height=860,width=1300');
+    var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Harian Sholat Berjamaah</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal portrait; margin: 0.5cm; }');
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
@@ -911,10 +920,13 @@ function exportDailyToPDF() {
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
     printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
     printWindow.document.write('.badge-secondary { background-color: #6c757d; color: white; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -940,10 +952,10 @@ function exportDailyToPDF() {
     printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(function() { printWindow.print(); }, 500);
 }
 
 function exportStudentToExcel() {
@@ -986,10 +998,11 @@ function exportStudentToExcel() {
 
 function exportStudentToPDF() {
     var studentName = '<?php echo isset($student_results[0]) ? addslashes($student_results[0]['nama_siswa']) : ""; ?>';
-    var printWindow = window.open('', '', 'height=860,width=1300');
+    var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Siswa</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal portrait; margin: 0.5cm; }');
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
@@ -999,10 +1012,13 @@ function exportStudentToPDF() {
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
     printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
     printWindow.document.write('.badge-secondary { background-color: #6c757d; color: white; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -1014,12 +1030,6 @@ function exportStudentToPDF() {
     var table = document.getElementById('studentTable');
     if (table) {
         var newTable = table.cloneNode(true);
-        var badges = newTable.querySelectorAll('.badge');
-        badges.forEach(function(badge) {
-            var text = badge.textContent;
-            var textNode = document.createTextNode(text);
-            badge.parentNode.replaceChild(textNode, badge);
-        });
         printWindow.document.write(newTable.outerHTML);
     }
     
@@ -1028,9 +1038,9 @@ function exportStudentToPDF() {
     printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(function() { printWindow.print(); }, 500);
 }
 </script>

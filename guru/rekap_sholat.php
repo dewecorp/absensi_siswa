@@ -452,7 +452,13 @@ echo "<script>
                     },
                     success: function(response) {
                         if (response.success) {
-                            Swal.fire('Berhasil', 'Status berhasil diperbarui', 'success');
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil',
+                                text: 'Status berhasil diperbarui',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
                             // Update badge locally
                             var badgeSpan = $('#badge_' + studentId);
                             if (status == 'Berhalangan') {

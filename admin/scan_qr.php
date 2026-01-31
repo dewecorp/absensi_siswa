@@ -327,7 +327,13 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(stream) {
                 // Permission granted
                 stream.getTracks().forEach(track => track.stop()); // Stop immediately
-                Swal.fire('Sukses', 'Izin kamera diberikan! Silakan refresh halaman.', 'success').then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Sukses',
+                    text: 'Izin kamera diberikan! Silakan refresh halaman.',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
                     location.reload();
                 });
             })

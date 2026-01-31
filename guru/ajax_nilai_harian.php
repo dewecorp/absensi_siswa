@@ -72,13 +72,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Actually, for simplicity, let's just loop and UPSERT
             
             $stmt = $pdo->prepare("
-                INSERT INTO tb_nilai_harian_detail (id_header, id_siswa, nilai) 
-                VALUES (?, ?, ?) 
-                ON DUPLICATE KEY UPDATE nilai = VALUES(nilai)
+                INSERT INTO tb_nilai_harian_detail (id_header, id_siswa, nilai, nilai_jadi) 
+                VALUES (?, ?, ?, ?) 
+                ON DUPLICATE KEY UPDATE nilai = VALUES(nilai), nilai_jadi = VALUES(nilai_jadi)
             ");
             
             foreach ($grades as $g) {
-                $stmt->execute([$id_header, $g['id_siswa'], $g['nilai']]);
+                $nilai = isset($g['nilai']) && $g['nilai'] !== '' ? $g['nilai'] : null;
+                $nilai_jadi = isset($g['nilai_jadi']) && $g['nilai_jadi'] !== '' ? $g['nilai_jadi'] : null;
+                $stmt->execute([$id_header, $g['id_siswa'], $nilai, $nilai_jadi]);
             }
             
             $pdo->commit();

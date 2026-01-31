@@ -874,10 +874,11 @@ function exportToPDF() {
 
 function fallbackPrintPDF() {
     // Print the table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
+    var printWindow = window.open('', '_blank'); // New tab
     printWindow.document.write('<html><head><title>Rekap Absensi Bulanan</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
     printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
@@ -890,17 +891,22 @@ function fallbackPrintPDF() {
     printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
     printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
-    printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
+    printWindow.document.write('.logo { max-width: 80px; vertical-align: middle; margin-right: 15px; }');
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
     printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
-    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div>');
+    printWindow.document.write('</div>');
     
     // Get the table
     var table = document.querySelector('.table-bordered');
@@ -923,14 +929,10 @@ function fallbackPrintPDF() {
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
     
-    printWindow.document.write('</div>');
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(function() {
-        printWindow.print();
-        // printWindow.close();
-    }, 500);
 }
 
 function fallbackSemesterPrintPDF() {

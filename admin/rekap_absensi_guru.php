@@ -22,10 +22,7 @@ $js_libs = [
     "https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js",
     "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js",
     // Using SheetJS from jsDelivr as alternative to XLSX
-    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
-    // jsPDF libraries for PDF export
-    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
-    "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"
+    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
 ];
 
 // Handle form submission

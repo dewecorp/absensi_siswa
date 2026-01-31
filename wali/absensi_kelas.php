@@ -376,7 +376,7 @@ $js_page[] = "
         printWindow.document.write('</style>');
         printWindow.document.write('</head><body>');
         
-        printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
+        printWindow.document.write('<button class=\"print-btn no-print\" onclick=\"window.print()\">Cetak / Simpan PDF</button>');
 
         printWindow.document.write('<div class=\"header-container\">');
         printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\">');

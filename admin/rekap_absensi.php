@@ -22,10 +22,7 @@ $js_libs = [
     "https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js",
     "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js",
     // Using SheetJS from jsDelivr as alternative to XLSX
-    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
-    // jsPDF libraries for PDF export
-    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
-    "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"
+    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
 ];
 
 // Handle form submission
@@ -1052,10 +1049,11 @@ function exportSemesterToPDF() {
 
 function fallbackSemesterPrintPDF() {
     // Print the semester table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
+    var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
+    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
     printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
@@ -1072,8 +1070,11 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
     printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
@@ -1102,13 +1103,9 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('</div>');
     
     printWindow.document.write('</div>');
+    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(function() {
-        printWindow.print();
-        // printWindow.close();
-    }, 500);
 }
 
 // Validate form submission - use event delegation on document level

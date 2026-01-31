@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_mapel'])) {
         $nama_mapel = trim($_POST['nama_mapel']);
         $kode_mapel = trim($_POST['kode_mapel']);
+        $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
         
         // Cek duplikasi mata pelajaran
         $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE nama_mapel = ? OR kode_mapel = ?");
@@ -36,11 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($check->fetchColumn() > 0) {
             $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
         } else {
-            $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel) VALUES (?, ?)");
-            if ($stmt->execute([$nama_mapel, $kode_mapel])) {
+            $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel, kktp) VALUES (?, ?, ?)");
+            if ($stmt->execute([$nama_mapel, $kode_mapel, $kktp])) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil ditambahkan!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                logActivity($pdo, $username, 'Tambah Mata Pelajaran', "Menambahkan mapel $nama_mapel ($kode_mapel)");
+                $kktp_log = $kktp !== null ? "dengan KKTP $kktp" : "tanpa KKTP";
+                logActivity($pdo, $username, 'Tambah Mata Pelajaran', "Menambahkan mapel $nama_mapel ($kode_mapel) $kktp_log");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal menambahkan mata pelajaran!'];
             }
@@ -49,6 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $id_mapel = (int)$_POST['id_mapel'];
         $nama_mapel = trim($_POST['nama_mapel']);
         $kode_mapel = trim($_POST['kode_mapel']);
+        $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
         
         // Cek duplikasi mata pelajaran selain ID ini
         $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE (nama_mapel = ? OR kode_mapel = ?) AND id_mapel != ?");
@@ -56,14 +59,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($check->fetchColumn() > 0) {
             $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
         } else {
-            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=? WHERE id_mapel=?");
-            if ($stmt->execute([$nama_mapel, $kode_mapel, $id_mapel])) {
+            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, kktp=? WHERE id_mapel=?");
+            if ($stmt->execute([$nama_mapel, $kode_mapel, $kktp, $id_mapel])) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil diupdate!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                logActivity($pdo, $username, 'Update Mata Pelajaran', "Update mapel ID $id_mapel menjadi $nama_mapel ($kode_mapel)");
+                $kktp_log = $kktp !== null ? "KKTP $kktp" : "tanpa KKTP";
+                logActivity($pdo, $username, 'Update Mata Pelajaran', "Update mapel ID $id_mapel menjadi $nama_mapel ($kode_mapel) $kktp_log");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengupdate mata pelajaran!'];
             }
+        }
+    } elseif (isset($_POST['set_global_kktp'])) {
+        $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
+        $only_empty = isset($_POST['only_empty']);
+        
+        $sql = "UPDATE tb_mata_pelajaran SET kktp = ?";
+        if ($only_empty) {
+            $sql .= " WHERE kktp IS NULL";
+        }
+        
+        $stmt = $pdo->prepare($sql);
+        if ($stmt->execute([$kktp])) {
+            $count = $stmt->rowCount();
+            $message = ['type' => 'success', 'text' => "Berhasil mengupdate KKTP untuk $count mata pelajaran!"];
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            $kktp_log = $kktp !== null ? "KKTP $kktp" : "tanpa KKTP";
+            $scope_log = $only_empty ? "untuk mapel tanpa KKTP" : "untuk SEMUA mapel";
+            logActivity($pdo, $username, 'Update Global KKTP', "Update global $kktp_log $scope_log");
+        } else {
+            $message = ['type' => 'danger', 'text' => 'Gagal mengupdate KKTP global!'];
         }
     } elseif (isset($_POST['delete_mapel'])) {
         $id_mapel = (int)$_POST['id_mapel'];
@@ -111,7 +135,7 @@ $(document).ready(function() {
     // Initialize DataTable
     $('#table-1').DataTable({
         \"columnDefs\": [
-            { \"sortable\": false, \"targets\": [3] }
+            { \"sortable\": false, \"targets\": [4] }
         ],
         \"language\": {
             \"lengthMenu\": \"Tampilkan _MENU_ entri\",
@@ -134,10 +158,12 @@ $(document).ready(function() {
         var id = $(this).data('id');
         var nama = $(this).data('nama');
         var kode = $(this).data('kode');
+        var kktp = $(this).data('kktp');
 
         $('#edit_id_mapel').val(id);
         $('#edit_nama_mapel').val(nama);
         $('#edit_kode_mapel').val(kode);
+        $('#edit_kktp').val(kktp);
         
         $('#editModal').modal('show');
     });
@@ -164,6 +190,33 @@ $(document).ready(function() {
                     '<input type=\"hidden\" name=\"delete_mapel\" value=\"1\">' +
                     '</form>');
                 $('body').append(form);
+                form.submit();
+            }
+        });
+    });
+
+    // Handle Global KKTP Update
+    $('#btn-update-global-kktp').on('click', function(e) {
+        e.preventDefault();
+        var form = $(this).closest('form');
+        
+        Swal.fire({
+            title: 'Konfirmasi Update',
+            text: 'Apakah Anda yakin ingin mengubah data KKTP?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, Update!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Add hidden input to simulate the button click name
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'set_global_kktp',
+                    value: '1'
+                }).appendTo(form);
                 form.submit();
             }
         });
@@ -261,6 +314,9 @@ include '../templates/sidebar.php';
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#addModal">
                                     <i class="fas fa-plus"></i> Tambah Mapel
                                 </button>
+                                <button class="btn btn-info ml-1" data-toggle="modal" data-target="#globalKktpModal">
+                                    <i class="fas fa-cog"></i> Set KKTP Global
+                                </button>
                                 <div class="dropdown d-inline mr-2">
                                     <button class="btn btn-success dropdown-toggle" type="button" id="exportDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <i class="fas fa-file-export"></i> Export
@@ -280,6 +336,7 @@ include '../templates/sidebar.php';
                                             <th class="text-center" width="5%">No</th>
                                             <th>Kode Mapel</th>
                                             <th>Mata Pelajaran</th>
+                                            <th>KKTP</th>
                                             <th width="15%">Aksi</th>
                                         </tr>
                                     </thead>
@@ -292,11 +349,13 @@ include '../templates/sidebar.php';
                                             <td class="text-center"><?= $no++ ?></td>
                                             <td><?= htmlspecialchars($row['kode_mapel'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['nama_mapel']) ?></td>
+                                            <td><?= $row['kktp'] !== null ? htmlspecialchars($row['kktp']) : '-' ?></td>
                                             <td>
                                                 <button class="btn btn-warning btn-sm edit-btn" 
                                                         data-id="<?= $row['id_mapel'] ?>"
                                                         data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>"
-                                                        data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>">
+                                                        data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>"
+                                                        data-kktp="<?= htmlspecialchars($row['kktp'] ?? '') ?>">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button class="btn btn-danger btn-sm delete-btn" 
@@ -338,10 +397,45 @@ include '../templates/sidebar.php';
                         <label>Nama Mata Pelajaran</label>
                         <input type="text" class="form-control" name="nama_mapel" required>
                     </div>
+                    <div class="form-group">
+                        <label>KKTP (Nilai Minimum)</label>
+                        <input type="number" class="form-control" name="kktp" value="75">
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" name="add_mapel" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Global KKTP Modal -->
+<div class="modal fade" id="globalKktpModal" tabindex="-1" role="dialog" aria-labelledby="globalKktpModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="globalKktpModalLabel">Set KKTP Global</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="">
+                <div class="modal-body">
+                    <p>Fitur ini akan mengatur nilai KKTP untuk mata pelajaran.</p>
+                    <div class="form-group">
+                        <label>Nilai KKTP Baru</label>
+                        <input type="number" class="form-control" name="kktp" value="75" required>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input" id="only_empty" name="only_empty">
+                        <label class="form-check-label" for="only_empty">Hanya update mapel yang KKTP-nya kosong (NULL)</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="button" id="btn-update-global-kktp" class="btn btn-info">Update Global</button>
                 </div>
             </form>
         </div>
@@ -368,6 +462,10 @@ include '../templates/sidebar.php';
                     <div class="form-group">
                         <label>Nama Mata Pelajaran</label>
                         <input type="text" class="form-control" name="nama_mapel" id="edit_nama_mapel" required>
+                    </div>
+                    <div class="form-group">
+                        <label>KKTP (Nilai Minimum)</label>
+                        <input type="number" class="form-control" name="kktp" id="edit_kktp">
                     </div>
                 </div>
                 <div class="modal-footer">

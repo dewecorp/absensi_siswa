@@ -315,6 +315,15 @@ function exportToPDF() {
     printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
+    
+    // Badge styles
+    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; border: 1px solid #000; display: inline-block; }');
+    printWindow.document.write('.badge-success { background-color: #28a745; color: white; }'); // Hadir
+    printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');    // Sakit (match page logic)
+    printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }'); // Izin (match page logic)
+    printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');  // Alpa
+    printWindow.document.write('.badge-secondary { background-color: #6c757d; color: white; }');
+
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; text-align: center; }');
     printWindow.document.write('.header-container { text-align: center; margin-bottom: 20px; }');
     printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
@@ -323,12 +332,12 @@ function exportToPDF() {
     printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
-    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
-    printWindow.document.write('<div class="header-container">');
-    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;">');
-    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<button class=\"print-btn no-print\" onclick=\"window.print()\">Cetak / Simpan PDF</button>');
+    printWindow.document.write('<div class=\"header-container\">');
+    printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\">');
+    printWindow.document.write('<div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3>" . $school_name_js . "</h3>');
-    printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style="clear: both;">');
+    printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector(\'#kelasSelect\').options[document.querySelector(\'#kelasSelect\').selectedIndex].text + \' - Tanggal \' + document.querySelector(\'#tanggalInput\').value + \'</h4></div><br style=\"clear: both;\">');
     printWindow.document.write('</div>');
     
     var table = document.getElementById('table-1').cloneNode(true);
@@ -339,19 +348,29 @@ function exportToPDF() {
         var selectElement = selectCell.querySelector('select');
         if (selectElement) {
             var selectedText = selectElement.options[selectElement.selectedIndex].text;
-            selectCell.innerHTML = selectedText;
+            var selectedValue = selectElement.value;
+            
+            // Apply badge styling based on value (matching page logic)
+            var badgeClass = 'badge-secondary';
+            if (selectedValue === 'Hadir') badgeClass = 'badge-success';
+            else if (selectedValue === 'Sakit') badgeClass = 'badge-info';
+            else if (selectedValue === 'Izin') badgeClass = 'badge-warning';
+            else if (selectedValue === 'Alpa') badgeClass = 'badge-danger';
+            else if (selectedValue === 'Berhalangan') badgeClass = 'badge-danger';
+            
+            selectCell.innerHTML = '<span class=\"badge ' + badgeClass + '\">' + selectedText + '</span>';
         }
     }
     printWindow.document.write(table.outerHTML);
 
     // Add signatures below the table
-    printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<div class=\"signature-wrapper\">');
+    printWindow.document.write('<div class=\"signature-box\">');
     printWindow.document.write('<p>Guru Kelas,</p>');
     printWindow.document.write('<br><br><br>');
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
-    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<div class=\"signature-box\">');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
     printWindow.document.write('<br><br><br>');
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
@@ -361,6 +380,7 @@ function exportToPDF() {
     printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
+    printWindow.focus();
 }
 
 function initDataTable() {

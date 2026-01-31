@@ -107,7 +107,10 @@ if ($selected_class && $selected_mapel) {
         
         // Organize grades by student_id and header_id
         foreach ($all_grades as $g) {
-            $grades_data[$g['id_siswa']][$g['id_header']] = $g['nilai'];
+            $grades_data[$g['id_siswa']][$g['id_header']] = [
+                'nilai' => $g['nilai'],
+                'nilai_jadi' => $g['nilai_jadi']
+            ];
         }
     }
 }
@@ -178,13 +181,16 @@ require_once '../templates/sidebar.php';
                                     <th style="width: 50px; vertical-align: middle;" rowspan="2">No</th>
                                     <th style="vertical-align: middle;" rowspan="2">Nama Siswa</th>
                                     <?php foreach ($grade_headers as $header): ?>
-                                        <th class="text-center position-relative" style="min-width: 150px;">
+                                        <th class="text-center position-relative" colspan="2" style="min-width: 200px;">
                                             <div class="mb-2">
                                                 <button class="btn btn-sm btn-icon btn-warning edit-col-btn" data-header-id="<?= $header['id_header'] ?>" title="Edit Nilai">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-icon btn-success save-col-btn d-none" data-header-id="<?= $header['id_header'] ?>" title="Simpan Nilai">
                                                     <i class="fas fa-save"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-icon btn-info auto-calc-btn d-none" data-header-id="<?= $header['id_header'] ?>" title="Hitung Nilai Jadi (Otomatis)">
+                                                    <i class="fas fa-magic"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-icon btn-danger delete-col-btn" data-header-id="<?= $header['id_header'] ?>" data-name="<?= $header['nama_penilaian'] ?>" title="Hapus Kolom">
                                                     <i class="fas fa-trash"></i>
@@ -194,6 +200,12 @@ require_once '../templates/sidebar.php';
                                         </th>
                                     <?php endforeach; ?>
                                     <th style="width: 100px; vertical-align: middle;" rowspan="2">Rerata</th>
+                                </tr>
+                                <tr>
+                                    <?php foreach ($grade_headers as $header): ?>
+                                        <th class="text-center bg-light" style="font-size: 0.85em;">Nilai</th>
+                                        <th class="text-center bg-light" style="font-size: 0.85em;">Jadi</th>
+                                    <?php endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -217,7 +229,10 @@ require_once '../templates/sidebar.php';
                                             ?>
                                             <?php foreach ($grade_headers as $header): ?>
                                                 <?php 
-                                                $val = isset($grades_data[$student['id_siswa']][$header['id_header']]) ? $grades_data[$student['id_siswa']][$header['id_header']] : '';
+                                                $data_nilai = isset($grades_data[$student['id_siswa']][$header['id_header']]) ? $grades_data[$student['id_siswa']][$header['id_header']] : [];
+                                                $val = isset($data_nilai['nilai']) ? $data_nilai['nilai'] : '';
+                                                $val_jadi = isset($data_nilai['nilai_jadi']) ? $data_nilai['nilai_jadi'] : '';
+                                                
                                                 if ($val !== '') {
                                                     $total_score += (float)$val;
                                                     $count_score++;
@@ -231,14 +246,23 @@ require_once '../templates/sidebar.php';
                                                     }
                                                 }
                                                 ?>
-                                                <td class="text-center">
+                                                <td class="text-center p-1">
                                                     <input type="number" 
                                                            class="form-control form-control-sm text-center grade-input grade-col-<?= $header['id_header'] ?>" 
                                                            data-student-id="<?= $student['id_siswa'] ?>" 
                                                            data-header-id="<?= $header['id_header'] ?>"
                                                            value="<?= $val ?>" 
                                                            disabled
-                                                           min="0" max="100">
+                                                           min="0" max="100" placeholder="-">
+                                                </td>
+                                                <td class="text-center p-1">
+                                                    <input type="number" 
+                                                           class="form-control form-control-sm text-center grade-input-jadi grade-col-jadi-<?= $header['id_header'] ?>" 
+                                                           data-student-id="<?= $student['id_siswa'] ?>" 
+                                                           data-header-id="<?= $header['id_header'] ?>"
+                                                           value="<?= $val_jadi ?>" 
+                                                           disabled
+                                                           min="0" max="100" placeholder="-">
                                                 </td>
                                             <?php endforeach; ?>
                                             <td class="text-center font-weight-bold student-avg">
@@ -377,10 +401,73 @@ $(document).ready(function() {
         // Toggle buttons
         $(this).addClass('d-none');
         $(this).siblings('.save-col-btn').removeClass('d-none');
+        $(this).siblings('.auto-calc-btn').removeClass('d-none');
         $(this).siblings('.delete-col-btn').prop('disabled', true);
         
         // Enable inputs
         $('.grade-col-' + id).prop('disabled', false);
+        $('.grade-col-jadi-' + id).prop('disabled', false);
+    });
+
+    // Auto Calculate (Magic Button)
+    $('.auto-calc-btn').click(function() {
+        var id = $(this).data('header-id');
+        var kktp = <?= json_encode($selected_mapel['kktp'] ?? 75) ?>; // Default 75 if not set
+        
+        Swal.fire({
+            title: 'Hitung Nilai Jadi Otomatis',
+            text: 'Rumus Baru: Nilai di bawah KKTP otomatis menjadi KKTP. Nilai di atas KKTP akan dinaikkan secara proporsional (kurva progresif) hingga maksimal 100.',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Hitung!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('.grade-col-' + id).each(function() {
+                    var studentId = $(this).data('student-id');
+                    var nilaiAwal = parseFloat($(this).val());
+                    
+                    if (!isNaN(nilaiAwal)) {
+                        var nilaiJadi;
+                        
+                        if (nilaiAwal < kktp) {
+                            // Rule 1: Under KKTP -> Set to KKTP
+                            nilaiJadi = kktp;
+                        } else {
+                            // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
+                            // Logic: Map [KKTP, 100] to [KKTP, 100] with a boost curve
+                            var range = 100 - kktp;
+                            if (range > 0) {
+                                var ratio = (nilaiAwal - kktp) / range; // 0 to 1
+                                // Apply ease-out curve: f(t) = 1 - (1-t)^2
+                                // This makes the boost stronger near KKTP and taper off near 100
+                                var ratioBoosted = 1 - Math.pow(1 - ratio, 2);
+                                nilaiJadi = kktp + (range * ratioBoosted);
+                            } else {
+                                nilaiJadi = nilaiAwal;
+                            }
+                        }
+                        
+                        // Round to nearest integer
+                        nilaiJadi = Math.round(nilaiJadi);
+                        
+                        // Ensure max 100 (safety)
+                        if (nilaiJadi > 100) nilaiJadi = 100;
+                        
+                        // Set value to corresponding 'nilai jadi' input
+                        $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val(nilaiJadi);
+                    }
+                });
+                
+                Swal.fire({
+                    title: 'Selesai!',
+                    text: 'Nilai jadi telah dihitung ulang sesuai rumus baru.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        });
     });
 
     // Save Column (Save Values)
@@ -392,10 +479,15 @@ $(document).ready(function() {
 
         inputs.each(function() {
             var val = $(this).val();
-            if(val !== '') {
+            var studentId = $(this).data('student-id');
+            // Find corresponding 'nilai jadi' input
+            var valJadi = $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val();
+            
+            if(val !== '' || valJadi !== '') {
                 grades.push({
-                    id_siswa: $(this).data('student-id'),
-                    nilai: val
+                    id_siswa: studentId,
+                    nilai: val,
+                    nilai_jadi: valJadi
                 });
             }
         });
@@ -416,21 +508,32 @@ $(document).ready(function() {
                     // Restore UI
                     btn.addClass('d-none');
                     btn.siblings('.edit-col-btn').removeClass('d-none');
+                    btn.siblings('.auto-calc-btn').addClass('d-none');
                     btn.siblings('.delete-col-btn').prop('disabled', false);
                     btn.html('<i class="fas fa-save"></i>');
                     
                     // Disable inputs
                     inputs.prop('disabled', true);
+                    $('.grade-col-jadi-' + id).prop('disabled', true);
                     
-                    // Recalculate stats (Simple reload for now to ensure consistency, or implement JS calc)
-                    location.reload(); 
+                    // Show success message with timer
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: 'Nilai berhasil disimpan',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Recalculate stats
+                        location.reload();
+                    });
                 } else {
-                    alert('Gagal: ' + response.message);
+                    Swal.fire('Gagal', 'Gagal: ' + response.message, 'error');
                     btn.html('<i class="fas fa-save"></i>');
                 }
             },
             error: function() {
-                alert('Terjadi kesalahan sistem');
+                Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
                 btn.html('<i class="fas fa-save"></i>');
             }
         });
