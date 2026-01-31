@@ -125,6 +125,62 @@ $school_profile = getSchoolProfile($pdo);
                  $message = ['type' => 'warning', 'text' => 'Harap lengkapi tanggal batas dan konfirmasi pembersihan.'];
              }
         }
+        // Handle Reset Data Tahunan
+        elseif (isset($_POST['reset_annual_data'])) {
+            $tahun_ajaran = isset($_POST['tahun_ajaran']) ? $_POST['tahun_ajaran'] : $school_profile['tahun_ajaran'];
+            
+            // Handle reset data (Annual Reset)
+            if (isset($_POST['reset_data']) && $_POST['reset_data'] == '1') {
+                try {
+                    // Delete all attendance data
+                    $pdo->exec("TRUNCATE TABLE tb_absensi");
+                    $pdo->exec("TRUNCATE TABLE tb_absensi_guru");
+                    
+                    // Log the action
+                    if (function_exists('logActivity')) {
+                        logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Hapus Data Tahunan', 'Mereset data kehadiran untuk tahun ajaran baru ' . $tahun_ajaran);
+                    }
+                    $message = ['type' => 'success', 'text' => 'Data kehadiran berhasil direset!'];
+                } catch (Exception $e) {
+                    // If TRUNCATE fails (e.g. FK constraints), try DELETE
+                    $pdo->exec("DELETE FROM tb_absensi");
+                    $pdo->exec("DELETE FROM tb_absensi_guru");
+                    $message = ['type' => 'warning', 'text' => 'Data kehadiran direset menggunakan metode DELETE (bukan TRUNCATE).'];
+                }
+            }
+
+            // Handle reset journal data
+            if (isset($_POST['reset_jurnal']) && $_POST['reset_jurnal'] == '1') {
+                try {
+                    // Delete all journal data
+                    $pdo->exec("TRUNCATE TABLE tb_jurnal");
+                    
+                    // Log the action
+                    if (function_exists('logActivity')) {
+                        logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Hapus Data Jurnal', 'Mereset data jurnal mengajar untuk tahun ajaran baru ' . $tahun_ajaran);
+                    }
+                    // Append message if both are reset
+                    if (isset($message) && $message['type'] == 'success') {
+                         $message['text'] .= ' Data jurnal berhasil direset!';
+                    } else {
+                         $message = ['type' => 'success', 'text' => 'Data jurnal berhasil direset!'];
+                    }
+                } catch (Exception $e) {
+                    // If TRUNCATE fails (e.g. FK constraints), try DELETE
+                    $pdo->exec("DELETE FROM tb_jurnal");
+                    if (isset($message)) {
+                         $message['text'] .= ' (Jurnal: DELETE)';
+                    } else {
+                         $message = ['type' => 'warning', 'text' => 'Data jurnal direset menggunakan metode DELETE.'];
+                    }
+                }
+            }
+            
+            if (!isset($_POST['reset_data']) && !isset($_POST['reset_jurnal'])) {
+                 $message = ['type' => 'warning', 'text' => 'Tidak ada opsi reset yang dipilih.'];
+            }
+        }
+        
         // Handle Update Profile
         elseif (isset($_POST['nama_yayasan'])) {
             $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
@@ -134,40 +190,6 @@ $school_profile = getSchoolProfile($pdo);
         $semester = sanitizeInput($_POST['semester']);
         $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
         $tempat_jadwal = sanitizeInput($_POST['tempat_jadwal']);
-        
-        // Handle reset data (Annual Reset)
-        if (isset($_POST['reset_data']) && $_POST['reset_data'] == '1') {
-            try {
-                // Delete all attendance data
-                $pdo->exec("TRUNCATE TABLE tb_absensi");
-                $pdo->exec("TRUNCATE TABLE tb_absensi_guru");
-                
-                // Log the action
-                if (function_exists('logActivity')) {
-                    logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Hapus Data Tahunan', 'Mereset data kehadiran untuk tahun ajaran baru ' . $tahun_ajaran);
-                }
-            } catch (Exception $e) {
-                // If TRUNCATE fails (e.g. FK constraints), try DELETE
-                $pdo->exec("DELETE FROM tb_absensi");
-                $pdo->exec("DELETE FROM tb_absensi_guru");
-            }
-        }
-
-        // Handle reset journal data
-        if (isset($_POST['reset_jurnal']) && $_POST['reset_jurnal'] == '1') {
-            try {
-                // Delete all journal data
-                $pdo->exec("TRUNCATE TABLE tb_jurnal");
-                
-                // Log the action
-                if (function_exists('logActivity')) {
-                    logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Hapus Data Jurnal', 'Mereset data jurnal mengajar untuk tahun ajaran baru ' . $tahun_ajaran);
-                }
-            } catch (Exception $e) {
-                // If TRUNCATE fails (e.g. FK constraints), try DELETE
-                $pdo->exec("DELETE FROM tb_jurnal");
-            }
-        }
         
         // Handle logo upload
     $logo = $school_profile['logo']; // Keep existing logo if no new file is uploaded
@@ -350,25 +372,7 @@ include '../templates/sidebar.php';
 
                                         <div class="row">
                                             <div class="col-12">
-                                                <div class="alert alert-warning">
-                                                    <div class="custom-control custom-checkbox">
-                                                        <input type="checkbox" class="custom-control-input" id="reset_data" name="reset_data" value="1">
-                                                        <label class="custom-control-label font-weight-bold" for="reset_data">Reset Data Kehadiran (Pergantian Tahun Ajaran)</label>
-                                                        <small class="d-block mt-1">Centang opsi ini <b>HANYA</b> jika Anda ingin menghapus seluruh data kehadiran Siswa dan Guru (misal: saat memulai tahun ajaran baru). Data yang dihapus tidak dapat dikembalikan.</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row">
-                                            <div class="col-12">
-                                                <div class="alert alert-danger">
-                                                    <div class="custom-control custom-checkbox">
-                                                        <input type="checkbox" class="custom-control-input" id="reset_jurnal" name="reset_jurnal" value="1">
-                                                        <label class="custom-control-label font-weight-bold" for="reset_jurnal">Reset Data Jurnal Mengajar</label>
-                                                        <small class="d-block mt-1">Centang opsi ini <b>HANYA</b> jika Anda ingin menghapus seluruh data Jurnal Mengajar guru. Data yang dihapus tidak dapat dikembalikan.</small>
-                                                    </div>
-                                                </div>
+                                                <!-- Reset Data options removed from here -->
                                             </div>
                                         </div>
                                         
@@ -408,6 +412,51 @@ include '../templates/sidebar.php';
                                             <div class="col-12 text-center">
                                                 <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
                                             </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow border-left-danger">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-danger">Reset Data (Pergantian Tahun Ajaran)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> <b>PERHATIAN PENTING!</b><br>
+                                        Fitur ini digunakan untuk <b>MENGHAPUS TOTAL</b> seluruh data untuk memulai Tahun Ajaran Baru. 
+                                        Data yang dihapus <b>TIDAK DAPAT DIKEMBALIKAN</b>. Pastikan Anda sudah melakukan backup data jika diperlukan.
+                                    </div>
+                                    
+                                    <form method="POST" onsubmit="return confirm('PERINGATAN KERAS: Anda akan menghapus SELURUH DATA yang dipilih. Tindakan ini TIDAK DAPAT DIBATALKAN. Apakah Anda yakin ingin melanjutkan?');">
+                                        <input type="hidden" name="reset_annual_data" value="1">
+                                        
+                                        <div class="form-group">
+                                            <div class="custom-control custom-checkbox mb-3">
+                                                <input type="checkbox" class="custom-control-input" id="reset_data" name="reset_data" value="1">
+                                                <label class="custom-control-label font-weight-bold text-danger" for="reset_data">Reset Total Data Kehadiran</label>
+                                                <small class="d-block text-muted">Menghapus SELURUH data kehadiran Siswa dan Guru dari database (Truncate).</small>
+                                            </div>
+                                            
+                                            <div class="custom-control custom-checkbox mb-3">
+                                                <input type="checkbox" class="custom-control-input" id="reset_jurnal" name="reset_jurnal" value="1">
+                                                <label class="custom-control-label font-weight-bold text-danger" for="reset_jurnal">Reset Total Jurnal Mengajar</label>
+                                                <small class="d-block text-muted">Menghapus SELURUH data Jurnal Mengajar guru dari database (Truncate).</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <div class="custom-control custom-checkbox my-1 mr-sm-2">
+                                                <input type="checkbox" class="custom-control-input" id="confirmReset" name="confirm_reset" value="1" required>
+                                                <label class="custom-control-label" for="confirmReset">Saya sadar sepenuhnya bahwa data akan hilang permanen</label>
+                                            </div>
+                                            <button type="submit" class="btn btn-danger mt-2">
+                                                <i class="fas fa-bomb"></i> Proses Reset Data Tahunan
+                                            </button>
                                         </div>
                                     </form>
                                 </div>
