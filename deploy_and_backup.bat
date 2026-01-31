@@ -103,21 +103,12 @@ if %errorlevel% neq 0 (
 )
 
 echo Pushing to GitHub (Branch: main)...
-git push -u origin main
-if %errorlevel% neq 0 (
+call git push -u origin main
+if errorlevel 1 (
     echo.
     echo ========================================================
     echo ERROR: PUSH FAILED
     echo ========================================================
-    echo Possible reasons:
-    echo 1. Internet connection issue.
-    echo 2. Invalid credentials (password/token).
-    echo 3. You don't have write access to the repository.
-    echo 4. Remote contains work that you do not have locally.
-    echo.
-    echo Try running: git push -u origin main --force
-    echo (Warning: --force will overwrite remote changes)
-    echo.
     goto :error
 )
 
