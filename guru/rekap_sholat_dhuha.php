@@ -780,7 +780,7 @@ function exportDailyToExcel() {
     headerDiv.innerHTML += '<h4>Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
-    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
     
@@ -862,7 +862,7 @@ function exportMonthlyToExcel() {
     headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha - ' + jsMonthName + ' ' + jsMonthYear + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('monthlyTable');
-    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
     
@@ -1009,8 +1009,8 @@ function exportStudentToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<h3>Rekap Sholat Dhuha - ' + studentName + '</h3>';
     
-    var table = document.getElementById('studentTable');
-    if (!table) { alert('Tabel tidak ditemukan'); return; }
+var table = document.getElementById('monthlyTable');
+            if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
     

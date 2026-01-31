@@ -265,7 +265,7 @@ if (isset($message)) {
         title: '" . ($message['type'] === 'success' ? 'Sukses!' : 'Info!') . "',
         text: '" . addslashes($message['text']) . "',
         icon: '" . $message['type'] . "',
-        timer: " . ($message['type'] === 'success' ? '3000' : '5000') . ",
+        timer: " . ($message['type'] === 'success' ? '1500' : '5000') . ",
         timerProgressBar: true,
         showConfirmButton: false
     });

@@ -725,7 +725,7 @@ function exportToExcel() {
     
     var table = document.querySelector('.table-bordered');
     if (!table) {
-        alert('Tabel tidak ditemukan');
+        Swal.fire('Error', 'Tabel tidak ditemukan', 'error');
         return;
     }
     var newTable = table.cloneNode(true);
@@ -804,7 +804,7 @@ function exportSemesterToExcel() {
     
     var table = document.getElementById('semesterTable');
     if (!table) {
-        alert('Tabel semester tidak ditemukan');
+        Swal.fire('Error', 'Tabel semester tidak ditemukan', 'error');
         return;
     }
     var newTable = table.cloneNode(true);

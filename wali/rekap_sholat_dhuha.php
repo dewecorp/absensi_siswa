@@ -703,7 +703,7 @@ function exportDailyToExcel() {
     headerDiv.innerHTML += '<h4>Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
-    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
     
@@ -785,7 +785,7 @@ function exportMonthlyToExcel() {
     headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha - ' + jsMonthName + ' ' + jsMonthYear + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('monthlyTable');
-    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
     
@@ -862,7 +862,7 @@ function exportSemesterToExcel() {
     headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha - ' + activeSemester + ' ' + academicYear + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('semesterTable');
-    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
     
@@ -933,7 +933,7 @@ function exportStudentToExcel() {
     headerDiv.innerHTML = '<h3>Rekap Sholat Dhuha - ' + studentName + '</h3>';
     
     var table = document.getElementById('studentTable');
-    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
     
@@ -1003,55 +1003,66 @@ function exportStudentToPDF() {
 }
 
 function updateStatus(studentId, status) {
-    if (!confirm('Set status siswa ini menjadi ' + status + '?')) return;
-    
-    // Show loading state
-    var badgeSpan = document.getElementById('badge_' + studentId);
-    var originalContent = badgeSpan.innerHTML;
-    badgeSpan.innerHTML = '<span class="badge badge-secondary">Loading...</span>';
-    
-    $.ajax({
-        url: window.location.href,
-        type: 'POST',
-        data: {
-            action: 'update_status',
-            student_id: studentId,
-            status: status,
-            date: selectedDate
-        },
-        success: function(response) {
-            if (response.success) {
-                if (status === 'Berhalangan') {
-                    badgeSpan.innerHTML = '<span class="badge badge-danger">Berhalangan</span>';
-                } else if (status === 'Hadir') {
-                    badgeSpan.innerHTML = '<span class="badge badge-success">Hadir</span>';
-                } else {
-                    badgeSpan.innerHTML = '<span class="badge badge-danger">Tidak Hadir</span>';
+    Swal.fire({
+        title: 'Konfirmasi',
+        text: 'Set status siswa ini menjadi ' + status + '?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Ubah!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading state
+            var badgeSpan = document.getElementById('badge_' + studentId);
+            var originalContent = badgeSpan.innerHTML;
+            badgeSpan.innerHTML = '<span class="badge badge-secondary">Loading...</span>';
+            
+            $.ajax({
+                url: window.location.href,
+                type: 'POST',
+                data: {
+                    action: 'update_status',
+                    student_id: studentId,
+                    status: status,
+                    date: selectedDate
+                },
+                success: function(response) {
+                    if (response.success) {
+                        if (status === 'Berhalangan') {
+                            badgeSpan.innerHTML = '<span class="badge badge-danger">Berhalangan</span>';
+                        } else if (status === 'Hadir') {
+                            badgeSpan.innerHTML = '<span class="badge badge-success">Hadir</span>';
+                        } else {
+                            badgeSpan.innerHTML = '<span class="badge badge-danger">Tidak Hadir</span>';
+                        }
+                        
+                        // Show success message
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: 'Status berhasil diperbarui',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        badgeSpan.innerHTML = originalContent;
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: response.message || 'Terjadi kesalahan'
+                        });
+                    }
+                },
+                error: function() {
+                    badgeSpan.innerHTML = originalContent;
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Terjadi kesalahan koneksi'
+                    });
                 }
-                
-                // Show success message
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil',
-                    text: 'Status berhasil diperbarui',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } else {
-                badgeSpan.innerHTML = originalContent;
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Gagal',
-                    text: response.message || 'Terjadi kesalahan'
-                });
-            }
-        },
-        error: function() {
-            badgeSpan.innerHTML = originalContent;
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Terjadi kesalahan koneksi'
             });
         }
     });

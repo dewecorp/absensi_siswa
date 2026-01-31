@@ -178,8 +178,8 @@ require_once '../templates/sidebar.php';
                         <table class="table table-bordered table-striped table-sm" id="gradesTable">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px; vertical-align: middle;" rowspan="2">No</th>
-                                    <th style="vertical-align: middle;" rowspan="2">Nama Siswa</th>
+                                    <th style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
+                                    <th style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
                                     <?php foreach ($grade_headers as $header): ?>
                                         <th class="text-center position-relative" colspan="2" style="min-width: 200px;">
                                             <div class="mb-2">
@@ -199,7 +199,15 @@ require_once '../templates/sidebar.php';
                                             <?= htmlspecialchars($header['nama_penilaian']) ?>
                                         </th>
                                     <?php endforeach; ?>
-                                    <th style="width: 100px; vertical-align: middle;" rowspan="2">Rerata</th>
+                                    <th style="width: 100px; vertical-align: middle;" rowspan="3">Rerata</th>
+                                </tr>
+                                <tr>
+                                    <?php foreach ($grade_headers as $header): ?>
+                                        <th class="text-center bg-white font-weight-normal materi-cell" data-header-id="<?= $header['id_header'] ?>" colspan="2" style="font-size: 0.85em; font-style: italic;">
+                                            <span class="materi-display"><?= htmlspecialchars($header['materi'] ?? '-') ?></span>
+                                            <textarea class="form-control form-control-sm materi-input d-none text-center" rows="2" placeholder="Materi"><?= htmlspecialchars($header['materi'] ?? '') ?></textarea>
+                                        </th>
+                                    <?php endforeach; ?>
                                 </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
@@ -320,6 +328,10 @@ require_once '../templates/sidebar.php';
                         <label>Nama Penilaian</label>
                         <input type="text" class="form-control" name="nama_penilaian" placeholder="Contoh: UH 1, Tugas 1, dll" required>
                     </div>
+                    <div class="form-group">
+                        <label>Materi</label>
+                        <textarea class="form-control" name="materi" placeholder="Deskripsi materi/topik" rows="3"></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -366,7 +378,7 @@ $(document).ready(function() {
                 if(response.success) {
                     location.reload();
                 } else {
-                    alert('Gagal: ' + response.message);
+                    Swal.fire('Gagal', response.message, 'error');
                 }
             }
         });
@@ -376,23 +388,35 @@ $(document).ready(function() {
     $('.delete-col-btn').click(function() {
         var id = $(this).data('header-id');
         var name = $(this).data('name');
-        if(confirm('Yakin ingin menghapus kolom nilai "' + name + '"? Semua data nilai di kolom ini akan terhapus.')) {
-            $.ajax({
-                url: 'ajax_nilai_harian.php',
-                type: 'POST',
-                data: {
-                    action: 'delete_column',
-                    id_header: id
-                },
-                success: function(response) {
-                    if(response.success) {
-                        location.reload();
-                    } else {
-                        alert('Gagal: ' + response.message);
+        
+        Swal.fire({
+            title: 'Hapus Kolom?',
+            text: 'Yakin ingin menghapus kolom nilai "' + name + '"? Semua data nilai di kolom ini akan terhapus.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: 'ajax_nilai_harian.php',
+                    type: 'POST',
+                    data: {
+                        action: 'delete_column',
+                        id_header: id
+                    },
+                    success: function(response) {
+                        if(response.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Gagal', response.message, 'error');
+                        }
                     }
-                }
-            });
-        }
+                });
+            }
+        });
     });
 
     // Edit Column (Enable Inputs)
@@ -407,6 +431,11 @@ $(document).ready(function() {
         // Enable inputs
         $('.grade-col-' + id).prop('disabled', false);
         $('.grade-col-jadi-' + id).prop('disabled', false);
+
+        // Enable Materi Edit
+        var materiCell = $('.materi-cell[data-header-id="' + id + '"]');
+        materiCell.find('.materi-display').addClass('d-none');
+        materiCell.find('.materi-input').removeClass('d-none');
     });
 
     // Auto Calculate (Magic Button)
@@ -477,19 +506,21 @@ $(document).ready(function() {
         var inputs = $('.grade-col-' + id);
         var grades = [];
 
+        // Get Materi Value
+        var materiCell = $('.materi-cell[data-header-id="' + id + '"]');
+        var materiVal = materiCell.find('.materi-input').val();
+
         inputs.each(function() {
             var val = $(this).val();
             var studentId = $(this).data('student-id');
             // Find corresponding 'nilai jadi' input
             var valJadi = $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val();
             
-            if(val !== '' || valJadi !== '') {
-                grades.push({
-                    id_siswa: studentId,
-                    nilai: val,
-                    nilai_jadi: valJadi
-                });
-            }
+            grades.push({
+                id_siswa: studentId,
+                nilai: val,
+                nilai_jadi: valJadi
+            });
         });
 
         // Show loading state
@@ -501,11 +532,22 @@ $(document).ready(function() {
             data: {
                 action: 'save_grades',
                 id_header: id,
-                grades: grades
+                grades: grades,
+                materi: materiVal
             },
             success: function(response) {
-                if(response.success) {
-                    // Restore UI
+                var res = (typeof response === 'string') ? JSON.parse(response) : response;
+
+                if(res.success) {
+                    Swal.fire({
+                        title: 'Berhasil',
+                        text: 'Data nilai dan materi berhasil disimpan',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    
+                    // Toggle buttons back
                     btn.addClass('d-none');
                     btn.siblings('.edit-col-btn').removeClass('d-none');
                     btn.siblings('.auto-calc-btn').addClass('d-none');
@@ -515,25 +557,19 @@ $(document).ready(function() {
                     // Disable inputs
                     inputs.prop('disabled', true);
                     $('.grade-col-jadi-' + id).prop('disabled', true);
-                    
-                    // Show success message with timer
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: 'Nilai berhasil disimpan',
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        // Recalculate stats
-                        location.reload();
-                    });
+
+                    // Update Materi Display and Toggle Back
+                    var displayVal = materiVal ? materiVal : '-';
+                    materiCell.find('.materi-display').text(displayVal).removeClass('d-none');
+                    materiCell.find('.materi-input').addClass('d-none');
+
                 } else {
-                    Swal.fire('Gagal', 'Gagal: ' + response.message, 'error');
+                    Swal.fire('Gagal', res.message, 'error');
                     btn.html('<i class="fas fa-save"></i>');
                 }
             },
             error: function() {
-                Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                Swal.fire('Error', 'Terjadi kesalahan server', 'error');
                 btn.html('<i class="fas fa-save"></i>');
             }
         });

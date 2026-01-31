@@ -91,9 +91,9 @@ $sheet->mergeCells('A4:H4');
 // Table Headers
 $row = 6;
 $sheet->setCellValue('A' . $row, 'NO');
-$sheet->mergeCells('A' . $row . ':A' . ($row + 1));
+$sheet->mergeCells('A' . $row . ':A' . ($row + 2));
 $sheet->setCellValue('B' . $row, 'NAMA SISWA');
-$sheet->mergeCells('B' . $row . ':B' . ($row + 1));
+$sheet->mergeCells('B' . $row . ':B' . ($row + 2));
 
 $col = 'C';
 foreach ($grade_headers as $header) {
@@ -105,15 +105,21 @@ foreach ($grade_headers as $header) {
     $sheet->setCellValue($currentCol . $row, $header['nama_penilaian']);
     $sheet->mergeCells($currentCol . $row . ':' . $nextCol . $row);
     
+    // Merge for Materi (New Row)
+    $materi = isset($header['materi']) ? $header['materi'] : '-';
+    $sheet->setCellValue($currentCol . ($row + 1), $materi);
+    $sheet->mergeCells($currentCol . ($row + 1) . ':' . $nextCol . ($row + 1));
+    $sheet->getStyle($currentCol . ($row + 1))->getFont()->setItalic(true);
+    
     // Sub-headers
-    $sheet->setCellValue($currentCol . ($row + 1), 'Nilai');
-    $sheet->setCellValue($nextCol . ($row + 1), 'Jadi');
+    $sheet->setCellValue($currentCol . ($row + 2), 'Nilai');
+    $sheet->setCellValue($nextCol . ($row + 2), 'Jadi');
     
     $col++; // Move to next available column for next loop (e.g., E)
 }
 
 $sheet->setCellValue($col . $row, 'RERATA');
-$sheet->mergeCells($col . $row . ':' . $col . ($row + 1));
+$sheet->mergeCells($col . $row . ':' . $col . ($row + 2));
 $lastCol = $col;
 
 // Style for Headers
@@ -126,10 +132,10 @@ $headerStyle = [
     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
 ];
 
-$sheet->getStyle('A' . $row . ':' . $lastCol . ($row + 1))->applyFromArray($headerStyle);
+$sheet->getStyle('A' . $row . ':' . $lastCol . ($row + 2))->applyFromArray($headerStyle);
 
 // Data Rows
-$row += 2; // Move past the 2 header rows
+$row += 3; // Move past the 3 header rows
 $no = 1;
 foreach ($students as $student) {
     $sheet->setCellValue('A' . $row, $no++);
@@ -155,8 +161,8 @@ foreach ($students as $student) {
         $sheet->setCellValue($col . $row, $nilai_jadi);
         $col++;
         
-        // For average, prefer nilai_jadi, else nilai
-        $valForAvg = $nilai_jadi !== '' && $nilai_jadi !== null ? $nilai_jadi : $nilai;
+        // For average, use nilai (original) to match table
+        $valForAvg = $nilai;
         
         if ($valForAvg !== '' && $valForAvg !== null) {
             $total += (float)$valForAvg;

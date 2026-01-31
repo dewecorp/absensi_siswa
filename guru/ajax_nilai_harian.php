@@ -27,9 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $id_kelas = $_POST['id_kelas'];
             $id_mapel = $_POST['id_mapel'];
             $nama = $_POST['nama_penilaian'];
+            $materi = $_POST['materi'] ?? null;
             
-            $stmt = $pdo->prepare("INSERT INTO tb_nilai_harian_header (id_guru, id_kelas, id_mapel, nama_penilaian) VALUES (?, ?, ?, ?)");
-            if ($stmt->execute([$id_guru, $id_kelas, $id_mapel, $nama])) {
+            $stmt = $pdo->prepare("INSERT INTO tb_nilai_harian_header (id_guru, id_kelas, id_mapel, nama_penilaian, materi) VALUES (?, ?, ?, ?, ?)");
+            if ($stmt->execute([$id_guru, $id_kelas, $id_mapel, $nama, $materi])) {
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Database error']);
@@ -56,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         elseif ($action == 'save_grades') {
             $id_header = $_POST['id_header'];
             $grades = isset($_POST['grades']) ? $_POST['grades'] : [];
+            $materi = isset($_POST['materi']) ? $_POST['materi'] : null;
             
             // Verify ownership
             $check = $pdo->prepare("SELECT id_header FROM tb_nilai_harian_header WHERE id_header = ? AND id_guru = ?");
@@ -66,6 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
             
             $pdo->beginTransaction();
+            
+            // Update Materi if provided
+            if ($materi !== null) {
+                $stmt = $pdo->prepare("UPDATE tb_nilai_harian_header SET materi = ? WHERE id_header = ?");
+                $stmt->execute([$materi, $id_header]);
+            }
             
             // Delete existing grades for this header (simplest way to handle updates/removals if we sent all, 
             // but here we only send non-empty. So better to upsert)

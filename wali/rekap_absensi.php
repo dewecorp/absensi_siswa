@@ -755,7 +755,7 @@ function exportToExcel() {
     // Create a copy of the table to modify
     var table = document.querySelector('.table-bordered');
     if (!table) {
-        alert('Tabel tidak ditemukan');
+        Swal.fire('Error', 'Tabel tidak ditemukan', 'error');
         return;
     }
     var newTable = table.cloneNode(true);
@@ -848,7 +848,7 @@ function exportSemesterToExcel() {
     // Create a copy of the semester table to modify
     var table = document.getElementById('semesterTable');
     if (!table) {
-        alert('Tabel semester tidak ditemukan');
+        Swal.fire('Error', 'Tabel semester tidak ditemukan', 'error');
         return;
     }
     var newTable = table.cloneNode(true);
@@ -994,13 +994,7 @@ $(document).ready(function() {
         
         console.log('Validation - Filter Type:', filterType, 'Class ID:', classId, 'Date:', datePicker);
         
-        // Check if SweetAlert is available
-        if (typeof Swal === 'undefined') {
-            console.error('SweetAlert is not loaded!');
-            alert('Untuk rekap harian, silakan pilih tanggal terlebih dahulu sebelum mencari!');
-            e.preventDefault();
-            return false;
-        }
+
         
         // Check if class is selected
         if (!classId || classId === '') {

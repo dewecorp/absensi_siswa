@@ -81,10 +81,16 @@ function getGuruName($pdo, $id) {
         th { background-color: #f2f2f2; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .text-left { text-align: left; }
         
+        .no-break {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        
         @media print {
             @page { size: landscape; margin: 10mm; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none; }
+            .no-break { page-break-inside: avoid; }
         }
         
         .print-btn {
@@ -109,19 +115,26 @@ function getGuruName($pdo, $id) {
 
     <div class="header">
         <h2>DAFTAR NILAI HARIAN</h2>
-        <h3><?= htmlspecialchars($class_info['nama_kelas']) ?> - <?= htmlspecialchars($mapel_info['nama_mapel']) ?></h3>
-        <p>Guru: <?= htmlspecialchars(getGuruName($pdo, $id_guru)) ?></p>
+        <h3><?= htmlspecialchars($class_info['nama_kelas'] ?? '') ?> - <?= htmlspecialchars($mapel_info['nama_mapel'] ?? '') ?></h3>
+        <p>Guru: <?= htmlspecialchars(getGuruName($pdo, $id_guru) ?: '') ?></p>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th width="5%" rowspan="2">NO</th>
-                <th width="30%" rowspan="2">NAMA SISWA</th>
+                <th width="5%" rowspan="3">NO</th>
+                <th width="30%" rowspan="3">NAMA SISWA</th>
                 <?php foreach ($grade_headers as $header): ?>
-                    <th colspan="2"><?= htmlspecialchars($header['nama_penilaian']) ?></th>
+                    <th colspan="2"><?= htmlspecialchars($header['nama_penilaian'] ?? '') ?></th>
                 <?php endforeach; ?>
-                <th width="10%" rowspan="2">RERATA</th>
+                <th width="10%" rowspan="3">RERATA</th>
+            </tr>
+            <tr>
+                <?php foreach ($grade_headers as $header): ?>
+                    <th colspan="2" style="font-weight: normal; font-style: italic; background-color: #fff;">
+                        <?= htmlspecialchars($header['materi'] ?? '-') ?>
+                    </th>
+                <?php endforeach; ?>
             </tr>
             <tr>
                 <?php foreach ($grade_headers as $header): ?>
@@ -151,11 +164,11 @@ function getGuruName($pdo, $id) {
                     $nilai = $data['nilai'];
                     $nilai_jadi = $data['nilai_jadi'];
                     
-                    echo '<td>' . htmlspecialchars($nilai) . '</td>';
-                    echo '<td>' . htmlspecialchars($nilai_jadi) . '</td>';
+                    echo '<td>' . htmlspecialchars($nilai ?? '') . '</td>';
+                    echo '<td>' . htmlspecialchars($nilai_jadi ?? '') . '</td>';
                     
-                    // For average, prefer nilai_jadi, else nilai
-                    $valForAvg = $nilai_jadi !== '' && $nilai_jadi !== null ? $nilai_jadi : $nilai;
+                    // For average, use nilai (original) to match table
+                    $valForAvg = $nilai;
                     
                     if ($valForAvg !== '' && $valForAvg !== null) {
                         $total += (float)$valForAvg;
@@ -171,10 +184,11 @@ function getGuruName($pdo, $id) {
         </tbody>
     </table>
     
-    <div style="margin-top: 30px; text-align: right; margin-right: 50px;">
+    <div class="no-break" style="margin-top: 30px; text-align: right; margin-right: 50px;">
         <p>Jepara, <?= date('d F Y') ?></p>
+        <p>Wali Kelas</p>
         <br><br><br>
-        <p><b><?= htmlspecialchars(getGuruName($pdo, $id_guru)) ?></b></p>
+        <p><b><?= htmlspecialchars($class_info['wali_kelas'] ?? '') ?></b></p>
     </div>
 
     <script>
