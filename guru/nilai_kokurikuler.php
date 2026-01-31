@@ -2,13 +2,13 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
+if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
     redirect('../login.php');
 }
 
 $page_title = 'Nilai Kokurikuler';
 $user_role = $_SESSION['level'];
-$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha']);
+$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin']);
 $can_edit = !$is_admin_view;
 
 // Get teacher data
@@ -64,6 +64,7 @@ if ($is_admin_view) {
     $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+// Determine selected class & mapel
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
 $selected_class = null;
@@ -109,11 +110,11 @@ if ($selected_class && $selected_mapel) {
 
     // Get grade headers
     if ($is_admin_view) {
-        $stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_kelas = ? AND id_mapel = ? ORDER BY created_at ASC");
-        $stmt->execute([$selected_class_id, $selected_mapel_id]);
+        $stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_kelas = ? AND id_mapel = ? AND tahun_ajaran = ? AND semester = ? ORDER BY created_at ASC");
+        $stmt->execute([$selected_class_id, $selected_mapel_id, $tahun_ajaran, $semester_aktif]);
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_guru = ? AND id_kelas = ? AND id_mapel = ? ORDER BY created_at ASC");
-        $stmt->execute([$id_guru, $selected_class_id, $selected_mapel_id]);
+        $stmt = $pdo->prepare("SELECT * FROM tb_nilai_kokurikuler_header WHERE id_guru = ? AND id_kelas = ? AND id_mapel = ? AND tahun_ajaran = ? AND semester = ? ORDER BY created_at ASC");
+        $stmt->execute([$id_guru, $selected_class_id, $selected_mapel_id, $tahun_ajaran, $semester_aktif]);
     }
     $grade_headers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

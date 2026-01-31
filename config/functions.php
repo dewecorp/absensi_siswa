@@ -39,7 +39,22 @@ function isAuthorized($allowed_levels = []) {
 function getSchoolProfile($pdo) {
     $stmt = $pdo->prepare("SELECT * FROM tb_profil_madrasah WHERE id = 1");
     $stmt->execute();
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$profile) {
+        return [
+            'nama_yayasan' => 'YAYASAN PENDIDIKAN ISLAM',
+            'nama_madrasah' => 'MADRASAH IBTIDAIYAH',
+            'kepala_madrasah' => 'KEPALA MADRASAH',
+            'tahun_ajaran' => date('Y') . '/' . (date('Y') + 1),
+            'semester' => 'Semester 1',
+            'alamat' => '',
+            'logo' => '',
+            'dashboard_hero_image' => ''
+        ];
+    }
+    
+    return $profile;
 }
 
 // Function to format date
@@ -122,11 +137,21 @@ function createNotification($pdo, $message, $link, $type = 'info') {
     return $stmt->execute([$message, $link]);
 }
 
-// Function to get unread notifications
-function getUnreadNotifications($pdo) {
-    $stmt = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE is_read = 0 ORDER BY created_at DESC LIMIT 5");
+// Function to get system notifications (auto delete > 24 hours)
+function getNotifications($pdo) {
+    // Delete notifications older than 24 hours
+    $cleanup_stmt = $pdo->prepare("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+    $cleanup_stmt->execute();
+
+    // Get all notifications from last 24 hours
+    $stmt = $pdo->prepare("SELECT * FROM tb_notifikasi ORDER BY created_at DESC");
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Function to get unread notifications (Deprecated, alias to getNotifications)
+function getUnreadNotifications($pdo) {
+    return getNotifications($pdo);
 }
 
 // Function to mark notification as read

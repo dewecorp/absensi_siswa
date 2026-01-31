@@ -2,13 +2,13 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
+if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
     redirect('../login.php');
 }
 
 $page_title = 'Rekap Nilai Siswa';
 $user_role = $_SESSION['level'];
-$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha']);
+$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin']);
 
 // Get teacher data
 $id_guru = null;

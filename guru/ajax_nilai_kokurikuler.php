@@ -30,8 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $jenis_kegiatan = $_POST['jenis_kegiatan'] ?? null;
             $tgl_kegiatan = !empty($_POST['tgl_kegiatan']) ? $_POST['tgl_kegiatan'] : null;
             
-            $stmt = $pdo->prepare("INSERT INTO tb_nilai_kokurikuler_header (id_guru, id_kelas, id_mapel, nama_penilaian, jenis_kegiatan, tgl_kegiatan) VALUES (?, ?, ?, ?, ?, ?)");
-            if ($stmt->execute([$id_guru, $id_kelas, $id_mapel, $nama, $jenis_kegiatan, $tgl_kegiatan])) {
+            // Get active semester info
+            $school_profile = getSchoolProfile($pdo);
+            $tahun_ajaran = $school_profile['tahun_ajaran'];
+            $semester = $school_profile['semester'];
+            
+            $stmt = $pdo->prepare("INSERT INTO tb_nilai_kokurikuler_header (id_guru, id_kelas, id_mapel, nama_penilaian, jenis_kegiatan, tgl_kegiatan, tahun_ajaran, semester) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            if ($stmt->execute([$id_guru, $id_kelas, $id_mapel, $nama, $jenis_kegiatan, $tgl_kegiatan, $tahun_ajaran, $semester])) {
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Database error']);

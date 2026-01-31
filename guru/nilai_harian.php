@@ -2,13 +2,13 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
+if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
     redirect('../login.php');
 }
 
 $page_title = 'Nilai Harian';
 $user_role = $_SESSION['level'];
-$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha']);
+$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin']);
 $can_edit = !$is_admin_view;
 
 // Get teacher data
@@ -75,6 +75,11 @@ $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
 $selected_class = null;
 $selected_mapel = null;
+
+// Get active semester info
+$school_profile = getSchoolProfile($pdo);
+$tahun_ajaran = $school_profile['tahun_ajaran'];
+$semester_aktif = $school_profile['semester'];
 
 if (count($classes) == 1 && !$selected_class_id) {
     $selected_class_id = $classes[0]['id_kelas'];

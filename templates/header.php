@@ -8,6 +8,15 @@ if (!isset($_SESSION)) {
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
+// Check if user is logged in
+if (!isset($_SESSION['user_id']) && !isset($_SESSION['username'])) {
+    // If not logged in, redirect to login page (optional, depending on page logic)
+    // redirect('../login.php'); 
+}
+
+// Get user level
+$user_level = function_exists('getUserLevel') ? getUserLevel() : null;
+
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
 

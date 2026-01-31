@@ -16,7 +16,66 @@ $school_profile = getSchoolProfile($pdo);
 // Handle form submission
     $message = '';
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
+        
+        // Handle Delete Grades
+        if (isset($_POST['action']) && $_POST['action'] == 'delete_grades') {
+            $del_tahun = $_POST['del_tahun_ajaran'];
+            $del_semester = $_POST['del_semester'];
+            $del_types = isset($_POST['del_types']) ? $_POST['del_types'] : [];
+            
+            if (empty($del_tahun) || empty($del_semester) || empty($del_types)) {
+                $message = ['type' => 'danger', 'text' => 'Mohon lengkapi data yang akan dihapus!'];
+            } else {
+                try {
+                    $pdo->beginTransaction();
+                    $count = 0;
+                    
+                    if (in_array('harian', $del_types)) {
+                        // Delete Nilai Harian
+                        $stmt = $pdo->prepare("SELECT id_header FROM tb_nilai_harian_header WHERE tahun_ajaran = ? AND semester = ?");
+                        $stmt->execute([$del_tahun, $del_semester]);
+                        $headers = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                        
+                        if (!empty($headers)) {
+                            $placeholders = implode(',', array_fill(0, count($headers), '?'));
+                            $pdo->prepare("DELETE FROM tb_nilai_harian_detail WHERE id_header IN ($placeholders)")->execute($headers);
+                            $pdo->prepare("DELETE FROM tb_nilai_harian_header WHERE id_header IN ($placeholders)")->execute($headers);
+                            $count += count($headers);
+                        }
+                    }
+                    
+                    if (in_array('kokurikuler', $del_types)) {
+                        // Delete Nilai Kokurikuler
+                        $stmt = $pdo->prepare("SELECT id_header FROM tb_nilai_kokurikuler_header WHERE tahun_ajaran = ? AND semester = ?");
+                        $stmt->execute([$del_tahun, $del_semester]);
+                        $headers = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                        
+                        if (!empty($headers)) {
+                            $placeholders = implode(',', array_fill(0, count($headers), '?'));
+                            $pdo->prepare("DELETE FROM tb_nilai_kokurikuler_detail WHERE id_header IN ($placeholders)")->execute($headers);
+                            $pdo->prepare("DELETE FROM tb_nilai_kokurikuler_header WHERE id_header IN ($placeholders)")->execute($headers);
+                            $count += count($headers);
+                        }
+                    }
+                    
+                    if (in_array('semester', $del_types)) {
+                        // Delete Nilai Semester (UTS, UAS, PAT, etc)
+                        $stmt = $pdo->prepare("DELETE FROM tb_nilai_semester WHERE tahun_ajaran = ? AND semester = ?");
+                        $stmt->execute([$del_tahun, $del_semester]);
+                        $count += $stmt->rowCount(); // This might not be exact "records" count comparable to headers, but okay.
+                    }
+                    
+                    $pdo->commit();
+                    $message = ['type' => 'success', 'text' => "Data nilai berhasil dihapus ($del_tahun - $del_semester)!"];
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $message = ['type' => 'danger', 'text' => 'Gagal menghapus data: ' . $e->getMessage()];
+                }
+            }
+        }
+        // Handle Update Profile
+        elseif (isset($_POST['nama_yayasan'])) {
+            $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
         $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
         $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
         $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
@@ -39,6 +98,22 @@ $school_profile = getSchoolProfile($pdo);
                 // If TRUNCATE fails (e.g. FK constraints), try DELETE
                 $pdo->exec("DELETE FROM tb_absensi");
                 $pdo->exec("DELETE FROM tb_absensi_guru");
+            }
+        }
+
+        // Handle reset journal data
+        if (isset($_POST['reset_jurnal']) && $_POST['reset_jurnal'] == '1') {
+            try {
+                // Delete all journal data
+                $pdo->exec("TRUNCATE TABLE tb_jurnal");
+                
+                // Log the action
+                if (function_exists('logActivity')) {
+                    logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Hapus Data Jurnal', 'Mereset data jurnal mengajar untuk tahun ajaran baru ' . $tahun_ajaran);
+                }
+            } catch (Exception $e) {
+                // If TRUNCATE fails (e.g. FK constraints), try DELETE
+                $pdo->exec("DELETE FROM tb_jurnal");
             }
         }
         
@@ -102,7 +177,27 @@ $school_profile = getSchoolProfile($pdo);
             $message = ['type' => 'danger', 'text' => 'Gagal memperbarui profil madrasah!'];
         }
     }
+    }
 }
+
+// Get distinct academic years for deletion form
+$years = [];
+$stmts = [
+    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_harian_header",
+    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_kokurikuler_header",
+    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_semester"
+];
+foreach ($stmts as $sql) {
+    try {
+        $stmt = $pdo->query($sql);
+        if ($stmt) {
+            $res = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            $years = array_merge($years, $res);
+        }
+    } catch (Exception $e) {}
+}
+$years = array_unique($years);
+rsort($years); // Sort descending
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
@@ -212,6 +307,18 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div class="alert alert-danger">
+                                                    <div class="custom-control custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input" id="reset_jurnal" name="reset_jurnal" value="1">
+                                                        <label class="custom-control-label font-weight-bold" for="reset_jurnal">Reset Data Jurnal Mengajar</label>
+                                                        <small class="d-block mt-1">Centang opsi ini <b>HANYA</b> jika Anda ingin menghapus seluruh data Jurnal Mengajar guru. Data yang dihapus tidak dapat dikembalikan.</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                         
                                         <div class="row mt-3">
                                             <div class="col-md-6">
@@ -249,6 +356,71 @@ include '../templates/sidebar.php';
                                             <div class="col-12 text-center">
                                                 <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
                                             </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card card-danger">
+                                <div class="card-header">
+                                    <h4>Manajemen Data Nilai (Hapus Data Lama)</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-light">
+                                        <i class="fas fa-info-circle"></i> Fitur ini digunakan untuk menghapus data nilai lama yang sudah tidak diperlukan.
+                                        Data yang dihapus <b>TIDAK DAPAT DIKEMBALIKAN</b>. Pastikan Anda memilih Tahun Ajaran dan Semester dengan benar.
+                                    </div>
+                                    <form method="POST" action="" onsubmit="return confirm('PERINGATAN: Apakah Anda yakin ingin menghapus data nilai yang dipilih? Tindakan ini tidak dapat dibatalkan!');">
+                                        <input type="hidden" name="action" value="delete_grades">
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Tahun Ajaran</label>
+                                                    <select class="form-control" name="del_tahun_ajaran" required>
+                                                        <option value="">Pilih Tahun Ajaran</option>
+                                                        <?php foreach ($years as $y): ?>
+                                                            <?php if (!empty($y)): ?>
+                                                            <option value="<?= htmlspecialchars($y) ?>"><?= htmlspecialchars($y) ?></option>
+                                                            <?php endif; ?>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Semester</label>
+                                                    <select class="form-control" name="del_semester" required>
+                                                        <option value="">Pilih Semester</option>
+                                                        <option value="Semester 1">Semester 1</option>
+                                                        <option value="Semester 2">Semester 2</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="d-block font-weight-bold">Pilih Data yang Akan Dihapus:</label>
+                                            <div class="custom-control custom-checkbox custom-control-inline">
+                                                <input type="checkbox" class="custom-control-input" name="del_types[]" value="harian" id="del_harian">
+                                                <label class="custom-control-label" for="del_harian">Nilai Harian</label>
+                                            </div>
+                                            <div class="custom-control custom-checkbox custom-control-inline">
+                                                <input type="checkbox" class="custom-control-input" name="del_types[]" value="kokurikuler" id="del_kokurikuler">
+                                                <label class="custom-control-label" for="del_kokurikuler">Nilai Kokurikuler</label>
+                                            </div>
+                                            <div class="custom-control custom-checkbox custom-control-inline">
+                                                <input type="checkbox" class="custom-control-input" name="del_types[]" value="semester" id="del_semester">
+                                                <label class="custom-control-label" for="del_semester">Nilai Semester (UTS, UAS, PAT, Pra Ujian)</label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <button type="submit" class="btn btn-danger">Hapus Data Terpilih</button>
                                         </div>
                                     </form>
                                 </div>

@@ -2,14 +2,14 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
+if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
     redirect('../login.php');
 }
 
 $page_title = 'Nilai Pra Ujian';
 $jenis_semester = 'Pra Ujian'; // Set this based on the file type
 $user_role = $_SESSION['level'];
-$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha']);
+$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin']);
 $can_edit = !$is_admin_view;
 
 // Get teacher data
