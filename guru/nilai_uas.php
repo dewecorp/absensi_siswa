@@ -74,6 +74,9 @@ if ($selected_mapel_id) {
     }
 }
 
+// Get KKTP
+$kktp = isset($selected_mapel['kktp']) ? $selected_mapel['kktp'] : 0;
+
 // Get active semester info
 $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran = $school_profile['tahun_ajaran'];
@@ -168,6 +171,13 @@ require_once '../templates/sidebar.php';
                                 <tbody>
                                     <?php 
                                     $no = 1;
+                                    
+                                    // Initialize Min/Max variables
+                                    $min_asli = null; $max_asli = null;
+                                    $min_remidi = null; $max_remidi = null;
+                                    $min_jadi = null; $max_jadi = null;
+                                    $min_rerata = null; $max_rerata = null;
+
                                     foreach ($students as $student): 
                                         $id_siswa = $student['id_siswa'];
                                         $grade = $grades_data[$id_siswa] ?? null;
@@ -176,29 +186,44 @@ require_once '../templates/sidebar.php';
                                         $nilai_jadi = $grade ? $grade['nilai_jadi'] : 0;
                                         
                                         // Calculate Rerata logic: (Asli + Remidi) / 2 if Remidi > 0, else Asli
-                                        // Or just display Nilai Jadi?
-                                        // User asked for "Rerata" column. 
-                                        // Let's implement simple average of inputs for now.
                                         $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+                                        
+                                        // Update Min/Max Stats (Only consider non-zero values)
+                                        if ($nilai_asli > 0) {
+                                            if ($min_asli === null || $nilai_asli < $min_asli) $min_asli = $nilai_asli;
+                                            if ($max_asli === null || $nilai_asli > $max_asli) $max_asli = $nilai_asli;
+                                        }
+                                        if ($nilai_remidi > 0) {
+                                            if ($min_remidi === null || $nilai_remidi < $min_remidi) $min_remidi = $nilai_remidi;
+                                            if ($max_remidi === null || $nilai_remidi > $max_remidi) $max_remidi = $nilai_remidi;
+                                        }
+                                        if ($nilai_jadi > 0) {
+                                            if ($min_jadi === null || $nilai_jadi < $min_jadi) $min_jadi = $nilai_jadi;
+                                            if ($max_jadi === null || $nilai_jadi > $max_jadi) $max_jadi = $nilai_jadi;
+                                        }
+                                        if ($rerata > 0) {
+                                            if ($min_rerata === null || $rerata < $min_rerata) $min_rerata = $rerata;
+                                            if ($max_rerata === null || $rerata > $max_rerata) $max_rerata = $rerata;
+                                        }
                                     ?>
                                         <tr data-id-siswa="<?= $id_siswa ?>">
                                             <td class="text-center"><?= $no++ ?></td>
                                             <td><?= htmlspecialchars($student['nama_siswa']) ?></td>
                                             <td class="text-center">
-                                                <span class="display-nilai-asli"><?= $nilai_asli > 0 ? $nilai_asli : '-' ?></span>
+                                                <span class="display-nilai-asli"><?= $nilai_asli > 0 ? (float)$nilai_asli : '-' ?></span>
                                                 <input type="number" class="form-control form-control-sm input-nilai-asli d-none" 
-                                                       value="<?= $nilai_asli ?>" min="0" max="100">
+                                                       value="<?= (float)$nilai_asli ?>" min="0" max="100">
                                             </td>
                                             <td class="text-center">
-                                                <span class="display-nilai-remidi"><?= $nilai_remidi > 0 ? $nilai_remidi : '-' ?></span>
+                                                <span class="display-nilai-remidi"><?= $nilai_remidi > 0 ? (float)$nilai_remidi : '-' ?></span>
                                                 <input type="number" class="form-control form-control-sm input-nilai-remidi d-none" 
-                                                       value="<?= $nilai_remidi ?>" min="0" max="100">
+                                                       value="<?= (float)$nilai_remidi ?>" min="0" max="100">
                                             </td>
                                             <td class="text-center bg-light">
-                                                <span class="display-nilai-jadi font-weight-bold"><?= $nilai_jadi > 0 ? $nilai_jadi : '-' ?></span>
+                                                <span class="display-nilai-jadi font-weight-bold"><?= $nilai_jadi > 0 ? (float)$nilai_jadi : '-' ?></span>
                                             </td>
                                             <td class="text-center bg-light">
-                                                <span class="display-rerata"><?= $rerata > 0 ? number_format($rerata, 1) : '-' ?></span>
+                                                <span class="display-rerata"><?= $rerata > 0 ? (float)number_format($rerata, 1) : '-' ?></span>
                                             </td>
                                             <td class="text-center">
                                                 <button class="btn btn-sm btn-warning btn-edit" title="Edit">
@@ -210,6 +235,24 @@ require_once '../templates/sidebar.php';
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
+                                    
+                                    <!-- Footer Stats -->
+                                    <tr class="bg-light font-weight-bold">
+                                        <td colspan="2" class="text-right">Nilai Tertinggi</td>
+                                        <td class="text-center text-success" id="max-asli"><?= $max_asli !== null ? (float)$max_asli : '-' ?></td>
+                                        <td class="text-center text-success" id="max-remidi"><?= $max_remidi !== null ? (float)$max_remidi : '-' ?></td>
+                                        <td class="text-center text-success" id="max-jadi"><?= $max_jadi !== null ? (float)$max_jadi : '-' ?></td>
+                                        <td class="text-center text-success" id="max-rerata"><?= $max_rerata !== null ? (float)number_format($max_rerata, 1) : '-' ?></td>
+                                        <td></td>
+                                    </tr>
+                                    <tr class="bg-light font-weight-bold">
+                                        <td colspan="2" class="text-right">Nilai Terendah</td>
+                                        <td class="text-center text-danger" id="min-asli"><?= $min_asli !== null ? (float)$min_asli : '-' ?></td>
+                                        <td class="text-center text-danger" id="min-remidi"><?= $min_remidi !== null ? (float)$min_remidi : '-' ?></td>
+                                        <td class="text-center text-danger" id="min-jadi"><?= $min_jadi !== null ? (float)$min_jadi : '-' ?></td>
+                                        <td class="text-center text-danger" id="min-rerata"><?= $min_rerata !== null ? (float)number_format($min_rerata, 1) : '-' ?></td>
+                                        <td></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -251,7 +294,30 @@ $(document).ready(function() {
         var n_asli = parseFloat(nilai_asli) || 0;
         var n_remidi = parseFloat(nilai_remidi) || 0;
         
-        var n_jadi = (n_remidi > n_asli) ? n_remidi : n_asli;
+        var kktp = <?= isset($kktp) ? (float)$kktp : 0 ?>;
+        var n_temp_jadi = (n_remidi > n_asli) ? n_remidi : n_asli;
+        
+        // Formula Angkat Nilai
+        var n_jadi = n_temp_jadi;
+        
+        if (kktp > 0 && n_temp_jadi > 0) {
+            if (n_temp_jadi < kktp) {
+                // Rule 1: Under KKTP -> Set to KKTP
+                n_jadi = kktp;
+            } else {
+                // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
+                var range = 100 - kktp;
+                if (range > 0) {
+                    var ratio = (n_temp_jadi - kktp) / range;
+                    var ratioBoosted = 1 - Math.pow(1 - ratio, 2);
+                    n_jadi = kktp + (range * ratioBoosted);
+                }
+            }
+            // Round to nearest integer and ensure max 100
+            n_jadi = Math.round(n_jadi);
+            if (n_jadi > 100) n_jadi = 100;
+        }
+        
         // User said: "jka remidi kosong maka tetap ambil nilai asli untuk diangkat"
         // If n_remidi is 0/empty, n_asli is taken (handled by logic above if n_asli >= 0)
         
@@ -272,11 +338,19 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.status === 'success') {
-                    // Update displays
-                    tr.find('.display-nilai-asli').text(n_asli > 0 ? n_asli : '-');
-                    tr.find('.display-nilai-remidi').text(n_remidi > 0 ? n_remidi : '-');
-                    tr.find('.display-nilai-jadi').text(n_jadi > 0 ? n_jadi : '-');
-                    tr.find('.display-rerata').text(n_rerata > 0 ? n_rerata.toFixed(1) : '-');
+                    // Update displays with server response to ensure consistency
+                    var data = response.data;
+                    var server_asli = parseFloat(data.nilai_asli) || 0;
+                    var server_remidi = parseFloat(data.nilai_remidi) || 0;
+                    var server_jadi = parseFloat(data.nilai_jadi) || 0;
+                    
+                    // Calculate Rerata based on server values
+                    var server_rerata = (server_remidi > 0) ? (server_asli + server_remidi) / 2 : server_asli;
+
+                    tr.find('.display-nilai-asli').text(server_asli > 0 ? server_asli : '-');
+                    tr.find('.display-nilai-remidi').text(server_remidi > 0 ? server_remidi : '-');
+                    tr.find('.display-nilai-jadi').text(server_jadi > 0 ? server_jadi : '-');
+                    tr.find('.display-rerata').text(server_rerata > 0 ? parseFloat(server_rerata.toFixed(1)) : '-');
                     
                     // Toggle view
                     tr.find('.display-nilai-asli, .display-nilai-remidi').removeClass('d-none');
@@ -284,6 +358,9 @@ $(document).ready(function() {
                     tr.find('.btn-edit').removeClass('d-none');
                     tr.find('.btn-save').addClass('d-none');
                     
+                    // Update Summary Stats immediately
+                    updateSummaryStats();
+
                     // Show toast
                     iziToast.success({
                         title: 'Sukses',
@@ -301,11 +378,65 @@ $(document).ready(function() {
             error: function() {
                 iziToast.error({
                     title: 'Error',
-                    message: 'Terjadi kesalahan server',
+                    message: 'Terjadi kesalahan sistem',
                     position: 'topRight'
                 });
             }
         });
     });
+
+    // Function to update summary stats
+    function updateSummaryStats() {
+        var min_asli = null, max_asli = null;
+        var min_remidi = null, max_remidi = null;
+        var min_jadi = null, max_jadi = null;
+        var min_rerata = null, max_rerata = null;
+
+        $('tbody tr[data-id-siswa]').each(function() {
+            var tr = $(this);
+            
+            // Helper to get value
+            var getVal = function(selector) {
+                var txt = tr.find(selector).text().trim();
+                return txt === '-' ? 0 : parseFloat(txt);
+            };
+
+            var asli = getVal('.display-nilai-asli');
+            var remidi = getVal('.display-nilai-remidi');
+            var jadi = getVal('.display-nilai-jadi');
+            var rerata = getVal('.display-rerata');
+
+            // Logic: Only consider non-zero values for min/max
+            if (asli > 0) {
+                if (min_asli === null || asli < min_asli) min_asli = asli;
+                if (max_asli === null || asli > max_asli) max_asli = asli;
+            }
+            if (remidi > 0) {
+                if (min_remidi === null || remidi < min_remidi) min_remidi = remidi;
+                if (max_remidi === null || remidi > max_remidi) max_remidi = remidi;
+            }
+            if (jadi > 0) {
+                if (min_jadi === null || jadi < min_jadi) min_jadi = jadi;
+                if (max_jadi === null || jadi > max_jadi) max_jadi = jadi;
+            }
+            if (rerata > 0) {
+                if (min_rerata === null || rerata < min_rerata) min_rerata = rerata;
+                if (max_rerata === null || rerata > max_rerata) max_rerata = rerata;
+            }
+        });
+
+        // Update DOM
+        $('#max-asli').text(max_asli !== null ? max_asli : '-');
+        $('#min-asli').text(min_asli !== null ? min_asli : '-');
+        
+        $('#max-remidi').text(max_remidi !== null ? max_remidi : '-');
+        $('#min-remidi').text(min_remidi !== null ? min_remidi : '-');
+        
+        $('#max-jadi').text(max_jadi !== null ? max_jadi : '-');
+        $('#min-jadi').text(min_jadi !== null ? min_jadi : '-');
+        
+        $('#max-rerata').text(max_rerata !== null ? parseFloat(max_rerata.toFixed(1)) : '-');
+        $('#min-rerata').text(min_rerata !== null ? parseFloat(min_rerata.toFixed(1)) : '-');
+    }
 });
 </script>

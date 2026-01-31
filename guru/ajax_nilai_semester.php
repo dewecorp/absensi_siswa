@@ -29,9 +29,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $tahun_ajaran = $school_profile['tahun_ajaran'];
         $semester_aktif = $school_profile['semester'];
 
+        // Get KKTP
+        $stmt = $pdo->prepare("SELECT kktp FROM tb_mata_pelajaran WHERE id_mapel = ?");
+        $stmt->execute([$id_mapel]);
+        $kktp = $stmt->fetchColumn();
+        $kktp = $kktp ? floatval($kktp) : 0;
+
         // Logic: Nilai Jadi = Max(Nilai Asli, Nilai Remidi)
         // If Remidi is 0, Nilai Jadi is Nilai Asli
-        $nilai_jadi = ($nilai_remidi > $nilai_asli) ? $nilai_remidi : $nilai_asli;
+        $temp_jadi = ($nilai_remidi > $nilai_asli) ? $nilai_remidi : $nilai_asli;
+        
+        // Formula Angkat Nilai
+        $nilai_jadi = $temp_jadi;
+        
+        if ($kktp > 0 && $temp_jadi > 0) {
+            if ($temp_jadi < $kktp) {
+                // Rule 1: Under KKTP -> Set to KKTP
+                $nilai_jadi = $kktp;
+            } else {
+                // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
+                $range = 100 - $kktp;
+                if ($range > 0) {
+                    $ratio = ($temp_jadi - $kktp) / $range; // 0 to 1
+                    $ratioBoosted = 1 - pow(1 - $ratio, 2);
+                    $nilai_jadi = $kktp + ($range * $ratioBoosted);
+                }
+            }
+            // Round to nearest integer and ensure max 100
+            $nilai_jadi = round($nilai_jadi);
+            if ($nilai_jadi > 100) $nilai_jadi = 100;
+        }
 
         try {
             // Check if record exists
@@ -68,7 +95,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $stmt->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $jenis_semester, $tahun_ajaran, $semester_aktif, $nilai_asli, $nilai_remidi, $nilai_jadi]);
             }
 
-            echo json_encode(['status' => 'success']);
+            echo json_encode([
+                'status' => 'success',
+                'data' => [
+                    'nilai_asli' => $nilai_asli,
+                    'nilai_remidi' => $nilai_remidi,
+                    'nilai_jadi' => $nilai_jadi,
+                    'kktp' => $kktp
+                ]
+            ]);
         } catch (PDOException $e) {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
