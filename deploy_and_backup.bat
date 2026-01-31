@@ -95,8 +95,8 @@ if !errorlevel! neq 0 (
 :sync_updates
 :: 6. Pull (Rebase) and Push
 echo [Git] Pulling latest changes (rebase)...
-git pull --rebase origin main
-if %errorlevel% neq 0 (
+call git pull --rebase origin main
+if errorlevel 1 (
     echo Warning: Pull failed. You might need to resolve conflicts manually.
     set /p "continue=Continue anyway? (Y/N): "
     if /i "!continue!" neq "y" goto :error
@@ -115,16 +115,15 @@ if errorlevel 1 (
 echo.
 echo [Git] Push successful.
 echo.
-echo [DEBUG] Reached point A (After Push)
-pause
 
 :: 7. Create ZIP Backup
 echo [Backup] Preparing backup...
-echo [DEBUG] Reached point B (Before Timestamp)
 
-:: STATIC TIMESTAMP FOR DEBUGGING
-set "TIMESTAMP=debug_backup"
-echo [DEBUG] Timestamp set to: %TIMESTAMP%
+:: Generate Timestamp using PowerShell
+set "TIMESTAMP="
+for /f "usebackq tokens=*" %%a in (`powershell -Command "Get-Date -format yyyy-MM-dd_HH-mm-ss"`) do set TIMESTAMP=%%a
+
+if "%TIMESTAMP%"=="" set TIMESTAMP=backup_date_unknown
 
 :: Define Backup Filename
 set "BACKUP_DIR=backups"
@@ -133,11 +132,9 @@ set "BACKUP_FILE=%BACKUP_DIR%\source_backup_%TIMESTAMP%.zip"
 
 echo [Backup] Creating ZIP: %BACKUP_FILE%
 echo This might take a while...
-echo [DEBUG] Reached point C (Before Tar)
-pause
 
 :: Create backup using tar
-:: We use explicit file inclusion to be safer, but * is usually fine.
+:: Exclude .git folder, the backups folder itself, and node_modules
 tar -a -c -f "%BACKUP_FILE%" --exclude ".git" --exclude "backups" --exclude "node_modules" *
 
 if %errorlevel% neq 0 (
