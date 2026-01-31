@@ -73,6 +73,58 @@ $school_profile = getSchoolProfile($pdo);
                 }
             }
         }
+        // Handle Cleanup Data (Maintenance)
+        elseif (isset($_POST['cleanup_data'])) {
+             $confirm_cleanup = $_POST['confirm_cleanup'] ?? false;
+             $cutoff_date = $_POST['cutoff_date'];
+        
+             if ($confirm_cleanup && $cutoff_date) {
+                 try {
+                     $messages = [];
+        
+                     // 1. Cleanup Attendance (Students)
+                     if (isset($_POST['cleanup_attendance_student'])) {
+                         $stmt = $pdo->prepare("DELETE FROM tb_absensi WHERE tanggal < ?");
+                         $stmt->execute([$cutoff_date]);
+                         $messages[] = $stmt->rowCount() . " data absensi siswa";
+                     }
+        
+                     // 2. Cleanup Attendance (Teachers)
+                     if (isset($_POST['cleanup_attendance_teacher'])) {
+                         $stmt = $pdo->prepare("DELETE FROM tb_absensi_guru WHERE tanggal < ?");
+                         $stmt->execute([$cutoff_date]);
+                         $messages[] = $stmt->rowCount() . " data absensi guru";
+                     }
+        
+                     // 3. Cleanup Journals
+                     if (isset($_POST['cleanup_journals'])) {
+                         $stmt = $pdo->prepare("DELETE FROM tb_jurnal WHERE tanggal < ?");
+                         $stmt->execute([$cutoff_date]);
+                         $messages[] = $stmt->rowCount() . " data jurnal mengajar";
+                     }
+        
+                     // 4. Cleanup Activity Log
+                     if (isset($_POST['cleanup_logs'])) {
+                         $stmt = $pdo->prepare("DELETE FROM tb_activity_log WHERE created_at < ?");
+                         $stmt->execute([$cutoff_date . ' 00:00:00']);
+                         $messages[] = $stmt->rowCount() . " log aktivitas";
+                     }
+        
+                     if (!empty($messages)) {
+                         $msg_text = "Berhasil menghapus: " . implode(", ", $messages) . " (sebelum $cutoff_date).";
+                         logActivity($pdo, $_SESSION['username'] ?? 'system', 'Pembersihan Data', $msg_text);
+                         $message = ['type' => 'success', 'text' => $msg_text];
+                     } else {
+                         $message = ['type' => 'warning', 'text' => 'Tidak ada opsi pembersihan yang dipilih.'];
+                     }
+        
+                 } catch (Exception $e) {
+                     $message = ['type' => 'danger', 'text' => 'Gagal menghapus data: ' . $e->getMessage()];
+                 }
+             } else {
+                 $message = ['type' => 'warning', 'text' => 'Harap lengkapi tanggal batas dan konfirmasi pembersihan.'];
+             }
+        }
         // Handle Update Profile
         elseif (isset($_POST['nama_yayasan'])) {
             $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
@@ -421,6 +473,67 @@ include '../templates/sidebar.php';
                                         
                                         <div class="form-group">
                                             <button type="submit" class="btn btn-danger">Hapus Data Terpilih</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow border-left-warning">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-warning">Pembersihan Data (Maintenance)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-light">
+                                        <i class="fas fa-exclamation-triangle"></i> Fitur ini digunakan untuk menghapus data lama (sebelum tanggal tertentu) yang sudah tidak diperlukan. Harap berhati-hati karena data yang dihapus tidak dapat dikembalikan.
+                                    </div>
+                                    
+                                    <form method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan!');">
+                                        <input type="hidden" name="cleanup_type" value="bulk_cleanup">
+                                        
+                                        <div class="form-group row">
+                                            <label class="col-sm-3 col-form-label">Hapus Data Sebelum Tanggal</label>
+                                            <div class="col-sm-4">
+                                                <input type="date" name="cutoff_date" class="form-control" required>
+                                                <small class="text-muted">Semua data sebelum tanggal ini akan dihapus.</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row">
+                                            <label class="col-sm-3 col-form-label">Pilih Data untuk Dihapus</label>
+                                            <div class="col-sm-9">
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" id="cleanupAttendanceStudent" name="cleanup_attendance_student" value="1" checked>
+                                                    <label class="custom-control-label" for="cleanupAttendanceStudent">Absensi Siswa</label>
+                                                </div>
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" id="cleanupAttendanceTeacher" name="cleanup_attendance_teacher" value="1" checked>
+                                                    <label class="custom-control-label" for="cleanupAttendanceTeacher">Absensi Guru</label>
+                                                </div>
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" id="cleanupJournals" name="cleanup_journals" value="1">
+                                                    <label class="custom-control-label" for="cleanupJournals">Jurnal Mengajar</label>
+                                                </div>
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" id="cleanupLogs" name="cleanup_logs" value="1">
+                                                    <label class="custom-control-label" for="cleanupLogs">Log Aktivitas</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row">
+                                            <div class="col-sm-3"></div>
+                                            <div class="col-sm-9">
+                                                <div class="custom-control custom-checkbox my-1 mr-sm-2">
+                                                    <input type="checkbox" class="custom-control-input" id="confirmCleanup" name="confirm_cleanup" value="1" required>
+                                                    <label class="custom-control-label" for="confirmCleanup">Saya mengerti konsekuensinya dan ingin melanjutkan</label>
+                                                </div>
+                                                <button type="submit" name="cleanup_data" class="btn btn-warning mt-2">
+                                                    <i class="fas fa-trash"></i> Hapus Data Terpilih
+                                                </button>
+                                            </div>
                                         </div>
                                     </form>
                                 </div>
