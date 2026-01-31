@@ -119,16 +119,10 @@ echo.
 :: 7. Create ZIP Backup
 echo [Backup] Preparing backup...
 
-:: Generate Timestamp using PowerShell
-set "TIMESTAMP="
-for /f "usebackq tokens=*" %%a in (`powershell -Command "Get-Date -format yyyy-MM-dd_HH-mm-ss"`) do set TIMESTAMP=%%a
-
-if "%TIMESTAMP%"=="" set TIMESTAMP=backup_date_unknown
-
-:: Define Backup Filename
+:: Define Backup Filename (Fixed name to overwrite previous backup)
 set "BACKUP_DIR=backups"
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
-set "BACKUP_FILE=%BACKUP_DIR%\source_backup_%TIMESTAMP%.zip"
+set "BACKUP_FILE=%BACKUP_DIR%\source_backup.zip"
 
 echo [Backup] Creating ZIP: %BACKUP_FILE%
 echo This might take a while...
