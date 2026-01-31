@@ -124,17 +124,16 @@ if %errorlevel% neq 0 (
 echo.
 echo [Git] Push successful.
 echo.
+echo [DEBUG] Reached point A (After Push)
 pause
 
 :: 7. Create ZIP Backup
 echo [Backup] Preparing backup...
-pause
+echo [DEBUG] Reached point B (Before Timestamp)
 
-:: Generate Timestamp using PowerShell (Simplified)
-set "TIMESTAMP="
-for /f "usebackq tokens=*" %%a in (`powershell -Command "Get-Date -format yyyy-MM-dd_HH-mm-ss"`) do set TIMESTAMP=%%a
-
-if "%TIMESTAMP%"=="" set TIMESTAMP=backup_date_unknown
+:: STATIC TIMESTAMP FOR DEBUGGING
+set "TIMESTAMP=debug_backup"
+echo [DEBUG] Timestamp set to: %TIMESTAMP%
 
 :: Define Backup Filename
 set "BACKUP_DIR=backups"
@@ -143,6 +142,7 @@ set "BACKUP_FILE=%BACKUP_DIR%\source_backup_%TIMESTAMP%.zip"
 
 echo [Backup] Creating ZIP: %BACKUP_FILE%
 echo This might take a while...
+echo [DEBUG] Reached point C (Before Tar)
 pause
 
 :: Create backup using tar
