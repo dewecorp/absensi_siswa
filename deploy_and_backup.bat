@@ -65,32 +65,34 @@ echo.
 git diff --cached --quiet
 if %errorlevel% equ 0 (
     echo No changes to commit. Proceeding to sync...
-) else (
-    :: 5. Commit changes
-    :get_message
-    echo.
-    set "commit_msg="
-    set /p "commit_msg=Enter commit message (Press Enter for 'Update'): "
-    if "!commit_msg!"=="" set "commit_msg=Update"
-    
-    echo.
-    echo    Commit Message: "!commit_msg!"
-    echo.
-    set /p "confirm=Are you sure you want to commit with this message? (Y/N): "
-    if /i "!confirm!" neq "y" (
-        echo.
-        echo Cancelled. Please re-enter message.
-        goto :get_message
-    )
-
-    echo [Git] Committing changes...
-    git commit -m "!commit_msg!"
-    if !errorlevel! neq 0 (
-        echo Error: Commit failed.
-        goto :error
-    )
+    goto :sync_updates
 )
 
+:: 5. Commit changes
+:get_message
+echo.
+set "commit_msg="
+set /p "commit_msg=Enter commit message (Press Enter for 'Update'): "
+if "!commit_msg!"=="" set "commit_msg=Update"
+
+echo.
+echo    Commit Message: "!commit_msg!"
+echo.
+set /p "confirm=Are you sure you want to commit with this message? (Y/N): "
+if /i "!confirm!" neq "y" (
+    echo.
+    echo Cancelled. Please re-enter message.
+    goto :get_message
+)
+
+echo [Git] Committing changes...
+git commit -m "!commit_msg!"
+if !errorlevel! neq 0 (
+    echo Error: Commit failed.
+    goto :error
+)
+
+:sync_updates
 :: 6. Pull (Rebase) and Push
 echo [Git] Pulling latest changes (rebase)...
 git pull --rebase origin main
