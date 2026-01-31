@@ -122,21 +122,13 @@ if %errorlevel% neq 0 (
 echo.
 echo [Git] Push successful.
 echo.
+pause
 
 :: 7. Create ZIP Backup
 echo [Backup] Preparing backup...
 
-:: Generate Timestamp (Safe Method)
-set "datetime="
-for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set "datetime=%%I"
-
-:: Check if datetime was retrieved
-if "%datetime%"=="" (
-    echo Warning: Could not retrieve date/time via WMIC. Using 'unknown_date'
-    set "TIMESTAMP=unknown_date"
-) else (
-    set "TIMESTAMP=%datetime:~0,4%-%datetime:~4,2%-%datetime:~6,2%_%datetime:~8,2%-%datetime:~10,2%-%datetime:~12,2%"
-)
+:: Generate Timestamp using PowerShell (More reliable than WMIC)
+for /f %%a in ('powershell -Command "Get-Date -format 'yyyy-MM-dd_HH-mm-ss'"') do set TIMESTAMP=%%a
 
 :: Define Backup Filename
 set "BACKUP_DIR=backups"
@@ -145,6 +137,7 @@ set "BACKUP_FILE=%BACKUP_DIR%\source_backup_%TIMESTAMP%.zip"
 
 echo [Backup] Creating ZIP: %BACKUP_FILE%
 echo This might take a while...
+pause
 
 :: Create backup using tar
 :: We use explicit file inclusion to be safer, but * is usually fine.
