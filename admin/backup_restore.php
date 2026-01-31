@@ -29,13 +29,23 @@ if (isset($_POST['backup_db'])) {
     // Generate backup filename
     $filename = $backup_dir . 'backup_' . date('Y-m-d_H-i-s') . '.sql';
     
+    // Determine mysqldump path
+    $mysqldump_path = 'mysqldump'; // Default fallback
+    $detected_path = 'D:/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysqldump.exe';
+    
+    if (file_exists($detected_path)) {
+        $mysqldump_path = '"' . $detected_path . '"';
+    }
+    
     // Command to backup database
-    $command = "mysqldump --host={$host} --user={$username} --password={$password} {$database} > {$filename}";
+    // Add --column-statistics=0 for compatibility with newer mysql versions if needed, but safe to omit if not sure
+    $command = "{$mysqldump_path} --host={$host} --user={$username} --password={$password} {$database} > {$filename} 2>&1";
     
     // Execute backup command
     exec($command, $output, $result);
     
-    if ($result === 0 && file_exists($filename)) {
+    // Check if file exists and has content
+    if (file_exists($filename) && filesize($filename) > 0) {
         // Get file size
         $filesize = filesize($filename);
         $filesize_formatted = formatBytes($filesize);
@@ -46,7 +56,13 @@ if (isset($_POST['backup_db'])) {
         
         $message = ['type' => 'success', 'text' => 'Database berhasil dibackup!'];
     } else {
-        $message = ['type' => 'danger', 'text' => 'Gagal membuat backup database!'];
+        // If file exists but empty (failed dump), delete it
+        if (file_exists($filename)) {
+            unlink($filename);
+        }
+        $error_msg = !empty($output) ? implode("\n", $output) : 'Unknown error';
+        error_log("Backup failed: " . $error_msg);
+        $message = ['type' => 'danger', 'text' => 'Gagal membuat backup database! Error: ' . ($result !== 0 ? "Exit code $result" : "File empty")];
     }
 }
 
@@ -62,8 +78,16 @@ if (isset($_POST['restore_db'])) {
             $password = DB_PASS;
             $database = DB_NAME;
             
+            // Determine mysql path
+            $mysql_path = 'mysql'; // Default fallback
+            $detected_mysql_path = 'D:/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql.exe';
+            
+            if (file_exists($detected_mysql_path)) {
+                $mysql_path = '"' . $detected_mysql_path . '"';
+            }
+            
             // Command to restore database
-            $command = "mysql --host={$host} --user={$username} --password={$password} {$database} < {$backup_path}";
+            $command = "{$mysql_path} --host={$host} --user={$username} --password={$password} {$database} < {$backup_path} 2>&1";
             
             // Execute restore command
             exec($command, $output, $result);
