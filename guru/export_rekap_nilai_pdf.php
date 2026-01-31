@@ -155,11 +155,40 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
     </style>
 </head>
 <body>
-    <div class="header">
-        <h3><?= $title ?></h3>
-        <p>KELAS: <?= htmlspecialchars($class_info['nama_kelas']) ?></p>
-        <p>TIPE: <?= $selected_tipe == 'nilai_asli' ? 'NILAI ASLI' : 'NILAI JADI' ?></p>
-        <p>TAHUN AJARAN: <?= $tahun_ajaran ?> - Semester <?= $semester_aktif ?></p>
+    <div class="header" style="border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+        <table style="width: 100%; border: none; margin: 0;">
+            <tr style="border: none;">
+                <td style="border: none; width: 100px; text-align: center; vertical-align: middle;">
+                    <?php if (!empty($school_profile['logo'])): ?>
+                        <img src="../assets/img/<?= htmlspecialchars($school_profile['logo']) ?>" style="height: 80px; width: auto;">
+                    <?php endif; ?>
+                </td>
+                <td style="border: none; text-align: center; vertical-align: middle;">
+                    <h3 style="margin: 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;"><?= htmlspecialchars($school_profile['nama_yayasan'] ?? '') ?></h3>
+                    <h2 style="margin: 5px 0; font-size: 22px; text-transform: uppercase; font-weight: bold;"><?= htmlspecialchars($school_profile['nama_madrasah'] ?? '') ?></h2>
+                    <p style="margin: 0; font-size: 12px;"><?= htmlspecialchars($school_profile['alamat'] ?? '') ?></p>
+                </td>
+                <td style="border: none; width: 100px;"></td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h3 style="margin: 0; margin-bottom: 15px; text-decoration: underline;"><?= $title ?></h3>
+        <table style="width: 100%; border: none; font-size: 12px; margin-top: 10px;">
+            <tr style="border: none;">
+                <td style="border: none; text-align: left; width: 15%; padding: 2px;">Kelas</td>
+                <td style="border: none; text-align: left; width: 35%; padding: 2px;">: <?= htmlspecialchars($class_info['nama_kelas']) ?></td>
+                <td style="border: none; text-align: left; width: 15%; padding: 2px;">Tipe Nilai</td>
+                <td style="border: none; text-align: left; width: 35%; padding: 2px;">: <?= $selected_tipe == 'nilai_asli' ? 'NILAI ASLI' : 'NILAI JADI' ?></td>
+            </tr>
+            <tr style="border: none;">
+                <td style="border: none; text-align: left; width: 15%; padding: 2px;">Wali Kelas</td>
+                <td style="border: none; text-align: left; width: 35%; padding: 2px;">: <?= htmlspecialchars($class_info['wali_kelas'] ?? '-') ?></td>
+                <td style="border: none; text-align: left; width: 15%; padding: 2px;">Tahun Ajaran</td>
+                <td style="border: none; text-align: left; width: 35%; padding: 2px;">: <?= $tahun_ajaran ?> (<?= $semester_aktif ?>)</td>
+            </tr>
+        </table>
     </div>
 
     <table>

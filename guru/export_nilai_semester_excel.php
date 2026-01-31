@@ -125,21 +125,34 @@ $spreadsheet->getProperties()
     ->setTitle($title . " " . $class_info['nama_kelas']);
 
 // Header Info
-$sheet->setCellValue('A1', $title);
-$sheet->setCellValue('A2', 'KELAS: ' . $class_info['nama_kelas']);
-$sheet->setCellValue('A3', 'MATA PELAJARAN: ' . $mapel_info['nama_mapel']);
-$sheet->setCellValue('A4', 'TAHUN AJARAN: ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
-$sheet->setCellValue('A5', 'GURU: ' . (getGuruName($pdo, $id_guru) ?: '.........................'));
+$sheet->setCellValue('A1', strtoupper($school_profile['nama_yayasan'] ?? ''));
+$sheet->setCellValue('A2', strtoupper($school_profile['nama_madrasah'] ?? ''));
+$sheet->setCellValue('A3', $school_profile['alamat'] ?? '');
+
+$sheet->setCellValue('A5', $title);
+$sheet->setCellValue('A6', 'KELAS: ' . $class_info['nama_kelas']);
+$sheet->setCellValue('A7', 'MATA PELAJARAN: ' . $mapel_info['nama_mapel']);
+$sheet->setCellValue('A8', 'TAHUN AJARAN: ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
+$sheet->setCellValue('A9', 'GURU: ' . (getGuruName($pdo, $id_guru) ?: '.........................'));
+
+// Style School Header
+$sheet->getStyle('A1')->getFont()->setSize(12);
+$sheet->getStyle('A2')->getFont()->setSize(14)->setBold(true);
+$sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
 // Merge Header Cells
 $sheet->mergeCells('A1:F1');
 $sheet->mergeCells('A2:F2');
 $sheet->mergeCells('A3:F3');
-$sheet->mergeCells('A4:F4');
+
 $sheet->mergeCells('A5:F5');
+$sheet->mergeCells('A6:F6');
+$sheet->mergeCells('A7:F7');
+$sheet->mergeCells('A8:F8');
+$sheet->mergeCells('A9:F9');
 
 // Table Headers
-$row = 7;
+$row = 11;
 $sheet->setCellValue('A' . $row, 'NO');
 $sheet->setCellValue('B' . $row, 'NAMA SISWA');
 $sheet->setCellValue('C' . $row, 'NILAI ASLI');

@@ -147,13 +147,32 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
 $spreadsheet->getProperties()->setTitle($title);
 
 // Header Info
-$sheet->setCellValue('A1', $title);
-$sheet->setCellValue('A2', 'KELAS: ' . $class_info['nama_kelas']);
-$sheet->setCellValue('A3', 'TIPE: ' . ($selected_tipe == 'nilai_asli' ? 'NILAI ASLI' : 'NILAI JADI'));
-$sheet->setCellValue('A4', 'TAHUN AJARAN: ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
+$sheet->setCellValue('A1', strtoupper($school_profile['nama_yayasan'] ?? ''));
+$sheet->setCellValue('A2', strtoupper($school_profile['nama_madrasah'] ?? ''));
+$sheet->setCellValue('A3', $school_profile['alamat'] ?? '');
+
+$sheet->setCellValue('A5', $title);
+$sheet->setCellValue('A6', 'KELAS: ' . $class_info['nama_kelas']);
+$sheet->setCellValue('A7', 'TIPE: ' . ($selected_tipe == 'nilai_asli' ? 'NILAI ASLI' : 'NILAI JADI'));
+$sheet->setCellValue('A8', 'TAHUN AJARAN: ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
+
+// Style School Header
+$sheet->getStyle('A1')->getFont()->setSize(12);
+$sheet->getStyle('A2')->getFont()->setSize(14)->setBold(true);
+$sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+// Merge Header Cells
+$sheet->mergeCells('A1:H1');
+$sheet->mergeCells('A2:H2');
+$sheet->mergeCells('A3:H3');
+
+$sheet->mergeCells('A5:H5');
+$sheet->mergeCells('A6:H6');
+$sheet->mergeCells('A7:H7');
+$sheet->mergeCells('A8:H8');
 
 // Table Header
-$row = 6;
+$row = 10;
 $sheet->setCellValue('A' . $row, 'NO');
 $sheet->setCellValue('B' . $row, 'NAMA SISWA');
 

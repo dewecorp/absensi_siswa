@@ -156,12 +156,40 @@ $title = isset($titles[$jenis_semester]) ? $titles[$jenis_semester] : 'NILAI SEM
         Cetak / Simpan PDF
     </button>
 
-    <div class="header">
-        <h2><?= htmlspecialchars($title) ?></h2>
-        <h3><?= htmlspecialchars($class_info['nama_kelas'] ?? '') ?> - <?= htmlspecialchars($mapel_info['nama_mapel'] ?? '') ?></h3>
-        <p>Tahun Ajaran: <?= htmlspecialchars($tahun_ajaran) ?> Semester <?= htmlspecialchars($semester_aktif) ?></p>
-        <p>Guru: <?= htmlspecialchars(getGuruName($pdo, $id_guru) ?: '.........................') ?></p>
-        <p>Wali Kelas: <?= htmlspecialchars($class_info['wali_kelas'] ?? '.........................') ?></p>
+    <div class="header" style="border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+        <table style="width: 100%; border: none; margin: 0;">
+            <tr style="border: none;">
+                <td style="border: none; width: 100px; text-align: center; vertical-align: middle;">
+                    <?php if (!empty($school_profile['logo'])): ?>
+                        <img src="../assets/img/<?= htmlspecialchars($school_profile['logo']) ?>" style="height: 80px; width: auto;">
+                    <?php endif; ?>
+                </td>
+                <td style="border: none; text-align: center; vertical-align: middle;">
+                    <h3 style="margin: 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;"><?= htmlspecialchars($school_profile['nama_yayasan'] ?? '') ?></h3>
+                    <h2 style="margin: 5px 0; font-size: 22px; text-transform: uppercase; font-weight: bold;"><?= htmlspecialchars($school_profile['nama_madrasah'] ?? '') ?></h2>
+                    <p style="margin: 0; font-size: 12px;"><?= htmlspecialchars($school_profile['alamat'] ?? '') ?></p>
+                </td>
+                <td style="border: none; width: 100px;"></td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h3 style="margin: 0; margin-bottom: 15px; text-decoration: underline;"><?= htmlspecialchars($title) ?></h3>
+        <table style="width: 100%; border: none; font-size: 12px; margin-top: 10px;">
+            <tr style="border: none;">
+                <td style="border: none; text-align: left; width: 15%; padding: 2px;">Mata Pelajaran</td>
+                <td style="border: none; text-align: left; width: 45%; padding: 2px;">: <b><?= htmlspecialchars($mapel_info['nama_mapel'] ?? '') ?></b></td>
+                <td style="border: none; text-align: left; width: 15%; padding: 2px;">Kelas</td>
+                <td style="border: none; text-align: left; width: 25%; padding: 2px;">: <?= htmlspecialchars($class_info['nama_kelas'] ?? '') ?></td>
+            </tr>
+            <tr style="border: none;">
+                <td style="border: none; text-align: left; width: 15%; padding: 2px;">Guru Pengampu</td>
+                <td style="border: none; text-align: left; width: 45%; padding: 2px;">: <?= htmlspecialchars(getGuruName($pdo, $id_guru) ?: '-') ?></td>
+                <td style="border: none; text-align: left; width: 15%; padding: 2px;">Tahun Ajaran</td>
+                <td style="border: none; text-align: left; width: 25%; padding: 2px;">: <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars($semester_aktif) ?>)</td>
+            </tr>
+        </table>
     </div>
 
     <table>

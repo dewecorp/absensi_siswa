@@ -120,21 +120,34 @@ $spreadsheet->getProperties()
     ->setTitle("Nilai Kokurikuler " . $class_info['nama_kelas']);
 
 // Header Info
-$sheet->setCellValue('A1', 'DAFTAR NILAI KOKURIKULER');
-$sheet->setCellValue('A2', 'KELAS: ' . $class_info['nama_kelas']);
-$sheet->setCellValue('A3', 'MATA PELAJARAN: ' . $mapel_info['nama_mapel']);
-$sheet->setCellValue('A4', 'GURU: ' . (getGuruName($pdo, $id_guru) ?: '.........................'));
-$sheet->setCellValue('A5', 'WALI KELAS: ' . ($class_info['wali_kelas'] ?? '.........................'));
+$sheet->setCellValue('A1', strtoupper($school_profile['nama_yayasan'] ?? ''));
+$sheet->setCellValue('A2', strtoupper($school_profile['nama_madrasah'] ?? ''));
+$sheet->setCellValue('A3', $school_profile['alamat'] ?? '');
+
+$sheet->setCellValue('A5', 'DAFTAR NILAI KOKURIKULER');
+$sheet->setCellValue('A6', 'KELAS: ' . $class_info['nama_kelas']);
+$sheet->setCellValue('A7', 'MATA PELAJARAN: ' . $mapel_info['nama_mapel']);
+$sheet->setCellValue('A8', 'GURU: ' . (getGuruName($pdo, $id_guru) ?: '.........................'));
+$sheet->setCellValue('A9', 'WALI KELAS: ' . ($class_info['wali_kelas'] ?? '.........................'));
+
+// Style School Header
+$sheet->getStyle('A1')->getFont()->setSize(12);
+$sheet->getStyle('A2')->getFont()->setSize(14)->setBold(true);
+$sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
 // Merge Header Cells
 $sheet->mergeCells('A1:H1');
 $sheet->mergeCells('A2:H2');
 $sheet->mergeCells('A3:H3');
-$sheet->mergeCells('A4:H4');
+
 $sheet->mergeCells('A5:H5');
+$sheet->mergeCells('A6:H6');
+$sheet->mergeCells('A7:H7');
+$sheet->mergeCells('A8:H8');
+$sheet->mergeCells('A9:H9');
 
 // Table Headers
-$row = 6;
+$row = 11;
 $sheet->setCellValue('A' . $row, 'NO');
 $sheet->mergeCells('A' . $row . ':A' . ($row + 2));
 $sheet->setCellValue('B' . $row, 'NAMA SISWA');
