@@ -2,55 +2,15 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
 $page_title = 'Rekap Nilai Siswa';
-$user_role = $_SESSION['level'];
-$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin']);
 
-// Get teacher data
-$id_guru = null;
-if (!$is_admin_view) {
-    $id_guru = $_SESSION['user_id'];
-    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
-        $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-        $id_guru = $stmt->fetchColumn();
-    }
-}
-
-// Fetch classes
-$classes = [];
-if ($is_admin_view) {
-    $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
-    $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    // Get teacher name and teaching assignments
-    $stmt = $pdo->prepare("SELECT nama_guru, mengajar FROM tb_guru WHERE id_guru = ?");
-    $stmt->execute([$id_guru]);
-    $guru_data = $stmt->fetch(PDO::FETCH_ASSOC);
-    $nama_guru = $guru_data['nama_guru'] ?? '';
-    $mengajar_json = $guru_data['mengajar'] ?? '[]';
-    $mengajar_ids = json_decode($mengajar_json, true) ?? [];
-
-    // Check if user is Wali Kelas
-    $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE wali_kelas = ?");
-    $stmt->execute([$nama_guru]);
-    $wali_classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $wali_class_ids = array_column($wali_classes, 'id_kelas');
-
-    // Merge classes
-    $all_class_ids = array_unique(array_merge($mengajar_ids, $wali_class_ids));
-
-    if (!empty($all_class_ids)) {
-        $placeholders = str_repeat('?,', count($all_class_ids) - 1) . '?';
-        $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
-        $stmt->execute($all_class_ids);
-        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-}
+// Fetch classes (Admin sees all)
+$stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
+$classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Parameters
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
@@ -68,7 +28,7 @@ if ($selected_class_id) {
     }
 }
 
-// Get All Subjects (Mapel)
+// Get All Subjects (Mapel) - Filtered
 $subjects = [];
 $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
     WHERE nama_mapel NOT LIKE '%Asmaul Husna%'
@@ -283,10 +243,10 @@ require_once '../templates/sidebar.php';
                             </div>
                             <div class="col-md-6 text-right">
                                 <div class="btn-group">
-                                    <a href="export_rekap_nilai_excel.php?kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-success">
+                                    <a href="../guru/export_rekap_nilai_excel.php?kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-success">
                                         <i class="fas fa-file-excel"></i> Export Excel
                                     </a>
-                                    <a href="export_rekap_nilai_pdf.php?kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-danger">
+                                    <a href="../guru/export_rekap_nilai_pdf.php?kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-danger">
                                         <i class="fas fa-file-pdf"></i> Export PDF
                                     </a>
                                 </div>
@@ -352,13 +312,14 @@ require_once '../templates/sidebar.php';
 
 <script>
 $(document).ready(function() {
-    $('.select2').select2();
-    $('#rekapTable').DataTable({
-        "pageLength": 50,
-        "scrollX": true,
-        "fixedColumns": {
-            "leftColumns": 2
-        }
-    });
+    if ($.fn.DataTable) {
+        $('#rekapTable').DataTable({
+            "pageLength": 50,
+            "scrollX": true,
+            "fixedColumns": {
+                "leftColumns": 2
+            }
+        });
+    }
 });
 </script>

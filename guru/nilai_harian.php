@@ -51,7 +51,13 @@ if ($is_admin_view) {
 // Fetch subjects
 $subjects = [];
 if ($is_admin_view) {
-    $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+    $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
+        WHERE nama_mapel NOT LIKE '%Asmaul Husna%'
+        AND nama_mapel NOT LIKE '%Upacara%'
+        AND nama_mapel NOT LIKE '%Istirahat%'
+        AND nama_mapel NOT LIKE '%Kepramukaan%'
+        AND nama_mapel NOT LIKE '%Ekstrakurikuler%'
+        ORDER BY nama_mapel ASC");
     $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
     // Fetch subjects from schedule
@@ -64,6 +70,7 @@ if ($is_admin_view) {
         AND mp.nama_mapel NOT LIKE '%Upacara%'
         AND mp.nama_mapel NOT LIKE '%Istirahat%'
         AND mp.nama_mapel NOT LIKE '%Kepramukaan%'
+        AND mp.nama_mapel NOT LIKE '%Ekstrakurikuler%'
         ORDER BY mp.nama_mapel ASC
     ");
     $stmt->execute([$id_guru]);

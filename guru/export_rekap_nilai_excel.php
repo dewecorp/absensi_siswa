@@ -48,6 +48,7 @@ $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran
     AND nama_mapel NOT LIKE '%Upacara%'
     AND nama_mapel NOT LIKE '%Istirahat%'
     AND nama_mapel NOT LIKE '%Kepramukaan%'
+    AND nama_mapel NOT LIKE '%Ekstrakurikuler%'
     ORDER BY nama_mapel ASC");
 $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

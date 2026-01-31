@@ -15,19 +15,19 @@ switch ($user_level) {
             [
                 'title' => 'Dashboard',
                 'icon' => 'fas fa-fire',
-                'url' => 'dashboard.php',
+                'url' => '../admin/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
             ],
             [
                 'title' => 'Master Data',
                 'icon' => 'fas fa-database',
                 'submenu' => [
-                    ['title' => 'Data Guru', 'url' => 'data_guru.php', 'active' => $current_page === 'data_guru.php'],
-                    ['title' => 'Data Kelas', 'url' => 'data_kelas.php', 'active' => $current_page === 'data_kelas.php'],
-                    ['title' => 'Data Siswa', 'url' => 'data_siswa.php', 'active' => $current_page === 'data_siswa.php'],
-                    ['title' => 'Mata Pelajaran', 'url' => 'mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
-                    ['title' => 'Jam Mengajar', 'url' => 'jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
-                    ['title' => 'Kenaikan Kelas', 'url' => 'kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php']
+                    ['title' => 'Data Guru', 'url' => '../admin/data_guru.php', 'active' => $current_page === 'data_guru.php'],
+                    ['title' => 'Data Kelas', 'url' => '../admin/data_kelas.php', 'active' => $current_page === 'data_kelas.php'],
+                    ['title' => 'Data Siswa', 'url' => '../admin/data_siswa.php', 'active' => $current_page === 'data_siswa.php'],
+                    ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
+                    ['title' => 'Jam Mengajar', 'url' => '../admin/jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
+                    ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php']
                 ],
                 'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php'])
             ],
@@ -35,30 +35,30 @@ switch ($user_level) {
                 'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => [
-                    ['title' => 'Scan Absensi', 'url' => 'scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
-                    ['title' => 'Absensi Guru', 'url' => 'absensi_guru.php', 'active' => $current_page === 'absensi_guru.php'],
-                    ['title' => 'Rekap Absensi Guru', 'url' => 'rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
-                    ['title' => 'Absensi Siswa', 'url' => 'absensi_harian.php', 'active' => $current_page === 'absensi_harian.php'],
-                ['title' => 'Rekap Absensi Siswa', 'url' => 'rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
-                ['title' => 'Sholat Berjamaah', 'url' => 'sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
-                ['title' => 'Rekap Sholat Berjamaah', 'url' => 'rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
-                ['title' => 'Sholat Dhuha', 'url' => 'sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
-                ['title' => 'Rekap Sholat Dhuha', 'url' => 'rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
+                    ['title' => 'Scan Absensi', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
+                    ['title' => 'Absensi Guru', 'url' => '../admin/absensi_guru.php', 'active' => $current_page === 'absensi_guru.php'],
+                    ['title' => 'Rekap Absensi Guru', 'url' => '../admin/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
+                    ['title' => 'Absensi Siswa', 'url' => '../admin/absensi_harian.php', 'active' => $current_page === 'absensi_harian.php'],
+                    ['title' => 'Rekap Absensi Siswa', 'url' => '../admin/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+                    ['title' => 'Sholat Berjamaah', 'url' => '../admin/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
+                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../admin/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
+                    ['title' => 'Sholat Dhuha', 'url' => '../admin/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
+                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
+                ],
+                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
-            'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
-        ],
             [
                 'title' => 'Nilai Siswa',
                 'icon' => 'fas fa-chart-bar',
                 'submenu' => [
-                    ['title' => 'Nilai Harian', 'url' => '../guru/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
-                    ['title' => 'Nilai Tengah Semester', 'url' => '../guru/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
-                    ['title' => 'Nilai Akhir Semester', 'url' => '../guru/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
-                    ['title' => 'Nilai Akhir Tahun', 'url' => '../guru/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
-                    ['title' => 'Nilai Kokurikuler', 'url' => '../guru/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
-                    ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
-                    ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
-                    ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
+                    ['title' => 'Nilai Harian', 'url' => '../admin/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
+                    ['title' => 'Nilai Tengah Semester', 'url' => '../admin/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
+                    ['title' => 'Nilai Akhir Semester', 'url' => '../admin/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
+                    ['title' => 'Nilai Akhir Tahun', 'url' => '../admin/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
+                    ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
+                    ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
+                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
             ],
@@ -66,39 +66,39 @@ switch ($user_level) {
                 'title' => 'Jadwal Pelajaran',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
-                    ['title' => 'Jadwal Reguler', 'url' => 'jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => 'jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
+                    ['title' => 'Jadwal Reguler', 'url' => '../admin/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
             [
                 'title' => 'Jurnal Mengajar',
                 'icon' => 'fas fa-book-open',
-                'url' => 'jurnal_mengajar.php',
+                'url' => '../admin/jurnal_mengajar.php',
                 'active' => $current_page === 'jurnal_mengajar.php'
             ],
             [
                 'title' => 'Pengaturan',
                 'icon' => 'fas fa-school',
-                'url' => 'profil_madrasah.php',
+                'url' => '../admin/profil_madrasah.php',
                 'active' => $current_page === 'profil_madrasah.php'
             ],
             [
                 'title' => 'Pengguna',
                 'icon' => 'fas fa-users',
-                'url' => 'pengguna.php',
+                'url' => '../admin/pengguna.php',
                 'active' => $current_page === 'pengguna.php'
             ],
             [
                 'title' => 'Backup & Restore',
                 'icon' => 'fas fa-hdd',
-                'url' => 'backup_restore.php',
+                'url' => '../admin/backup_restore.php',
                 'active' => $current_page === 'backup_restore.php'
             ],
             [
                 'title' => 'Log Aktivitas',
                 'icon' => 'fas fa-history',
-                'url' => 'activity_log.php',
+                'url' => '../admin/activity_log.php',
                 'active' => $current_page === 'activity_log.php'
             ],
             [
