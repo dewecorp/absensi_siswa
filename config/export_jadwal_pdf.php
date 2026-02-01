@@ -57,19 +57,62 @@ if ($kelas_id) {
 }
 
 // Get Mapel Map
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+// Sort by Kode Mapel naturally (1, 2, 10 instead of 1, 10, 2)
+$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY LENGTH(kode_mapel), kode_mapel ASC");
 $mapels = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Filter Non-Academic Subjects
+// Filter removed for Main Schedule content, but applied for Legend
+// Removed 'Kepramukaan' and 'Ekstrakurikuler' from filter as requested (they have numeric codes)
+$non_academic_keywords = ['Asmaul Husna', 'Upacara', 'Istirahat', 'Tadarrus'];
+
 $mapel_map = [];
+$mapel_codes = [];
+$mapel_legend = [];
+$i = 1;
 foreach ($mapels as $m) {
     $mapel_map[$m['id_mapel']] = $m;
+    
+    // Use kode_mapel from DB if available, otherwise auto-increment
+    $code = !empty($m['kode_mapel']) ? $m['kode_mapel'] : $i;
+    $mapel_codes[$m['id_mapel']] = $code;
+    
+    // Check filter for Legend ONLY
+    $is_non_academic = false;
+    foreach ($non_academic_keywords as $keyword) {
+        if (stripos($m['nama_mapel'], $keyword) !== false) {
+            $is_non_academic = true;
+            break;
+        }
+    }
+    
+    if (!$is_non_academic) {
+         $mapel_legend[] = ['code' => $code, 'name' => $m['nama_mapel']];
+    }
+    $i++;
 }
 
 // Get Guru Map
-$stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
+// Sort by Kode Guru
+$stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY kode_guru ASC, nama_guru ASC");
 $gurus = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $guru_map = [];
+$guru_codes = [];
+$guru_legend = [];
+$chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+$i = 0;
 foreach ($gurus as $g) {
     $guru_map[$g['id_guru']] = $g;
+    
+    $code = '';
+    if ($i < 26) {
+        $code = $chars[$i];
+    } else {
+        $code = $chars[floor($i / 26) - 1] . $chars[$i % 26];
+    }
+    $guru_codes[$g['id_guru']] = $code;
+    $guru_legend[] = ['code' => $code, 'name' => $g['nama_guru']];
+    $i++;
 }
 
 // Get Jam Mengajar (Ordered by Waktu Mulai)
@@ -88,6 +131,11 @@ $all_schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $main_schedule = [];
 $used_jam_ke = [];
 foreach ($all_schedules as $row) {
+    // Filter non-academic schedules
+    if (!isset($mapel_map[$row['mapel_id']])) {
+        continue;
+    }
+
     $main_schedule[$row['hari']][$row['jam_ke']][$row['kelas_id']] = $row;
     // Only mark as used if this schedule belongs to one of the selected classes
     foreach ($classes as $c) {
@@ -132,6 +180,9 @@ $html = '
         .signature-table { margin-top: 15px; border: none; page-break-inside: avoid; }
         .signature-table td { border: none; vertical-align: top; text-align: center; padding: 10px; font-size: 10pt; }
         .special-slot { background-color: #f9f9f9; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .legend-table { width: 100%; font-size: 8pt; border: 1px solid black; margin-bottom: 5px; }
+        .legend-table th { background-color: #f0f0f0; border: 1px solid black; text-align: center; font-weight: bold; }
+        .legend-table td { border: 1px solid black; text-align: left; padding: 2px 4px; }
         .print-btn {
             position: fixed;
             top: 20px;
@@ -273,7 +324,10 @@ foreach ($jam_display as $jam) {
                         if ($kelas_id) {
                             $content = '<b>' . $m['nama_mapel'] . '</b>';
                         } else {
-                            $content = $m['kode_mapel'] ?: $m['nama_mapel'];
+                            // Use Generated Codes for Jadwal Utama
+                            $m_code = isset($mapel_codes[$sched['mapel_id']]) ? $mapel_codes[$sched['mapel_id']] : '-';
+                            // Only show Mapel Code in the main schedule cell as requested
+                            $content = '<b>' . $m_code . '</b>';
                         }
                     }
                 }
@@ -314,10 +368,86 @@ if ($kelas_id) {
                 <b>' . htmlspecialchars($wali_kelas) . '</b>
             </td>';
 } else {
-    // Jadwal Utama: Mengetahui (Kepala)
+    // Jadwal Utama: Legend on Left, Signature on Right
+    
+    // Build Legend HTML
+    // Split into 2 columns (max 20 per column? Or split evenly)
+    // Actually we want 2 main tables: Mapel and Guru
+    
+    $mapel_rows = count($mapel_legend);
+    $mapel_mid = ceil($mapel_rows / 2);
+    
+    $guru_rows = count($guru_legend);
+    $guru_mid = ceil($guru_rows / 2);
+    
+    $legend_html = '
+        <table style="width:100%; border:none;">
+            <tr>
+                <td style="width:50%; vertical-align:top; border:none; padding-right:5px;">
+                    <table class="legend-table">
+                        <tr><th colspan="4">KODE MATA PELAJARAN</th></tr>';
+                        
+    for ($i = 0; $i < $mapel_mid; $i++) {
+        $legend_html .= '<tr>';
+        // Left Column
+        if (isset($mapel_legend[$i])) {
+            $legend_html .= '<td style="width:20px; text-align:center;">' . $mapel_legend[$i]['code'] . '</td>';
+            $legend_html .= '<td>' . htmlspecialchars($mapel_legend[$i]['name']) . '</td>';
+        } else {
+            $legend_html .= '<td></td><td></td>';
+        }
+        
+        // Right Column
+        $j = $i + $mapel_mid;
+        if (isset($mapel_legend[$j])) {
+            $legend_html .= '<td style="width:20px; text-align:center;">' . $mapel_legend[$j]['code'] . '</td>';
+            $legend_html .= '<td>' . htmlspecialchars($mapel_legend[$j]['name']) . '</td>';
+        } else {
+            $legend_html .= '<td></td><td></td>';
+        }
+        $legend_html .= '</tr>';
+    }
+    
+    $legend_html .= '
+                    </table>
+                </td>
+                <td style="width:50%; vertical-align:top; border:none; padding-left:5px;">
+                    <table class="legend-table">
+                        <tr><th colspan="4">KODE GURU</th></tr>';
+                        
+    for ($i = 0; $i < $guru_mid; $i++) {
+        $legend_html .= '<tr>';
+        // Left Column
+        if (isset($guru_legend[$i])) {
+            $legend_html .= '<td style="width:20px; text-align:center;">' . $guru_legend[$i]['code'] . '</td>';
+            $legend_html .= '<td>' . htmlspecialchars($guru_legend[$i]['name']) . '</td>';
+        } else {
+            $legend_html .= '<td></td><td></td>';
+        }
+        
+        // Right Column
+        $j = $i + $guru_mid;
+        if (isset($guru_legend[$j])) {
+            $legend_html .= '<td style="width:20px; text-align:center;">' . $guru_legend[$j]['code'] . '</td>';
+            $legend_html .= '<td>' . htmlspecialchars($guru_legend[$j]['name']) . '</td>';
+        } else {
+            $legend_html .= '<td></td><td></td>';
+        }
+        $legend_html .= '</tr>';
+    }
+    
+    $legend_html .= '
+                    </table>
+                </td>
+            </tr>
+        </table>
+    ';
+    
     $html .= '
-            <td width="50%"></td> <!-- Empty Left -->
-            <td width="50%">
+            <td width="70%" style="vertical-align:top; padding-right: 20px;">
+                ' . $legend_html . '
+            </td>
+            <td width="30%" style="vertical-align:top;">
                 ' . $date_str . '<br>
                 Kepala Madrasah<br>
                 <br><br><br><br>

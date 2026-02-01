@@ -38,19 +38,61 @@ if ($kelas_id) {
 }
 
 // Get Mapel Map
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+// Sort by Kode Mapel naturally (1, 2, 10 instead of 1, 10, 2)
+$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY LENGTH(kode_mapel), kode_mapel ASC");
 $mapels = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Filter Non-Academic Subjects
+// Filter removed for Main Schedule content, but applied for Legend
+// Removed 'Kepramukaan' and 'Ekstrakurikuler' from filter as requested (they have numeric codes)
+$non_academic_keywords = ['Asmaul Husna', 'Upacara', 'Istirahat', 'Tadarrus'];
+
 $mapel_map = [];
+$mapel_legend = [];
+$i = 1;
 foreach ($mapels as $m) {
+    // Use kode_mapel from DB if available, otherwise auto-increment
+    $code = !empty($m['kode_mapel']) ? $m['kode_mapel'] : $i;
+    $m['display_code'] = $code;
     $mapel_map[$m['id_mapel']] = $m;
+    
+    // Check filter for Legend ONLY
+    $is_non_academic = false;
+    foreach ($non_academic_keywords as $keyword) {
+        if (stripos($m['nama_mapel'], $keyword) !== false) {
+            $is_non_academic = true;
+            break;
+        }
+    }
+    
+    if (!$is_non_academic) {
+        $mapel_legend[] = ['code' => $code, 'name' => $m['nama_mapel']];
+    }
+    $i++;
 }
 
 // Get Guru Map
-$stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
+$stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY kode_guru ASC, nama_guru ASC");
 $gurus = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $guru_map = [];
+$guru_legend = [];
+$chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+$i = 0;
 foreach ($gurus as $g) {
+    // Use kode_guru from DB if available, otherwise generate letter
+    if (!empty($g['kode_guru'])) {
+        $code = $g['kode_guru'];
+    } else {
+        if ($i < 26) {
+            $code = $chars[$i];
+        } else {
+            $code = $chars[floor($i / 26) - 1] . $chars[$i % 26];
+        }
+    }
+    $g['display_code'] = $code;
     $guru_map[$g['id_guru']] = $g;
+    $guru_legend[] = ['code' => $code, 'name' => $g['nama_guru']];
+    $i++;
 }
 
 // Get Jam Mengajar (Ordered by Waktu Mulai)
@@ -69,6 +111,11 @@ $all_schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $main_schedule = [];
 $used_jam_ke = [];
 foreach ($all_schedules as $row) {
+    // Filter non-academic schedules
+    if (!isset($mapel_map[$row['mapel_id']])) {
+        continue;
+    }
+
     $main_schedule[$row['hari']][$row['jam_ke']][$row['kelas_id']] = $row;
     foreach ($classes as $c) {
         if ($c['id_kelas'] == $row['kelas_id']) {
@@ -114,8 +161,8 @@ header("Expires: 0");
     <table>
         <thead>
             <tr>
-                <th rowspan="3" style="width: 50px;">JAM<br>KE</th>
-                <th rowspan="3" style="width: 100px;">WAKTU</th>
+                <th rowspan="2" style="width: 50px;">JAM<br>KE</th>
+                <th rowspan="2" style="width: 100px;">WAKTU</th>
                 <?php foreach ($days as $day): ?>
                     <th colspan="<?= count($classes) ?>" style="background-color: #e0e0e0;"><?= strtoupper($day) ?></th>
                 <?php endforeach; ?>
@@ -124,27 +171,6 @@ header("Expires: 0");
                 <?php foreach ($days as $day): ?>
                     <?php foreach ($classes as $c): ?>
                         <th><?= $c['nama_kelas'] ?></th>
-                    <?php endforeach; ?>
-                <?php endforeach; ?>
-            </tr>
-            <tr>
-                <?php foreach ($days as $day): ?>
-                    <?php foreach ($classes as $c): 
-                        $code = '-';
-                        if (isset($main_schedule[$day])) {
-                            foreach ($main_schedule[$day] as $jam_data) {
-                                if (isset($jam_data[$c['id_kelas']])) {
-                                    $sched = $jam_data[$c['id_kelas']];
-                                    if (!empty($sched['guru_id']) && isset($guru_map[$sched['guru_id']])) {
-                                        $g = $guru_map[$sched['guru_id']];
-                                        $code = $g['kode_guru'] ?? substr($g['nama_guru'], 0, 3);
-                                        break; 
-                                    }
-                                }
-                            }
-                        }
-                    ?>
-                        <th><?= $code ?></th>
                     <?php endforeach; ?>
                 <?php endforeach; ?>
             </tr>
@@ -184,12 +210,12 @@ header("Expires: 0");
                                     if ($kelas_id) {
                                         $content = $m['nama_mapel'];
                                     } else {
-                                        $content = $m['kode_mapel'] ?: $m['nama_mapel'];
+                                        $content = $m['display_code'];
                                     }
                                 }
                             }
                         ?>
-                        <td><?= htmlspecialchars($content) ?></td>
+                        <td><?= $kelas_id ? htmlspecialchars($content) : '<b>'.htmlspecialchars($content).'</b>' ?></td>
                     <?php endforeach; endif; ?>
                 <?php endforeach; ?>
             </tr>
@@ -221,8 +247,37 @@ header("Expires: 0");
                 <b><u><?= htmlspecialchars($wali_kelas) ?></u></b>
             </td>
             <?php else: ?>
-            <td style="border: none;" width="50%"></td>
-            <td style="border: none; text-align: center;" width="50%">
+            <!-- Legend and Signature for Main Schedule -->
+            <td style="border: none; vertical-align: top;" width="70%">
+                <table style="border: none;">
+                    <tr style="border: none;">
+                        <td valign="top" style="border:none">
+                            <table style="border: 1px solid black; border-collapse: collapse;">
+                                <tr><th colspan="2" style="background-color: #f0f0f0; border: 1px solid black;">KODE MATA PELAJARAN</th></tr>
+                                <?php foreach ($mapel_legend as $item): ?>
+                                <tr>
+                                    <td style="text-align: center; border: 1px solid black;"><?= $item['code'] ?></td>
+                                    <td style="text-align: left; border: 1px solid black;"><?= htmlspecialchars($item['name']) ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </table>
+                        </td>
+                        <td style="border:none; width: 20px;"></td>
+                        <td valign="top" style="border:none">
+                            <table style="border: 1px solid black; border-collapse: collapse;">
+                                <tr><th colspan="2" style="background-color: #f0f0f0; border: 1px solid black;">KODE GURU</th></tr>
+                                <?php foreach ($guru_legend as $item): ?>
+                                <tr>
+                                    <td style="text-align: center; border: 1px solid black;"><?= $item['code'] ?></td>
+                                    <td style="text-align: left; border: 1px solid black;"><?= htmlspecialchars($item['name']) ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+            <td style="border: none; text-align: center; vertical-align: top;" width="30%">
                 <?= $date_str ?><br>
                 Kepala Madrasah<br>
                 <br><br><br><br>
