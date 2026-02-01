@@ -651,7 +651,7 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-user-check"></i>
@@ -666,7 +666,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-user-injured"></i>
@@ -681,7 +681,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-user-clock"></i>

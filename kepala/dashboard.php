@@ -450,13 +450,6 @@ $js_page = [
                                 fill: false,
                                 tension: 0.4
                             }, {
-                                label: 'Sakit',
-                                data: " . $guru_sakit_data_json . ",
-                                borderColor: 'rgb(255, 99, 132)',
-                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                                fill: false,
-                                tension: 0.4
-                            }, {
                                 label: 'Izin',
                                 data: " . $guru_izin_data_json . ",
                                 borderColor: 'rgb(255, 206, 86)',
@@ -629,7 +622,7 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-user-check"></i>
@@ -644,7 +637,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-user-injured"></i>
@@ -659,7 +652,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-user-clock"></i>

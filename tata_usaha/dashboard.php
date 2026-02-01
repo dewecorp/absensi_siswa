@@ -460,13 +460,6 @@ $js_page = [
                                 backgroundColor: 'rgba(255, 206, 86, 0.2)',
                                 fill: false,
                                 tension: 0.4
-                            }, {
-                                label: 'Alpa',
-                                data: " . $guru_alpa_data_json . ",
-                                borderColor: 'rgb(153, 102, 255)',
-                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                                fill: false,
-                                tension: 0.4
                             }]
                         },
                         options: {
@@ -646,7 +639,7 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-user-check"></i>
@@ -661,7 +654,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-user-injured"></i>
@@ -676,7 +669,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-user-clock"></i>

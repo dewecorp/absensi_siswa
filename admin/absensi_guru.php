@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_absensi'])) {
     foreach ($guru_data as $id_guru => $status) {
         $keterangan = $keterangan_data[$id_guru] ?? '';
         
-        // Default to 'Alpa' if status is empty
+        // Default to 'Alpa' removed. If status is empty, it remains empty.
         if (empty($status)) {
             // No default status, let it remain empty if not selected
         } else {
