@@ -40,8 +40,8 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
     <title><?php echo $page_title; ?> | Sistem Informasi Madrasah</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
-    <link rel="apple-touch-icon" href="../assets/img/favicon.svg">
+    <link rel="icon" type="image/png" href="../assets/img/logo_1768301957.png">
+    <link rel="apple-touch-icon" href="../assets/img/logo_1768301957.png">
 
     <!-- General CSS Files -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
