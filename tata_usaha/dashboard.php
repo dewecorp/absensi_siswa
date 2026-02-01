@@ -151,26 +151,13 @@ $stmt->execute();
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $guru_izin = isset($result['izin']) ? (int)$result['izin'] : 0;
 
-$stmt = $pdo->prepare("SELECT COUNT(*) as alpa FROM tb_absensi_guru WHERE status = 'Alpa' AND tanggal = CURDATE()");
-$stmt->execute();
-$result = $stmt->fetch(PDO::FETCH_ASSOC);
-$guru_alpa_recorded = isset($result['alpa']) ? (int)$result['alpa'] : 0;
-
-// Calculate total Alpa (including those not yet recorded)
-// Logic: Total Guru - (Hadir + Sakit + Izin)
-// This assumes that any guru not marked as Hadir/Sakit/Izin is effectively Alpa/Belum Absen
-$guru_alpa = $total_guru - ($guru_hadir + $guru_sakit + $guru_izin);
-// Ensure non-negative (just in case of data inconsistency)
-if ($guru_alpa < 0) $guru_alpa = 0;
-
 // Get teacher attendance trend data for the last 7 days
 $stmt = $pdo->prepare(
     "SELECT 
         DATE(tanggal) as tanggal,
         SUM(CASE WHEN status = 'Hadir' THEN 1 ELSE 0 END) as hadir,
         SUM(CASE WHEN status = 'Sakit' THEN 1 ELSE 0 END) as sakit,
-        SUM(CASE WHEN status = 'Izin' THEN 1 ELSE 0 END) as izin,
-        SUM(CASE WHEN status = 'Alpa' THEN 1 ELSE 0 END) as alpa
+        SUM(CASE WHEN status = 'Izin' THEN 1 ELSE 0 END) as izin
     FROM tb_absensi_guru 
     WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
     GROUP BY DATE(tanggal)
@@ -183,14 +170,6 @@ $guru_dates = [];
 $guru_hadir_data = [];
 $guru_sakit_data = [];
 $guru_izin_data = [];
-$guru_alpa_data = [];
-
-// Helper to fill missing dates if needed, but for now we trust the query returns dates with activity
-// If we want to show strict last 7 days including empty days, we might need a loop.
-// However, let's stick to the query result but fix the Alpa calculation.
-// Since we can't easily get "Total Guru" history without a log, we will stick to recorded Alpa for history,
-// OR we assume Total Guru is constant and calculate remainder.
-// Let's assume Total Guru is constant ($total_guru) for the trend graph to be consistent with today's stats.
 
 foreach ($guru_trends as $trend) {
     $guru_dates[] = $trend['tanggal'] ? date('d M', strtotime($trend['tanggal'])) : '';
@@ -198,25 +177,15 @@ foreach ($guru_trends as $trend) {
     $s = isset($trend['sakit']) ? (int)$trend['sakit'] : 0;
     $i = isset($trend['izin']) ? (int)$trend['izin'] : 0;
     
-    // Recorded Alpa
-    $a_recorded = isset($trend['alpa']) ? (int)$trend['alpa'] : 0;
-    
-    // Calculated Alpa (Remainder)
-    // Use current total_guru as proxy for historical total (limitation: if teachers changed, this might be slightly off)
-    $a_calculated = $total_guru - ($h + $s + $i);
-    if ($a_calculated < 0) $a_calculated = 0;
-    
     $guru_hadir_data[] = $h;
     $guru_sakit_data[] = $s;
     $guru_izin_data[] = $i;
-    $guru_alpa_data[] = $a_calculated; // Use calculated Alpa for consistency
 }
 
 $guru_dates_json = json_encode($guru_dates);
 $guru_hadir_data_json = json_encode($guru_hadir_data);
 $guru_sakit_data_json = json_encode($guru_sakit_data);
 $guru_izin_data_json = json_encode($guru_izin_data);
-$guru_alpa_data_json = json_encode($guru_alpa_data);
 
 // Define CSS libraries for this page (only essential ones)
 $css_libs = [
@@ -403,26 +372,23 @@ $js_page = [
                     var guruDailyChart = new Chart(guruDailyCtx2d, {
                         type: 'bar',
                         data: {
-                            labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'],
+                            labels: ['Hadir', 'Sakit', 'Izin'],
                             datasets: [{
                                 label: 'Jumlah Guru',
                                 data: [
                                     " . $guru_hadir . ",
                                     " . $guru_sakit . ",
-                                    " . $guru_izin . ",
-                                    " . $guru_alpa . "
+                                    " . $guru_izin . "
                                 ],
                                 backgroundColor: [
                                     'rgba(54, 162, 235, 0.2)',
                                     'rgba(255, 99, 132, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)',
-                                    'rgba(153, 102, 255, 0.2)'
+                                    'rgba(255, 206, 86, 0.2)'
                                 ],
                                 borderColor: [
                                     'rgba(54, 162, 235, 1)',
                                     'rgba(255,99,132,1)',
-                                    'rgba(255, 206, 86, 1)',
-                                    'rgba(153, 102, 255, 1)'
+                                    'rgba(255, 206, 86, 1)'
                                 ],
                                 borderWidth: 1
                             }]
@@ -569,7 +535,7 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
                                     <i class="fas fa-users"></i>
@@ -721,21 +687,6 @@ include '../templates/sidebar.php';
                                     </div>
                                     <div class="card-body">
                                         <?php echo $guru_izin; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-secondary">
-                                    <i class="fas fa-user-times"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Guru Alpa</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <?php echo $guru_alpa; ?>
                                     </div>
                                 </div>
                             </div>

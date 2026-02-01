@@ -180,7 +180,7 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
     $teacher_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Calculate summary statistics
-    $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+    $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0];
     foreach ($teacher_results as $record) {
         $status_key = ucfirst($record['keterangan']);
         if (isset($summary[$status_key])) {
@@ -236,13 +236,13 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
         if (!isset($attendance_by_teacher[$teacher_id])) {
             $attendance_by_teacher[$teacher_id] = [
                 'monthly_totals' => [], // Initialize monthly totals array
-                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0]
             ];
             
             // Initialize all months in semester
             for ($m = $start_month; $m <= $end_month; $m++) {
                 $attendance_by_teacher[$teacher_id]['monthly_totals'][$m] = [
-                    'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
+                    'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0
                 ];
             }
         }
@@ -263,13 +263,13 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
             'nama_guru' => $teacher['nama_guru'],
             'nuptk' => $teacher['nuptk'],
             'monthly_totals' => [],
-            'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+            'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0]
         ];
         
         // Initialize monthly totals for all months in semester
         for ($m = $start_month; $m <= $end_month; $m++) {
             $teacher_data['monthly_totals'][$m] = [
-                'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
+                'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0
             ];
         }
         
@@ -418,7 +418,6 @@ include '../templates/sidebar.php';
                                                             if ($status == 'hadir') $badge_class = 'success';
                                                             elseif ($status == 'sakit') $badge_class = 'primary';
                                                             elseif ($status == 'izin') $badge_class = 'warning';
-                                                            elseif ($status == 'alpa') $badge_class = 'danger';
                                                             ?>
                                                             <span class="badge badge-<?php echo $badge_class; ?>"><?php echo ucfirst($status); ?></span>
                                                         </td>
@@ -477,14 +476,12 @@ include '../templates/sidebar.php';
                                                             if ($status == 'hadir') { $code = 'H'; $bg = 'bg-success text-white'; }
                                                             elseif ($status == 'sakit') { $code = 'S'; $bg = 'bg-primary text-white'; }
                                                             elseif ($status == 'izin') { $code = 'I'; $bg = 'bg-warning text-white'; }
-                                                            elseif ($status == 'alpa') { $code = 'A'; $bg = 'bg-danger text-white'; }
                                                         ?>
                                                         <td class="text-center <?php echo $bg; ?>" style="padding: 2px;"><?php echo $code; ?></td>
                                                         <?php endfor; ?>
                                                         <td class="text-center font-weight-bold"><?php echo $student['summary']['Hadir']; ?></td>
                                                         <td class="text-center font-weight-bold"><?php echo $student['summary']['Sakit']; ?></td>
                                                         <td class="text-center font-weight-bold"><?php echo $student['summary']['Izin']; ?></td>
-                                                        <td class="text-center font-weight-bold"><?php echo $student['summary']['Alpa']; ?></td>
                                                     </tr>
                                                     <?php endforeach; ?>
                                                 </tbody>
@@ -509,7 +506,7 @@ include '../templates/sidebar.php';
                                     </div>
                                     <div class="card-body">
                                         <div class="row mb-4">
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <div class="card bg-success text-white">
                                                     <div class="card-body text-center p-3">
                                                         <h5>Hadir</h5>
@@ -517,7 +514,7 @@ include '../templates/sidebar.php';
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <div class="card bg-primary text-white">
                                                     <div class="card-body text-center p-3">
                                                         <h5>Sakit</h5>
@@ -525,19 +522,11 @@ include '../templates/sidebar.php';
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <div class="card bg-warning text-white">
                                                     <div class="card-body text-center p-3">
                                                         <h5>Izin</h5>
                                                         <h3><?php echo $teacher_attendance_summary['Izin']; ?></h3>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="card bg-danger text-white">
-                                                    <div class="card-body text-center p-3">
-                                                        <h5>Alpa</h5>
-                                                        <h3><?php echo $teacher_attendance_summary['Alpa']; ?></h3>
                                                     </div>
                                                 </div>
                                             </div>
@@ -602,10 +591,10 @@ include '../templates/sidebar.php';
                                                         <?php 
                                                         // Headers for months
                                                         for ($m = $start_month; $m <= $end_month; $m++) {
-                                                            echo '<th colspan="4" class="text-center">' . $month_names[$m] . '</th>';
+                                                            echo '<th colspan="3" class="text-center">' . $month_names[$m] . '</th>';
                                                         }
                                                         ?>
-                                                        <th colspan="4" class="text-center bg-light">Total Semester</th>
+                                                        <th colspan="3" class="text-center bg-light">Total Semester</th>
                                                     </tr>
                                                     <tr>
                                                         <?php 
@@ -614,13 +603,11 @@ include '../templates/sidebar.php';
                                                             echo '<th class="text-center bg-success text-white" style="font-size: 9px; padding: 2px;">H</th>';
                                                             echo '<th class="text-center bg-primary text-white" style="font-size: 9px; padding: 2px;">S</th>';
                                                             echo '<th class="text-center bg-warning text-white" style="font-size: 9px; padding: 2px;">I</th>';
-                                                            echo '<th class="text-center bg-danger text-white" style="font-size: 9px; padding: 2px;">A</th>';
                                                         }
                                                         // Headers for total semester
                                                         echo '<th class="text-center bg-success text-white" style="font-size: 9px; padding: 2px;">H</th>';
                                                         echo '<th class="text-center bg-primary text-white" style="font-size: 9px; padding: 2px;">S</th>';
                                                         echo '<th class="text-center bg-warning text-white" style="font-size: 9px; padding: 2px;">I</th>';
-                                                        echo '<th class="text-center bg-danger text-white" style="font-size: 9px; padding: 2px;">A</th>';
                                                         ?>
                                                     </tr>
                                                 </thead>
@@ -636,13 +623,11 @@ include '../templates/sidebar.php';
                                                             echo '<td class="text-center" style="padding: 2px;">' . ($monthly['Hadir'] > 0 ? $monthly['Hadir'] : '-') . '</td>';
                                                             echo '<td class="text-center" style="padding: 2px;">' . ($monthly['Sakit'] > 0 ? $monthly['Sakit'] : '-') . '</td>';
                                                             echo '<td class="text-center" style="padding: 2px;">' . ($monthly['Izin'] > 0 ? $monthly['Izin'] : '-') . '</td>';
-                                                            echo '<td class="text-center" style="padding: 2px;">' . ($monthly['Alpa'] > 0 ? $monthly['Alpa'] : '-') . '</td>';
                                                         }
                                                         // Total semester
                                                         echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $teacher['summary']['Hadir'] . '</td>';
                                                         echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $teacher['summary']['Sakit'] . '</td>';
                                                         echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $teacher['summary']['Izin'] . '</td>';
-                                                        echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $teacher['summary']['Alpa'] . '</td>';
                                                         ?>
                                                     </tr>
                                                     <?php endforeach; ?>

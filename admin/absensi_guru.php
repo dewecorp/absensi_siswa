@@ -39,9 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_absensi'])) {
         
         // Default to 'Alpa' if status is empty
         if (empty($status)) {
-            $status = 'Alpa';
+            // No default status, let it remain empty if not selected
         } else {
-            // Ensure Title Case (Hadir, Sakit, Izin, Alpa)
+            // Ensure Title Case (Hadir, Sakit, Izin)
             $status = ucfirst($status);
         }
         
@@ -366,9 +366,6 @@ include '../templates/sidebar.php';
                                                         <button type="button" class="btn btn-warning btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="izin" style="opacity: 0.6;">
                                                             <i class="fas fa-envelope-open-text"></i> Izin
                                                         </button>
-                                                        <button type="button" class="btn btn-danger btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="alpa" style="opacity: 0.6;">
-                                                            <i class="fas fa-times"></i> Alpa
-                                                        </button>
                                                     </div>
                                                     <input type="hidden" name="status[<?= $teacher['id_guru'] ?>]" id="status_<?= $teacher['id_guru'] ?>" class="status-input" data-id="<?= $teacher['id_guru'] ?>" value="<?= $teacher['status_kehadiran'] ?>">
                                                 </td>
@@ -379,7 +376,7 @@ include '../templates/sidebar.php';
                                                 </td>
                                                 <td>
                                                     <?php if ($teacher['status_kehadiran']): ?>
-                                                        <span class="badge badge-<?= $status_lower == 'hadir' ? 'success' : ($status_lower == 'sakit' ? 'info' : ($status_lower == 'izin' ? 'warning' : ($status_lower == 'alpa' ? 'danger' : 'secondary'))) ?>">
+                                                        <span class="badge badge-<?= $status_lower == 'hadir' ? 'success' : ($status_lower == 'sakit' ? 'info' : ($status_lower == 'izin' ? 'warning' : 'secondary')) ?>">
                                                             <?= ucfirst($teacher['status_kehadiran']) ?>
                                                         </span>
                                                     <?php else: ?>
