@@ -51,20 +51,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_absensi'])) {
         $existing = $check->fetch(PDO::FETCH_ASSOC);
 
         if ($existing) {
-            // Update
-            $stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = NOW() WHERE id_absensi = ?");
-            if ($stmt->execute([$status, $keterangan, $existing['id_absensi']])) {
-                $success_count++;
+            // Update or Delete
+            if (!empty($status)) {
+                $stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = NOW() WHERE id_absensi = ?");
+                if ($stmt->execute([$status, $keterangan, $existing['id_absensi']])) {
+                    $success_count++;
+                } else {
+                    $error_count++;
+                }
             } else {
-                $error_count++;
+                // If status is empty but record exists, delete it (reset to Belum Absen)
+                $stmt = $pdo->prepare("DELETE FROM tb_absensi_guru WHERE id_absensi = ?");
+                $stmt->execute([$existing['id_absensi']]);
             }
         } else {
-            // Insert
-            $stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, NOW())");
-            if ($stmt->execute([$id_guru, $tanggal, $status, $keterangan])) {
-                $success_count++;
-            } else {
-                $error_count++;
+            // Insert only if status is not empty
+            if (!empty($status)) {
+                $stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, NOW())");
+                if ($stmt->execute([$id_guru, $tanggal, $status, $keterangan])) {
+                    $success_count++;
+                } else {
+                    $error_count++;
+                }
             }
         }
     }
@@ -350,7 +358,6 @@ include '../templates/sidebar.php';
                                                 if ($status_lower == 'hadir') $bg_color = 'rgba(40, 167, 69, 0.1)';
                                                 elseif ($status_lower == 'sakit') $bg_color = 'rgba(23, 162, 184, 0.1)';
                                                 elseif ($status_lower == 'izin') $bg_color = 'rgba(255, 193, 7, 0.1)';
-                                                elseif ($status_lower == 'alpa') $bg_color = 'rgba(220, 53, 69, 0.1)';
                                             ?>
                                             <tr style="background-color: <?= $bg_color ?>">
                                                 <td class="text-center"><?= $no++ ?></td>
