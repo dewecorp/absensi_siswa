@@ -187,6 +187,31 @@ $guru_hadir_data_json = json_encode($guru_hadir_data);
 $guru_sakit_data_json = json_encode($guru_sakit_data);
 $guru_izin_data_json = json_encode($guru_izin_data);
 
+// Get latest teacher attendance (today)
+$stmt = $pdo->prepare("
+    SELECT g.nama_guru, a.status, a.waktu_input
+    FROM tb_absensi_guru a
+    JOIN tb_guru g ON a.id_guru = g.id_guru
+    WHERE a.tanggal = CURDATE()
+    ORDER BY a.waktu_input DESC
+    LIMIT 10
+");
+$stmt->execute();
+$latest_guru_attendance = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get latest student attendance (today)
+$stmt = $pdo->prepare("
+    SELECT s.nama_siswa, k.nama_kelas, a.keterangan, a.jam_masuk
+    FROM tb_absensi a
+    JOIN tb_siswa s ON a.id_siswa = s.id_siswa
+    JOIN tb_kelas k ON s.id_kelas = k.id_kelas
+    WHERE a.tanggal = CURDATE()
+    ORDER BY a.jam_masuk DESC
+    LIMIT 10
+");
+$stmt->execute();
+$latest_siswa_attendance = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 // Define CSS libraries for this page (only essential ones)
 $css_libs = [
     // Removed JQVMap since files don't exist
@@ -732,7 +757,103 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
                     
-
+                    <div class="row">
+                        <div class="col-lg-6 col-md-12 col-12 col-sm-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Rekap Absensi Guru Hari Ini (Terbaru)</h4>
+                                    <div class="card-header-action">
+                                        <a href="../admin/rekap_absensi_guru.php" class="btn btn-primary">Lihat Semua</a>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nama Guru</th>
+                                                    <th>Status</th>
+                                                    <th>Waktu</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php if (count($latest_guru_attendance) > 0): ?>
+                                                    <?php foreach ($latest_guru_attendance as $row): ?>
+                                                        <tr>
+                                                            <td><?php echo htmlspecialchars($row['nama_guru']); ?></td>
+                                                            <td>
+                                                                <?php 
+                                                                $badge_class = 'badge-secondary';
+                                                                if ($row['status'] == 'Hadir') $badge_class = 'badge-success';
+                                                                elseif ($row['status'] == 'Sakit') $badge_class = 'badge-danger';
+                                                                elseif ($row['status'] == 'Izin') $badge_class = 'badge-warning';
+                                                                ?>
+                                                                <div class="badge <?php echo $badge_class; ?>"><?php echo $row['status']; ?></div>
+                                                            </td>
+                                                            <td><?php echo isset($row['waktu_input']) && $row['waktu_input'] ? date('H:i:s', strtotime($row['waktu_input'])) : '-'; ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <tr>
+                                                        <td colspan="3" class="text-center">Belum ada data absensi guru hari ini.</td>
+                                                    </tr>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 col-md-12 col-12 col-sm-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Rekap Absensi Siswa Hari Ini (Terbaru)</h4>
+                                    <div class="card-header-action">
+                                        <a href="../admin/rekap_absensi.php" class="btn btn-primary">Lihat Semua</a>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nama Siswa</th>
+                                                    <th>Kelas</th>
+                                                    <th>Status</th>
+                                                    <th>Waktu</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php if (count($latest_siswa_attendance) > 0): ?>
+                                                    <?php foreach ($latest_siswa_attendance as $row): ?>
+                                                        <tr>
+                                                            <td><?php echo htmlspecialchars($row['nama_siswa']); ?></td>
+                                                            <td><?php echo htmlspecialchars($row['nama_kelas']); ?></td>
+                                                            <td>
+                                                                <?php 
+                                                                $badge_class = 'badge-secondary';
+                                                                if ($row['keterangan'] == 'Hadir') $badge_class = 'badge-success';
+                                                                elseif ($row['keterangan'] == 'Sakit') $badge_class = 'badge-danger';
+                                                                elseif ($row['keterangan'] == 'Izin') $badge_class = 'badge-warning';
+                                                                elseif ($row['keterangan'] == 'Alpa') $badge_class = 'badge-danger';
+                                                                ?>
+                                                                <div class="badge <?php echo $badge_class; ?>"><?php echo $row['keterangan']; ?></div>
+                                                            </td>
+                                                            <td><?php echo isset($row['jam_masuk']) && $row['jam_masuk'] ? date('H:i:s', strtotime($row['jam_masuk'])) : '-'; ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <tr>
+                                                        <td colspan="4" class="text-center">Belum ada data absensi siswa hari ini.</td>
+                                                    </tr>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="row">
                         <div class="col-12">

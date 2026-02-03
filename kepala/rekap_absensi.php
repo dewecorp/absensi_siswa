@@ -86,7 +86,7 @@ if ($class_id > 0) {
         
         // Get attendance data for the selected date
         $stmt = $pdo->prepare("
-            SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, a.tanggal, k.nama_kelas
+            SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, a.tanggal, k.nama_kelas, a.jam_masuk, a.jam_keluar
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa  
             LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
@@ -115,7 +115,9 @@ if ($class_id > 0) {
                     'nisn' => $student['nisn'],
                     'keterangan' => 'Belum Absen', // Mark as not yet attended
                     'tanggal' => $selected_date,
-                    'nama_kelas' => $student['nama_kelas'] // Include class name
+                    'nama_kelas' => $student['nama_kelas'], // Include class name
+                    'jam_masuk' => null,
+                    'jam_keluar' => null
                 ];
             }
         }
@@ -442,6 +444,7 @@ include '../templates/sidebar.php';
                                                                 <th>NISN</th>
                                                                 <th>Kelas</th>
                                                                 <th>Status</th>
+                                                                <th>Waktu Masuk</th>
                                                                 <th>Tanggal</th>
                                                             </tr>
                                                         </thead>
@@ -458,16 +461,17 @@ include '../templates/sidebar.php';
                                                                         switch ($status_text) {
                                                                             case 'Hadir': $status_class = 'badge-success'; break;
                                                                             case 'Sakit': $status_class = 'badge-warning'; break;
-                                                                    case 'Izin': $status_class = 'badge-info'; break;
-                                                                    case 'Alpa': $status_class = 'badge-danger'; break;
-                                                                    case 'Berhalangan': $status_class = 'badge-danger'; break;
-                                                                    default: $status_class = 'badge-secondary'; break;
+                                                                            case 'Izin': $status_class = 'badge-info'; break;
+                                                                            case 'Alpa': $status_class = 'badge-danger'; break;
+                                                                            case 'Berhalangan': $status_class = 'badge-danger'; break;
+                                                                            default: $status_class = 'badge-secondary'; break;
                                                                         }
                                                                         ?>
                                                                         <div class="badge <?php echo $status_class; ?>">
                                                                             <?php echo $status_text; ?>
                                                                         </div>
                                                                     </td>
+                                                                    <td><?php echo isset($record['jam_masuk']) && $record['jam_masuk'] ? date('H:i:s', strtotime($record['jam_masuk'])) : '-'; ?></td>
                                                                     <td><?php echo $record['tanggal'] ? date('d M Y', strtotime($record['tanggal'])) : '-'; ?></td>
                                                                 </tr>
                                                             <?php endforeach; ?>

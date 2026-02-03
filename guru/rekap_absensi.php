@@ -130,7 +130,7 @@ if ($class_id > 0) {
     if ($filter_type == 'daily' && !empty($selected_date)) {
         // Daily filter
         $stmt = $pdo->prepare("
-            SELECT s.nama_siswa, s.nisn, k.nama_kelas, a.keterangan, a.tanggal
+            SELECT s.nama_siswa, s.nisn, k.nama_kelas, a.keterangan, a.tanggal, a.jam_masuk, a.jam_keluar
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa  
             LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
@@ -366,6 +366,7 @@ include '../templates/user_header.php';
                                                     <th>NISN</th>
                                                     <th>Kelas</th>
                                                     <th>Status</th>
+                                                    <th>Waktu Masuk</th>
                                                     <th>Tanggal</th>
                                                 </tr>
                                             </thead>
@@ -392,6 +393,7 @@ include '../templates/user_header.php';
                                                                 <?php echo $status_text; ?>
                                                             </div>
                                                         </td>
+                                                        <td><?php echo isset($record['jam_masuk']) && $record['jam_masuk'] ? date('H:i:s', strtotime($record['jam_masuk'])) : '-'; ?></td>
                                                         <td><?php echo $record['tanggal'] ? date('d M Y', strtotime($record['tanggal'])) : '-'; ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>

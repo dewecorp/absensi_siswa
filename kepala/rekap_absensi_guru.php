@@ -75,7 +75,7 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
     
     // Get attendance data for the selected date
     $stmt = $pdo->prepare("
-        SELECT g.id_guru, g.nama_guru, g.nuptk, a.status as keterangan, a.keterangan as catatan, a.tanggal
+        SELECT g.id_guru, g.nama_guru, g.nuptk, a.status as keterangan, a.keterangan as catatan, a.tanggal, a.waktu_input
         FROM tb_absensi_guru a
         LEFT JOIN tb_guru g ON a.id_guru = g.id_guru  
         WHERE a.tanggal = ?
@@ -103,7 +103,8 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
                 'nuptk' => $teacher['nuptk'],
                 'keterangan' => 'Belum Absen', // Mark as not yet attended
                 'catatan' => '',
-                'tanggal' => $selected_date
+                'tanggal' => $selected_date,
+                'waktu_input' => null
             ];
         }
     }
@@ -402,6 +403,7 @@ include '../templates/sidebar.php';
                                                         <th>Nama Guru</th>
                                                         <th>NUPTK</th>
                                                         <th>Status</th>
+                                                        <th>Waktu</th>
                                                         <th>Keterangan</th>
                                                     </tr>
                                                 </thead>
@@ -421,6 +423,7 @@ include '../templates/sidebar.php';
                                                             ?>
                                                             <span class="badge badge-<?php echo $badge_class; ?>"><?php echo ucfirst($status); ?></span>
                                                         </td>
+                                                        <td><?php echo isset($row['waktu_input']) && $row['waktu_input'] ? date('H:i:s', strtotime($row['waktu_input'])) : '-'; ?></td>
                                                         <td><?php echo htmlspecialchars($row['catatan'] ?? '-'); ?></td>
                                                     </tr>
                                                     <?php endforeach; ?>
