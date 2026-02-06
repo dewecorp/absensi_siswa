@@ -136,8 +136,8 @@ $school_profile = getSchoolProfile($pdo);
     <title>Login | Sistem Absensi Siswa</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-    <link rel="apple-touch-icon" href="assets/img/favicon.svg">
+    <link rel="icon" type="image/png" href="assets/img/logo_1768301957.png">
+    <link rel="apple-touch-icon" href="assets/img/logo_1768301957.png">
 
     <!-- General CSS Files -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -186,11 +186,6 @@ $school_profile = getSchoolProfile($pdo);
                                 <div class="form-group">
                                     <div class="d-block">
                                         <label for="password" class="control-label">Password</label>
-                                        <div class="float-right">
-                                            <a href="lupa_password.php" class="text-small">
-                                                Lupa Password?
-                                            </a>
-                                        </div>
                                     </div>
                                     <input id="password" type="password" class="form-control" name="password" tabindex="2" required>
                                 </div>
