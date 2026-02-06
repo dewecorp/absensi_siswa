@@ -32,33 +32,8 @@ if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
     $_SESSION['nama_guru'] = $teacher['nama_guru'];
 }
 
-$message = null;
 
-// Handle profile update
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
-    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL) && !empty($email)) {
-        $message = ['type' => 'warning', 'text' => 'Format email tidak valid!'];
-    } else {
-        // Update email
-        $stmt = $pdo->prepare("UPDATE tb_guru SET email = ? WHERE id_guru = ?");
-        if ($stmt->execute([$email, $teacher['id_guru']])) {
-            $message = ['type' => 'success', 'text' => 'Profil berhasil diperbarui!'];
-            
-            // Log activity
-            $username = isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system';
-            logActivity($pdo, $username, 'Update Profil', 'Guru memperbarui email profil');
-            
-            // Refresh teacher data
-            $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
-            $stmt->execute([$teacher['id_guru']]);
-            $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
-        } else {
-            $message = ['type' => 'danger', 'text' => 'Gagal memperbarui profil!'];
-        }
-    }
-}
+$message = null;
 
 // Handle password change
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ubah_password'])) {
@@ -130,10 +105,6 @@ include '../templates/user_header.php';
                                 <div class="form-group">
                                     <label>NUPTK</label>
                                     <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['nuptk']); ?>" readonly>
-                                </div>
-                                <div class="form-group">
-                                    <label>Email (untuk reset password)</label>
-                                    <input type="email" class="form-control" name="email" value="<?php echo htmlspecialchars($teacher['email'] ?? ''); ?>" placeholder="Masukkan email aktif">
                                 </div>
                                 <div class="form-group">
                                     <label>Jenis Kelamin</label>

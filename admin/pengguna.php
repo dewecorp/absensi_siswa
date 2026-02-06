@@ -16,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_user'])) {
         $username = sanitizeInput($_POST['username']);
         $nama = sanitizeInput($_POST['nama']);
-        $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
         $password = hashPassword($_POST['password']);
         $level = sanitizeInput($_POST['level']);
         
@@ -41,15 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         if (!$message || $message['type'] !== 'danger') {
-            $sql = "INSERT INTO tb_pengguna (username, nama, email, password, level";
-            $params = [$username, $nama, $email, $password, $level];
+            $sql = "INSERT INTO tb_pengguna (username, nama, password, level";
+            $params = [$username, $nama, $password, $level];
             
             if ($foto !== null) {
                 $sql .= ", foto";
                 $params[] = $foto;
             }
             
-            $sql .= ") VALUES (?, ?, ?, ?, ?";
+            $sql .= ") VALUES (?, ?, ?, ?";
             if ($foto !== null) {
                 $sql .= ", ?";
             }
@@ -69,7 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $id_pengguna = (int)$_POST['id_pengguna'];
         $username = sanitizeInput($_POST['username']);
         $nama = sanitizeInput($_POST['nama']);
-        $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
         $level = sanitizeInput($_POST['level']);
         
         // Handle photo upload
@@ -115,20 +113,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $password = hashPassword($_POST['password']);
                 
                 if ($update_foto) {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, email=?, password=?, level=?, foto=? WHERE id_pengguna=?");
-                    $params = [$username, $nama, $email, $password, $level, $foto, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, password=?, level=?, foto=? WHERE id_pengguna=?");
+                    $params = [$username, $nama, $password, $level, $foto, $id_pengguna];
                 } else {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, email=?, password=?, level=? WHERE id_pengguna=?");
-                    $params = [$username, $nama, $email, $password, $level, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, password=?, level=? WHERE id_pengguna=?");
+                    $params = [$username, $nama, $password, $level, $id_pengguna];
                 }
             } else {
                 // Update without changing password
                 if ($update_foto) {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, email=?, level=?, foto=? WHERE id_pengguna=?");
-                    $params = [$username, $nama, $email, $level, $foto, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, level=?, foto=? WHERE id_pengguna=?");
+                    $params = [$username, $nama, $level, $foto, $id_pengguna];
                 } else {
-                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, email=?, level=? WHERE id_pengguna=?");
-                    $params = [$username, $nama, $email, $level, $id_pengguna];
+                    $stmt = $pdo->prepare("UPDATE tb_pengguna SET username=?, nama=?, level=? WHERE id_pengguna=?");
+                    $params = [$username, $nama, $level, $id_pengguna];
                 }
             }
             

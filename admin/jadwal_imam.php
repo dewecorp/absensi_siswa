@@ -112,12 +112,17 @@ include '../templates/sidebar.php';
                         <div class="card-body">
                             <!-- Printable Area -->
                             <div id="printableArea">
-                                <div class="d-none d-print-block" style="position: relative; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 15px;">
-                                    <img src="<?php echo $logo_path; ?>" alt="Logo" style="position: absolute; left: 0; top: 0; height: 80px; width: auto;">
-                                    <div class="text-center" style="min-height: 80px; display: flex; flex-direction: column; justify-content: center;">
-                                        <h5 class="mb-0" style="font-weight: bold; margin: 0; font-size: 18px;">JADWAL IMAM SHALAT DHUHA</h5>
-                                        <h5 class="mb-0" style="font-weight: bold; margin: 0; font-size: 18px;"><?php echo strtoupper($school_profile['nama_madrasah']); ?></h5>
-                                        <h6 class="mb-0" style="font-weight: normal; margin: 0; font-size: 14px;">TAHUN AJARAN <?php echo $school_profile['tahun_ajaran']; ?></h6>
+                                <div class="d-none d-print-block" style="border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 15px;">
+                                    <div style="display: flex; align-items: center;">
+                                        <div style="flex: 0 0 100px; text-align: left;">
+                                            <img src="<?php echo $logo_path; ?>" alt="Logo" style="height: 80px; width: auto;">
+                                        </div>
+                                        <div style="flex: 1; text-align: center;">
+                                            <h5 class="mb-0" style="font-weight: bold; margin: 0; font-size: 18px;">JADWAL IMAM SHALAT DHUHA</h5>
+                                            <h5 class="mb-0" style="font-weight: bold; margin: 0; font-size: 18px;"><?php echo strtoupper($school_profile['nama_madrasah']); ?></h5>
+                                            <h6 class="mb-0" style="font-weight: normal; margin: 0; font-size: 14px;">Tahun Ajaran <?php echo $school_profile['tahun_ajaran']; ?></h6>
+                                        </div>
+                                        <div style="flex: 0 0 100px;"></div>
                                     </div>
                                 </div>
 
