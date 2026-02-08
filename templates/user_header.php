@@ -208,7 +208,7 @@ if (!isLoggedIn()) {
                                 <i class="fas fa-cog"></i> Pengaturan
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a href="#" onclick="confirmLogoutInline(); return false;" class="dropdown-item has-icon text-danger">
+                            <a href="#" onclick="confirmLogoutInline('../logout.php?level=<?php echo getUserLevel(); ?>'); return false;" class="dropdown-item has-icon text-danger">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
                         </div>

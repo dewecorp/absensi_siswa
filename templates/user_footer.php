@@ -150,7 +150,8 @@ if (!isset($school_profile)) {
 
     <!-- Logout Confirmation Function -->
     <script>
-    function confirmLogoutInline() {
+    function confirmLogoutInline(logoutUrl) {
+        logoutUrl = logoutUrl || '../logout.php';
         Swal.fire({
             title: 'Konfirmasi Logout',
             text: 'Apakah Anda yakin ingin keluar dari sistem?',
@@ -162,7 +163,7 @@ if (!isset($school_profile)) {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '../logout.php';
+                window.location.href = logoutUrl;
             }
         });
     }

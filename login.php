@@ -32,6 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $level = 'wali';
             }
             
+            // Start user specific session
+            startUserSession($level);
+
             // Set session variables
             $_SESSION['user_id'] = $guru_user['id_guru'];
             $_SESSION['username'] = $guru_user['nuptk'];
@@ -61,6 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $siswa_user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($siswa_user && $siswa_user['password'] && password_verify($password, $siswa_user['password'])) {
+                // Start user specific session
+                startUserSession('siswa');
+
                 // Set session variables
                 $_SESSION['user_id'] = $siswa_user['id_siswa'];
                 $_SESSION['username'] = $siswa_user['nisn'];
@@ -84,6 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         // User found in tb_pengguna, verify password
         if ($user && verifyPassword($password, $user['password'])) {
+            // Start user specific session
+            startUserSession($user['level']);
+
             // Set session variables
             $_SESSION['user_id'] = $user['id_pengguna'];
             $_SESSION['username'] = $user['username'];

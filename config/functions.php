@@ -3,7 +3,65 @@
 date_default_timezone_set('Asia/Jakarta');
 
 if (session_status() == PHP_SESSION_NONE) {
+    // Determine session name based on directory or explicit request
+    $script_path = $_SERVER['PHP_SELF'];
+    $session_name = 'SIS_LOGIN'; // Default for root/login
+
+    // Check directory context
+    if (strpos($script_path, '/admin/') !== false) {
+        $session_name = 'SIS_ADMIN';
+    } elseif (strpos($script_path, '/guru/') !== false) {
+        $session_name = 'SIS_GURU';
+    } elseif (strpos($script_path, '/siswa/') !== false) {
+        $session_name = 'SIS_SISWA';
+    } elseif (strpos($script_path, '/wali/') !== false) {
+        $session_name = 'SIS_WALI';
+    } elseif (strpos($script_path, '/tata_usaha/') !== false) {
+        $session_name = 'SIS_TU';
+    } elseif (strpos($script_path, '/kepala/') !== false) {
+        $session_name = 'SIS_KEPALA';
+    }
+    
+    // Handle logout specific target
+    if (basename($_SERVER['SCRIPT_NAME']) == 'logout.php' && isset($_GET['level'])) {
+        $lvl = $_GET['level'];
+        switch($lvl) {
+            case 'admin': $session_name = 'SIS_ADMIN'; break;
+            case 'guru': $session_name = 'SIS_GURU'; break;
+            case 'siswa': $session_name = 'SIS_SISWA'; break;
+            case 'wali': $session_name = 'SIS_WALI'; break;
+            case 'tata_usaha': $session_name = 'SIS_TU'; break;
+            case 'kepala_madrasah': 
+            case 'kepala': $session_name = 'SIS_KEPALA'; break;
+        }
+    }
+
+    session_name($session_name);
+    session_set_cookie_params(0, '/'); // Ensure cookies are available globally
     session_start();
+}
+
+// Function to switch session context (used in login.php)
+function startUserSession($level) {
+    if (session_status() == PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+    
+    $session_name = 'SIS_LOGIN';
+    switch ($level) {
+        case 'admin': $session_name = 'SIS_ADMIN'; break;
+        case 'guru': $session_name = 'SIS_GURU'; break;
+        case 'siswa': $session_name = 'SIS_SISWA'; break;
+        case 'wali': $session_name = 'SIS_WALI'; break;
+        case 'tata_usaha': $session_name = 'SIS_TU'; break;
+        case 'kepala_madrasah': 
+        case 'kepala': $session_name = 'SIS_KEPALA'; break;
+    }
+    
+    session_name($session_name);
+    session_set_cookie_params(0, '/');
+    session_start();
+    session_regenerate_id(true);
 }
 
 // Function to redirect user

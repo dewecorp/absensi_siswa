@@ -379,7 +379,8 @@
     
 
     
-    function confirmLogout() {
+    function confirmLogout(logoutUrl) {
+        logoutUrl = logoutUrl || '../logout.php';
         Swal.fire({
             title: 'Konfirmasi Logout',
             text: 'Apakah Anda yakin ingin keluar dari sistem?',
@@ -391,7 +392,7 @@
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '../logout.php';
+                window.location.href = logoutUrl;
             }
         });
     }
