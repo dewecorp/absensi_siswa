@@ -56,13 +56,28 @@ if (!isLoggedIn()) {
         <?php endforeach; ?>
     <?php endif; ?>
 
+    <!-- Custom Mobile Layout CSS -->
     <style>
+        .mobile-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            z-index: 800;
+            background: #ffffff;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
         @media (max-width: 991.98px) {
             .main-navbar, .navbar-bg {
                 display: none !important;
             }
             .main-content {
-                padding-top: 10px !important;
+                padding-top: 120px !important;
             }
         }
     </style>
@@ -71,6 +86,17 @@ if (!isLoggedIn()) {
 <body>
     <div id="app">
         <div class="main-wrapper">
+            <!-- Mobile Header -->
+            <div class="mobile-header d-lg-none">
+                <div class="d-flex align-items-center">
+                    <img src="../assets/img/logo_1768301957.png" alt="logo" class="mr-3" style="height: 45px;">
+                    <div style="line-height: 1.2;">
+                        <h6 class="mb-0 text-success font-weight-bold" style="font-size: 1.1rem;">Sistem Informasi Madrasah</h6>
+                        <small class="text-dark font-weight-bold" style="font-size: 0.85rem;"><?php echo isset($school_profile['nama_sekolah']) ? $school_profile['nama_sekolah'] : 'MI Sultan Fattah Sukosono'; ?></small>
+                    </div>
+                </div>
+            </div>
+            
             <div class="navbar-bg"></div>
             <nav class="navbar navbar-expand-lg main-navbar">
                 <form class="form-inline mr-auto">
