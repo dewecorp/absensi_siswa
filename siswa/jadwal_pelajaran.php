@@ -191,8 +191,9 @@ function getDisplayDayName($day) {
                                 <!-- Jadwal Ramadhan Tab -->
                                 <div class="tab-pane fade" id="ramadhan" role="tabpanel" aria-labelledby="ramadhan-tab">
                                     <div class="mb-3 text-right">
-                                        <a href="../config/export_jadwal_pdf.php?kelas_id=<?php echo $id_kelas; ?>&jenis=Ramadhan" target="_blank" class="btn btn-danger btn-icon icon-left"><i class="fas fa-file-pdf"></i> Export PDF</a>
+                                        <a href="../config/export_jadwal_pdf.php?kelas_id=<?php echo $id_kelas; ?>&jenis=Ramadhan&session_type=siswa" target="_blank" class="btn btn-danger btn-icon icon-left"><i class="fas fa-file-pdf"></i> Export PDF</a>
                                         <form method="POST" action="../config/export_jadwal_excel.php" target="_blank" class="d-inline">
+                                            <input type="hidden" name="session_type" value="siswa">
                                             <input type="hidden" name="kelas_id" value="<?php echo $id_kelas; ?>">
                                             <input type="hidden" name="jenis" value="Ramadhan">
                                             <button type="submit" class="btn btn-success btn-icon icon-left"><i class="fas fa-file-excel"></i> Export Excel</button>

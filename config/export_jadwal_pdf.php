@@ -1,4 +1,17 @@
 <?php
+// Set session name based on request BEFORE including functions.php
+if (isset($_GET['session_type'])) {
+    $type = $_GET['session_type'];
+    if ($type == 'admin') session_name('SIS_ADMIN');
+    elseif ($type == 'guru') session_name('SIS_GURU');
+    elseif ($type == 'siswa') session_name('SIS_SISWA');
+    elseif ($type == 'wali') session_name('SIS_WALI');
+    elseif ($type == 'tata_usaha') session_name('SIS_TU');
+    elseif ($type == 'kepala_madrasah' || $type == 'kepala') session_name('SIS_KEPALA');
+    
+    session_start();
+}
+
 require_once 'database.php';
 require_once 'functions.php';
 

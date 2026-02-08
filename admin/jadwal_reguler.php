@@ -276,6 +276,7 @@ require_once '../templates/sidebar.php';
                         <!-- Export Buttons -->
                         <div>
                             <form method="GET" action="../config/export_jadwal_pdf.php" target="_blank" class="d-inline">
+                                <input type="hidden" name="session_type" value="admin">
                                 <input type="hidden" name="kelas_id" value="<?= $selected_kelas_id ?? '' ?>">
                                 <input type="hidden" name="jenis" value="Reguler">
                                 <button type="submit" class="btn btn-danger btn-icon icon-left">
@@ -284,6 +285,7 @@ require_once '../templates/sidebar.php';
                             </form>
                             
                             <form method="POST" action="../config/export_jadwal_excel.php" target="_blank" class="d-inline ml-2">
+                                <input type="hidden" name="session_type" value="admin">
                                 <input type="hidden" name="kelas_id" value="<?= $selected_kelas_id ?? '' ?>">
                                 <input type="hidden" name="jenis" value="Reguler">
                                 <button type="submit" class="btn btn-success btn-icon icon-left">
