@@ -884,17 +884,32 @@ include '../templates/sidebar.php';
                                                     }
                                                 ?>"></i>
                                             </div>
-                                            <div class="activity-detail">
-                                                <div class="mb-2">
-                                                    <span class="text-job text-primary text-capitalize"><?php echo htmlspecialchars($activity['display_name']); ?></span>
-                                                    <span class="text-muted small ml-2">
-                                                        <i class="far fa-clock"></i> <?php echo timeAgo($activity['created_at']); ?> <span class="bullet"></span> <?php echo date('d M Y', strtotime($activity['created_at'])); ?> <span class="bullet"></span> <?php echo date('H:i:s', strtotime($activity['created_at'])); ?>
-                                                    </span>
+                                            <div class="activity-detail w-100">
+                                                <div class="card shadow-sm border-0 mb-0 w-100" style="background-color: #f8f9fa;">
+                                                    <div class="card-body p-3">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <span class="text-job text-primary font-weight-bold text-capitalize" style="font-size: 14px;">
+                                                                <?php echo htmlspecialchars($activity['display_name']); ?>
+                                                            </span>
+                                                            <small class="text-muted font-weight-bold">
+                                                                <i class="far fa-clock mr-1"></i><?php echo timeAgo($activity['created_at']); ?>
+                                                            </small>
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <span class="badge badge-white border text-primary font-weight-bold shadow-sm" style="font-size: 11px;">
+                                                                <?php echo htmlspecialchars($activity['action']); ?>
+                                                            </span>
+                                                        </div>
+                                                        <p class="mb-2 text-dark" style="line-height: 1.5; font-size: 13px;">
+                                                            <?php echo htmlspecialchars($activity['description']); ?>
+                                                        </p>
+                                                        <div class="text-muted small border-top pt-2 mt-2 d-flex align-items-center" style="font-size: 11px;">
+                                                            <i class="far fa-calendar-alt mr-1"></i> <?php echo date('d M Y', strtotime($activity['created_at'])); ?>
+                                                            <span class="mx-2">•</span>
+                                                            <i class="far fa-clock mr-1"></i> <?php echo date('H:i:s', strtotime($activity['created_at'])); ?>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <p>
-                                                    <strong><?php echo htmlspecialchars($activity['action']); ?></strong>: 
-                                                    <?php echo htmlspecialchars($activity['description']); ?>
-                                                </p>
                                             </div>
                                         </div>
                                         <?php 
