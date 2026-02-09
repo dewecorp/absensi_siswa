@@ -23,4 +23,3 @@ try {
     error_log("Connection failed: " . $e->getMessage());
     die("Koneksi database gagal. Silakan hubungi administrator.");
 }
-?>

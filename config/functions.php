@@ -465,4 +465,3 @@ function getActivityIcon($action) {
         return 'fas fa-info';
     }
 }
-?>

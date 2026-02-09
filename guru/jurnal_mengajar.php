@@ -222,7 +222,7 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     }
     
     if ($has_access) {
-        $stmt = $pdo->prepare("SELECT * FROM tb_jurnal WHERE id_kelas = ? ORDER BY tanggal DESC, jam_ke ASC");
+        $stmt = $pdo->prepare("SELECT * FROM tb_jurnal WHERE id_kelas = ? ORDER BY tanggal DESC, jam_ke DESC");
         $stmt->execute([$id_kelas]);
         $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -241,8 +241,47 @@ foreach ($jam_mengajar_list as $jam) {
     ];
 }
 
-$mapel_stmt = $pdo->query("SELECT DISTINCT nama_mapel FROM tb_mata_pelajaran WHERE nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC");
+$mapel_stmt = $pdo->prepare("
+    SELECT DISTINCT m.nama_mapel 
+    FROM tb_mata_pelajaran m
+    JOIN tb_jadwal_pelajaran j ON m.id_mapel = j.mapel_id
+    WHERE j.guru_id = ?
+    AND m.nama_mapel NOT LIKE '%Asmaul Husna%' 
+    AND m.nama_mapel NOT LIKE '%Upacara%' 
+    AND m.nama_mapel NOT LIKE '%Istirahat%' 
+    AND m.nama_mapel NOT LIKE '%Kepramukaan%' 
+    AND m.nama_mapel NOT LIKE '%Ekstrakurikuler%'
+    ORDER BY m.nama_mapel ASC
+");
+$mapel_stmt->execute([$teacher['id_guru']]);
 $mapel_list = $mapel_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get schedule map (class_id => [mapels])
+$schedule_stmt = $pdo->prepare("
+    SELECT DISTINCT m.nama_mapel, j.kelas_id 
+    FROM tb_mata_pelajaran m
+    JOIN tb_jadwal_pelajaran j ON m.id_mapel = j.mapel_id
+    WHERE j.guru_id = ?
+    AND m.nama_mapel NOT LIKE '%Asmaul Husna%' 
+    AND m.nama_mapel NOT LIKE '%Upacara%' 
+    AND m.nama_mapel NOT LIKE '%Istirahat%' 
+    AND m.nama_mapel NOT LIKE '%Kepramukaan%' 
+    AND m.nama_mapel NOT LIKE '%Ekstrakurikuler%'
+    ORDER BY m.nama_mapel ASC
+");
+$schedule_stmt->execute([$teacher['id_guru']]);
+$schedule_rows = $schedule_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$schedule_map = [];
+foreach ($schedule_rows as $row) {
+    $schedule_map[$row['kelas_id']][] = $row['nama_mapel'];
+}
+
+// If no specific subjects found in schedule, fallback to all subjects (safety net)
+if (empty($mapel_list)) {
+    $mapel_stmt = $pdo->query("SELECT DISTINCT nama_mapel FROM tb_mata_pelajaran WHERE nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC");
+    $mapel_list = $mapel_stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 $page_title = 'Jurnal Mengajar';
 
@@ -261,6 +300,30 @@ $js_libs = [
 $js_page = [
     "
     var jamMengajarList = " . json_encode($jam_mengajar_list) . ";
+    var teacherSchedule = " . json_encode($schedule_map) . ";
+    var allMapels = " . json_encode(array_column($mapel_list, 'nama_mapel')) . ";
+
+    function updateMapelOptions(classId) {
+        var \$mapelSelect = $('select[name=\"mapel\"]');
+        \$mapelSelect.empty();
+        \$mapelSelect.append('<option value=\"\">-- Pilih Mata Pelajaran --</option>');
+        
+        var mapels = [];
+        // If class is selected and we have schedule for it, use it
+        if (classId && teacherSchedule[classId]) {
+            mapels = teacherSchedule[classId];
+        } else {
+            // Otherwise show all mapels available to this teacher
+            mapels = allMapels;
+        }
+        
+        mapels.forEach(function(mapel) {
+            var option = new Option(mapel, mapel, false, false);
+            \$mapelSelect.append(option);
+        });
+        
+        \$mapelSelect.trigger('change');
+    }
 
     function updateJamOptions(selectedJenis, selectedValues = []) {
         var \$jamSelect = $('select[name=\"jam_ke[]\"]');
@@ -289,7 +352,7 @@ $js_page = [
     $(document).ready(function() {
         var t = $('#table-jurnal').DataTable({
             'language': { 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
-            'order': [[ 7, 'desc' ]],
+            'ordering': false,
             'columnDefs': [ {
                 'searchable': false,
                 'orderable': false,
@@ -309,6 +372,11 @@ $js_page = [
         
         $('#jenis_jadwal').change(function() {
             updateJamOptions($(this).val());
+        });
+        
+        // Update mapel options when class changes in modal
+        $('select[name=\"id_kelas\"]').change(function() {
+            updateMapelOptions($(this).val());
         });
 
         // Check all functionality
@@ -388,17 +456,19 @@ $js_page = [
             $('#jenis_jadwal').val('Reguler');
             updateJamOptions('Reguler');
             
-            $('select[name=\"mapel\"]').val('').trigger('change');
-            
             // Set default date to today
             var today = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' });
             $('input[name=\"tanggal\"]').val(today);
             
             // Set class if selected
             var urlParams = new URLSearchParams(window.location.search);
+            var defaultClass = '';
             if(urlParams.has('kelas')) {
-                $('select[name=\"id_kelas\"]').val(urlParams.get('kelas'));
+                defaultClass = urlParams.get('kelas');
+                $('select[name=\"id_kelas\"]').val(defaultClass);
             }
+            updateMapelOptions(defaultClass);
+            
         } else {
             $('#modalTitle').text('Edit Jurnal');
             $('#id_jurnal').val(data.id);
@@ -415,7 +485,15 @@ $js_page = [
             
             updateJamOptions(jenis, jamKeValues);
             
-            $('select[name=\"mapel\"]').val(data.mapel).trigger('change');
+            // Update mapel options first
+            updateMapelOptions(data.id_kelas);
+            
+            // Then set the value
+            // Timeout needed to ensure options are rendered if select2 is used (though standard select is fast)
+            setTimeout(function() {
+                $('select[name=\"mapel\"]').val(data.mapel).trigger('change');
+            }, 50);
+            
             $('textarea[name=\"materi\"]').val(data.materi);
         }
         $('#jurnalModal').modal('show');
@@ -517,10 +595,18 @@ include '../templates/header.php';
                     <div class="card-header">
                         <h4>Data Jurnal - <?php echo isset($class_info['nama_kelas']) ? htmlspecialchars($class_info['nama_kelas']) : ''; ?></h4>
                         <div class="card-header-action">
+                            <div class="btn-group mr-2">
+                                <a href="../config/export_jurnal_pdf.php?session_type=guru&kelas=<?= $_GET['kelas'] ?? '' ?>" target="_blank" class="btn btn-danger">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                                <a href="../config/export_jurnal_excel.php?session_type=guru&kelas=<?= $_GET['kelas'] ?? '' ?>" target="_blank" class="btn btn-success">
+                                    <i class="fas fa-file-excel"></i>
+                                </a>
+                            </div>
                             <button id="btn-bulk-delete" class="btn btn-danger mr-2" style="display: none;" onclick="bulkDelete()">
-                                <i class="fas fa-trash"></i> Hapus Terpilih
+                                <i class="fas fa-trash"></i>
                             </button>
-                            <button class="btn btn-primary" onclick="openModal('add')"><i class="fas fa-plus"></i> Tambah Jurnal</button>
+                            <button class="btn btn-primary" onclick="openModal('add')"><i class="fas fa-plus"></i> Tambah</button>
                         </div>
                     </div>
                     <div class="card-body">

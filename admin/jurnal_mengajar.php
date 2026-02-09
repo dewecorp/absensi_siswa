@@ -114,7 +114,7 @@ if (!empty($params)) {
               LEFT JOIN tb_guru g ON j.id_guru = g.id_guru 
               LEFT JOIN tb_kelas k ON j.id_kelas = k.id_kelas
               WHERE " . implode(' AND ', $where_clauses) . "
-              ORDER BY j.tanggal DESC, j.jam_ke ASC";
+              ORDER BY j.tanggal DESC, j.jam_ke DESC";
               
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
@@ -144,7 +144,7 @@ $js_page = [
             'language': {
                 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
             },
-            'order': [[ 8, 'desc' ]],
+            'ordering': false, // Disable client-side sorting to respect server-side 'latest' order
             'columnDefs': [ {
                 'searchable': false,
                 'orderable': false,
@@ -353,6 +353,14 @@ include '../templates/header.php';
                     <div class="card-header">
                         <h4>Data Jurnal Mengajar <?php echo $filter_title ? '- ' . htmlspecialchars($filter_title) : ''; ?></h4>
                         <div class="card-header-action">
+                            <div class="btn-group mr-2">
+                                <a href="../config/export_jurnal_pdf.php?session_type=admin&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>" target="_blank" class="btn btn-danger">
+                                    <i class="fas fa-file-pdf"></i> Export PDF
+                                </a>
+                                <a href="../config/export_jurnal_excel.php?session_type=admin&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>" target="_blank" class="btn btn-success">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </a>
+                            </div>
                             <button id="btn-bulk-delete" class="btn btn-danger" style="display: none;" onclick="bulkDelete()">
                                 <i class="fas fa-trash"></i> Hapus Terpilih
                             </button>
