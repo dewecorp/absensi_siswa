@@ -92,6 +92,7 @@ header("Expires: 0");
 <body>
     <h3 class="text-center"><?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN') ?></h3>
     <h4 class="text-center"><?= strtoupper($school_profile['nama_sekolah'] ?? $school_profile['nama_madrasah'] ?? 'NAMA SEKOLAH') ?></h4>
+    <p class="text-center">Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?> | Semester: <?= $school_profile['semester'] ?? '-' ?></p>
     <h4 class="text-center" style="margin-top: 20px;">LAPORAN JURNAL MENGAJAR</h4>
     <?php if ($filter_title): ?>
         <p class="text-center"><strong><?= htmlspecialchars($filter_title) ?></strong></p>

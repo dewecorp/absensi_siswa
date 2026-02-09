@@ -112,6 +112,7 @@ $page_title = "Laporan Jurnal Mengajar" . ($filter_title ? " - " . $filter_title
         <?php endif; ?>
         <h3><?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN') ?></h3>
         <h2><?= strtoupper($school_profile['nama_sekolah'] ?? $school_profile['nama_madrasah'] ?? 'NAMA SEKOLAH') ?></h2>
+        <p style="margin: 2px 0; font-size: 12px;">Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?> | Semester: <?= $school_profile['semester'] ?? '-' ?></p>
     </div>
 
     <h3 class="text-center">LAPORAN JURNAL MENGAJAR</h3>
@@ -157,7 +158,15 @@ $page_title = "Laporan Jurnal Mengajar" . ($filter_title ? " - " . $filter_title
             <td width="33%"></td>
             <td width="33%"></td>
             <td width="33%">
-                <?= $school_profile['kota'] ?? 'Kota' ?>, <?= date('d F Y') ?><br>
+                <?php
+                $bulan_indo = [
+                    'January' => 'Januari', 'February' => 'Februari', 'March' => 'Maret', 'April' => 'April',
+                    'May' => 'Mei', 'June' => 'Juni', 'July' => 'Juli', 'August' => 'Agustus',
+                    'September' => 'September', 'October' => 'Oktober', 'November' => 'November', 'December' => 'Desember'
+                ];
+                $tanggal_indo = date('d') . ' ' . $bulan_indo[date('F')] . ' ' . date('Y');
+                ?>
+                <?= $tanggal_indo ?><br>
                 Kepala Madrasah<br><br><br><br>
                 <strong><u><?= $kepala_madrasah ?></u></strong><br>
                 NIP. <?= $school_profile['nip_kepala'] ?? '-' ?>
