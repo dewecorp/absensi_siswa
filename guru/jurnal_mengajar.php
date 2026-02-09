@@ -597,10 +597,10 @@ include '../templates/header.php';
                         <div class="card-header-action">
                             <div class="btn-group mr-2">
                                 <a href="../config/export_jurnal_pdf.php?session_type=guru&kelas=<?= $_GET['kelas'] ?? '' ?>" target="_blank" class="btn btn-danger">
-                                    <i class="fas fa-file-pdf"></i>
+                                    <i class="fas fa-file-pdf"></i> Export PDF
                                 </a>
                                 <a href="../config/export_jurnal_excel.php?session_type=guru&kelas=<?= $_GET['kelas'] ?? '' ?>" target="_blank" class="btn btn-success">
-                                    <i class="fas fa-file-excel"></i>
+                                    <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
                             <button id="btn-bulk-delete" class="btn btn-danger mr-2" style="display: none;" onclick="bulkDelete()">
