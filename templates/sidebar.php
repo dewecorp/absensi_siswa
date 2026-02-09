@@ -407,20 +407,20 @@ switch ($user_level) {
         
         // Gunakan file guru agar wali bisa input nilai sebagai guru mapel
         $nilai_submenu = [
-             ['title' => 'Nilai Harian', 'url' => '../guru/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
-             ['title' => 'Nilai Tengah Semester', 'url' => '../guru/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
-             ['title' => 'Nilai Akhir Semester', 'url' => '../guru/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
-             ['title' => 'Nilai Akhir Tahun', 'url' => '../guru/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
-             ['title' => 'Nilai Kokurikuler', 'url' => '../guru/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php']
+             ['title' => 'Nilai Harian', 'url' => '../guru/nilai_harian.php?session_type=wali', 'active' => $current_page === 'nilai_harian.php'],
+             ['title' => 'Nilai Tengah Semester', 'url' => '../guru/nilai_uts.php?session_type=wali', 'active' => $current_page === 'nilai_uts.php'],
+             ['title' => 'Nilai Akhir Semester', 'url' => '../guru/nilai_uas.php?session_type=wali', 'active' => $current_page === 'nilai_uas.php'],
+             ['title' => 'Nilai Akhir Tahun', 'url' => '../guru/nilai_pat.php?session_type=wali', 'active' => $current_page === 'nilai_pat.php'],
+             ['title' => 'Nilai Kokurikuler', 'url' => '../guru/nilai_kokurikuler.php?session_type=wali', 'active' => $current_page === 'nilai_kokurikuler.php']
         ];
         
         if ($is_grade_6) {
-             $nilai_submenu[] = ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'];
-             $nilai_submenu[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'];
+             $nilai_submenu[] = ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php?session_type=wali', 'active' => $current_page === 'nilai_pra_ujian.php'];
+             $nilai_submenu[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php?session_type=wali', 'active' => $current_page === 'nilai_ujian.php'];
         }
 
         // Menu Rekap Nilai untuk wali kelas
-        $nilai_submenu[] = ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php'];
+        $nilai_submenu[] = ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php?session_type=wali', 'active' => $current_page === 'rekap_nilai.php'];
         
         $nilai_urls = array_map(function($item) {
             return basename($item['url']);

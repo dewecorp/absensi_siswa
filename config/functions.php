@@ -7,11 +7,47 @@ if (session_status() == PHP_SESSION_NONE) {
     $script_path = $_SERVER['PHP_SELF'];
     $session_name = 'SIS_LOGIN'; // Default for root/login
 
+    // Check for explicit session type request
+    if (isset($_GET['session_type'])) {
+        $type = $_GET['session_type'];
+        if ($type == 'admin') $session_name = 'SIS_ADMIN';
+        elseif ($type == 'guru') $session_name = 'SIS_GURU';
+        elseif ($type == 'siswa') $session_name = 'SIS_SISWA';
+        elseif ($type == 'wali') $session_name = 'SIS_WALI';
+        elseif ($type == 'tata_usaha') $session_name = 'SIS_TU';
+        elseif ($type == 'kepala_madrasah' || $type == 'kepala') $session_name = 'SIS_KEPALA';
+    } 
     // Check directory context
-    if (strpos($script_path, '/admin/') !== false) {
+    elseif (strpos($script_path, '/admin/') !== false) {
         $session_name = 'SIS_ADMIN';
+        
+        // Check LAST_ACTIVE_SESSION
+        if (isset($_COOKIE['LAST_ACTIVE_SESSION']) && in_array($_COOKIE['LAST_ACTIVE_SESSION'], ['SIS_TU', 'SIS_KEPALA'])) {
+             $session_name = $_COOKIE['LAST_ACTIVE_SESSION'];
+        }
+        // Fallback for TU and Kepala accessing Admin files
+        elseif (!isset($_COOKIE['SIS_ADMIN'])) {
+            if (isset($_COOKIE['SIS_TU'])) {
+                $session_name = 'SIS_TU';
+            } elseif (isset($_COOKIE['SIS_KEPALA'])) {
+                $session_name = 'SIS_KEPALA';
+            }
+        }
     } elseif (strpos($script_path, '/guru/') !== false) {
         $session_name = 'SIS_GURU';
+        
+        // Check LAST_ACTIVE_SESSION
+        if (isset($_COOKIE['LAST_ACTIVE_SESSION']) && in_array($_COOKIE['LAST_ACTIVE_SESSION'], ['SIS_WALI', 'SIS_ADMIN'])) {
+             $session_name = $_COOKIE['LAST_ACTIVE_SESSION'];
+        }
+        // Fallback for Wali accessing Guru files
+        elseif (!isset($_COOKIE['SIS_GURU'])) {
+            if (isset($_COOKIE['SIS_WALI'])) {
+                $session_name = 'SIS_WALI';
+            } elseif (isset($_COOKIE['SIS_ADMIN'])) {
+                $session_name = 'SIS_ADMIN'; // Allow Admin to view Guru files
+            }
+        }
     } elseif (strpos($script_path, '/siswa/') !== false) {
         $session_name = 'SIS_SISWA';
     } elseif (strpos($script_path, '/wali/') !== false) {
@@ -39,6 +75,11 @@ if (session_status() == PHP_SESSION_NONE) {
     session_name($session_name);
     session_set_cookie_params(0, '/'); // Ensure cookies are available globally
     session_start();
+    
+    // Update sticky session if logged in
+    if (isset($_SESSION['user_id'])) {
+        setcookie('LAST_ACTIVE_SESSION', $session_name, time() + 86400 * 30, '/');
+    }
 }
 
 // Function to switch session context (used in login.php)
@@ -62,6 +103,9 @@ function startUserSession($level) {
     session_set_cookie_params(0, '/');
     session_start();
     session_regenerate_id(true);
+    
+    // Update sticky session
+    setcookie('LAST_ACTIVE_SESSION', $session_name, time() + 86400 * 30, '/');
 }
 
 // Function to redirect user

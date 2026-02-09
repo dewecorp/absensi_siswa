@@ -12,6 +12,9 @@ $_SESSION = array();
 // Destroy the session
 session_destroy();
 
+// Clear sticky session
+setcookie('LAST_ACTIVE_SESSION', '', time() - 3600, '/');
+
 // Log logout activity
 $username = !empty($current_user) && $current_user !== 'Unknown' ? $current_user : 'system';
 $log_result = logActivity($pdo, $username, 'Logout', 'User logged out from ' . $user_level . ' session');
