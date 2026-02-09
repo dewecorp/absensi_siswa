@@ -37,16 +37,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
             $check_stmt->execute([$id_siswa, $tanggal]);
             
+            $current_time = date('H:i:s');
+            
             if ($check_stmt->rowCount() > 0) {
                 // Update existing record
-                $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ? WHERE id_siswa = ? AND tanggal = ?");
-                $update_stmt->execute([$keterangan, $id_siswa, $tanggal]);
+                $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ?, jam_masuk = IF(? = 'Hadir', IF(jam_masuk IS NULL, ?, jam_masuk), NULL) WHERE id_siswa = ? AND tanggal = ?");
+                $update_stmt->execute([$keterangan, $keterangan, $current_time, $id_siswa, $tanggal]);
             } else {
                 // Insert new record
                 // For admin and tata_usaha users, id_guru should be NULL since they don't have a valid teacher ID
                 $id_guru = ($_SESSION['level'] === 'admin' || $_SESSION['level'] === 'tata_usaha') ? NULL : $_SESSION['user_id'];
-                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru) VALUES (?, ?, ?, ?)");
-                $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru]);
+                $jam_masuk = ($keterangan == 'Hadir') ? $current_time : NULL;
+                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru, jam_masuk) VALUES (?, ?, ?, ?, ?)");
+                $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru, $jam_masuk]);
             }
             $saved_count++;
         }

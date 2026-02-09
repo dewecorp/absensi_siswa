@@ -370,6 +370,7 @@ include '../templates/user_header.php';
                                                     <table class="table table-striped table-md" id="dailyTable">
                                                         <thead>
                                                             <tr>
+                                                                <th>No</th>
                                                                 <th>Nama Siswa</th>
                                                                 <th>NISN</th>
                                                                 <th>Kelas</th>
@@ -379,8 +380,9 @@ include '../templates/user_header.php';
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            <?php foreach ($daily_results as $record): ?>
+                                                            <?php $no = 1; foreach ($daily_results as $record): ?>
                                                                 <tr>
+                                                                    <td><?php echo $no++; ?></td>
                                                                     <td><?php echo htmlspecialchars($record['nama_siswa']); ?></td>
                                                                     <td><?php echo htmlspecialchars($record['nisn']); ?></td>
                                                                     <td><?php echo htmlspecialchars($record['nama_kelas']); ?></td>
