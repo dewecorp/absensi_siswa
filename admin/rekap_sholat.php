@@ -444,14 +444,16 @@ include '../templates/sidebar.php';
                             <table class="table table-striped" id="dailyTable">
                                 <thead>
                                     <tr>
+                                        <th width="5%">No</th>
                                         <th>Nama Siswa</th>
                                         <th>Status</th>
                                         <th>Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($daily_results as $r): ?>
+                                    <?php foreach ($daily_results as $idx => $r): ?>
                                     <tr>
+                                        <td><?php echo $idx + 1; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <td>
                                             <?php if ($r['keterangan'] == 'Hadir'): ?>
@@ -639,14 +641,16 @@ include '../templates/sidebar.php';
                                 <table class="table table-striped" id="studentTable">
                                     <thead>
                                         <tr>
+                                            <th width="5%">No</th>
                                             <th>Tanggal</th>
                                             <th>Status</th>
                                             <th>Keterangan</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($student_results as $r): ?>
+                                        <?php foreach ($student_results as $idx => $r): ?>
                                         <tr>
+                                            <td><?php echo $idx + 1; ?></td>
                                             <td><?php echo date('d-m-Y', strtotime($r['tanggal'])); ?></td>
                                             <td>
                                                 <?php if ($r['keterangan'] == 'Hadir'): ?>
@@ -798,6 +802,7 @@ function exportSemesterToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>';
     headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
     var table = document.getElementById('semesterTable');
@@ -849,6 +854,7 @@ function exportSemesterToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Berjamaah <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?></h4></div>');
     printWindow.document.write('</div>');
     
@@ -873,6 +879,7 @@ function exportDailyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>';
     headerDiv.innerHTML += '<h4>Rekap Harian Sholat Berjamaah - <?php echo htmlspecialchars(date("d-m-Y", strtotime($selected_date)), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
@@ -932,6 +939,7 @@ function exportDailyToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Harian Sholat Berjamaah - <?php echo htmlspecialchars(date("d-m-Y", strtotime($selected_date)), ENT_QUOTES, "UTF-8"); ?></h4></div>');
     printWindow.document.write('</div>');
     
@@ -965,6 +973,7 @@ function exportStudentToExcel() {
     
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>';
     headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah Siswa: ' + studentName + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('studentTable');
@@ -1024,6 +1033,7 @@ function exportStudentToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Berjamaah Siswa: ' + studentName + '</h4></div>');
     printWindow.document.write('</div>');
     

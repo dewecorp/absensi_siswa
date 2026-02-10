@@ -278,10 +278,13 @@ foreach ($schedule_rows as $row) {
 }
 
 // If no specific subjects found in schedule, fallback to all subjects (safety net)
+// Disabled as per user request to strictly follow schedule
+/*
 if (empty($mapel_list)) {
     $mapel_stmt = $pdo->query("SELECT DISTINCT nama_mapel FROM tb_mata_pelajaran WHERE nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC");
     $mapel_list = $mapel_stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+*/
 
 $page_title = 'Jurnal Mengajar';
 

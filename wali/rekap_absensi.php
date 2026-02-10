@@ -747,6 +747,8 @@ include '../templates/user_header.php';
 // Define signature names from PHP
 var classTeacherName = "<?php echo addslashes($teacher_name ?? 'Guru Kelas'); ?>";
 var madrasahHeadName = "<?php echo addslashes($school_profile['nama_kepala_madrasah'] ?? 'Kepala Madrasah'); ?>";
+var academicYear = "<?php echo $school_profile['tahun_ajaran'] ?? '-'; ?>";
+var activeSemester = "<?php echo $active_semester ?? '-'; ?>";
 
 function exportToExcel() {
     // Create a container for the full report
@@ -756,6 +758,7 @@ function exportToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3><?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang'); ?></h3>';
+    headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>';
     headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo $month_names[(int)substr($selected_month, 5, 2)] . " " . substr($selected_month, 0, 4); ?></h4></div><br style="clear: both;">';
     
     // Create a copy of the table to modify
@@ -901,6 +904,7 @@ function exportSemesterToPDF() {
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3><?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang'); ?></h3>');
+    printWindow.document.write('<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>');
     printWindow.document.write('<h4>Rekap Absensi <?php echo $active_semester; ?> - Tahun <?php echo date('Y'); ?></h4></div><br style="clear: both;">');
     
     // Get the semester table

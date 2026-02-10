@@ -339,6 +339,7 @@ function exportHarianToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>';
     headerDiv.innerHTML += '<h4>Rekap Harian Sholat Dhuha - ' + studentName + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('table-harian');
@@ -386,6 +387,7 @@ function exportHarianToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Harian Sholat Dhuha - ' + studentName + '</h4>');
     printWindow.document.write('</div></div>');
     
@@ -421,6 +423,7 @@ function exportBulananToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>';
     headerDiv.innerHTML += '<h4>Rekap Bulanan Sholat Dhuha - ' + studentName + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('table-bulanan');

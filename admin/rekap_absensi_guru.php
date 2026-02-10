@@ -672,24 +672,43 @@ include '../templates/sidebar.php';
                 $('#exportExcelBtn').click(function() {
                     var filterType = '<?php echo $filter_type; ?>';
                     var wb = XLSX.utils.book_new();
-                    var ws;
                     var fileName = 'Rekap_Absensi_Guru';
+                    var tableId = '';
+                    var titleInfo = '';
                     
                     if (filterType === 'daily') {
                         var date = '<?php echo $selected_date; ?>';
                         fileName += '_Harian_' + date;
-                        ws = XLSX.utils.table_to_sheet(document.getElementById('dailyTable'));
+                        tableId = 'dailyTable';
+                        titleInfo = 'Harian - ' + '<?php echo date('d F Y', strtotime($selected_date)); ?>';
                     } else if (filterType === 'monthly') {
                         var month = '<?php echo $js_month_name_file . "_" . $js_month_year_safe; ?>';
                         fileName += '_Bulanan_' + month;
-                        ws = XLSX.utils.table_to_sheet(document.getElementById('monthlyTable'));
+                        tableId = 'monthlyTable';
+                        titleInfo = 'Bulanan - <?php echo $js_month_name_safe . " " . $js_month_year_safe; ?>';
                     } else if (filterType === 'semester') {
                         var semester = '<?php echo str_replace(" ", "_", $active_semester); ?>';
                         fileName += '_' + semester;
-                        ws = XLSX.utils.table_to_sheet(document.getElementById('semesterTable'));
+                        tableId = 'semesterTable';
+                        titleInfo = '<?php echo $active_semester; ?>';
                     } else if (filterType === 'teacher') {
                         fileName += '_PerGuru';
-                        ws = XLSX.utils.table_to_sheet(document.getElementById('teacherTable'));
+                        tableId = 'teacherTable';
+                        titleInfo = 'Per Guru';
+                    }
+                    
+                    // Create header info
+                    var ws = XLSX.utils.aoa_to_sheet([
+                        ['<?php echo $school_profile["nama_madrasah"] ?? "Sistem Absensi Siswa"; ?>'],
+                        ['Rekap Absensi Guru - ' + titleInfo],
+                        ['Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?>'],
+                        [''] // Spacer
+                    ]);
+
+                    // Append table data starting from row 5 (index 4)
+                    var table = document.getElementById(tableId);
+                    if(table) {
+                        XLSX.utils.sheet_add_dom(ws, table, {origin: "A5"});
                     }
                     
                     XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
@@ -750,6 +769,7 @@ include '../templates/sidebar.php';
                     printWindow.document.write('<div class="header">');
                     printWindow.document.write('<h2>' + title + '</h2>');
                     printWindow.document.write('<p><?php echo $school_profile["nama_madrasah"] ?? "Sistem Absensi Siswa"; ?></p>');
+                    printWindow.document.write('<p>Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>');
                     printWindow.document.write('<p>Dicetak pada: ' + new Date().toLocaleString('id-ID') + '</p>');
                     printWindow.document.write('</div>');
                     

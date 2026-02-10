@@ -566,14 +566,16 @@ echo "<script>
                             <table class="table table-striped" id="dailyTable">
                                 <thead>
                                     <tr>
+                                        <th>No</th>
                                         <th>Nama Siswa</th>
                                         <th>Status</th>
                                         <th>Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($daily_results as $r): ?>
+                                    <?php $no = 1; foreach ($daily_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <td>
                                             <?php if ($r['keterangan'] == 'Hadir'): ?>
@@ -597,10 +599,25 @@ echo "<script>
                             </table>
                         </div>
                     <?php elseif (!empty($monthly_results)): ?>
+                        <!-- Export Buttons -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="btn-group float-right" role="group">
+                                    <button type="button" class="btn btn-success" onclick="exportMonthlyToExcel()">
+                                        <i class="fas fa-file-excel"></i> Ekspor Excel
+                                    </button>
+                                    <button type="button" class="btn btn-warning" onclick="exportMonthlyToPDF()">
+                                        <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="table-responsive mt-4">
                             <table class="table table-bordered table-striped" id="monthlyTable">
                                 <thead>
                                     <tr>
+                                        <th rowspan="2">No</th>
                                         <th rowspan="2">Nama Siswa</th>
                                         <th colspan="31" class="text-center">Tanggal</th>
                                         <th colspan="3" class="text-center">Total</th>
@@ -613,8 +630,9 @@ echo "<script>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($monthly_results as $r): ?>
+                                    <?php $no = 1; foreach ($monthly_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($i=1; $i<=31; $i++): 
                                             $s = $r['days'][$i];
@@ -682,14 +700,16 @@ echo "<script>
                                     <table class="table table-striped" id="studentTable">
                                         <thead>
                                             <tr>
+                                                <th>No</th>
                                                 <th>Tanggal</th>
                                                 <th>Status</th>
                                                 <th>Keterangan</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($student_results as $r): ?>
+                                            <?php $no = 1; foreach ($student_results as $r): ?>
                                             <tr>
+                                                <td><?php echo $no++; ?></td>
                                                 <td><?php echo date('d-m-Y', strtotime($r['tanggal'])); ?></td>
                                                 <td>
                                                     <?php if ($r['keterangan'] == 'Hadir' || $r['keterangan'] == 'Melaksanakan'): ?>
@@ -747,8 +767,9 @@ echo "<script>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($semester_results as $r): ?>
+                                    <?php $no = 1; foreach ($semester_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($m=$start_month; $m<=$end_month; $m++): ?>
                                             <td class="text-center"><?php echo $r['monthly_totals'][$m]['Hadir']; ?></td>
@@ -777,6 +798,7 @@ function exportDailyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>';
     headerDiv.innerHTML += '<h4>Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
@@ -936,6 +958,7 @@ function exportSemesterToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>';
     headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha - ' + activeSemester + ' ' + academicYear + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('semesterTable');
@@ -1009,7 +1032,7 @@ function exportStudentToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<h3>Rekap Sholat Dhuha - ' + studentName + '</h3>';
     
-var table = document.getElementById('monthlyTable');
+    var table = document.getElementById('studentTable');
             if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
@@ -1049,6 +1072,7 @@ function exportStudentToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<p style="margin: 5px 0; font-size: 12px;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha - ' + studentName + '</h4>');
     printWindow.document.write('</div></div>');
     

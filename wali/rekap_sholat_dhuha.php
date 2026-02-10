@@ -478,14 +478,16 @@ echo "<script>
                             <table class="table table-striped" id="dailyTable">
                                 <thead>
                                     <tr>
+                                        <th>No</th>
                                         <th>Nama Siswa</th>
                                         <th>Status</th>
                                         <th>Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($daily_results as $r): ?>
+                                    <?php $no = 1; foreach ($daily_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <td>
                                             <span id="badge_<?php echo $r['id_siswa']; ?>">
@@ -527,6 +529,7 @@ echo "<script>
                             <table class="table table-bordered table-striped" id="monthlyTable">
                                 <thead>
                                     <tr>
+                                        <th rowspan="2">No</th>
                                         <th rowspan="2">Nama Siswa</th>
                                         <th colspan="31" class="text-center">Tanggal</th>
                                         <th colspan="3" class="text-center">Total</th>
@@ -539,8 +542,9 @@ echo "<script>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($monthly_results as $r): ?>
+                                    <?php $no = 1; foreach ($monthly_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($i=1; $i<=31; $i++): 
                                             $s = $r['days'][$i];
@@ -603,14 +607,16 @@ echo "<script>
                                     <table class="table table-striped" id="studentTable">
                                         <thead>
                                             <tr>
+                                                <th>No</th>
                                                 <th>Tanggal</th>
                                                 <th>Status</th>
                                                 <th>Keterangan</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($student_results as $r): ?>
+                                            <?php $no = 1; foreach ($student_results as $r): ?>
                                             <tr>
+                                                <td><?php echo $no++; ?></td>
                                                 <td><?php echo date('d-m-Y', strtotime($r['tanggal'])); ?></td>
                                                 <td>
                                                     <?php if ($r['keterangan'] == 'Hadir' || $r['keterangan'] == 'Melaksanakan'): ?>
@@ -650,6 +656,7 @@ echo "<script>
                             <table class="table table-bordered table-sm" id="semesterTable">
                                 <thead>
                                     <tr>
+                                        <th rowspan="2">No</th>
                                         <th rowspan="2" style="width: 200px;">Nama Siswa</th>
                                         <?php for($m=$start_month; $m<=$end_month; $m++): ?>
                                             <th colspan="3"><?php echo $month_names[$m]; ?></th>
@@ -668,8 +675,9 @@ echo "<script>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($semester_results as $r): ?>
+                                    <?php $no = 1; foreach ($semester_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($m=$start_month; $m<=$end_month; $m++): ?>
                                             <td class="text-center"><?php echo $r['monthly_totals'][$m]['Hadir']; ?></td>
@@ -700,6 +708,7 @@ function exportDailyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>';
     headerDiv.innerHTML += '<h4>Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
@@ -707,13 +716,7 @@ function exportDailyToExcel() {
     
     var newTable = table.cloneNode(true);
     
-    // Convert badges to text
-    var badges = newTable.querySelectorAll('.badge');
-    badges.forEach(function(badge) {
-        var text = badge.textContent;
-        var textNode = document.createTextNode(text);
-        badge.parentNode.replaceChild(textNode, badge);
-    });
+    replaceIconsWithText(newTable);
 
     container.appendChild(headerDiv);
     container.appendChild(newTable);
@@ -747,6 +750,7 @@ function exportDailyToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<p style="margin: 5px 0; font-size: 12px;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4>');
     printWindow.document.write('</div></div>');
     
@@ -777,6 +781,34 @@ function exportDailyToPDF() {
     setTimeout(function() { printWindow.print(); }, 500);
 }
 
+// Ganti icon dengan teks untuk export
+function replaceIconsWithText(node) {
+    // Replace check icons with "v"
+    var checks = node.querySelectorAll('.fa-check');
+    checks.forEach(function(icon) {
+        icon.parentNode.replaceChild(document.createTextNode('v'), icon);
+    });
+
+    // Replace times icons with "x"
+    var times = node.querySelectorAll('.fa-times');
+    times.forEach(function(icon) {
+        icon.parentNode.replaceChild(document.createTextNode('x'), icon);
+    });
+
+    // Replace ban icons with "b"
+    var bans = node.querySelectorAll('.fa-ban');
+    bans.forEach(function(icon) {
+        icon.parentNode.replaceChild(document.createTextNode('b'), icon);
+    });
+
+    // Replace badges with text
+    var badges = node.querySelectorAll('.badge');
+    badges.forEach(function(badge) {
+        var text = badge.textContent.trim();
+        badge.parentNode.replaceChild(document.createTextNode(text), badge);
+    });
+}
+
 function exportMonthlyToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
@@ -788,6 +820,7 @@ function exportMonthlyToExcel() {
     if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
+    replaceIconsWithText(newTable);
     
     container.appendChild(headerDiv);
     container.appendChild(newTable);
@@ -824,6 +857,7 @@ function exportMonthlyToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<p style="margin: 5px 0; font-size: 12px;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha - ' + jsMonthName + ' ' + jsMonthYear + '</h4>');
     printWindow.document.write('</div></div>');
     
@@ -865,6 +899,7 @@ function exportSemesterToExcel() {
     if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
+    replaceIconsWithText(newTable);
     
     container.appendChild(headerDiv);
     container.appendChild(newTable);
@@ -930,17 +965,16 @@ function exportSemesterToPDF() {
 function exportStudentToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
-    headerDiv.innerHTML = '<h3>Rekap Sholat Dhuha - ' + studentName + '</h3>';
+    headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha - ' + studentName + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('studentTable');
     if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
     
     var newTable = table.cloneNode(true);
     
-    var badges = newTable.querySelectorAll('.badge');
-    badges.forEach(function(badge) {
-        badge.parentNode.replaceChild(document.createTextNode(badge.textContent), badge);
-    });
+    replaceIconsWithText(newTable);
 
     container.appendChild(headerDiv);
     container.appendChild(newTable);
@@ -972,6 +1006,7 @@ function exportStudentToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<p style="margin: 5px 0; font-size: 12px;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha - ' + studentName + '</h4>');
     printWindow.document.write('</div></div>');
     

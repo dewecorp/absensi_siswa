@@ -444,14 +444,16 @@ include '../templates/sidebar.php';
                             <table class="table table-striped" id="dailyTable">
                                 <thead>
                                     <tr>
+                                        <th>No</th>
                                         <th>Nama Siswa</th>
                                         <th>Status</th>
                                         <th>Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($daily_results as $r): ?>
+                                    <?php $no = 1; foreach ($daily_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <td>
                                             <?php if ($r['keterangan'] == 'Hadir'): ?>
@@ -476,10 +478,10 @@ include '../templates/sidebar.php';
                         <div class="row mb-3">
                             <div class="col-md-12">
                                 <div class="btn-group float-right" role="group">
-                                    <button type="button" class="btn btn-success" onclick="exportToExcel()">
+                                    <button type="button" class="btn btn-success" onclick="exportMonthlyToExcel()">
                                         <i class="fas fa-file-excel"></i> Ekspor Excel
                                     </button>
-                                    <button type="button" class="btn btn-warning" onclick="exportToPDF()">
+                                    <button type="button" class="btn btn-warning" onclick="exportMonthlyToPDF()">
                                         <i class="fas fa-file-pdf"></i> Ekspor PDF
                                     </button>
                                 </div>
@@ -639,14 +641,16 @@ include '../templates/sidebar.php';
                                 <table class="table table-striped" id="studentTable">
                                     <thead>
                                         <tr>
+                                            <th>No</th>
                                             <th>Tanggal</th>
                                             <th>Status</th>
                                             <th>Keterangan</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($student_results as $r): ?>
+                                        <?php $no = 1; foreach ($student_results as $r): ?>
                                         <tr>
+                                            <td><?php echo $no++; ?></td>
                                             <td><?php echo date('d-m-Y', strtotime($r['tanggal'])); ?></td>
                                             <td>
                                                 <?php if ($r['keterangan'] == 'Hadir'): ?>
@@ -707,9 +711,17 @@ function replaceIconsWithText(tableClone) {
         var textNode = document.createTextNode('b');
         icon.parentNode.replaceChild(textNode, icon);
     });
+
+    // Replace badges with text
+    var badges = tableClone.querySelectorAll('.badge');
+    badges.forEach(function(badge) {
+        var text = badge.textContent.trim();
+        var textNode = document.createTextNode(text);
+        badge.parentNode.replaceChild(textNode, badge);
+    });
 }
 
-function exportToExcel() {
+function exportMonthlyToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
@@ -741,7 +753,7 @@ function exportToExcel() {
     }
 }
 
-function exportToPDF() {
+function exportMonthlyToPDF() {
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Berjamaah</title>');
     printWindow.document.write('<style>');
@@ -805,7 +817,7 @@ function exportSemesterToExcel() {
     if (!table) { alert('Tabel tidak ditemukan'); return; }
     
     var newTable = table.cloneNode(true);
-    // No icons in semester table, just text numbers
+    replaceIconsWithText(newTable);
     
     container.appendChild(headerDiv);
     container.appendChild(newTable);
@@ -974,12 +986,8 @@ function exportStudentToExcel() {
     if (!table) { alert('Tabel tidak ditemukan'); return; }
     
     var newTable = table.cloneNode(true);
-    var badges = newTable.querySelectorAll('.badge');
-    badges.forEach(function(badge) {
-        var text = badge.textContent;
-        var textNode = document.createTextNode(text);
-        badge.parentNode.replaceChild(textNode, badge);
-    });
+    
+    replaceIconsWithText(newTable);
     
     container.appendChild(headerDiv);
     container.appendChild(newTable);

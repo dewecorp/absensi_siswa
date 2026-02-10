@@ -824,6 +824,8 @@ $class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali 
 // Pass actual names to JavaScript
 var madrasahHeadName = '<?php echo $madrasah_head; ?>';
 var classTeacherName = '<?php echo $class_teacher; ?>';
+var academicYear = "<?php echo $school_profile['tahun_ajaran'] ?? '-'; ?>";
+var activeSemester = "<?php echo $active_semester ?? '-'; ?>";
 
 function exportToExcel() {
     // Create a container for the full report
@@ -833,6 +835,7 @@ function exportToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>';
     headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
     // Create a copy of the table to modify
@@ -969,6 +972,7 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>');
     printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
     
     // Get the semester table

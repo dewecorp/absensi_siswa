@@ -79,17 +79,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                 $insert_stmt->execute([$id_siswa, $tanggal, $status]);
             }
             
-            // Sync with Sholat Dhuha if Berhalangan
-            if ($status == 'Berhalangan') {
-                $check_dhuha = $pdo->prepare("SELECT * FROM tb_sholat_dhuha WHERE id_siswa = ? AND tanggal = ?");
-                $check_dhuha->execute([$id_siswa, $tanggal]);
-                if ($check_dhuha->rowCount() > 0) {
-                     $update_dhuha = $pdo->prepare("UPDATE tb_sholat_dhuha SET status = 'Berhalangan' WHERE id_siswa = ? AND tanggal = ?");
-                     $update_dhuha->execute([$id_siswa, $tanggal]);
-                } else {
-                     $insert_dhuha = $pdo->prepare("INSERT INTO tb_sholat_dhuha (id_siswa, tanggal, status) VALUES (?, ?, 'Berhalangan')");
-                     $insert_dhuha->execute([$id_siswa, $tanggal]);
-                }
+            // Sync with Sholat Dhuha (Always sync)
+            $check_dhuha = $pdo->prepare("SELECT * FROM tb_sholat_dhuha WHERE id_siswa = ? AND tanggal = ?");
+            $check_dhuha->execute([$id_siswa, $tanggal]);
+            if ($check_dhuha->rowCount() > 0) {
+                    $update_dhuha = $pdo->prepare("UPDATE tb_sholat_dhuha SET status = ? WHERE id_siswa = ? AND tanggal = ?");
+                    $update_dhuha->execute([$status, $id_siswa, $tanggal]);
+            } else {
+                    $insert_dhuha = $pdo->prepare("INSERT INTO tb_sholat_dhuha (id_siswa, tanggal, status) VALUES (?, ?, ?)");
+                    $insert_dhuha->execute([$id_siswa, $tanggal, $status]);
             }
             
             $saved_count++;

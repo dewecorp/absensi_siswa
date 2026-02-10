@@ -48,7 +48,7 @@ $nama_kelas = $wali_kelas['nama_kelas'];
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     // Validate that the posted class ID matches the wali's class
-    if ((int)$_POST['id_kelas'] !== $id_kelas) {
+    if ((int)$_POST['id_kelas'] !== (int)$id_kelas) {
         die('Unauthorized class modification');
     }
     
@@ -81,17 +81,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                 $insert_stmt->execute([$id_siswa, $tanggal, $status]);
             }
 
-            // Sync with Sholat Berjamaah if Berhalangan
-            if ($status == 'Berhalangan') {
-                $check_berjamaah = $pdo->prepare("SELECT * FROM tb_sholat WHERE id_siswa = ? AND tanggal = ?");
-                $check_berjamaah->execute([$id_siswa, $tanggal]);
-                if ($check_berjamaah->rowCount() > 0) {
-                     $update_berjamaah = $pdo->prepare("UPDATE tb_sholat SET status = 'Berhalangan' WHERE id_siswa = ? AND tanggal = ?");
-                     $update_berjamaah->execute([$id_siswa, $tanggal]);
-                } else {
-                     $insert_berjamaah = $pdo->prepare("INSERT INTO tb_sholat (id_siswa, tanggal, status) VALUES (?, ?, 'Berhalangan')");
-                     $insert_berjamaah->execute([$id_siswa, $tanggal]);
-                }
+            // Sync with Sholat Berjamaah (Always sync)
+            $check_berjamaah = $pdo->prepare("SELECT * FROM tb_sholat WHERE id_siswa = ? AND tanggal = ?");
+            $check_berjamaah->execute([$id_siswa, $tanggal]);
+            if ($check_berjamaah->rowCount() > 0) {
+                    $update_berjamaah = $pdo->prepare("UPDATE tb_sholat SET status = ? WHERE id_siswa = ? AND tanggal = ?");
+                    $update_berjamaah->execute([$status, $id_siswa, $tanggal]);
+            } else {
+                    $insert_berjamaah = $pdo->prepare("INSERT INTO tb_sholat (id_siswa, tanggal, status) VALUES (?, ?, ?)");
+                    $insert_berjamaah->execute([$id_siswa, $tanggal, $status]);
             }
 
             $saved_count++;

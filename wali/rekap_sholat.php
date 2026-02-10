@@ -362,6 +362,10 @@ echo "<script>
     var schoolName = " . json_encode($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang') . ";
     var classTeacherName = " . json_encode($teacher_name ?? '') . ";
     var madrasahHeadName = " . json_encode($school_profile['nama_kepala_madrasah'] ?? 'Kepala Madrasah') . ";
+    var jsMonthName = " . json_encode($js_month_name) . ";
+    var jsMonthYear = " . json_encode($js_month_year) . ";
+    var activeSemester = " . json_encode($active_semester) . ";
+    var academicYear = " . json_encode($school_profile['tahun_ajaran'] ?? '') . ";
 
     function updateStatus(studentId, status) {
         Swal.fire({
@@ -487,14 +491,16 @@ echo "<script>
                             <table class="table table-striped" id="dailyTable">
                                 <thead>
                                     <tr>
+                                        <th>No</th>
                                         <th>Nama Siswa</th>
                                         <th>Status</th>
                                         <th>Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($daily_results as $r): ?>
+                                    <?php $no = 1; foreach ($daily_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <td>
                                             <?php if ($r['keterangan'] == 'Hadir'): ?>
@@ -518,10 +524,25 @@ echo "<script>
                             </table>
                         </div>
                     <?php elseif (!empty($monthly_results)): ?>
+                        <!-- Export Buttons -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="btn-group float-right" role="group">
+                                    <button type="button" class="btn btn-success" onclick="exportMonthlyToExcel()">
+                                        <i class="fas fa-file-excel"></i> Ekspor Excel
+                                    </button>
+                                    <button type="button" class="btn btn-warning" onclick="exportMonthlyToPDF()">
+                                        <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="table-responsive mt-4">
                             <table class="table table-bordered table-striped" id="monthlyTable">
                                 <thead>
                                     <tr>
+                                        <th rowspan="2">No</th>
                                         <th rowspan="2">Nama Siswa</th>
                                         <th colspan="31" class="text-center">Tanggal</th>
                                         <th colspan="3" class="text-center">Total</th>
@@ -534,8 +555,9 @@ echo "<script>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($monthly_results as $r): ?>
+                                    <?php $no = 1; foreach ($monthly_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($i=1; $i<=31; $i++): 
                                             $s = $r['days'][$i];
@@ -603,14 +625,16 @@ echo "<script>
                                     <table class="table table-striped" id="studentTable">
                                         <thead>
                                             <tr>
+                                                <th>No</th>
                                                 <th>Tanggal</th>
                                                 <th>Status</th>
                                                 <th>Keterangan</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($student_results as $r): ?>
+                                            <?php $no = 1; foreach ($student_results as $r): ?>
                                             <tr>
+                                                <td><?php echo $no++; ?></td>
                                                 <td><?php echo date('d-m-Y', strtotime($r['tanggal'])); ?></td>
                                                 <td>
                                                     <?php if ($r['keterangan'] == 'Hadir' || $r['keterangan'] == 'Melaksanakan'): ?>
@@ -632,10 +656,25 @@ echo "<script>
                             </div>
                         </div>
                     <?php elseif (!empty($semester_results)): ?>
+                        <!-- Export Buttons -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="btn-group float-right" role="group">
+                                    <button type="button" class="btn btn-success" onclick="exportSemesterToExcel()">
+                                        <i class="fas fa-file-excel"></i> Ekspor Excel
+                                    </button>
+                                    <button type="button" class="btn btn-warning" onclick="exportSemesterToPDF()">
+                                        <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="table-responsive mt-4">
                             <table class="table table-bordered table-sm" id="semesterTable">
                                 <thead>
                                     <tr>
+                                        <th rowspan="2">No</th>
                                         <th rowspan="2" style="width: 200px;">Nama Siswa</th>
                                         <?php for($m=$start_month; $m<=$end_month; $m++): ?>
                                             <th colspan="3"><?php echo $month_names[$m]; ?></th>
@@ -654,8 +693,9 @@ echo "<script>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($semester_results as $r): ?>
+                                    <?php $no = 1; foreach ($semester_results as $r): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($m=$start_month; $m<=$end_month; $m++): ?>
                                             <td class="text-center"><?php echo $r['monthly_totals'][$m]['Hadir']; ?></td>
@@ -686,18 +726,13 @@ function exportDailyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>';
     headerDiv.innerHTML += '<h4>Rekap Harian Sholat Berjamaah - ' + selectedDate.split('-').reverse().join('-') + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
     var newTable = table.cloneNode(true);
     
-    // Convert badges to text
-    var badges = newTable.querySelectorAll('.badge');
-    badges.forEach(function(badge) {
-        var text = badge.textContent;
-        var textNode = document.createTextNode(text);
-        badge.parentNode.replaceChild(textNode, badge);
-    });
+    replaceIconsWithText(newTable);
 
     container.appendChild(headerDiv);
     container.appendChild(newTable);
@@ -764,15 +799,16 @@ function exportDailyToPDF() {
 function exportStudentToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
-    headerDiv.innerHTML = '<h3>Rekap Sholat Berjamaah - ' + studentName + '</h3>';
+    headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah - ' + studentName + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('studentTable');
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
+    
     var newTable = table.cloneNode(true);
     
-    var badges = newTable.querySelectorAll('.badge');
-    badges.forEach(function(badge) {
-        badge.parentNode.replaceChild(document.createTextNode(badge.textContent), badge);
-    });
+    replaceIconsWithText(newTable);
 
     container.appendChild(headerDiv);
     container.appendChild(newTable);
@@ -804,13 +840,16 @@ function exportStudentToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
-    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Berjamaah - ' + studentName + '</h4>');
-    printWindow.document.write('</div></div>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Berjamaah - ' + studentName + '</h4></div></div>');
     
     var table = document.getElementById('studentTable');
     if (table) {
-        var tableHTML = table.outerHTML;
-        printWindow.document.write(tableHTML);
+        var newTable = table.cloneNode(true);
+        var badges = newTable.querySelectorAll('.badge');
+        badges.forEach(function(badge) {
+            badge.parentNode.replaceChild(document.createTextNode(badge.textContent), badge);
+        });
+        printWindow.document.write(newTable.outerHTML);
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
@@ -832,6 +871,187 @@ function exportStudentToPDF() {
     printWindow.document.close();
     printWindow.focus();
     setTimeout(function() { printWindow.print(); }, 500);
+}
+
+function exportMonthlyToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah - ' + jsMonthName + ' ' + jsMonthYear + '</h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('monthlyTable');
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
+    
+    var newTable = table.cloneNode(true);
+    replaceIconsWithText(newTable);
+    
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Bulanan");
+        XLSX.writeFile(wb, 'rekap_sholat_berjamaah_bulanan_' + jsMonthName + '_' + jsMonthYear + '.xlsx');
+    }
+}
+
+function exportMonthlyToPDF() {
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Bulanan Sholat Berjamaah</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 10px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
+    printWindow.document.write('.bg-success { background-color: #28a745 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }');
+    printWindow.document.write('.bg-danger { background-color: #dc3545 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }');
+    printWindow.document.write('.bg-warning { background-color: #ffc107 !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Berjamaah - ' + jsMonthName + ' ' + jsMonthYear + '</h4></div>');
+    printWindow.document.write('</div>');
+    
+    var table = document.getElementById('monthlyTable');
+    if (table) {
+        printWindow.document.write(table.outerHTML);
+    }
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>&nbsp;</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 500);
+}
+
+function exportSemesterToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah - ' + activeSemester + ' ' + academicYear + '</h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('semesterTable');
+    if (!table) { Swal.fire('Error', 'Tabel tidak ditemukan', 'error'); return; }
+    
+    var newTable = table.cloneNode(true);
+    replaceIconsWithText(newTable);
+    
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Semester");
+        XLSX.writeFile(wb, 'rekap_sholat_berjamaah_semester_' + activeSemester.replace(' ', '_') + '_' + academicYear.replace('/', '-') + '.xlsx');
+    }
+}
+
+function exportSemesterToPDF() {
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Semester Sholat Berjamaah</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 9px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 3px; text-align: center; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
+    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<p style="margin: 5px 0; font-size: 10px;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Berjamaah - ' + activeSemester + ' ' + academicYear + '</h4></div>');
+    printWindow.document.write('</div>');
+    
+    var table = document.getElementById('semesterTable');
+    if (table) {
+        printWindow.document.write(table.outerHTML);
+    }
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>&nbsp;</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<br><br><br>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() { printWindow.print(); }, 500);
+}
+
+// Ganti icon dan badge dengan teks untuk export
+function replaceIconsWithText(node) {
+    // Ganti icon check
+    var checks = node.querySelectorAll('.fa-check');
+    checks.forEach(function(icon) {
+        icon.parentNode.replaceChild(document.createTextNode('v'), icon);
+    });
+
+    // Ganti icon times
+    var times = node.querySelectorAll('.fa-times');
+    times.forEach(function(icon) {
+        icon.parentNode.replaceChild(document.createTextNode('x'), icon);
+    });
+
+    // Ganti icon ban (izin/sakit)
+    var bans = node.querySelectorAll('.fa-ban');
+    bans.forEach(function(icon) {
+        icon.parentNode.replaceChild(document.createTextNode('b'), icon);
+    });
+
+    // Ganti badge dengan teks
+    var badges = node.querySelectorAll('.badge');
+    badges.forEach(function(badge) {
+        var text = badge.textContent.trim();
+        badge.parentNode.replaceChild(document.createTextNode(text), badge);
+    });
 }
 </script>
 
