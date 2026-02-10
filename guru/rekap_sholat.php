@@ -233,7 +233,7 @@ if ($class_id > 0) {
         foreach ($all_students as $student) {
             $sid = $student['id_siswa'];
             $days = array_fill(1, 31, '');
-            $summary = ['Hadir' => 0, 'Tidak Hadir' => 0];
+            $summary = ['Hadir' => 0, 'Tidak Hadir' => 0, 'Berhalangan' => 0];
 
             for ($d = 1; $d <= 31; $d++) {
                 $abs = $absensi_by_student[$sid][$d] ?? null;
@@ -250,8 +250,9 @@ if ($class_id > 0) {
                 }
                 
                 $days[$d] = $status;
-                if ($status === 'Hadir') $summary['Hadir']++;
-                if ($status === 'Tidak Hadir') $summary['Tidak Hadir']++;
+                if ($status === 'Hadir' || $status === 'Melaksanakan') $summary['Hadir']++;
+                if ($status === 'Tidak Hadir' || $status === 'Tidak Melaksanakan') $summary['Tidak Hadir']++;
+                if ($status === 'Berhalangan') $summary['Berhalangan']++;
             }
 
             $student_attendance[] = [
@@ -318,8 +319,8 @@ if ($class_id > 0) {
                      'nama_kelas' => $student_info['nama_kelas']
                  ];
                  
-                 if ($final === 'Hadir') $summary['Hadir']++;
-                 if ($final === 'Tidak Hadir') $summary['Tidak Hadir']++;
+                 if ($final === 'Hadir' || $final === 'Melaksanakan') $summary['Hadir']++;
+                 if ($final === 'Tidak Hadir' || $final === 'Tidak Melaksanakan') $summary['Tidak Hadir']++;
                  if ($final === 'Berhalangan') $summary['Berhalangan']++;
              }
              $student_attendance_summary = $summary;
@@ -380,10 +381,10 @@ if ($class_id > 0) {
         foreach ($all_students as $student) {
             $sid = $student['id_siswa'];
             $monthly_totals = [];
-            $sem_summary = ['Hadir' => 0, 'Tidak Hadir' => 0];
+            $sem_summary = ['Hadir' => 0, 'Tidak Hadir' => 0, 'Berhalangan' => 0];
             
             for ($m = $start_month; $m <= $end_month; $m++) {
-                $monthly_totals[$m] = ['Hadir' => 0, 'Tidak Hadir' => 0];
+                $monthly_totals[$m] = ['Hadir' => 0, 'Tidak Hadir' => 0, 'Berhalangan' => 0];
                 // Loop through days 1-31
                 for ($d = 1; $d <= 31; $d++) {
                     $abs = $absensi_map[$sid][$m][$d] ?? null;
@@ -399,12 +400,15 @@ if ($class_id > 0) {
                         $st = null;
                     }
                     
-                    if ($st === 'Hadir') {
+                    if ($st === 'Hadir' || $st === 'Melaksanakan') {
                         $monthly_totals[$m]['Hadir']++;
                         $sem_summary['Hadir']++;
-                    } elseif ($st === 'Tidak Hadir') {
+                    } elseif ($st === 'Tidak Hadir' || $st === 'Tidak Melaksanakan') {
                         $monthly_totals[$m]['Tidak Hadir']++;
                         $sem_summary['Tidak Hadir']++;
+                    } elseif ($st === 'Berhalangan') {
+                        $monthly_totals[$m]['Berhalangan']++;
+                        $sem_summary['Berhalangan']++;
                     }
                 }
             }
@@ -484,7 +488,8 @@ function exportMonthlyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<h4>Rekap Bulanan Sholat Berjamaah - ' + jsMonthName + ' ' + jsMonthYear + '</h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Bulanan Sholat Berjamaah - ' + jsMonthName + ' ' + jsMonthYear + '</h4>';
+    headerDiv.innerHTML += '<p>Tahun Ajaran: <?php echo htmlspecialchars($school_profile["tahun_ajaran"] ?? "", ENT_QUOTES, "UTF-8"); ?> | Semester: <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?></p></div><br style="clear: both;">';
     
     var table = document.getElementById('monthlyTable');
     var newTable = table.cloneNode(true);
@@ -529,6 +534,7 @@ function exportMonthlyToPDF() {
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Bulanan Sholat Berjamaah - ' + jsMonthName + ' ' + jsMonthYear + '</h4>');
+    printWindow.document.write('<p style="margin: 5px 0;">Tahun Ajaran: <?php echo htmlspecialchars($school_profile["tahun_ajaran"] ?? "", ENT_QUOTES, "UTF-8"); ?> | Semester: <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?></p>');
     printWindow.document.write('</div></div>');
     
     var table = document.getElementById('monthlyTable');

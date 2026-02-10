@@ -172,7 +172,7 @@ if ($class_id > 0) {
         foreach ($all_students as $student) {
             $sid = $student['id_siswa'];
             $days = array_fill(1, 31, '');
-            $summary = ['Hadir' => 0, 'Tidak Hadir' => 0];
+            $summary = ['Hadir' => 0, 'Tidak Hadir' => 0, 'Berhalangan' => 0];
 
             for ($d = 1; $d <= 31; $d++) {
                 $abs = $absensi_by_student[$sid][$d] ?? null;
@@ -189,8 +189,9 @@ if ($class_id > 0) {
                 }
                 
                 $days[$d] = $status;
-                if ($status === 'Hadir') $summary['Hadir']++;
-                if ($status === 'Tidak Hadir') $summary['Tidak Hadir']++;
+                if ($status === 'Hadir' || $status === 'Melaksanakan') $summary['Hadir']++;
+                if ($status === 'Tidak Hadir' || $status === 'Tidak Melaksanakan') $summary['Tidak Hadir']++;
+                if ($status === 'Berhalangan') $summary['Berhalangan']++;
             }
 
             $student_attendance[] = [
@@ -228,7 +229,7 @@ if ($class_id > 0) {
              $absensi_map = [];
              foreach ($absensi_recs as $r) $absensi_map[$r['tanggal']] = $r['keterangan'];
              
-             $summary = ['Hadir' => 0, 'Tidak Hadir' => 0];
+             $summary = ['Hadir' => 0, 'Tidak Hadir' => 0, 'Berhalangan' => 0];
              
              foreach (array_keys($dates) as $date) {
                  $abs = $absensi_map[$date] ?? null;
@@ -256,8 +257,9 @@ if ($class_id > 0) {
                      'nama_kelas' => $student_info['nama_kelas']
                  ];
                  
-                 if ($final === 'Hadir') $summary['Hadir']++;
-                 if ($final === 'Tidak Hadir') $summary['Tidak Hadir']++;
+                 if ($final === 'Hadir' || $final === 'Melaksanakan') $summary['Hadir']++;
+                 if ($final === 'Tidak Hadir' || $final === 'Tidak Melaksanakan') $summary['Tidak Hadir']++;
+                 if ($final === 'Berhalangan') $summary['Berhalangan']++;
              }
              $student_attendance_summary = $summary;
         }
@@ -329,10 +331,10 @@ if ($class_id > 0) {
                         $st = null;
                     }
                     
-                    if ($st === 'Hadir') {
+                    if ($st === 'Hadir' || $st === 'Melaksanakan') {
                         $monthly_totals[$m]['Hadir']++;
                         $sem_summary['Hadir']++;
-                    } elseif ($st === 'Tidak Hadir') {
+                    } elseif ($st === 'Tidak Hadir' || $st === 'Tidak Melaksanakan') {
                         $monthly_totals[$m]['Tidak Hadir']++;
                         $sem_summary['Tidak Hadir']++;
                     } elseif ($st === 'Berhalangan') {
@@ -922,6 +924,7 @@ function exportMonthlyToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;">' + schoolName + '</h3>');
+    printWindow.document.write('<p style="margin: 5px 0;">Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</p>');
     printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Berjamaah - ' + jsMonthName + ' ' + jsMonthYear + '</h4></div>');
     printWindow.document.write('</div>');
     
