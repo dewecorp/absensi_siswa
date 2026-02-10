@@ -28,12 +28,12 @@ $stmt = $pdo->prepare("
     SELECT 
         DATE_FORMAT(a.tanggal, '%Y-%m') as periode,
         SUM(CASE 
-            WHEN s.status = 'Melaksanakan' THEN 1 
+            WHEN s.status = 'Melaksanakan' OR s.status = 'Hadir' THEN 1 
             WHEN s.status IS NULL AND a.keterangan IN ('Hadir', 'Terlambat') THEN 1 
             ELSE 0 
         END) as melaksanakan,
         SUM(CASE 
-            WHEN s.status = 'Tidak Melaksanakan' THEN 1 
+            WHEN s.status = 'Tidak Melaksanakan' OR s.status = 'Tidak Hadir' THEN 1 
             WHEN s.status IS NULL AND a.keterangan IN ('Sakit', 'Izin', 'Alpa') THEN 1
             ELSE 0 
         END) as tidak_melaksanakan,
@@ -77,12 +77,12 @@ $stmt = $pdo->prepare("
     SELECT 
         COUNT(*) as total_hari,
         SUM(CASE 
-            WHEN s.status = 'Melaksanakan' THEN 1 
+            WHEN s.status = 'Melaksanakan' OR s.status = 'Hadir' THEN 1 
             WHEN s.status IS NULL AND a.keterangan IN ('Hadir', 'Terlambat') THEN 1 
             ELSE 0 
         END) as melaksanakan,
         SUM(CASE 
-            WHEN s.status = 'Tidak Melaksanakan' THEN 1 
+            WHEN s.status = 'Tidak Melaksanakan' OR s.status = 'Tidak Hadir' THEN 1 
             WHEN s.status IS NULL AND a.keterangan IN ('Sakit', 'Izin', 'Alpa') THEN 1
             ELSE 0 
         END) as tidak_melaksanakan,
@@ -199,8 +199,8 @@ echo "<script>
                                                             <td>
                                                                 <?php
                                                                 $badge_class = 'secondary';
-                                                                if ($row['status'] == 'Melaksanakan') $badge_class = 'success';
-                                                                elseif ($row['status'] == 'Tidak Melaksanakan') $badge_class = 'danger';
+                                                                if ($row['status'] == 'Melaksanakan' || $row['status'] == 'Hadir') $badge_class = 'success';
+                                                                elseif ($row['status'] == 'Tidak Melaksanakan' || $row['status'] == 'Tidak Hadir') $badge_class = 'danger';
                                                                 elseif ($row['status'] == 'Berhalangan') $badge_class = 'warning';
                                                                 elseif ($row['status'] == 'Belum Diisi') $badge_class = 'secondary';
                                                                 ?>

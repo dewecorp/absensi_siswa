@@ -250,8 +250,8 @@ if ($class_id > 0) {
                 }
                 
                 $days[$d] = $status;
-                if ($status === 'Hadir') $summary['Hadir']++;
-                if ($status === 'Tidak Hadir') $summary['Tidak Hadir']++;
+                if ($status === 'Hadir' || $status === 'Melaksanakan') $summary['Hadir']++;
+                if ($status === 'Tidak Hadir' || $status === 'Tidak Melaksanakan') $summary['Tidak Hadir']++;
                 if ($status === 'Berhalangan') $summary['Berhalangan']++;
             }
 
@@ -319,8 +319,8 @@ if ($class_id > 0) {
                      'nama_kelas' => $student_info['nama_kelas']
                  ];
                  
-                 if ($final === 'Hadir') $summary['Hadir']++;
-                 if ($final === 'Tidak Hadir') $summary['Tidak Hadir']++;
+                 if ($final === 'Hadir' || $final === 'Melaksanakan') $summary['Hadir']++;
+                 if ($final === 'Tidak Hadir' || $final === 'Tidak Melaksanakan') $summary['Tidak Hadir']++;
                  if ($final === 'Berhalangan') $summary['Berhalangan']++;
              }
              $student_attendance_summary = $summary;
@@ -400,10 +400,10 @@ if ($class_id > 0) {
                         $st = null;
                     }
                     
-                    if ($st === 'Hadir') {
+                    if ($st === 'Hadir' || $st === 'Melaksanakan') {
                         $monthly_totals[$m]['Hadir']++;
                         $sem_summary['Hadir']++;
-                    } elseif ($st === 'Tidak Hadir') {
+                    } elseif ($st === 'Tidak Hadir' || $st === 'Tidak Melaksanakan') {
                         $monthly_totals[$m]['Tidak Hadir']++;
                         $sem_summary['Tidak Hadir']++;
                     } elseif ($st === 'Berhalangan') {
