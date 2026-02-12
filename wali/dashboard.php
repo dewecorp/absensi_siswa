@@ -92,7 +92,7 @@ foreach ($attendance_stats as $stat) {
     }
 }
 
-// Get attendance trend data for the last 7 days
+// Get attendance trend data for the current month
 $trend_stmt = null;
 $attendance_trends = [];
 
@@ -107,7 +107,7 @@ if ($wali_kelas) {
             SUM(CASE WHEN a.keterangan = 'Berhalangan' THEN 1 ELSE 0 END) as berhalangan
         FROM tb_absensi a
         JOIN tb_siswa s ON a.id_siswa = s.id_siswa
-        WHERE s.id_kelas = ? AND a.tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        WHERE s.id_kelas = ? AND a.tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
         GROUP BY DATE(a.tanggal)
         ORDER BY DATE(a.tanggal) ASC"
     );
@@ -392,7 +392,7 @@ $js_page = [
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'Trend Kehadiran 7 Hari Terakhir'
+                                    text: 'Trend Kehadiran Bulan Ini'
                                 }
                             },
                             scales: {
@@ -801,7 +801,7 @@ include '../templates/sidebar.php';
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Trend Kehadiran 7 Hari Terakhir</h4>
+                                    <h4>Trend Kehadiran Bulan Ini</h4>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="trendChart" height="158"></canvas>

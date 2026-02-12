@@ -97,7 +97,7 @@ try {
     error_log("Error fetching activity log: " . $e->getMessage());
 }
 
-// Get attendance trend data for the last 7 days
+// Get attendance trend data for the current month
 $trend_stmt = $pdo->prepare(
     "SELECT 
         DATE(tanggal) as tanggal,
@@ -106,7 +106,7 @@ $trend_stmt = $pdo->prepare(
         SUM(CASE WHEN keterangan = 'Izin' THEN 1 ELSE 0 END) as izin,
         SUM(CASE WHEN keterangan = 'Alpa' THEN 1 ELSE 0 END) as alpa
     FROM tb_absensi 
-    WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    WHERE tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
     GROUP BY DATE(tanggal)
     ORDER BY tanggal ASC"
 );
@@ -151,7 +151,7 @@ $stmt->execute();
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $guru_izin = isset($result['izin']) ? (int)$result['izin'] : 0;
 
-// Get teacher attendance trend data for the last 7 days
+// Get teacher attendance trend data for the current month
 $stmt = $pdo->prepare(
     "SELECT 
         DATE(tanggal) as tanggal,
@@ -159,7 +159,7 @@ $stmt = $pdo->prepare(
         SUM(CASE WHEN status = 'Sakit' THEN 1 ELSE 0 END) as sakit,
         SUM(CASE WHEN status = 'Izin' THEN 1 ELSE 0 END) as izin
     FROM tb_absensi_guru 
-    WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    WHERE tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
     GROUP BY DATE(tanggal)
     ORDER BY tanggal ASC"
 );
@@ -364,7 +364,7 @@ $js_page = [
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'Trend Kehadiran 7 Hari Terakhir'
+                                    text: 'Trend Kehadiran Bulan Ini'
                                 }
                             },
                             scales: {
@@ -493,7 +493,7 @@ $js_page = [
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'Trend Kehadiran Guru 7 Hari Terakhir'
+                                    text: 'Trend Kehadiran Guru Bulan Ini'
                                 }
                             },
                             scales: {
@@ -725,7 +725,7 @@ include '../templates/sidebar.php';
                         <div class="col-lg-6 col-md-12 col-12 col-sm-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Grafik Trend Kehadiran Guru (7 Hari Terakhir)</h4>
+                                    <h4>Grafik Trend Kehadiran Guru (Bulan Ini)</h4>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="guruChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
@@ -748,7 +748,7 @@ include '../templates/sidebar.php';
                         <div class="col-lg-6 col-md-12 col-12 col-sm-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Grafik Trend Kehadiran Siswa (7 Hari Terakhir)</h4>
+                                    <h4>Grafik Trend Kehadiran Siswa (Bulan Ini)</h4>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="trendChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>

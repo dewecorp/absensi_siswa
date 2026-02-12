@@ -140,7 +140,7 @@ if ($total_marked_count > 0) {
     $persentase_hadir = round(($jumlah_hadir / $total_marked_count) * 100, 1);
 }
 
-// Get attendance trend data for the last 7 days for ALL classes taught
+// Get attendance trend data for the current month for ALL classes taught
 $attendance_trends = [];
 if (!empty($teacher_class_ids)) {
     $placeholders = str_repeat('?,', count($teacher_class_ids) - 1) . '?';
@@ -154,7 +154,7 @@ if (!empty($teacher_class_ids)) {
             SUM(CASE WHEN a.keterangan = 'Berhalangan' THEN 1 ELSE 0 END) as berhalangan
         FROM tb_absensi a
         JOIN tb_siswa s ON a.id_siswa = s.id_siswa
-        WHERE s.id_kelas IN ($placeholders) AND a.tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        WHERE s.id_kelas IN ($placeholders) AND a.tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
         GROUP BY DATE(a.tanggal)
         ORDER BY DATE(a.tanggal) ASC"
     );
@@ -351,7 +351,7 @@ $js_page = [
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'Trend Kehadiran 7 Hari Terakhir'
+                                    text: 'Trend Kehadiran Bulan Ini'
                                 }
                             },
                             scales: {
@@ -720,7 +720,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Trend Kehadiran 7 Hari Terakhir</h4>
+                                    <h4>Trend Kehadiran Bulan Ini</h4>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="trendChart" height="158"></canvas>

@@ -43,7 +43,7 @@ $stmt->execute();
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $jumlah_alpa = isset($result['alpa']) ? (int)$result['alpa'] : 0;
 
-// Get attendance trend data for the last 7 days
+// Get attendance trend data for the current month
 $trend_stmt = $pdo->prepare(
     "SELECT 
         DATE(tanggal) as tanggal,
@@ -52,7 +52,7 @@ $trend_stmt = $pdo->prepare(
         SUM(CASE WHEN keterangan = 'Izin' THEN 1 ELSE 0 END) as izin,
         SUM(CASE WHEN keterangan = 'Alpa' THEN 1 ELSE 0 END) as alpa
     FROM tb_absensi 
-    WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    WHERE tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
     GROUP BY DATE(tanggal)
     ORDER BY tanggal ASC"
 );
@@ -151,7 +151,7 @@ $alpa_data_json = json_encode($alpa_data);
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4>Grafik Trend Kehadiran 7 Hari Terakhir</h4>
+                        <h4>Grafik Trend Kehadiran Bulan Ini</h4>
                     </div>
                     <div class="card-body">
                         <canvas id="trendChart" height="158"></canvas>
@@ -267,7 +267,7 @@ $alpa_data_json = json_encode($alpa_data);
                     plugins: {
                         title: {
                             display: true,
-                            text: 'Trend Kehadiran 7 Hari Terakhir'
+                            text: 'Trend Kehadiran Bulan Ini'
                         }
                     },
                     scales: {
