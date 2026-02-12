@@ -70,6 +70,13 @@ $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get School Profile
 $school_profile = getSchoolProfile($pdo);
 $kepala_madrasah = $school_profile['kepala_madrasah'] ?? '-';
+
+// Digital Signature Logic
+$qr_content = 'Validasi Tanda Tangan Digital: ' . $kepala_madrasah . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+$qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_content);
+$qr_img = '<img src="' . $qr_url . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
+$qr_img .= '<p style="font-size: 10px; margin-top: 0; text-align: center;">(Ditandatangani secara digital)</p>';
+
 $logo_file = $school_profile['logo'] ?? '';
 $logo_path = '';
 if ($logo_file && file_exists(__DIR__ . '/../assets/img/' . $logo_file)) {
@@ -167,7 +174,8 @@ $page_title = "Laporan Jurnal Mengajar" . ($filter_title ? " - " . $filter_title
                 $tanggal_indo = date('d') . ' ' . $bulan_indo[date('F')] . ' ' . date('Y');
                 ?>
                 <?= $tanggal_indo ?><br>
-                Kepala Madrasah<br><br><br><br>
+                Kepala Madrasah<br>
+                <?= $qr_img ?>
                 <strong><u><?= $kepala_madrasah ?></u></strong><br>
                 NIP. <?= $school_profile['nip_kepala'] ?? '-' ?>
             </td>

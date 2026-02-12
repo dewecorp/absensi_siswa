@@ -43,6 +43,10 @@ $student_attendance_summary = [];
 // Define month names array
 $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
+// Get school city and report date for signatures
+$school_city = addslashes($school_profile['tempat_jadwal'] ?? 'Kota Padang');
+$report_date = formatDateIndonesia(date('Y-m-d'));
+
 // Prepare month name for JavaScript
 $js_month_name = '';
 $js_month_year = '';
@@ -684,12 +688,18 @@ include '../templates/sidebar.php';
 $madrasah_head = addslashes(htmlspecialchars($school_profile['kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8'));
 $class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8'));
 $school_logo = $school_profile['logo'] ?? 'logo.png';
+$madrasah_head_signature = addslashes($school_profile['ttd_kepala'] ?? '');
+$school_name = addslashes(htmlspecialchars($school_profile['nama_madrasah'] ?? '', ENT_QUOTES, 'UTF-8'));
 ?>
 <script>
 // Pass actual names to JavaScript
 var madrasahHeadName = '<?php echo $madrasah_head; ?>';
 var classTeacherName = '<?php echo $class_teacher; ?>';
 var schoolLogo = '<?php echo $school_logo; ?>';
+var madrasahHeadSignature = '<?php echo $madrasah_head_signature; ?>';
+var schoolName = '<?php echo $school_name; ?>';
+var schoolCity = '<?php echo $school_city; ?>';
+var reportDate = '<?php echo $report_date; ?>';
 
 function replaceIconsWithText(tableClone) {
     // Replace check icons with "v"
@@ -790,8 +800,29 @@ function exportToPDF() {
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>Wali Kelas,</p><br><br><br><p><strong>' + classTeacherName + '</strong></p></div>');
-    printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
@@ -867,8 +898,29 @@ function exportSemesterToPDF() {
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>Wali Kelas,</p><br><br><br><p><strong>' + classTeacherName + '</strong></p></div>');
-    printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
@@ -959,8 +1011,29 @@ function exportDailyToPDF() {
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>Wali Kelas,</p><br><br><br><p><strong>' + classTeacherName + '</strong></p></div>');
-    printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
@@ -1047,8 +1120,29 @@ function exportStudentToPDF() {
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>Wali Kelas,</p><br><br><br><p><strong>' + classTeacherName + '</strong></p></div>');
-    printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');

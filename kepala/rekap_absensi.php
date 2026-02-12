@@ -62,6 +62,8 @@ if (!empty($selected_month)) {
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
+$schoolCity = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$reportDate = formatDateIndonesia(date('Y-m-d'));
 
 // Get all classes
 $stmt = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC");
@@ -436,8 +438,22 @@ include '../templates/sidebar.php';
                                                     </div>
                                                 </div>
                                                 
+                                                <!-- Export Buttons -->
+                                                <div class="row mb-3">
+                                                    <div class="col-md-12">
+                                                        <div class="btn-group float-right" role="group">
+                                                            <button type="button" class="btn btn-success" onclick="exportDailyToExcel()">
+                                                                <i class="fas fa-file-excel"></i> Ekspor Excel
+                                                            </button>
+                                                            <button type="button" class="btn btn-warning" onclick="exportDailyToPDF()">
+                                                                <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
                                                 <div class="table-responsive">
-                                                    <table class="table table-striped table-md">
+                                                    <table class="table table-striped table-md" id="dailyTable">
                                                         <thead>
                                                             <tr>
                                                                 <th>No</th>
@@ -749,6 +765,20 @@ include '../templates/sidebar.php';
                                                     </div>
                                                 </div>
                                                 
+                                                <!-- Export Buttons -->
+                                                <div class="row mb-3">
+                                                    <div class="col-md-12">
+                                                        <div class="btn-group float-right" role="group">
+                                                            <button type="button" class="btn btn-success" onclick="exportStudentToExcel()">
+                                                                <i class="fas fa-file-excel"></i> Ekspor Excel
+                                                            </button>
+                                                            <button type="button" class="btn btn-warning" onclick="exportStudentToPDF()">
+                                                                <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
                                                 <!-- Detailed Attendance Table -->
                                                 <div class="table-responsive">
                                                     <table class="table table-striped table-md" id="studentTable">
@@ -819,13 +849,183 @@ include '../templates/sidebar.php';
 // Prepare data for JavaScript
 $madrasah_head = addslashes(htmlspecialchars($school_profile['kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8'));
 $class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8'));
+$madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
 ?>
 <script>
 // Pass actual names to JavaScript
 var madrasahHeadName = '<?php echo $madrasah_head; ?>';
 var classTeacherName = '<?php echo $class_teacher; ?>';
+var madrasahHeadSignature = '<?php echo $madrasah_head_signature; ?>';
 var academicYear = "<?php echo $school_profile['tahun_ajaran'] ?? '-'; ?>";
 var activeSemester = "<?php echo $active_semester ?? '-'; ?>";
+var schoolCity = "<?php echo addslashes($schoolCity); ?>";
+var reportDate = "<?php echo addslashes($reportDate); ?>";
+var schoolName = "<?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah'); ?>";
+
+function exportDailyToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Absensi Harian - Tanggal: <?php echo date("d-m-Y", strtotime($selected_date)); ?></h4>';
+    headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('dailyTable');
+    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    var newTable = table.cloneNode(true);
+    
+    // Remove badges for Excel
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        badge.parentNode.replaceChild(document.createTextNode(badge.textContent.trim()), badge);
+    }
+    
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Harian");
+        XLSX.writeFile(wb, 'rekap_absensi_harian_<?php echo $selected_date; ?>.xlsx');
+    } else {
+        var a = document.createElement('a');
+        a.href = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(container.innerHTML);
+        a.download = 'rekap_absensi_harian_<?php echo $selected_date; ?>.xls';
+        a.click();
+    }
+}
+
+function exportDailyToPDF() {
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Rekap Absensi Harian</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; position: relative; }');
+    printWindow.document.write('.logo { max-width: 80px; position: absolute; left: 0; top: 0; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('@media print { .no-print { display: none !important; } }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
+    printWindow.document.write('<h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3>' + schoolName + '</h3>');
+    printWindow.document.write('<h4>Rekap Absensi Harian - Tanggal: <?php echo date("d-m-Y", strtotime($selected_date)); ?></h4>');
+    printWindow.document.write('</div>');
+    
+    var table = document.getElementById('dailyTable');
+    if (table) printWindow.document.write(table.outerHTML);
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '</p><p>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName);
+        printWindow.document.write('<img src="' + qr + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px;">(Ditandatangani secara digital)</p>');
+    } else { printWindow.document.write('<br><br><br><br>'); }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p></div>');
+    
+    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '</p><p>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName);
+        printWindow.document.write('<img src="' + qrHead + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px;">(Ditandatangani secara digital)</p>');
+    } else { printWindow.document.write('<br><br><br><br>'); }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div></div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+}
+
+function exportStudentToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Absensi Siswa: <?php echo addslashes($student_results[0]["nama_siswa"] ?? ""); ?></h4>';
+    headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('studentTable');
+    if (!table) { alert('Tabel tidak ditemukan'); return; }
+    var newTable = table.cloneNode(true);
+    
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        badge.parentNode.replaceChild(document.createTextNode(badge.textContent.trim()), badge);
+    }
+    
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Siswa");
+        XLSX.writeFile(wb, 'rekap_absensi_siswa_<?php echo $selected_student; ?>.xlsx');
+    } else {
+        var a = document.createElement('a');
+        a.href = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(container.innerHTML);
+        a.download = 'rekap_absensi_siswa_<?php echo $selected_student; ?>.xls';
+        a.click();
+    }
+}
+
+function exportStudentToPDF() {
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Rekap Absensi Siswa</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal portrait; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; position: relative; }');
+    printWindow.document.write('.logo { max-width: 80px; position: absolute; left: 0; top: 0; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('@media print { .no-print { display: none !important; } }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
+    printWindow.document.write('<h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3>' + schoolName + '</h3>');
+    printWindow.document.write('<h4>Rekap Absensi Siswa: <?php echo addslashes($student_results[0]["nama_siswa"] ?? ""); ?></h4>');
+    printWindow.document.write('</div>');
+    
+    var table = document.getElementById('studentTable');
+    if (table) printWindow.document.write(table.outerHTML);
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '</p><p>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName);
+        printWindow.document.write('<img src="' + qr + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px;">(Ditandatangani secara digital)</p>');
+    } else { printWindow.document.write('<br><br><br><br>'); }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p></div>');
+    
+    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '</p><p>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName);
+        printWindow.document.write('<img src="' + qrHead + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px;">(Ditandatangani secara digital)</p>');
+    } else { printWindow.document.write('<br><br><br><br>'); }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div></div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+}
 
 function exportToExcel() {
     // Create a container for the full report
@@ -926,14 +1126,30 @@ function fallbackPrintPDF() {
     // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Code" style="width: 80px; height: 80px; margin: 10px 0;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
@@ -984,14 +1200,30 @@ function fallbackSemesterPrintPDF() {
     // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Code" style="width: 80px; height: 80px; margin: 10px 0;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
@@ -1099,14 +1331,30 @@ function fallbackSemesterPrintPDF() {
     // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Code" style="width: 80px; height: 80px; margin: 10px 0;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');

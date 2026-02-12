@@ -39,6 +39,10 @@ $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran = $school_profile['tahun_ajaran'];
 $semester_aktif = $school_profile['semester'];
+$madrasah_head_name = $school_profile['kepala_madrasah'] ?? '.........................';
+$madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
+$school_city = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$report_date = formatDateIndonesia(date('Y-m-d'));
 
 // Data Fetching
 $students = [];
@@ -229,11 +233,36 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
         </tbody>
     </table>
     
-    <div class="no-break" style="margin-top: 30px; text-align: right; margin-right: 50px;">
-        <p>Jepara, <?= date('d F Y') ?></p>
-        <p>Wali Kelas</p>
-        <br><br><br>
-        <p><b><?= htmlspecialchars($nama_guru ?? '.........................') ?></b></p>
+    <div class="no-break" style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 50px; padding-right: 50px;">
+        <div style="text-align: center; width: 250px;">
+            <p><?= htmlspecialchars($school_city) ?>, <?= htmlspecialchars($report_date) ?><br>Wali Kelas,</p>
+            <?php
+            if ($nama_guru) {
+                $qrContent = 'Validasi Tanda Tangan Digital: ' . $nama_guru . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+                $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContent);
+                echo '<img src="' . $qrUrl . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
+                echo '<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>';
+            } else {
+                echo '<br><br><br><br><br>';
+            }
+            ?>
+            <p><b><?= htmlspecialchars($nama_guru ?? '.........................') ?></b></p>
+        </div>
+
+        <div style="text-align: center; width: 250px;">
+            <p><?= htmlspecialchars($school_city) ?>, <?= htmlspecialchars($report_date) ?><br>Kepala Madrasah,</p>
+            <?php
+            if ($madrasah_head_signature) {
+                $qrContentHead = 'Validasi Tanda Tangan Digital: ' . $madrasah_head_name . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+                $qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContentHead);
+                echo '<img src="' . $qrUrlHead . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
+                echo '<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>';
+            } else {
+                echo '<br><br><br><br><br>';
+            }
+            ?>
+            <p><b><?= htmlspecialchars($madrasah_head_name) ?></b></p>
+        </div>
     </div>
 
     <script>

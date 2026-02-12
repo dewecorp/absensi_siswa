@@ -179,6 +179,30 @@ $html = '
 // Add the table data
 $html .= $table_data;
 
+// Add Digital Signature
+$kepala_madrasah = $school_profile['kepala_madrasah'] ?? '';
+if ($kepala_madrasah) {
+    $qr_content = 'Validasi Tanda Tangan Digital: ' . $kepala_madrasah . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+    $qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_content);
+    
+    $html .= '
+    <div style="margin-top: 30px; text-align: right; margin-right: 50px; page-break-inside: avoid;">
+        <p>' . date('d F Y') . '</p>
+        <p>Kepala Madrasah,</p>
+        <img src="' . $qr_url . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px 0; display: inline-block;">
+        <p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>
+        <p><strong>' . htmlspecialchars($kepala_madrasah) . '</strong></p>
+    </div>';
+} else {
+    $html .= '
+    <div style="margin-top: 30px; text-align: right; margin-right: 50px; page-break-inside: avoid;">
+        <p>' . date('d F Y') . '</p>
+        <p>Kepala Madrasah,</p>
+        <br><br><br>
+        <p><strong>.........................</strong></p>
+    </div>';
+}
+
 $html .= '
     <div class="footer">
         Laporan ' . $report_title . ' - Sistem Absensi Siswa

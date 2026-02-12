@@ -10,7 +10,7 @@ $page_title = 'Rekap Nilai Saya';
 
 // Get student data
 $id_siswa = $_SESSION['user_id'];
-$stmt = $pdo->prepare("SELECT s.*, k.nama_kelas, k.id_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ?");
+$stmt = $pdo->prepare("SELECT s.*, k.nama_kelas, k.id_kelas, k.wali_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ?");
 $stmt->execute([$id_siswa]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -25,10 +25,20 @@ $id_kelas = $student['id_kelas'];
 $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran = $school_profile['tahun_ajaran'];
 $semester_aktif = $school_profile['semester'];
+$school_city = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$report_date = formatDateIndonesia(date('Y-m-d'));
+$school_name = $school_profile['nama_madrasah'] ?? 'Madrasah';
+$madrasah_head_name = $school_profile['kepala_madrasah'] ?? 'Kepala Madrasah';
+$madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
 
 // Parameters
 $selected_jenis = isset($_GET['jenis']) ? $_GET['jenis'] : 'Harian';
 $selected_tipe = isset($_GET['tipe']) ? $_GET['tipe'] : 'nilai_jadi'; // nilai_asli or nilai_jadi
+
+// Define JS libraries for this page
+$js_libs = [
+    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+];
 
 // Get Subjects (Mapel) - Filtered (Non-Academic)
 $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
@@ -132,6 +142,16 @@ require_once '../templates/sidebar.php';
                                 </tr>
                             </table>
                         </div>
+                        <div class="col-md-6 text-right">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-success" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel"></i> Ekspor Excel
+                                </button>
+                                <button type="button" class="btn btn-warning" onclick="exportToPDF()">
+                                    <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <form method="GET" action="" class="mb-4">
@@ -170,7 +190,7 @@ require_once '../templates/sidebar.php';
                     </form>
 
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped">
+                        <table class="table table-bordered table-striped" id="rekapNilaiTable">
                             <thead>
                                 <tr>
                                     <th width="50" class="text-center">No</th>
@@ -212,3 +232,105 @@ require_once '../templates/sidebar.php';
 </div>
 
 <?php require_once '../templates/footer.php'; ?>
+
+<script>
+var schoolCity = '<?php echo addslashes($school_city); ?>';
+var reportDate = '<?php echo addslashes($report_date); ?>';
+var schoolName = '<?php echo addslashes($school_name); ?>';
+var madrasahHeadName = '<?php echo addslashes($madrasah_head_name); ?>';
+var madrasahHeadSignature = '<?php echo addslashes($madrasah_head_signature); ?>';
+var waliKelasName = '<?php echo addslashes($student["wali_kelas"] ?? "Wali Kelas"); ?>';
+var studentName = '<?php echo addslashes($student["nama_siswa"]); ?>';
+var studentKelas = '<?php echo addslashes($student["nama_kelas"]); ?>';
+var tahunAjaran = '<?php echo addslashes($tahun_ajaran); ?>';
+var semesterAktif = '<?php echo addslashes($semester_aktif); ?>';
+var jenisPenilaian = '<?php echo addslashes($selected_jenis); ?>';
+
+function exportToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Nilai: ' + studentName + ' (' + studentKelas + ')</h4>';
+    headerDiv.innerHTML += '<h4>Jenis: ' + jenisPenilaian + ' | Tahun: ' + tahunAjaran + ' | Semester: ' + semesterAktif + '</h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('rekapNilaiTable');
+    if (!table) return;
+    var newTable = table.cloneNode(true);
+    
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Nilai");
+        XLSX.writeFile(wb, 'rekap_nilai_' + studentName.replace(/\s+/g, '_') + '.xlsx');
+    } else {
+        var a = document.createElement('a');
+        a.href = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(container.innerHTML);
+        a.download = 'rekap_nilai_' + studentName.replace(/\s+/g, '_') + '.xls';
+        a.click();
+    }
+}
+
+function exportToPDF() {
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Rekap Nilai Siswa</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal portrait; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; position: relative; }');
+    printWindow.document.write('.logo { max-width: 80px; position: absolute; left: 0; top: 0; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('@media print { .no-print { display: none !important; } }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
+    printWindow.document.write('<h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3>' + schoolName + '</h3>');
+    printWindow.document.write('<h4>Rekap Nilai Siswa: ' + studentName + ' (' + studentKelas + ')</h4>');
+    printWindow.document.write('<h4>Jenis: ' + jenisPenilaian + ' | Tahun: ' + tahunAjaran + ' | Semester: ' + semesterAktif + '</h4>');
+    printWindow.document.write('</div>');
+    
+    var table = document.getElementById('rekapNilaiTable').cloneNode(true);
+    printWindow.document.write(table.outerHTML);
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    if (waliKelasName) {
+        var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + waliKelasName + ' - ' + schoolName);
+        printWindow.document.write('<img src="' + qr + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + waliKelasName + '</strong></p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    if (madrasahHeadName) {
+        var qrHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName);
+        printWindow.document.write('<img src="' + qrHead + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+}
+</script>

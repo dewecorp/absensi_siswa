@@ -240,10 +240,35 @@ $school_profile = getSchoolProfile($pdo);
             $message = ['type' => 'danger', 'text' => 'Format file background tidak didukung!'];
         }
     }
+
+    // Handle ttd kepala upload
+    $ttd_kepala = $school_profile['ttd_kepala'] ?? null;
+    if (isset($_FILES['ttd_kepala']) && $_FILES['ttd_kepala']['error'] == 0) {
+        $allowed_extensions = ['jpg', 'jpeg', 'png'];
+        $file_extension = strtolower(pathinfo($_FILES['ttd_kepala']['name'], PATHINFO_EXTENSION));
+        
+        if (in_array($file_extension, $allowed_extensions)) {
+            $new_ttd_name = 'ttd_kepala_' . time() . '.' . $file_extension;
+            $target_dir = '../assets/img/';
+            $target_file = $target_dir . $new_ttd_name;
+            
+            if (move_uploaded_file($_FILES['ttd_kepala']['tmp_name'], $target_file)) {
+                // Delete old ttd if it exists
+                if (!empty($school_profile['ttd_kepala']) && file_exists($target_dir . $school_profile['ttd_kepala'])) {
+                    unlink($target_dir . $school_profile['ttd_kepala']);
+                }
+                $ttd_kepala = $new_ttd_name;
+            } else {
+                $message = ['type' => 'danger', 'text' => 'Gagal mengupload tanda tangan!'];
+            }
+        } else {
+            $message = ['type' => 'danger', 'text' => 'Format file tanda tangan tidak didukung!'];
+        }
+    }
     
     if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, logo=?, dashboard_hero_image=? WHERE id=1");
-        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $logo, $hero_image])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $logo, $hero_image, $ttd_kepala])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
@@ -404,6 +429,23 @@ include '../templates/sidebar.php';
                                                     </div>
                                                     <input type="file" class="form-control" name="hero_image">
                                                     <small class="text-muted">Format: JPG, PNG, GIF. Ukuran maksimal: 2MB. Disarankan gambar landscape.</small>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Tanda Tangan Kepala Madrasah</label>
+                                                    <div class="mb-2">
+                                                        <?php if (!empty($school_profile['ttd_kepala'])): ?>
+                                                        <img src="../assets/img/<?php echo $school_profile['ttd_kepala']; ?>" alt="TTD Kepala" height="100" class="img-thumbnail" style="object-fit: contain;">
+                                                        <?php else: ?>
+                                                        <p class="text-muted">Tanda tangan belum diupload</p>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <input type="file" class="form-control" name="ttd_kepala">
+                                                    <small class="text-muted">Format: JPG, PNG. Background transparan disarankan.</small>
                                                 </div>
                                             </div>
                                         </div>

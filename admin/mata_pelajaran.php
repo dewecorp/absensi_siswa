@@ -250,6 +250,29 @@ $(document).ready(function() {
                 
             printWindow.document.write(headerContent);
             printWindow.document.write(table[0].outerHTML);
+
+            // Add signature block
+            var madrasahHeadName = '" . addslashes($school_profile['kepala_madrasah'] ?? '.........................') . "';
+            var madrasahHeadSignature = '" . addslashes($school_profile['ttd_kepala'] ?? '') . "';
+            var schoolName = '" . addslashes($school_profile['nama_madrasah'] ?? 'Madrasah') . "';
+            var schoolCity = '" . addslashes($school_profile['tempat_jadwal'] ?? 'Padang') . "';
+            var reportDate = '" . formatDateIndonesia(date('Y-m-d')) . "';
+
+            printWindow.document.write('<div style=\"margin-top: 30px; display: flex; justify-content: flex-end; width: 100%; page-break-inside: avoid;\">');
+            printWindow.document.write('<div style=\"text-align: center; width: 300px;\">');
+            printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+            if (madrasahHeadSignature) {
+                var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+                var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+                printWindow.document.write('<img src=\"' + qrUrl + '\" alt=\"QR Signature\" style=\"width: 80px; height: 80px; margin: 10px auto; display: block;\">');
+                printWindow.document.write('<p style=\"font-size: 10px; margin-top: 0;\">(Ditandatangani secara digital)</p>');
+            } else {
+                printWindow.document.write('<br><br><br><br><br>');
+            }
+            printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+            printWindow.document.write('</div>');
+            printWindow.document.write('</div>');
+
             printWindow.document.write('<script>window.onload = function() { window.print(); window.close(); }<\/script>');
             printWindow.document.write('</body></html>');
             printWindow.document.close();

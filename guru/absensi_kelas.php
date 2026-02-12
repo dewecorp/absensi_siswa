@@ -259,8 +259,9 @@ if (isset($message)) {
 // Add other page-specific functions
 $js_page[] = "
 // Pass actual names to JavaScript
-var madrasahHeadName = '" . addslashes(htmlspecialchars($school_profile['nama_kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8')) . "';
+var madrasahHeadName = '" . addslashes(htmlspecialchars($school_profile['kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8')) . "';
 var classTeacherName = '" . addslashes(htmlspecialchars($teacher['nama_guru'] ?? 'Guru Kelas', ENT_QUOTES, 'UTF-8')) . "';
+var madrasahHeadSignature = '" . ($school_profile['ttd_kepala'] ?? '') . "';
 
 function updateBadge(selectElement) {
     var selectedOption = selectElement.options[selectElement.selectedIndex].text;
@@ -370,12 +371,30 @@ function exportToPDF() {
     printWindow.document.write('<div class=\"signature-wrapper\">');
     printWindow.document.write('<div class=\"signature-box\">');
     printWindow.document.write('<p>Guru Kelas,</p>');
-    printWindow.document.write('<br><br><br>');
+    
+    if (classTeacherName && classTeacherName !== 'Guru Kelas') {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + '" . $school_name_js . "';
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src=\"' + qrUrl + '\" alt=\"QR Signature\" style=\"width: 80px; height: 80px; margin: 5px auto; display: block;\">');
+        printWindow.document.write('<p style=\"font-size: 10px; margin-top: 0;\">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class=\"signature-box\">');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<br><br><br>');
+    
+    if (madrasahHeadSignature) {
+        var qrContentHead = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + '" . $school_name_js . "';
+        var qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentHead);
+        printWindow.document.write('<img src=\"' + qrUrlHead + '\" alt=\"QR Signature\" style=\"width: 80px; height: 80px; margin: 5px auto; display: block;\">');
+        printWindow.document.write('<p style=\"font-size: 10px; margin-top: 0;\">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');

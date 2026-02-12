@@ -39,6 +39,8 @@ $student_attendance_summary = [];
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
+$schoolCity = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$reportDate = formatDateIndonesia(date('Y-m-d'));
 
 // Get teacher information
 if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
@@ -365,6 +367,20 @@ include '../templates/user_header.php';
                                                         Ditemukan <?php echo count($daily_results); ?> data absensi untuk tanggal yang dipilih.
                                                     </div>
                                                 </div>
+
+                                                <!-- Export Buttons -->
+                                                <div class="row mb-3">
+                                                    <div class="col-md-12">
+                                                        <div class="btn-group float-right" role="group">
+                                                            <button type="button" class="btn btn-success" onclick="exportDailyToExcel()">
+                                                                <i class="fas fa-file-excel"></i> Ekspor Excel
+                                                            </button>
+                                                            <button type="button" class="btn btn-warning" onclick="exportDailyToPDF()">
+                                                                <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 
                                                 <div class="table-responsive">
                                                     <table class="table table-striped table-md" id="dailyTable">
@@ -598,6 +614,20 @@ include '../templates/user_header.php';
                                                         Menampilkan riwayat absensi untuk <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?>
                                                     </div>
                                                 </div>
+
+                                                <!-- Export Buttons -->
+                                                <div class="row mb-3">
+                                                    <div class="col-md-12">
+                                                        <div class="btn-group float-right" role="group">
+                                                            <button type="button" class="btn btn-success" onclick="exportStudentToExcel()">
+                                                                <i class="fas fa-file-excel"></i> Ekspor Excel
+                                                            </button>
+                                                            <button type="button" class="btn btn-warning" onclick="exportStudentToPDF()">
+                                                                <i class="fas fa-file-pdf"></i> Ekspor PDF
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 
                                                 <!-- Student Summary Cards -->
                                                 <div class="row mb-4">
@@ -746,9 +776,13 @@ include '../templates/user_header.php';
 <script>
 // Define signature names from PHP
 var classTeacherName = "<?php echo addslashes($teacher_name ?? 'Guru Kelas'); ?>";
-var madrasahHeadName = "<?php echo addslashes($school_profile['nama_kepala_madrasah'] ?? 'Kepala Madrasah'); ?>";
+var madrasahHeadName = "<?php echo addslashes($school_profile['kepala_madrasah'] ?? 'Kepala Madrasah'); ?>";
+var madrasahHeadSignature = "<?php echo $school_profile['ttd_kepala'] ?? ''; ?>";
+var schoolName = "<?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah'); ?>";
 var academicYear = "<?php echo $school_profile['tahun_ajaran'] ?? '-'; ?>";
 var activeSemester = "<?php echo $active_semester ?? '-'; ?>";
+var schoolCity = "<?php echo addslashes($schoolCity); ?>";
+var reportDate = "<?php echo addslashes($reportDate); ?>";
 
 function exportToExcel() {
     // Create a container for the full report
@@ -822,14 +856,30 @@ function exportToPDF() {
     // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px 0;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
@@ -916,14 +966,30 @@ function exportSemesterToPDF() {
     // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
-    printWindow.document.write('<br><br><br>');
+    if (madrasahHeadSignature) {
+        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px 0;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
     printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
@@ -934,6 +1000,183 @@ function exportSemesterToPDF() {
     setTimeout(function() {
         printWindow.print();
         // printWindow.close();
+    }, 500);
+}
+
+// Daily Export Functions
+function exportDailyToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Absensi Harian - Tanggal: <?php echo date('d M Y', strtotime($selected_date)); ?></h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('dailyTable');
+    if (!table) {
+        Swal.fire('Error', 'Tabel harian tidak ditemukan', 'error');
+        return;
+    }
+    var newTable = table.cloneNode(true);
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    var html = container.innerHTML;
+    var a = document.createElement('a');
+    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+    a.href = data;
+    a.download = 'rekap_absensi_harian_' + '<?php echo $selected_date; ?>' + '.xls';
+    a.click();
+}
+
+function exportDailyToPDF() {
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Absensi Harian</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
+    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }');
+    printWindow.document.write('td:nth-child(2) { text-align: left; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; color: white; }');
+    printWindow.document.write('.badge-success { background-color: #28a745; }');
+    printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
+    printWindow.document.write('.badge-info { background-color: #17a2b8; }');
+    printWindow.document.write('.badge-danger { background-color: #dc3545; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
+    printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
+    printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 20px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
+    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3>' + schoolName + '</h3>');
+    printWindow.document.write('<h4>Rekap Absensi Harian - Tanggal: <?php echo date('d M Y', strtotime($selected_date)); ?></h4></div><br style="clear: both;">');
+    
+    var table = document.getElementById('dailyTable');
+    if (table) {
+        printWindow.document.write(table.outerHTML);
+    }
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+    var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+    printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+    printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+    printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+    printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() {
+        printWindow.print();
+    }, 500);
+}
+
+// Student Export Functions
+function exportStudentToExcel() {
+    var container = document.createElement('div');
+    var headerDiv = document.createElement('div');
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
+    headerDiv.innerHTML += '<h4>Rekap Absensi Siswa: <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?></h4></div><br style="clear: both;">';
+    
+    var table = document.getElementById('studentTable');
+    if (!table) {
+        Swal.fire('Error', 'Tabel siswa tidak ditemukan', 'error');
+        return;
+    }
+    var newTable = table.cloneNode(true);
+    container.appendChild(headerDiv);
+    container.appendChild(newTable);
+    
+    var html = container.innerHTML;
+    var a = document.createElement('a');
+    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+    a.href = data;
+    a.download = 'rekap_absensi_siswa_' + '<?php echo str_replace(' ', '_', $student_results[0]['nama_siswa'] ?? 'siswa'); ?>' + '.xls';
+    a.click();
+}
+
+function exportStudentToPDF() {
+    var printWindow = window.open('', '', 'height=860,width=1300');
+    printWindow.document.write('<html><head><title>Rekap Absensi Siswa</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
+    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }');
+    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
+    printWindow.document.write('.badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; color: white; }');
+    printWindow.document.write('.badge-success { background-color: #28a745; }');
+    printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
+    printWindow.document.write('.badge-info { background-color: #17a2b8; }');
+    printWindow.document.write('.badge-danger { background-color: #dc3545; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
+    printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
+    printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 20px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
+    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3>' + schoolName + '</h3>');
+    printWindow.document.write('<h4>Rekap Absensi Siswa: <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?></h4></div><br style="clear: both;">');
+    
+    var table = document.getElementById('studentTable');
+    if (table) {
+        printWindow.document.write(table.outerHTML);
+    }
+    
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+    var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+    printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+    printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+    printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+    printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function() {
+        printWindow.print();
     }, 500);
 }
 

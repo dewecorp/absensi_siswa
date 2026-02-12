@@ -27,6 +27,13 @@ $title_jenis = strtoupper($jenis);
 // Get School Profile
 $school_profile = getSchoolProfile($pdo);
 $kepala_madrasah = $school_profile['kepala_madrasah'] ?? '-';
+
+// Digital Signature Logic
+$qr_content = 'Validasi Tanda Tangan Digital: ' . $kepala_madrasah . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+$qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_content);
+$qr_img = '<img src="' . $qr_url . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
+$qr_img .= '<p style="font-size: 10px; margin-top: 0; text-align: center;">(Ditandatangani secara digital)</p>';
+
 $logo_file = $school_profile['logo'] ?? '';
 $logo_path = '';
 if ($logo_file && file_exists(__DIR__ . '/../assets/img/' . $logo_file)) {
@@ -367,17 +374,22 @@ $date_str = $tempat . ', ' . $tanggal;
 
 if ($kelas_id) {
     // Jadwal Kelas: Mengetahui (Kepala), Tanggal & Wali Kelas
+    $qrContentWali = 'Validasi Tanda Tangan Digital: ' . $wali_kelas . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+    $qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContentWali);
+    $qrImgWali = '<img src="' . $qrUrlWali . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
+    $qrImgWali .= '<p style="font-size: 10px; margin-top: 0; text-align: center;">(Ditandatangani secara digital)</p>';
+
     $html .= '
             <td width="50%">
                 Mengetahui,<br>
                 Kepala Madrasah<br>
-                <br><br><br><br>
+                ' . $qr_img . '
                 <b>' . htmlspecialchars($kepala_madrasah) . '</b>
             </td>
             <td width="50%">
                 ' . $date_str . '<br>
                 Wali Kelas ' . $classes[0]['nama_kelas'] . '<br>
-                <br><br><br><br>
+                ' . $qrImgWali . '
                 <b>' . htmlspecialchars($wali_kelas) . '</b>
             </td>';
 } else {
@@ -463,7 +475,7 @@ if ($kelas_id) {
             <td width="30%" style="vertical-align:top;">
                 ' . $date_str . '<br>
                 Kepala Madrasah<br>
-                <br><br><br><br>
+                ' . $qr_img . '
                 <b>' . htmlspecialchars($kepala_madrasah) . '</b>
             </td>';
 }

@@ -55,6 +55,9 @@ if (!empty($selected_month)) {
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
+$schoolCity = $school_profile['tempat_jadwal'] ?? 'Padang';
+$reportDate = formatDateIndonesia(date('Y-m-d'));
+$schoolName = $school_profile['nama_madrasah'] ?? 'Madrasah';
 
 // Get all classes
 $stmt = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC");
@@ -682,12 +685,18 @@ include '../templates/sidebar.php';
 $madrasah_head = addslashes(htmlspecialchars($school_profile['kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8'));
 $class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8'));
 $school_logo = $school_profile['logo'] ?? 'logo.png';
+$madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
+$school_city = addslashes(htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Kota', ENT_QUOTES, 'UTF-8'));
+$report_date = formatDateIndonesia(date('Y-m-d'));
 ?>
 <script>
 // Pass actual names to JavaScript
 var madrasahHeadName = '<?php echo $madrasah_head; ?>';
 var classTeacherName = '<?php echo $class_teacher; ?>';
 var schoolLogo = '<?php echo $school_logo; ?>';
+var madrasahHeadSignature = '<?php echo $madrasah_head_signature; ?>';
+var schoolCity = '<?php echo $school_city; ?>';
+var reportDate = '<?php echo $report_date; ?>';
 var studentName = '<?php echo isset($student_results[0]) ? addslashes($student_results[0]['nama_siswa']) : ""; ?>';
 var selectedDate = '<?php echo htmlspecialchars($selected_date); ?>';
 
@@ -767,10 +776,13 @@ function exportMonthlyToPDF() {
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
     printWindow.document.write('.fa-check { color: green; font-family: sans-serif; font-style: normal; } .fa-check:before { content: "v"; }');
     printWindow.document.write('.fa-times { color: red; font-family: sans-serif; font-style: normal; } .fa-times:before { content: "x"; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -791,8 +803,31 @@ function exportMonthlyToPDF() {
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>Wali Kelas,</p><br><br><br><p><strong>' + classTeacherName + '</strong></p></div>');
-    printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrContentKepala = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
+        var qrUrlKepala = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentKepala);
+        printWindow.document.write('<img src="' + qrUrlKepala + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('</body></html>');
@@ -844,10 +879,13 @@ function exportSemesterToPDF() {
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -862,8 +900,29 @@ function exportSemesterToPDF() {
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>Wali Kelas,</p><br><br><br><p><strong>' + classTeacherName + '</strong></p></div>');
-    printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p><br>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrContentHead = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
+        var qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentHead);
+        printWindow.document.write('<img src="' + qrUrlHead + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('</body></html>');
@@ -917,10 +976,13 @@ function exportDailyToPDF() {
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
     printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
     printWindow.document.write('.badge-secondary { background-color: #6c757d; color: white; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -942,8 +1004,29 @@ function exportDailyToPDF() {
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>Wali Kelas,</p><br><br><br><p><strong>' + classTeacherName + '</strong></p></div>');
-    printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p><br>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrContentHead = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
+        var qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentHead);
+        printWindow.document.write('<img src="' + qrUrlHead + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('</body></html>');
@@ -1003,10 +1086,13 @@ function exportStudentToPDF() {
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
     printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
     printWindow.document.write('.badge-secondary { background-color: #6c757d; color: white; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
+    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
+    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
@@ -1028,8 +1114,29 @@ function exportStudentToPDF() {
     }
     
     printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>Wali Kelas,</p><br><br><br><p><strong>' + classTeacherName + '</strong></p></div>');
-    printWindow.document.write('<div class="signature-box"><p>Kepala Madrasah,</p><br><br><br><p><strong>' + madrasahHeadName + '</strong></p></div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p><br>Wali Kelas,</p>');
+    if (classTeacherName) {
+        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
+        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    if (madrasahHeadSignature) {
+        var qrContentHead = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
+        var qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentHead);
+        printWindow.document.write('<img src="' + qrUrlHead + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
+    } else {
+        printWindow.document.write('<br><br><br>');
+    }
+    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('</body></html>');
