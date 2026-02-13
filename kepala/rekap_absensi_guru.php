@@ -140,7 +140,7 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
         if (!isset($attendance_by_teacher[$teacher_id])) {
             $attendance_by_teacher[$teacher_id] = [
                 'days' => array_fill(1, 31, ''), // Initialize all days as empty
-                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
             ];
         }
         $day = (int)$record['day'];
@@ -159,7 +159,7 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
             'nama_guru' => $teacher['nama_guru'],
             'nuptk' => $teacher['nuptk'],
             'days' => array_fill(1, 31, ''), // Initialize all days as empty
-            'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+            'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
         ];
         
         // Merge with attendance data if available
@@ -186,7 +186,7 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
     $teacher_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Calculate summary statistics
-    $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0];
+    $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0];
     foreach ($teacher_results as $record) {
         $status_key = ucfirst($record['keterangan']);
         if (isset($summary[$status_key])) {
@@ -269,13 +269,13 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
             'nama_guru' => $teacher['nama_guru'],
             'nuptk' => $teacher['nuptk'],
             'monthly_totals' => [],
-            'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0]
+            'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
         ];
         
         // Initialize monthly totals for all months in semester
         for ($m = $start_month; $m <= $end_month; $m++) {
             $teacher_data['monthly_totals'][$m] = [
-                'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0
+                'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0
             ];
         }
         

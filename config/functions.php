@@ -37,15 +37,19 @@ if (session_status() == PHP_SESSION_NONE) {
         $session_name = 'SIS_GURU';
         
         // Check LAST_ACTIVE_SESSION
-        if (isset($_COOKIE['LAST_ACTIVE_SESSION']) && in_array($_COOKIE['LAST_ACTIVE_SESSION'], ['SIS_WALI', 'SIS_ADMIN'])) {
+        if (isset($_COOKIE['LAST_ACTIVE_SESSION']) && in_array($_COOKIE['LAST_ACTIVE_SESSION'], ['SIS_WALI', 'SIS_ADMIN', 'SIS_TU', 'SIS_KEPALA'])) {
              $session_name = $_COOKIE['LAST_ACTIVE_SESSION'];
         }
-        // Fallback for Wali accessing Guru files
+        // Fallback for others accessing Guru files
         elseif (!isset($_COOKIE['SIS_GURU'])) {
             if (isset($_COOKIE['SIS_WALI'])) {
                 $session_name = 'SIS_WALI';
             } elseif (isset($_COOKIE['SIS_ADMIN'])) {
-                $session_name = 'SIS_ADMIN'; // Allow Admin to view Guru files
+                $session_name = 'SIS_ADMIN';
+            } elseif (isset($_COOKIE['SIS_TU'])) {
+                $session_name = 'SIS_TU';
+            } elseif (isset($_COOKIE['SIS_KEPALA'])) {
+                $session_name = 'SIS_KEPALA';
             }
         }
     } elseif (strpos($script_path, '/siswa/') !== false) {

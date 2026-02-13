@@ -39,7 +39,7 @@ $student_attendance_summary = [];
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
-$schoolCity = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$school_city = $school_profile['tempat_jadwal'] ?? '';
 $reportDate = formatDateIndonesia(date('Y-m-d'));
 
 // Get teacher information
@@ -151,7 +151,7 @@ if ($class_id > 0) {
                     'nama_siswa' => $record['nama_siswa'],
                     'nisn' => $record['nisn'],
                     'days' => array_fill(1, 31, ''), // Initialize all days as empty
-                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
                 ];
             }
             $day = (int)$record['day'];
@@ -177,7 +177,7 @@ if ($class_id > 0) {
         $student_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Calculate summary statistics
-        $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+        $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0];
         foreach ($student_results as $record) {
             if (isset($summary[$record['keterangan']])) {
                 $summary[$record['keterangan']]++;
@@ -242,13 +242,13 @@ if ($class_id > 0) {
                     'nama_siswa' => $record['nama_siswa'],
                     'nisn' => $record['nisn'],
                     'monthly_totals' => [], // Initialize monthly totals array
-                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
                 ];
                 
                 // Initialize all months in semester
                 for ($m = $start_month; $m <= $end_month; $m++) {
                     $student_attendance[$student_id]['monthly_totals'][$m] = [
-                        'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
+                        'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0
                     ];
                 }
             }

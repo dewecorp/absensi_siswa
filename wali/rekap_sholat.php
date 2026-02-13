@@ -29,7 +29,7 @@ $js_libs = [
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
-$schoolCity = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$schoolCity = $school_profile['tempat_jadwal'] ?? '';
 $reportDate = formatDateIndonesia(date('Y-m-d'));
 
 // --- Wali Specific Logic ---

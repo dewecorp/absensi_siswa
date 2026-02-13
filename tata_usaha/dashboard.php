@@ -553,7 +553,7 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
                                     <i class="fas fa-users"></i>
@@ -568,70 +568,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-success">
-                                    <i class="far fa-user"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Total Siswa Hadir</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <?php echo $jumlah_hadir; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-danger">
-                                    <i class="far fa-times-circle"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Sakit</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <?php echo $jumlah_sakit; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-warning">
-                                    <i class="far fa-flag"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Izin</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <?php echo $jumlah_izin; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-secondary">
-                                    <i class="fas fa-user-slash"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Alpa</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <?php echo $jumlah_alpa; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-info">
                                     <i class="fas fa-chalkboard-teacher"></i>
@@ -646,7 +583,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-school"></i>
@@ -657,6 +594,69 @@ include '../templates/sidebar.php';
                                     </div>
                                     <div class="card-body">
                                         <?php echo $total_kelas; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-success">
+                                    <i class="fas fa-user-check"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Siswa Hadir</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_hadir; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-danger">
+                                    <i class="fas fa-user-injured"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Siswa Sakit</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_sakit; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-warning">
+                                    <i class="fas fa-user-clock"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Siswa Izin</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_izin; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-secondary">
+                                    <i class="fas fa-user-slash"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Siswa Alpa</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_alpa; ?>
                                     </div>
                                 </div>
                             </div>
@@ -854,77 +854,7 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h4>Aktivitas Pengguna <span class="badge badge-primary"><?php echo $total_activities; ?></span></h4>
-                                                                <div class="card-header-action">
-                                                                    <a href="../admin/activity_log.php" class="btn btn-primary">Lihat Semua</a>
-                                                                </div>
-                                </div>
-                                <div class="card-body">
-                                    <div class="activities" style="max-height: 600px; overflow-y: auto;">
-                                        <?php 
-                                        if (!empty($activities)):
-                                            foreach ($activities as $activity): 
-                                        ?>
-                                        <div class="activity">
-                                            <?php 
-                                                $actColor = function_exists('getActivityColor') ? getActivityColor(htmlspecialchars($activity['action'])) : 'bg-primary';
-                                                $actShadow = str_replace('bg-', 'shadow-', $actColor);
-                                            ?>
-                                            <div class="activity-icon <?php echo $actColor; ?> text-white <?php echo $actShadow; ?>">
-                                                <i class="<?php 
-                                                    if (function_exists('getActivityIcon')) {
-                                                        echo getActivityIcon(htmlspecialchars($activity['action']));
-                                                    } else {
-                                                        echo 'fas fa-info-circle';
-                                                    }
-                                                ?>"></i>
-                                            </div>
-                                            <div class="activity-detail w-100">
-                                                <div class="card shadow-sm border-0 mb-0 w-100" style="background-color: #f8f9fa;">
-                                                    <div class="card-body p-3">
-                                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                                            <span class="text-job text-primary font-weight-bold text-capitalize" style="font-size: 14px;">
-                                                                <?php echo htmlspecialchars($activity['display_name']); ?>
-                                                            </span>
-                                                            <small class="text-muted font-weight-bold">
-                                                                <i class="far fa-clock mr-1"></i><?php echo timeAgo($activity['created_at']); ?>
-                                                            </small>
-                                                        </div>
-                                                        <div class="mb-2">
-                                                            <span class="badge badge-white border text-primary font-weight-bold shadow-sm" style="font-size: 11px;">
-                                                                <?php echo htmlspecialchars($activity['action']); ?>
-                                                            </span>
-                                                        </div>
-                                                        <p class="mb-2 text-dark" style="line-height: 1.5; font-size: 13px;">
-                                                            <?php echo htmlspecialchars($activity['description']); ?>
-                                                        </p>
-                                                        <div class="text-muted small border-top pt-2 mt-2 d-flex align-items-center" style="font-size: 11px;">
-                                                            <i class="far fa-calendar-alt mr-1"></i> <?php echo date('d M Y', strtotime($activity['created_at'])); ?>
-                                                            <span class="mx-2">•</span>
-                                                            <i class="far fa-clock mr-1"></i> <?php echo date('H:i:s', strtotime($activity['created_at'])); ?>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <?php 
-                                            endforeach; 
-                                        else: 
-                                        ?>
-                                        <div class="text-center py-4">
-                                            <p class="text-muted">Tidak ada aktivitas terbaru</p>
-                                        </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
                 </section>
             </div>
 

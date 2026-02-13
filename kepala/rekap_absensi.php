@@ -62,7 +62,7 @@ if (!empty($selected_month)) {
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
-$schoolCity = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$school_city = $school_profile['tempat_jadwal'] ?? '';
 $reportDate = formatDateIndonesia(date('Y-m-d'));
 
 // Get all classes
@@ -169,7 +169,7 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'days' => array_fill(1, 31, ''), // Initialize all days as empty
-                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
             ];
             
             // Merge with attendance data if available
@@ -197,7 +197,7 @@ if ($class_id > 0) {
         $student_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Calculate summary statistics
-        $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+        $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0];
         foreach ($student_results as $record) {
             if (isset($summary[$record['keterangan']])) {
                 $summary[$record['keterangan']]++;
@@ -286,13 +286,13 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'monthly_totals' => [],
-                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
             ];
             
             // Initialize monthly totals for all months in semester
             for ($m = $start_month; $m <= $end_month; $m++) {
                 $student_data['monthly_totals'][$m] = [
-                    'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
+                    'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0
                 ];
             }
             
@@ -442,10 +442,10 @@ include '../templates/sidebar.php';
                                                 <div class="row mb-3">
                                                     <div class="col-md-12">
                                                         <div class="btn-group float-right" role="group">
-                                                            <button type="button" class="btn btn-success" onclick="exportDailyToExcel()">
+                                                            <button type="button" class="btn btn-success" id="btnDailyExcel">
                                                                 <i class="fas fa-file-excel"></i> Ekspor Excel
                                                             </button>
-                                                            <button type="button" class="btn btn-warning" onclick="exportDailyToPDF()">
+                                                            <button type="button" class="btn btn-warning" id="btnDailyPDF">
                                                                 <i class="fas fa-file-pdf"></i> Ekspor PDF
                                                             </button>
                                                         </div>
@@ -512,10 +512,10 @@ include '../templates/sidebar.php';
                                                 <div class="row mb-3">
                                                     <div class="col-md-12">
                                                         <div class="btn-group float-right" role="group">
-                                                            <button type="button" class="btn btn-success" onclick="exportSemesterToExcel()">
+                                                            <button type="button" class="btn btn-success" id="btnSemesterExcel">
                                                                 <i class="fas fa-file-excel"></i> Ekspor Excel
                                                             </button>
-                                                            <button type="button" class="btn btn-warning" onclick="exportSemesterToPDF()">
+                                                            <button type="button" class="btn btn-warning" id="btnSemesterPDF">
                                                                 <i class="fas fa-file-pdf"></i> Ekspor PDF
                                                             </button>
                                                         </div>
@@ -604,10 +604,10 @@ include '../templates/sidebar.php';
                                                 <div class="row mb-3">
                                                     <div class="col-md-12">
                                                         <div class="btn-group float-right" role="group">
-                                                            <button type="button" class="btn btn-success" onclick="exportToExcel()">
+                                                            <button type="button" class="btn btn-success" id="btnMonthlyExcel">
                                                                 <i class="fas fa-file-excel"></i> Ekspor Excel
                                                             </button>
-                                                            <button type="button" class="btn btn-warning" onclick="exportToPDF()">
+                                                            <button type="button" class="btn btn-warning" id="btnMonthlyPDF">
                                                                 <i class="fas fa-file-pdf"></i> Ekspor PDF
                                                             </button>
                                                         </div>
@@ -615,7 +615,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                                 
                                                 <div class="table-responsive">
-                                                    <table class="table table-bordered table-md">
+                                                    <table class="table table-bordered table-md" id="monthlyTable">
                                                         <thead>
                                                             <tr>
                                                                 <th rowspan="2">No</th>
@@ -769,10 +769,10 @@ include '../templates/sidebar.php';
                                                 <div class="row mb-3">
                                                     <div class="col-md-12">
                                                         <div class="btn-group float-right" role="group">
-                                                            <button type="button" class="btn btn-success" onclick="exportStudentToExcel()">
+                                                            <button type="button" class="btn btn-success" id="btnStudentExcel">
                                                                 <i class="fas fa-file-excel"></i> Ekspor Excel
                                                             </button>
-                                                            <button type="button" class="btn btn-warning" onclick="exportStudentToPDF()">
+                                                            <button type="button" class="btn btn-warning" id="btnStudentPDF">
                                                                 <i class="fas fa-file-pdf"></i> Ekspor PDF
                                                             </button>
                                                         </div>
@@ -847,20 +847,20 @@ include '../templates/sidebar.php';
 <!-- Export Functions from absensi_harian.php -->
 <?php 
 // Prepare data for JavaScript
-$madrasah_head = addslashes(htmlspecialchars($school_profile['kepala_madrasah'] ?? 'Kepala Madrasah', ENT_QUOTES, 'UTF-8'));
-$class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8'));
+$madrasah_head = $school_profile['kepala_madrasah'] ?? 'Kepala Madrasah';
+$class_teacher = $class_info['wali_kelas'] ?? 'Wali Kelas';
 $madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
 ?>
 <script>
-// Pass actual names to JavaScript
-var madrasahHeadName = '<?php echo $madrasah_head; ?>';
-var classTeacherName = '<?php echo $class_teacher; ?>';
-var madrasahHeadSignature = '<?php echo $madrasah_head_signature; ?>';
-var academicYear = "<?php echo $school_profile['tahun_ajaran'] ?? '-'; ?>";
-var activeSemester = "<?php echo $active_semester ?? '-'; ?>";
-var schoolCity = "<?php echo addslashes($schoolCity); ?>";
-var reportDate = "<?php echo addslashes($reportDate); ?>";
-var schoolName = "<?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah'); ?>";
+// Pass actual names to JavaScript using json_encode for safety
+var madrasahHeadName = <?php echo json_encode($madrasah_head); ?>;
+var classTeacherName = <?php echo json_encode($class_teacher); ?>;
+var madrasahHeadSignature = <?php echo json_encode($madrasah_head_signature); ?>;
+var academicYear = <?php echo json_encode($school_profile['tahun_ajaran'] ?? '-'); ?>;
+var activeSemester = <?php echo json_encode($active_semester ?? '-'); ?>;
+var schoolCity = <?php echo json_encode($school_city); ?>;
+var reportDate = <?php echo json_encode($reportDate); ?>;
+var schoolName = <?php echo json_encode($school_profile['nama_madrasah'] ?? 'Madrasah'); ?>;
 
 function exportDailyToExcel() {
     var container = document.createElement('div');
@@ -1039,7 +1039,7 @@ function exportToExcel() {
     headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
     // Create a copy of the table to modify
-    var table = document.querySelector('.table-bordered');
+    var table = document.getElementById('monthlyTable');
     if (!table) {
         alert('Tabel tidak ditemukan');
         return;
@@ -1066,13 +1066,13 @@ function exportToExcel() {
         var wb = XLSX.utils.book_new();
         var ws = XLSX.utils.table_to_sheet(newTable);
         XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
-        XLSX.writeFile(wb, 'rekap_absensi_bulanan_' + '<?php echo htmlspecialchars($js_month_name_file, ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars($js_month_year_safe, ENT_QUOTES, "UTF-8"); ?>' + '.xlsx');
+        XLSX.writeFile(wb, 'rekap_absensi_bulanan_' + '<?php echo $js_month_name_file; ?>' + '_' + '<?php echo $js_month_year_safe; ?>' + '.xlsx');
     } else {
         // Fallback to HTML-based Excel export
         var a = document.createElement('a');
         var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
         a.href = data;
-        a.download = 'rekap_absensi_bulanan_' + '<?php echo htmlspecialchars($js_month_name_file, ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars($js_month_year_safe, ENT_QUOTES, "UTF-8"); ?>' + '.xls';
+        a.download = 'rekap_absensi_bulanan_' + '<?php echo $js_month_name_file; ?>' + '_' + '<?php echo $js_month_year_safe; ?>' + '.xls';
         a.click();
     }
 }
@@ -1118,7 +1118,7 @@ function fallbackPrintPDF() {
     printWindow.document.write('</div>');
     
     // Get the table
-    var table = document.querySelector('.table-bordered');
+    var table = document.getElementById('monthlyTable');
     if (table) {
         printWindow.document.write(table.outerHTML);
     }
@@ -1160,84 +1160,6 @@ function fallbackPrintPDF() {
     printWindow.focus();
 }
 
-function fallbackSemesterPrintPDF() {
-    // Print the semester table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
-    printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
-    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
-    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
-    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
-    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
-    printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
-    printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
-    printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
-    printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
-    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
-    printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
-    printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
-    printWindow.document.write('</style>');
-    printWindow.document.write('</head><body>');
-    printWindow.document.write('<div class="header">');
-    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
-    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>');
-    printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
-    
-    // Get the semester table
-    var table = document.getElementById('semesterTable');
-    if (table) {
-        printWindow.document.write(table.outerHTML);
-    }
-    
-    // Add signatures below the table
-    printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
-    printWindow.document.write('<p>Wali Kelas,</p>');
-    if (classTeacherName) {
-        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
-        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
-        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
-    } else {
-        printWindow.document.write('<br><br><br>');
-    }
-    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
-    printWindow.document.write('</div>');
-    
-    printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
-    printWindow.document.write('<p>Kepala Madrasah,</p>');
-    if (madrasahHeadSignature) {
-        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
-        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
-        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Code" style="width: 80px; height: 80px; margin: 10px 0;">');
-        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>');
-    } else {
-        printWindow.document.write('<br><br><br>');
-    }
-    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
-    printWindow.document.write('</div>');
-    printWindow.document.write('</div>');
-    
-    printWindow.document.write('</div>');
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(function() {
-        printWindow.print();
-        // printWindow.close();
-    }, 500);
-}
-
 // Semester Export Functions
 function exportSemesterToExcel() {
     // Create a container for the semester report
@@ -1277,13 +1199,13 @@ function exportSemesterToExcel() {
         var wb = XLSX.utils.book_new();
         var ws = XLSX.utils.table_to_sheet(newTable);
         XLSX.utils.book_append_sheet(wb, ws, "Rekap Semester");
-        XLSX.writeFile(wb, 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xlsx');
+        XLSX.writeFile(wb, 'rekap_absensi_' + '<?php echo str_replace(" ", "_", strtolower($active_semester)); ?>' + '_' + '<?php echo date("Y"); ?>' + '.xlsx');
     } else {
         // Fallback to HTML-based Excel export
         var a = document.createElement('a');
         var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
         a.href = data;
-        a.download = 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xls';
+        a.download = 'rekap_absensi_' + '<?php echo str_replace(" ", "_", strtolower($active_semester)); ?>' + '_' + '<?php echo date("Y"); ?>' + '.xls';
         a.click();
     }
 }
@@ -1617,5 +1539,76 @@ $(document).ready(function() {
     
     // Re-initialize after form submission (when new data is loaded)
     setTimeout(initDataTables, 500);
+});
+</script>
+<script>
+// Use robust jQuery event delegation to handle export buttons
+// This works even if the content is loaded via AJAX or defined later in the DOM
+$(document).ready(function() {
+    console.log('Export system initialized');
+    
+    $(document).on('click', '#btnDailyExcel', function(e) {
+        e.preventDefault();
+        console.log('Daily Excel requested');
+        if (typeof exportDailyToExcel === 'function') {
+            try { exportDailyToExcel(); } catch(err) { console.error(err); alert('Gagal: ' + err.message); }
+        } else { alert('Fungsi exportDailyToExcel tidak ditemukan'); }
+    });
+    
+    $(document).on('click', '#btnDailyPDF', function(e) {
+        e.preventDefault();
+        console.log('Daily PDF requested');
+        if (typeof exportDailyToPDF === 'function') {
+            try { exportDailyToPDF(); } catch(err) { console.error(err); alert('Gagal: ' + err.message); }
+        } else { alert('Fungsi exportDailyToPDF tidak ditemukan'); }
+    });
+    
+    $(document).on('click', '#btnMonthlyExcel', function(e) {
+        e.preventDefault();
+        console.log('Monthly Excel requested');
+        if (typeof exportToExcel === 'function') {
+            try { exportToExcel(); } catch(err) { console.error(err); alert('Gagal: ' + err.message); }
+        } else { alert('Fungsi exportToExcel tidak ditemukan'); }
+    });
+    
+    $(document).on('click', '#btnMonthlyPDF', function(e) {
+        e.preventDefault();
+        console.log('Monthly PDF requested');
+        if (typeof exportToPDF === 'function') {
+            try { exportToPDF(); } catch(err) { console.error(err); alert('Gagal: ' + err.message); }
+        } else { alert('Fungsi exportToPDF tidak ditemukan'); }
+    });
+    
+    $(document).on('click', '#btnSemesterExcel', function(e) {
+        e.preventDefault();
+        console.log('Semester Excel requested');
+        if (typeof exportSemesterToExcel === 'function') {
+            try { exportSemesterToExcel(); } catch(err) { console.error(err); alert('Gagal: ' + err.message); }
+        } else { alert('Fungsi exportSemesterToExcel tidak ditemukan'); }
+    });
+    
+    $(document).on('click', '#btnSemesterPDF', function(e) {
+        e.preventDefault();
+        console.log('Semester PDF requested');
+        if (typeof exportSemesterToPDF === 'function') {
+            try { exportSemesterToPDF(); } catch(err) { console.error(err); alert('Gagal: ' + err.message); }
+        } else { alert('Fungsi exportSemesterToPDF tidak ditemukan'); }
+    });
+    
+    $(document).on('click', '#btnStudentExcel', function(e) {
+        e.preventDefault();
+        console.log('Student Excel requested');
+        if (typeof exportStudentToExcel === 'function') {
+            try { exportStudentToExcel(); } catch(err) { console.error(err); alert('Gagal: ' + err.message); }
+        } else { alert('Fungsi exportStudentToExcel tidak ditemukan'); }
+    });
+    
+    $(document).on('click', '#btnStudentPDF', function(e) {
+        e.preventDefault();
+        console.log('Student PDF requested');
+        if (typeof exportStudentToPDF === 'function') {
+            try { exportStudentToPDF(); } catch(err) { console.error(err); alert('Gagal: ' + err.message); }
+        } else { alert('Fungsi exportStudentToPDF tidak ditemukan'); }
+    });
 });
 </script>

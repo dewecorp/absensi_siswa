@@ -195,7 +195,7 @@ if ($class_id > 0) {
         $student_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Calculate summary statistics
-        $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+        $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0];
         foreach ($student_results as $record) {
             if (isset($summary[$record['keterangan']])) {
                 $summary[$record['keterangan']]++;
@@ -242,12 +242,12 @@ if ($class_id > 0) {
                     'nama_siswa' => $record['nama_siswa'],
                     'nisn' => $record['nisn'],
                     'monthly_totals' => [],
-                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
                 ];
                 
                 for ($m = $start_month; $m <= $end_month; $m++) {
                     $student_attendance[$student_id]['monthly_totals'][$m] = [
-                        'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
+                        'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0
                     ];
                 }
             }
@@ -716,7 +716,7 @@ include '../templates/user_header.php';
 <?php include '../templates/footer.php'; ?>
 
 // Pass PHP variables to JS
-$school_city = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$school_city = $school_profile['tempat_jadwal'] ?? '';
 $report_date = formatDateIndonesia(date('Y-m-d'));
 
 echo "<script>

@@ -55,9 +55,12 @@ if (!empty($selected_month)) {
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
-$schoolCity = $school_profile['tempat_jadwal'] ?? 'Padang';
-$reportDate = formatDateIndonesia(date('Y-m-d'));
-$schoolName = $school_profile['nama_madrasah'] ?? 'Madrasah';
+$school_city = addslashes($school_profile['tempat_jadwal'] ?? '');
+$report_date = formatDateIndonesia(date('Y-m-d'));
+$school_name = addslashes(htmlspecialchars($school_profile['nama_madrasah'] ?? 'Madrasah', ENT_QUOTES, 'UTF-8'));
+$school_logo = $school_profile['logo_madrasah'] ?? 'logo.png';
+$madrasah_head_name = addslashes($school_profile['nama_kepala'] ?? 'Kepala Madrasah');
+$madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
 
 // Get all classes
 $stmt = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC");
@@ -695,9 +698,9 @@ var madrasahHeadName = '<?php echo $madrasah_head; ?>';
 var classTeacherName = '<?php echo $class_teacher; ?>';
 var schoolLogo = '<?php echo $school_logo; ?>';
 var madrasahHeadSignature = '<?php echo $madrasah_head_signature; ?>';
-var schoolCity = '<?php echo addslashes($schoolCity); ?>';
-var reportDate = '<?php echo addslashes($reportDate); ?>';
-var schoolName = '<?php echo addslashes($schoolName); ?>';
+var schoolCity = '<?php echo $school_city; ?>';
+var reportDate = '<?php echo $report_date; ?>';
+var schoolName = '<?php echo $school_name; ?>';
 
 function replaceIconsWithText(tableClone) {
     // Replace check icons with "v"

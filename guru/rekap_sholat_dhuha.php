@@ -427,7 +427,7 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 
 // Pass variables to JS
-$school_city = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$school_city = $school_profile['tempat_jadwal'] ?? '';
 $report_date = formatDateIndonesia(date('Y-m-d'));
 
 echo "<script>

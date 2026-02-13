@@ -164,7 +164,7 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'days' => array_fill(1, 31, ''), // Initialize all days as empty
-                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
             ];
             
             // Merge with attendance data if available
@@ -192,7 +192,7 @@ if ($class_id > 0) {
         $student_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Calculate summary statistics
-        $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+        $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0];
         foreach ($student_results as $record) {
             if (isset($summary[$record['keterangan']])) {
                 $summary[$record['keterangan']]++;
@@ -281,13 +281,13 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'monthly_totals' => [],
-                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
             ];
             
             // Initialize monthly totals for all months in semester
             for ($m = $start_month; $m <= $end_month; $m++) {
                 $student_data['monthly_totals'][$m] = [
-                    'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0
+                    'Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0
                 ];
             }
             
@@ -818,7 +818,7 @@ $madrasah_head = addslashes(htmlspecialchars($school_profile['kepala_madrasah'] 
 $class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8'));
 $madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
 $school_name = addslashes(htmlspecialchars($school_profile['nama_madrasah'] ?? '', ENT_QUOTES, 'UTF-8'));
-$school_city = addslashes($school_profile['tempat_jadwal'] ?? 'Kota Padang');
+$school_city = addslashes($school_profile['tempat_jadwal'] ?? '');
 $report_date = formatDateIndonesia(date('Y-m-d'));
 ?>
 <script>
@@ -839,7 +839,7 @@ function exportToExcel() {
     // Add application name and school info
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
-    headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>';
     headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>';
     headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
@@ -917,7 +917,7 @@ function fallbackPrintPDF() {
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>');
     printWindow.document.write('<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>');
     printWindow.document.write('<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
     
@@ -996,7 +996,7 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>');
     printWindow.document.write('<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>');
     printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
     
@@ -1052,7 +1052,7 @@ function exportSemesterToExcel() {
     // Add application name and school info
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
-    headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>';
     headerDiv.innerHTML += '<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
     // Create a copy of the semester table to modify
@@ -1129,7 +1129,7 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>');
     printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
     
     // Get the semester table

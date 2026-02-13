@@ -22,7 +22,7 @@ $tahun_ajaran = $school_profile['tahun_ajaran'];
 $semester_aktif = $school_profile['semester'];
 $madrasah_head_name = $school_profile['kepala_madrasah'] ?? '.........................';
 $madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
-$school_city = $school_profile['tempat_jadwal'] ?? 'Kota Padang';
+$school_city = $school_profile['tempat_jadwal'] ?? '';
 $report_date = formatDateIndonesia(date('Y-m-d'));
 
 // Get teacher data

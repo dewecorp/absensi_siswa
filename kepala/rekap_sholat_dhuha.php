@@ -55,9 +55,9 @@ if (!empty($selected_month)) {
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
-$schoolCity = $school_profile['tempat_jadwal'] ?? 'Padang';
-$reportDate = formatDateIndonesia(date('Y-m-d'));
-$schoolName = $school_profile['nama_madrasah'] ?? 'Madrasah';
+$school_city = addslashes($school_profile['tempat_jadwal'] ?? '');
+$report_date = formatDateIndonesia(date('Y-m-d'));
+$school_name = addslashes(htmlspecialchars($school_profile['nama_madrasah'] ?? 'Madrasah', ENT_QUOTES, 'UTF-8'));
 
 // Get all classes
 $stmt = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC");
@@ -686,8 +686,9 @@ $madrasah_head = addslashes(htmlspecialchars($school_profile['kepala_madrasah'] 
 $class_teacher = addslashes(htmlspecialchars($class_info['wali_kelas'] ?? 'Wali Kelas', ENT_QUOTES, 'UTF-8'));
 $school_logo = $school_profile['logo'] ?? 'logo.png';
 $madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
-$school_city = addslashes(htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Kota', ENT_QUOTES, 'UTF-8'));
-$report_date = formatDateIndonesia(date('Y-m-d'));
+$school_city = $school_city; // Use the one assigned above
+$report_date = $report_date; // Use the one assigned above
+$school_name = $school_name; // Use the one assigned above
 ?>
 <script>
 // Pass actual names to JavaScript
@@ -697,6 +698,7 @@ var schoolLogo = '<?php echo $school_logo; ?>';
 var madrasahHeadSignature = '<?php echo $madrasah_head_signature; ?>';
 var schoolCity = '<?php echo $school_city; ?>';
 var reportDate = '<?php echo $report_date; ?>';
+var schoolName = '<?php echo $school_name; ?>';
 var studentName = '<?php echo isset($student_results[0]) ? addslashes($student_results[0]['nama_siswa']) : ""; ?>';
 var selectedDate = '<?php echo htmlspecialchars($selected_date); ?>';
 

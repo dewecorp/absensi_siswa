@@ -43,8 +43,11 @@ $student_attendance_summary = [];
 // Define month names array
 $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
+// Get school profile for semester information
+$school_profile = getSchoolProfile($pdo);
+
 // Get school city and report date for signatures
-$school_city = addslashes($school_profile['tempat_jadwal'] ?? 'Kota Padang');
+$school_city = addslashes($school_profile['tempat_jadwal'] ?? '');
 $report_date = formatDateIndonesia(date('Y-m-d'));
 
 // Prepare month name for JavaScript
@@ -56,8 +59,6 @@ if (!empty($selected_month)) {
     $js_month_year = substr($selected_month, 0, 4);
 }
 
-// Get school profile for semester information
-$school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
 
 // Get all classes
