@@ -28,9 +28,10 @@ switch ($user_level) {
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Jam Mengajar', 'url' => '../admin/jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
                     ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php'],
-                    ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php']
+                    ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
+                    ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php', 'active' => $current_page === 'kalender_pendidikan.php']
                 ],
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'jadwal_imam.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'jadwal_imam.php', 'kalender_pendidikan.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -121,6 +122,12 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
+                'title' => 'Kalender Pendidikan',
+                'icon' => 'fas fa-calendar-alt',
+                'url' => '../admin/kalender_pendidikan.php?session_type=kepala_madrasah',
+                'active' => $current_page === 'kalender_pendidikan.php'
+            ],
+            [
                 'title' => 'Jadwal Pelajaran',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
@@ -178,6 +185,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-fire',
                 'url' => '../tata_usaha/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Kalender Pendidikan',
+                'icon' => 'fas fa-calendar-alt',
+                'url' => '../admin/kalender_pendidikan.php?session_type=tata_usaha',
+                'active' => $current_page === 'kalender_pendidikan.php'
             ],
             [
                 'title' => 'Jadwal Pelajaran',
@@ -341,6 +354,12 @@ switch ($user_level) {
                 'active' => $current_page === 'jurnal_mengajar.php'
             ],
             [
+                'title' => 'Kalender Pendidikan',
+                'icon' => 'fas fa-calendar-alt',
+                'url' => '../admin/kalender_pendidikan.php?session_type=guru',
+                'active' => $current_page === 'kalender_pendidikan.php'
+            ],
+            [
                 'title' => 'Profil',
                 'icon' => 'fas fa-user',
                 'url' => '../guru/profil.php',
@@ -468,6 +487,12 @@ switch ($user_level) {
                 'active' => $current_page === 'jurnal_mengajar.php'
             ],
             [
+                'title' => 'Kalender Pendidikan',
+                'icon' => 'fas fa-calendar-alt',
+                'url' => '../admin/kalender_pendidikan.php?session_type=wali',
+                'active' => $current_page === 'kalender_pendidikan.php'
+            ],
+            [
                 'title' => 'Profil & Pengaturan',
                 'icon' => 'fas fa-user-cog',
                 'url' => '../wali/profil.php',
@@ -535,6 +560,12 @@ switch ($user_level) {
                     ['title' => 'Rekap Sholat Dhuha', 'url' => '../siswa/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
                 ],
                 'active' => in_array($current_page, ['rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Kalender Pendidikan',
+                'icon' => 'fas fa-calendar-alt',
+                'url' => '../admin/kalender_pendidikan.php?session_type=siswa',
+                'active' => $current_page === 'kalender_pendidikan.php'
             ],
             [
                 'title' => 'Logout',
