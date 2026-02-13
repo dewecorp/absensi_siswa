@@ -2,11 +2,10 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/functions.php';
 
-// Hanya izinkan admin yang menjalankan script ini jika sudah login
-// Sementara dinonaktifkan agar bisa dijalankan langsung di lokal
-// if (!isAuthorized(['admin'])) {
-//     die("Akses ditolak. Hanya Admin yang dapat menjalankan script ini.");
-// }
+// Hanya izinkan admin yang menjalankan script ini
+if (!isAuthorized(['admin'])) {
+    die("Akses ditolak. Anda harus login sebagai Admin untuk menjalankan script ini.");
+}
 
 try {
     $sql = "CREATE TABLE IF NOT EXISTS tb_kalender_pendidikan (

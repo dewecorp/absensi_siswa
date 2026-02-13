@@ -2,10 +2,10 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/functions.php';
 
-// Sementara dinonaktifkan agar bisa dijalankan langsung di lokal
-// if (!isAuthorized(['admin'])) {
-//     die("Akses ditolak.");
-// }
+// Hanya izinkan admin yang menjalankan script ini
+if (!isAuthorized(['admin'])) {
+    die("Akses ditolak. Anda harus login sebagai Admin untuk mengekspor data ini.");
+}
 
 try {
     $stmt = $pdo->query("SELECT * FROM tb_kalender_pendidikan");

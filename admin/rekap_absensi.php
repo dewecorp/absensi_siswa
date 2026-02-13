@@ -176,6 +176,9 @@ if ($class_id > 0) {
             $student_attendance[$student_id] = $student_data;
         }
         
+        // Get holidays for the month
+        $holidays = getHolidays($pdo, $year, $month);
+        
         // Convert to indexed array
         $monthly_results = array_values($student_attendance);
     } elseif ($filter_type == 'student' && $selected_student > 0) {
@@ -630,7 +633,14 @@ include '../templates/sidebar.php';
                                                                         <td>
                                                                             <?php 
                                                                             $status = $student['days'][$day] ?? '';
-                                                                            if (!empty($status)) {
+                                                                            
+                                                                            // Check if it's a holiday
+                                                                            $current_date = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
+                                                                            $is_holiday = isset($holidays[$current_date]);
+                                                                            
+                                                                            if ($is_holiday) {
+                                                                                echo '<span style="font-size: 10pt; color: red;" title="' . htmlspecialchars($holidays[$current_date]) . '">L</span>';
+                                                                            } elseif (!empty($status)) {
                                                                                 $status_class = '';
                                                                                 switch ($status) {
                                                                                     case 'Hadir': $status_class = 'badge-success'; break;

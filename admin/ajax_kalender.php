@@ -35,7 +35,17 @@ switch ($action) {
             $stmt->execute($params);
             
             $events = [];
+            $existing_dates = []; // Track dates that already have events
+
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                // Track occupied dates to avoid overlapping with Friday holiday events
+                $h_start = new DateTime($row['tgl_mulai']);
+                $h_end = new DateTime($row['tgl_selesai']);
+                $period = new DatePeriod($h_start, new DateInterval('P1D'), $h_end->modify('+1 day'));
+                foreach ($period as $date) {
+                    $existing_dates[$date->format('Y-m-d')] = true;
+                }
+
                 // FullCalendar end date is exclusive, add 1 day for display if it's a range
                 $endDate = new DateTime($row['tgl_selesai']);
                 $endDate->modify('+1 day');
@@ -65,6 +75,32 @@ switch ($action) {
                     ]
                 ];
             }
+
+            // Add Fridays as events if not already occupied
+            if ($tahun_filter) {
+                $years = explode('/', $tahun_filter);
+                $year1 = (int)$years[0];
+                $year2 = (int)($years[1] ?? ($year1 + 1));
+                
+                $start = new DateTime("$year1-07-01");
+                $end = new DateTime("$year2-06-30");
+                $period = new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day'));
+                
+                foreach ($period as $date) {
+                    $date_str = $date->format('Y-m-d');
+                    if ($date->format('N') == 5 && !isset($existing_dates[$date_str])) {
+                        $events[] = [
+                            'title' => 'Hari Libur (Jumat)',
+                            'start' => $date_str,
+                            'allDay' => true,
+                            'backgroundColor' => '#fc544b', // danger/red
+                            'borderColor' => '#fc544b',
+                            'display' => 'block'
+                        ];
+                    }
+                }
+            }
+
             echo json_encode($events);
         } catch (Exception $e) {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);

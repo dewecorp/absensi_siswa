@@ -131,6 +131,9 @@ if ($class_id > 0) {
         $year = substr($selected_month, 0, 4);
         $month = substr($selected_month, 5, 2);
         
+        // Ambil data libur
+        $holidays = getHolidays($pdo, $year, $month);
+        
         $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
         $stmt->execute([$class_id]);
         $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -518,9 +521,18 @@ include '../templates/sidebar.php';
                                             <td>
                                                 <?php 
                                                     $s = $r['days'][$d];
-                                                    if ($s === 'Hadir') echo '<i class="fas fa-check text-success"></i>';
-                                                    elseif ($s === 'Berhalangan') echo '<i class="fas fa-ban text-warning"></i>';
-                                                    elseif ($s === 'Tidak Hadir') echo '<i class="fas fa-times text-danger"></i>';
+                                                    $current_date = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($d, 2, '0', STR_PAD_LEFT);
+                                                    $is_holiday = isset($holidays[$current_date]);
+                                                    
+                                                    if ($is_holiday) {
+                                                        echo '<span class="badge bg-danger text-white" title="' . htmlspecialchars($holidays[$current_date]) . '">L</span>';
+                                                    } elseif ($s === 'Hadir') {
+                                                        echo '<i class="fas fa-check text-success"></i>';
+                                                    } elseif ($s === 'Berhalangan') {
+                                                        echo '<i class="fas fa-ban text-warning"></i>';
+                                                    } elseif ($s === 'Tidak Hadir') {
+                                                        echo '<i class="fas fa-times text-danger"></i>';
+                                                    }
                                                 ?>
                                             </td>
                                         <?php endfor; ?>

@@ -199,6 +199,10 @@ if ($class_id > 0) {
                 'summary' => $summary
             ];
         }
+        
+        // Get holidays for the month
+        $holidays = getHolidays($pdo, $year, $month);
+        
         $monthly_results = $student_attendance;
 
     } elseif ($filter_type == 'student' && $selected_student > 0) {
@@ -519,9 +523,18 @@ include '../templates/sidebar.php';
                                             <td>
                                                 <?php 
                                                     $s = $r['days'][$d];
-                                                    if ($s === 'Hadir' || $s === 'Melaksanakan') echo '<i class="fas fa-check text-success"></i>';
-                                                    elseif ($s === 'Tidak Hadir' || $s === 'Tidak Melaksanakan') echo '<i class="fas fa-times text-danger"></i>';
-                                                    elseif ($s === 'Berhalangan') echo '<i class="fas fa-ban text-danger"></i>';
+                                                    $current_date = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($d, 2, '0', STR_PAD_LEFT);
+                                                    $is_holiday = isset($holidays[$current_date]);
+                                                    
+                                                    if ($is_holiday) {
+                                                        echo '<span class="badge bg-danger text-white" title="' . htmlspecialchars($holidays[$current_date]) . '">L</span>';
+                                                    } elseif ($s === 'Hadir' || $s === 'Melaksanakan') {
+                                                        echo '<i class="fas fa-check text-success"></i>';
+                                                    } elseif ($s === 'Tidak Hadir' || $s === 'Tidak Melaksanakan') {
+                                                        echo '<i class="fas fa-times text-danger"></i>';
+                                                    } elseif ($s === 'Berhalangan') {
+                                                        echo '<i class="fas fa-ban text-danger"></i>';
+                                                    }
                                                 ?>
                                             </td>
                                         <?php endfor; ?>

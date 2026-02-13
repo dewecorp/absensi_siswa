@@ -166,6 +166,9 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
         $teacher_attendance[$teacher_id] = $teacher_data;
     }
     
+    // Get holidays for the month
+    $holidays = getHolidays($pdo, $year, $month);
+    
     // Convert to indexed array
     $monthly_results = array_values($teacher_attendance);
 } elseif ($filter_type == 'teacher' && $selected_teacher > 0) {
@@ -475,11 +478,25 @@ include '../templates/sidebar.php';
                                                             $status = isset($student['days'][$i]) ? strtolower($student['days'][$i]) : '';
                                                             $code = '';
                                                             $bg = '';
-                                                            if ($status == 'hadir') { $code = 'H'; $bg = 'bg-success text-white'; }
-                                                            elseif ($status == 'sakit') { $code = 'S'; $bg = 'bg-primary text-white'; }
-                                                            elseif ($status == 'izin') { $code = 'I'; $bg = 'bg-warning text-white'; }
+                                                            
+                                                            // Check if it's a holiday
+                                                            $current_date = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($i, 2, '0', STR_PAD_LEFT);
+                                                            $is_holiday = isset($holidays[$current_date]);
+                                                            
+                                                            if ($is_holiday) {
+                                                                $code = 'L';
+                                                                $bg = 'bg-danger text-white';
+                                                            } elseif ($status == 'hadir') { 
+                                                                $code = 'H'; $bg = 'bg-success text-white'; 
+                                                            } elseif ($status == 'sakit') { 
+                                                                $code = 'S'; $bg = 'bg-primary text-white'; 
+                                                            } elseif ($status == 'izin') { 
+                                                                $code = 'I'; $bg = 'bg-warning text-white'; 
+                                                            }
                                                         ?>
-                                                        <td class="text-center <?php echo $bg; ?>" style="padding: 2px;"><?php echo $code; ?></td>
+                                                        <td class="text-center <?php echo $bg; ?>" style="padding: 2px;" title="<?php echo $is_holiday ? htmlspecialchars($holidays[$current_date]) : ''; ?>">
+                                                            <?php echo $code; ?>
+                                                        </td>
                                                         <?php endfor; ?>
                                                         <td class="text-center font-weight-bold"><?php echo $student['summary']['Hadir']; ?></td>
                                                         <td class="text-center font-weight-bold"><?php echo $student['summary']['Sakit']; ?></td>

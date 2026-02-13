@@ -452,6 +452,72 @@ function getActivityColor($action) {
     }
 }
 
+// Function to get holidays from kalender pendidikan
+function getHolidays($pdo, $year, $month = null) {
+    $holidays = [];
+    $query = "SELECT tgl_mulai, tgl_selesai, nama_kegiatan, warna FROM tb_kalender_pendidikan WHERE warna = 'danger'";
+    $params = [];
+
+    if ($month) {
+        $query .= " AND (
+            (MONTH(tgl_mulai) = ? AND YEAR(tgl_mulai) = ?) OR 
+            (MONTH(tgl_selesai) = ? AND YEAR(tgl_selesai) = ?) OR
+            (? BETWEEN MONTH(tgl_mulai) AND MONTH(tgl_selesai) AND ? BETWEEN YEAR(tgl_mulai) AND YEAR(tgl_selesai))
+        )";
+        $params = [$month, $year, $month, $year, $month, $year];
+    } else {
+        $query .= " AND (YEAR(tgl_mulai) = ? OR YEAR(tgl_selesai) = ?)";
+        $params = [$year, $year];
+    }
+
+    try {
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $start = new DateTime($row['tgl_mulai']);
+            $end = new DateTime($row['tgl_selesai']);
+            $end->modify('+1 day');
+
+            $period = new DatePeriod($start, new DateInterval('P1D'), $end);
+            foreach ($period as $date) {
+                $holidays[$date->format('Y-m-d')] = $row['nama_kegiatan'];
+            }
+        }
+    } catch (PDOException $e) {
+        // Table might not exist yet
+    }
+
+    // Tambahkan hari Jumat sebagai hari libur
+    if ($month) {
+        $num_days = cal_days_in_month(CAL_GREGORIAN, (int)$month, (int)$year);
+        for ($d = 1; $d <= $num_days; $d++) {
+            $date_str = sprintf('%04d-%02d-%02d', $year, $month, $d);
+            $day_of_week = date('N', strtotime($date_str));
+            if ($day_of_week == 5) { // 5 adalah Jumat (ISO-8601)
+                if (!isset($holidays[$date_str])) {
+                    $holidays[$date_str] = 'Hari Libur (Jumat)';
+                }
+            }
+        }
+    } else {
+        // Jika hanya tahun, loop seluruh bulan
+        for ($m = 1; $m <= 12; $m++) {
+            $num_days = cal_days_in_month(CAL_GREGORIAN, $m, (int)$year);
+            for ($d = 1; $d <= $num_days; $d++) {
+                $date_str = sprintf('%04d-%02d-%02d', $year, $m, $d);
+                $day_of_week = date('N', strtotime($date_str));
+                if ($day_of_week == 5) {
+                    if (!isset($holidays[$date_str])) {
+                        $holidays[$date_str] = 'Hari Libur (Jumat)';
+                    }
+                }
+            }
+        }
+    }
+
+    return $holidays;
+}
+
 // Function to get activity icon based on action
 function getActivityIcon($action) {
     $action = strtolower($action);
