@@ -40,23 +40,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['username'] = $guru_user['nuptk'];
             $_SESSION['level'] = $level;
             $_SESSION['nama_guru'] = $guru_user['nama_guru'];
+            $_SESSION['login_success_msg'] = "Selamat datang, " . $guru_user['nama_guru'] . "!";
+            
+            // Redirect will be handled by JavaScript for SweetAlert
+            $redirect_url = '';
+            switch ($level) {
+                case 'wali': $redirect_url = 'wali/dashboard.php'; break;
+                case 'guru': $redirect_url = 'guru/dashboard.php'; break;
+            }
+            $show_swal = true;
             
             // Log login activity
             $username = isset($guru_user['nuptk']) ? $guru_user['nuptk'] : 'system';
             $log_result = logActivity($pdo, $username, 'Login', 'Teacher logged in successfully using NUPTK');
             if (!$log_result) error_log("Failed to log activity for Login: Teacher");
             
-            // Redirect based on level
-            switch ($level) {
-                case 'wali':
-                    redirect('wali/dashboard.php');
-                    break;
-                case 'guru':
-                    redirect('guru/dashboard.php');
-                    break;
-                default:
-                    $error = "Invalid user level";
-            }
+            // Redirect is now handled at the end of the script if $show_swal is true
         } else {
             // If not found in tb_guru, try tb_siswa using NISN
             $stmt = $pdo->prepare("SELECT *, 'siswa' as level FROM tb_siswa WHERE nisn = ?");
@@ -73,6 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $_SESSION['level'] = 'siswa';
                 $_SESSION['nama_siswa'] = $siswa_user['nama_siswa'];
                 $_SESSION['id_kelas'] = $siswa_user['id_kelas'];
+                $_SESSION['login_success_msg'] = "Selamat datang, " . $siswa_user['nama_siswa'] . "!";
+
+                $redirect_url = 'siswa/dashboard.php';
+                $show_swal = true;
 
                 // Log login activity
                 $username = isset($siswa_user['nisn']) ? $siswa_user['nisn'] : 'system';
@@ -81,8 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if (function_exists('logActivity')) {
                     logActivity($pdo, $username, 'Login', 'Student logged in successfully using NISN');
                 }
-
-                redirect('siswa/dashboard.php');
             } else {
                 $error = "Username/NUPTK/NISN atau password salah!";
             }
@@ -98,6 +99,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['username'] = $user['username'];
             $_SESSION['level'] = $user['level'];
             $_SESSION['login_source'] = 'tb_pengguna';
+            $_SESSION['login_success_msg'] = "Selamat datang, " . $user['username'] . "!";
+
+            $redirect_url = '';
+            switch ($user['level']) {
+                case 'admin': $redirect_url = 'admin/dashboard.php'; break;
+                case 'guru': $redirect_url = 'guru/dashboard.php'; break;
+                case 'wali': $redirect_url = 'wali/dashboard.php'; break;
+                case 'kepala_madrasah': $redirect_url = 'kepala/dashboard.php'; break;
+                case 'tata_usaha': $redirect_url = 'tata_usaha/dashboard.php'; break;
+            }
+            $show_swal = true;
             
             // Prevent Session Fixation
             session_regenerate_id(true);
@@ -107,26 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $log_result = logActivity($pdo, $username, 'Login', 'User logged in successfully');
             if (!$log_result) error_log("Failed to log activity for Login: User");
             
-            // Redirect based on user level
-            switch ($user['level']) {
-                case 'admin':
-                    redirect('admin/dashboard.php');
-                    break;
-                case 'guru':
-                    redirect('guru/dashboard.php');
-                    break;
-                case 'wali':
-                    redirect('wali/dashboard.php');
-                    break;
-                case 'kepala_madrasah':
-                    redirect('kepala/dashboard.php');
-                    break;
-                case 'tata_usaha':
-                    redirect('tata_usaha/dashboard.php');
-                    break;
-                default:
-                    $error = "Invalid user level";
-            }
+            // Redirect is now handled at the end of the script if $show_swal is true
         } else {
             $error = "Username atau password salah!";
         }
@@ -158,7 +151,8 @@ $school_profile = getSchoolProfile($pdo);
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/components.css">
     
-
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body style="height: 100vh; margin: 0; overflow: hidden;">
@@ -228,6 +222,23 @@ $school_profile = getSchoolProfile($pdo);
     <!-- Template JS File -->
     <script src="assets/js/scripts.js"></script>
     <script src="assets/js/custom.js"></script>
+
+    <?php if (isset($show_swal) && $show_swal): ?>
+    <script>
+        Swal.fire({
+            title: 'Login Berhasil!',
+            text: '<?php echo $_SESSION['login_success_msg']; ?>',
+            icon: 'success',
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            allowOutsideClick: false
+        }).then(() => {
+            window.location.href = '<?php echo $redirect_url; ?>';
+        });
+    </script>
+    <?php unset($_SESSION['login_success_msg']); ?>
+    <?php endif; ?>
 
     <!-- JS Libraies -->
 </body>

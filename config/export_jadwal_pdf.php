@@ -197,12 +197,12 @@ $html = '
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { border: 1px solid black; padding: 3px; text-align: center; font-size: 9pt; word-wrap: break-word; }
         th { background-color: #f0f0f0; }
-        .signature-table { margin-top: 15px; border: none; page-break-inside: avoid; }
-        .signature-table td { border: none; vertical-align: top; text-align: center; padding: 10px; font-size: 10pt; }
+        .signature-table { margin-top: 5px; border: none; page-break-inside: avoid; }
+        .signature-table td { border: none; vertical-align: top; text-align: center; padding: 5px; font-size: 10pt; }
         .special-slot { background-color: #f9f9f9; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-        .legend-table { width: 100%; font-size: 8pt; border: 1px solid black; margin-bottom: 5px; }
-        .legend-table th { background-color: #f0f0f0; border: 1px solid black; text-align: center; font-weight: bold; }
-        .legend-table td { border: 1px solid black; text-align: left; padding: 2px 4px; }
+        .legend-table { width: 100%; font-size: 7.5pt; border: 1px solid black; margin-bottom: 2px; }
+        .legend-table th { background-color: #f0f0f0; border: 1px solid black; text-align: center; font-weight: bold; padding: 1px; }
+        .legend-table td { border: 1px solid black; text-align: left; padding: 1px 3px; }
         .print-btn {
             position: fixed;
             top: 20px;
@@ -408,15 +408,15 @@ if ($kelas_id) {
     $legend_html = '
         <table style="width:100%; border:none;">
             <tr>
-                <td style="width:50%; vertical-align:top; border:none; padding-right:5px;">
+                <td style="width:40%; vertical-align:top; border:none; padding-right:5px;">
                     <table class="legend-table">
-                        <tr><th colspan="4">KODE MATA PELAJARAN</th></tr>';
+                        <tr><th colspan="4" style="white-space: nowrap;">KODE MATA PELAJARAN</th></tr>';
                         
     for ($i = 0; $i < $mapel_mid; $i++) {
         $legend_html .= '<tr>';
         // Left Column
         if (isset($mapel_legend[$i])) {
-            $legend_html .= '<td style="width:20px; text-align:center;">' . $mapel_legend[$i]['code'] . '</td>';
+            $legend_html .= '<td style="width:25px; text-align:center;">' . $mapel_legend[$i]['code'] . '</td>';
             $legend_html .= '<td>' . htmlspecialchars($mapel_legend[$i]['name']) . '</td>';
         } else {
             $legend_html .= '<td></td><td></td>';
@@ -425,7 +425,7 @@ if ($kelas_id) {
         // Right Column
         $j = $i + $mapel_mid;
         if (isset($mapel_legend[$j])) {
-            $legend_html .= '<td style="width:20px; text-align:center;">' . $mapel_legend[$j]['code'] . '</td>';
+            $legend_html .= '<td style="width:25px; text-align:center;">' . $mapel_legend[$j]['code'] . '</td>';
             $legend_html .= '<td>' . htmlspecialchars($mapel_legend[$j]['name']) . '</td>';
         } else {
             $legend_html .= '<td></td><td></td>';
@@ -436,15 +436,15 @@ if ($kelas_id) {
     $legend_html .= '
                     </table>
                 </td>
-                <td style="width:50%; vertical-align:top; border:none; padding-left:5px;">
+                <td style="width:60%; vertical-align:top; border:none; padding-left:5px;">
                     <table class="legend-table">
-                        <tr><th colspan="4">KODE GURU</th></tr>';
+                        <tr><th colspan="4" style="white-space: nowrap;">KODE GURU</th></tr>';
                         
     for ($i = 0; $i < $guru_mid; $i++) {
         $legend_html .= '<tr>';
         // Left Column
         if (isset($guru_legend[$i])) {
-            $legend_html .= '<td style="width:20px; text-align:center;">' . $guru_legend[$i]['code'] . '</td>';
+            $legend_html .= '<td style="width:25px; text-align:center;">' . $guru_legend[$i]['code'] . '</td>';
             $legend_html .= '<td>' . htmlspecialchars($guru_legend[$i]['name']) . '</td>';
         } else {
             $legend_html .= '<td></td><td></td>';
@@ -453,7 +453,7 @@ if ($kelas_id) {
         // Right Column
         $j = $i + $guru_mid;
         if (isset($guru_legend[$j])) {
-            $legend_html .= '<td style="width:20px; text-align:center;">' . $guru_legend[$j]['code'] . '</td>';
+            $legend_html .= '<td style="width:25px; text-align:center;">' . $guru_legend[$j]['code'] . '</td>';
             $legend_html .= '<td>' . htmlspecialchars($guru_legend[$j]['name']) . '</td>';
         } else {
             $legend_html .= '<td></td><td></td>';
@@ -469,10 +469,10 @@ if ($kelas_id) {
     ';
     
     $html .= '
-            <td width="70%" style="vertical-align:top; padding-right: 20px;">
+            <td width="75%" style="vertical-align:top; padding-right: 15px;">
                 ' . $legend_html . '
             </td>
-            <td width="30%" style="vertical-align:top;">
+            <td width="25%" style="vertical-align:top;">
                 ' . $date_str . '<br>
                 Kepala Madrasah<br>
                 ' . $qr_img . '
