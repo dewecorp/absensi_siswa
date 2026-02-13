@@ -201,7 +201,7 @@ $(document).ready(function() {
     $('.select2').select2();
 
     // Initialize DataTable
-    $('#table-1').DataTable({
+    var table = $('#table-1').DataTable({
         \"columnDefs\": [
             { \"sortable\": false, \"targets\": [4] }
         ],
@@ -218,6 +218,20 @@ $(document).ready(function() {
                 \"next\": \"Selanjutnya\",
                 \"previous\": \"Sebelumnya\"
             }
+        },
+        \"drawCallback\": function() {
+            // Set initial state based on existing data on every draw (pagination/search)
+            $('.status-input').each(function() {
+                var id = $(this).data('id');
+                var status = $(this).val();
+                if (status) {
+                    var statusLower = status.toLowerCase();
+                    $('.btn-absensi[data-id=\"' + id + '\"][data-status=\"' + statusLower + '\"]').addClass('active').css('opacity', '1');
+                    if (statusLower === 'izin' || statusLower === 'sakit') {
+                        $('#keterangan_container_' + id).show();
+                    }
+                }
+            });
         }
     });
 
@@ -233,6 +247,7 @@ $(document).ready(function() {
     $(document).on('click', '.btn-absensi', function() {
         var id = $(this).data('id');
         var status = $(this).data('status');
+        var row = $(this).closest('tr');
         
         // Reset buttons for this row
         $('.btn-absensi[data-id=\"' + id + '\"]').removeClass('active').css('opacity', '0.6');
@@ -243,28 +258,52 @@ $(document).ready(function() {
         // Set hidden input value
         $('#status_' + id).val(status);
         
-        // Show/Hide Keterangan based on status 'izin' or 'sakit' (optional logic, user said 'jika izin muncul kolom keterangan')
-        // User requirement: 'jika izin muncul kolom keterangan'
+        // Update Badge and Row Color instantly
+        var badge = row.find('td:last-child span');
+        var statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        var badgeClass = 'badge-secondary';
+        var bgColor = '';
+
+        if (status === 'hadir') {
+            badgeClass = 'badge-success';
+            bgColor = 'rgba(40, 167, 69, 0.1)';
+        } else if (status === 'sakit') {
+            badgeClass = 'badge-info';
+            bgColor = 'rgba(23, 162, 184, 0.1)';
+        } else if (status === 'izin') {
+            badgeClass = 'badge-warning';
+            bgColor = 'rgba(255, 193, 7, 0.1)';
+        }
+
+        badge.attr('class', 'badge ' + badgeClass).text(statusLabel);
+        row.css('background-color', bgColor);
+        
+        // Show/Hide Keterangan based on status 'izin' or 'sakit'
         if (status === 'izin' || status === 'sakit') {
             $('#keterangan_container_' + id).show();
             $('#keterangan_' + id).focus();
         } else {
             $('#keterangan_container_' + id).hide();
-            $('#keterangan_' + id).val(''); // Clear text if present? Or keep it? Let's clear to avoid confusion.
+            $('#keterangan_' + id).val('');
         }
     });
 
-    // Set initial state based on existing data
-    $('.status-input').each(function() {
-        var id = $(this).data('id');
-        var status = $(this).val();
-        if (status) {
-            var statusLower = status.toLowerCase();
-            $('.btn-absensi[data-id=\"' + id + '\"][data-status=\"' + statusLower + '\"]').addClass('active').css('opacity', '1');
-            if (statusLower === 'izin' || statusLower === 'sakit') {
-                $('#keterangan_container_' + id).show();
+    // Handle Form Submit to include all pages data
+    $('form').on('submit', function(e) {
+        var form = this;
+        
+        // Get all hidden inputs and text inputs from all pages in the table
+        table.$('input').each(function() {
+            // If the element is not in the DOM (on another page), add it to the form
+            if (!$.contains(document, this)) {
+                $(form).append(
+                    $('<input>')
+                        .attr('type', 'hidden')
+                        .attr('name', this.name)
+                        .val(this.value)
+                );
             }
-        }
+        });
     });
 });
 ";
