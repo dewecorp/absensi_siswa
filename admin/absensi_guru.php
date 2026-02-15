@@ -23,19 +23,77 @@ $logo_url = $web_root . '/assets/img/' . $logo_file;
 // Set page title
 $page_title = 'Absensi Guru';
 
-// Handle form submissions (Save Attendance)
+// Handle single teacher submission
 $message = '';
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
+    $tanggal = date('Y-m-d');
+    $id_guru = (int)($_POST['id_guru'] ?? 0);
+    $status = trim($_POST['status'] ?? '');
+    $keterangan = trim($_POST['keterangan'] ?? '');
+    $waktu_time = $_POST['waktu_input'] ?? null;
+    $waktu_dt = $waktu_time ? ($tanggal . ' ' . $waktu_time) : date('Y-m-d H:i:s');
+    $result = ['success' => false];
+    if ($id_guru > 0) {
+        $check = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+        $check->execute([$id_guru, $tanggal]);
+        $existing = $check->fetch(PDO::FETCH_ASSOC);
+        try {
+            if ($existing) {
+                if ($status !== '') {
+                    $stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_absensi = ?");
+                    if ($stmt->execute([ucfirst($status), $keterangan, $waktu_dt, $existing['id_absensi']])) {
+                        $result['success'] = true;
+                    }
+                } else {
+                    $stmt = $pdo->prepare("DELETE FROM tb_absensi_guru WHERE id_absensi = ?");
+                    if ($stmt->execute([$existing['id_absensi']])) {
+                        $result['success'] = true;
+                    }
+                }
+            } else {
+                if ($status !== '') {
+                    $stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
+                    if ($stmt->execute([$id_guru, $tanggal, ucfirst($status), $keterangan, $waktu_dt])) {
+                        $result['success'] = true;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            $result['success'] = false;
+        }
+    }
+    header('Content-Type: application/json');
+    echo json_encode($result);
+    exit;
+}
+
+// Handle form submissions (Save Attendance)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_absensi'])) {
     $tanggal = date('Y-m-d');
     $id_kelas = $_POST['id_kelas'];
     $guru_data = $_POST['status']; // Array of id_guru => status
     $keterangan_data = $_POST['keterangan'] ?? []; // Array of id_guru => keterangan
+    $modified_data = $_POST['modified'] ?? []; // Array of id_guru => '1' if row clicked/changed
+    $waktu_input_data = $_POST['waktu_input'] ?? []; // Array of id_guru => 'HH:MM:SS' (local time at click)
+    // Bangun daftar ID target hanya dari baris yang benar-benar diklik (modified=1)
+    $target_ids = [];
+    foreach ($modified_data as $mid => $flag) {
+        if ($flag === '1') { $target_ids[] = (int)$mid; }
+    }
 
     $success_count = 0;
     $error_count = 0;
+    $processed_count = 0;
 
-    foreach ($guru_data as $id_guru => $status) {
+    // Hanya proses ID yang dikirim eksplisit melalui submit_ids
+    foreach ($target_ids as $id_guru) {
+        $modified = isset($modified_data[$id_guru]) && $modified_data[$id_guru] === '1';
+        if (!$modified) { continue; }
+        $processed_count++;
+        $status = $guru_data[$id_guru] ?? '';
         $keterangan = $keterangan_data[$id_guru] ?? '';
+        $waktu_time = $waktu_input_data[$id_guru] ?? null; // 'HH:MM:SS'
+        $waktu_dt = $waktu_time ? ($tanggal . ' ' . $waktu_time) : date('Y-m-d H:i:s'); // 'YYYY-MM-DD HH:MM:SS'
         
         // Default to 'Alpa' removed. If status is empty, it remains empty.
         if (empty($status)) {
@@ -50,30 +108,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_absensi'])) {
         $check->execute([$id_guru, $tanggal]);
         $existing = $check->fetch(PDO::FETCH_ASSOC);
 
-        if ($existing) {
-            // Update or Delete
-            if (!empty($status)) {
-                $stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = NOW() WHERE id_absensi = ?");
-                if ($stmt->execute([$status, $keterangan, $existing['id_absensi']])) {
-                    $success_count++;
+        try {
+            if ($existing) {
+                // Update atau hapus
+                if (!empty($status)) {
+                    $stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_absensi = ?");
+                    if ($stmt->execute([$status, $keterangan, $waktu_dt, $existing['id_absensi']])) {
+                        $success_count++;
+                    } else {
+                        $error_count++;
+                    }
                 } else {
-                    $error_count++;
+                    // Jika status kosong dan record ada, hapus (reset ke Belum Absen)
+                    $stmt = $pdo->prepare("DELETE FROM tb_absensi_guru WHERE id_absensi = ?");
+                    if ($stmt->execute([$existing['id_absensi']])) {
+                        $success_count++;
+                    } else {
+                        $error_count++;
+                    }
                 }
             } else {
-                // If status is empty but record exists, delete it (reset to Belum Absen)
-                $stmt = $pdo->prepare("DELETE FROM tb_absensi_guru WHERE id_absensi = ?");
-                $stmt->execute([$existing['id_absensi']]);
-            }
-        } else {
-            // Insert only if status is not empty
-            if (!empty($status)) {
-                $stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, NOW())");
-                if ($stmt->execute([$id_guru, $tanggal, $status, $keterangan])) {
-                    $success_count++;
-                } else {
-                    $error_count++;
+                // Insert hanya jika status tidak kosong
+                if (!empty($status)) {
+                    $stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
+                    if ($stmt->execute([$id_guru, $tanggal, $status, $keterangan, $waktu_dt])) {
+                        $success_count++;
+                    } else {
+                        $error_count++;
+                    }
                 }
             }
+        } catch (Exception $e) {
+            $error_count++;
         }
     }
 
@@ -82,7 +148,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_absensi'])) {
         $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
         logActivity($pdo, $username, 'Input Absensi Guru', "Menyimpan absensi guru untuk tanggal $tanggal");
     } else {
-        $message = ['type' => 'danger', 'text' => 'Gagal menyimpan data absensi guru!'];
+        if ($processed_count === 0 && $error_count === 0) {
+            $message = ['type' => 'info', 'text' => 'Tidak ada data yang diubah.'];
+        } else {
+            $message = ['type' => 'danger', 'text' => 'Gagal menyimpan data absensi guru!'];
+        }
     }
 }
 
@@ -165,12 +235,13 @@ if ($selected_kelas_id) {
         
         if ($include) {
             // Get current attendance status for today
-            $stmt_att = $pdo->prepare("SELECT status, keterangan FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+            $stmt_att = $pdo->prepare("SELECT status, keterangan, waktu_input FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
             $stmt_att->execute([$teacher['id_guru'], date('Y-m-d')]);
             $attendance = $stmt_att->fetch(PDO::FETCH_ASSOC);
             
             $teacher['status_kehadiran'] = $attendance['status'] ?? ''; // Default empty
             $teacher['keterangan'] = $attendance['keterangan'] ?? '';
+            $teacher['waktu_input'] = $attendance['waktu_input'] ?? '';
             
             $teachers[] = $teacher;
         }
@@ -234,6 +305,9 @@ $(document).ready(function() {
             });
         }
     });
+    
+    // Track baris yang diubah pada sesi saat ini
+    var changedIds = new Set();
 
     // Handle Class Change
     $('#filter_kelas').change(function() {
@@ -249,6 +323,9 @@ $(document).ready(function() {
         var status = $(this).data('status');
         var row = $(this).closest('tr');
         
+        // Tandai baris ini sebagai diubah pada sesi ini
+        changedIds.add(String(id));
+        
         // Reset buttons for this row
         $('.btn-absensi[data-id=\"' + id + '\"]').removeClass('active').css('opacity', '0.6');
         
@@ -257,6 +334,13 @@ $(document).ready(function() {
         
         // Set hidden input value
         $('#status_' + id).val(status);
+        // Mark row as modified and set click time (HH:MM:SS)
+        $('#modified_' + id).val('1');
+        var now = new Date();
+        var hh = String(now.getHours()).padStart(2,'0');
+        var mm = String(now.getMinutes()).padStart(2,'0');
+        var ss = String(now.getSeconds()).padStart(2,'0');
+        $('#waktu_' + id).val(hh + ':' + mm + ':' + ss);
         
         // Update Badge and Row Color instantly
         var badge = row.find('td:last-child span');
@@ -286,32 +370,40 @@ $(document).ready(function() {
             $('#keterangan_container_' + id).hide();
             $('#keterangan_' + id).val('');
         }
-    });
-
-    // Handle Form Submit to include all pages data
-    $('form').on('submit', function(e) {
-        var form = this;
         
-        // Get all hidden inputs and text inputs from all pages in the table
-        table.$('input').each(function() {
-            // If the element is not in the DOM (on another page), add it to the form
-            if (!$.contains(document, this)) {
-                $(form).append(
-                    $('<input>')
-                        .attr('type', 'hidden')
-                        .attr('name', this.name)
-                        .val(this.value)
-                );
+        var ketVal = $('#keterangan_' + id).val() || '';
+        var waktuVal = $('#waktu_' + id).val() || '';
+        $.ajax({
+            type: 'POST',
+            url: 'absensi_guru.php' + (window.location.search || ''),
+            data: { single_absensi: 1, id_guru: id, status: status, keterangan: ketVal, waktu_input: waktuVal },
+            success: function(resp) {
+                if (resp && resp.success) {
+                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Absensi guru diperbarui', timer: 1200, showConfirmButton: false });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan absensi guru', timer: 1500, showConfirmButton: false });
+                }
+            },
+            error: function() {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan absensi guru', timer: 1500, showConfirmButton: false });
             }
         });
     });
+
+    // Disable collective submit
+    $('form').on('submit', function(e) {
+        e.preventDefault();
+        Swal.fire({ icon: 'info', title: 'Otomatis', text: 'Absensi disimpan saat tombol diklik', timer: 1200, showConfirmButton: false });
+    });
+    
+    $('form button[type=\"submit\"], #btn-simpan-absensi').hide();
 });
 ";
 
 // Add SweetAlert
 if ($message) {
-    $swal_icon = $message['type'] == 'success' ? 'success' : 'error';
-    $swal_title = $message['type'] == 'success' ? 'Berhasil!' : 'Gagal!';
+    $swal_icon = ($message['type'] == 'success' ? 'success' : ($message['type'] == 'info' ? 'info' : 'error'));
+    $swal_title = ($message['type'] == 'success' ? 'Berhasil!' : ($message['type'] == 'info' ? 'Informasi' : 'Gagal!'));
     $swal_text = json_encode($message['text']);
     
     $js_page[] = "
@@ -413,7 +505,9 @@ include '../templates/sidebar.php';
                                                             <i class="fas fa-envelope-open-text"></i> Izin
                                                         </button>
                                                     </div>
-                                                    <input type="hidden" name="status[<?= $teacher['id_guru'] ?>]" id="status_<?= $teacher['id_guru'] ?>" class="status-input" data-id="<?= $teacher['id_guru'] ?>" value="<?= $teacher['status_kehadiran'] ?>">
+                                        <input type="hidden" name="status[<?= $teacher['id_guru'] ?>]" id="status_<?= $teacher['id_guru'] ?>" class="status-input" data-id="<?= $teacher['id_guru'] ?>" value="<?= $teacher['status_kehadiran'] ?>">
+                                        <input type="hidden" name="modified[<?= $teacher['id_guru'] ?>]" id="modified_<?= $teacher['id_guru'] ?>" value="0">
+                                        <input type="hidden" name="waktu_input[<?= $teacher['id_guru'] ?>]" id="waktu_<?= $teacher['id_guru'] ?>" value="<?= $teacher['waktu_input'] ? date('H:i:s', strtotime($teacher['waktu_input'])) : '' ?>">
                                                 </td>
                                                 <td>
                                                     <div id="keterangan_container_<?= $teacher['id_guru'] ?>" style="display: none;">

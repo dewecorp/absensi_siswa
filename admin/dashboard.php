@@ -539,6 +539,11 @@ include '../templates/sidebar.php';
                     </div>
                     <?php endif; ?>
 
+                    <style>
+                        .chart-canvas { width: 100% !important; height: 280px !important; }
+                        @media (min-width: 768px) { .chart-canvas { height: 360px !important; } }
+                    </style>
+                    
                     <div class="row">
                         <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
@@ -705,7 +710,7 @@ include '../templates/sidebar.php';
                                     <h4>Grafik Kehadiran Guru Hari Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="guruDailyChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
+                                    <canvas id="guruDailyChart" class="chart-canvas"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -715,7 +720,7 @@ include '../templates/sidebar.php';
                                     <h4>Grafik Trend Kehadiran Guru (Bulan Ini)</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="guruChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
+                                    <canvas id="guruChart" class="chart-canvas"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -728,7 +733,7 @@ include '../templates/sidebar.php';
                                     <h4>Grafik Kehadiran Siswa Hari Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="myChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
+                                    <canvas id="myChart" class="chart-canvas"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -738,7 +743,7 @@ include '../templates/sidebar.php';
                                     <h4>Grafik Trend Kehadiran Siswa (Bulan Ini)</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="trendChart" width="400" height="150" style="width:100%; max-height:400px;"></canvas>
+                                    <canvas id="trendChart" class="chart-canvas"></canvas>
                                 </div>
                             </div>
                         </div>
