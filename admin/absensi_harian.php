@@ -18,7 +18,10 @@ $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     $id_kelas = (int)$_POST['id_kelas'];
     $tanggal = $_POST['tanggal'];
-    
+    $holiday = isSchoolHoliday($pdo, $tanggal);
+    if ($holiday['is_holiday']) {
+        $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Absensi siswa tidak dapat disimpan untuk tanggal ini.'];
+    } else {
     // Only process students that are actually in the POST data
     // This prevents DataTables pagination from affecting students on other pages
     $saved_count = 0;
@@ -55,10 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
         }
     }
     
-    $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
-    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-    $log_result = logActivity($pdo, $username, 'Input Absensi', "Admin " . $username . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
-    if (!$log_result) error_log("Failed to log activity for Input Absensi: kelas ID $id_kelas");
+        $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+        $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+        $log_result = logActivity($pdo, $username, 'Input Absensi', "Admin " . $username . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
+        if (!$log_result) error_log("Failed to log activity for Input Absensi: kelas ID $id_kelas");
+    }
 }
 
 // Get students for selected class
@@ -112,6 +116,24 @@ $css_libs = [
 ];
 
 include '../templates/header.php';
+?>
+<?php if (!empty($tanggal)) :
+    $todayHoliday = isSchoolHoliday($pdo, $tanggal);
+    if ($todayHoliday['is_holiday']) :
+        $holiday_name = htmlspecialchars($todayHoliday['name'], ENT_QUOTES, 'UTF-8'); ?>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Hari Libur',
+                text: 'Hari ini adalah hari libur: <?php echo $holiday_name; ?>. Absensi siswa ditutup untuk tanggal ini.',
+                confirmButtonText: 'OK'
+            });
+        });
+        </script>
+<?php
+    endif;
+endif;
 ?>
 
             <!-- Main Content -->

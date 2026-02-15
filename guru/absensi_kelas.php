@@ -91,60 +91,64 @@ error_log("Guru " . $teacher['nama_guru'] . " classes found: " . count($classes)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     $id_kelas = (int)$_POST['id_kelas'];
     $tanggal = $_POST['tanggal'];
-    
-    // Only process students that are actually in the POST data
-    // This prevents DataTables pagination from affecting students on other pages
-    $saved_count = 0;
-    foreach ($_POST as $key => $value) {
-        // Check if this is a keterangan field (keterangan_[id_siswa])
-        if (strpos($key, 'keterangan_') === 0) {
-            $id_siswa = (int)str_replace('keterangan_', '', $key);
-            $keterangan = $value;
-            
-            // Validate keterangan value
-            if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Berhalangan'])) {
-                continue; // Skip invalid values
+    $holiday = isSchoolHoliday($pdo, $tanggal);
+    if ($holiday['is_holiday']) {
+        $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Absensi siswa tidak dapat disimpan untuk tanggal ini.'];
+    } else {
+        // Only process students that are actually in the POST data
+        // This prevents DataTables pagination from affecting students on other pages
+        $saved_count = 0;
+        foreach ($_POST as $key => $value) {
+            // Check if this is a keterangan field (keterangan_[id_siswa])
+            if (strpos($key, 'keterangan_') === 0) {
+                $id_siswa = (int)str_replace('keterangan_', '', $key);
+                $keterangan = $value;
+                
+                // Validate keterangan value
+                if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Berhalangan'])) {
+                    continue; // Skip invalid values
+                }
+                
+                // Check if attendance already exists for this student and date
+                $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
+                $check_stmt->execute([$id_siswa, $tanggal]);
+                
+                $current_time = date('H:i:s');
+                
+                if ($check_stmt->rowCount() > 0) {
+                    // Update existing record
+                    $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ?, jam_masuk = IF(? = 'Hadir', IF(jam_masuk IS NULL, ?, jam_masuk), NULL) WHERE id_siswa = ? AND tanggal = ?");
+                    $update_stmt->execute([$keterangan, $keterangan, $current_time, $id_siswa, $tanggal]);
+                } else {
+                    // Insert new record
+                    $id_guru = $_SESSION['user_id'];
+                    $jam_masuk = ($keterangan == 'Hadir') ? $current_time : NULL;
+                    $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru, jam_masuk) VALUES (?, ?, ?, ?, ?)");
+                    $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru, $jam_masuk]);
+                }
+                $saved_count++;
             }
-            
-            // Check if attendance already exists for this student and date
-            $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
-            $check_stmt->execute([$id_siswa, $tanggal]);
-            
-            $current_time = date('H:i:s');
-            
-            if ($check_stmt->rowCount() > 0) {
-                // Update existing record
-                $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ?, jam_masuk = IF(? = 'Hadir', IF(jam_masuk IS NULL, ?, jam_masuk), NULL) WHERE id_siswa = ? AND tanggal = ?");
-                $update_stmt->execute([$keterangan, $keterangan, $current_time, $id_siswa, $tanggal]);
-            } else {
-                // Insert new record
-                $id_guru = $_SESSION['user_id'];
-                $jam_masuk = ($keterangan == 'Hadir') ? $current_time : NULL;
-                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru, jam_masuk) VALUES (?, ?, ?, ?, ?)");
-                $insert_stmt->execute([$id_siswa, $tanggal, $keterangan, $id_guru, $jam_masuk]);
-            }
-            $saved_count++;
         }
-    }
-    
-    $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
-    logActivity($pdo, $teacher['nuptk'], 'Input Absensi', "Guru " . $teacher['nama_guru'] . " melakukan input absensi kelas ID: $id_kelas untuk $saved_count siswa");
+        
+        $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+        logActivity($pdo, $teacher['nuptk'], 'Input Absensi', "Guru " . $teacher['nama_guru'] . " melakukan input absensi kelas ID: $id_kelas untuk $saved_count siswa");
 
-    // Send notification to admin if data was saved
-    if ($saved_count > 0) {
-        $nama_guru = $teacher['nama_guru'];
-        
-        // Get class name
-        $stmt_kelas = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
-        $stmt_kelas->execute([$id_kelas]);
-        $kelas_data = $stmt_kelas->fetch(PDO::FETCH_ASSOC);
-        $nama_kelas = $kelas_data ? $kelas_data['nama_kelas'] : 'Kelas ID ' . $id_kelas;
-        
-        $waktu = date('H:i');
-        $tanggal_notif = date('d-m-Y');
-        
-        $notif_msg = "$nama_guru telah mengirim kehadiran siswa kelas $nama_kelas pada pukul $waktu tanggal $tanggal_notif";
-        createNotification($pdo, $notif_msg, 'absensi_harian.php?kelas=' . $id_kelas . '&tanggal=' . $tanggal, 'absensi_siswa');
+        // Send notification to admin if data was saved
+        if ($saved_count > 0) {
+            $nama_guru = $teacher['nama_guru'];
+            
+            // Get class name
+            $stmt_kelas = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+            $stmt_kelas->execute([$id_kelas]);
+            $kelas_data = $stmt_kelas->fetch(PDO::FETCH_ASSOC);
+            $nama_kelas = $kelas_data ? $kelas_data['nama_kelas'] : 'Kelas ID ' . $id_kelas;
+            
+            $waktu = date('H:i');
+            $tanggal_notif = date('d-m-Y');
+            
+            $notif_msg = "$nama_guru telah mengirim kehadiran siswa kelas $nama_kelas pada pukul $waktu tanggal $tanggal_notif";
+            createNotification($pdo, $notif_msg, 'absensi_harian.php?kelas=' . $id_kelas . '&tanggal=' . $tanggal, 'absensi_siswa');
+        }
     }
 }
 
@@ -241,6 +245,24 @@ $(document).ready(function() {
     });
 });
 ";
+
+// Tampilkan peringatan jika tanggal yang dipilih adalah hari libur
+if (!empty($tanggal)) {
+    $todayHoliday = isSchoolHoliday($pdo, $tanggal);
+    if ($todayHoliday['is_holiday']) {
+        $holiday_name = addslashes($todayHoliday['name']);
+        $js_page[] = "
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Hari Libur',
+                text: 'Hari ini adalah hari libur: $holiday_name. Absensi siswa ditutup untuk tanggal ini.',
+                confirmButtonText: 'OK'
+            });
+        });
+        ";
+    }
+}
 
 // Add SweetAlert if message exists
 if (isset($message)) {

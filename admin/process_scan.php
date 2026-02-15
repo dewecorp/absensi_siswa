@@ -38,6 +38,16 @@ try {
     $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($student) {
+        $holiday = isSchoolHoliday($pdo, $today);
+        if ($holiday['is_holiday']) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Hari libur: ' . $holiday['name'] . '. Absensi siswa ditutup untuk tanggal ini.',
+                'icon' => 'warning',
+                'title' => 'Hari Libur'
+            ]);
+            exit;
+        }
         // --- STUDENT ATTENDANCE LOGIC ---
         
         // Check if already attended today
@@ -89,6 +99,16 @@ try {
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($teacher) {
+        $holiday = isSchoolHoliday($pdo, $today);
+        if ($holiday['is_holiday']) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Hari libur: ' . $holiday['name'] . '. Absensi guru ditutup untuk tanggal ini.',
+                'icon' => 'warning',
+                'title' => 'Hari Libur'
+            ]);
+            exit;
+        }
         // --- TEACHER ATTENDANCE LOGIC ---
         
         // Check if already attended today
