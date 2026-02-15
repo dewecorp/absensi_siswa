@@ -326,14 +326,21 @@ $(document).ready(function() {
         // Tandai baris ini sebagai diubah pada sesi ini
         changedIds.add(String(id));
         
-        // Reset buttons for this row
-        $('.btn-absensi[data-id=\"' + id + '\"]').removeClass('active').css('opacity', '0.6');
+        // Cek apakah klik adalah toggle (membatalkan)
+        var current = ($('#status_' + id).val() || '').toLowerCase();
+        var isToggleCancel = current === String(status).toLowerCase();
+        var newStatus = isToggleCancel ? '' : status;
+
+        // Reset buttons untuk baris ini
+        var rowButtons = $('.btn-absensi[data-id=\"' + id + '\"]');
+        rowButtons.removeClass('active').css('opacity', '0.6');
+        if (!isToggleCancel) {
+            // Highlight tombol yang dipilih jika bukan batal
+            $(this).addClass('active').css('opacity', '1');
+        }
         
-        // Highlight clicked button
-        $(this).addClass('active').css('opacity', '1');
-        
-        // Set hidden input value
-        $('#status_' + id).val(status);
+        // Set hidden input value ke status baru (bisa kosong untuk batal)
+        $('#status_' + id).val(newStatus);
         // Mark row as modified and set click time (HH:MM:SS)
         $('#modified_' + id).val('1');
         var now = new Date();
@@ -344,17 +351,17 @@ $(document).ready(function() {
         
         // Update Badge and Row Color instantly
         var badge = row.find('td:last-child span');
-        var statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        var statusLabel = newStatus ? (newStatus.charAt(0).toUpperCase() + newStatus.slice(1)) : 'Belum Absen';
         var badgeClass = 'badge-secondary';
         var bgColor = '';
 
-        if (status === 'hadir') {
+        if (newStatus === 'hadir') {
             badgeClass = 'badge-success';
             bgColor = 'rgba(40, 167, 69, 0.1)';
-        } else if (status === 'sakit') {
+        } else if (newStatus === 'sakit') {
             badgeClass = 'badge-info';
             bgColor = 'rgba(23, 162, 184, 0.1)';
-        } else if (status === 'izin') {
+        } else if (newStatus === 'izin') {
             badgeClass = 'badge-warning';
             bgColor = 'rgba(255, 193, 7, 0.1)';
         }
@@ -363,7 +370,7 @@ $(document).ready(function() {
         row.css('background-color', bgColor);
         
         // Show/Hide Keterangan based on status 'izin' or 'sakit'
-        if (status === 'izin' || status === 'sakit') {
+        if (newStatus === 'izin' || newStatus === 'sakit') {
             $('#keterangan_container_' + id).show();
             $('#keterangan_' + id).focus();
         } else {
@@ -376,10 +383,10 @@ $(document).ready(function() {
         $.ajax({
             type: 'POST',
             url: 'absensi_guru.php' + (window.location.search || ''),
-            data: { single_absensi: 1, id_guru: id, status: status, keterangan: ketVal, waktu_input: waktuVal },
+            data: { single_absensi: 1, id_guru: id, status: newStatus, keterangan: ketVal, waktu_input: waktuVal },
             success: function(resp) {
                 if (resp && resp.success) {
-                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Absensi guru diperbarui', timer: 1200, showConfirmButton: false });
+                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: (isToggleCancel ? 'Absensi dibatalkan' : 'Absensi guru diperbarui'), timer: 1200, showConfirmButton: false });
                 } else {
                     Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan absensi guru', timer: 1500, showConfirmButton: false });
                 }

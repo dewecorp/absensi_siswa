@@ -225,27 +225,21 @@ $js_libs = [
 // Define page-specific JS
 $js_page = [
     "
-    // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
-        // Small delay to ensure Chart.js is ready
         setTimeout(function() {
-            // Ensure Chart.js is loaded before configuring
+            var isMobile = window.matchMedia('(max-width: 576px)').matches;
             if (typeof Chart === 'undefined') {
                 console.error('Chart.js library not loaded');
                 return;
             }
-            
-            // Configure Chart defaults if they exist (for v3.x)
             if (typeof Chart.defaults !== 'undefined') {
                 if (typeof Chart.defaults.font !== 'undefined') {
-                    // Chart.js v3+
                     Chart.defaults.font.family = 'Nunito, Segoe UI, Arial';
-                    Chart.defaults.font.size = 12;
+                    Chart.defaults.font.size = isMobile ? 13 : 12;
                     Chart.defaults.color = '#999';
                 } else if (typeof Chart.defaults.global !== 'undefined') {
-                    // Chart.js v2.x fallback
                     Chart.defaults.global.defaultFontFamily = 'Nunito, Segoe UI, Arial';
-                    Chart.defaults.global.defaultFontSize = 12;
+                    Chart.defaults.global.defaultFontSize = isMobile ? 13 : 12;
                     Chart.defaults.global.defaultFontColor = '#999';
                 }
             }
@@ -255,6 +249,7 @@ $js_page = [
             if (ctx) {
                 try {
                     var ctx2d = ctx.getContext('2d');
+                    ctx.style.height = isMobile ? '280px' : '220px';
                     var myChart = new Chart(ctx2d, {
                         type: 'bar',
                         data: {
@@ -298,11 +293,8 @@ $js_page = [
                                 y: {
                                     beginAtZero: true,
                                     ticks: {
-                                        callback: function(value) {
-                                            if (Number.isInteger(value)) {
-                                                return value;
-                                            }
-                                        }
+                                        callback: function(value) { if (Number.isInteger(value)) { return value; } },
+                                        font: { size: isMobile ? 12 : 11 }
                                     },
                                     title: {
                                         display: true,
@@ -310,6 +302,7 @@ $js_page = [
                                     }
                                 },
                                 x: {
+                                    ticks: { maxRotation: 0, autoSkip: true, font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Status Kehadiran'
@@ -328,6 +321,7 @@ $js_page = [
             if (trendCtx) {
                 try {
                     var trendCtx2d = trendCtx.getContext('2d');
+                    trendCtx.style.height = isMobile ? '300px' : '240px';
                     var trendChart = new Chart(trendCtx2d, {
                         type: 'line',
                         data: {
@@ -370,12 +364,14 @@ $js_page = [
                             scales: {
                                 y: {
                                     beginAtZero: true,
+                                    ticks: { font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Jumlah Siswa'
                                     }
                                 },
                                 x: {
+                                    ticks: { maxRotation: 0, autoSkip: true, font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Tanggal'
@@ -394,6 +390,7 @@ $js_page = [
             if (guruDailyCtx) {
                 try {
                     var guruDailyCtx2d = guruDailyCtx.getContext('2d');
+                    guruDailyCtx.style.height = isMobile ? '280px' : '220px';
                     var guruDailyChart = new Chart(guruDailyCtx2d, {
                         type: 'bar',
                         data: {
@@ -434,7 +431,8 @@ $js_page = [
                                 y: {
                                     beginAtZero: true,
                                     ticks: {
-                                        stepSize: 1
+                                        stepSize: 1,
+                                        font: { size: isMobile ? 12 : 11 }
                                     },
                                     title: {
                                         display: true,
@@ -442,6 +440,7 @@ $js_page = [
                                     }
                                 },
                                 x: {
+                                    ticks: { maxRotation: 0, autoSkip: true, font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Status Kehadiran'
@@ -460,6 +459,7 @@ $js_page = [
             if (guruCtx) {
                 try {
                     var guruCtx2d = guruCtx.getContext('2d');
+                    guruCtx.style.height = isMobile ? '300px' : '240px';
                     var guruChart = new Chart(guruCtx2d, {
                         type: 'line',
                         data: {
@@ -504,10 +504,12 @@ $js_page = [
                                         text: 'Jumlah Guru'
                                     },
                                     ticks: {
-                                        stepSize: 1
+                                        stepSize: 1,
+                                        font: { size: isMobile ? 12 : 11 }
                                     }
                                 },
                                 x: {
+                                    ticks: { maxRotation: 0, autoSkip: true, font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Tanggal'

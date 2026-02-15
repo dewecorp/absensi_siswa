@@ -207,6 +207,7 @@ $js_page = [
     document.addEventListener('DOMContentLoaded', function() {
         // Small delay to ensure Chart.js is ready
         setTimeout(function() {
+            var isMobile = window.matchMedia('(max-width: 576px)').matches;
             // Ensure Chart.js is loaded before configuring
             if (typeof Chart === 'undefined') {
                 console.error('Chart.js library not loaded');
@@ -218,12 +219,12 @@ $js_page = [
                 if (typeof Chart.defaults.font !== 'undefined') {
                     // Chart.js v3+
                     Chart.defaults.font.family = 'Nunito, Segoe UI, Arial';
-                    Chart.defaults.font.size = 12;
+                    Chart.defaults.font.size = isMobile ? 13 : 12;
                     Chart.defaults.color = '#999';
                 } else if (typeof Chart.defaults.global !== 'undefined') {
                     // Chart.js v2.x fallback
                     Chart.defaults.global.defaultFontFamily = 'Nunito, Segoe UI, Arial';
-                    Chart.defaults.global.defaultFontSize = 12;
+                    Chart.defaults.global.defaultFontSize = isMobile ? 13 : 12;
                     Chart.defaults.global.defaultFontColor = '#999';
                 }
             }
@@ -291,6 +292,7 @@ $js_page = [
                                     }
                                 },
                                 x: {
+                                    ticks: { maxRotation: 0, autoSkip: true, font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Status Kehadiran'
@@ -357,12 +359,14 @@ $js_page = [
                             scales: {
                                 y: {
                                     beginAtZero: true,
+                                    ticks: { font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Jumlah Siswa'
                                     }
                                 },
                                 x: {
+                                    ticks: { maxRotation: 40, minRotation: 40, autoSkip: false, includeBounds: true, font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Tanggal'
@@ -616,7 +620,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                     </script>
 
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
                                     <i class="far fa-user"></i>
@@ -631,32 +635,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-success">
-                                    <i class="fas fa-chalkboard-teacher"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Nama Guru</h4>
-                                    </div>
-                                    <div class="card-body" style="font-size: 0.9rem; line-height: 1.4;">
-                                        <?php 
-                                        if ($teacher) {
-                                            // Display teacher name - ensure it's displayed on one line
-                                            $nama_guru = trim($teacher['nama_guru']);
-                                            // Clean up any extra spaces
-                                            $nama_guru = preg_replace('/\s+/', ' ', $nama_guru);
-                                            echo htmlspecialchars($nama_guru);
-                                        } else {
-                                            echo 'N/A';
-                                        }
-                                        ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-school"></i>
@@ -671,7 +650,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-info">
                                     <i class="fas fa-users"></i>
@@ -682,6 +662,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                                     </div>
                                     <div class="card-body">
                                         <?php echo $persentase_hadir; ?>%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-success">
+                                    <i class="fas fa-user-check"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Hadir</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_hadir; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-warning">
+                                    <i class="fas fa-heartbeat"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Sakit</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_sakit; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-info">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Izin</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php echo $jumlah_izin; ?>
                                     </div>
                                 </div>
                             </div>
@@ -710,7 +739,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                                     <h4>Statistik Kehadiran Siswa Hari Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="myChart" height="158"></canvas>
+                                    <canvas id="myChart" height="220" style="width:100%; display:block; max-width:100%;"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -723,7 +752,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                                     <h4>Trend Kehadiran Bulan Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="trendChart" height="158"></canvas>
+                                    <canvas id="trendChart" height="240" style="width:100%; display:block; max-width:100%;"></canvas>
                                 </div>
                             </div>
                         </div>

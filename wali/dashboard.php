@@ -244,27 +244,21 @@ $js_libs = [
 // Define page-specific JS
 $js_page = [
     "
-    // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
-        // Small delay to ensure Chart.js is ready
         setTimeout(function() {
-            // Ensure Chart.js is loaded before configuring
+            var isMobile = window.matchMedia('(max-width: 576px)').matches;
             if (typeof Chart === 'undefined') {
                 console.error('Chart.js library not loaded');
                 return;
             }
-            
-            // Configure Chart defaults if they exist (for v3.x)
             if (typeof Chart.defaults !== 'undefined') {
                 if (typeof Chart.defaults.font !== 'undefined') {
-                    // Chart.js v3+
                     Chart.defaults.font.family = 'Nunito, Segoe UI, Arial';
-                    Chart.defaults.font.size = 12;
+                    Chart.defaults.font.size = isMobile ? 13 : 12;
                     Chart.defaults.color = '#999';
                 } else if (typeof Chart.defaults.global !== 'undefined') {
-                    // Chart.js v2.x fallback
                     Chart.defaults.global.defaultFontFamily = 'Nunito, Segoe UI, Arial';
-                    Chart.defaults.global.defaultFontSize = 12;
+                    Chart.defaults.global.defaultFontSize = isMobile ? 13 : 12;
                     Chart.defaults.global.defaultFontColor = '#999';
                 }
             }
@@ -274,6 +268,7 @@ $js_page = [
             if (ctx) {
                 try {
                     var ctx2d = ctx.getContext('2d');
+                    ctx.style.height = isMobile ? '280px' : '220px';
                     var myChart = new Chart(ctx2d, {
                         type: 'bar',
                         data: {
@@ -320,11 +315,8 @@ $js_page = [
                                 y: {
                                     beginAtZero: true,
                                     ticks: {
-                                        callback: function(value) {
-                                            if (Number.isInteger(value)) {
-                                                return value;
-                                            }
-                                        }
+                                        callback: function(value) { if (Number.isInteger(value)) { return value; } },
+                                        font: { size: isMobile ? 12 : 11 }
                                     },
                                     title: {
                                         display: true,
@@ -332,6 +324,7 @@ $js_page = [
                                     }
                                 },
                                 x: {
+                                    ticks: { maxRotation: 0, autoSkip: true, font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Status Kehadiran'
@@ -350,6 +343,7 @@ $js_page = [
             if (trendCtx) {
                 try {
                     var trendCtx2d = trendCtx.getContext('2d');
+                    trendCtx.style.height = isMobile ? '300px' : '240px';
                     var trendChart = new Chart(trendCtx2d, {
                         type: 'line',
                         data: {
@@ -398,12 +392,14 @@ $js_page = [
                             scales: {
                                 y: {
                                     beginAtZero: true,
+                                    ticks: { font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Jumlah Siswa'
                                     }
                                 },
                                 x: {
+                                    ticks: { maxRotation: 40, minRotation: 40, autoSkip: false, includeBounds: true, font: { size: isMobile ? 12 : 11 } },
                                     title: {
                                         display: true,
                                         text: 'Tanggal'
@@ -639,7 +635,7 @@ include '../templates/sidebar.php';
                     </div>
                     
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-info">
                                     <i class="fas fa-file-alt"></i>
@@ -654,7 +650,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-times-circle"></i>
@@ -669,7 +665,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-ban"></i>
@@ -791,7 +787,7 @@ include '../templates/sidebar.php';
                                     <h4>Grafik Kehadiran Siswa Hari Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="myChart" height="158"></canvas>
+                                    <canvas id="myChart" style="width:100%; height: 220px;"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -804,7 +800,7 @@ include '../templates/sidebar.php';
                                     <h4>Trend Kehadiran Bulan Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="trendChart" height="158"></canvas>
+                                    <canvas id="trendChart" style="width:100%; height: 240px;"></canvas>
                                 </div>
                             </div>
                         </div>
