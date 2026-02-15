@@ -404,6 +404,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
     if ($current_teacher_id > 0) {
         $current_date = date('Y-m-d');
         
+        $holiday = isSchoolHoliday($pdo, $current_date);
+        if ($holiday['is_holiday']) {
+            echo "<script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        title: 'Hari Libur',
+                        text: 'Absensi ditutup pada hari libur: " . addslashes($holiday['name']) . "',
+                        icon: 'warning',
+                        timer: 4000,
+                        showConfirmButton: true
+                    });
+                });
+            </script>";
+            // Stop processing on holidays
+            goto after_submission;
+        }
+        
         // Check if already attended
         $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
         $check_stmt->execute([$current_teacher_id, $current_date]);
@@ -470,6 +487,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
             }
         }
     }
+    after_submission:
 }
 ?>
 

@@ -33,6 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
     $waktu_time = $_POST['waktu_input'] ?? null;
     $waktu_dt = $waktu_time ? ($tanggal . ' ' . $waktu_time) : date('Y-m-d H:i:s');
     $result = ['success' => false];
+    $holiday = isSchoolHoliday($pdo, $tanggal);
+    if ($holiday['is_holiday'] && $status !== '') {
+        $result['error'] = 'Hari libur: ' . $holiday['name'] . '. Absensi untuk tanggal ini ditutup.';
+        header('Content-Type: application/json');
+        echo json_encode($result);
+        exit;
+    }
     if ($id_guru > 0) {
         $check = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
         $check->execute([$id_guru, $tanggal]);
@@ -387,6 +394,10 @@ $(document).ready(function() {
             success: function(resp) {
                 if (resp && resp.success) {
                     Swal.fire({ icon: 'success', title: 'Tersimpan', text: (isToggleCancel ? 'Absensi dibatalkan' : 'Absensi guru diperbarui'), timer: 1200, showConfirmButton: false });
+                } else if (resp && resp.error) {
+                    Swal.fire({ icon: 'warning', title: 'Hari Libur', text: resp.error, confirmButtonText: 'OK' }).then(function() {
+                        window.location.reload();
+                    });
                 } else {
                     Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan absensi guru', timer: 1500, showConfirmButton: false });
                 }
@@ -406,6 +417,22 @@ $(document).ready(function() {
     $('form button[type=\"submit\"], #btn-simpan-absensi').hide();
 });
 ";
+
+// Tampilkan peringatan jika hari ini adalah hari libur (kalender pendidikan)
+$todayHoliday = isSchoolHoliday($pdo, date('Y-m-d'));
+if ($todayHoliday['is_holiday']) {
+    $holiday_name = addslashes($todayHoliday['name']);
+    $js_page[] = "
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Hari Libur',
+            text: 'Hari ini adalah hari libur: $holiday_name. Absensi ditutup untuk semua pengguna.',
+            confirmButtonText: 'OK'
+        });
+    });
+    ";
+}
 
 // Add SweetAlert
 if ($message) {

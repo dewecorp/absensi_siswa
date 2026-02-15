@@ -89,31 +89,40 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['absen_status'])) {
     $status = $_POST['absen_status']; // Hadir, Sakit, Izin
     
-    if ($attendance) {
+    $holiday = isSchoolHoliday($pdo, $today);
+    if ($holiday['is_holiday']) {
         $swal_message = [
-            'title' => 'Peringatan!',
-            'text' => 'Anda sudah melakukan absensi hari ini!',
+            'title' => 'Hari Libur',
+            'text' => 'Absensi ditutup pada hari libur: ' . $holiday['name'],
             'icon' => 'warning'
         ];
     } else {
-        $jam_masuk = date('H:i:s');
-        $stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, jam_masuk, keterangan) VALUES (?, ?, ?, ?)");
-        if ($stmt->execute([$id_siswa, $today, $jam_masuk, $status])) {
+        if ($attendance) {
             $swal_message = [
-                'title' => 'Berhasil!',
-                'text' => 'Absensi berhasil disimpan!',
-                'icon' => 'success'
+                'title' => 'Peringatan!',
+                'text' => 'Anda sudah melakukan absensi hari ini!',
+                'icon' => 'warning'
             ];
-            // Refresh attendance data
-            $stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
-            $stmt->execute([$id_siswa, $today]);
-            $attendance = $stmt->fetch(PDO::FETCH_ASSOC);
         } else {
-            $swal_message = [
-                'title' => 'Gagal!',
-                'text' => 'Gagal menyimpan absensi!',
-                'icon' => 'error'
-            ];
+            $jam_masuk = date('H:i:s');
+            $stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, jam_masuk, keterangan) VALUES (?, ?, ?, ?)");
+            if ($stmt->execute([$id_siswa, $today, $jam_masuk, $status])) {
+                $swal_message = [
+                    'title' => 'Berhasil!',
+                    'text' => 'Absensi berhasil disimpan!',
+                    'icon' => 'success'
+                ];
+                // Refresh attendance data
+                $stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
+                $stmt->execute([$id_siswa, $today]);
+                $attendance = $stmt->fetch(PDO::FETCH_ASSOC);
+            } else {
+                $swal_message = [
+                    'title' => 'Gagal!',
+                    'text' => 'Gagal menyimpan absensi!',
+                    'icon' => 'error'
+                ];
+            }
         }
     }
 }

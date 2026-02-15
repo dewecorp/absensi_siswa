@@ -518,6 +518,20 @@ function getHolidays($pdo, $year, $month = null) {
     return $holidays;
 }
 
+// Check if a specific date is a holiday based on Kalender Pendidikan
+function isSchoolHoliday($pdo, $date) {
+    try {
+        $year = (int)date('Y', strtotime($date));
+        $month = (int)date('m', strtotime($date));
+        $holidays = getHolidays($pdo, $year, $month);
+        if (isset($holidays[$date])) {
+            return ['is_holiday' => true, 'name' => $holidays[$date]];
+        }
+        return ['is_holiday' => false, 'name' => ''];
+    } catch (Exception $e) {
+        return ['is_holiday' => false, 'name' => ''];
+    }
+}
 // Function to get activity icon based on action
 function getActivityIcon($action) {
     $action = strtolower($action);
