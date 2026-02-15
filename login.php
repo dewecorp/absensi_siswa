@@ -99,7 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['username'] = $user['username'];
             $_SESSION['level'] = $user['level'];
             $_SESSION['login_source'] = 'tb_pengguna';
-            $_SESSION['login_success_msg'] = "Selamat datang, " . $user['username'] . "!";
+            $display_name = !empty($user['nama']) ? $user['nama'] : $user['username'];
+            $_SESSION['login_success_msg'] = "Selamat datang, " . $display_name . "!";
 
             $redirect_url = '';
             switch ($user['level']) {

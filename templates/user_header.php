@@ -185,7 +185,7 @@ if (!isLoggedIn()) {
                             $current_user = $user_stmt->fetch(PDO::FETCH_ASSOC);
                             
                             $avatar_html = getUserAvatarImage($current_user ?? ['username' => $_SESSION['username']], 30);
-                            $display_name = $_SESSION['username'];
+                            $display_name = ($current_user && !empty($current_user['nama'])) ? $current_user['nama'] : $_SESSION['username'];
                         }
                         ?>
                         <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
