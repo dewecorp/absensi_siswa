@@ -418,7 +418,7 @@ include '../templates/sidebar.php';
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>Background Dashboard Guru/Wali</label>
+                                                    <label>Background Dashboard (Hero Semua Dashboard)</label>
                                                     <div class="mb-2">
                                                         <?php if (!empty($school_profile['dashboard_hero_image'])): ?>
                                                         <img src="../assets/img/<?php echo $school_profile['dashboard_hero_image']; ?>" alt="Hero Image" height="100" class="img-thumbnail" style="object-fit: cover; width: 100%;">
@@ -428,7 +428,7 @@ include '../templates/sidebar.php';
                                                         <?php endif; ?>
                                                     </div>
                                                     <input type="file" class="form-control" name="hero_image">
-                                                    <small class="text-muted">Format: JPG, PNG, GIF. Ukuran maksimal: 2MB. Disarankan gambar landscape.</small>
+                                                    <small class="text-muted">Format: JPG, PNG, GIF. Ukuran maksimal: 2MB. Digunakan sebagai gambar hero di dashboard (mobile) semua level pengguna. Disarankan gambar landscape.</small>
                                                 </div>
                                             </div>
                                         </div>

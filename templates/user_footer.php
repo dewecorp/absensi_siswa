@@ -41,10 +41,21 @@ if (!isset($school_profile)) {
     <?php
     // Determine profile URL for bottom nav
     $bottom_profile_url = 'profil.php';
+    $bottom_home_url = 'dashboard.php';
     if (function_exists('getUserLevel')) {
         $bottom_user_level = getUserLevel();
         if ($bottom_user_level === 'admin' || $bottom_user_level === 'kepala_madrasah') {
             $bottom_profile_url = 'profil_madrasah.php';
+        }
+    }
+
+    // Determine home URL for bottom nav based on menu items
+    if (isset($menu_items) && is_array($menu_items)) {
+        foreach ($menu_items as $item) {
+            if (isset($item['title'], $item['url']) && $item['title'] === 'Dashboard') {
+                $bottom_home_url = $item['url'];
+                break;
+            }
         }
     }
     ?>
@@ -53,30 +64,32 @@ if (!isset($school_profile)) {
     <div class="d-block d-lg-none" style="height: 70px;"></div>
 
     <!-- Bottom Navbar (Mobile Only) -->
+    <?php
+    $bottom_quick_links = function_exists('get_bottom_nav_quick_links') && isset($menu_items)
+        ? get_bottom_nav_quick_links($menu_items, 3)
+        : [];
+    ?>
     <nav class="navbar navbar-expand navbar-light bg-white d-block d-lg-none border-top shadow-lg" style="position: fixed; bottom: 0; left: 0; right: 0; height: 60px; padding: 0; z-index: 1030;">
-        <div class="container-fluid h-100">
-            <div class="row w-100 mx-0 h-100">
-                <!-- Hamburger / Menu -->
-                <div class="col-4 px-0 h-100">
-                    <a href="#" data-toggle="sidebar" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
-                        <i class="fas fa-bars fa-lg mb-1"></i>
-                        <span style="font-size: 10px;">Menu</span>
-                    </a>
-                </div>
-                
-                <!-- Home / Dashboard -->
-                <div class="col-4 px-0 h-100">
-                    <a href="dashboard.php" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-primary">
+        <div class="container-fluid h-100 px-0">
+            <div class="row w-100 mx-0 h-100 no-gutters">
+                <div class="col px-0 h-100">
+                    <a href="<?php echo $bottom_home_url; ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-primary">
                         <i class="fas fa-home fa-lg mb-1"></i>
-                        <span style="font-size: 10px;">Home</span>
+                        <span class="d-block text-center" style="font-size: 10px;">Home</span>
                     </a>
                 </div>
-                
-                <!-- User / Profile -->
-                <div class="col-4 px-0 h-100">
+                <?php foreach ($bottom_quick_links as $link): ?>
+                    <div class="col px-0 h-100">
+                        <a href="<?php echo $link['url']; ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
+                            <i class="<?php echo $link['icon']; ?> fa-lg mb-1"></i>
+                            <span class="d-block text-center" style="font-size: 10px;"><?php echo $link['title']; ?></span>
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+                <div class="col px-0 h-100">
                     <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
                         <i class="fas fa-user fa-lg mb-1"></i>
-                        <span style="font-size: 10px;">Akun</span>
+                        <span class="d-block text-center" style="font-size: 10px;">Akun</span>
                     </a>
                 </div>
             </div>

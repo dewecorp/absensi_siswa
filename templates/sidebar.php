@@ -581,6 +581,57 @@ switch ($user_level) {
         $menu_items = [];
         break;
 }
+
+if (!function_exists('get_mobile_menu_groups')) {
+    function get_mobile_menu_groups($menu_items)
+    {
+        $single = [];
+        $grouped = [];
+        foreach ($menu_items as $item) {
+            if ($item['title'] === 'Logout') {
+                continue;
+            }
+            $has_submenu = isset($item['submenu']) && is_array($item['submenu']);
+            if ($has_submenu) {
+                $grouped[] = [
+                    'title' => $item['title'],
+                    'icon' => isset($item['icon']) ? $item['icon'] : '',
+                    'items' => $item['submenu']
+                ];
+            } else {
+                $single[] = [
+                    'title' => $item['title'],
+                    'icon' => isset($item['icon']) ? $item['icon'] : '',
+                    'url' => $item['url']
+                ];
+            }
+        }
+        return ['single' => $single, 'grouped' => $grouped];
+    }
+}
+
+if (!function_exists('get_bottom_nav_quick_links')) {
+    function get_bottom_nav_quick_links($menu_items, $limit = 3)
+    {
+        $links = [];
+        foreach ($menu_items as $item) {
+            if ($item['title'] === 'Logout' || $item['title'] === 'Dashboard') {
+                continue;
+            }
+            $has_submenu = isset($item['submenu']) && is_array($item['submenu']) && count($item['submenu']) > 0;
+            $url = $has_submenu ? $item['submenu'][0]['url'] : $item['url'];
+            $links[] = [
+                'title' => $item['title'],
+                'icon' => isset($item['icon']) ? $item['icon'] : '',
+                'url' => $url
+            ];
+            if (count($links) >= $limit) {
+                break;
+            }
+        }
+        return $links;
+    }
+}
 ?>
 
 <div class="main-sidebar">

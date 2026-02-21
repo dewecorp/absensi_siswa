@@ -79,6 +79,9 @@ if (!isLoggedIn()) {
             .main-content {
                 padding-top: 120px !important;
             }
+            .main-sidebar {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -99,11 +102,7 @@ if (!isLoggedIn()) {
             
             <div class="navbar-bg"></div>
             <nav class="navbar navbar-expand-lg main-navbar">
-                <form class="form-inline mr-auto">
-                    <ul class="navbar-nav mr-3">
-                        <li><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
-                    </ul>
-                </form>
+                <div class="mr-auto d-flex align-items-center"></div>
                 <ul class="navbar-nav mr-auto">
                     <!-- Academic Year and Semester Info -->
                     <li class="nav-item d-flex align-items-center">

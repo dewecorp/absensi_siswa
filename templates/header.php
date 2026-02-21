@@ -89,6 +89,9 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
             .main-content {
                 padding-top: 120px !important;
             }
+            .main-sidebar {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -109,11 +112,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
             
             <div class="navbar-bg"></div>
             <nav class="navbar navbar-expand-lg main-navbar">
-                <form class="form-inline mr-auto">
-                    <ul class="navbar-nav mr-3">
-                        <li class="d-none d-lg-block"><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
-                    </ul>
-                </form>
+                <div class="mr-auto"></div>
                 <ul class="navbar-nav mr-auto">
                     <!-- Academic Year and Semester Info -->
                     <li class="nav-item d-none d-lg-flex align-items-center">

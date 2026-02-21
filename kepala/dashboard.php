@@ -511,6 +511,82 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
 
+                    <div class="row d-lg-none">
+                        <div class="col-12 mb-3">
+                            <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mr-3" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem;">
+                                            <?php echo strtoupper(substr($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'K'), 0, 1)); ?>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small mb-1">Hai,</div>
+                                            <div class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Kepala Madrasah')); ?></div>
+                                            <div class="text-muted small">Selamat datang di Sistem Informasi Madrasah</div>
+                                        </div>
+                                    </div>
+                                    <?php
+                                    $hero_image = !empty($school_profile['dashboard_hero_image'])
+                                        ? '../assets/img/' . $school_profile['dashboard_hero_image']
+                                        : '../assets/img/unsplash/eberhard-grossgasteiger-1207565-unsplash.jpg';
+                                    ?>
+                                    <div class="rounded-lg overflow-hidden">
+                                        <img src="<?php echo $hero_image; ?>" alt="Hero" class="img-fluid" style="width: 100%; height: 170px; object-fit: cover;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mb-4">
+                            <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                                <div class="card-body pb-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0 font-weight-bold">Menu Utama</h6>
+                                        <span class="badge badge-success badge-pill">Semua Fitur</span>
+                                    </div>
+                                    <?php
+                                    $mobile_menu_groups = function_exists('get_mobile_menu_groups') ? get_mobile_menu_groups($menu_items) : ['single' => [], 'grouped' => []];
+                                    $single_items = $mobile_menu_groups['single'];
+                                    $grouped_items = $mobile_menu_groups['grouped'];
+                                    ?>
+                                    <?php if (!empty($single_items) || !empty($grouped_items)): ?>
+                                        <?php if (!empty($single_items)): ?>
+                                            <div class="row">
+                                                <?php foreach ($single_items as $item): ?>
+                                                    <div class="col-3 mb-3">
+                                                        <a href="<?php echo $item['url']; ?>" class="text-decoration-none text-center d-block">
+                                                            <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
+                                                                <i class="<?php echo $item['icon']; ?> text-primary" style="font-size: 1.4rem;"></i>
+                                                            </div>
+                                                            <div class="small text-dark" style="font-size: 0.75rem;"><?php echo $item['title']; ?></div>
+                                                        </a>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php foreach ($grouped_items as $group): ?>
+                                            <div class="mt-3">
+                                                <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
+                                                <div class="row">
+                                                    <?php foreach ($group['items'] as $subitem): ?>
+                                                        <div class="col-3 mb-3">
+                                                            <a href="<?php echo $subitem['url']; ?>" class="text-decoration-none text-center d-block">
+                                                                <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
+                                                                    <i class="<?php echo $group['icon']; ?> text-primary" style="font-size: 1.4rem;"></i>
+                                                                </div>
+                                                                <div class="small text-dark" style="font-size: 0.75rem;"><?php echo $subitem['title']; ?></div>
+                                                            </a>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">

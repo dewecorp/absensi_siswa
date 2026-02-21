@@ -79,8 +79,17 @@ if (session_status() == PHP_SESSION_NONE) {
     session_name($session_name);
     session_set_cookie_params(0, '/'); // Ensure cookies are available globally
     session_start();
+
+    // Jika sesi yang dipilih tidak punya user, coba fallback ke LAST_ACTIVE_SESSION
+    if (!isset($_SESSION['user_id']) && isset($_COOKIE['LAST_ACTIVE_SESSION']) && $_COOKIE['LAST_ACTIVE_SESSION'] !== $session_name) {
+        session_write_close();
+        $fallback_session = $_COOKIE['LAST_ACTIVE_SESSION'];
+        session_name($fallback_session);
+        session_start();
+        $session_name = $fallback_session;
+    }
     
-    // Update sticky session if logged in
+    // Update sticky session jika sudah login
     if (isset($_SESSION['user_id'])) {
         setcookie('LAST_ACTIVE_SESSION', $session_name, time() + 86400 * 30, '/');
     }
