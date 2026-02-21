@@ -536,9 +536,9 @@ include '../templates/sidebar.php';
                                             <?php echo strtoupper(substr($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'A'), 0, 1)); ?>
                                         </div>
                                         <div>
-                                            <div class="text-muted small mb-1">Hai,</div>
+                                            <div class="text-dark mb-1" style="font-size: 0.95rem;">Hai,</div>
                                             <div class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Admin')); ?></div>
-                                            <div class="text-muted small">Selamat datang di Sistem Informasi Madrasah</div>
+                                            <div class="text-dark" style="font-size: 0.95rem;">Selamat datang di Sistem Informasi Madrasah</div>
                                         </div>
                                     </div>
                                     <?php

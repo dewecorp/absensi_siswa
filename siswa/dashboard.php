@@ -144,16 +144,16 @@ include '../templates/sidebar.php';
             <div class="col-12 mb-3">
                 <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
                     <div class="card-body p-3">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mr-3" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem;">
-                                <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mr-3" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem;">
+                                    <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                                </div>
+                                <div>
+                                    <div class="text-dark mb-1" style="font-size: 0.95rem;">Hai,</div>
+                                    <div class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($student['nama_siswa']); ?></div>
+                                    <div class="text-dark" style="font-size: 0.95rem;">Selamat datang di Sistem Informasi Madrasah</div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="text-muted small mb-1">Hai,</div>
-                                <div class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($student['nama_siswa']); ?></div>
-                                <div class="text-muted small">Selamat datang di Sistem Informasi Madrasah</div>
-                            </div>
-                        </div>
                         <?php
                         $hero_image = !empty($school_profile['dashboard_hero_image'])
                             ? '../assets/img/' . $school_profile['dashboard_hero_image']

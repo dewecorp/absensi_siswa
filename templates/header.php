@@ -94,16 +94,29 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
             word-break: normal;
         }
         .bottom-nav-label {
-            font-size: 9px !important;
-            line-height: 1.2 !important;
+            font-size: 11px !important;
+            line-height: 1.3 !important;
             text-align: center;
             display: block;
             margin-top: 0;
-            max-width: 76px;
+            max-width: 84px;
             margin-left: auto;
             margin-right: auto;
             white-space: normal;
             word-break: normal;
+        }
+        #table-siswa_wrapper {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        #table-siswa_wrapper .row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+        #table-siswa_wrapper .col-sm-12,
+        #table-siswa_wrapper .col-md-6 {
+            padding-left: 0;
+            padding-right: 0;
         }
         @media (max-width: 991.98px) {
             .main-navbar, .navbar-bg {

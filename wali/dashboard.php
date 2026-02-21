@@ -451,8 +451,8 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
 
-                    <!-- Profile Box (Mobile) -->
-                    <div class="row d-lg-none">
+                    <!-- Profile Box -->
+                    <div class="row">
                         <div class="col-12 mb-4">
                             <div class="hero text-white hero-bg-image hero-bg-parallax" style="background-image: url('<?php echo $hero_bg; ?>'); background-position: center; background-size: cover; position: relative;">
                                 <div class="hero-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);"></div>
@@ -461,7 +461,9 @@ include '../templates/sidebar.php';
                                         <div class="col-md-3 text-center position-relative">
                                             <div class="d-inline-block position-relative my-3">
                                                 <?php 
+                                                // Wrapper to ensure image style
                                                 $avatar_img = getTeacherAvatarImage($teacher, 120);
+                                                // Add border and shadow to image
                                                 $avatar_img = str_replace('class=\'rounded-circle\'', 'class=\'rounded-circle shadow-lg border border-white\' style=\'border-width: 3px !important;\'', $avatar_img);
                                                 echo $avatar_img; 
                                                 ?>
@@ -500,6 +502,75 @@ include '../templates/sidebar.php';
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Box for Teacher -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Absensi Harian & Jurnal Mengajar</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-light alert-has-icon">
+                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
+                                        <div class="alert-body">
+                                            <div class="alert-title">Penting</div>
+                                            Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda, <b>Absensi Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
+                                        </div>
+                                    </div>
+
+                                    <?php
+                                    // Check current attendance status
+                                    $today_attendance = null;
+                                    if (isset($teacher['id_guru'])) {
+                                        $stmt_check = $pdo->prepare("SELECT * FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = CURDATE()");
+                                        $stmt_check->execute([$teacher['id_guru']]);
+                                        $today_attendance = $stmt_check->fetch(PDO::FETCH_ASSOC);
+                                    }
+                                    ?>
+
+                                    <form method="POST" action="" id="attendanceForm">
+                                        <div class="form-group">
+                                            <label class="d-block font-weight-bold">Status Kehadiran Hari Ini (<?php echo date('d-m-Y'); ?>)</label>
+                                            <div class="selectgroup selectgroup-pills">
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'hadir') ? 'checked' : ''; ?> required>
+                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-check"></i> Hadir</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'sakit') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-procedures"></i> Sakit</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && in_array($today_attendance['status'], ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
+                                            <label>Keterangan</label>
+                                            <textarea name="attendance_note" class="form-control" placeholder="Masukkan keterangan..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <div class="row">
+                                                <div class="col-12 col-md-4 mb-2">
+                                                    <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block btn-icon icon-left"><i class="fas fa-save"></i> Simpan Absensi</button>
+                                                </div>
+                                                <div class="col-12 col-md-4 mb-2">
+                                                    <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
+                                                </div>
+                                                <div class="col-12 col-md-4 mb-2">
+                                                    <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -552,62 +623,6 @@ include '../templates/sidebar.php';
                                             </div>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Profile Box (Desktop) -->
-                    <div class="row d-none d-lg-block">
-                        <div class="col-12 mb-4">
-                            <div class="hero text-white hero-bg-image hero-bg-parallax" style="background-image: url('<?php echo $hero_bg; ?>'); background-position: center; background-size: cover; position: relative;">
-                                <div class="hero-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);"></div>
-                                <div class="hero-inner" style="position: relative; z-index: 1;">
-                                    <div class="row align-items-center">
-                                        <div class="col-md-3 text-center position-relative">
-                                            <div class="d-inline-block position-relative my-3">
-                                                <?php 
-                                                // Wrapper to ensure image style
-                                                $avatar_img = getTeacherAvatarImage($teacher, 120);
-                                                // Add border and shadow to image
-                                                $avatar_img = str_replace('class=\'rounded-circle\'', 'class=\'rounded-circle shadow-lg border border-white\' style=\'border-width: 3px !important;\'', $avatar_img);
-                                                echo $avatar_img; 
-                                                ?>
-                                                <div class="camera-icon-overlay" onclick="document.getElementById('foto_upload').click()">
-                                                    <i class="fas fa-camera"></i>
-                                                </div>
-                                                <input type="file" id="foto_upload" name="foto" style="display: none;" accept="image/*">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <h2>Selamat Datang, <?php echo htmlspecialchars($teacher_name); ?></h2>
-                                            <p class="lead">Anda login sebagai Wali Kelas <b><?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '-'; ?></b>.</p>
-                                            
-                                            <div class="mt-4">
-                                                <div class="row">
-                                                    <div class="col-auto">
-                                                        <div class="font-weight-bold text-white-50">NUPTK</div>
-                                                        <div><?php echo !empty($teacher['nuptk']) ? htmlspecialchars($teacher['nuptk']) : '-'; ?></div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="font-weight-bold text-white-50">Tempat, Tanggal Lahir</div>
-                                                        <div>
-                                                            <?php 
-                                                            $ttl = [];
-                                                            if (!empty($teacher['tempat_lahir'])) $ttl[] = $teacher['tempat_lahir'];
-                                                            if (!empty($teacher['tanggal_lahir'])) $ttl[] = date('d-m-Y', strtotime($teacher['tanggal_lahir']));
-                                                            echo !empty($ttl) ? implode(', ', $ttl) : '-';
-                                                            ?>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="font-weight-bold text-white-50">Status</div>
-                                                        <div><?php echo !empty($teacher['status_kepegawaian']) ? htmlspecialchars($teacher['status_kepegawaian']) : 'Aktif'; ?></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -804,104 +819,6 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                     </div>
-
-                    <!-- Attendance Box for Teacher -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h4>Absensi Harian & Jurnal Mengajar</h4>
-                                </div>
-                                <div class="card-body">
-                                    <div class="alert alert-light alert-has-icon">
-                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
-                                        <div class="alert-body">
-                                            <div class="alert-title">Penting</div>
-                                            Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda, <b>Absensi Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
-                                        </div>
-                                    </div>
-
-                                    <?php
-                                    // Check current attendance status
-                                    $today_attendance = null;
-                                    if (isset($teacher['id_guru'])) {
-                                        $stmt_check = $pdo->prepare("SELECT * FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = CURDATE()");
-                                        $stmt_check->execute([$teacher['id_guru']]);
-                                        $today_attendance = $stmt_check->fetch(PDO::FETCH_ASSOC);
-                                    }
-                                    ?>
-
-                                    <form method="POST" action="" id="attendanceForm">
-                                        <div class="form-group">
-                                            <label class="d-block font-weight-bold">Status Kehadiran Hari Ini (<?php echo date('d-m-Y'); ?>)</label>
-                                            <div class="selectgroup selectgroup-pills">
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'hadir') ? 'checked' : ''; ?> required>
-                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-check"></i> Hadir</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-procedures"></i> Sakit</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-paper-plane"></i> Izin</span>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && in_array($today_attendance['status'], ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
-                                            <label>Keterangan</label>
-                                            <textarea name="attendance_note" class="form-control" placeholder="Masukkan keterangan..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
-                                        </div>
-
-                                        <div class="form-group">
-                                            <div class="row">
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block btn-icon icon-left"><i class="fas fa-save"></i> Simpan Absensi</button>
-                                                </div>
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
-                                                </div>
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
-                        const keteranganBox = document.getElementById('keterangan_box');
-                        const keteranganTextarea = keteranganBox.querySelector('textarea');
-                        
-                        function updateKeteranganBox() {
-                            const selectedRadio = document.querySelector('input[name="attendance_status"]:checked');
-                            if (selectedRadio) {
-                                const status = selectedRadio.value;
-                                if (status === 'izin' || status === 'sakit') {
-                                    keteranganBox.style.display = 'block';
-                                    keteranganTextarea.required = (status === 'izin');
-                                } else {
-                                    keteranganBox.style.display = 'none';
-                                    keteranganTextarea.required = false;
-                                }
-                            }
-                        }
-
-                        // Run on load to set initial state
-                        updateKeteranganBox();
-                        
-                        radioButtons.forEach(radio => {
-                            radio.addEventListener('change', updateKeteranganBox);
-                        });
-                    });
-                    </script>
                     
                     <div class="row">
                         <div class="col-12">
@@ -929,61 +846,75 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
                     
-                    <!-- Student List Section -->
+                    <?php
+                    $siswa_list = [];
+                    if ($wali_kelas) {
+                        $siswa_stmt = $pdo->prepare("SELECT s.*, a.keterangan as attendance_status FROM tb_siswa s LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = CURDATE() WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
+                        $siswa_stmt->execute([$wali_kelas['id_kelas']]);
+                        $siswa_list = $siswa_stmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                    ?>
                     <div class="row">
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Data Siswa Kelas <?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas'] ?? 'Tidak Ada Kelas') : 'Tidak Ada Kelas'; ?></h4>
+                                    <h4>Status Kehadiran Siswa Hari Ini<?php echo $wali_kelas ? ' - Kelas ' . htmlspecialchars($wali_kelas['nama_kelas'] ?? '') : ''; ?></h4>
                                 </div>
                                 <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped" id="table-siswa">
+                                    <div class="table-responsive mt-3">
+                                        <table class="table table-striped table-bordered">
                                             <thead>
                                                 <tr>
                                                     <th>No</th>
                                                     <th>Nama Siswa</th>
                                                     <th>NISN</th>
-                                                    <th>Jenis Kelamin</th>
-                                                    <th>Status Hari Ini</th>
+                                                    <th>Status Kehadiran</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php
-                                                if ($wali_kelas) {
-                                                    $siswa_stmt = $pdo->prepare("SELECT s.*, a.keterangan as attendance_status FROM tb_siswa s LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = CURDATE() WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
-                                                    $siswa_stmt->execute([$wali_kelas['id_kelas']]);
-                                                    $siswa_list = $siswa_stmt->fetchAll(PDO::FETCH_ASSOC);
-                                                    
-                                                    $no = 1;
-                                                    foreach ($siswa_list as $siswa):
-                                                ?>
-                                                <tr>
-                                                    <td><?php echo $no++; ?></td>
-                                                    <td><?php echo htmlspecialchars($siswa['nama_siswa']); ?></td>
-                                                    <td><?php echo htmlspecialchars($siswa['nisn']); ?></td>
-                                                    <td><?php echo $siswa['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($siswa['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
-                                                    <td>
-                                                        <div class="badge badge-<?php 
-                                                            switch(strtolower($siswa['attendance_status'] ?? 'Belum Absen')) {
-                                                                case 'hadir': echo 'success'; break;
-                                                                case 'sakit': echo 'warning'; break;
-                                                                case 'izin': echo 'info'; break;
-                                                                case 'alpa': echo 'danger'; break;
-                                                                case 'berhalangan': echo 'danger'; break;
-                                                                default: echo 'secondary'; break;
-                                                            }
-                                                        ?>"><?php echo htmlspecialchars($siswa['attendance_status'] ?? 'Belum Absen'); ?></div>
-                                                    </td>
-                                                </tr>
-                                                <?php 
-                                                    endforeach;
-                                                } else {
-                                                ?>
-                                                <tr>
-                                                    <td colspan="5" class="text-center">Tidak ada kelas yang diajar</td>
-                                                </tr>
-                                                <?php } ?>
+                                                <?php if ($wali_kelas && !empty($siswa_list)): ?>
+                                                    <?php foreach ($siswa_list as $idx => $siswa): ?>
+                                                        <tr>
+                                                            <td><?php echo $idx + 1; ?></td>
+                                                            <td><?php echo htmlspecialchars($siswa['nama_siswa']); ?></td>
+                                                            <td><?php echo htmlspecialchars($siswa['nisn']); ?></td>
+                                                            <td>
+                                                                <?php
+                                                                $status = $siswa['attendance_status'] ?? 'Belum Absen';
+                                                                $badge_class = '';
+                                                                switch (strtolower($status)) {
+                                                                    case 'hadir':
+                                                                        $badge_class = 'badge-success';
+                                                                        break;
+                                                                    case 'sakit':
+                                                                        $badge_class = 'badge-info';
+                                                                        break;
+                                                                    case 'izin':
+                                                                        $badge_class = 'badge-warning';
+                                                                        break;
+                                                                    case 'alpa':
+                                                                    case 'berhalangan':
+                                                                        $badge_class = 'badge-danger';
+                                                                        break;
+                                                                    default:
+                                                                        $badge_class = 'badge-secondary';
+                                                                }
+                                                                ?>
+                                                                <span class="badge <?php echo $badge_class; ?>">
+                                                                    <?php echo htmlspecialchars($status); ?>
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php elseif ($wali_kelas): ?>
+                                                    <tr>
+                                                        <td colspan="4" class="text-center">Tidak ada siswa dalam kelas ini</td>
+                                                    </tr>
+                                                <?php else: ?>
+                                                    <tr>
+                                                        <td colspan="4" class="text-center">Tidak ada kelas yang diajar</td>
+                                                    </tr>
+                                                <?php endif; ?>
                                             </tbody>
                                         </table>
                                     </div>
@@ -994,40 +925,6 @@ include '../templates/sidebar.php';
                 </section>
             </div>
             
-    <?php 
-    // Add DataTables initialization for table-siswa
-    if (!isset($js_page)) {
-        $js_page = [];
-    }
-    $js_page[] = "
-    $(document).ready(function() {
-        if ($.fn.DataTable && $('#table-siswa').length > 0) {
-            $('#table-siswa').DataTable({
-                \"paging\": true,
-                \"lengthChange\": true,
-                \"pageLength\": 10,
-                \"lengthMenu\": [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-                \"dom\": 'lfrtip',
-                \"info\": true,
-                \"language\": {
-                    \"lengthMenu\": \"Tampilkan _MENU_ entri\",
-                    \"zeroRecords\": \"Tidak ada data yang ditemukan\",
-                    \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
-                    \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
-                    \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
-                    \"search\": \"Cari:\",
-                    \"paginate\": {
-                        \"first\": \"Pertama\",
-                        \"last\": \"Terakhir\",
-                        \"next\": \"Selanjutnya\",
-                        \"previous\": \"Sebelumnya\"
-                    }
-                }
-            });
-        }
-    });
-    ";
-    ?>
     <!-- Modal QR Code -->
     <div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
