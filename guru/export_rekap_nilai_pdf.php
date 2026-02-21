@@ -241,7 +241,7 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
                 $qrContent = 'Validasi Tanda Tangan Digital: ' . $nama_guru . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
                 $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContent);
                 echo '<img src="' . $qrUrl . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
-                echo '<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>';
+                echo '<p style="font-size: 10px; margin-top: 0;"></p>';
             } else {
                 echo '<br><br><br><br><br>';
             }
@@ -256,7 +256,7 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
                 $qrContentHead = 'Validasi Tanda Tangan Digital: ' . $madrasah_head_name . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
                 $qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContentHead);
                 echo '<img src="' . $qrUrlHead . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
-                echo '<p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>';
+                echo '<p style="font-size: 10px; margin-top: 0;"></p>';
             } else {
                 echo '<br><br><br><br><br>';
             }

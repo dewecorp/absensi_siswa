@@ -309,7 +309,7 @@ function exportToPDF() {
     if (waliKelasName) {
         var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + waliKelasName + ' - ' + schoolName);
         printWindow.document.write('<img src="' + qr + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px;">(Ditandatangani secara digital)</p>');
+        printWindow.document.write('<p style="font-size: 10px;"></p>');
     } else {
         printWindow.document.write('<br><br><br><br><br>');
     }
@@ -322,7 +322,7 @@ function exportToPDF() {
     if (madrasahHeadName) {
         var qrHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName);
         printWindow.document.write('<img src="' + qrHead + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px;">(Ditandatangani secara digital)</p>');
+        printWindow.document.write('<p style="font-size: 10px;"></p>');
     } else {
         printWindow.document.write('<br><br><br><br><br>');
     }

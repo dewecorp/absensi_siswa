@@ -32,7 +32,6 @@ $kepala_madrasah = $school_profile['kepala_madrasah'] ?? '-';
 $qr_content = 'Validasi Tanda Tangan Digital: ' . $kepala_madrasah . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
 $qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_content);
 $qr_img = '<img src="' . $qr_url . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
-$qr_img .= '<p style="font-size: 10px; margin-top: 0; text-align: center;">(Ditandatangani secara digital)</p>';
 
 $logo_file = $school_profile['logo'] ?? '';
 $logo_path = '';
@@ -377,7 +376,6 @@ if ($kelas_id) {
     $qrContentWali = 'Validasi Tanda Tangan Digital: ' . $wali_kelas . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
     $qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContentWali);
     $qrImgWali = '<img src="' . $qrUrlWali . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
-    $qrImgWali .= '<p style="font-size: 10px; margin-top: 0; text-align: center;">(Ditandatangani secara digital)</p>';
 
     $html .= '
             <td width="50%">

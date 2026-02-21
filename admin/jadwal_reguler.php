@@ -15,6 +15,16 @@ if (!isAuthorized($allowed_roles)) {
 
 $user_role = getUserLevel();
 $is_editable = ($user_role === 'admin');
+$export_session_type = 'admin';
+if ($user_role === 'wali') {
+    $export_session_type = 'wali';
+} elseif ($user_role === 'guru') {
+    $export_session_type = 'guru';
+} elseif ($user_role === 'tata_usaha') {
+    $export_session_type = 'tata_usaha';
+} elseif ($user_role === 'kepala_madrasah') {
+    $export_session_type = 'kepala';
+}
 $guru_id_session = null;
 $wali_kelas_id = null;
 
@@ -276,7 +286,7 @@ require_once '../templates/sidebar.php';
                         <!-- Export Buttons -->
                         <div>
                             <form method="GET" action="../config/export_jadwal_pdf.php" target="_blank" class="d-inline">
-                                <input type="hidden" name="session_type" value="admin">
+                                <input type="hidden" name="session_type" value="<?= $export_session_type ?>">
                                 <input type="hidden" name="kelas_id" value="<?= $selected_kelas_id ?? '' ?>">
                                 <input type="hidden" name="jenis" value="Reguler">
                                 <button type="submit" class="btn btn-danger btn-icon icon-left">
@@ -285,7 +295,7 @@ require_once '../templates/sidebar.php';
                             </form>
                             
                             <form method="POST" action="../config/export_jadwal_excel.php" target="_blank" class="d-inline ml-2">
-                                <input type="hidden" name="session_type" value="admin">
+                                <input type="hidden" name="session_type" value="<?= $export_session_type ?>">
                                 <input type="hidden" name="kelas_id" value="<?= $selected_kelas_id ?? '' ?>">
                                 <input type="hidden" name="jenis" value="Reguler">
                                 <button type="submit" class="btn btn-success btn-icon icon-left">

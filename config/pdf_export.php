@@ -190,7 +190,7 @@ if ($kepala_madrasah) {
         <p>' . date('d F Y') . '</p>
         <p>Kepala Madrasah,</p>
         <img src="' . $qr_url . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px 0; display: inline-block;">
-        <p style="font-size: 10px; margin-top: 0;">(Ditandatangani secara digital)</p>
+        <p style="font-size: 10px; margin-top: 0;"></p>
         <p><strong>' . htmlspecialchars($kepala_madrasah) . '</strong></p>
     </div>';
 } else {
