@@ -73,22 +73,22 @@ if (!isLoggedIn()) {
             border-bottom: 1px solid #f0f0f0;
         }
         .mobile-menu-label {
-            font-size: 0.65rem;
-            line-height: 1.15;
+            font-size: 0.78rem;
+            line-height: 1.2;
             text-align: center;
             display: block;
-            max-width: 70px;
+            max-width: 78px;
             margin: 2px auto 0;
             white-space: normal;
             word-break: normal;
         }
         .bottom-nav-label {
-            font-size: 7px !important;
-            line-height: 1.1 !important;
+            font-size: 9px !important;
+            line-height: 1.2 !important;
             text-align: center;
             display: block;
             margin-top: 0;
-            max-width: 68px;
+            max-width: 76px;
             margin-left: auto;
             margin-right: auto;
             white-space: normal;

@@ -451,6 +451,61 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
 
+                    <!-- Profile Box (Mobile) -->
+                    <div class="row d-lg-none">
+                        <div class="col-12 mb-4">
+                            <div class="hero text-white hero-bg-image hero-bg-parallax" style="background-image: url('<?php echo $hero_bg; ?>'); background-position: center; background-size: cover; position: relative;">
+                                <div class="hero-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);"></div>
+                                <div class="hero-inner" style="position: relative; z-index: 1;">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3 text-center position-relative">
+                                            <div class="d-inline-block position-relative my-3">
+                                                <?php 
+                                                $avatar_img = getTeacherAvatarImage($teacher, 120);
+                                                $avatar_img = str_replace('class=\'rounded-circle\'', 'class=\'rounded-circle shadow-lg border border-white\' style=\'border-width: 3px !important;\'', $avatar_img);
+                                                echo $avatar_img; 
+                                                ?>
+                                                <div class="camera-icon-overlay" onclick="document.getElementById('foto_upload').click()">
+                                                    <i class="fas fa-camera"></i>
+                                                </div>
+                                                <input type="file" id="foto_upload" name="foto" style="display: none;" accept="image/*">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-9">
+                                            <h2>Selamat Datang, <?php echo htmlspecialchars($teacher_name); ?></h2>
+                                            <p class="lead">Anda login sebagai Wali Kelas <b><?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '-'; ?></b>.</p>
+                                            
+                                            <div class="mt-4">
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <div class="font-weight-bold text-white-50">NUPTK</div>
+                                                        <div><?php echo !empty($teacher['nuptk']) ? htmlspecialchars($teacher['nuptk']) : '-'; ?></div>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <div class="font-weight-bold text-white-50">Tempat, Tanggal Lahir</div>
+                                                        <div>
+                                                            <?php 
+                                                            $ttl = [];
+                                                            if (!empty($teacher['tempat_lahir'])) $ttl[] = $teacher['tempat_lahir'];
+                                                            if (!empty($teacher['tanggal_lahir'])) $ttl[] = date('d-m-Y', strtotime($teacher['tanggal_lahir']));
+                                                            echo !empty($ttl) ? implode(', ', $ttl) : '-';
+                                                            ?>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <div class="font-weight-bold text-white-50">Status</div>
+                                                        <div><?php echo !empty($teacher['status_kepegawaian']) ? htmlspecialchars($teacher['status_kepegawaian']) : 'Aktif'; ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Menu -->
                     <div class="row d-lg-none">
                         <div class="col-12 mb-4">
                             <div class="card border-0 shadow-sm" style="border-radius: 16px;">
@@ -502,8 +557,8 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
 
-                    <!-- Profile Box -->
-                    <div class="row">
+                    <!-- Profile Box (Desktop) -->
+                    <div class="row d-none d-lg-block">
                         <div class="col-12 mb-4">
                             <div class="hero text-white hero-bg-image hero-bg-parallax" style="background-image: url('<?php echo $hero_bg; ?>'); background-position: center; background-size: cover; position: relative;">
                                 <div class="hero-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);"></div>
