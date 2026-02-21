@@ -558,7 +558,7 @@ include '../templates/sidebar.php';
                                                             <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
                                                                 <i class="<?php echo $item['icon']; ?> text-primary" style="font-size: 1.4rem;"></i>
                                                             </div>
-                                                            <div class="small text-dark" style="font-size: 0.75rem;"><?php echo $item['title']; ?></div>
+                                                            <div class="mobile-menu-label small text-dark"><?php echo $item['title']; ?></div>
                                                         </a>
                                                     </div>
                                                 <?php endforeach; ?>
@@ -574,7 +574,7 @@ include '../templates/sidebar.php';
                                                                 <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
                                                                     <i class="<?php echo $group['icon']; ?> text-primary" style="font-size: 1.4rem;"></i>
                                                                 </div>
-                                                                <div class="small text-dark" style="font-size: 0.75rem;"><?php echo $subitem['title']; ?></div>
+                                                                <div class="mobile-menu-label small text-dark"><?php echo $subitem['title']; ?></div>
                                                             </a>
                                                         </div>
                                                     <?php endforeach; ?>

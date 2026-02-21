@@ -67,21 +67,21 @@
                         <div class="col px-0 h-100">
                             <a href="<?php echo $bottom_home_url; ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-primary">
                                 <i class="fas fa-home fa-lg mb-1"></i>
-                                <span class="d-block text-center" style="font-size: 10px;">Home</span>
+                                <span class="bottom-nav-label">Home</span>
                             </a>
                         </div>
                         <?php foreach ($bottom_quick_links as $link): ?>
                             <div class="col px-0 h-100">
                                 <a href="<?php echo $link['url']; ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
                                     <i class="<?php echo $link['icon']; ?> fa-lg mb-1"></i>
-                                    <span class="d-block text-center" style="font-size: 10px;"><?php echo $link['title']; ?></span>
+                                    <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
                                 </a>
                             </div>
                         <?php endforeach; ?>
                         <div class="col px-0 h-100">
                             <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
                                 <i class="fas fa-user fa-lg mb-1"></i>
-                                <span class="d-block text-center" style="font-size: 10px;">Akun</span>
+                                <span class="bottom-nav-label">Akun</span>
                             </a>
                         </div>
                     </div>

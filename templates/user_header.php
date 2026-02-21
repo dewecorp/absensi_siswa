@@ -72,6 +72,28 @@ if (!isLoggedIn()) {
             align-items: center;
             border-bottom: 1px solid #f0f0f0;
         }
+        .mobile-menu-label {
+            font-size: 0.65rem;
+            line-height: 1.15;
+            text-align: center;
+            display: block;
+            max-width: 70px;
+            margin: 2px auto 0;
+            white-space: normal;
+            word-break: normal;
+        }
+        .bottom-nav-label {
+            font-size: 7px !important;
+            line-height: 1.1 !important;
+            text-align: center;
+            display: block;
+            margin-top: 0;
+            max-width: 68px;
+            margin-left: auto;
+            margin-right: auto;
+            white-space: normal;
+            word-break: normal;
+        }
         @media (max-width: 991.98px) {
             .main-navbar, .navbar-bg {
                 display: none !important;
