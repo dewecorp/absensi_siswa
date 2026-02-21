@@ -77,7 +77,8 @@ if (!isLoggedIn()) {
             line-height: 1.2;
             text-align: center;
             display: block;
-            max-width: 78px;
+            width: 56px;
+            max-width: 56px;
             margin: 2px auto 0;
             white-space: normal;
             word-break: normal;
