@@ -12,6 +12,19 @@ $can_edit = in_array($user_level, ['admin', 'tata_usaha']);
 
 $page_title = 'Kalender Pendidikan';
 
+$dashboard_url = '../admin/dashboard.php';
+if ($user_level === 'tata_usaha') {
+    $dashboard_url = '../tata_usaha/dashboard.php';
+} elseif ($user_level === 'kepala_madrasah') {
+    $dashboard_url = '../kepala/dashboard.php';
+} elseif ($user_level === 'guru') {
+    $dashboard_url = '../guru/dashboard.php';
+} elseif ($user_level === 'wali') {
+    $dashboard_url = '../wali/dashboard.php';
+} elseif ($user_level === 'siswa') {
+    $dashboard_url = '../siswa/dashboard.php';
+}
+
 // Get Active Semester & Year
 $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran_aktif = $school_profile['tahun_ajaran'];
@@ -102,8 +115,14 @@ require_once '../templates/sidebar.php';
         <div class="section-header">
             <h1><?= $page_title ?></h1>
             <div class="section-header-breadcrumb">
-                <div class="breadcrumb-item active"><a href="#">Master Data</a></div>
-                <div class="breadcrumb-item">Kalender Pendidikan</div>
+                <?php if (in_array($user_level, ['admin', 'tata_usaha'])): ?>
+                    <div class="breadcrumb-item active"><a href="<?= $dashboard_url ?>">Dashboard</a></div>
+                    <div class="breadcrumb-item"><a href="#">Master Data</a></div>
+                    <div class="breadcrumb-item">Kalender Pendidikan</div>
+                <?php else: ?>
+                    <div class="breadcrumb-item active"><a href="<?= $dashboard_url ?>">Dashboard</a></div>
+                    <div class="breadcrumb-item">Kalender Pendidikan</div>
+                <?php endif; ?>
             </div>
         </div>
 

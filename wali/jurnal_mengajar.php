@@ -501,6 +501,10 @@ include '../templates/header.php';
     <section class="section">
         <div class="section-header">
             <h1>Jurnal Mengajar</h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
+                <div class="breadcrumb-item">Jurnal Mengajar</div>
+            </div>
         </div>
 
         <?php if (isset($message)): ?>

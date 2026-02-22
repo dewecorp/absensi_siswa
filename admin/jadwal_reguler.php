@@ -25,6 +25,17 @@ if ($user_role === 'wali') {
 } elseif ($user_role === 'kepala_madrasah') {
     $export_session_type = 'kepala';
 }
+
+$dashboard_url = '../admin/dashboard.php';
+if ($user_role === 'guru') {
+    $dashboard_url = '../guru/dashboard.php';
+} elseif ($user_role === 'wali') {
+    $dashboard_url = '../wali/dashboard.php';
+} elseif ($user_role === 'tata_usaha') {
+    $dashboard_url = '../tata_usaha/dashboard.php';
+} elseif ($user_role === 'kepala_madrasah') {
+    $dashboard_url = '../kepala/dashboard.php';
+}
 $guru_id_session = null;
 $wali_kelas_id = null;
 
@@ -263,6 +274,11 @@ require_once '../templates/sidebar.php';
     <section class="section">
         <div class="section-header">
             <h1>Jadwal Pelajaran Reguler</h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item active"><a href="<?= $dashboard_url ?>">Dashboard</a></div>
+                <div class="breadcrumb-item"><a href="#">Jadwal Pelajaran</a></div>
+                <div class="breadcrumb-item">Jadwal Reguler</div>
+            </div>
         </div>
 
         <div class="section-body">

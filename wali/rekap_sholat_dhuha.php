@@ -419,6 +419,11 @@ echo "<script>
     <section class="section">
         <div class="section-header">
             <h1>Rekap Sholat Dhuha - Kelas <?php echo htmlspecialchars($wali_kelas['nama_kelas']); ?></h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
+                <div class="breadcrumb-item"><a href="#">Absensi Siswa</a></div>
+                <div class="breadcrumb-item">Rekap Sholat Dhuha</div>
+            </div>
         </div>
 
         <div class="section-body">

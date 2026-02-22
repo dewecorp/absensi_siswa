@@ -680,6 +680,11 @@ function exportSemesterToPDF() {
     <section class="section">
         <div class="section-header">
             <h1>Rekap Sholat Berjamaah</h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
+                <div class="breadcrumb-item"><a href="#">Absensi Siswa</a></div>
+                <div class="breadcrumb-item">Rekap Sholat Berjamaah</div>
+            </div>
         </div>
 
         <div class="section-body">
