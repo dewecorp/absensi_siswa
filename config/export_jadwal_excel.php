@@ -166,7 +166,7 @@ header("Expires: 0");
     <div class="header">
         <h3><?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN ISLAM') ?></h3>
         <h2><?= strtoupper($school_profile['nama_madrasah']) ?></h2>
-        <p>TAHUN PELAJARAN: <?= $school_profile['tahun_ajaran'] ?? '' ?> SEMESTER: <?= $school_profile['semester'] ?? '' ?></p>
+        <p>TAHUN PELAJARAN <?= $school_profile['tahun_ajaran'] ?? '' ?> SEMESTER: <?= $school_profile['semester'] ?? '' ?></p>
         <br>
         <h3><?= $page_title ?></h3>
     </div>

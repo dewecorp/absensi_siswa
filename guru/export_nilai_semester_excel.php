@@ -132,7 +132,7 @@ $sheet->setCellValue('A3', $school_profile['alamat'] ?? '');
 $sheet->setCellValue('A5', $title);
 $sheet->setCellValue('A6', 'KELAS: ' . $class_info['nama_kelas']);
 $sheet->setCellValue('A7', 'MATA PELAJARAN: ' . $mapel_info['nama_mapel']);
-$sheet->setCellValue('A8', 'TAHUN AJARAN: ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
+$sheet->setCellValue('A8', 'TAHUN AJARAN ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
 $sheet->setCellValue('A9', 'GURU: ' . (getGuruName($pdo, $id_guru) ?: '.........................'));
 
 // Style School Header

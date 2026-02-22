@@ -154,7 +154,7 @@ $sheet->setCellValue('A3', $school_profile['alamat'] ?? '');
 $sheet->setCellValue('A5', $title);
 $sheet->setCellValue('A6', 'KELAS: ' . $class_info['nama_kelas']);
 $sheet->setCellValue('A7', 'TIPE: ' . ($selected_tipe == 'nilai_asli' ? 'NILAI ASLI' : 'NILAI JADI'));
-$sheet->setCellValue('A8', 'TAHUN AJARAN: ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
+$sheet->setCellValue('A8', 'TAHUN AJARAN ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
 
 // Style School Header
 $sheet->getStyle('A1')->getFont()->setSize(12);
