@@ -20,16 +20,15 @@ $reportDate = formatDateIndonesia(date('Y-m-d'));
 
 // Ambil data siswa dan kelas untuk mendapatkan nama wali kelas
 $stmt = $pdo->prepare("
-    SELECT s.nama_siswa, s.nis, k.nama_kelas, g.nama_guru as wali_kelas
+    SELECT s.nama_siswa, s.nisn, k.nama_kelas, k.wali_kelas
     FROM tb_siswa s
-    JOIN tb_kelas k ON s.id_kelas = k.id_kelas
-    LEFT JOIN tb_guru g ON k.id_guru = g.id_guru
+    LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
     WHERE s.id_siswa = ?
 ");
 $stmt->execute([$id_siswa]);
 $student_info = $stmt->fetch(PDO::FETCH_ASSOC);
 $nama_siswa = $student_info['nama_siswa'] ?? '';
-$nis_siswa = $student_info['nis'] ?? '';
+$nis_siswa = $student_info['nisn'] ?? '';
 $nama_kelas = $student_info['nama_kelas'] ?? '';
 $waliKelasName = $student_info['wali_kelas'] ?? '';
 
