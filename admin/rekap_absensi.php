@@ -365,7 +365,7 @@ include '../templates/sidebar.php';
                                         <form method="POST" class="row" id="attendanceFilterForm">
                                             <div class="form-group col-md-3">
                                                 <label>Pilih Kelas</label>
-                                                <select name="class_id" class="form-control selectric" id="classSelect" required>
+                                                <select name="class_id" class="form-control selectric" id="classSelect" required onchange="this.form.submit()">
                                                     <option value="">Pilih Kelas...</option>
                                                     <?php foreach ($classes as $class): ?>
                                                         <option value="<?php echo $class['id_kelas']; ?>" <?php echo ($class_id == $class['id_kelas']) ? 'selected' : ''; ?>>
@@ -377,7 +377,7 @@ include '../templates/sidebar.php';
                                             
                                             <div class="form-group col-md-2">
                                                 <label>Jenis Filter</label>
-                                                <select name="filter_type" class="form-control selectric" id="filterType">
+                                                <select name="filter_type" class="form-control selectric" id="filterType" onchange="this.form.submit()">
                                                     <option value="daily" <?php echo ($filter_type == 'daily') ? 'selected' : ''; ?>>Harian</option>
                                                     <option value="monthly" <?php echo ($filter_type == 'monthly') ? 'selected' : ''; ?>>Bulanan</option>
                                                     <option value="semester" <?php echo ($filter_type == 'semester') ? 'selected' : ''; ?>>Per Semester</option>
@@ -388,18 +388,18 @@ include '../templates/sidebar.php';
                                             <div class="form-group col-md-3 daily-filter" style="<?php echo ($filter_type == 'daily') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Tanggal</label>
                                                 <input type="date" name="attendance_date" class="form-control" 
-                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker">
+                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker" onchange="this.form.submit()">
                                             </div>
                                             
                                             <div class="form-group col-md-3 monthly-filter" style="<?php echo ($filter_type == 'monthly') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Bulan</label>
                                                 <input type="month" name="month_picker" class="form-control" 
-                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker">
+                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker" onchange="this.form.submit()">
                                             </div>
                                             
                                             <div class="form-group col-md-3 student-filter" style="<?php echo ($filter_type == 'student') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Siswa</label>
-                                                <select name="student_id" class="form-control selectric" id="studentSelect">
+                                                <select name="student_id" class="form-control selectric" id="studentSelect" onchange="this.form.submit()">
                                                     <option value="">Pilih Siswa...</option>
                                                     <?php 
                                                     if ($class_id > 0) {
@@ -1313,24 +1313,18 @@ $(document).ready(function() {
         }
     }
     
-    // Initialize on page load
     initStudentSelect2();
     
-    // Re-initialize when class changes
     $('#classSelect').on('change', function() {
         console.log('Class select changed, reinitializing student select');
-        // Small delay to allow for DOM updates
         setTimeout(initStudentSelect2, 100);
     });
     
-    // Handle filter type change - show/hide date picker
     $('#filterType').on('change', function() {
         var filterType = $(this).val();
         
-        // Hide all filter inputs
         $('.daily-filter, .monthly-filter, .student-filter').hide();
         
-        // Show appropriate filter input
         if (filterType === 'daily') {
             $('.daily-filter').show();
         } else if (filterType === 'monthly') {
@@ -1339,7 +1333,6 @@ $(document).ready(function() {
             $('.student-filter').show();
         }
     });
-    
     
     // Initialize DataTables for all tables with pagination
     function initDataTables() {
