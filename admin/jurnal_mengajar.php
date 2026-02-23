@@ -53,7 +53,7 @@ $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt_guru = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
 $teachers = $stmt_guru->fetchAll(PDO::FETCH_ASSOC);
 
-// Get teaching hours mapping
+// Get teaching hours mapping (flat by jam_ke, mengikuti konfigurasi jam mengajar aktif)
 $stmt_jam = $pdo->query("SELECT * FROM tb_jam_mengajar");
 $jam_mengajar_rows = $stmt_jam->fetchAll(PDO::FETCH_ASSOC);
 $jam_map = [];

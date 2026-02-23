@@ -229,13 +229,32 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
 }
 
 // Fetch Reference Data
-$jam_mengajar_stmt = $pdo->query("SELECT * FROM tb_jam_mengajar ORDER BY jam_ke ASC");
-$jam_mengajar_list = $jam_mengajar_stmt->fetchAll(PDO::FETCH_ASSOC);
+$jam_reguler_stmt = $pdo->prepare("SELECT * FROM tb_jam_mengajar WHERE jenis = 'Reguler' ORDER BY jam_ke ASC");
+$jam_reguler_stmt->execute();
+$jam_reguler_list = $jam_reguler_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Create mapping for time calculation
-$jam_map = [];
-foreach ($jam_mengajar_list as $jam) {
-    $jam_map[$jam['jam_ke']] = [
+$jam_ramadhan_stmt = $pdo->prepare("SELECT * FROM tb_jam_mengajar WHERE jenis = 'Ramadhan' ORDER BY jam_ke ASC");
+$jam_ramadhan_stmt->execute();
+$jam_ramadhan_list = $jam_ramadhan_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Combined list for frontend dropdown (tetap mengirim struktur lama ke JavaScript)
+$jam_mengajar_list = array_merge($jam_reguler_list, $jam_ramadhan_list);
+
+// Create mapping for time calculation per jenis
+$jam_map = [
+    'Reguler' => [],
+    'Ramadhan' => []
+];
+
+foreach ($jam_reguler_list as $jam) {
+    $jam_map['Reguler'][$jam['jam_ke']] = [
+        'mulai' => date('H:i', strtotime($jam['waktu_mulai'])),
+        'selesai' => date('H:i', strtotime($jam['waktu_selesai']))
+    ];
+}
+
+foreach ($jam_ramadhan_list as $jam) {
+    $jam_map['Ramadhan'][$jam['jam_ke']] = [
         'mulai' => date('H:i', strtotime($jam['waktu_mulai'])),
         'selesai' => date('H:i', strtotime($jam['waktu_selesai']))
     ];
@@ -302,7 +321,8 @@ $js_libs = [
 
 $js_page = [
     "
-    var jamMengajarList = " . json_encode($jam_mengajar_list) . ";
+    var jamRegulerList = " . json_encode($jam_reguler_list) . ";
+    var jamRamadhanList = " . json_encode($jam_ramadhan_list) . ";
     var teacherSchedule = " . json_encode($schedule_map) . ";
     var allMapels = " . json_encode(array_column($mapel_list, 'nama_mapel')) . ";
 
@@ -332,17 +352,17 @@ $js_page = [
         var \$jamSelect = $('select[name=\"jam_ke[]\"]');
         \$jamSelect.empty();
         
-        jamMengajarList.forEach(function(jam) {
-            if (jam.jenis === selectedJenis) {
-                if (['A', 'B', 'C'].includes(jam.jam_ke)) return;
-                
-                var startTime = jam.waktu_mulai.substring(0, 5);
-                var endTime = jam.waktu_selesai.substring(0, 5);
-                var label = jam.jam_ke + ' (' + startTime + ' - ' + endTime + ')';
-                
-                var option = new Option(label, jam.jam_ke, false, false);
-                \$jamSelect.append(option);
-            }
+        var sourceList = selectedJenis === 'Ramadhan' ? jamRamadhanList : jamRegulerList;
+        
+        sourceList.forEach(function(jam) {
+            if (['A', 'B', 'C'].includes(jam.jam_ke)) return;
+            
+            var startTime = jam.waktu_mulai.substring(0, 5);
+            var endTime = jam.waktu_selesai.substring(0, 5);
+            var label = jam.jam_ke + ' (' + startTime + ' - ' + endTime + ')';
+            
+            var option = new Option(label, jam.jam_ke, false, false);
+            \$jamSelect.append(option);
         });
         
         if (selectedValues.length > 0) {
@@ -659,9 +679,10 @@ include '../templates/header.php';
                                             $first_jam = $jam_ke_arr[0];
                                             $last_jam = end($jam_ke_arr);
                                             
+                                            $jenis_jurnal = $journal['jenis'] ?? 'Reguler';
                                             $waktu_str = '';
-                                            if (isset($jam_map[$first_jam]) && isset($jam_map[$last_jam])) {
-                                                $waktu_str = $jam_map[$first_jam]['mulai'] . ' - ' . $jam_map[$last_jam]['selesai'];
+                                            if (isset($jam_map[$jenis_jurnal][$first_jam]) && isset($jam_map[$jenis_jurnal][$last_jam])) {
+                                                $waktu_str = $jam_map[$jenis_jurnal][$first_jam]['mulai'] . ' - ' . $jam_map[$jenis_jurnal][$last_jam]['selesai'];
                                             }
                                             echo htmlspecialchars($waktu_str);
                                             ?>
