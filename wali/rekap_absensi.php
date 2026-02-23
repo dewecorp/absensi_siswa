@@ -327,9 +327,9 @@ include '../templates/user_header.php';
                                                 <?php endif; ?>
                                             </div>
                                             
-                                            <div class="form-group col-md-2">
+                                            <div class="form-group col-md-3">
                                                 <label>Jenis Filter</label>
-                                                <select name="filter_type" class="form-control selectric" id="filterType">
+                                                <select name="filter_type" class="form-control selectric" id="filterType" onchange="this.form.submit()">
                                                     <option value="daily" <?php echo ($filter_type == 'daily') ? 'selected' : ''; ?>>Harian</option>
                                                     <option value="monthly" <?php echo ($filter_type == 'monthly') ? 'selected' : ''; ?>>Bulanan</option>
                                                     <option value="semester" <?php echo ($filter_type == 'semester') ? 'selected' : ''; ?>>Per Semester</option>
@@ -340,18 +340,18 @@ include '../templates/user_header.php';
                                             <div class="form-group col-md-3 daily-filter" style="<?php echo ($filter_type == 'daily') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Tanggal</label>
                                                 <input type="date" name="attendance_date" class="form-control" 
-                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker">
+                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker" onchange="this.form.submit()">
                                             </div>
                                             
                                             <div class="form-group col-md-3 monthly-filter" style="<?php echo ($filter_type == 'monthly') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Bulan</label>
                                                 <input type="month" name="month_picker" class="form-control" 
-                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker">
+                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker" onchange="this.form.submit()">
                                             </div>
                                             
                                             <div class="form-group col-md-3 student-filter" style="<?php echo ($filter_type == 'student') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Siswa</label>
-                                                <select name="student_id" class="form-control selectric" id="studentSelect">
+                                                <select name="student_id" class="form-control selectric" id="studentSelect" onchange="this.form.submit()">
                                                     <option value="">Pilih Siswa...</option>
                                                     <?php 
                                                     if ($class_id > 0) {

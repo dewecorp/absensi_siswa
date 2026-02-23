@@ -288,7 +288,7 @@ include '../templates/user_header.php';
                             <h4>Filter Rekap Absensi</h4>
                         </div>
                         <div class="card-body">
-                            <form method="POST" class="row" id="attendanceFilterForm">
+                                        <form method="POST" class="row" id="attendanceFilterForm">
                                 <div class="form-group col-md-3">
                                     <label>Pilih Kelas</label>
                                     <select name="class_id" class="form-control selectric" id="classSelect" required>
@@ -301,9 +301,9 @@ include '../templates/user_header.php';
                                     </select>
                                 </div>
                                 
-                                <div class="form-group col-md-2">
-                                    <label>Jenis Filter</label>
-                                    <select name="filter_type" class="form-control selectric" id="filterType">
+                                            <div class="form-group col-md-3">
+                                                <label>Jenis Filter</label>
+                                                <select name="filter_type" class="form-control selectric" id="filterType" onchange="this.form.submit()">
                                         <option value="daily" <?php echo ($filter_type == 'daily') ? 'selected' : ''; ?>>Harian</option>
                                         <option value="monthly" <?php echo ($filter_type == 'monthly') ? 'selected' : ''; ?>>Bulanan</option>
                                         <option value="semester" <?php echo ($filter_type == 'semester') ? 'selected' : ''; ?>>Per Semester</option>
@@ -311,21 +311,21 @@ include '../templates/user_header.php';
                                     </select>
                                 </div>
                                 
-                                <div class="form-group col-md-3 daily-filter" style="<?php echo ($filter_type == 'daily') ? '' : 'display:none;'; ?>">
-                                    <label>Pilih Tanggal</label>
-                                    <input type="date" name="attendance_date" class="form-control" 
-                                           value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker">
+                                            <div class="form-group col-md-3 daily-filter" style="<?php echo ($filter_type == 'daily') ? '' : 'display:none;'; ?>">
+                                                <label>Pilih Tanggal</label>
+                                                <input type="date" name="attendance_date" class="form-control" 
+                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker" onchange="this.form.submit()">
                                 </div>
                                 
-                                <div class="form-group col-md-3 monthly-filter" style="<?php echo ($filter_type == 'monthly') ? '' : 'display:none;'; ?>">
-                                    <label>Pilih Bulan</label>
-                                    <input type="month" name="month_picker" class="form-control" 
-                                           value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker">
+                                            <div class="form-group col-md-3 monthly-filter" style="<?php echo ($filter_type == 'monthly') ? '' : 'display:none;'; ?>">
+                                                <label>Pilih Bulan</label>
+                                                <input type="month" name="month_picker" class="form-control" 
+                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker" onchange="this.form.submit()">
                                 </div>
                                 
-                                <div class="form-group col-md-3 student-filter" style="<?php echo ($filter_type == 'student') ? '' : 'display:none;'; ?>">
-                                    <label>Pilih Siswa</label>
-                                    <select name="student_id" class="form-control selectric" id="studentSelect">
+                                            <div class="form-group col-md-3 student-filter" style="<?php echo ($filter_type == 'student') ? '' : 'display:none;'; ?>">
+                                                <label>Pilih Siswa</label>
+                                                <select name="student_id" class="form-control selectric" id="studentSelect" onchange="this.form.submit()">
                                         <option value="">Pilih Siswa...</option>
                                         <?php 
                                         if ($class_id > 0) {
