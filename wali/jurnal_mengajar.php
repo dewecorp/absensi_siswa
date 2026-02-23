@@ -219,8 +219,8 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     }
     
     if ($has_access) {
-        $stmt = $pdo->prepare("SELECT * FROM tb_jurnal WHERE id_kelas = ? ORDER BY tanggal DESC, jam_ke DESC");
-        $stmt->execute([$id_kelas]);
+        $stmt = $pdo->prepare("SELECT * FROM tb_jurnal WHERE id_kelas = ? AND id_guru = ? ORDER BY tanggal DESC, jam_ke DESC");
+        $stmt->execute([$id_kelas, $teacher['id_guru']]);
         $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
