@@ -61,9 +61,15 @@ if ($wali_kelas) {
 }
 
 // Get today's attendance statistics for the wali's class
+$today = date('Y-m-d');
 if ($wali_kelas) {
-    $today = date('Y-m-d');
-    $stmt = $pdo->prepare("SELECT a.keterangan, COUNT(*) as jumlah FROM tb_absensi a JOIN tb_siswa s ON a.id_siswa = s.id_siswa WHERE s.id_kelas = ? AND a.tanggal = ? GROUP BY a.keterangan");
+    $stmt = $pdo->prepare("
+        SELECT a.keterangan, COUNT(*) as jumlah 
+        FROM tb_absensi a 
+        JOIN tb_siswa s ON a.id_siswa = s.id_siswa 
+        WHERE s.id_kelas = ? AND a.tanggal = ? 
+        GROUP BY a.keterangan
+    ");
     $stmt->execute([$wali_kelas['id_kelas'], $today]);
     $attendance_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
@@ -71,7 +77,11 @@ if ($wali_kelas) {
 }
 
 // Initialize counts
-$jumlah_hadir = $jumlah_sakit = $jumlah_izin = $jumlah_alpa = $jumlah_berhalangan = 0;
+$jumlah_hadir = 0;
+$jumlah_sakit = 0;
+$jumlah_izin = 0;
+$jumlah_alpa = 0;
+$jumlah_berhalangan = 0;
 foreach ($attendance_stats as $stat) {
     switch ($stat['keterangan']) {
         case 'Hadir':
@@ -89,6 +99,25 @@ foreach ($attendance_stats as $stat) {
         case 'Berhalangan':
             $jumlah_berhalangan = $stat['jumlah'];
             break;
+    }
+}
+
+// Include Berhalangan from sholat data (siswa putri berhalangan)
+if ($wali_kelas) {
+    $berhalangan_stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT s.id_siswa) AS jumlah
+        FROM tb_sholat sh
+        JOIN tb_siswa s ON sh.id_siswa = s.id_siswa
+        WHERE s.id_kelas = ? 
+          AND sh.tanggal = ? 
+          AND sh.status = 'Berhalangan'
+    ");
+    $berhalangan_stmt->execute([$wali_kelas['id_kelas'], $today]);
+    $berhalangan_row = $berhalangan_stmt->fetch(PDO::FETCH_ASSOC);
+    $jumlah_berhalangan_sholat = (int)($berhalangan_row['jumlah'] ?? 0);
+
+    if ($jumlah_berhalangan_sholat > $jumlah_berhalangan) {
+        $jumlah_berhalangan = $jumlah_berhalangan_sholat;
     }
 }
 

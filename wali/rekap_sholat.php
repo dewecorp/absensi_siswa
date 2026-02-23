@@ -86,23 +86,19 @@ $class_info = $wali_kelas;
 
 // Process search based on filter type
 if ($class_id > 0) {
-    // Fetch all students in class for dropdowns and processing
     $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
     $stmt->execute([$class_id]);
     $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if ($filter_type == 'daily' && !empty($selected_date)) {
-        // Daily filter
         $stmt = $pdo->prepare("SELECT s.id_siswa, s.nama_siswa, s.nisn, s.jenis_kelamin, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
         $stmt->execute([$class_id]);
         $all_daily_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Get sholat data
         $stmt = $pdo->prepare("SELECT id_siswa, status FROM tb_sholat WHERE tanggal = ?");
         $stmt->execute([$selected_date]);
         $sholat_records = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
         
-        // Get daily attendance data
         $stmt = $pdo->prepare("SELECT id_siswa, keterangan FROM tb_absensi WHERE tanggal = ?");
         $stmt->execute([$selected_date]);
         $absensi_records = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -140,7 +136,6 @@ if ($class_id > 0) {
         }
 
     } elseif ($filter_type == 'monthly' && !empty($selected_month)) {
-        // Monthly filter
         $year = substr($selected_month, 0, 4);
         $month = substr($selected_month, 5, 2);
         
@@ -204,6 +199,7 @@ if ($class_id > 0) {
             ];
         }
         $monthly_results = $student_attendance;
+        $holidays = getHolidays($pdo, (int)$year, (int)$month);
 
     } elseif ($filter_type == 'student' && $selected_student > 0) {
         // Student filter
@@ -573,23 +569,28 @@ echo "<script>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($i=1; $i<=31; $i++): 
                                             $s = $r['days'][$i];
-                                            $bg = '';
-                                            if ($s == 'Hadir' || $s == 'Melaksanakan') $bg = 'bg-success text-white';
-                                            elseif ($s == 'Tidak Hadir' || $s == 'Tidak Melaksanakan') $bg = 'bg-danger text-white';
-                                            elseif ($s == 'Berhalangan') $bg = 'bg-danger text-white';
-                                            elseif ($s == 'Sakit' || $s == 'Izin') $bg = 'bg-warning text-white';
-                                        ?>
-                                            <td class="text-center <?php echo $bg; ?>" title="<?php echo $s; ?>">
-                                                <?php 
+                                            $current_date = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($i, 2, '0', STR_PAD_LEFT);
+                                            $is_holiday = isset($holidays[$current_date]);
+                                            
+                                            if ($is_holiday) {
+                                                echo '<td class="text-center" title="' . htmlspecialchars($holidays[$current_date], ENT_QUOTES, 'UTF-8') . '"><span style="font-size: 10pt; color: red;">L</span></td>';
+                                            } else {
+                                                $bg = '';
+                                                if ($s == 'Hadir' || $s == 'Melaksanakan') $bg = 'bg-success text-white';
+                                                elseif ($s == 'Tidak Hadir' || $s == 'Tidak Melaksanakan') $bg = 'bg-danger text-white';
+                                                elseif ($s == 'Berhalangan') $bg = 'bg-danger text-white';
+                                                elseif ($s == 'Sakit' || $s == 'Izin') $bg = 'bg-warning text-white';
+                                                
+                                                echo '<td class="text-center ' . $bg . '" title="' . htmlspecialchars($s, ENT_QUOTES, 'UTF-8') . '">';
                                                 if ($s == 'Hadir' || $s == 'Melaksanakan') echo 'H';
                                                 elseif ($s == 'Tidak Hadir' || $s == 'Tidak Melaksanakan') echo 'TH';
                                                 elseif ($s == 'Berhalangan') echo 'B';
                                                 elseif ($s == 'Sakit') echo 'S';
                                                 elseif ($s == 'Izin') echo 'I';
                                                 elseif ($s == 'Alpa') echo 'A';
-                                                ?>
-                                            </td>
-                                        <?php endfor; ?>
+                                                echo '</td>';
+                                            }
+                                        endfor; ?>
                                         <td class="text-center font-weight-bold"><?php echo $r['summary']['Hadir']; ?></td>
                                         <td class="text-center font-weight-bold"><?php echo $r['summary']['Tidak Hadir']; ?></td>
                                         <td class="text-center font-weight-bold"><?php echo $r['summary']['Berhalangan'] ?? 0; ?></td>

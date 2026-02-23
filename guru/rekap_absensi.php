@@ -20,7 +20,8 @@ $css_libs = [
 $js_libs = [
     "node_modules/select2/dist/js/select2.full.min.js",
     "https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js",
-    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"
+    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js",
+    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
 ];
 
 // Handle form submission
@@ -178,6 +179,9 @@ if ($class_id > 0) {
                 $student_attendance[$student_id]['summary'][$record['keterangan']]++;
             }
         }
+        
+        // Get holidays for selected month (kalender pendidikan + Jumat)
+        $holidays = getHolidays($pdo, $year, $month);
         
         // Convert to indexed array
         $monthly_results = array_values($student_attendance);
@@ -551,7 +555,12 @@ include '../templates/user_header.php';
                                                             <td>
                                                                 <?php 
                                                                 $status = $student['days'][$day] ?? '';
-                                                                if (!empty($status)) {
+                                                                $current_date = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
+                                                                $is_holiday = isset($holidays[$current_date]);
+                                                                
+                                                                if ($is_holiday) {
+                                                                    echo '<span style="font-size: 10pt; color: red;" title="' . htmlspecialchars($holidays[$current_date]) . '">L</span>';
+                                                                } elseif (!empty($status)) {
                                                                     $status_class = '';
                                                                     switch ($status) {
                                                                         case 'Hadir': $status_class = 'badge-success'; break;
@@ -745,15 +754,31 @@ function exportToExcel() {
         return;
     }
     var newTable = table.cloneNode(true);
+    
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        var textNode = document.createTextNode(badge.textContent);
+        badge.parentNode.replaceChild(textNode, badge);
+    }
+    
     container.appendChild(headerDiv);
     container.appendChild(newTable);
     
     var html = container.innerHTML;
-    var a = document.createElement('a');
-    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-    a.href = data;
-    a.download = 'rekap_absensi_bulanan_' + '<?php echo str_replace(" ", "_", $month_names[(int)substr($selected_month, 5, 2)]); ?>' + '_' + '<?php echo substr($selected_month, 0, 4); ?>' + '.xls';
-    a.click();
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
+        XLSX.writeFile(wb, 'rekap_absensi_bulanan_' + '<?php echo str_replace(" ", "_", strtolower($month_names[(int)substr($selected_month, 5, 2)])); ?>' + '_' + '<?php echo substr($selected_month, 0, 4); ?>' + '.xlsx');
+    } else {
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'rekap_absensi_bulanan_' + '<?php echo str_replace(" ", "_", $month_names[(int)substr($selected_month, 5, 2)]); ?>' + '_' + '<?php echo substr($selected_month, 0, 4); ?>' + '.xls';
+        a.click();
+    }
 }
 
 function exportToPDF() {
@@ -840,15 +865,31 @@ function exportSemesterToExcel() {
         return;
     }
     var newTable = table.cloneNode(true);
+    
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        var textNode = document.createTextNode(badge.textContent);
+        badge.parentNode.replaceChild(textNode, badge);
+    }
+    
     container.appendChild(headerDiv);
     container.appendChild(newTable);
     
     var html = container.innerHTML;
-    var a = document.createElement('a');
-    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-    a.href = data;
-    a.download = 'rekap_absensi_' + '<?php echo str_replace(' ', '_', strtolower($active_semester)); ?>' + '_' + '<?php echo date('Y'); ?>' + '.xls';
-    a.click();
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Semester");
+        XLSX.writeFile(wb, 'rekap_absensi_' + '<?php echo str_replace(" ", "_", strtolower($active_semester)); ?>' + '_' + '<?php echo date('Y'); ?>' + '.xlsx');
+    } else {
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'rekap_absensi_' + '<?php echo str_replace(" ", "_", strtolower($active_semester)); ?>' + '_' + '<?php echo date('Y'); ?>' + '.xls';
+        a.click();
+    }
 }
 
 function exportSemesterToPDF() {

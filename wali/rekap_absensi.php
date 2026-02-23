@@ -20,8 +20,8 @@ $css_libs = [
 $js_libs = [
     "node_modules/select2/dist/js/select2.full.min.js",
     "https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js",
-    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"
-    // Removed XLSX CDN due to 403 errors
+    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js",
+    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
 ];
 
 // Handle form submission
@@ -35,6 +35,23 @@ $daily_results = [];
 $monthly_results = [];
 $student_results = [];
 $student_attendance_summary = [];
+
+// Define month names and prepare month data for JavaScript
+$month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+$js_month_name = '';
+$js_month_year = '';
+if (!empty($selected_month)) {
+    $month_num = (int)substr($selected_month, 5, 2);
+    $js_month_name = isset($month_names[$month_num]) ? $month_names[$month_num] : '';
+    $js_month_year = substr($selected_month, 0, 4);
+    $js_month_name_safe = htmlspecialchars($js_month_name, ENT_QUOTES, 'UTF-8');
+    $js_month_year_safe = htmlspecialchars($js_month_year, ENT_QUOTES, 'UTF-8');
+    $js_month_name_file = htmlspecialchars(str_replace(' ', '_', strtolower($js_month_name)), ENT_QUOTES, 'UTF-8');
+} else {
+    $js_month_name_safe = '';
+    $js_month_year_safe = date('Y');
+    $js_month_name_file = '';
+}
 
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
@@ -160,6 +177,9 @@ if ($class_id > 0) {
                 $student_attendance[$student_id]['summary'][$record['keterangan']]++;
             }
         }
+        
+        // Get holidays for selected month (kalender pendidikan + Jumat)
+        $holidays = getHolidays($pdo, $year, $month);
         
         // Convert to indexed array
         $monthly_results = array_values($student_attendance);
@@ -579,15 +599,20 @@ include '../templates/user_header.php';
                                                                         <td>
                                                                             <?php 
                                                                             $status = $student['days'][$day] ?? '';
-                                                                            if (!empty($status)) {
+                                                                            $current_date = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
+                                                                            $is_holiday = isset($holidays[$current_date]);
+                                                                            
+                                                                            if ($is_holiday) {
+                                                                                echo '<span style="font-size: 10pt; color: red;" title="' . htmlspecialchars($holidays[$current_date]) . '">L</span>';
+                                                                            } elseif (!empty($status)) {
                                                                                 $status_class = '';
                                                                                 switch ($status) {
                                                                                     case 'Hadir': $status_class = 'badge-success'; break;
                                                                                     case 'Sakit': $status_class = 'badge-warning'; break;
                                                                                     case 'Izin': $status_class = 'badge-info'; break;
                                                                                     case 'Alpa': $status_class = 'badge-danger'; break;
-                                                                    case 'Berhalangan': $status_class = 'badge-danger'; break;
-                                                                    default: $status_class = 'badge-secondary'; break;
+                                                                                    case 'Berhalangan': $status_class = 'badge-danger'; break;
+                                                                                    default: $status_class = 'badge-secondary'; break;
                                                                                 }
                                                                                 echo '<span class="badge ' . $status_class . ' badge-sm">' . substr($status, 0, 1) . '</span>';
                                                                             }
@@ -772,30 +797,34 @@ include '../templates/user_header.php';
 
 <?php include '../templates/user_footer.php'; ?>
 
-<!-- Export Functions from absensi_harian.php -->
+<?php 
+$madrasah_head = $school_profile['kepala_madrasah'] ?? 'Kepala Madrasah';
+$class_teacher = $teacher_name ?? 'Wali Kelas';
+$madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
+$student_name_for_report = '';
+if (!empty($student_results) && isset($student_results[0]['nama_siswa'])) {
+    $student_name_for_report = $student_results[0]['nama_siswa'];
+}
+?>
+
 <script>
-// Define signature names from PHP
-var classTeacherName = "<?php echo addslashes($teacher_name ?? 'Guru Kelas'); ?>";
-var madrasahHeadName = "<?php echo addslashes($school_profile['kepala_madrasah'] ?? 'Kepala Madrasah'); ?>";
-var madrasahHeadSignature = "<?php echo $school_profile['ttd_kepala'] ?? ''; ?>";
-var schoolName = "<?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah'); ?>";
-var academicYear = "<?php echo $school_profile['tahun_ajaran'] ?? '-'; ?>";
-var activeSemester = "<?php echo $active_semester ?? '-'; ?>";
-var schoolCity = "<?php echo addslashes($schoolCity); ?>";
-var reportDate = "<?php echo addslashes($reportDate); ?>";
+var madrasahHeadName = <?php echo json_encode($madrasah_head); ?>;
+var classTeacherName = <?php echo json_encode($class_teacher); ?>;
+var madrasahHeadSignature = <?php echo json_encode($madrasah_head_signature); ?>;
+var academicYear = <?php echo json_encode($school_profile['tahun_ajaran'] ?? '-'); ?>;
+var activeSemester = <?php echo json_encode($active_semester ?? '-'); ?>;
+var schoolCity = <?php echo json_encode($school_city); ?>;
+var reportDate = <?php echo json_encode($reportDate); ?>;
+var schoolName = <?php echo json_encode($school_profile['nama_madrasah'] ?? 'Madrasah'); ?>;
 
 function exportToExcel() {
-    // Create a container for the full report
     var container = document.createElement('div');
-    
-    // Add application name and school info
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
-    headerDiv.innerHTML += '<h3><?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang'); ?></h3>';
+    headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>';
     headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo $month_names[(int)substr($selected_month, 5, 2)] . " " . substr($selected_month, 0, 4); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
-    // Create a copy of the table to modify
     var table = document.querySelector('.table-bordered');
     if (!table) {
         Swal.fire('Error', 'Tabel tidak ditemukan', 'error');
@@ -803,31 +832,42 @@ function exportToExcel() {
     }
     var newTable = table.cloneNode(true);
     
-    // Append header and table to container
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        var textNode = document.createTextNode(badge.textContent);
+        badge.parentNode.replaceChild(textNode, badge);
+    }
+    
     container.appendChild(headerDiv);
     container.appendChild(newTable);
     
     var html = container.innerHTML;
     
-    // Create download link
-    var a = document.createElement('a');
-    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-    a.href = data;
-    a.download = 'rekap_absensi_bulanan_' + '<?php echo str_replace(" ", "_", $month_names[(int)substr($selected_month, 5, 2)]); ?>' + '_' + '<?php echo substr($selected_month, 0, 4); ?>' + '.xls';
-    a.click();
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
+        XLSX.writeFile(wb, 'rekap_absensi_bulanan_' + '<?php echo $js_month_name_file; ?>' + '_' + '<?php echo $js_month_year_safe; ?>' + '.xlsx');
+    } else {
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'rekap_absensi_bulanan_' + '<?php echo $js_month_name_file; ?>' + '_' + '<?php echo $js_month_year_safe; ?>' + '.xls';
+        a.click();
+    }
 }
 
 function exportToPDF() {
-    // Print the table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
+    var printWindow = window.open('', '', 'height=860,width=1300');
     printWindow.document.write('<html><head><title>Rekap Absensi Bulanan</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
     printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
-    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 1px 3px; border-radius: 2px; font-size: 7px; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
@@ -844,16 +884,14 @@ function exportToPDF() {
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang'); ?></h3>');
-    printWindow.document.write('<h4>Rekap Absensi Bulanan - <?php echo $month_names[(int)substr($selected_month, 5, 2)] . " " . substr($selected_month, 0, 4); ?></h4></div><br style="clear: both;">');
+    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
     
-    // Get the table
     var table = document.querySelector('.table-bordered');
     if (table) {
         printWindow.document.write(table.outerHTML);
     }
     
-    // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
@@ -875,7 +913,7 @@ function exportToPDF() {
     if (madrasahHeadSignature) {
         var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
         var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
-        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px 0;">');
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
         printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
     } else {
         printWindow.document.write('<br><br><br>');
@@ -889,22 +927,16 @@ function exportToPDF() {
     printWindow.focus();
     setTimeout(function() {
         printWindow.print();
-        // printWindow.close();
     }, 500);
 }
 
-// Semester Export Functions
 function exportSemesterToExcel() {
-    // Create a container for the semester report
     var container = document.createElement('div');
-    
-    // Add application name and school info
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
-    headerDiv.innerHTML += '<h3><?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang'); ?></h3>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi <?php echo $active_semester; ?> - Tahun <?php echo date('Y'); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>';
+    headerDiv.innerHTML += '<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
-    // Create a copy of the semester table to modify
     var table = document.getElementById('semesterTable');
     if (!table) {
         Swal.fire('Error', 'Tabel semester tidak ditemukan', 'error');
@@ -912,31 +944,42 @@ function exportSemesterToExcel() {
     }
     var newTable = table.cloneNode(true);
     
-    // Append header and table to container
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        var textNode = document.createTextNode(badge.textContent);
+        badge.parentNode.replaceChild(textNode, badge);
+    }
+    
     container.appendChild(headerDiv);
     container.appendChild(newTable);
     
     var html = container.innerHTML;
     
-    // Create download link
-    var a = document.createElement('a');
-    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-    a.href = data;
-    a.download = 'rekap_absensi_' + '<?php echo str_replace(' ', '_', strtolower($active_semester)); ?>' + '_' + '<?php echo date('Y'); ?>' + '.xls';
-    a.click();
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Semester");
+        XLSX.writeFile(wb, 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xlsx');
+    } else {
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xls';
+        a.click();
+    }
 }
 
 function exportSemesterToPDF() {
-    // Print the semester table as PDF with F4 landscape format
-    var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
+    var printWindow = window.open('', '', 'height=860,width=1300');
     printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
+    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
     printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
-    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
+    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 1px 2px; border-radius: 2px; font-size: 6px; }');
     printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
@@ -953,17 +996,15 @@ function exportSemesterToPDF() {
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang'); ?></h3>');
+    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>');
     printWindow.document.write('<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>');
-    printWindow.document.write('<h4>Rekap Absensi <?php echo $active_semester; ?> - Tahun <?php echo date('Y'); ?></h4></div><br style="clear: both;">');
+    printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
     
-    // Get the semester table
     var table = document.getElementById('semesterTable');
     if (table) {
         printWindow.document.write(table.outerHTML);
     }
     
-    // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
     printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
@@ -985,7 +1026,7 @@ function exportSemesterToPDF() {
     if (madrasahHeadSignature) {
         var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
         var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
-        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px 0;">');
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
         printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
     } else {
         printWindow.document.write('<br><br><br>');
@@ -999,17 +1040,15 @@ function exportSemesterToPDF() {
     printWindow.focus();
     setTimeout(function() {
         printWindow.print();
-        // printWindow.close();
     }, 500);
 }
 
-// Daily Export Functions
 function exportDailyToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi Harian - Tanggal: <?php echo date('d M Y', strtotime($selected_date)); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Absensi Harian - Tanggal: ' + <?php echo json_encode(date('d M Y', strtotime($selected_date))); ?> + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
     if (!table) {
@@ -1017,15 +1056,31 @@ function exportDailyToExcel() {
         return;
     }
     var newTable = table.cloneNode(true);
+    
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        var textNode = document.createTextNode(badge.textContent);
+        badge.parentNode.replaceChild(textNode, badge);
+    }
+    
     container.appendChild(headerDiv);
     container.appendChild(newTable);
     
     var html = container.innerHTML;
-    var a = document.createElement('a');
-    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-    a.href = data;
-    a.download = 'rekap_absensi_harian_' + '<?php echo $selected_date; ?>' + '.xls';
-    a.click();
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Harian");
+        XLSX.writeFile(wb, 'rekap_absensi_harian_' + '<?php echo $selected_date; ?>' + '.xlsx');
+    } else {
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'rekap_absensi_harian_' + '<?php echo $selected_date; ?>' + '.xls';
+        a.click();
+    }
 }
 
 function exportDailyToPDF() {
@@ -1055,7 +1110,7 @@ function exportDailyToPDF() {
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3>' + schoolName + '</h3>');
-    printWindow.document.write('<h4>Rekap Absensi Harian - Tanggal: <?php echo date('d M Y', strtotime($selected_date)); ?></h4></div><br style="clear: both;">');
+    printWindow.document.write('<h4>Rekap Absensi Harian - Tanggal: ' + <?php echo json_encode(date('d M Y', strtotime($selected_date))); ?> + '</h4></div><br style="clear: both;">');
     
     var table = document.getElementById('dailyTable');
     if (table) {
@@ -1092,13 +1147,12 @@ function exportDailyToPDF() {
     }, 500);
 }
 
-// Student Export Functions
 function exportStudentToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi Siswa: <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Absensi Siswa: ' + <?php echo json_encode($student_name_for_report); ?> + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('studentTable');
     if (!table) {
@@ -1106,15 +1160,31 @@ function exportStudentToExcel() {
         return;
     }
     var newTable = table.cloneNode(true);
+    
+    var badges = newTable.querySelectorAll('.badge');
+    for (var i = 0; i < badges.length; i++) {
+        var badge = badges[i];
+        var textNode = document.createTextNode(badge.textContent);
+        badge.parentNode.replaceChild(textNode, badge);
+    }
+    
     container.appendChild(headerDiv);
     container.appendChild(newTable);
     
     var html = container.innerHTML;
-    var a = document.createElement('a');
-    var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-    a.href = data;
-    a.download = 'rekap_absensi_siswa_' + '<?php echo str_replace(' ', '_', $student_results[0]['nama_siswa'] ?? 'siswa'); ?>' + '.xls';
-    a.click();
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Siswa");
+        XLSX.writeFile(wb, 'rekap_absensi_siswa_' + <?php echo json_encode(str_replace(' ', '_', $student_name_for_report ?: 'siswa')); ?> + '.xlsx');
+    } else {
+        var a = document.createElement('a');
+        var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.href = data;
+        a.download = 'rekap_absensi_siswa_' + <?php echo json_encode(str_replace(' ', '_', $student_name_for_report ?: 'siswa')); ?> + '.xls';
+        a.click();
+    }
 }
 
 function exportStudentToPDF() {
@@ -1143,7 +1213,7 @@ function exportStudentToPDF() {
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
     printWindow.document.write('<h3>' + schoolName + '</h3>');
-    printWindow.document.write('<h4>Rekap Absensi Siswa: <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?></h4></div><br style="clear: both;">');
+    printWindow.document.write('<h4>Rekap Absensi Siswa: ' + <?php echo json_encode($student_name_for_report); ?> + '</h4></div><br style="clear: both;">');
     
     var table = document.getElementById('studentTable');
     if (table) {
@@ -1180,7 +1250,6 @@ function exportStudentToPDF() {
     }, 500);
 }
 
-// Initialize Select2 for student dropdown when page loads and when class changes
 $(document).ready(function() {
     console.log('Document ready, initializing Select2');
     
