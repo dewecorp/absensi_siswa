@@ -242,12 +242,14 @@ if (!empty($grade_headers)) {
                     echo '<td>' . htmlspecialchars($nilai ?? '') . '</td>';
                     echo '<td>' . htmlspecialchars($nilai_jadi ?? '') . '</td>';
                     
-                    // For average, use nilai (original) to match table
                     $valForAvg = $nilai;
                     
                     if ($valForAvg !== '' && $valForAvg !== null) {
-                        $total += (float)$valForAvg;
-                        $count++;
+                        $valForAvgFloat = (float)$valForAvg;
+                        if ($valForAvgFloat > 0) {
+                            $total += $valForAvgFloat;
+                            $count++;
+                        }
                     }
                 }
                 

@@ -93,6 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             foreach ($grades as $g) {
                 $nilai = isset($g['nilai']) && $g['nilai'] !== '' ? $g['nilai'] : null;
                 $nilai_jadi = isset($g['nilai_jadi']) && $g['nilai_jadi'] !== '' ? $g['nilai_jadi'] : null;
+
+                if ($nilai === null || floatval($nilai) <= 0) {
+                    $nilai_jadi = null;
+                }
+
                 $stmt->execute([$id_header, $g['id_siswa'], $nilai, $nilai_jadi]);
             }
             

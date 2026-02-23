@@ -219,12 +219,14 @@ foreach ($students as $student) {
         $sheet->setCellValue($col . $row, $nilai_jadi);
         $col++;
         
-        // For average, use nilai (original) to match table
         $valForAvg = $nilai;
         
         if ($valForAvg !== '' && $valForAvg !== null) {
-            $total += (float)$valForAvg;
-            $count++;
+            $valForAvgFloat = (float)$valForAvg;
+            if ($valForAvgFloat > 0) {
+                $total += $valForAvgFloat;
+                $count++;
+            }
         }
     }
     

@@ -132,6 +132,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             foreach ($grades as $g) {
                 $nilai = isset($g['nilai']) && $g['nilai'] !== '' ? $g['nilai'] : 0;
                 $nilai_jadi = isset($g['nilai_jadi']) && $g['nilai_jadi'] !== '' ? $g['nilai_jadi'] : 0;
+
+                if ($nilai <= 0) {
+                    $nilai_jadi = 0;
+                }
                 
                 $stmtCheck->execute([$id_header, $g['id_siswa']]);
                 $existingId = $stmtCheck->fetchColumn();

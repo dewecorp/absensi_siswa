@@ -525,7 +525,6 @@ $(document).ready(function() {
         cell.find('.date-input').removeClass('d-none');
     });
 
-    // Auto Calc Button
     $('.auto-calc-btn').click(function() {
         var id = $(this).data('header-id');
         var kktp = <?= json_encode($selected_mapel['kktp'] ?? 75) ?>; // Default 75
@@ -542,30 +541,33 @@ $(document).ready(function() {
                 $('.grade-col-' + id).each(function() {
                     var studentId = $(this).data('student-id');
                     var nilaiAwal = parseFloat($(this).val());
-                    
+
                     if (!isNaN(nilaiAwal) && nilaiAwal > 0) {
-                        var nilaiJadi;
-                        if (nilaiAwal < kktp) {
-                            nilaiJadi = kktp;
-                        } else {
-                            // Curve logic similar to nilai_harian
-                            var maxVal = 99;
-                            var range = maxVal - kktp;
-                            var inputRange = 100 - kktp;
-                            
-                            if (range > 0) {
-                                var ratio = (nilaiAwal - kktp) / inputRange;
-                                var ratioBoosted = 1 - Math.pow(1 - ratio, 2);
-                                nilaiJadi = kktp + (range * ratioBoosted);
+                        var nilaiJadi = nilaiAwal;
+
+                        if (kktp > 0) {
+                            if (nilaiAwal < kktp) {
+                                nilaiJadi = kktp;
                             } else {
-                                nilaiJadi = nilaiAwal;
+                                var diff = nilaiAwal - kktp;
+                                var bonus = 0;
+
+                                if (diff < 5) bonus = 5;
+                                else if (diff < 10) bonus = 4;
+                                else if (diff < 15) bonus = 3;
+                                else if (diff < 20) bonus = 2;
+                                else bonus = 1;
+
+                                nilaiJadi = nilaiAwal + bonus;
                             }
                         }
+
                         nilaiJadi = Math.round(nilaiJadi);
                         if (nilaiJadi > 99) nilaiJadi = 99;
-                        
-                        // Always update, even if 0
+
                         $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val(nilaiJadi);
+                    } else {
+                        $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val('');
                     }
                 });
                 iziToast.success({message: 'Nilai jadi berhasil dihitung ulang', position: 'topRight'});

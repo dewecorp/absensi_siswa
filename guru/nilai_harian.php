@@ -324,15 +324,17 @@ require_once '../templates/sidebar.php';
                                                 $val_jadi = isset($data_nilai['nilai_jadi']) ? $data_nilai['nilai_jadi'] : '';
                                                 
                                                 if ($val !== '') {
-                                                    $total_score += (float)$val;
-                                                    $count_score++;
-                                                    
-                                                    // Track min/max
-                                                    if (!isset($col_min[$header['id_header']]) || $val < $col_min[$header['id_header']]) {
-                                                        $col_min[$header['id_header']] = $val;
-                                                    }
-                                                    if (!isset($col_max[$header['id_header']]) || $val > $col_max[$header['id_header']]) {
-                                                        $col_max[$header['id_header']] = $val;
+                                                    $val_float = (float)$val;
+                                                    if ($val_float > 0) {
+                                                        $total_score += $val_float;
+                                                        $count_score++;
+                                                        
+                                                        if (!isset($col_min[$header['id_header']]) || $val_float < $col_min[$header['id_header']]) {
+                                                            $col_min[$header['id_header']] = $val_float;
+                                                        }
+                                                        if (!isset($col_max[$header['id_header']]) || $val_float > $col_max[$header['id_header']]) {
+                                                            $col_max[$header['id_header']] = $val_float;
+                                                        }
                                                     }
                                                 }
                                                 ?>
@@ -529,7 +531,6 @@ $(document).ready(function() {
         materiCell.find('.materi-input').removeClass('d-none');
     });
 
-    // Auto Calculate (Magic Button)
     $('.auto-calc-btn').click(function() {
         var id = $(this).data('header-id');
         var kktp = <?= json_encode($selected_mapel['kktp'] ?? 75) ?>; // Default 75 if not set
@@ -546,39 +547,33 @@ $(document).ready(function() {
                 $('.grade-col-' + id).each(function() {
                     var studentId = $(this).data('student-id');
                     var nilaiAwal = parseFloat($(this).val());
-                    
-                    if (!isNaN(nilaiAwal)) {
-                        var nilaiJadi;
-                        
-                        if (nilaiAwal < kktp) {
-                            // Rule 1: Under KKTP -> Set to KKTP
-                            nilaiJadi = kktp;
-                        } else {
-                            // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
-                            // Logic: Map [KKTP, 100] to [KKTP, 99] with a boost curve
-                            var maxVal = 99;
-                            var range = maxVal - kktp;
-                            var inputRange = 100 - kktp;
-                            
-                            if (range > 0) {
-                                var ratio = (nilaiAwal - kktp) / inputRange; // 0 to 1
-                                // Apply ease-out curve: f(t) = 1 - (1-t)^2
-                                // This makes the boost stronger near KKTP and taper off near 100
-                                var ratioBoosted = 1 - Math.pow(1 - ratio, 2);
-                                nilaiJadi = kktp + (range * ratioBoosted);
+
+                    if (!isNaN(nilaiAwal) && nilaiAwal > 0) {
+                        var nilaiJadi = nilaiAwal;
+
+                        if (kktp > 0) {
+                            if (nilaiAwal < kktp) {
+                                nilaiJadi = kktp;
                             } else {
-                                nilaiJadi = nilaiAwal;
+                                var diff = nilaiAwal - kktp;
+                                var bonus = 0;
+
+                                if (diff < 5) bonus = 5;
+                                else if (diff < 10) bonus = 4;
+                                else if (diff < 15) bonus = 3;
+                                else if (diff < 20) bonus = 2;
+                                else bonus = 1;
+
+                                nilaiJadi = nilaiAwal + bonus;
                             }
                         }
-                        
-                        // Round to nearest integer
+
                         nilaiJadi = Math.round(nilaiJadi);
-                        
-                        // Ensure max 99 (safety)
                         if (nilaiJadi > 99) nilaiJadi = 99;
-                        
-                        // Set value to corresponding 'nilai jadi' input
+
                         $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val(nilaiJadi);
+                    } else {
+                        $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val('');
                     }
                 });
                 
