@@ -356,7 +356,14 @@ require_once '../templates/sidebar.php';
                                                 </td>
                                             <?php endforeach; ?>
                                             <td class="text-center font-weight-bold student-avg">
-                                                <?= $count_score > 0 ? round($total_score / $count_score, 1) : '-' ?>
+                                                <?php
+                                                if ($count_score > 0) {
+                                                    $avg = round($total_score / $count_score, 1);
+                                                    echo fmod($avg, 1.0) == 0.0 ? (int)$avg : $avg;
+                                                } else {
+                                                    echo '-';
+                                                }
+                                                ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -661,5 +668,55 @@ $(document).ready(function() {
             }
         });
     });
+
+    $(document).on('input', '.grade-input', function() {
+        var studentId = $(this).data('student-id');
+        var headerId = $(this).data('header-id');
+
+        updateRowAverage(studentId);
+        updateColumnStats(headerId);
+    });
+
+    function updateRowAverage(studentId) {
+        var total = 0;
+        var count = 0;
+
+        $('input.grade-input[data-student-id="' + studentId + '"]').each(function() {
+            var v = parseFloat($(this).val());
+            if (!isNaN(v) && v > 0) {
+                total += v;
+                count++;
+            }
+        });
+
+        var avg = count > 0 ? (total / count).toFixed(1) : '-';
+        if (avg !== '-' && avg.endsWith('.0')) {
+            avg = parseInt(avg, 10).toString();
+        }
+
+        var row = $('input.grade-input[data-student-id="' + studentId + '"]').first().closest('tr');
+        row.find('.student-avg').text(avg);
+    }
+
+    function updateColumnStats(headerId) {
+        var max = -Infinity;
+        var min = Infinity;
+        var hasData = false;
+
+        $('.grade-col-' + headerId).each(function() {
+            var v = parseFloat($(this).val());
+            if (!isNaN(v) && v > 0) {
+                if (v > max) max = v;
+                if (v < min) min = v;
+                hasData = true;
+            }
+        });
+
+        var maxText = hasData ? max : '-';
+        var minText = hasData ? min : '-';
+
+        $('.col-max-' + headerId).text(maxText);
+        $('.col-min-' + headerId).text(minText);
+    }
 });
 </script>
