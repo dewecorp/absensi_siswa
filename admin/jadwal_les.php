@@ -2,17 +2,20 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-// Check if user is logged in and has admin level
-if (!isAuthorized(['admin'])) {
+// Check if user is logged in and has allowed level
+if (!isAuthorized(['admin', 'kepala_madrasah', 'guru', 'wali', 'siswa'])) {
     redirect('../login.php');
 }
+
+$user_level = getUserLevel();
+$is_admin = ($user_level === 'admin');
 
 // Set page title
 $page_title = 'Jadwal Les';
 
 // Handle Form Submission
 $message = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_admin) {
     if (isset($_POST['action'])) {
         try {
             if ($_POST['action'] == 'add') {
@@ -222,9 +225,11 @@ include '../templates/sidebar.php';
                                         <i class="fas fa-file-excel"></i> Export Excel
                                     </a>
                                 </div>
+                                <?php if ($is_admin): ?>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#addModal">
                                     <i class="fas fa-plus"></i> Tambah Jadwal
                                 </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="card-body">
@@ -237,7 +242,9 @@ include '../templates/sidebar.php';
                                             <th>Tanggal</th>
                                             <th>Nama Guru</th>
                                             <th>Waktu</th>
+                                            <?php if ($is_admin): ?>
                                             <th>Aksi</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -248,6 +255,7 @@ include '../templates/sidebar.php';
                                                 <td><?php echo date('d-m-Y', strtotime($s['tanggal'])); ?></td>
                                                 <td><?php echo htmlspecialchars($s['nama_guru']); ?></td>
                                                 <td><?php echo date('H.i', strtotime($s['waktu_mulai'])) . ' - ' . date('H.i', strtotime($s['waktu_selesai'])); ?></td>
+                                                <?php if ($is_admin): ?>
                                                 <td>
                                                     <button class="btn btn-warning btn-sm edit-btn" 
                                                             data-id="<?php echo $s['id_les']; ?>"
@@ -262,6 +270,7 @@ include '../templates/sidebar.php';
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </td>
+                                                <?php endif; ?>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -276,6 +285,7 @@ include '../templates/sidebar.php';
 </div>
 
 <!-- Add Modal -->
+<?php if ($is_admin): ?>
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <form method="POST">
@@ -421,5 +431,6 @@ include '../templates/sidebar.php';
         </form>
     </div>
 </div>
+<?php endif; ?>
 
 <?php include '../templates/footer.php'; ?>

@@ -40,15 +40,18 @@ switch ($user_level) {
                 'submenu' => [
                     ['title' => 'Scan Absensi', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
                     ['title' => 'Absensi Guru', 'url' => '../admin/absensi_guru.php', 'active' => $current_page === 'absensi_guru.php'],
+                    ['title' => 'Absensi Les Guru', 'url' => '../admin/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'],
                     ['title' => 'Rekap Absensi Guru', 'url' => '../admin/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
                     ['title' => 'Absensi Siswa', 'url' => '../admin/absensi_harian.php', 'active' => $current_page === 'absensi_harian.php'],
+                    ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php', 'active' => $current_page === 'absensi_les_siswa.php'],
                     ['title' => 'Rekap Absensi Siswa', 'url' => '../admin/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+                    ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php', 'active' => $current_page === 'rekap_absensi_les_siswa.php'],
                     ['title' => 'Sholat Berjamaah', 'url' => '../admin/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
                     ['title' => 'Rekap Sholat Berjamaah', 'url' => '../admin/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
                     ['title' => 'Sholat Dhuha', 'url' => '../admin/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
                     ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
                 ],
-                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'absensi_les_siswa.php', 'rekap_absensi.php', 'rekap_absensi_les_siswa.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -129,6 +132,12 @@ switch ($user_level) {
                 'active' => $current_page === 'kalender_pendidikan.php'
             ],
             [
+                'title' => 'Jadwal Les Kelas 6',
+                'icon' => 'fas fa-clock',
+                'url' => '../kepala/jadwal_les.php',
+                'active' => $current_page === 'jadwal_les.php'
+            ],
+            [
                 'title' => 'Jadwal Pelajaran',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
@@ -141,6 +150,9 @@ switch ($user_level) {
                 'title' => 'Rekap Absensi',
                 'icon' => 'fas fa-file-alt',
                 'submenu' => [
+                    ['title' => 'Absensi Les Guru', 'url' => '../kepala/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'],
+                    ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'absensi_les_siswa.php'],
+                    ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'rekap_absensi_les_siswa.php'],
                     ['title' => 'Rekap Absensi Guru', 'url' => '../kepala/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
                     ['title' => 'Rekap Absensi Siswa', 'url' => '../kepala/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
                     ['title' => 'Rekap Sholat Berjamaah', 'url' => '../kepala/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
@@ -313,6 +325,23 @@ switch ($user_level) {
             return basename($item['url']);
         }, $nilai_submenu_guru);
 
+        $absensi_submenu_guru = [
+            ['title' => 'Absensi Harian', 'url' => '../guru/absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
+            ['title' => 'Rekap Absensi Harian', 'url' => '../guru/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+            ['title' => 'Sholat Berjamaah', 'url' => '../guru/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
+            ['title' => 'Rekap Sholat Berjamaah', 'url' => '../guru/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
+            ['title' => 'Sholat Dhuha', 'url' => '../guru/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
+            ['title' => 'Rekap Sholat Dhuha', 'url' => '../guru/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
+        ];
+
+        if ($is_grade_6_guru) {
+            array_splice($absensi_submenu_guru, 2, 0, [
+                ['title' => 'Absensi Les Guru', 'url' => '../guru/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'],
+                ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php?session_type=guru', 'active' => $current_page === 'absensi_les_siswa.php'],
+                ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=guru', 'active' => $current_page === 'rekap_absensi_les_siswa.php']
+            ]);
+        }
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -323,15 +352,8 @@ switch ($user_level) {
             [
                 'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
-                'submenu' => [
-                    ['title' => 'Absensi Harian', 'url' => '../guru/absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
-                    ['title' => 'Rekap Absensi Harian', 'url' => '../guru/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
-                    ['title' => 'Sholat Berjamaah', 'url' => '../guru/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
-                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../guru/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
-                    ['title' => 'Sholat Dhuha', 'url' => '../guru/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
-                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../guru/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
-                ],
-                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+                'submenu' => $absensi_submenu_guru,
+                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -359,20 +381,31 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-alt',
                 'url' => '../admin/kalender_pendidikan.php?session_type=guru',
                 'active' => $current_page === 'kalender_pendidikan.php'
-            ],
-            [
-                'title' => 'Profil',
-                'icon' => 'fas fa-user',
-                'url' => '../guru/profil.php',
-                'active' => $current_page === 'profil.php'
-            ],
-            [
-                'title' => 'Logout',
-                'icon' => 'fas fa-sign-out-alt',
-                'url' => '#',
-                'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
             ]
+        ];
+
+        if ($is_grade_6_guru) {
+            // Add Jadwal Les menu for Grade 6 Teachers
+            array_splice($menu_items, 4, 0, [[
+                'title' => 'Jadwal Les Kelas 6',
+                'icon' => 'fas fa-clock',
+                'url' => '../guru/jadwal_les.php',
+                'active' => $current_page === 'jadwal_les.php'
+            ]]);
+        }
+
+        $menu_items[] = [
+            'title' => 'Profil',
+            'icon' => 'fas fa-user',
+            'url' => '../guru/profil.php',
+            'active' => $current_page === 'profil.php'
+        ];
+        $menu_items[] = [
+            'title' => 'Logout',
+            'icon' => 'fas fa-sign-out-alt',
+            'url' => '#',
+            'active' => false,
+            'attributes' => 'onclick="confirmLogoutInline(); return false;"'
         ];
         break;
         
@@ -446,6 +479,23 @@ switch ($user_level) {
             return basename($item['url']);
         }, $nilai_submenu);
 
+        $absensi_submenu_wali = [
+            ['title' => 'Absensi Harian', 'url' => '../wali/absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
+            ['title' => 'Rekap Absensi', 'url' => '../wali/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+            ['title' => 'Sholat Berjamaah', 'url' => '../wali/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
+            ['title' => 'Rekap Sholat Berjamaah', 'url' => '../wali/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
+            ['title' => 'Sholat Dhuha', 'url' => '../wali/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
+            ['title' => 'Rekap Sholat Dhuha', 'url' => '../wali/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
+        ];
+
+        if ($is_grade_6) {
+            array_splice($absensi_submenu_wali, 2, 0, [
+                ['title' => 'Absensi Les Guru', 'url' => '../wali/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'],
+                ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php?session_type=wali', 'active' => $current_page === 'absensi_les_siswa.php'],
+                ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=wali', 'active' => $current_page === 'rekap_absensi_les_siswa.php']
+            ]);
+        }
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -463,17 +513,10 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
             [
-                'title' => 'Absensi Siswa',
+                'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
-                'submenu' => [
-                    ['title' => 'Absensi Harian', 'url' => '../wali/absensi_kelas.php', 'active' => $current_page === 'absensi_kelas.php'],
-                    ['title' => 'Rekap Absensi', 'url' => '../wali/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
-                    ['title' => 'Sholat Berjamaah', 'url' => '../wali/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
-                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../wali/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
-                    ['title' => 'Sholat Dhuha', 'url' => '../wali/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
-                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../wali/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
-                ],
-                'active' => in_array($current_page, ['absensi_kelas.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+                'submenu' => $absensi_submenu_wali,
+                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -492,20 +535,31 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-alt',
                 'url' => '../admin/kalender_pendidikan.php?session_type=wali',
                 'active' => $current_page === 'kalender_pendidikan.php'
-            ],
-            [
-                'title' => 'Profil & Pengaturan',
-                'icon' => 'fas fa-user-cog',
-                'url' => '../wali/profil.php',
-                'active' => $current_page === 'profil.php'
-            ],
-            [
-                'title' => 'Logout',
-                'icon' => 'fas fa-sign-out-alt',
-                'url' => '#',
-                'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
             ]
+        ];
+
+        if ($is_grade_6) {
+            // Add Jadwal Les menu for Grade 6 Wali
+            array_splice($menu_items, 5, 0, [[
+                'title' => 'Jadwal Les Kelas 6',
+                'icon' => 'fas fa-clock',
+                'url' => '../wali/jadwal_les.php',
+                'active' => $current_page === 'jadwal_les.php'
+            ]]);
+        }
+
+        $menu_items[] = [
+            'title' => 'Profil & Pengaturan',
+            'icon' => 'fas fa-user-cog',
+            'url' => '../wali/profil.php',
+            'active' => $current_page === 'profil.php'
+        ];
+        $menu_items[] = [
+            'title' => 'Logout',
+            'icon' => 'fas fa-sign-out-alt',
+            'url' => '#',
+            'active' => false,
+            'attributes' => 'onclick="confirmLogoutInline(); return false;"'
         ];
         break;
 
@@ -567,14 +621,25 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-alt',
                 'url' => '../admin/kalender_pendidikan.php?session_type=siswa',
                 'active' => $current_page === 'kalender_pendidikan.php'
-            ],
-            [
-                'title' => 'Logout',
-                'icon' => 'fas fa-sign-out-alt',
-                'url' => '#',
-                'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
             ]
+        ];
+
+        if ($is_grade_6_siswa) {
+            // Add Jadwal Les menu for Grade 6 Students
+            array_splice($menu_items, 4, 0, [[
+                'title' => 'Jadwal Les Kelas 6',
+                'icon' => 'fas fa-clock',
+                'url' => '../siswa/jadwal_les.php',
+                'active' => $current_page === 'jadwal_les.php'
+            ]]);
+        }
+
+        $menu_items[] = [
+            'title' => 'Logout',
+            'icon' => 'fas fa-sign-out-alt',
+            'url' => '#',
+            'active' => false,
+            'attributes' => 'onclick="confirmLogoutInline(); return false;"'
         ];
         break;
 
