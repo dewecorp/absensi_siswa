@@ -27,11 +27,12 @@ switch ($user_level) {
                     ['title' => 'Data Siswa', 'url' => '../admin/data_siswa.php', 'active' => $current_page === 'data_siswa.php'],
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Jam Mengajar', 'url' => '../admin/jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
+                    ['title' => 'Jadwal Les', 'url' => '../admin/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
                     ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php'],
                     ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php', 'active' => $current_page === 'kalender_pendidikan.php']
                 ],
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'jadwal_imam.php', 'kalender_pendidikan.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'jadwal_les.php', 'kenaikan_kelas.php', 'jadwal_imam.php', 'kalender_pendidikan.php'])
             ],
             [
                 'title' => 'Absensi',
