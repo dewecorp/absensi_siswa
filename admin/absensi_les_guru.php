@@ -347,6 +347,40 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.btn-absensi {
+    font-size: 1.15rem;
+    font-weight: 600;
+    border-width: 2px;
+    transition: all .15s ease-in-out;
+}
+.btn-absensi i { font-size: 1.55rem; }
+.btn-absensi:hover { transform: translateY(-1px); }
+
+/* Filled color for single-view buttons */
+.btn-absensi.btn-outline-success {
+    background-color: #28a745;
+    color: #fff;
+    border-color: #28a745;
+}
+.btn-absensi.btn-outline-info {
+    background-color: #17a2b8;
+    color: #fff;
+    border-color: #17a2b8;
+}
+.btn-absensi.btn-outline-warning {
+    background-color: #ffc107;
+    color: #212529;
+    border-color: #ffc107;
+}
+
+/* Table action buttons: stronger colors and bigger text */
+.table .btn-absensi {
+    font-size: 1rem;
+    font-weight: 600;
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -445,13 +479,13 @@ include '../templates/sidebar.php';
                                                 <td><?= htmlspecialchars($teacher['nama_guru']) ?></td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-success btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir" style="opacity: 0.6;">
+                                                        <button type="button" class="btn btn-success btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir">
                                                             <i class="fas fa-check"></i> Hadir
                                                         </button>
-                                                        <button type="button" class="btn btn-info btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit" style="opacity: 0.6;">
+                                                        <button type="button" class="btn btn-info btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit">
                                                             <i class="fas fa-procedures"></i> Sakit
                                                         </button>
-                                                        <button type="button" class="btn btn-warning btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="izin" style="opacity: 0.6;">
+                                                        <button type="button" class="btn btn-warning btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="izin">
                                                             <i class="fas fa-envelope-open-text"></i> Izin
                                                         </button>
                                                     </div>
