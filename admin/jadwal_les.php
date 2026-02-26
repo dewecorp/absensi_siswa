@@ -95,14 +95,14 @@ $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Ahad'];
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-timepicker/0.5.2/css/bootstrap-timepicker.min.css',
-    '../node_modules/select2/dist/css/select2.min.css'
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
 ];
 
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-timepicker/0.5.2/js/bootstrap-timepicker.min.js',
-    '../node_modules/select2/dist/js/select2.full.min.js'
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js'
 ];
 
 $js_page = ["
@@ -156,8 +156,8 @@ $(document).ready(function() {
         });
     " : "") . "
 
-    // Edit functionality
-    $('.edit-btn').on('click', function() {
+    // Edit functionality (delegate to handle DataTables redraw)
+    $(document).on('click', '.edit-btn', function() {
         var data = $(this).data();
         $('#edit_id_les').val(data.id);
         $('#edit_hari').val(data.hari);
@@ -168,8 +168,8 @@ $(document).ready(function() {
         $('#editModal').modal('show');
     });
 
-    // Delete confirmation
-    $('.delete-btn').on('click', function(e) {
+    // Delete confirmation (delegate to handle DataTables redraw)
+    $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
         var id = $(this).data('id');
         Swal.fire({
