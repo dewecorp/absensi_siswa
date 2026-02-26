@@ -113,26 +113,37 @@ $(document).ready(function() {
         }
     });
 
-    $('.select2').select2({
-        width: '100%',
-        dropdownParent: $('#addModal')
-    });
-    
-    $('.select2-edit').select2({
-        width: '100%',
-        dropdownParent: $('#editModal')
-    });
+    // Guard: Select2 may fail to load on some hosts, so degrade gracefully
+    if ($.fn && $.fn.select2) {
+        $('.select2').select2({
+            width: '100%',
+            dropdownParent: $('#addModal')
+        });
+        $('.select2-edit').select2({
+            width: '100%',
+            dropdownParent: $('#editModal')
+        });
+    } else {
+        console.warn('Select2 not loaded; falling back to native selects');
+        $('.select2, .select2-edit').css('width', '100%');
+    }
 
-    $('.timepicker').timepicker({
-        showMeridian: false,
-        minuteStep: 5,
-        defaultTime: '07:00',
-        showInputs: true,
-        icons: {
-            up: 'fas fa-chevron-up',
-            down: 'fas fa-chevron-down'
-        }
-    });
+    // Guard: Bootstrap timepicker may fail to load; proceed without blocking
+    if ($.fn && $.fn.timepicker) {
+        $('.timepicker').timepicker({
+            showMeridian: false,
+            minuteStep: 5,
+            defaultTime: '07:00',
+            showInputs: true,
+            icons: {
+                up: 'fas fa-chevron-up',
+                down: 'fas fa-chevron-down'
+            }
+        });
+    } else {
+        console.warn('Timepicker not loaded; using plain text inputs');
+        $('.timepicker').attr('type', 'time');
+    }
 
     // Auto-fill day name from date
     $('input[name=\"tanggal\"]').on('change', function() {
