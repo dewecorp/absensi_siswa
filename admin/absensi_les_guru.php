@@ -8,7 +8,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check if user is logged in and has allowed level
-if (!isAuthorized(['admin', 'tata_usaha', 'guru', 'wali', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'tata_usaha', 'guru', 'wali'])) {
     redirect('../login.php');
 }
 

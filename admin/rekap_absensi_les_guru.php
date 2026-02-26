@@ -12,7 +12,7 @@ $session_type = $user_level;
 if ($user_level == 'kepala_madrasah') $session_type = 'kepala';
 
 // Set page title
-$page_title = 'Rekap Absensi Les Siswa';
+$page_title = 'Rekap Absensi Les Guru';
 
 // Define CSS and JS libraries
 $css_libs = [
@@ -28,35 +28,63 @@ $js_libs = [
 $filter_type = $_POST['filter_type'] ?? 'all';
 $selected_date = $_POST['attendance_date'] ?? date('Y-m-d');
 
-// Get Grade 6 Class ID
-$stmt_grade6 = $pdo->query("SELECT id_kelas, nama_kelas, wali_kelas FROM tb_kelas WHERE nama_kelas = 'VI' OR nama_kelas = '6' LIMIT 1");
-$class_grade6 = $stmt_grade6->fetch(PDO::FETCH_ASSOC);
-$id_kelas_fixed = $class_grade6 ? $class_grade6['id_kelas'] : 6;
-$nama_kelas_fixed = $class_grade6 ? $class_grade6['nama_kelas'] : 'VI';
-$wali_kelas_fixed = $class_grade6 ? $class_grade6['wali_kelas'] : '-';
-
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
+
+// Get Grade 6 Class IDs
+$stmt_grade6 = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE nama_kelas LIKE '%6%' OR nama_kelas LIKE '%VI%'");
+$grade6_classes = $stmt_grade6->fetchAll(PDO::FETCH_ASSOC);
+$grade6_ids = array_column($grade6_classes, 'id_kelas');
+$grade6_names = array_column($grade6_classes, 'nama_kelas');
 
 $daily_results = [];
 $all_results = [];
 
 // Process search based on filter type
 if ($filter_type == 'daily') {
-    $stmt = $pdo->prepare("
-        SELECT s.id_siswa, s.nama_siswa, s.nisn, al.status, al.tanggal, al.waktu_input
-        FROM tb_siswa s
-        LEFT JOIN tb_absensi_les al ON s.id_siswa = al.id_siswa AND al.tanggal = ?
-        WHERE s.id_kelas = ?
-        ORDER BY s.nama_siswa ASC
-    ");
-    $stmt->execute([$selected_date, $id_kelas_fixed]);
-    $daily_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get all teachers first to filter by grade 6
+    $stmt = $pdo->query("SELECT id_guru, nama_guru, nuptk, mengajar FROM tb_guru ORDER BY nama_guru ASC");
+    $teachers_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $grade6_teacher_ids = [];
+    foreach ($teachers_raw as $t) {
+        $mengajar = json_decode($t['mengajar'], true) ?? [];
+        foreach ($mengajar as $m) {
+            if (in_array($m, $grade6_ids) || in_array($m, $grade6_names)) {
+                $grade6_teacher_ids[] = $t['id_guru'];
+                break;
+            }
+        }
+    }
+
+    if (!empty($grade6_teacher_ids)) {
+        $placeholders = str_repeat('?,', count($grade6_teacher_ids) - 1) . '?';
+        $stmt = $pdo->prepare("
+            SELECT g.id_guru, g.nama_guru, g.nuptk, alg.status, alg.tanggal, alg.waktu_input
+            FROM tb_guru g
+            LEFT JOIN tb_absensi_les_guru alg ON g.id_guru = alg.id_guru AND alg.tanggal = ?
+            WHERE g.id_guru IN ($placeholders)
+            ORDER BY g.nama_guru ASC
+        ");
+        $params = array_merge([$selected_date], $grade6_teacher_ids);
+        $stmt->execute($params);
+        $daily_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 } elseif ($filter_type == 'all') {
-    // Get all students
-    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
-    $stmt->execute([$id_kelas_fixed]);
-    $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get all teachers and filter by grade 6
+    $stmt = $pdo->query("SELECT id_guru, nama_guru, nuptk, mengajar FROM tb_guru ORDER BY nama_guru ASC");
+    $all_teachers_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $all_teachers = [];
+    foreach ($all_teachers_raw as $t) {
+        $mengajar = json_decode($t['mengajar'], true) ?? [];
+        foreach ($mengajar as $m) {
+            if (in_array($m, $grade6_ids) || in_array($m, $grade6_names)) {
+                $all_teachers[] = $t;
+                break;
+            }
+        }
+    }
     
     // Get all scheduled dates
     $stmt_sched = $pdo->query("
@@ -67,38 +95,35 @@ if ($filter_type == 'daily') {
     $scheduled_dates = $stmt_sched->fetchAll(PDO::FETCH_COLUMN);
 
     // Get all attendance data
-    $stmt = $pdo->prepare("
-        SELECT s.id_siswa, al.status, al.tanggal
-        FROM tb_absensi_les al
-        JOIN tb_siswa s ON al.id_siswa = s.id_siswa
-        WHERE s.id_kelas = ?
+    $stmt = $pdo->query("
+        SELECT id_guru, status, tanggal
+        FROM tb_absensi_les_guru
     ");
-    $stmt->execute([$id_kelas_fixed]);
     $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    $attendance_by_student = [];
+    $attendance_by_teacher = [];
     foreach ($records as $r) {
-        $sid = $r['id_siswa'];
+        $gid = $r['id_guru'];
         $date = $r['tanggal'];
-        if (!isset($attendance_by_student[$sid])) {
-            $attendance_by_student[$sid] = [
+        if (!isset($attendance_by_teacher[$gid])) {
+            $attendance_by_teacher[$gid] = [
                 'dates' => [],
                 'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
             ];
         }
-        $attendance_by_student[$sid]['dates'][$date] = $r['status'];
-        if (isset($attendance_by_student[$sid]['summary'][$r['status']])) {
-            $attendance_by_student[$sid]['summary'][$r['status']]++;
+        $attendance_by_teacher[$gid]['dates'][$date] = $r['status'];
+        if (isset($attendance_by_teacher[$gid]['summary'][$r['status']])) {
+            $attendance_by_teacher[$gid]['summary'][$r['status']]++;
         }
     }
     
-    foreach ($all_students as $student) {
-        $sid = $student['id_siswa'];
+    foreach ($all_teachers as $teacher) {
+        $gid = $teacher['id_guru'];
         $all_results[] = [
-            'nama_siswa' => $student['nama_siswa'],
-            'nisn' => $student['nisn'],
-            'dates' => $attendance_by_student[$sid]['dates'] ?? [],
-            'summary' => $attendance_by_student[$sid]['summary'] ?? ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
+            'nama_guru' => $teacher['nama_guru'],
+            'nuptk' => $teacher['nuptk'],
+            'dates' => $attendance_by_teacher[$gid]['dates'] ?? [],
+            'summary' => $attendance_by_teacher[$gid]['summary'] ?? ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
         ];
     }
 }
@@ -110,7 +135,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Rekap Absensi Les Siswa</h1>
+            <h1>Rekap Absensi Les Guru</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
                 <div class="breadcrumb-item">Rekap Absensi Les</div>
@@ -122,11 +147,11 @@ include '../templates/sidebar.php';
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Filter Rekap Absensi Les</h4>
+                            <h4>Filter Rekap Absensi Les Guru</h4>
                         </div>
                         <div class="card-body">
                             <!-- Print Header -->
-                                <div class="print-header" style="display:none;">
+                            <div class="print-header" style="display:none;">
                                 <?php 
                                 $logo_file = $school_profile['logo'] ?? '';
                                 $logo_path = '../assets/img/' . $logo_file;
@@ -138,7 +163,7 @@ include '../templates/sidebar.php';
                                 <p><?= $school_profile['alamat'] ?? '' ?></p>
                                 <p>Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?> | Semester: <?= $school_profile['semester'] ?? '-' ?></p>
                                 <hr style="border: 1px solid black; margin-top: 5px;">
-                                <h4 style="margin-top: 15px; text-decoration: underline;">REKAP ABSENSI LES SISWA KELAS <?= $nama_kelas_fixed ?></h4>
+                                <h4 style="margin-top: 15px; text-decoration: underline;">REKAP ABSENSI LES GURU</h4>
                             </div>
 
                             <form method="POST" class="row">
@@ -163,16 +188,16 @@ include '../templates/sidebar.php';
                             <?php if ($filter_type == 'daily' && !empty($daily_results)): ?>
                                 <div class="mt-4">
                                     <div class="btn-group mb-3 float-right">
-                                        <a href="../config/export_rekap_les_excel.php?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a href="../config/export_rekap_les_pdf.php?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
+                                        <a href="../config/export_rekap_les_guru_excel.php?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+                                        <a href="../config/export_rekap_les_guru_pdf.php?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
                                     </div>
                                     <div class="table-responsive">
                                         <table class="table table-striped table-md" id="table-daily">
                                             <thead>
                                                 <tr>
                                                     <th>No</th>
-                                                    <th>Nama Siswa</th>
-                                                    <th>NISN</th>
+                                                    <th>Nama Guru</th>
+                                                    <th>NUPTK</th>
                                                     <th>Status</th>
                                                     <th>Waktu Input</th>
                                                 </tr>
@@ -181,8 +206,8 @@ include '../templates/sidebar.php';
                                                 <?php foreach ($daily_results as $i => $r): ?>
                                                 <tr>
                                                     <td><?= $i+1 ?></td>
-                                                    <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
-                                                    <td><?= htmlspecialchars($r['nisn']) ?></td>
+                                                    <td><?= htmlspecialchars($r['nama_guru']) ?></td>
+                                                    <td><?= htmlspecialchars($r['nuptk'] ?: '-') ?></td>
                                                     <td>
                                                         <?php 
                                                         $badge = 'badge-secondary';
@@ -204,16 +229,16 @@ include '../templates/sidebar.php';
                             <?php elseif ($filter_type == 'all' && !empty($all_results)): ?>
                                 <div class="mt-4">
                                     <div class="btn-group mb-3 float-right">
-                                        <a href="../config/export_rekap_les_excel.php?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a href="../config/export_rekap_les_pdf.php?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
+                                        <a href="../config/export_rekap_les_guru_excel.php?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+                                        <a href="../config/export_rekap_les_guru_pdf.php?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
                                     </div>
                                     <div class="table-responsive">
                                         <table class="table table-bordered table-sm" id="table-all">
                                             <thead>
                                                 <tr>
                                                     <th rowspan="2" class="align-middle text-center">No</th>
-                                                    <th rowspan="2" class="align-middle">Nama Siswa</th>
-                                                    <th colspan="<?= count($scheduled_dates) ?: 1 ?>" class="text-center">Rekap Absensi Les (Semua Jadwal)</th>
+                                                    <th rowspan="2" class="align-middle">Nama Guru</th>
+                                                    <th colspan="<?= count($scheduled_dates) ?: 1 ?>" class="text-center">Rekap Absensi Les Guru (Semua Jadwal)</th>
                                                     <th colspan="4" class="text-center">Total</th>
                                                 </tr>
                                                 <tr>
@@ -234,7 +259,7 @@ include '../templates/sidebar.php';
                                                 <?php foreach ($all_results as $i => $r): ?>
                                                 <tr>
                                                     <td class="text-center"><?= $i+1 ?></td>
-                                                    <td style="white-space:nowrap;"><?= htmlspecialchars($r['nama_siswa']) ?></td>
+                                                    <td style="white-space:nowrap;"><?= htmlspecialchars($r['nama_guru']) ?></td>
                                                     <?php 
                                                     if (empty($scheduled_dates)) {
                                                         echo "<td class='text-center'>-</td>";
@@ -266,19 +291,8 @@ include '../templates/sidebar.php';
                                     </div>
                                     <!-- Print Signatures -->
                                     <div class="signature-wrapper" style="display:none;">
-                                        <div class="signature-box">
-                                            <p><?= $school_profile['tempat_jadwal'] ?? 'Sukosono' ?>, <?= formatDateIndonesia(date('Y-m-d')) ?><br>Wali Kelas <?= $nama_kelas_fixed ?>,</p>
-                                            <div style="height: 60px;">
-                                                <?php 
-                                                $qr_wali = 'Validasi Wali Kelas: ' . $wali_kelas_fixed . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
-                                                $qr_wali_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_wali);
-                                                ?>
-                                                <img src="<?= $qr_wali_url ?>" style="width: 60px;">
-                                            </div>
-                                            <p><strong><u><?= $wali_kelas_fixed ?></u></strong></p>
-                                        </div>
-                                        <div class="signature-box">
-                                            <p><br>Mengetahui,<br>Kepala Madrasah,</p>
+                                        <div class="signature-box" style="width: 100%;">
+                                            <p><?= $school_profile['tempat_jadwal'] ?? 'Sukosono' ?>, <?= formatDateIndonesia(date('Y-m-d')) ?><br>Mengetahui,<br>Kepala Madrasah,</p>
                                             <div style="height: 60px;">
                                                 <?php 
                                                 $kepala = $school_profile['kepala_madrasah'] ?? '-';
@@ -316,8 +330,8 @@ include '../templates/sidebar.php';
     .print-header img { position: absolute; left: 0; top: 0; width: 70px; }
     .print-header h2, .print-header h3, .print-header p { margin: 2px 0; color: black !important; }
     
-    .signature-wrapper { display: flex !important; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; }
-    .signature-box { text-align: center; width: 40%; }
+    .signature-wrapper { display: flex !important; justify-content: center; margin-top: 30px; page-break-inside: avoid; }
+    .signature-box { text-align: center; width: 100%; }
 }
 .print-header, .signature-wrapper { display: none; }
 </style>
@@ -328,23 +342,11 @@ function exportToExcel(type) {
     var table = document.getElementById(tableId);
     var newTable = table.cloneNode(true);
     
-    // Create Excel Header
-    var excelHtml = '<table>';
-    excelHtml += '<tr><td colspan="5" style="text-align:center; font-weight:bold; font-size:14pt;"><?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN') ?></td></tr>';
-    excelHtml += '<tr><td colspan="5" style="text-align:center; font-weight:bold; font-size:16pt;"><?= strtoupper($school_profile['nama_madrasah'] ?? 'MADRASAH') ?></td></tr>';
-    excelHtml += '<tr><td colspan="5" style="text-align:center;"><?= $school_profile['alamat'] ?? '' ?></td></tr>';
-    excelHtml += '<tr><td colspan="5"></td></tr>';
-    excelHtml += '<tr><td colspan="5" style="text-align:center; font-weight:bold; text-decoration:underline;">REKAP ABSENSI LES SISWA KELAS <?= $nama_kelas_fixed ?></td></tr>';
-    excelHtml += '<tr><td colspan="5"></td></tr>';
-    excelHtml += '</table>';
-
     var wb = XLSX.utils.book_new();
     var ws = XLSX.utils.table_to_sheet(newTable);
     
-    // Prepend header manually in Excel is hard with table_to_sheet, 
-    // so we'll use a simpler approach for the file name and content
-    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi Les");
-    XLSX.writeFile(wb, "Rekap_Absensi_Les_Siswa_" + type + "_" + new Date().getTime() + ".xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi Les Guru");
+    XLSX.writeFile(wb, "Rekap_Absensi_Les_Guru_" + type + "_" + new Date().getTime() + ".xlsx");
 }
 
 function printReport() {

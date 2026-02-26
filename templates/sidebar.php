@@ -46,6 +46,7 @@ switch ($user_level) {
                     ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php', 'active' => $current_page === 'absensi_les_siswa.php'],
                     ['title' => 'Rekap Absensi Siswa', 'url' => '../admin/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
                     ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php', 'active' => $current_page === 'rekap_absensi_les_siswa.php'],
+                    ['title' => 'Rekap Absensi Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php', 'active' => $current_page === 'rekap_absensi_les_guru.php'],
                     ['title' => 'Sholat Berjamaah', 'url' => '../admin/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
                     ['title' => 'Rekap Sholat Berjamaah', 'url' => '../admin/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
                     ['title' => 'Sholat Dhuha', 'url' => '../admin/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
@@ -150,9 +151,8 @@ switch ($user_level) {
                 'title' => 'Rekap Absensi',
                 'icon' => 'fas fa-file-alt',
                 'submenu' => [
-                    ['title' => 'Absensi Les Guru', 'url' => '../kepala/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'],
-                    ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'absensi_les_siswa.php'],
                     ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'rekap_absensi_les_siswa.php'],
+                    ['title' => 'Rekap Absensi Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php?session_type=kepala_madrasah', 'active' => $current_page === 'rekap_absensi_les_guru.php'],
                     ['title' => 'Rekap Absensi Guru', 'url' => '../kepala/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
                     ['title' => 'Rekap Absensi Siswa', 'url' => '../kepala/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
                     ['title' => 'Rekap Sholat Berjamaah', 'url' => '../kepala/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
@@ -338,7 +338,8 @@ switch ($user_level) {
             array_splice($absensi_submenu_guru, 2, 0, [
                 ['title' => 'Absensi Les Guru', 'url' => '../guru/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'],
                 ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php?session_type=guru', 'active' => $current_page === 'absensi_les_siswa.php'],
-                ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=guru', 'active' => $current_page === 'rekap_absensi_les_siswa.php']
+                ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=guru', 'active' => $current_page === 'rekap_absensi_les_siswa.php'],
+                ['title' => 'Rekap Absensi Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php?session_type=guru', 'active' => $current_page === 'rekap_absensi_les_guru.php']
             ]);
         }
 
@@ -492,7 +493,8 @@ switch ($user_level) {
             array_splice($absensi_submenu_wali, 2, 0, [
                 ['title' => 'Absensi Les Guru', 'url' => '../wali/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'],
                 ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php?session_type=wali', 'active' => $current_page === 'absensi_les_siswa.php'],
-                ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=wali', 'active' => $current_page === 'rekap_absensi_les_siswa.php']
+                ['title' => 'Rekap Absensi Les', 'url' => '../admin/rekap_absensi_les_siswa.php?session_type=wali', 'active' => $current_page === 'rekap_absensi_les_siswa.php'],
+                ['title' => 'Rekap Absensi Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php?session_type=wali', 'active' => $current_page === 'rekap_absensi_les_guru.php']
             ]);
         }
 
