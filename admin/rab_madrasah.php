@@ -26,7 +26,8 @@ try {
         uraian VARCHAR(255) NOT NULL,
         volume INT NOT NULL DEFAULT 0,
         satuan DECIMAL(15,2) NOT NULL DEFAULT 0,
-        jumlah DECIMAL(15,2) GENERATED ALWAYS AS (volume * satuan) STORED,
+        jumlah INT NOT NULL DEFAULT 1,
+        total DECIMAL(15,2) GENERATED ALWAYS AS (volume * satuan * jumlah) STORED,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
 
@@ -36,10 +37,35 @@ try {
         uraian VARCHAR(255) NOT NULL,
         volume INT NOT NULL DEFAULT 0,
         satuan DECIMAL(15,2) NOT NULL DEFAULT 0,
-        jumlah DECIMAL(15,2) GENERATED ALWAYS AS (volume * satuan) STORED,
+        jumlah INT NOT NULL DEFAULT 1,
+        total DECIMAL(15,2) GENERATED ALWAYS AS (volume * satuan * jumlah) STORED,
         id_kategori INT NULL,
+        sub_kategori VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
+    
+    // Add sub_kategori column if not exists
+    $columns = $pdo->query("SHOW COLUMNS FROM tb_rencana_pengeluaran LIKE 'sub_kategori'")->fetchAll();
+    if (empty($columns)) {
+        $pdo->exec("ALTER TABLE tb_rencana_pengeluaran ADD COLUMN sub_kategori VARCHAR(255) NULL AFTER id_kategori");
+    }
+
+    // Migrate 'jumlah' column to 'total' and recreate 'jumlah' as INT for existing tables
+    // Check if 'total' exists in tb_sumber_anggaran
+    $cols_sumber = $pdo->query("SHOW COLUMNS FROM tb_sumber_anggaran LIKE 'total'")->fetchAll();
+    if (empty($cols_sumber)) {
+        $pdo->exec("ALTER TABLE tb_sumber_anggaran DROP COLUMN jumlah");
+        $pdo->exec("ALTER TABLE tb_sumber_anggaran ADD COLUMN jumlah INT NOT NULL DEFAULT 1 AFTER satuan");
+        $pdo->exec("ALTER TABLE tb_sumber_anggaran ADD COLUMN total DECIMAL(15,2) GENERATED ALWAYS AS (volume * satuan * jumlah) STORED AFTER jumlah");
+    }
+
+    // Check if 'total' exists in tb_rencana_pengeluaran
+    $cols_pengeluaran = $pdo->query("SHOW COLUMNS FROM tb_rencana_pengeluaran LIKE 'total'")->fetchAll();
+    if (empty($cols_pengeluaran)) {
+        $pdo->exec("ALTER TABLE tb_rencana_pengeluaran DROP COLUMN jumlah");
+        $pdo->exec("ALTER TABLE tb_rencana_pengeluaran ADD COLUMN jumlah INT NOT NULL DEFAULT 1 AFTER satuan");
+        $pdo->exec("ALTER TABLE tb_rencana_pengeluaran ADD COLUMN total DECIMAL(15,2) GENERATED ALWAYS AS (volume * satuan * jumlah) STORED AFTER jumlah");
+    }
 } catch (PDOException $e) {
     error_log("Error creating tables: " . $e->getMessage());
 }
@@ -59,11 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_sumber'])) {
         $uraian = trim($_POST['uraian']);
         $volume = (int)$_POST['volume'];
-        $satuan = (float)str_replace(['Rp', '.', ' '], '', $_POST['satuan']); // Remove formatting
+        $satuan = (float)str_replace(['Rp', '.', ' '], '', $_POST['satuan']); 
+        $jumlah = (int)$_POST['jumlah'];
 
         if (!empty($uraian)) {
-            $stmt = $pdo->prepare("INSERT INTO tb_sumber_anggaran (uraian, volume, satuan) VALUES (?, ?, ?)");
-            if ($stmt->execute([$uraian, $volume, $satuan])) {
+            $stmt = $pdo->prepare("INSERT INTO tb_sumber_anggaran (uraian, volume, satuan, jumlah) VALUES (?, ?, ?, ?)");
+            if ($stmt->execute([$uraian, $volume, $satuan, $jumlah])) {
                 $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Sumber anggaran berhasil ditambahkan!'];
                 logActivity($pdo, $_SESSION['username'] ?? 'system', 'Tambah Sumber Anggaran', "Menambahkan: $uraian");
             } else {
@@ -75,9 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $uraian = trim($_POST['uraian']);
         $volume = (int)$_POST['volume'];
         $satuan = (float)str_replace(['Rp', '.', ' '], '', $_POST['satuan']);
+        $jumlah = (int)$_POST['jumlah'];
 
-        $stmt = $pdo->prepare("UPDATE tb_sumber_anggaran SET uraian=?, volume=?, satuan=? WHERE id_sumber=?");
-        if ($stmt->execute([$uraian, $volume, $satuan, $id])) {
+        $stmt = $pdo->prepare("UPDATE tb_sumber_anggaran SET uraian=?, volume=?, satuan=?, jumlah=? WHERE id_sumber=?");
+        if ($stmt->execute([$uraian, $volume, $satuan, $jumlah, $id])) {
             $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Sumber anggaran berhasil diupdate!'];
             logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Sumber Anggaran', "Update ID: $id");
         } else {
@@ -99,11 +127,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $uraian = trim($_POST['uraian']);
         $volume = (int)$_POST['volume'];
         $satuan = (float)str_replace(['Rp', '.', ' '], '', $_POST['satuan']);
+        $jumlah = (int)$_POST['jumlah'];
         $id_kategori = !empty($_POST['id_kategori']) ? (int)$_POST['id_kategori'] : null;
+        $sub_kategori = !empty($_POST['sub_kategori']) ? trim($_POST['sub_kategori']) : null;
 
         if (!empty($uraian)) {
-            $stmt = $pdo->prepare("INSERT INTO tb_rencana_pengeluaran (uraian, volume, satuan, id_kategori) VALUES (?, ?, ?, ?)");
-            if ($stmt->execute([$uraian, $volume, $satuan, $id_kategori])) {
+            $stmt = $pdo->prepare("INSERT INTO tb_rencana_pengeluaran (uraian, volume, satuan, jumlah, id_kategori, sub_kategori) VALUES (?, ?, ?, ?, ?, ?)");
+            if ($stmt->execute([$uraian, $volume, $satuan, $jumlah, $id_kategori, $sub_kategori])) {
                 $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Rencana pengeluaran berhasil ditambahkan!'];
                 logActivity($pdo, $_SESSION['username'] ?? 'system', 'Tambah Rencana Pengeluaran', "Menambahkan: $uraian");
             } else {
@@ -115,10 +145,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $uraian = trim($_POST['uraian']);
         $volume = (int)$_POST['volume'];
         $satuan = (float)str_replace(['Rp', '.', ' '], '', $_POST['satuan']);
+        $jumlah = (int)$_POST['jumlah'];
         $id_kategori = !empty($_POST['id_kategori']) ? (int)$_POST['id_kategori'] : null;
+        $sub_kategori = !empty($_POST['sub_kategori']) ? trim($_POST['sub_kategori']) : null;
 
-        $stmt = $pdo->prepare("UPDATE tb_rencana_pengeluaran SET uraian=?, volume=?, satuan=?, id_kategori=? WHERE id_pengeluaran=?");
-        if ($stmt->execute([$uraian, $volume, $satuan, $id_kategori, $id])) {
+        $stmt = $pdo->prepare("UPDATE tb_rencana_pengeluaran SET uraian=?, volume=?, satuan=?, jumlah=?, id_kategori=?, sub_kategori=? WHERE id_pengeluaran=?");
+        if ($stmt->execute([$uraian, $volume, $satuan, $jumlah, $id_kategori, $sub_kategori, $id])) {
             $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Rencana pengeluaran berhasil diupdate!'];
             logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Rencana Pengeluaran', "Update ID: $id");
         } else {
@@ -145,8 +177,8 @@ $rencana_pengeluaran = $pdo->query("SELECT p.*, k.nama_kategori FROM tb_rencana_
 $kategori_anggaran = $pdo->query("SELECT * FROM tb_kategori_anggaran ORDER BY nama_kategori ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Calculate Totals
-$total_sumber = array_sum(array_column($sumber_anggaran, 'jumlah'));
-$total_pengeluaran = array_sum(array_column($rencana_pengeluaran, 'jumlah'));
+$total_sumber = array_sum(array_column($sumber_anggaran, 'total'));
+$total_pengeluaran = array_sum(array_column($rencana_pengeluaran, 'total'));
 $sisa_anggaran = $total_sumber - $total_pengeluaran;
 
 // Define CSS libraries
@@ -253,7 +285,8 @@ include '../templates/sidebar.php';
                                             <th>Uraian</th>
                                             <th class="text-center">Volume</th>
                                             <th class="text-right">Satuan (Rp)</th>
-                                            <th class="text-right">Jumlah (Rp)</th>
+                                            <th class="text-center">Jumlah</th>
+                                            <th class="text-right">Total (Rp)</th>
                                             <th width="15%" class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
@@ -264,13 +297,15 @@ include '../templates/sidebar.php';
                                             <td><?= htmlspecialchars($row['uraian']) ?></td>
                                             <td class="text-center"><?= number_format($row['volume'], 0, ',', '.') ?></td>
                                             <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
-                                            <td class="text-right font-weight-bold"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
+                                            <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
+                                            <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
                                             <td class="text-center">
                                                 <button class="btn btn-warning btn-sm edit-sumber-btn" 
                                                     data-id="<?= $row['id_sumber'] ?>"
                                                     data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
                                                     data-volume="<?= $row['volume'] ?>"
-                                                    data-satuan="<?= $row['satuan'] ?>">
+                                                    data-satuan="<?= $row['satuan'] ?>"
+                                                    data-jumlah="<?= $row['jumlah'] ?>">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button class="btn btn-danger btn-sm delete-sumber-btn" 
@@ -309,9 +344,11 @@ include '../templates/sidebar.php';
                                             <th class="text-center" width="5%">No</th>
                                             <th>Uraian</th>
                                             <th>Kategori</th>
+                                            <th>Sub Kategori</th>
                                             <th class="text-center">Volume</th>
                                             <th class="text-right">Satuan (Rp)</th>
-                                            <th class="text-right">Jumlah (Rp)</th>
+                                            <th class="text-center">Jumlah</th>
+                                            <th class="text-right">Total (Rp)</th>
                                             <th width="15%" class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
@@ -320,23 +357,21 @@ include '../templates/sidebar.php';
                                         <tr>
                                             <td class="text-center"><?= $i + 1 ?></td>
                                             <td><?= htmlspecialchars($row['uraian']) ?></td>
-                                            <td>
-                                                <?php if ($row['nama_kategori']): ?>
-                                                    <span class="badge badge-info"><?= htmlspecialchars($row['nama_kategori']) ?></span>
-                                                <?php else: ?>
-                                                    <span class="badge badge-light">-</span>
-                                                <?php endif; ?>
-                                            </td>
+                                            <td><?= htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori') ?></td>
+                                            <td><?= htmlspecialchars($row['sub_kategori'] ?? '-') ?></td>
                                             <td class="text-center"><?= number_format($row['volume'], 0, ',', '.') ?></td>
                                             <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
-                                            <td class="text-right font-weight-bold"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
+                                            <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
+                                            <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
                                             <td class="text-center">
                                                 <button class="btn btn-warning btn-sm edit-pengeluaran-btn" 
                                                     data-id="<?= $row['id_pengeluaran'] ?>"
                                                     data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
                                                     data-kategori="<?= $row['id_kategori'] ?>"
+                                                    data-sub_kategori="<?= htmlspecialchars($row['sub_kategori'] ?? '') ?>"
                                                     data-volume="<?= $row['volume'] ?>"
-                                                    data-satuan="<?= $row['satuan'] ?>">
+                                                    data-satuan="<?= $row['satuan'] ?>"
+                                                    data-jumlah="<?= $row['jumlah'] ?>">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button class="btn btn-danger btn-sm delete-pengeluaran-btn" 
@@ -375,32 +410,29 @@ include '../templates/sidebar.php';
                         <label>Uraian</label>
                         <input type="text" class="form-control" name="uraian" required>
                     </div>
-                    <div class="form-group">
-                        <label>Kategori Anggaran</label>
-                        <select class="form-control" name="id_kategori">
-                            <option value="">-- Pilih Kategori --</option>
-                            <?php foreach ($kategori_anggaran as $kat): ?>
-                                <option value="<?= $kat['id_kategori'] ?>"><?= htmlspecialchars($kat['nama_kategori']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Volume</label>
                                 <input type="number" class="form-control input-volume" name="volume" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Satuan (Rp)</label>
                                 <input type="text" class="form-control input-satuan uang" name="satuan" required>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Jumlah</label>
+                                <input type="number" class="form-control input-jumlah-qty" name="jumlah" value="1" required>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label>Total Jumlah (Otomatis)</label>
-                        <input type="text" class="form-control input-jumlah" readonly style="font-weight: bold; background-color: #e9ecef;">
+                        <label>Total (Otomatis)</label>
+                        <input type="text" class="form-control input-total" readonly style="font-weight: bold; background-color: #e9ecef;">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -430,22 +462,28 @@ include '../templates/sidebar.php';
                         <input type="text" class="form-control" name="uraian" id="edit_sumber_uraian" required>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Volume</label>
                                 <input type="number" class="form-control input-volume" name="volume" id="edit_sumber_volume" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Satuan (Rp)</label>
                                 <input type="text" class="form-control input-satuan uang" name="satuan" id="edit_sumber_satuan" required>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Jumlah</label>
+                                <input type="number" class="form-control input-jumlah-qty" name="jumlah" id="edit_sumber_jumlah_qty" required>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label>Total Jumlah (Otomatis)</label>
-                        <input type="text" class="form-control input-jumlah" id="edit_sumber_jumlah" readonly style="font-weight: bold; background-color: #e9ecef;">
+                        <label>Total (Otomatis)</label>
+                        <input type="text" class="form-control input-total" id="edit_sumber_total" readonly style="font-weight: bold; background-color: #e9ecef;">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -482,23 +520,33 @@ include '../templates/sidebar.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Sub Kategori (Opsional)</label>
+                        <input type="text" class="form-control" name="sub_kategori" placeholder="Contoh: Kegiatan KSM">
+                    </div>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Volume</label>
                                 <input type="number" class="form-control input-volume" name="volume" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Satuan (Rp)</label>
                                 <input type="text" class="form-control input-satuan uang" name="satuan" required>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Jumlah</label>
+                                <input type="number" class="form-control input-jumlah-qty" name="jumlah" value="1" required>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label>Total Jumlah (Otomatis)</label>
-                        <input type="text" class="form-control input-jumlah" readonly style="font-weight: bold; background-color: #e9ecef;">
+                        <label>Total (Otomatis)</label>
+                        <input type="text" class="form-control input-total" readonly style="font-weight: bold; background-color: #e9ecef;">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -536,23 +584,33 @@ include '../templates/sidebar.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Sub Kategori (Opsional)</label>
+                        <input type="text" class="form-control" name="sub_kategori" id="edit_pengeluaran_sub_kategori" placeholder="Contoh: Kegiatan KSM">
+                    </div>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Volume</label>
                                 <input type="number" class="form-control input-volume" name="volume" id="edit_pengeluaran_volume" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label>Satuan (Rp)</label>
                                 <input type="text" class="form-control input-satuan uang" name="satuan" id="edit_pengeluaran_satuan" required>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Jumlah</label>
+                                <input type="number" class="form-control input-jumlah-qty" name="jumlah" id="edit_pengeluaran_jumlah_qty" required>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label>Total Jumlah (Otomatis)</label>
-                        <input type="text" class="form-control input-jumlah" id="edit_pengeluaran_jumlah" readonly style="font-weight: bold; background-color: #e9ecef;">
+                        <label>Total (Otomatis)</label>
+                        <input type="text" class="form-control input-total" id="edit_pengeluaran_total" readonly style="font-weight: bold; background-color: #e9ecef;">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -582,28 +640,44 @@ $(document).ready(function() {
     // Init DataTables
     $('#table-sumber').DataTable();
     $('#table-pengeluaran').DataTable({
-        order: [[2, 'asc']],
+        ordering: false, // Matikan fitur sorting agar sesuai urutan database
         rowGroup: {
-            dataSrc: 2,
-            startRender: function ( rows, group ) {
+            dataSrc: [2, 3],
+            startRender: function ( rows, group, level ) {
+                // If sub-category is empty, don't show the header row for it
+                if (level === 1 && (!group || group === '-')) {
+                    return null;
+                }
+
                 var total = rows
                     .data()
-                    .pluck(5)
+                    .pluck(7) // Index 7 is Total column (Rp)
                     .reduce( function (a, b) {
                         return a + b.replace(/[^\d]/g, '')*1;
                     }, 0);
                 
                 var totalStr = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                var groupName = group ? group : 'Tanpa Kategori';
+                var groupName = group ? group : (level === 0 ? 'Tanpa Kategori' : 'Tanpa Sub Kategori');
+
+                var backgroundColor = level === 0 ? '#e2e3e5' : '#f8f9fa';
+                var fontWeight = level === 0 ? 'bold' : 'normal';
+                var paddingLeft = level === 0 ? '10px' : '30px';
+                
+                var label;
+                if (level === 0) {
+                    label = '<span class="badge badge-primary" style="font-size: 14px;">' + groupName + '</span>';
+                } else {
+                    label = '<i class="fas fa-angle-right mr-2"></i> <span class="badge badge-success border" style="font-size: 13px;">' + groupName + '</span>';
+                }
 
                 return $('<tr/>')
-                    .append( '<td colspan="4" style="background-color:#f2f2f2; font-weight:bold;">'+groupName+'</td>' )
-                    .append( '<td style="background-color:#f2f2f2; font-weight:bold; text-align:right;">'+totalStr+'</td>' )
-                    .append( '<td style="background-color:#f2f2f2;"></td>' );
+                    .append( '<td colspan="7" style="background-color:'+backgroundColor+'; font-weight:'+fontWeight+'; padding-left:'+paddingLeft+';">'+label+'</td>' )
+                    .append( '<td style="background-color:'+backgroundColor+'; font-weight:bold; text-align:right;">'+totalStr+'</td>' )
+                    .append( '<td style="background-color:'+backgroundColor+';"></td>' );
             }
         },
         columnDefs: [
-            { targets: [2], visible: false }
+            { targets: [2, 3], visible: false }
         ]
     });
 
@@ -627,15 +701,17 @@ $(document).ready(function() {
         var volume = parseInt(container.find('.input-volume').val()) || 0;
         var satuanStr = container.find('.input-satuan').val().replace(/\./g, '');
         var satuan = parseInt(satuanStr) || 0;
-        var total = volume * satuan;
+        var jumlah = parseInt(container.find('.input-jumlah-qty').val()) || 0;
+        
+        var total = volume * satuan * jumlah;
         
         // Format to Rupiah
         var totalStr = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        container.find('.input-jumlah').val(totalStr);
+        container.find('.input-total').val(totalStr);
     }
 
     // Bind calculation events
-    $(document).on('keyup change', '.input-volume, .input-satuan', function() {
+    $(document).on('keyup change', '.input-volume, .input-satuan, .input-jumlah-qty', function() {
         calculateTotal($(this).closest('.modal-body'));
     });
 
@@ -646,13 +722,17 @@ $(document).ready(function() {
         var id = $(this).data('id');
         var uraian = $(this).data('uraian');
         var volume = $(this).data('volume');
-        var satuan = $(this).data('satuan');
-        var jumlah = volume * satuan;
+        var satuan = parseInt($(this).data('satuan')); // Parse as Int to remove .00
+        var jumlah = $(this).data('jumlah');
 
         $('#edit_sumber_id').val(id);
         $('#edit_sumber_uraian').val(uraian);
         $('#edit_sumber_volume').val(volume);
-        $('#edit_sumber_satuan').val(satuan.toString()).trigger('input'); // Trigger mask
+        $('#edit_sumber_satuan').val(satuan).mask('000.000.000.000', {reverse: true});
+        $('#edit_sumber_jumlah_qty').val(jumlah);
+        
+        // Calculate manually
+        calculateTotal($('#editSumberModal .modal-body'));
         $('#editSumberModal').modal('show');
     });
 
@@ -683,14 +763,21 @@ $(document).ready(function() {
         var id = $(this).data('id');
         var uraian = $(this).data('uraian');
         var volume = $(this).data('volume');
-        var satuan = $(this).data('satuan');
+        var satuan = parseInt($(this).data('satuan')); // Parse as Int to remove .00
+        var jumlah = $(this).data('jumlah');
         var kategori = $(this).data('kategori');
+        var sub_kategori = $(this).data('sub_kategori');
 
         $('#edit_pengeluaran_id').val(id);
         $('#edit_pengeluaran_uraian').val(uraian);
         $('#edit_pengeluaran_volume').val(volume);
-        $('#edit_pengeluaran_satuan').val(satuan.toString()).trigger('input');
+        $('#edit_pengeluaran_satuan').val(satuan).mask('000.000.000.000', {reverse: true});
+        $('#edit_pengeluaran_jumlah_qty').val(jumlah);
         $('#edit_pengeluaran_kategori').val(kategori);
+        $('#edit_pengeluaran_sub_kategori').val(sub_kategori);
+        
+        // Calculate manually
+        calculateTotal($('#editPengeluaranModal .modal-body'));
         $('#editPengeluaranModal').modal('show');
     });
 
