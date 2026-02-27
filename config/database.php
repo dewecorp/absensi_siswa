@@ -18,6 +18,14 @@ try {
     
     // Set Timezone MySQL
     $pdo->exec("SET time_zone = '+07:00'");
+
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM tb_mata_pelajaran LIKE 'jenis_mapel'");
+        if ($colCheck && $colCheck->rowCount() == 0) {
+            $pdo->exec("ALTER TABLE tb_mata_pelajaran ADD COLUMN jenis_mapel VARCHAR(20) NULL DEFAULT 'Akademik' AFTER kode_mapel");
+        }
+    } catch (Exception $e) {
+    }
 } catch(PDOException $e) {
     // Log error instead of showing it to user
     error_log("Connection failed: " . $e->getMessage());

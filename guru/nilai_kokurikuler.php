@@ -47,7 +47,8 @@ if ($is_admin_view) {
 $subjects = [];
 if ($is_admin_view) {
     $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
-        WHERE nama_mapel NOT LIKE '%Asmaul Husna%'
+        WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik')
+        AND nama_mapel NOT LIKE '%Asmaul Husna%'
         AND nama_mapel NOT LIKE '%Upacara%'
         AND nama_mapel NOT LIKE '%Istirahat%'
         AND nama_mapel NOT LIKE '%Kepramukaan%'
@@ -60,6 +61,7 @@ if ($is_admin_view) {
         FROM tb_mata_pelajaran mp
         JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
         WHERE jp.guru_id = ?
+        AND (mp.jenis_mapel IS NULL OR mp.jenis_mapel = 'Akademik')
         AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
         AND mp.nama_mapel NOT LIKE '%Upacara%'
         AND mp.nama_mapel NOT LIKE '%Istirahat%'

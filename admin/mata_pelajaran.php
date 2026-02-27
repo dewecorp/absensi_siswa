@@ -23,6 +23,16 @@ $logo_url = $web_root . '/assets/img/' . $logo_file;
 // Set page title
 $page_title = 'Mata Pelajaran';
 
+// Ensure schema: add jenis_mapel column if missing
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM tb_mata_pelajaran LIKE 'jenis_mapel'");
+    if ($colCheck->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE tb_mata_pelajaran ADD COLUMN jenis_mapel VARCHAR(20) NULL DEFAULT 'Akademik' AFTER kode_mapel");
+    }
+} catch (Exception $e) {
+    // Ignore schema change errors to avoid breaking page on limited hosting
+}
+
 // Handle form submissions
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -30,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $nama_mapel = trim($_POST['nama_mapel']);
         $kode_mapel = trim($_POST['kode_mapel']);
         $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
+        $jenis_mapel = isset($_POST['jenis_mapel']) && in_array($_POST['jenis_mapel'], ['Akademik', 'Non Akademik']) ? $_POST['jenis_mapel'] : 'Akademik';
         
         // Cek duplikasi mata pelajaran
         $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE nama_mapel = ? OR kode_mapel = ?");
@@ -37,12 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($check->fetchColumn() > 0) {
             $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
         } else {
-            $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel, kktp) VALUES (?, ?, ?)");
-            if ($stmt->execute([$nama_mapel, $kode_mapel, $kktp])) {
+            $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel, jenis_mapel, kktp) VALUES (?, ?, ?, ?)");
+            if ($stmt->execute([$nama_mapel, $kode_mapel, $jenis_mapel, $kktp])) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil ditambahkan!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
                 $kktp_log = $kktp !== null ? "dengan KKTP $kktp" : "tanpa KKTP";
-                logActivity($pdo, $username, 'Tambah Mata Pelajaran', "Menambahkan mapel $nama_mapel ($kode_mapel) $kktp_log");
+                logActivity($pdo, $username, 'Tambah Mata Pelajaran', "Menambahkan mapel $nama_mapel ($kode_mapel) [$jenis_mapel] $kktp_log");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal menambahkan mata pelajaran!'];
             }
@@ -52,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $nama_mapel = trim($_POST['nama_mapel']);
         $kode_mapel = trim($_POST['kode_mapel']);
         $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
+        $jenis_mapel = isset($_POST['jenis_mapel']) && in_array($_POST['jenis_mapel'], ['Akademik', 'Non Akademik']) ? $_POST['jenis_mapel'] : 'Akademik';
         
         // Cek duplikasi mata pelajaran selain ID ini
         $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE (nama_mapel = ? OR kode_mapel = ?) AND id_mapel != ?");
@@ -59,12 +71,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($check->fetchColumn() > 0) {
             $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
         } else {
-            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, kktp=? WHERE id_mapel=?");
-            if ($stmt->execute([$nama_mapel, $kode_mapel, $kktp, $id_mapel])) {
+            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, jenis_mapel=?, kktp=? WHERE id_mapel=?");
+            if ($stmt->execute([$nama_mapel, $kode_mapel, $jenis_mapel, $kktp, $id_mapel])) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil diupdate!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
                 $kktp_log = $kktp !== null ? "KKTP $kktp" : "tanpa KKTP";
-                logActivity($pdo, $username, 'Update Mata Pelajaran', "Update mapel ID $id_mapel menjadi $nama_mapel ($kode_mapel) $kktp_log");
+                logActivity($pdo, $username, 'Update Mata Pelajaran', "Update mapel ID $id_mapel menjadi $nama_mapel ($kode_mapel) [$jenis_mapel] $kktp_log");
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengupdate mata pelajaran!'];
             }
@@ -135,7 +147,7 @@ $(document).ready(function() {
     // Initialize DataTable
     $('#table-1').DataTable({
         \"columnDefs\": [
-            { \"sortable\": false, \"targets\": [4] }
+            { \"sortable\": false, \"targets\": [5] }
         ],
         \"language\": {
             \"lengthMenu\": \"Tampilkan _MENU_ entri\",
@@ -159,11 +171,13 @@ $(document).ready(function() {
         var nama = $(this).data('nama');
         var kode = $(this).data('kode');
         var kktp = $(this).data('kktp');
+        var jenis = $(this).data('jenis') || 'Akademik';
 
         $('#edit_id_mapel').val(id);
         $('#edit_nama_mapel').val(nama);
         $('#edit_kode_mapel').val(kode);
         $('#edit_kktp').val(kktp);
+        $('#edit_jenis_mapel').val(jenis);
         
         $('#editModal').modal('show');
     });
@@ -359,6 +373,7 @@ include '../templates/sidebar.php';
                                             <th class="text-center" width="5%">No</th>
                                             <th>Kode Mapel</th>
                                             <th>Mata Pelajaran</th>
+                                            <th>Jenis</th>
                                             <th>KKTP</th>
                                             <th width="15%">Aksi</th>
                                         </tr>
@@ -372,12 +387,14 @@ include '../templates/sidebar.php';
                                             <td class="text-center"><?= $no++ ?></td>
                                             <td><?= htmlspecialchars($row['kode_mapel'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['nama_mapel']) ?></td>
+                                            <td><?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?></td>
                                             <td><?= $row['kktp'] !== null ? htmlspecialchars($row['kktp']) : '-' ?></td>
                                             <td>
                                                 <button class="btn btn-warning btn-sm edit-btn" 
                                                         data-id="<?= $row['id_mapel'] ?>"
                                                         data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>"
                                                         data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>"
+                                                        data-jenis="<?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?>"
                                                         data-kktp="<?= htmlspecialchars($row['kktp'] ?? '') ?>">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -419,6 +436,13 @@ include '../templates/sidebar.php';
                     <div class="form-group">
                         <label>Nama Mata Pelajaran</label>
                         <input type="text" class="form-control" name="nama_mapel" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Jenis Mapel</label>
+                        <select class="form-control" name="jenis_mapel">
+                            <option value="Akademik">Akademik</option>
+                            <option value="Non Akademik">Non Akademik</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>KKTP (Nilai Minimum)</label>
@@ -485,6 +509,13 @@ include '../templates/sidebar.php';
                     <div class="form-group">
                         <label>Nama Mata Pelajaran</label>
                         <input type="text" class="form-control" name="nama_mapel" id="edit_nama_mapel" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Jenis Mapel</label>
+                        <select class="form-control" name="jenis_mapel" id="edit_jenis_mapel">
+                            <option value="Akademik">Akademik</option>
+                            <option value="Non Akademik">Non Akademik</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>KKTP (Nilai Minimum)</label>

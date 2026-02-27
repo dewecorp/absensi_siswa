@@ -31,7 +31,8 @@ if ($selected_class_id) {
 // Get All Subjects (Mapel) - Filtered
 $subjects = [];
 $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
-    WHERE nama_mapel NOT LIKE '%Asmaul Husna%'
+    WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik')
+    AND nama_mapel NOT LIKE '%Asmaul Husna%'
     AND nama_mapel NOT LIKE '%Upacara%'
     AND nama_mapel NOT LIKE '%Istirahat%'
     AND nama_mapel NOT LIKE '%Kepramukaan%'
