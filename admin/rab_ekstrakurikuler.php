@@ -664,7 +664,7 @@ $(document).ready(function() {
                 var groupName = group ? group : 'Tanpa Kategori';
 
                 return $('<tr/>')
-                    .append( '<td colspan="7" style="background-color:#e2e3e5; font-weight:bold;">'+groupName+'</td>' )
+                    .append( '<td colspan="6" style="background-color:#e2e3e5; font-weight:bold;">'+groupName+'</td>' )
                     .append( '<td style="background-color:#e2e3e5; font-weight:bold; text-align:right;">'+totalStr+'</td>' )
                     .append( '<td style="background-color:#e2e3e5;"></td>' );
             }

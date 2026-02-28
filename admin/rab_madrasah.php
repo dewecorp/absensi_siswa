@@ -271,6 +271,9 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Sumber Anggaran</h4>
                             <div class="card-header-action">
+                                <a href="export_rab_sql.php" target="_blank" class="btn btn-info mr-2" title="Backup Database RAB">
+                                    <i class="fas fa-database"></i> Backup DB
+                                </a>
                                 <a href="export_excel_rab_madrasah.php" target="_blank" class="btn btn-success mr-2">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
@@ -679,7 +682,7 @@ $(document).ready(function() {
                 }
 
                 return $('<tr/>')
-                    .append( '<td colspan="7" style="background-color:'+backgroundColor+'; font-weight:'+fontWeight+'; padding-left:'+paddingLeft+';">'+label+'</td>' )
+                    .append( '<td colspan="5" style="background-color:'+backgroundColor+'; font-weight:'+fontWeight+'; padding-left:'+paddingLeft+';">'+label+'</td>' )
                     .append( '<td style="background-color:'+backgroundColor+'; font-weight:bold; text-align:right;">'+totalStr+'</td>' )
                     .append( '<td style="background-color:'+backgroundColor+';"></td>' );
             }
