@@ -186,6 +186,7 @@ $school_profile = getSchoolProfile($pdo);
             $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
         $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
         $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
+        $nip_kepala = sanitizeInput($_POST['nip_kepala']);
         $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
         $semester = sanitizeInput($_POST['semester']);
         $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
@@ -267,8 +268,8 @@ $school_profile = getSchoolProfile($pdo);
     }
     
     if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, kepala_madrasah=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
-        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $kepala_madrasah, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $logo, $hero_image, $ttd_kepala])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, kepala_madrasah=?, nip_kepala=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $kepala_madrasah, $nip_kepala, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $logo, $hero_image, $ttd_kepala])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
@@ -345,16 +346,25 @@ include '../templates/sidebar.php';
                                         </div>
 
                                         <div class="row">
-                                            <div class="col-md-6">
+                                            <div class="col-12">
                                                 <div class="form-group">
                                                     <label>Nama Madrasah</label>
                                                     <input type="text" class="form-control" name="nama_madrasah" value="<?php echo htmlspecialchars($school_profile['nama_madrasah']); ?>" required>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>Nama Kepala Madrasah</label>
+                                                    <label>Kepala Madrasah</label>
                                                     <input type="text" class="form-control" name="kepala_madrasah" value="<?php echo htmlspecialchars($school_profile['kepala_madrasah'] ?? ''); ?>" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>NIP Kepala Madrasah</label>
+                                                    <input type="text" class="form-control" name="nip_kepala" value="<?php echo htmlspecialchars($school_profile['nip_kepala'] ?? ''); ?>" placeholder="NIP (Kosongkan jika tidak ada)">
                                                 </div>
                                             </div>
                                         </div>

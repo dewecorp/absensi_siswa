@@ -194,7 +194,7 @@ $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js',
     'https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js' // Mask Plugin for Rupiah
+    'https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js'
 ];
 
 // Include header
@@ -271,6 +271,12 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Sumber Anggaran</h4>
                             <div class="card-header-action">
+                                <a href="export_excel_rab_madrasah.php" target="_blank" class="btn btn-success mr-2">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </a>
+                                <a href="cetak_rab_madrasah.php" target="_blank" class="btn btn-warning mr-2">
+                                    <i class="fas fa-print"></i> Cetak Laporan
+                                </a>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#addSumberModal">
                                     <i class="fas fa-plus"></i> Tambah Sumber
                                 </button>
@@ -638,9 +644,11 @@ include '../templates/sidebar.php';
 <script>
 $(document).ready(function() {
     // Init DataTables
-    $('#table-sumber').DataTable();
-    $('#table-pengeluaran').DataTable({
-        ordering: false, // Matikan fitur sorting agar sesuai urutan database
+    var tableOptions = {
+        ordering: false
+    };
+
+    var pengeluaranOptions = $.extend({}, tableOptions, {
         rowGroup: {
             dataSrc: [2, 3],
             startRender: function ( rows, group, level ) {
@@ -680,6 +688,9 @@ $(document).ready(function() {
             { targets: [2, 3], visible: false }
         ]
     });
+
+    $('#table-sumber').DataTable(tableOptions);
+    $('#table-pengeluaran').DataTable(pengeluaranOptions);
 
     // Init Rupiah Mask
     $('.uang').mask('000.000.000.000', {reverse: true});

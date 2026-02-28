@@ -152,24 +152,51 @@ function isAuthorized($allowed_levels = []) {
 
 // Function to get school profile
 function getSchoolProfile($pdo) {
-    $stmt = $pdo->prepare("SELECT * FROM tb_profil_madrasah WHERE id = 1");
-    $stmt->execute();
-    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$profile) {
-        return [
-            'nama_yayasan' => 'YAYASAN PENDIDIKAN ISLAM',
-            'nama_madrasah' => 'MADRASAH IBTIDAIYAH',
-            'kepala_madrasah' => 'KEPALA MADRASAH',
-            'tahun_ajaran' => date('Y') . '/' . (date('Y') + 1),
-            'semester' => 'Semester 1',
-            'alamat' => '',
-            'logo' => '',
-            'dashboard_hero_image' => ''
-        ];
+    try {
+        // Ensure table exists
+        $pdo->exec("CREATE TABLE IF NOT EXISTS tb_profil_madrasah (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            nama_yayasan VARCHAR(255),
+            nama_madrasah VARCHAR(255),
+            alamat TEXT,
+            kepala_madrasah VARCHAR(255),
+            nip_kepala VARCHAR(50),
+            logo VARCHAR(255),
+            ttd_kepala VARCHAR(255),
+            dashboard_hero_image VARCHAR(255),
+            tahun_ajaran VARCHAR(20),
+            semester ENUM('Ganjil', 'Genap'),
+            tanggal_jadwal DATE,
+            tempat_jadwal VARCHAR(100),
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )");
+
+        // Ensure nip_kepala column exists
+        $columns = $pdo->query("SHOW COLUMNS FROM tb_profil_madrasah LIKE 'nip_kepala'")->fetchAll();
+        if (empty($columns)) {
+            $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN nip_kepala VARCHAR(50) AFTER kepala_madrasah");
+        }
+        
+        // Check if profile exists
+        $stmt = $pdo->query("SELECT * FROM tb_profil_madrasah LIMIT 1");
+        $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$profile) {
+            // Insert default profile
+            $stmt = $pdo->prepare("INSERT INTO tb_profil_madrasah (nama_yayasan, nama_madrasah, kepala_madrasah, nip_kepala, tahun_ajaran, semester) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute(['Yayasan Pendidikan', 'Madrasah Ibtidaiyah', 'Nama Kepala Madrasah', '-', date('Y') . '/' . (date('Y') + 1), 'Ganjil']);
+            return getSchoolProfile($pdo);
+        }
+
+        // Map old column names to new standard if necessary (for compatibility)
+        if (isset($profile['kepala_madrasah'])) {
+            $profile['nama_kepala'] = $profile['kepala_madrasah'];
+        }
+
+        return $profile;
+    } catch (PDOException $e) {
+        return [];
     }
-    
-    return $profile;
 }
 
 // Function to format date
