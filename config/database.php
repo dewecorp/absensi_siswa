@@ -1,4 +1,9 @@
 <?php
+// Set session lifetime to 24 hours (86400 seconds)
+ini_set('session.gc_maxlifetime', 86400);
+ini_set('session.cookie_lifetime', 86400);
+session_set_cookie_params(86400);
+
 // Database configuration
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
