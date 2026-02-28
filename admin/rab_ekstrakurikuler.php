@@ -8,9 +8,10 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check authorization
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
+$is_admin = isAuthorized(['admin']);
 
 $page_title = 'RAB Ekstrakurikuler';
 
@@ -79,6 +80,9 @@ if (isset($_SESSION['flash_message'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!$is_admin) {
+        die('Unauthorized');
+    }
     $redirect_url = $_SERVER['PHP_SELF'];
     
     // --- SUMBER ANGGARAN CRUD ---
@@ -276,9 +280,11 @@ include '../templates/sidebar.php';
                                 <a href="cetak_rab_ekstra.php" target="_blank" class="btn btn-warning mr-2">
                                     <i class="fas fa-print"></i> Cetak Laporan
                                 </a>
+                                <?php if ($is_admin): ?>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#addSumberModal">
                                     <i class="fas fa-plus"></i> Tambah Sumber
                                 </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="card-body">
@@ -292,7 +298,9 @@ include '../templates/sidebar.php';
                                             <th class="text-right">Satuan (Rp)</th>
                                             <th class="text-center">Jumlah</th>
                                             <th class="text-right">Total (Rp)</th>
+                                            <?php if ($is_admin): ?>
                                             <th width="15%" class="text-center">Aksi</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -304,6 +312,7 @@ include '../templates/sidebar.php';
                                             <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
                                             <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
                                             <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
+                                            <?php if ($is_admin): ?>
                                             <td class="text-center">
                                                 <button class="btn btn-warning btn-sm edit-sumber-btn" 
                                                     data-id="<?= $row['id_sumber'] ?>"
@@ -319,6 +328,7 @@ include '../templates/sidebar.php';
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </td>
+                                            <?php endif; ?>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -336,9 +346,11 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Rencana Anggaran (Pengeluaran)</h4>
                             <div class="card-header-action">
+                                <?php if ($is_admin): ?>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#addPengeluaranModal">
                                     <i class="fas fa-plus"></i> Tambah Pengeluaran
                                 </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="card-body">
@@ -354,7 +366,9 @@ include '../templates/sidebar.php';
                                             <th class="text-center">Jumlah</th>
                                             <th class="text-center">X</th>
                                             <th class="text-right">Total (Rp)</th>
+                                            <?php if ($is_admin): ?>
                                             <th width="15%" class="text-center">Aksi</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -368,6 +382,7 @@ include '../templates/sidebar.php';
                                             <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
                                             <td class="text-center"><?= number_format($row['perkalian'] ?? 1, 0, ',', '.') ?></td>
                                             <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
+                                            <?php if ($is_admin): ?>
                                             <td class="text-center">
                                                 <button class="btn btn-warning btn-sm edit-pengeluaran-btn" 
                                                     data-id="<?= $row['id_pengeluaran'] ?>"
@@ -385,6 +400,7 @@ include '../templates/sidebar.php';
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </td>
+                                            <?php endif; ?>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -646,6 +662,8 @@ include '../templates/sidebar.php';
 
 <script>
 $(document).ready(function() {
+    var isAdmin = <?= $is_admin ? 'true' : 'false' ?>;
+
     // Init DataTables
     $('#table-sumber').DataTable({ ordering: false });
     $('#table-pengeluaran').DataTable({
@@ -663,10 +681,15 @@ $(document).ready(function() {
                 var totalStr = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                 var groupName = group ? group : 'Tanpa Kategori';
 
-                return $('<tr/>')
+                var row = $('<tr/>')
                     .append( '<td colspan="6" style="background-color:#e2e3e5; font-weight:bold;">'+groupName+'</td>' )
-                    .append( '<td style="background-color:#e2e3e5; font-weight:bold; text-align:right;">'+totalStr+'</td>' )
-                    .append( '<td style="background-color:#e2e3e5;"></td>' );
+                    .append( '<td style="background-color:#e2e3e5; font-weight:bold; text-align:right;">'+totalStr+'</td>' );
+                
+                if (isAdmin) {
+                    row.append( '<td style="background-color:#e2e3e5;"></td>' );
+                }
+                
+                return row;
             }
         },
         columnDefs: [

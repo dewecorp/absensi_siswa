@@ -8,9 +8,10 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check authorization
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
+$is_admin = isAuthorized(['admin']);
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
@@ -44,6 +45,9 @@ if (isset($_SESSION['flash_message'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!$is_admin) {
+        die('Unauthorized');
+    }
     $redirect_url = $_SERVER['PHP_SELF'];
 
     if (isset($_POST['add_kategori'])) {
@@ -157,9 +161,11 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Daftar Kategori</h4>
                             <div class="card-header-action">
+                                <?php if ($is_admin): ?>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#addModal">
                                     <i class="fas fa-plus"></i> Tambah Kategori
                                 </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="card-body">
@@ -169,7 +175,9 @@ include '../templates/sidebar.php';
                                         <tr>
                                             <th class="text-center" width="5%">No</th>
                                             <th>Nama Kategori</th>
+                                            <?php if ($is_admin): ?>
                                             <th width="15%">Aksi</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -177,6 +185,7 @@ include '../templates/sidebar.php';
                                         <tr>
                                             <td class="text-center"><?= $index + 1 ?></td>
                                             <td><?= htmlspecialchars($row['nama_kategori']) ?></td>
+                                            <?php if ($is_admin): ?>
                                             <td>
                                                 <button class="btn btn-warning btn-sm edit-btn" 
                                                     data-id="<?= $row['id_kategori'] ?>" 
@@ -189,6 +198,7 @@ include '../templates/sidebar.php';
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </td>
+                                            <?php endif; ?>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
