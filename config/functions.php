@@ -76,8 +76,34 @@ if (session_status() == PHP_SESSION_NONE) {
         }
     }
 
+    // --- SESSION CONFIGURATION ---
+    // Use custom save path to avoid system cron cleanup (fix for hosting 30min timeout)
+    $save_path = __DIR__ . '/../sessions';
+    if (!file_exists($save_path)) {
+        mkdir($save_path, 0777, true);
+    }
+    session_save_path($save_path);
+
+    // Set session lifetime to 24 hours (86400 seconds)
+    // This ensures the server keeps the session file for at least 24h
+    ini_set('session.gc_maxlifetime', 86400);
+    
+    // Set cookie lifetime to 0 (expires on browser close) OR match maxlifetime
+    // Using 0 is standard for "session" cookies, but if user wants persistence against random closures:
+    // session_set_cookie_params(86400, '/'); 
+    // User asked for "idle" behavior, so standard session cookie is best, 
+    // but with LONG server-side lifetime.
+    // However, to be safe and avoid "30 min" issues, let's explicitly set parameters.
+    session_set_cookie_params([
+        'lifetime' => 86400, // 24 hours cookie
+        'path' => '/',
+        'domain' => '',
+        'secure' => isset($_SERVER['HTTPS']), // Only secure if HTTPS
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+
     session_name($session_name);
-    session_set_cookie_params(0, '/'); // Ensure cookies are available globally
     session_start();
 
     // Jika sesi yang dipilih tidak punya user, coba fallback ke LAST_ACTIVE_SESSION
