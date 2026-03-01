@@ -80,6 +80,7 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
             ],
+
             [
                 'title' => 'Jadwal Pelajaran',
                 'icon' => 'fas fa-calendar-alt',
@@ -106,6 +107,16 @@ switch ($user_level) {
                 'icon' => 'fas fa-users',
                 'url' => '../admin/pengguna.php',
                 'active' => $current_page === 'pengguna.php'
+            ],
+            [
+                'title' => 'Keuangan',
+                'icon' => 'fas fa-money-bill-wave',
+                'submenu' => [
+                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
+                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
+                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
+                ],
+                'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
             [
                 'title' => 'Backup & Restore',
@@ -267,6 +278,16 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
             ],
             [
+                'title' => 'Keuangan',
+                'icon' => 'fas fa-money-bill-wave',
+                'submenu' => [
+                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
+                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
+                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
+                ],
+                'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
+            ],
+            [
                 'title' => 'Backup & Restore',
                 'icon' => 'fas fa-hdd',
                 'url' => '../admin/backup_restore.php',
@@ -382,6 +403,16 @@ switch ($user_level) {
                 'icon' => 'fas fa-graduation-cap',
                 'submenu' => $nilai_submenu_guru,
                 'active' => in_array($current_page, $nilai_urls_guru)
+            ],
+            [
+                'title' => 'Keuangan',
+                'icon' => 'fas fa-money-bill-wave',
+                'submenu' => [
+                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
+                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
+                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
+                ],
+                'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
             [
                 'title' => 'Jadwal Pelajaran',
@@ -548,6 +579,16 @@ switch ($user_level) {
                 'active' => in_array($current_page, $nilai_urls)
             ],
             [
+                'title' => 'Keuangan',
+                'icon' => 'fas fa-money-bill-wave',
+                'submenu' => [
+                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
+                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
+                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
+                ],
+                'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
+            ],
+            [
                 'title' => 'Jurnal Mengajar',
                 'icon' => 'fas fa-book-open',
                 'url' => '../wali/jurnal_mengajar.php',
@@ -654,6 +695,14 @@ switch ($user_level) {
                 'icon' => 'fas fa-clock',
                 'url' => '../siswa/jadwal_les.php',
                 'active' => $current_page === 'jadwal_les.php'
+            ]]);
+
+            // Add Biaya Ujian menu for Grade 6 Students
+            array_splice($menu_items, 5, 0, [[
+                'title' => 'Biaya Ujian',
+                'icon' => 'fas fa-money-bill-wave',
+                'url' => '../siswa/biaya_ujian.php',
+                'active' => $current_page === 'biaya_ujian.php'
             ]]);
         }
 

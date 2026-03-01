@@ -22,7 +22,7 @@ if (session_status() == PHP_SESSION_NONE) {
         $session_name = 'SIS_ADMIN';
         
         // Check LAST_ACTIVE_SESSION
-        if (isset($_COOKIE['LAST_ACTIVE_SESSION']) && in_array($_COOKIE['LAST_ACTIVE_SESSION'], ['SIS_TU', 'SIS_KEPALA'])) {
+        if (isset($_COOKIE['LAST_ACTIVE_SESSION']) && in_array($_COOKIE['LAST_ACTIVE_SESSION'], ['SIS_TU', 'SIS_KEPALA', 'SIS_WALI', 'SIS_GURU'])) {
              $session_name = $_COOKIE['LAST_ACTIVE_SESSION'];
         }
         // Fallback for TU and Kepala accessing Admin files
@@ -31,6 +31,10 @@ if (session_status() == PHP_SESSION_NONE) {
                 $session_name = 'SIS_TU';
             } elseif (isset($_COOKIE['SIS_KEPALA'])) {
                 $session_name = 'SIS_KEPALA';
+            } elseif (isset($_COOKIE['SIS_WALI'])) {
+                $session_name = 'SIS_WALI';
+            } elseif (isset($_COOKIE['SIS_GURU'])) {
+                $session_name = 'SIS_GURU';
             }
         }
     } elseif (strpos($script_path, '/guru/') !== false) {

@@ -6,7 +6,7 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
     die('Unauthorized');
 }
 

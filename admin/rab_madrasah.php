@@ -8,7 +8,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check authorization
-if (!isAuthorized(['admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
     redirect('../login.php');
 }
 $is_admin = isAuthorized(['admin']);
