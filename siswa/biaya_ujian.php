@@ -37,8 +37,25 @@ try {
 }
 // --- DATABASE MIGRATION END ---
 
+// Get Visibility Setting
+$stmt_setting = $pdo->prepare("SELECT nilai FROM tb_pengaturan_aplikasi WHERE kunci = 'biaya_ujian_visibility'");
+$stmt_setting->execute();
+$visibility_setting = $stmt_setting->fetchColumn();
+if ($visibility_setting === false) $visibility_setting = 'closed';
+
 // Fetch Data
 $rencana_pengeluaran = $pdo->query("SELECT * FROM tb_pengeluaran_ujian ORDER BY kategori ASC, id_pengeluaran ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+// If visibility is closed, mask the amounts
+if ($visibility_setting == 'closed') {
+    foreach ($rencana_pengeluaran as &$row) {
+        $row['volume'] = 0;
+        $row['satuan'] = 0;
+        $row['jumlah'] = 0;
+        $row['perkalian'] = 0;
+        $row['total'] = 0;
+    }
+}
 
 // Get Student Count (Kelas 6)
 // Using tb_siswa and tb_kelas relation.
@@ -57,8 +74,13 @@ try {
 }
 
 // Calculate Totals
-$total_pengeluaran = array_sum(array_column($rencana_pengeluaran, 'total'));
-$biaya_per_siswa = $jumlah_siswa > 0 ? $total_pengeluaran / $jumlah_siswa : 0;
+$total_pengeluaran = 0;
+$biaya_per_siswa = 0;
+
+if ($visibility_setting == 'open') {
+    $total_pengeluaran = array_sum(array_column($rencana_pengeluaran, 'total'));
+    $biaya_per_siswa = $jumlah_siswa > 0 ? $total_pengeluaran / $jumlah_siswa : 0;
+}
 
 // Define CSS libraries
 $css_libs = [

@@ -21,6 +21,22 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Absensi Si
 
 // --- DATABASE MIGRATION START ---
 try {
+    // Tabel Pengaturan Aplikasi (Settings)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tb_pengaturan_aplikasi (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        kunci VARCHAR(50) UNIQUE NOT NULL,
+        nilai TEXT,
+        keterangan VARCHAR(255),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+
+    // Insert default setting for biaya_ujian_visibility if not exists
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tb_pengaturan_aplikasi WHERE kunci = 'biaya_ujian_visibility'");
+    $stmt->execute();
+    if ($stmt->fetchColumn() == 0) {
+        $pdo->exec("INSERT INTO tb_pengaturan_aplikasi (kunci, nilai, keterangan) VALUES ('biaya_ujian_visibility', 'closed', 'Visibility of Exam Fees for Students (open/closed)')");
+    }
+
     // Tabel Pengeluaran Ujian
     $pdo->exec("CREATE TABLE IF NOT EXISTS tb_pengeluaran_ujian (
         id_pengeluaran INT PRIMARY KEY AUTO_INCREMENT,
@@ -50,6 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         die('Unauthorized');
     }
     $redirect_url = $_SERVER['PHP_SELF'];
+    
+    // --- SETTING VISIBILITY ---
+    if (isset($_POST['update_visibility'])) {
+        $visibility = $_POST['biaya_ujian_visibility']; // open or closed
+        $stmt = $pdo->prepare("UPDATE tb_pengaturan_aplikasi SET nilai = ? WHERE kunci = 'biaya_ujian_visibility'");
+        if ($stmt->execute([$visibility])) {
+            $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Pengaturan visibilitas berhasil diupdate!'];
+            logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Visibilitas Biaya Ujian', "Set to: $visibility");
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Gagal update pengaturan!'];
+        }
+    }
     
     // --- PENGELUARAN CRUD ---
     if (isset($_POST['add_pengeluaran'])) {
@@ -102,6 +130,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Fetch Data
 $rencana_pengeluaran = $pdo->query("SELECT * FROM tb_pengeluaran_ujian ORDER BY kategori ASC, id_pengeluaran ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+// Get Visibility Setting
+$stmt_setting = $pdo->prepare("SELECT nilai FROM tb_pengaturan_aplikasi WHERE kunci = 'biaya_ujian_visibility'");
+$stmt_setting->execute();
+$visibility_setting = $stmt_setting->fetchColumn();
+if ($visibility_setting === false) $visibility_setting = 'closed';
 
 // Get Student Count (Kelas 6)
 // Using tb_siswa and tb_kelas relation.
@@ -158,6 +192,34 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             
+            <?php if ($is_admin): ?>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>Pengaturan Tampilan Siswa</h4>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="">
+                                <div class="form-group">
+                                    <label class="d-block">Status Biaya Ujian di Akun Siswa</label>
+                                    <div class="custom-control custom-radio custom-control-inline">
+                                        <input type="radio" id="visibility_open" name="biaya_ujian_visibility" class="custom-control-input" value="open" <?= $visibility_setting == 'open' ? 'checked' : '' ?>>
+                                        <label class="custom-control-label" for="visibility_open">Dibuka (Terlihat)</label>
+                                    </div>
+                                    <div class="custom-control custom-radio custom-control-inline">
+                                        <input type="radio" id="visibility_closed" name="biaya_ujian_visibility" class="custom-control-input" value="closed" <?= $visibility_setting == 'closed' ? 'checked' : '' ?>>
+                                        <label class="custom-control-label" for="visibility_closed">Ditutup (Disembunyikan)</label>
+                                    </div>
+                                    <button type="submit" name="update_visibility" class="btn btn-primary btn-sm ml-3">Simpan Pengaturan</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Summary Cards -->
             <div class="row">
                 <div class="col-lg-6 col-md-6 col-sm-12 col-12">
