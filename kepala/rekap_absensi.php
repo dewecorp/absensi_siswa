@@ -536,9 +536,9 @@ include '../templates/sidebar.php';
                                                                 
                                                                 for ($m = $start_month; $m <= $end_month; $m++):
                                                                 ?>
-                                                                    <th colspan="5" class="text-center"><?php echo $month_names[$m]; ?></th>
+                                                                    <th colspan="4" class="text-center"><?php echo $month_names[$m]; ?></th>
                                                                 <?php endfor; ?>
-                                                                <th colspan="5" class="text-center">Total Semester</th>
+                                                                <th colspan="4" class="text-center">Total Semester</th>
                                                             </tr>
                                                             <tr>
                                                                 <?php 
@@ -550,7 +550,6 @@ include '../templates/sidebar.php';
                                                                     <th>S</th>
                                                                     <th>I</th>
                                                                     <th>A</th>
-                                                                    <th>B</th>
                                                                 <?php endfor; ?>
                                                             </tr>
                                                         </thead>
@@ -573,7 +572,6 @@ include '../templates/sidebar.php';
                                                         echo '<td class="text-center" style="font-size: 10pt;">' . ($sakit > 0 ? $sakit : '-') . '</td>';
                                                         echo '<td class="text-center" style="font-size: 10pt;">' . ($izin > 0 ? $izin : '-') . '</td>';
                                                         echo '<td class="text-center" style="font-size: 10pt;">' . ($alpa > 0 ? $alpa : '-') . '</td>';
-                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($berhalangan > 0 ? $berhalangan : '-') . '</td>';
                                                     endfor;
                                                     
                                                     // Display semester totals
@@ -581,7 +579,6 @@ include '../templates/sidebar.php';
                                                     echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Sakit'] . '</td>';
                                                     echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Izin'] . '</td>';
                                                     echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Alpa'] . '</td>';
-                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Berhalangan'] . '</td>';
                                                     ?>
                                                                 </tr>
                                                             <?php endforeach; ?>
@@ -627,7 +624,7 @@ include '../templates/sidebar.php';
                                                                     echo $month_names[$month_num] . ' ' . substr($selected_month, 0, 4);
                                                                     ?>
                                                                 </th>
-                                                                <th colspan="5" class="text-center">Total</th>
+                                                                <th colspan="4" class="text-center">Total</th>
                                                             </tr>
                                                             <tr>
                                                                 <?php for ($day = 1; $day <= 31; $day++): ?>
@@ -637,7 +634,6 @@ include '../templates/sidebar.php';
                                                                 <th>Sakit</th>
                                                                 <th>Izin</th>
                                                                 <th>Alpa</th>
-                                                                <th>Berhalangan</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -668,7 +664,6 @@ include '../templates/sidebar.php';
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Sakit']; ?></span></td>
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Izin']; ?></span></td>
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Alpa']; ?></span></td>
-                                                                    <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Berhalangan']; ?></span></td>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>

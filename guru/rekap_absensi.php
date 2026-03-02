@@ -445,9 +445,9 @@ include '../templates/user_header.php';
                                                     
                                                     for ($m = $start_month; $m <= $end_month; $m++):
                                                     ?>
-                                                        <th colspan="5" class="text-center"><?php echo $month_names[$m]; ?></th>
+                                                        <th colspan="4" class="text-center"><?php echo $month_names[$m]; ?></th>
                                                     <?php endfor; ?>
-                                                    <th colspan="5" class="text-center">Total Semester</th>
+                                                    <th colspan="4" class="text-center">Total Semester</th>
                                                 </tr>
                                                 <tr>
                                                     <?php 
@@ -458,7 +458,6 @@ include '../templates/user_header.php';
                                                         <th>S</th>
                                                         <th>I</th>
                                                         <th>A</th>
-                                                        <th>B</th>
                                                     <?php endfor; ?>
                                                 </tr>
                                             </thead>
@@ -480,14 +479,12 @@ include '../templates/user_header.php';
                                                             echo '<td class="text-center">' . ($sakit > 0 ? '<span class="badge badge-warning">' . $sakit . '</span>' : '-') . '</td>';
                                                             echo '<td class="text-center">' . ($izin > 0 ? '<span class="badge badge-info">' . $izin . '</span>' : '-') . '</td>';
                                                             echo '<td class="text-center">' . ($alpa > 0 ? '<span class="badge badge-danger">' . $alpa . '</span>' : '-') . '</td>';
-                                                            echo '<td class="text-center">' . ($berhalangan > 0 ? '<span class="badge badge-danger">' . $berhalangan . '</span>' : '-') . '</td>';
                                                         endfor;
                                                         
                                                         echo '<td class="text-center"><span class="badge badge-success">' . $student['summary']['Hadir'] . '</span></td>';
                                                         echo '<td class="text-center"><span class="badge badge-warning">' . $student['summary']['Sakit'] . '</span></td>';
                                                         echo '<td class="text-center"><span class="badge badge-info">' . $student['summary']['Izin'] . '</span></td>';
                                                         echo '<td class="text-center"><span class="badge badge-danger">' . $student['summary']['Alpa'] . '</span></td>';
-                                                        echo '<td class="text-center"><span class="badge badge-danger">' . $student['summary']['Berhalangan'] . '</span></td>';
                                                         ?>
                                                     </tr>
                                                 <?php endforeach; ?>
@@ -533,7 +530,7 @@ include '../templates/user_header.php';
                                                         echo $month_names[$month_num] . ' ' . substr($selected_month, 0, 4);
                                                         ?>
                                                     </th>
-                                                    <th colspan="5" class="text-center">Total</th>
+                                                    <th colspan="4" class="text-center">Total</th>
                                                 </tr>
                                                 <tr>
                                                     <?php for ($day = 1; $day <= 31; $day++): ?>
@@ -543,7 +540,6 @@ include '../templates/user_header.php';
                                                     <th>Sakit</th>
                                                     <th>Izin</th>
                                                     <th>Alpa</th>
-                                                    <th>Berhalangan</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -579,7 +575,6 @@ include '../templates/user_header.php';
                                                         <td class="text-center"><span class="badge badge-warning"><?php echo $student['summary']['Sakit']; ?></span></td>
                                                         <td class="text-center"><span class="badge badge-info"><?php echo $student['summary']['Izin']; ?></span></td>
                                                         <td class="text-center"><span class="badge badge-danger"><?php echo $student['summary']['Alpa']; ?></span></td>
-                                                        <td class="text-center"><span class="badge badge-danger"><?php echo $student['summary']['Berhalangan']; ?></span></td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             </tbody>
@@ -793,10 +788,10 @@ function exportToPDF() {
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 1px 3px; border-radius: 2px; font-size: 7px; }');
-    printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
+    printWindow.document.write('.badge-success { background-color: #28a745; color: black; }');
     printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
-    printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
-    printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
+    printWindow.document.write('.badge-info { background-color: #17a2b8; color: black; }');
+    printWindow.document.write('.badge-danger { background-color: #dc3545; color: black; }');
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
     printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');

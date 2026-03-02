@@ -142,6 +142,33 @@ if ($wali_kelas) {
     );
     $trend_stmt->execute([$wali_kelas['id_kelas']]);
     $attendance_trends = $trend_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get Berhalangan trend from tb_sholat to merge with attendance
+    $sholat_trend_stmt = $pdo->prepare(
+        "SELECT 
+            DATE(sh.tanggal) as tanggal,
+            COUNT(DISTINCT sh.id_siswa) as berhalangan_sholat
+        FROM tb_sholat sh
+        JOIN tb_siswa s ON sh.id_siswa = s.id_siswa
+        WHERE s.id_kelas = ? 
+          AND sh.tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND sh.status = 'Berhalangan'
+        GROUP BY DATE(sh.tanggal)"
+    );
+    $sholat_trend_stmt->execute([$wali_kelas['id_kelas']]);
+    $sholat_trends = $sholat_trend_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Merge sholat trends into attendance trends
+    foreach ($attendance_trends as &$trend) {
+        $tgl = $trend['tanggal'];
+        if (isset($sholat_trends[$tgl])) {
+            // Take the higher count (similar to daily logic)
+            if ($sholat_trends[$tgl] > $trend['berhalangan']) {
+                $trend['berhalangan'] = $sholat_trends[$tgl];
+            }
+        }
+    }
+    unset($trend); // break reference
 }
 
 // Prepare data for chart

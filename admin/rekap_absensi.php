@@ -520,9 +520,9 @@ include '../templates/sidebar.php';
                                                                 
                                                                 for ($m = $start_month; $m <= $end_month; $m++):
                                                                 ?>
-                                                                    <th colspan="5" class="text-center"><?php echo $month_names[$m]; ?></th>
+                                                                    <th colspan="4" class="text-center"><?php echo $month_names[$m]; ?></th>
                                                                 <?php endfor; ?>
-                                                                <th colspan="5" class="text-center">Total Semester</th>
+                                                                <th colspan="4" class="text-center">Total Semester</th>
                                                             </tr>
                                                             <tr>
                                                                 <?php 
@@ -534,7 +534,6 @@ include '../templates/sidebar.php';
                                                                     <th>S</th>
                                                                     <th>I</th>
                                                                     <th>A</th>
-                                                                    <th>B</th>
                                                                 <?php endfor; ?>
                                                             </tr>
                                                         </thead>
@@ -557,7 +556,6 @@ include '../templates/sidebar.php';
                                                         echo '<td class="text-center" style="font-size: 10pt;">' . ($sakit > 0 ? $sakit : '-') . '</td>';
                                                         echo '<td class="text-center" style="font-size: 10pt;">' . ($izin > 0 ? $izin : '-') . '</td>';
                                                         echo '<td class="text-center" style="font-size: 10pt;">' . ($alpa > 0 ? $alpa : '-') . '</td>';
-                                                        echo '<td class="text-center" style="font-size: 10pt;">' . ($berhalangan > 0 ? $berhalangan : '-') . '</td>';
                                                     endfor;
                                                     
                                                     // Display semester totals
@@ -565,7 +563,6 @@ include '../templates/sidebar.php';
                                                     echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Sakit'] . '</td>';
                                                     echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Izin'] . '</td>';
                                                     echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Alpa'] . '</td>';
-                                                    echo '<td class="text-center" style="font-size: 10pt;">' . $student['summary']['Berhalangan'] . '</td>';
                                                     ?>
                                                                 </tr>
                                                             <?php endforeach; ?>
@@ -611,7 +608,7 @@ include '../templates/sidebar.php';
                                                                     echo $month_names[$month_num] . ' ' . substr($selected_month, 0, 4);
                                                                     ?>
                                                                 </th>
-                                                                <th colspan="5" class="text-center">Total</th>
+                                                                <th colspan="4" class="text-center">Total</th>
                                                             </tr>
                                                             <tr>
                                                                 <?php for ($day = 1; $day <= 31; $day++): ?>
@@ -621,7 +618,6 @@ include '../templates/sidebar.php';
                                                                 <th>Sakit</th>
                                                                 <th>Izin</th>
                                                                 <th>Alpa</th>
-                                                                <th>Berhalangan</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -659,7 +655,6 @@ include '../templates/sidebar.php';
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Sakit']; ?></span></td>
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Izin']; ?></span></td>
                                                                     <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Alpa']; ?></span></td>
-                                                                    <td class="text-center" style="font-size: 10pt;"><span style="font-size: 10pt;"><?php echo $student['summary']['Berhalangan']; ?></span></td>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>
@@ -910,10 +905,10 @@ function fallbackPrintPDF() {
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; border: 1px solid #000; }');
-    printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
+    printWindow.document.write('.badge-success { background-color: #28a745; color: black; }');
     printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
-    printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
-    printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
+    printWindow.document.write('.badge-info { background-color: #17a2b8; color: black; }');
+    printWindow.document.write('.badge-danger { background-color: #dc3545; color: black; }');
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
     printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');

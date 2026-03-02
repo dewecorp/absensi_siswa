@@ -500,7 +500,6 @@ include '../templates/user_header.php';
                                                                     <th>S</th>
                                                                     <th>I</th>
                                                                     <th>A</th>
-                                                                    <th>B</th>
                                                                 <?php endfor; ?>
                                                             </tr>
                                                         </thead>
@@ -523,7 +522,6 @@ include '../templates/user_header.php';
                                                                         echo '<td class="text-center">' . ($sakit > 0 ? '<span class="badge badge-warning">' . $sakit . '</span>' : '-') . '</td>';
                                                                         echo '<td class="text-center">' . ($izin > 0 ? '<span class="badge badge-info">' . $izin . '</span>' : '-') . '</td>';
                                                                         echo '<td class="text-center">' . ($alpa > 0 ? '<span class="badge badge-danger">' . $alpa . '</span>' : '-') . '</td>';
-                                                                        echo '<td class="text-center">' . ($berhalangan > 0 ? '<span class="badge badge-danger">' . $berhalangan . '</span>' : '-') . '</td>';
                                                                     endfor;
                                                                     
                                                                     // Display semester totals
@@ -531,7 +529,6 @@ include '../templates/user_header.php';
                                                                     echo '<td class="text-center"><span class="badge badge-warning">' . $student['summary']['Sakit'] . '</span></td>';
                                                                     echo '<td class="text-center"><span class="badge badge-info">' . $student['summary']['Izin'] . '</span></td>';
                                                                     echo '<td class="text-center"><span class="badge badge-danger">' . $student['summary']['Alpa'] . '</span></td>';
-                                                                    echo '<td class="text-center"><span class="badge badge-danger">' . $student['summary']['Berhalangan'] . '</span></td>';
                                                                     ?>
                                                                 </tr>
                                                             <?php endforeach; ?>
@@ -587,7 +584,6 @@ include '../templates/user_header.php';
                                                                 <th>Sakit</th>
                                                                 <th>Izin</th>
                                                                 <th>Alpa</th>
-                                                                <th>Berhalangan</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -870,10 +866,10 @@ function exportToPDF() {
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 1px 3px; border-radius: 2px; font-size: 7px; }');
-    printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
+    printWindow.document.write('.badge-success { background-color: #28a745; color: black; }');
     printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
-    printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
-    printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
+    printWindow.document.write('.badge-info { background-color: #17a2b8; color: black; }');
+    printWindow.document.write('.badge-danger { background-color: #dc3545; color: black; }');
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
     printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
@@ -982,10 +978,10 @@ function exportSemesterToPDF() {
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
     printWindow.document.write('.badge { padding: 1px 2px; border-radius: 2px; font-size: 6px; }');
-    printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
+    printWindow.document.write('.badge-success { background-color: #28a745; color: black; }');
     printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
-    printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
-    printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
+    printWindow.document.write('.badge-info { background-color: #17a2b8; color: black; }');
+    printWindow.document.write('.badge-danger { background-color: #dc3545; color: black; }');
     printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
     printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
     printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
