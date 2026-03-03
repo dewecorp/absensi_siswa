@@ -1059,6 +1059,22 @@ include '../templates/sidebar.php';
 
 echo "<!-- DEBUG: After template inclusion -->\n";
 ?>
+<style>
+@media (max-width: 768px) {
+    .dropdown { position: static !important; }
+    .dropdown-menu {
+        position: fixed !important;
+        top: 80px !important;
+        left: 16px !important;
+        right: 16px !important;
+        width: auto !important;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+        z-index: 5000 !important;
+        transform: none !important;
+    }
+}
+</style>
             <!-- Main Content -->
             <div class="main-content">
                 <section class="section">

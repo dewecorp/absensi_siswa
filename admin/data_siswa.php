@@ -290,10 +290,36 @@ $students = [];
 if ($selected_kelas_id > 0) {
     $students = getStudentsByClass($pdo, $selected_kelas_id);
 }
+$selected_kelas_name = '';
+if ($selected_kelas_id > 0) {
+    foreach ($kelas_list as $kelas) {
+        if ((int)$kelas['id_kelas'] === (int)$selected_kelas_id) {
+            $selected_kelas_name = $kelas['nama_kelas'];
+            break;
+        }
+    }
+}
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+
+<style>
+@media (max-width: 768px) {
+    .dropdown { position: static !important; }
+    .dropdown-menu {
+        position: fixed !important;
+        top: 80px !important;
+        left: 16px !important;
+        right: 16px !important;
+        width: auto !important;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+        z-index: 5000 !important;
+        transform: none !important;
+    }
+}
+</style>
 
 <div class="main-content">
     <section class="section">
@@ -319,6 +345,8 @@ include '../templates/sidebar.php';
                                     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">Tambah Siswa</button>
                                     <button type="button" class="btn btn-info" data-toggle="modal" data-target="#importModal" onclick="setImportType('siswa')"><i class="fas fa-file-import"></i> Impor Excel</button>
                                     <a href="cetak_qr_siswa.php?kelas=<?php echo $selected_kelas_id; ?>" target="_blank" class="btn btn-dark"><i class="fas fa-print"></i> Cetak QR Kelas</a>
+                                    <button type="button" class="btn btn-success" onclick="exportStudentsToExcel()"><i class="fas fa-file-excel"></i> Ekspor Excel</button>
+                                    <button type="button" class="btn btn-warning" onclick="exportStudentsToPDF()"><i class="fas fa-file-pdf"></i> Ekspor PDF</button>
                                     <button type="button" class="btn btn-warning" id="bulk-edit-btn" disabled><i class="fas fa-edit"></i> Edit Terpilih</button>
                                     <button type="button" class="btn btn-danger" id="bulk-delete-btn" disabled><i class="fas fa-trash"></i> Hapus Terpilih</button>
                                 </div>
@@ -332,6 +360,8 @@ include '../templates/sidebar.php';
                                             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus mr-2"></i> Tambah Siswa</a>
                                             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#importModal" onclick="setImportType('siswa')"><i class="fas fa-file-import mr-2"></i> Impor Excel</a>
                                             <a class="dropdown-item" href="cetak_qr_siswa.php?kelas=<?php echo $selected_kelas_id; ?>" target="_blank"><i class="fas fa-print mr-2"></i> Cetak QR Kelas</a>
+                                            <a class="dropdown-item" href="#" onclick="exportStudentsToExcel()"><i class="fas fa-file-excel mr-2"></i> Ekspor Excel</a>
+                                            <a class="dropdown-item" href="#" onclick="exportStudentsToPDF()"><i class="fas fa-file-pdf mr-2"></i> Ekspor PDF</a>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item text-warning disabled" href="#" id="bulk-edit-btn-mobile"><i class="fas fa-edit mr-2"></i> Edit Terpilih</a>
                                             <a class="dropdown-item text-danger disabled" href="#" id="bulk-delete-btn-mobile"><i class="fas fa-trash mr-2"></i> Hapus Terpilih</a>
@@ -467,6 +497,30 @@ include '../templates/sidebar.php';
                                         </div>
                                         
 
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="exportTableContainer" style="display:none;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Nama Siswa</th>
+                                            <th>NISN</th>
+                                            <th>Jenis Kelamin</th>
+                                            <th>Kelas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php $no = 1; foreach ($students as $student): ?>
+                                        <tr>
+                                            <td><?php echo $no++; ?></td>
+                                            <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
+                                            <td><?php echo htmlspecialchars($student['nisn']); ?></td>
+                                            <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($student['nama_kelas'] ?? $selected_kelas_name); ?></td>
+                                        </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
@@ -1015,6 +1069,82 @@ $(document).ready(function() {
     
     initDataTable();
 });
+";
+$js_page[] = "
+function exportStudentsToExcel() {
+    var c = document.getElementById('exportTableContainer');
+    if (!c) return;
+    var html = c.innerHTML;
+    var f = document.createElement('form');
+    f.method = 'POST';
+    f.action = '../config/excel_export.php';
+    f.target = '_blank';
+    var i1 = document.createElement('input');
+    i1.type = 'hidden';
+    i1.name = 'table_data';
+    i1.value = html;
+    var i2 = document.createElement('input');
+    i2.type = 'hidden';
+    i2.name = 'export_type';
+    i2.value = 'students';
+    var i3 = document.createElement('input');
+    i3.type = 'hidden';
+    i3.name = 'report_title';
+    i3.value = 'Data Siswa Kelas ' + '" . addslashes($selected_kelas_name ?: '') . "';
+    var i4 = document.createElement('input');
+    i4.type = 'hidden';
+    i4.name = 'filename';
+    i4.value = 'data_siswa_kelas_' + '" . addslashes(str_replace(' ', '_', strtolower($selected_kelas_name ?: ''))) . "';
+    var i5 = document.createElement('input');
+    i5.type = 'hidden';
+    i5.name = 'session_type';
+    i5.value = 'admin';
+    f.appendChild(i1);
+    f.appendChild(i2);
+    f.appendChild(i3);
+    f.appendChild(i4);
+    f.appendChild(i5);
+    document.body.appendChild(f);
+    f.submit();
+    document.body.removeChild(f);
+}
+function exportStudentsToPDF() {
+    var c = document.getElementById('exportTableContainer');
+    if (!c) return;
+    var html = c.innerHTML;
+    var f = document.createElement('form');
+    f.method = 'POST';
+    f.action = '../config/pdf_export.php';
+    f.target = '_blank';
+    var i1 = document.createElement('input');
+    i1.type = 'hidden';
+    i1.name = 'table_data';
+    i1.value = html;
+    var i2 = document.createElement('input');
+    i2.type = 'hidden';
+    i2.name = 'export_type';
+    i2.value = 'students';
+    var i3 = document.createElement('input');
+    i3.type = 'hidden';
+    i3.name = 'report_title';
+    i3.value = 'Data Siswa Kelas ' + '" . addslashes($selected_kelas_name ?: '') . "';
+    var i4 = document.createElement('input');
+    i4.type = 'hidden';
+    i4.name = 'filename';
+    i4.value = 'data_siswa_kelas_' + '" . addslashes(str_replace(' ', '_', strtolower($selected_kelas_name ?: ''))) . "';
+    var i5 = document.createElement('input');
+    i5.type = 'hidden';
+    i5.name = 'session_type';
+    i5.value = 'admin';
+    f.appendChild(i1);
+    f.appendChild(i2);
+    f.appendChild(i3);
+    f.appendChild(i4);
+    f.appendChild(i5);
+    document.body.appendChild(f);
+    f.submit();
+    document.body.removeChild(f);
+}
 ";
 
 include '../templates/footer.php'; 

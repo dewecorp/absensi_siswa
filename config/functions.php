@@ -8,8 +8,8 @@ if (session_status() == PHP_SESSION_NONE) {
     $session_name = 'SIS_LOGIN'; // Default for root/login
 
     // Check for explicit session type request
-    if (isset($_GET['session_type'])) {
-        $type = $_GET['session_type'];
+    if (isset($_REQUEST['session_type'])) {
+        $type = $_REQUEST['session_type'];
         if ($type == 'admin') $session_name = 'SIS_ADMIN';
         elseif ($type == 'guru') $session_name = 'SIS_GURU';
         elseif ($type == 'siswa') $session_name = 'SIS_SISWA';

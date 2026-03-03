@@ -176,7 +176,9 @@ $writer = new Xlsx($spreadsheet);
 
 // Output headers for download
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment;filename="data_guru_' . date('Y-m-d_H-i-s') . '.xlsx"');
+$safeFilename = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $filename ?: 'data_export');
+$downloadName = $safeFilename . '_' . date('Y-m-d_H-i-s') . '.xlsx';
+header('Content-Disposition: attachment;filename="' . $downloadName . '"');
 header('Cache-Control: max-age=0');
 
 $writer->save('php://output');

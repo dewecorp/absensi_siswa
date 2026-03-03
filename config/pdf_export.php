@@ -105,18 +105,11 @@ $html = '
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .header h2 {
-            margin: 0;
-            color: #333;
-        }
-        .header p {
-            margin: 5px 0;
-            color: #666;
-        }
+        .header { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+        .header .logo { width: 80px; height: 80px; object-fit: contain; margin-right: 15px; }
+        .header .info { text-align: center; }
+        .header .info h2 { margin: 0; color: #333; }
+        .header .info p { margin: 5px 0; color: #666; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -170,9 +163,12 @@ $html = '
     </button>
 
     <div class="header">
-        <h2>' . strtoupper($report_title) . '</h2>
-        <p>' . ($school_profile['nama_madrasah'] ?? 'Sistem Absensi Siswa') . '</p>
-        <p>Dicetak pada: ' . date('d/m/Y H:i:s') . '</p>
+        <img class="logo" src="../assets/img/' . ($school_profile['logo'] ?? 'logo.png') . '" alt="Logo">
+        <div class="info">
+            <h2>' . strtoupper($report_title) . '</h2>
+            <p>' . ($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah') . '</p>
+            <p>Dicetak pada: ' . formatDateIndonesia(date('Y-m-d')) . ' ' . date('H:i:s') . '</p>
+        </div>
     </div>
 ';
 
@@ -187,7 +183,7 @@ if ($kepala_madrasah) {
     
     $html .= '
     <div style="margin-top: 30px; text-align: right; margin-right: 50px; page-break-inside: avoid;">
-        <p>' . date('d F Y') . '</p>
+        <p>' . formatDateIndonesia(date('Y-m-d')) . '</p>
         <p>Kepala Madrasah,</p>
         <img src="' . $qr_url . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px 0; display: inline-block;">
         <p style="font-size: 10px; margin-top: 0;"></p>
@@ -196,7 +192,7 @@ if ($kepala_madrasah) {
 } else {
     $html .= '
     <div style="margin-top: 30px; text-align: right; margin-right: 50px; page-break-inside: avoid;">
-        <p>' . date('d F Y') . '</p>
+        <p>' . formatDateIndonesia(date('Y-m-d')) . '</p>
         <p>Kepala Madrasah,</p>
         <br><br><br>
         <p><strong>.........................</strong></p>
@@ -205,7 +201,7 @@ if ($kepala_madrasah) {
 
 $html .= '
     <div class="footer">
-        Laporan ' . $report_title . ' - Sistem Absensi Siswa
+        Laporan ' . $report_title . ' - Sistem Informasi Madrasah
     </div>
 
     <script>
