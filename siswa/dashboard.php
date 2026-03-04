@@ -220,8 +220,8 @@ include '../templates/sidebar.php';
             <!-- Box Identitas Siswa -->
             <div class="col-lg-6 col-md-12 col-12 col-sm-12">
                 <div class="card card-primary">
-                    <div class="card-header">
-                        <h4>Identitas Siswa</h4>
+                    <div class="card-header d-flex flex-column align-items-center flex-md-row justify-content-md-between py-3 h-auto">
+                        <h4 class="mb-0">Identitas Siswa</h4>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -248,15 +248,15 @@ include '../templates/sidebar.php';
             <!-- Box Absensi Manual -->
             <div class="col-lg-6 col-md-12 col-12 col-sm-12">
                 <div class="card card-warning">
-                    <div class="card-header">
-                        <h4>Absensi Hari Ini</h4>
-                        <div class="card-header-action">
+                    <div class="card-header d-flex flex-column align-items-center flex-md-row justify-content-md-between py-3 h-auto">
+                        <h4 class="mb-2 mb-md-0">Absensi Hari Ini</h4>
+                        <div class="card-header-action m-0 mx-auto mx-md-0 text-center">
                             <span class="badge badge-primary"><?php echo getCurrentDateIndonesia(); ?></span>
                         </div>
                     </div>
                     <div class="card-body text-center">
                         <?php if ($attendance): ?>
-                            <div class="empty-state" data-height="150">
+                            <div class="empty-state mt-4 mt-md-0" data-height="150">
                                 <div class="empty-state-icon bg-<?php 
                                     echo $attendance['keterangan'] == 'Hadir' ? 'success' : 
                                         ($attendance['keterangan'] == 'Sakit' ? 'warning' : 
@@ -304,8 +304,8 @@ include '../templates/sidebar.php';
 
             <?php if ($student['jenis_kelamin'] == 'P'): ?>
             <div class="card card-danger mt-4">
-                <div class="card-header">
-                    <h4>Laporan Berhalangan (Haid)</h4>
+                <div class="card-header d-flex flex-column align-items-center flex-md-row justify-content-md-between py-3 h-auto">
+                    <h4 class="mb-0">Laporan Berhalangan (Haid)</h4>
                 </div>
                 <div class="card-body text-center">
                     <?php if ($sholat_status == 'Berhalangan'): ?>
@@ -334,8 +334,8 @@ include '../templates/sidebar.php';
             <!-- Box Barcode Absensi -->
             <div class="col-12">
                 <div class="card card-info">
-                    <div class="card-header">
-                        <h4>Barcode Absensi</h4>
+                    <div class="card-header d-flex flex-column align-items-center flex-md-row justify-content-md-between py-3 h-auto">
+                        <h4 class="mb-0">Barcode Absensi</h4>
                     </div>
                     <div class="card-body text-center">
                         <p>Gunakan barcode ini untuk absensi di perangkat sekolah (jika tersedia).</p>
