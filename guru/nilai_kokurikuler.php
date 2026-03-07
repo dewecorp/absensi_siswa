@@ -182,19 +182,64 @@ require_once '../templates/sidebar.php';
         min-width: 200px;
         max-width: 250px;
     }
+    .sticky-col-right {
+        position: sticky !important;
+        right: 0;
+        background-color: #fff !important;
+        z-index: 10;
+        border-left: 1px solid #dee2e6;
+    }
     
     /* Sticky Header */
     thead th {
         position: sticky !important;
+        background-color: #ffffff !important;
+        z-index: 100;
+        box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+        vertical-align: middle;
+        padding: 8px !important;
+    }
+
+    /* Multi-row Header Sticky Offsets */
+    thead tr:nth-child(1) th {
         top: 0;
-        background-color: #f8f9fa !important;
-        z-index: 15;
-        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        z-index: 103;
+        height: 70px;
+    }
+    thead tr:nth-child(2) th {
+        top: 70px;
+        z-index: 102;
+        height: 60px;
+    }
+    thead tr:nth-child(3) th {
+        top: 130px;
+        z-index: 101;
+        height: 35px;
     }
     
     /* Sticky Header + Sticky Column Intersection */
     thead th.sticky-col {
-        z-index: 25 !important;
+        z-index: 110 !important;
+    }
+    thead th.sticky-col-right {
+        z-index: 110 !important;
+    }
+
+    /* Pastikan input tidak memiliki z-index yang lebih tinggi */
+    .grade-input, .grade-input-jadi {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Tambahkan background solid pada sticky columns */
+    .sticky-col, .sticky-col-right {
+        background-color: #ffffff !important;
+    }
+
+    /* Ensure table body is not covered too much */
+    table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
     }
 </style>
 
@@ -267,7 +312,7 @@ require_once '../templates/sidebar.php';
                                     <th class="sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
                                     <th class="sticky-col sticky-col-2" style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
                                     <?php foreach ($grade_headers as $header): ?>
-                                        <th class="text-center position-relative" colspan="2" style="min-width: 200px;">
+                                        <th class="text-center" colspan="2" style="min-width: 200px;">
                                             <?php if ($can_edit): ?>
                                             <div class="mb-2">
                                                 <button class="btn btn-sm btn-icon btn-warning edit-col-btn" data-header-id="<?= $header['id_header'] ?>" title="Edit Nilai">
@@ -287,11 +332,11 @@ require_once '../templates/sidebar.php';
                                             <?= htmlspecialchars($header['nama_penilaian']) ?>
                                         </th>
                                     <?php endforeach; ?>
-                                    <th style="width: 100px; vertical-align: middle;" rowspan="3">Rerata</th>
+                                    <th class="sticky-col-right" style="width: 100px; vertical-align: middle;" rowspan="3">Rerata</th>
                                 </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
-                                        <th class="text-center bg-white font-weight-normal activity-cell" data-header-id="<?= $header['id_header'] ?>" colspan="2" style="font-size: 0.85em; font-style: italic;">
+                                        <th class="text-center font-weight-normal activity-cell" data-header-id="<?= $header['id_header'] ?>" colspan="2" style="font-size: 0.85em; font-style: italic;">
                                             <div class="mb-1">
                                                 <span class="activity-display font-weight-bold d-block"><?= htmlspecialchars($header['jenis_kegiatan'] ?? '-') ?></span>
                                                 <textarea class="form-control form-control-sm activity-input d-none text-center" rows="2" placeholder="Jenis Kegiatan"><?= htmlspecialchars($header['jenis_kegiatan'] ?? '') ?></textarea>
@@ -305,8 +350,8 @@ require_once '../templates/sidebar.php';
                                 </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
-                                        <th class="text-center bg-light" style="font-size: 0.85em;">Nilai</th>
-                                        <th class="text-center bg-light" style="font-size: 0.85em;">Jadi</th>
+                                        <th class="text-center" style="font-size: 0.85em;">Nilai</th>
+                                        <th class="text-center" style="font-size: 0.85em;">Jadi</th>
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
@@ -371,7 +416,7 @@ require_once '../templates/sidebar.php';
                                                            min="0" max="100" placeholder="-">
                                                 </td>
                                             <?php endforeach; ?>
-                                            <td class="text-center font-weight-bold student-avg">
+                                            <td class="text-center font-weight-bold student-avg sticky-col-right">
                                                 <?= $count_score > 0 ? round($total_score / $count_score, 1) : '-' ?>
                                             </td>
                                         </tr>
@@ -379,24 +424,24 @@ require_once '../templates/sidebar.php';
                                     
                                     <!-- Footer Stats -->
                                     <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right">Nilai Tertinggi</td>
+                                        <td colspan="2" class="text-right sticky-col sticky-col-1" style="left: 0;">Nilai Tertinggi</td>
                                         <?php foreach ($grade_headers as $header): ?>
                                             <td class="text-center text-success col-max-<?= $header['id_header'] ?>">
                                                 <?= isset($col_max[$header['id_header']]) ? $col_max[$header['id_header']] : '-' ?>
                                             </td>
                                             <td></td>
                                         <?php endforeach; ?>
-                                        <td></td>
+                                        <td class="sticky-col-right"></td>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right">Nilai Terendah</td>
+                                        <td colspan="2" class="text-right sticky-col sticky-col-1" style="left: 0;">Nilai Terendah</td>
                                         <?php foreach ($grade_headers as $header): ?>
                                             <td class="text-center text-danger col-min-<?= $header['id_header'] ?>">
                                                 <?= isset($col_min[$header['id_header']]) ? $col_min[$header['id_header']] : '-' ?>
                                             </td>
                                             <td></td>
                                         <?php endforeach; ?>
-                                        <td></td>
+                                        <td class="sticky-col-right"></td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
