@@ -108,16 +108,7 @@ switch ($user_level) {
                 'url' => '../admin/pengguna.php',
                 'active' => $current_page === 'pengguna.php'
             ],
-            [
-                'title' => 'Keuangan',
-                'icon' => 'fas fa-money-bill-wave',
-                'submenu' => [
-                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
-                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
-                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
-                ],
-                'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
-            ],
+
             [
                 'title' => 'Backup & Restore',
                 'icon' => 'fas fa-hdd',
