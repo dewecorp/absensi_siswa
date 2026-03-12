@@ -1077,7 +1077,7 @@ function exportStudentsToExcel() {
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/excel_export.php';
+    f.action = '../config/excel_export?session_type=admin';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';
@@ -1114,7 +1114,7 @@ function exportStudentsToPDF() {
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/pdf_export.php';
+    f.action = '../config/pdf_export?session_type=admin';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';

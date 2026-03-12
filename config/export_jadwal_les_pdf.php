@@ -1,12 +1,29 @@
 <?php
-session_name('SIS_ADMIN');
-session_start();
+// Determine session name before including functions.php
+if (isset($_GET['session_type'])) {
+    $type = $_GET['session_type'];
+    $session_name = 'SIS_LOGIN';
+    if ($type == 'admin') $session_name = 'SIS_ADMIN';
+    elseif ($type == 'guru') $session_name = 'SIS_GURU';
+    elseif ($type == 'siswa') $session_name = 'SIS_SISWA';
+    elseif ($type == 'wali') $session_name = 'SIS_WALI';
+    elseif ($type == 'tata_usaha') $session_name = 'SIS_TU';
+    elseif ($type == 'kepala_madrasah' || $type == 'kepala') $session_name = 'SIS_KEPALA';
+    
+    if (session_status() == PHP_SESSION_NONE) {
+        $save_path = __DIR__ . '/../sessions';
+        if (!file_exists($save_path)) mkdir($save_path, 0777, true);
+        session_save_path($save_path);
+        session_name($session_name);
+        session_start();
+    }
+}
 
 require_once 'database.php';
 require_once 'functions.php';
 
 // Check auth
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha', 'guru', 'kepala_madrasah', 'wali', 'siswa'])) {
     die("Unauthorized access");
 }
 

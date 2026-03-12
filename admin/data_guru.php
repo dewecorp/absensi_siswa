@@ -1568,7 +1568,7 @@ function setImportType(type) {
                 // Create form and submit to excel_export.php
                 var form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '../config/excel_export.php';
+                form.action = '../config/excel_export?session_type=admin';
                 
                 // Get table HTML
                 var table = document.getElementById('table-1');
@@ -1650,7 +1650,7 @@ function setImportType(type) {
                 // Create form and submit to pdf_export.php
                 var form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '../config/pdf_export.php';
+                form.action = '../config/pdf_export?session_type=admin';
                 form.target = '_blank'; // Open in new tab
                 
                 // Get table HTML

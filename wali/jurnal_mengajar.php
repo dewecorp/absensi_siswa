@@ -219,8 +219,18 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     }
     
     if ($has_access) {
-        $stmt = $pdo->prepare("SELECT * FROM tb_jurnal WHERE id_kelas = ? AND id_guru = ? ORDER BY tanggal DESC, jam_ke DESC");
-        $stmt->execute([$id_kelas, $teacher['id_guru']]);
+        $query = "SELECT * FROM tb_jurnal WHERE id_kelas = ? AND id_guru = ?";
+        $params = [$id_kelas, $teacher['id_guru']];
+
+        if (isset($_GET['jenis']) && !empty($_GET['jenis'])) {
+            $query .= " AND jenis = ?";
+            $params[] = $_GET['jenis'];
+        }
+
+        $query .= " ORDER BY tanggal DESC, jam_ke DESC";
+        
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
         $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
@@ -541,8 +551,8 @@ include '../templates/header.php';
             <div class="col-12">
                 <div class="card">
                     <div class="card-body">
-                        <?php if (count($classes) > 1): ?>
                         <form method="GET" action="">
+                            <?php if (count($classes) > 1): ?>
                             <div class="form-group row mb-4">
                                 <label class="col-form-label text-md-right col-12 col-md-3 col-lg-3">Pilih Kelas</label>
                                 <div class="col-sm-12 col-md-7">
@@ -556,14 +566,26 @@ include '../templates/header.php';
                                     </select>
                                 </div>
                             </div>
-                        </form>
-                        <?php else: ?>
-                            <?php if (!empty($classes)): ?>
-                            <div class="alert alert-info mb-0">
-                                Menampilkan jurnal untuk kelas <strong><?php echo htmlspecialchars($classes[0]['nama_kelas']); ?></strong>
-                            </div>
+                            <?php else: ?>
+                                <?php if (!empty($classes)): ?>
+                                <input type="hidden" name="kelas" value="<?php echo $classes[0]['id_kelas']; ?>">
+                                <div class="alert alert-info mb-4">
+                                    Menampilkan jurnal untuk kelas <strong><?php echo htmlspecialchars($classes[0]['nama_kelas']); ?></strong>
+                                </div>
+                                <?php endif; ?>
                             <?php endif; ?>
-                        <?php endif; ?>
+
+                            <div class="form-group row mb-4">
+                                <label class="col-form-label text-md-right col-12 col-md-3 col-lg-3">Jenis Jadwal</label>
+                                <div class="col-sm-12 col-md-7">
+                                    <select class="form-control select2" name="jenis" onchange="this.form.submit()">
+                                        <option value="">-- Semua Jenis --</option>
+                                        <option value="Reguler" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Reguler') ? 'selected' : ''; ?>>Reguler</option>
+                                        <option value="Ramadhan" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Ramadhan') ? 'selected' : ''; ?>>Ramadhan</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -577,10 +599,10 @@ include '../templates/header.php';
                         <h4>Data Jurnal - <?php echo isset($class_info['nama_kelas']) ? htmlspecialchars($class_info['nama_kelas']) : ''; ?></h4>
                         <div class="card-header-action">
                             <div class="btn-group mr-2">
-                                <a href="../config/export_jurnal_pdf.php?session_type=wali&kelas=<?= $_GET['kelas'] ?? '' ?>" target="_blank" class="btn btn-danger">
+                                <a href="../config/export_jurnal_pdf?session_type=wali&kelas=<?= $_GET['kelas'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-danger">
                                     <i class="fas fa-file-pdf"></i> Export PDF
                                 </a>
-                                <a href="../config/export_jurnal_excel.php?session_type=wali&kelas=<?= $_GET['kelas'] ?? '' ?>" target="_blank" class="btn btn-success">
+                                <a href="../config/export_jurnal_excel?session_type=wali&kelas=<?= $_GET['kelas'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-success">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
@@ -605,6 +627,7 @@ include '../templates/header.php';
                                         <th>Tanggal</th>
                                         <th>Jam Ke</th>
                                         <th>Waktu</th>
+                                        <th>Jenis Jadwal</th>
                                         <th>Mapel</th>
                                         <th>Materi</th>
                                         <th>Dibuat Pada</th>
@@ -641,6 +664,7 @@ include '../templates/header.php';
                                             echo htmlspecialchars($waktu_str);
                                             ?>
                                         </td>
+                                        <td><?php echo htmlspecialchars($journal['jenis'] ?? 'Reguler'); ?></td>
                                         <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                         <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                         <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>

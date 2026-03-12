@@ -163,8 +163,8 @@ include '../templates/sidebar.php';
                             <?php if ($filter_type == 'daily' && !empty($daily_results)): ?>
                                 <div class="mt-4">
                                     <div class="btn-group mb-3 float-right">
-                                        <a href="../config/export_rekap_les_excel.php?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a href="../config/export_rekap_les_pdf.php?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
+                                        <a href="../config/export_rekap_les_excel?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+                                        <a href="../config/export_rekap_les_pdf?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
                                     </div>
                                     <div class="table-responsive">
                                         <table class="table table-striped table-md" id="table-daily">
@@ -204,8 +204,8 @@ include '../templates/sidebar.php';
                             <?php elseif ($filter_type == 'all' && !empty($all_results)): ?>
                                 <div class="mt-4">
                                     <div class="btn-group mb-3 float-right">
-                                        <a href="../config/export_rekap_les_excel.php?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a href="../config/export_rekap_les_pdf.php?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
+                                        <a href="../config/export_rekap_les_excel?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+                                        <a href="../config/export_rekap_les_pdf?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
                                     </div>
                                     <div class="table-responsive">
                                         <table class="table table-bordered table-sm" id="table-all">

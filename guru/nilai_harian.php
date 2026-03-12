@@ -286,10 +286,10 @@ require_once '../templates/sidebar.php';
                     <h4>Data Nilai Harian - <?= $selected_class['nama_kelas'] ?> - <?= $selected_mapel['nama_mapel'] ?></h4>
                     <div class="card-header-action">
                         <div class="btn-group mr-2">
-                            <a href="export_nilai_harian_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="btn btn-success">
+                            <a href="export_nilai_harian_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="btn btn-success">
                                 <i class="fas fa-file-excel"></i> Export Excel
                             </a>
-                            <a href="export_nilai_harian_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="btn btn-danger">
+                            <a href="export_nilai_harian_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="btn btn-danger">
                                 <i class="fas fa-file-pdf"></i> Export PDF
                             </a>
                         </div>

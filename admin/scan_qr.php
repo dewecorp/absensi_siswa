@@ -92,7 +92,7 @@ include '../templates/sidebar.php';
                                     <thead>
                                         <tr>
                                             <th>Waktu</th>
-                                            <th>Siswa</th>
+                                            <th>Nama</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading state
         Swal.fire({
             title: 'Memproses...',
-            text: 'Sedang mencari data siswa...',
+            text: 'Sedang mencari data...',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();

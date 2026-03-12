@@ -301,7 +301,7 @@ require_once '../templates/sidebar.php';
                         
                         <!-- Export Buttons -->
                         <div>
-                            <form method="GET" action="../config/export_jadwal_pdf.php" target="_blank" class="d-inline">
+                            <form method="GET" action="../config/export_jadwal_pdf" target="_blank" class="d-inline">
                                 <input type="hidden" name="session_type" value="<?= $export_session_type ?>">
                                 <input type="hidden" name="kelas_id" value="<?= $selected_kelas_id ?? '' ?>">
                                 <input type="hidden" name="jenis" value="Reguler">
@@ -310,7 +310,7 @@ require_once '../templates/sidebar.php';
                                 </button>
                             </form>
                             
-                            <form method="POST" action="../config/export_jadwal_excel.php" target="_blank" class="d-inline ml-2">
+                            <form method="POST" action="../config/export_jadwal_excel" target="_blank" class="d-inline ml-2">
                                 <input type="hidden" name="session_type" value="<?= $export_session_type ?>">
                                 <input type="hidden" name="kelas_id" value="<?= $selected_kelas_id ?? '' ?>">
                                 <input type="hidden" name="jenis" value="Reguler">

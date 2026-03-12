@@ -108,6 +108,12 @@ if (isset($_GET['jam_ke']) && !empty($_GET['jam_ke'])) {
     $filter_title .= ($filter_title ? ' - ' : '') . 'Jam Ke-' . $_GET['jam_ke'];
 }
 
+if (isset($_GET['jenis']) && !empty($_GET['jenis'])) {
+    $where_clauses[] = "j.jenis = ?";
+    $params[] = $_GET['jenis'];
+    $filter_title .= ($filter_title ? ' - ' : '') . $_GET['jenis'];
+}
+
 if (!empty($params)) {
     $query = "SELECT j.*, g.nama_guru, k.nama_kelas 
               FROM tb_jurnal j 
@@ -300,7 +306,7 @@ include '../templates/header.php';
                     <div class="card-body">
                         <form method="GET" action="">
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Pilih Kelas</label>
                                         <select class="form-control select2" name="kelas" onchange="this.form.submit()">
@@ -313,7 +319,7 @@ include '../templates/header.php';
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Pilih Guru</label>
                                         <select class="form-control select2" name="guru" onchange="this.form.submit()">
@@ -326,7 +332,7 @@ include '../templates/header.php';
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Pilih Jam Ke</label>
                                         <select class="form-control select2" name="jam_ke" onchange="this.form.submit()">
@@ -336,6 +342,16 @@ include '../templates/header.php';
                                                     <?php echo $jam; ?>
                                                 </option>
                                             <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Jenis Jadwal</label>
+                                        <select class="form-control select2" name="jenis" onchange="this.form.submit()">
+                                            <option value="">-- Semua Jenis --</option>
+                                            <option value="Reguler" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Reguler') ? 'selected' : ''; ?>>Reguler</option>
+                                            <option value="Ramadhan" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Ramadhan') ? 'selected' : ''; ?>>Ramadhan</option>
                                         </select>
                                     </div>
                                 </div>
@@ -354,10 +370,10 @@ include '../templates/header.php';
                         <h4>Data Jurnal Mengajar <?php echo $filter_title ? '- ' . htmlspecialchars($filter_title) : ''; ?></h4>
                         <div class="card-header-action">
                             <div class="btn-group mr-2">
-                                <a href="../config/export_jurnal_pdf.php?session_type=kepala&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>" target="_blank" class="btn btn-danger">
+                                <a href="../config/export_jurnal_pdf?session_type=kepala&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-danger">
                                     <i class="fas fa-file-pdf"></i> Export PDF
                                 </a>
-                                <a href="../config/export_jurnal_excel.php?session_type=kepala&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>" target="_blank" class="btn btn-success">
+                                <a href="../config/export_jurnal_excel?session_type=kepala&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-success">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
@@ -381,6 +397,7 @@ include '../templates/header.php';
                                         <th>Tanggal</th>
                                         <th>Jam Ke</th>
                                         <th>Waktu</th>
+                                        <th>Jenis Jadwal</th>
                                         <th>Mata Pelajaran</th>
                                         <th>Materi Pokok</th>
                                         <th>Guru</th>
@@ -433,6 +450,7 @@ include '../templates/header.php';
                                                 echo $waktu_str;
                                                 ?>
                                             </td>
+                                            <td><?php echo htmlspecialchars($journal['jenis'] ?? 'Reguler'); ?></td>
                                             <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['nama_guru'] ?? '-'); ?></td>

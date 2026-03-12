@@ -289,10 +289,10 @@ require_once '../templates/sidebar.php';
                             </div>
                             <div class="col-md-6 text-right">
                                 <div class="btn-group">
-                                    <a href="export_rekap_nilai_excel.php?kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-success">
+                                    <a href="export_rekap_nilai_excel?session_type=guru&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-success">
                                         <i class="fas fa-file-excel"></i> Export Excel
                                     </a>
-                                    <a href="export_rekap_nilai_pdf.php?kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-danger">
+                                    <a href="export_rekap_nilai_pdf?session_type=guru&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-danger">
                                         <i class="fas fa-file-pdf"></i> Export PDF
                                     </a>
                                 </div>

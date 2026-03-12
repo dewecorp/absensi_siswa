@@ -1,15 +1,22 @@
 <?php
-// Set session name based on request BEFORE including functions.php
+// Determine session name before including functions.php
 if (isset($_GET['session_type'])) {
     $type = $_GET['session_type'];
-    if ($type == 'admin') session_name('SIS_ADMIN');
-    elseif ($type == 'guru') session_name('SIS_GURU');
-    elseif ($type == 'siswa') session_name('SIS_SISWA');
-    elseif ($type == 'wali') session_name('SIS_WALI');
-    elseif ($type == 'tata_usaha') session_name('SIS_TU');
-    elseif ($type == 'kepala_madrasah' || $type == 'kepala') session_name('SIS_KEPALA');
+    $session_name = 'SIS_LOGIN';
+    if ($type == 'admin') $session_name = 'SIS_ADMIN';
+    elseif ($type == 'guru') $session_name = 'SIS_GURU';
+    elseif ($type == 'siswa') $session_name = 'SIS_SISWA';
+    elseif ($type == 'wali') $session_name = 'SIS_WALI';
+    elseif ($type == 'tata_usaha') $session_name = 'SIS_TU';
+    elseif ($type == 'kepala_madrasah' || $type == 'kepala') $session_name = 'SIS_KEPALA';
     
-    session_start();
+    if (session_status() == PHP_SESSION_NONE) {
+        $save_path = __DIR__ . '/../sessions';
+        if (!file_exists($save_path)) mkdir($save_path, 0777, true);
+        session_save_path($save_path);
+        session_name($session_name);
+        session_start();
+    }
 }
 
 require_once 'database.php';
@@ -24,6 +31,7 @@ if (!isAuthorized(['admin', 'tata_usaha', 'guru', 'kepala_madrasah', 'wali'])) {
 $kelas_id = isset($_GET['kelas']) ? (int)$_GET['kelas'] : null;
 $guru_id = isset($_GET['guru']) ? (int)$_GET['guru'] : null;
 $jam_ke = isset($_GET['jam_ke']) ? $_GET['jam_ke'] : null;
+$jenis = isset($_GET['jenis']) ? $_GET['jenis'] : null;
 
 // Build Query
 $where_clauses = ["j.mapel NOT IN ('Istirahat I', 'Istirahat II', 'Upacara Bendera', 'Asmaul Husna')", "j.jam_ke NOT IN ('A', 'B', 'C')"];
@@ -54,6 +62,12 @@ if ($jam_ke) {
     $where_clauses[] = "FIND_IN_SET(?, j.jam_ke)";
     $params[] = $jam_ke;
     $filter_title .= ($filter_title ? ' - ' : '') . 'Jam Ke-' . $jam_ke;
+}
+
+if ($jenis) {
+    $where_clauses[] = "j.jenis = ?";
+    $params[] = $jenis;
+    $filter_title .= ($filter_title ? ' - ' : '') . $jenis;
 }
 
 $query = "SELECT j.*, g.nama_guru, k.nama_kelas 
@@ -132,16 +146,17 @@ $page_title = "Laporan Jurnal Mengajar" . ($filter_title ? " - " . $filter_title
                 <th width="5%">No</th>
                 <th width="10%">Tanggal</th>
                 <th width="8%">Jam Ke</th>
+                <th width="12%">Jenis</th>
                 <th width="12%">Kelas</th>
-                <th width="20%">Mata Pelajaran</th>
-                <th width="25%">Materi Pokok</th>
-                <th width="20%">Guru</th>
+                <th width="15%">Mata Pelajaran</th>
+                <th width="20%">Materi Pokok</th>
+                <th width="18%">Guru</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($journal_entries)): ?>
                 <tr>
-                    <td colspan="7" class="text-center">Tidak ada data jurnal.</td>
+                    <td colspan="8" class="text-center">Tidak ada data jurnal.</td>
                 </tr>
             <?php else: ?>
                 <?php $no = 1; foreach ($journal_entries as $journal): ?>
@@ -149,6 +164,7 @@ $page_title = "Laporan Jurnal Mengajar" . ($filter_title ? " - " . $filter_title
                     <td class="text-center"><?= $no++ ?></td>
                     <td class="text-center"><?= date('d-m-Y', strtotime($journal['tanggal'])) ?></td>
                     <td class="text-center"><?= htmlspecialchars($journal['jam_ke']) ?></td>
+                    <td class="text-center"><?= htmlspecialchars($journal['jenis'] ?? 'Reguler') ?></td>
                     <td class="text-center"><?= htmlspecialchars($journal['nama_kelas'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($journal['mapel']) ?></td>
                     <td><?= htmlspecialchars($journal['materi']) ?></td>

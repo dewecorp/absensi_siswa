@@ -275,13 +275,11 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Sumber Anggaran</h4>
                             <div class="card-header-action">
-                                <a href="export_rab_sql.php" target="_blank" class="btn btn-info mr-2" title="Backup Database RAB">
-                                    <i class="fas fa-database"></i> Backup DB
-                                </a>
-                                <a href="export_excel_rab_madrasah.php" target="_blank" class="btn btn-success mr-2">
+
+                                <a href="export_excel_rab_madrasah?session_type=admin" target="_blank" class="btn btn-success mr-2">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
-                                <a href="cetak_rab_madrasah.php" target="_blank" class="btn btn-warning mr-2">
+                                <a href="cetak_rab_madrasah?session_type=admin" target="_blank" class="btn btn-warning mr-2">
                                     <i class="fas fa-print"></i> Cetak Laporan
                                 </a>
                                 <?php if ($is_admin): ?>

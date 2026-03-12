@@ -229,10 +229,10 @@ include '../templates/sidebar.php';
                             <h4>Data Jadwal Les</h4>
                             <div class="card-header-action">
                                 <div class="btn-group mr-2">
-                                    <a href="../config/export_jadwal_les_pdf.php" target="_blank" class="btn btn-danger">
+                                    <a href="../config/export_jadwal_les_pdf?session_type=<?= $user_level ?>" target="_blank" class="btn btn-danger">
                                         <i class="fas fa-file-pdf"></i> Export PDF
                                     </a>
-                                    <a href="../config/export_jadwal_les_excel.php" target="_blank" class="btn btn-success">
+                                    <a href="../config/export_jadwal_les_excel?session_type=<?= $user_level ?>" target="_blank" class="btn btn-success">
                                         <i class="fas fa-file-excel"></i> Export Excel
                                     </a>
                                 </div>

@@ -291,7 +291,7 @@ $(document).ready(function() {
             printWindow.document.write('</body></html>');
             printWindow.document.close();
         } else {
-            var url = '../config/excel_export.php';
+            var url = '../config/excel_export?session_type=admin';
             var form = $('<form method=\"POST\" action=\"' + url + '\" target=\"_blank\">' +
                 '<input type=\"hidden\" name=\"table_data\" value=\"\">' +
                 '<input type=\"hidden\" name=\"report_title\" value=\"Data Mata Pelajaran\">' +
