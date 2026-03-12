@@ -237,10 +237,10 @@ require_once '../templates/sidebar.php';
                     <h4>Data Nilai Kokurikuler - <?= $selected_class['nama_kelas'] ?> - <?= $selected_mapel['nama_mapel'] ?></h4>
                     <div class="card-header-action">
                         <div class="btn-group mr-2">
-                            <a href="../guru/export_nilai_kokurikuler_excel?session_type=admin&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="btn btn-success">
+                            <a href="../guru/export_nilai_kokurikuler_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="btn btn-success">
                                 <i class="fas fa-file-excel"></i> Export Excel
                             </a>
-                            <a href="../guru/export_nilai_kokurikuler_pdf?session_type=admin&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="btn btn-danger">
+                            <a href="../guru/export_nilai_kokurikuler_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="btn btn-danger">
                                 <i class="fas fa-file-pdf"></i> Export PDF
                             </a>
                         </div>

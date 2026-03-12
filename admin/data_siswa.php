@@ -1077,7 +1077,7 @@ function exportStudentsToExcel() {
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/excel_export?session_type=admin';
+    f.action = '../config/excel_export?session_type={$_SESSION['level']}';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';

@@ -261,10 +261,10 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Rencana Anggaran (Pengeluaran)</h4>
                             <div class="card-header-action">
-                                <a href="export_excel_rab_ujian?session_type=admin" target="_blank" class="btn btn-success mr-2">
+                                <a href="export_excel_rab_ujian?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="btn btn-success mr-2">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
-                                <a href="cetak_rab_ujian?session_type=admin" target="_blank" class="btn btn-warning mr-2">
+                                <a href="cetak_rab_ujian?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="btn btn-warning mr-2">
                                     <i class="fas fa-print"></i> Cetak Laporan
                                 </a>
                                 <?php if ($is_admin): ?>

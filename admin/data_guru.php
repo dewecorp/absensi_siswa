@@ -1568,7 +1568,7 @@ function setImportType(type) {
                 // Create form and submit to excel_export.php
                 var form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '../config/excel_export?session_type=admin';
+                form.action = '../config/excel_export?session_type={$_SESSION['level']}';
                 
                 // Get table HTML
                 var table = document.getElementById('table-1');

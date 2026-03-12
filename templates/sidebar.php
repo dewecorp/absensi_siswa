@@ -225,7 +225,7 @@ switch ($user_level) {
             [
                 'title' => 'Kalender Pendidikan',
                 'icon' => 'fas fa-calendar-alt',
-                'url' => '../admin/kalender_pendidikan.php?session_type=tata_usaha',
+                'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'],
                 'active' => $current_page === 'kalender_pendidikan.php'
             ],
             [

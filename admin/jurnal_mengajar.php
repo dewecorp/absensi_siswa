@@ -370,10 +370,10 @@ include '../templates/header.php';
                         <h4>Data Jurnal Mengajar <?php echo $filter_title ? '- ' . htmlspecialchars($filter_title) : ''; ?></h4>
                         <div class="card-header-action">
                             <div class="btn-group mr-2">
-                                <a href="../config/export_jurnal_pdf?session_type=admin&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-danger">
+                                <a href="../config/export_jurnal_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-danger">
                                     <i class="fas fa-file-pdf"></i> Export PDF
                                 </a>
-                                <a href="../config/export_jurnal_excel?session_type=admin&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-success">
+                                <a href="../config/export_jurnal_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-success">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
