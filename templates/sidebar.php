@@ -77,9 +77,10 @@ switch ($user_level) {
                     ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
                     ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
                     ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
-                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
+                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
             ],
 
             [
@@ -195,9 +196,10 @@ switch ($user_level) {
                     ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
                     ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
                     ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
-                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
+                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
             ],
             [
                 'title' => 'Jurnal Mengajar',
@@ -271,9 +273,10 @@ switch ($user_level) {
                     ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
                     ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
                     ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
-                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
+                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
             ],
             [
                 'title' => 'Keuangan',
@@ -525,6 +528,11 @@ switch ($user_level) {
 
         // Menu Rekap Nilai untuk wali kelas
         $nilai_submenu[] = ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php?session_type=wali', 'active' => $current_page === 'rekap_nilai.php'];
+        
+        // Data Nilai Ujian hanya untuk wali kelas 6
+        if ($is_grade_6) {
+            $nilai_submenu[] = ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=wali', 'active' => $current_page === 'data_nilai_ujian.php'];
+        }
         
         $nilai_urls = array_map(function($item) {
             return basename($item['url']);
