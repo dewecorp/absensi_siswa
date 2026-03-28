@@ -27,6 +27,122 @@ if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
+// Handle chart image export (POST with chart_image)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chart_image'])) {
+    $chart_image = $_POST['chart_image'];
+    $report_title = $_POST['report_title'] ?? 'Grafik Data';
+    $filename = $_POST['filename'] ?? 'chart';
+    
+    // Get school profile
+    $school_profile = getSchoolProfile($pdo);
+    
+    // HTML content for chart export
+    $html = '
+<!DOCTYPE html>
+<html>
+<head>
+    <title>' . htmlspecialchars($report_title) . '</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        @page {
+            size: landscape;
+            margin: 10mm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .header .logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin-right: 15px;
+        }
+        .header .info {
+            text-align: center;
+        }
+        .header .info h2 {
+            margin: 0;
+            color: #333;
+        }
+        .header .info p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .print-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 9999;
+            font-size: 14px;
+        }
+        .print-btn:hover {
+            background: #0056b3;
+        }
+        .no-print {
+            display: block !important;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Cetak / Simpan PDF
+    </button>
+
+    <div class="header">
+        <img class="logo" src="../assets/img/' . ($school_profile['logo'] ?? 'logo.png') . '" alt="Logo">
+        <div class="info">
+            <h2>' . strtoupper($report_title) . '</h2>
+            <p>' . ($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah') . '</p>
+            <p>Dicetak pada: ' . formatDateIndonesia(date('Y-m-d')) . ' ' . date('H:i:s') . '</p>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <img src="' . $chart_image . '" alt="Chart" style="max-width: 800px;">
+    </div>
+
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+</body>
+</html>';
+
+    echo $html;
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect('../admin/data_guru.php');
 }
