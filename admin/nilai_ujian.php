@@ -11,8 +11,8 @@ $jenis_semester = 'Ujian';
 $is_admin_view = true;
 $can_edit = false;
 
-// Fetch classes (Admin sees all)
-$stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
+// Fetch classes - only Kelas 6 for Ujian
+$stmt = $pdo->query("SELECT * FROM tb_kelas WHERE nama_kelas LIKE '%6%' OR nama_kelas LIKE '%VI%' ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch subjects (Admin sees all, filtered)
@@ -32,6 +32,11 @@ $selected_class = null;
 $selected_mapel = null;
 
 if (count($classes) == 1 && !$selected_class_id) {
+    $selected_class_id = $classes[0]['id_kelas'];
+}
+
+// If no class selected, auto-select the first Kelas 6
+if (!$selected_class_id && count($classes) > 0) {
     $selected_class_id = $classes[0]['id_kelas'];
 }
 
@@ -149,19 +154,6 @@ require_once '../templates/sidebar.php';
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label>Kelas</label>
-                                    <select name="kelas" class="form-control" onchange="this.form.submit()">
-                                        <option value="">Pilih Kelas</option>
-                                        <?php foreach ($classes as $cls): ?>
-                                            <option value="<?= $cls['id_kelas'] ?>" <?= $selected_class_id == $cls['id_kelas'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($cls['nama_kelas']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
                                     <label>Mata Pelajaran</label>
                                     <select name="mapel" class="form-control" onchange="this.form.submit()">
                                         <option value="">Pilih Mata Pelajaran</option>
@@ -174,6 +166,8 @@ require_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
+                        <!-- Hidden input for kelas -->
+                        <input type="hidden" name="kelas" value="<?= $selected_class_id ?>">
                     </form>
 
                     <?php if ($selected_class && $selected_mapel): ?>
