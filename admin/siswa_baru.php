@@ -218,15 +218,6 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
-            <!-- Info Card -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="alert alert-info">
-                        <h5><i class="fas fa-info-circle"></i> Informasi</h5>
-                        <p class="mb-0">Data siswa baru diambil dari jumlah siswa yang terdaftar di <strong>Kelas I</strong>. Data setiap tahun ajaran akan tersimpan dan tidak akan hilang ketika tahun ajaran baru dimulai.</p>
-                    </div>
-                </div>
-            </div>
         </div>
     </section>
 </div>
