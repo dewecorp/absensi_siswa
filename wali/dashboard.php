@@ -62,6 +62,23 @@ if ($wali_kelas) {
 
 // Get today's attendance statistics for the wali's class
 $today = date('Y-m-d');
+
+// Check if there is a tutoring schedule today (for Grade 6)
+$is_grade_6_wali = false;
+if ($wali_kelas) {
+    $class_name = strtoupper($wali_kelas['nama_kelas']);
+    if (strpos($class_name, '6') !== false || strpos($class_name, 'VI') !== false) {
+        $is_grade_6_wali = true;
+    }
+}
+
+$stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
+$stmt_check_sched->execute([$today]);
+$has_les_schedule = $stmt_check_sched->fetchColumn() > 0;
+
+// Note: Student attendance always uses tb_absensi table (no separate les table for students)
+// Only teacher attendance uses tb_absensi_les_guru for tutoring days
+
 if ($wali_kelas) {
     $stmt = $pdo->prepare("
         SELECT a.keterangan, COUNT(*) as jumlah 
@@ -227,6 +244,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
     if ($current_teacher_id > 0) {
         $current_date = date('Y-m-d');
         
+        // Check if this should use les attendance (Grade 6 wali with tutoring schedule)
+        $is_grade_6_wali_check = false;
+        if ($wali_kelas) {
+            $class_name_check = strtoupper($wali_kelas['nama_kelas']);
+            if (strpos($class_name_check, '6') !== false || strpos($class_name_check, 'VI') !== false) {
+                $is_grade_6_wali_check = true;
+            }
+        }
+        
+        $stmt_check_sched_submit = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
+        $stmt_check_sched_submit->execute([$current_date]);
+        $has_les_schedule_submit = $stmt_check_sched_submit->fetchColumn() > 0;
+        
+        $use_les_attendance_submit = $is_grade_6_wali_check && $has_les_schedule_submit;
+        $attendance_table_submit = $use_les_attendance_submit ? 'tb_absensi_les_guru' : 'tb_absensi_guru';
+        
         $holiday = isSchoolHoliday($pdo, $current_date);
         if ($holiday['is_holiday']) {
             echo "<script>
@@ -243,13 +276,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
             goto after_submission_wali;
         }
         
-        // Check if already attended
-        $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+        // Check if already attended using correct table
+        $check_stmt = $pdo->prepare("SELECT id_absensi FROM $attendance_table_submit WHERE id_guru = ? AND tanggal = ?");
         $check_stmt->execute([$current_teacher_id, $current_date]);
         
         if ($check_stmt->rowCount() > 0) {
             // Update existing
-             $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ? WHERE id_guru = ? AND tanggal = ?");
+             $update_stmt = $pdo->prepare("UPDATE $attendance_table_submit SET status = ?, keterangan = ? WHERE id_guru = ? AND tanggal = ?");
              if ($update_stmt->execute([$attendance_status, $attendance_note, $current_teacher_id, $current_date])) {
                  echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
@@ -266,20 +299,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
              }
         } else {
             // Insert new
-            $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan) VALUES (?, ?, ?, ?)");
+            $insert_stmt = $pdo->prepare("INSERT INTO $attendance_table_submit (id_guru, tanggal, status, keterangan) VALUES (?, ?, ?, ?)");
             if ($insert_stmt->execute([$current_teacher_id, $current_date, $attendance_status, $attendance_note])) {
                  
                  // Send notification to admin
                  $nama_guru = $_SESSION['nama_guru'] ?? 'Wali Kelas';
                  $waktu = date('H:i');
                  $tanggal_indo = date('d-m-Y');
+                 $notif_type = $use_les_attendance_submit ? 'Absensi Les Guru' : 'Absensi Guru';
                  $notif_msg = "$nama_guru (Wali) telah mengirim kehadiran pada pukul $waktu tanggal $tanggal_indo";
                  createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
 
                  // Log activity
                  $log_desc = "$nama_guru (Wali) memperbarui kehadiran: $attendance_status";
                  if ($attendance_note) $log_desc .= " ($attendance_note)";
-                 logActivity($pdo, $nama_guru, 'Absensi Guru', $log_desc);
+                 logActivity($pdo, $nama_guru, $notif_type, $log_desc);
 
                  echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
@@ -580,10 +614,26 @@ include '../templates/sidebar.php';
                                     </div>
 
                                     <?php
-                                    // Check current attendance status
+                                    // Check current attendance status - use les table if Grade 6 wali and there's a schedule
                                     $today_attendance = null;
                                     if (isset($teacher['id_guru'])) {
-                                        $stmt_check = $pdo->prepare("SELECT * FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = CURDATE()");
+                                        // Re-check if this should use les attendance for display
+                                        $is_grade_6_wali_display = false;
+                                        if ($wali_kelas) {
+                                            $class_name_display = strtoupper($wali_kelas['nama_kelas']);
+                                            if (strpos($class_name_display, '6') !== false || strpos($class_name_display, 'VI') !== false) {
+                                                $is_grade_6_wali_display = true;
+                                            }
+                                        }
+                                        
+                                        $stmt_check_sched_display = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
+                                        $stmt_check_sched_display->execute([$today]);
+                                        $has_les_schedule_display = $stmt_check_sched_display->fetchColumn() > 0;
+                                        
+                                        $use_les_attendance_display = $is_grade_6_wali_display && $has_les_schedule_display;
+                                        $attendance_table = $use_les_attendance_display ? 'tb_absensi_les_guru' : 'tb_absensi_guru';
+                                        
+                                        $stmt_check = $pdo->prepare("SELECT * FROM $attendance_table WHERE id_guru = ? AND tanggal = CURDATE()");
                                         $stmt_check->execute([$teacher['id_guru']]);
                                         $today_attendance = $stmt_check->fetch(PDO::FETCH_ASSOC);
                                     }
