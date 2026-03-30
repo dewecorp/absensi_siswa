@@ -93,10 +93,13 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
             [
-                'title' => 'Jurnal Mengajar',
+                'title' => 'Jurnal',
                 'icon' => 'fas fa-book-open',
-                'url' => '../admin/jurnal_mengajar.php',
-                'active' => $current_page === 'jurnal_mengajar.php'
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Pengaturan',
@@ -425,10 +428,13 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
             ],
             [
-                'title' => 'Jurnal Mengajar',
+                'title' => 'Jurnal',
                 'icon' => 'fas fa-book-open',
-                'url' => '../guru/jurnal_mengajar.php',
-                'active' => $current_page === 'jurnal_mengajar.php'
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Kalender Pendidikan',
@@ -595,10 +601,13 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
             [
-                'title' => 'Jurnal Mengajar',
+                'title' => 'Jurnal',
                 'icon' => 'fas fa-book-open',
-                'url' => '../wali/jurnal_mengajar.php',
-                'active' => $current_page === 'jurnal_mengajar.php'
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../wali/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../wali/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Kalender Pendidikan',

@@ -57,13 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
     $waktu_dt = $waktu_time ? ($tanggal . ' ' . $waktu_time) : date('Y-m-d H:i:s');
     $result = ['success' => false];
     
-    $holiday = isSchoolHoliday($pdo, $tanggal);
-    if ($holiday['is_holiday'] && $status !== '') {
-        $result['error'] = 'Hari libur: ' . $holiday['name'] . '. Absensi untuk tanggal ini ditutup.';
-        header('Content-Type: application/json');
-        echo json_encode($result);
-        exit;
-    }
+    // Note: Tutoring attendance does NOT check school holidays
+    // It only depends on whether there is a tutoring schedule (tb_jadwal_les)
+    // This allows tutoring on holidays like Fridays if scheduled
     
     if ($id_guru > 0) {
         $check = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
@@ -173,116 +169,80 @@ if (!$has_schedule) {
 $js_page[] = "
 $(document).ready(function() {
     $('.select2').select2();
-";
-
-if (!$is_single_view) {
-    $js_page[count($js_page)-1] .= "
-    var table = $('#table-1').DataTable({
-        \"columnDefs\": [
-            { \"sortable\": false, \"targets\": [2, 3] }
-        ],
-        \"language\": {
-            \"url\": \"//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json\"
-        },
-        \"drawCallback\": function() {
-            $('.status-input').each(function() {
-                var id = $(this).data('id');
-                var status = $(this).val();
-                if (status) {
-                    var statusLower = status.toLowerCase();
-                    $('.btn-absensi[data-id=\' + id + \'][data-status=\' + statusLower + \']').addClass('active').css('opacity', '1');
-                    if (statusLower === 'izin' || statusLower === 'sakit') {
-                        $('#keterangan_container_' + id).show();
-                    }
-                }
-            });
-        }
-    });
-    ";
-} else {
-    $js_page[count($js_page)-1] .= "
-        // Single view active state handling
-        $('.status-input').each(function() {
-            var id = $(this).data('id');
-            var status = $(this).val();
-            if (status) {
-                var statusLower = status.toLowerCase();
-                var btn = $('.btn-absensi[data-id=\' + id + \'][data-status=\' + statusLower + \']');
-                btn.addClass('active').css('opacity', '1');
-                
-                var btnClass = '';
-                if (statusLower === 'hadir') btnClass = 'btn-success';
-                else if (statusLower === 'sakit') btnClass = 'btn-info';
-                else if (statusLower === 'izin') btnClass = 'btn-warning';
-                
-                btn.removeClass('btn-outline-success btn-outline-info btn-outline-warning').addClass(btnClass);
-            }
-        });
-    ";
-}
-
-$js_page[count($js_page)-1] .= "
-    $(document).on('click', '.btn-absensi', function() {
-        var id = $(this).data('id');
-        var status = $(this).data('status');
+    
+    // Variable dari PHP
+    var isSingleView = " . ($is_single_view ? 'true' : 'false') . ";
+    
+    console.log('isSingleView:', isSingleView);
+    
+    // Button click handler
+    $(document).on('click', '.btn-absensi', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var id = $(this).attr('data-id');
+        var status = $(this).attr('data-status');
         var row = $(this).closest('tr');
         
-        var current = ($('#status_' + id).val() || '').toLowerCase();
-        var isToggleCancel = current === String(status).toLowerCase();
-        var newStatus = isToggleCancel ? '' : status;
-
-        var rowButtons = $('.btn-absensi[data-id=\' + id + \']');
-        rowButtons.removeClass('active').css('opacity', '0.6');
+        console.log('Button clicked - ID:', id, 'Status:', status);
         
-        // Handle visual feedback for new buttons
-        rowButtons.each(function() {
-            var btnStatus = $(this).data('status');
-            var btnClass = '';
-            if (btnStatus === 'hadir') btnClass = 'btn-success';
-            else if (btnStatus === 'sakit') btnClass = 'btn-info';
-            else if (btnStatus === 'izin') btnClass = 'btn-warning';
-            
-            $(this).removeClass(btnClass).addClass('btn-outline-' + btnStatus.replace('hadir', 'success').replace('sakit', 'info').replace('izin', 'warning'));
+        // Get current status
+        var currentStatus = $('#status_' + id).val() || '';
+        var isToggle = currentStatus.toLowerCase() === status.toLowerCase();
+        var newStatus = isToggle ? '' : status;
+        
+        console.log('Current:', currentStatus, 'Is Toggle:', isToggle, 'New Status:', newStatus);
+        
+        // Reset all buttons
+        $('.btn-absensi[data-id=' + id + ']').each(function() {
+            var btnStat = $(this).attr('data-status');
+            $(this).removeClass('active btn-success btn-info btn-warning')
+                    .addClass('btn-outline-' + (btnStat == 'hadir' ? 'success' : (btnStat == 'sakit' ? 'info' : 'warning')))
+                    .css('opacity', '0.6');
         });
-
-        if (!isToggleCancel) {
-            $(this).addClass('active').css('opacity', '1');
-            var btnClass = '';
-            if (status === 'hadir') btnClass = 'btn-success';
-            else if (status === 'sakit') btnClass = 'btn-info';
-            else if (status === 'izin') btnClass = 'btn-warning';
-            $(this).removeClass('btn-outline-success btn-outline-info btn-outline-warning').addClass(btnClass);
+        
+        // Set active button if not toggling off
+        if (!isToggle && newStatus) {
+            var activeBtn = $('.btn-absensi[data-id=' + id + '][data-status=' + newStatus + ']');
+            activeBtn.addClass('active').css('opacity', '1');
+            
+            if (newStatus == 'hadir') {
+                activeBtn.removeClass('btn-outline-success').addClass('btn-success');
+            } else if (newStatus == 'sakit') {
+                activeBtn.removeClass('btn-outline-info').addClass('btn-info');
+            } else if (newStatus == 'izin') {
+                activeBtn.removeClass('btn-outline-warning').addClass('btn-warning');
+            }
         }
         
+        // Update hidden field
         $('#status_' + id).val(newStatus);
+        
+        // Update time
         var now = new Date();
-        var timeStr = now.getHours().toString().padStart(2,'0') + ':' + 
-                      now.getMinutes().toString().padStart(2,'0') + ':' + 
-                      now.getSeconds().toString().padStart(2,'0');
+        var timeStr = String(now.getHours()).padStart(2,'0') + ':' + 
+                      String(now.getMinutes()).padStart(2,'0') + ':' + 
+                      String(now.getSeconds()).padStart(2,'0');
         $('#waktu_' + id).val(timeStr);
         
-        var badge = $('#badge_' + id);
-        var statusLabel = newStatus ? (newStatus.charAt(0).toUpperCase() + newStatus.slice(1)) : 'Belum Absen';
-        var badgeClass = 'badge-secondary';
-        var bgColor = '';
-
-        if (newStatus === 'hadir') {
-            badgeClass = 'badge-success';
-            bgColor = 'rgba(40, 167, 69, 0.1)';
-        } else if (newStatus === 'sakit') {
-            badgeClass = 'badge-info';
-            bgColor = 'rgba(23, 162, 184, 0.1)';
-        } else if (newStatus === 'izin') {
-            badgeClass = 'badge-warning';
-            bgColor = 'rgba(255, 193, 7, 0.1)';
-        }
-
-        badge.attr('class', 'badge ' + badgeClass).text(statusLabel);
-        if (!<?= $is_single_view ? 'true' : 'false' ?>) {
+        // Update badge
+        var badgeText = newStatus ? (newStatus.charAt(0).toUpperCase() + newStatus.slice(1)) : 'Belum Absen';
+        var badgeClass = newStatus == 'hadir' ? 'badge-success' : 
+                        (newStatus == 'sakit' ? 'badge-info' : 
+                        (newStatus == 'izin' ? 'badge-warning' : 'badge-secondary'));
+        $('#badge_' + id).attr('class', 'badge ' + badgeClass).text(badgeText);
+        
+        // Update row background
+        if (!isSingleView && row.length > 0) {
+            var bgColor = '';
+            if (newStatus == 'hadir') bgColor = 'rgba(40, 167, 69, 0.1)';
+            else if (newStatus == 'sakit') bgColor = 'rgba(23, 162, 184, 0.1)';
+            else if (newStatus == 'izin') bgColor = 'rgba(255, 193, 7, 0.1)';
             row.css('background-color', bgColor);
         }
         
-        if (newStatus === 'izin' || newStatus === 'sakit') {
+        // Show/hide keterangan
+        if (newStatus == 'izin' || newStatus == 'sakit') {
             $('#keterangan_container_' + id).show();
             $('#keterangan_' + id).focus();
         } else {
@@ -290,51 +250,83 @@ $js_page[count($js_page)-1] .= "
             $('#keterangan_' + id).val('');
         }
         
+        // AJAX request
         var ketVal = $('#keterangan_' + id).val() || '';
         var waktuVal = $('#waktu_' + id).val() || '';
         
+        console.log('Sending AJAX - ID:', id, 'Status:', newStatus, 'Ket:', ketVal);
+        
         $.ajax({
-            type: 'POST',
             url: window.location.href,
-            data: { 
-                single_absensi: 1, 
-                id_guru: id, 
-                status: newStatus, 
-                keterangan: ketVal, 
-                waktu_input: waktuVal 
+            type: 'POST',
+            data: {
+                single_absensi: 1,
+                id_guru: id,
+                status: newStatus,
+                keterangan: ketVal,
+                waktu_input: waktuVal
             },
-            success: function(resp) {
-                if (resp && resp.success) {
-                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: (isToggleCancel ? 'Absensi dibatalkan' : 'Absensi les diperbarui'), timer: 1200, showConfirmButton: false });
-                } else if (resp && resp.error) {
-                    Swal.fire({ icon: 'warning', title: 'Hari Libur', text: resp.error, confirmButtonText: 'OK' }).then(function() {
-                        window.location.reload();
+            dataType: 'json',
+            success: function(response) {
+                console.log('Response:', response);
+                if (response && response.success) {
+                    var msg = isToggle ? 'Absensi les berhasil dibatalkan' : 'Absensi les berhasil disimpan';
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: msg,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else if (response && response.error) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Tidak Ada Jadwal',
+                        text: response.error,
+                        confirmButtonText: 'OK'
+                    }).then(function() {
+                        location.reload();
                     });
                 }
+            },
+            error: function(xhr, status, err) {
+                console.error('AJAX Error:', status, err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Gagal menyimpan absensi. Silakan coba lagi.'
+                });
             }
         });
     });
-
+    
+    // Keterangan change handler
     $(document).on('change', '.keterangan-input', function() {
         var id = $(this).attr('id').replace('keterangan_', '');
         var status = $('#status_' + id).val();
-        var ketVal = $(this).val();
-        var waktuVal = $('#waktu_' + id).val();
+        var val = $(this).val();
+        var timeVal = $('#waktu_' + id).val();
         
         if (status) {
             $.ajax({
-                type: 'POST',
                 url: window.location.href,
-                data: { 
-                    single_absensi: 1, 
-                    id_guru: id, 
-                    status: status, 
-                    keterangan: ketVal, 
-                    waktu_input: waktuVal 
+                type: 'POST',
+                data: {
+                    single_absensi: 1,
+                    id_guru: id,
+                    status: status,
+                    keterangan: val,
+                    waktu_input: timeVal
                 },
+                dataType: 'json',
                 success: function(resp) {
                     if (resp && resp.success) {
-                        Swal.fire({ icon: 'success', title: 'Keterangan Tersimpan', timer: 1000, showConfirmButton: false });
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Keterangan Tersimpan',
+                            timer: 1000,
+                            showConfirmButton: false
+                        });
                     }
                 }
             });

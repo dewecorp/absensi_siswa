@@ -29,39 +29,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     } else {
         $id_kelas = $id_kelas_fixed;
         $tanggal = $_POST['tanggal'];
-        $holiday = isSchoolHoliday($pdo, $tanggal);
-        if ($holiday['is_holiday']) {
-            $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Absensi siswa tidak dapat disimpan untuk tanggal ini.'];
-        } else {
-            $saved_count = 0;
-            foreach ($_POST as $key => $value) {
-                if (strpos($key, 'keterangan_') === 0) {
-                    $id_siswa = (int)str_replace('keterangan_', '', $key);
-                    $status = $value;
-                    
-                    if (!in_array($status, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
-                        continue;
-                    }
-                    
-                    $check_stmt = $pdo->prepare("SELECT id_absensi_les FROM tb_absensi_les WHERE id_siswa = ? AND tanggal = ?");
-                    $check_stmt->execute([$id_siswa, $tanggal]);
-                    $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($existing) {
-                        $update_stmt = $pdo->prepare("UPDATE tb_absensi_les SET status = ?, waktu_input = NOW() WHERE id_absensi_les = ?");
-                        $update_stmt->execute([$status, $existing['id_absensi_les']]);
-                    } else {
-                        $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les (id_siswa, tanggal, status) VALUES (?, ?, ?)");
-                        $insert_stmt->execute([$id_siswa, $tanggal, $status]);
-                    }
-                    $saved_count++;
+        
+        // Note: Tutoring attendance does NOT check school holidays
+        // It only depends on whether there is a tutoring schedule (tb_jadwal_les)
+        // This allows tutoring on holidays like Fridays if scheduled
+        
+        $saved_count = 0;
+        foreach ($_POST as $key => $value) {
+            if (strpos($key, 'keterangan_') === 0) {
+                $id_siswa = (int)str_replace('keterangan_', '', $key);
+                $status = $value;
+                
+                if (!in_array($status, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+                    continue;
                 }
+                
+                $check_stmt = $pdo->prepare("SELECT id_absensi_les FROM tb_absensi_les WHERE id_siswa = ? AND tanggal = ?");
+                $check_stmt->execute([$id_siswa, $tanggal]);
+                $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($existing) {
+                    $update_stmt = $pdo->prepare("UPDATE tb_absensi_les SET status = ?, waktu_input = NOW() WHERE id_absensi_les = ?");
+                    $update_stmt->execute([$status, $existing['id_absensi_les']]);
+                } else {
+                    $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les (id_siswa, tanggal, status) VALUES (?, ?, ?)");
+                    $insert_stmt->execute([$id_siswa, $tanggal, $status]);
+                }
+                $saved_count++;
             }
-            
-            $message = ['type' => 'success', 'text' => "Data absensi les berhasil disimpan untuk $saved_count siswa!"];
-            $username = $_SESSION['username'] ?? 'system';
-            logActivity($pdo, $username, 'Input Absensi Les', "Melakukan input absensi les siswa kelas $nama_kelas_fixed untuk $saved_count siswa");
         }
+        
+        $message = ['type' => 'success', 'text' => "Data absensi les berhasil disimpan untuk $saved_count siswa!"];
+        $username = $_SESSION['username'] ?? 'system';
+        logActivity($pdo, $username, 'Input Absensi Les', "Melakukan input absensi les siswa kelas $nama_kelas_fixed untuk $saved_count siswa");
     }
 }
 
@@ -149,7 +149,7 @@ include '../templates/sidebar.php';
                                                 <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
                                                 <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                                 <td>
-                                                    <select class="form-control" name="keterangan_<?php echo $student['id_siswa']; ?>" <?php echo !$has_schedule ? 'disabled' : ''; ?>>
+                                                    <select class="form-control student-status" id="status_<?php echo $student['id_siswa']; ?>" name="keterangan_<?php echo $student['id_siswa']; ?>" <?php echo !$has_schedule ? 'disabled' : ''; ?>>
                                                         <option value="Hadir" <?php echo ($student['keterangan'] ?? 'Hadir') === 'Hadir' ? 'selected' : ''; ?>>Hadir</option>
                                                         <option value="Sakit" <?php echo ($student['keterangan'] ?? '') === 'Sakit' ? 'selected' : ''; ?>>Sakit</option>
                                                         <option value="Izin" <?php echo ($student['keterangan'] ?? '') === 'Izin' ? 'selected' : ''; ?>>Izin</option>
@@ -164,7 +164,9 @@ include '../templates/sidebar.php';
                                 
                                 <div class="row mt-4">
                                     <div class="col-12 text-center">
-                                        <button type="submit" class="btn btn-primary" id="saveAttendanceBtn" <?php echo !$has_schedule ? 'disabled' : ''; ?>>Simpan Absensi</button>
+                                        <button type="submit" class="btn btn-primary" id="saveAttendanceBtn" <?php echo !$has_schedule ? 'disabled' : ''; ?>>
+                                            <i class="fas fa-save"></i> Simpan Absensi
+                                        </button>
                                     </div>
                                 </div>
                             </form>
@@ -216,7 +218,10 @@ $(document).ready(function() {
         'language': { 'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
         'pageLength': 50
     });
-
+    
+    // No alert on dropdown change - just allow user to change values
+    // User can click 'Simpan Semua Perubahan' button to save
+    
     $('#tanggalInput').on('change', function() {
         $('#filterForm').submit();
     });

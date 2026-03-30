@@ -76,13 +76,14 @@ $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tang
 $stmt_check_sched->execute([$today]);
 $has_les_schedule = $stmt_check_sched->fetchColumn() > 0;
 
-// Note: Student attendance always uses tb_absensi table (no separate les table for students)
-// Only teacher attendance uses tb_absensi_les_guru for tutoring days
+// Determine which attendance table to use for STUDENTS
+// Tutoring attendance uses tb_absensi_les, regular uses tb_absensi
+$student_attendance_table = $has_les_schedule ? 'tb_absensi_les' : 'tb_absensi';
 
 if ($wali_kelas) {
     $stmt = $pdo->prepare("
         SELECT a.keterangan, COUNT(*) as jumlah 
-        FROM tb_absensi a 
+        FROM $student_attendance_table a 
         JOIN tb_siswa s ON a.id_siswa = s.id_siswa 
         WHERE s.id_kelas = ? AND a.tanggal = ? 
         GROUP BY a.keterangan
@@ -260,20 +261,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
         $use_les_attendance_submit = $is_grade_6_wali_check && $has_les_schedule_submit;
         $attendance_table_submit = $use_les_attendance_submit ? 'tb_absensi_les_guru' : 'tb_absensi_guru';
         
-        $holiday = isSchoolHoliday($pdo, $current_date);
-        if ($holiday['is_holiday']) {
-            echo "<script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    Swal.fire({
-                        title: 'Hari Libur',
-                        text: 'Absensi ditutup pada hari libur: " . addslashes($holiday['name']) . "',
-                        icon: 'warning',
-                        timer: 4000,
-                        showConfirmButton: true
+        // For tutoring attendance, only check if there's a schedule (not school holidays)
+        // Tutoring can occur on holidays if scheduled in tb_jadwal_les
+        if ($use_les_attendance_submit) {
+            // No holiday check for tutoring - schedule determines if attendance is allowed
+        } else {
+            // Regular attendance still checks holidays
+            $holiday = isSchoolHoliday($pdo, $current_date);
+            if ($holiday['is_holiday']) {
+                echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            title: 'Hari Libur',
+                            text: 'Absensi ditutup pada hari libur: " . addslashes($holiday['name']) . "',
+                            icon: 'warning',
+                            timer: 4000,
+                            showConfirmButton: true
+                        });
                     });
-                });
-            </script>";
-            goto after_submission_wali;
+                </script>";
+                goto after_submission_wali;
+            }
         }
         
         // Check if already attended using correct table
@@ -645,15 +653,15 @@ include '../templates/sidebar.php';
                                             <div class="selectgroup selectgroup-pills">
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'hadir') ? 'checked' : ''; ?> required>
-                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-check"></i> Hadir</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
                                                 </label>
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-procedures"></i> Sakit</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
                                                 </label>
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -756,6 +764,26 @@ include '../templates/sidebar.php';
                         background: #6777ef;
                         color: #fff;
                         transform: scale(1.1);
+                    }
+                    
+                    /* Override ALL Stisla styles with maximum specificity */
+                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="hadir"].active-status,
+                    span.selectgroup-button[data-status="hadir"].active-status {
+                        background: #28a745 !important;
+                        color: #fff !important;
+                        font-weight: bold !important;
+                    }
+                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="sakit"].active-status,
+                    span.selectgroup-button[data-status="sakit"].active-status {
+                        background: #17a2b8 !important;
+                        color: #fff !important;
+                        font-weight: bold !important;
+                    }
+                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="izin"].active-status,
+                    span.selectgroup-button[data-status="izin"].active-status {
+                        background: #ffc107 !important;
+                        color: #212529 !important;
+                        font-weight: bold !important;
                     }
                     </style>
 
