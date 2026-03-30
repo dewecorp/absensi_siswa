@@ -28,12 +28,11 @@ switch ($user_level) {
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php', 'active' => $current_page === 'siswa_baru.php'],
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Jam Mengajar', 'url' => '../admin/jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
-                    ['title' => 'Jadwal Les', 'url' => '../admin/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
                     ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php'],
                     ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php', 'active' => $current_page === 'kalender_pendidikan.php']
                 ],
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'jadwal_les.php', 'kenaikan_kelas.php', 'jadwal_imam.php', 'kalender_pendidikan.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'jadwal_imam.php', 'kalender_pendidikan.php'])
             ],
             [
                 'title' => 'Keuangan',
@@ -84,13 +83,14 @@ switch ($user_level) {
             ],
 
             [
-                'title' => 'Jadwal Pelajaran',
+                'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
                     ['title' => 'Jadwal Reguler', 'url' => '../admin/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
+                    ['title' => 'Jadwal Les', 'url' => '../admin/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php'])
             ],
             [
                 'title' => 'Jurnal',
@@ -151,19 +151,14 @@ switch ($user_level) {
                 'active' => $current_page === 'kalender_pendidikan.php'
             ],
             [
-                'title' => 'Jadwal Les Kelas 6',
-                'icon' => 'fas fa-clock',
-                'url' => '../kepala/jadwal_les.php',
-                'active' => $current_page === 'jadwal_les.php'
-            ],
-            [
-                'title' => 'Jadwal Pelajaran',
+                'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
                     ['title' => 'Jadwal Reguler', 'url' => '../kepala/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../kepala/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../kepala/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
+                    ['title' => 'Jadwal Les Kelas 6', 'url' => '../kepala/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php'])
             ],
             [
                 'title' => 'Keuangan',
@@ -241,7 +236,7 @@ switch ($user_level) {
                 'active' => $current_page === 'siswa_baru.php'
             ],
             [
-                'title' => 'Jadwal Pelajaran',
+                'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
                     ['title' => 'Jadwal Reguler', 'url' => '../tata_usaha/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
@@ -419,22 +414,13 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
             [
-                'title' => 'Jadwal Pelajaran',
+                'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
                     ['title' => 'Jadwal Reguler', 'url' => '../guru/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
                     ['title' => 'Jadwal Ramadhan', 'url' => '../guru/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
-            ],
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php'])
             ],
             [
                 'title' => 'Kalender Pendidikan',
@@ -445,13 +431,24 @@ switch ($user_level) {
         ];
 
         if ($is_grade_6_guru) {
-            // Add Jadwal Les menu for Grade 6 Teachers
+            // Add Jurnal menu for Grade 6 Teachers
             array_splice($menu_items, 4, 0, [[
-                'title' => 'Jadwal Les Kelas 6',
-                'icon' => 'fas fa-clock',
-                'url' => '../guru/jadwal_les.php',
-                'active' => $current_page === 'jadwal_les.php'
+                'title' => 'Jurnal',
+                'icon' => 'fas fa-book-open',
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ]]);
+            
+            // Add Jadwal Les into Jadwal submenu for Grade 6 Teachers
+            foreach ($menu_items as &$m_item) {
+                if ($m_item['title'] === 'Jadwal') {
+                    $m_item['submenu'][] = ['title' => 'Jadwal Les Kelas 6', 'url' => '../guru/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'];
+                    break;
+                }
+            }
         }
 
         $menu_items[] = [
@@ -570,13 +567,13 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Jadwal Pelajaran',
+                'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
                     ['title' => 'Jadwal Reguler', 'url' => '../wali/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
                     ['title' => 'Jadwal Ramadhan', 'url' => '../wali/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -601,15 +598,6 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
             [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../wali/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../wali/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-            ],
-            [
                 'title' => 'Kalender Pendidikan',
                 'icon' => 'fas fa-calendar-alt',
                 'url' => '../admin/kalender_pendidikan.php?session_type=wali',
@@ -618,13 +606,24 @@ switch ($user_level) {
         ];
 
         if ($is_grade_6) {
-            // Add Jadwal Les menu for Grade 6 Wali
+            // Add Jurnal menu for Grade 6 Wali
             array_splice($menu_items, 5, 0, [[
-                'title' => 'Jadwal Les Kelas 6',
-                'icon' => 'fas fa-clock',
-                'url' => '../wali/jadwal_les.php',
-                'active' => $current_page === 'jadwal_les.php'
+                'title' => 'Jurnal',
+                'icon' => 'fas fa-book-open',
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../wali/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../wali/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ]]);
+            
+            // Add Jadwal Les into Jadwal submenu for Grade 6 Wali
+            foreach ($menu_items as &$m_item) {
+                if ($m_item['title'] === 'Jadwal') {
+                    $m_item['submenu'][] = ['title' => 'Jadwal Les Kelas 6', 'url' => '../wali/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'];
+                    break;
+                }
+            }
         }
 
         $menu_items[] = [
@@ -674,10 +673,12 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Jadwal Pelajaran',
+                'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
-                'url' => '../siswa/jadwal_pelajaran.php',
-                'active' => $current_page === 'jadwal_pelajaran.php'
+                'submenu' => [
+                    ['title' => 'Jadwal Pelajaran', 'url' => '../siswa/jadwal_pelajaran.php', 'active' => $current_page === 'jadwal_pelajaran.php']
+                ],
+                'active' => in_array($current_page, ['jadwal_pelajaran.php', 'jadwal_les.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -704,13 +705,13 @@ switch ($user_level) {
         ];
 
         if ($is_grade_6_siswa) {
-            // Add Jadwal Les menu for Grade 6 Students
-            array_splice($menu_items, 4, 0, [[
-                'title' => 'Jadwal Les Kelas 6',
-                'icon' => 'fas fa-clock',
-                'url' => '../siswa/jadwal_les.php',
-                'active' => $current_page === 'jadwal_les.php'
-            ]]);
+            // Add Jadwal Les into Jadwal submenu for Grade 6 Students
+            foreach ($menu_items as &$m_item) {
+                if ($m_item['title'] === 'Jadwal') {
+                    $m_item['submenu'][] = ['title' => 'Jadwal Les Kelas 6', 'url' => '../siswa/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'];
+                    break;
+                }
+            }
 
             // Add Biaya Ujian menu for Grade 6 Students
             array_splice($menu_items, 5, 0, [[

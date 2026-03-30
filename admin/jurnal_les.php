@@ -65,6 +65,7 @@ $journal_entries = [];
 $class_info = [];
 $filter_title = '';
 
+// Use GET kelas directly since we set it above
 $where_clauses = [];
 $params = [];
 
@@ -227,6 +228,16 @@ include '../templates/header.php';
             <div class="card">
                 <div class="card-header">
                     <h4>Data Jurnal Les <?php echo $filter_title ? '- ' . $filter_title : ''; ?></h4>
+                    <div class="card-header-action">
+                        <div class="btn-group">
+                            <a href="../config/export_jurnal_les_pdf.php?session_type=admin&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&guru=<?php echo $_GET['guru'] ?? ''; ?>" target="_blank" class="btn btn-danger">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </a>
+                            <a href="../config/export_jurnal_les_excel.php?session_type=admin&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&guru=<?php echo $_GET['guru'] ?? ''; ?>" target="_blank" class="btn btn-success">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </a>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($journal_entries)): ?>
