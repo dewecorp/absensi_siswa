@@ -288,10 +288,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
         $check_stmt = $pdo->prepare("SELECT id_absensi FROM $attendance_table_submit WHERE id_guru = ? AND tanggal = ?");
         $check_stmt->execute([$current_teacher_id, $current_date]);
         
+        $status_to_save = ucfirst($attendance_status);
+        $now_time = date('Y-m-d H:i:s');
+        
         if ($check_stmt->rowCount() > 0) {
             // Update existing
-             $update_stmt = $pdo->prepare("UPDATE $attendance_table_submit SET status = ?, keterangan = ? WHERE id_guru = ? AND tanggal = ?");
-             if ($update_stmt->execute([$attendance_status, $attendance_note, $current_teacher_id, $current_date])) {
+             $update_stmt = $pdo->prepare("UPDATE $attendance_table_submit SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
+             if ($update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date])) {
                  echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({
@@ -307,8 +310,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
              }
         } else {
             // Insert new
-            $insert_stmt = $pdo->prepare("INSERT INTO $attendance_table_submit (id_guru, tanggal, status, keterangan) VALUES (?, ?, ?, ?)");
-            if ($insert_stmt->execute([$current_teacher_id, $current_date, $attendance_status, $attendance_note])) {
+            $insert_stmt = $pdo->prepare("INSERT INTO $attendance_table_submit (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
+            if ($insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time])) {
                  
                  // Send notification to admin
                  $nama_guru = $_SESSION['nama_guru'] ?? 'Wali Kelas';
@@ -652,16 +655,16 @@ include '../templates/sidebar.php';
                                             <label class="d-block font-weight-bold">Status Kehadiran Hari Ini (<?php echo date('d-m-Y'); ?>)</label>
                                             <div class="selectgroup selectgroup-pills">
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'hadir') ? 'checked' : ''; ?> required>
-                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
+                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
                                                 </label>
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && $today_attendance['status'] == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
+                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
                                                 </label>
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && $today_attendance['status'] == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -766,29 +769,70 @@ include '../templates/sidebar.php';
                         transform: scale(1.1);
                     }
                     
-                    /* Override ALL Stisla styles with maximum specificity */
-                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="hadir"].active-status,
-                    span.selectgroup-button[data-status="hadir"].active-status {
-                        background: #28a745 !important;
-                        color: #fff !important;
-                        font-weight: bold !important;
+                    /* Custom styles for attendance buttons */
+                    .selectgroup-button-icon {
+                        border: 1px solid #e4e6fc !important;
+                        background-color: #fff !important;
+                        color: #6c757d !important;
+                        transition: all 0.3s ease;
                     }
-                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="sakit"].active-status,
-                    span.selectgroup-button[data-status="sakit"].active-status {
-                        background: #17a2b8 !important;
+                    
+                    .selectgroup-input:checked + .selectgroup-button-icon[data-status="hadir"],
+                    .selectgroup-button-icon.active-hadir {
+                        background-color: #28a745 !important;
+                        border-color: #28a745 !important;
                         color: #fff !important;
-                        font-weight: bold !important;
                     }
-                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="izin"].active-status,
-                    span.selectgroup-button[data-status="izin"].active-status {
-                        background: #ffc107 !important;
+                    
+                    .selectgroup-input:checked + .selectgroup-button-icon[data-status="sakit"],
+                    .selectgroup-button-icon.active-sakit {
+                        background-color: #17a2b8 !important;
+                        border-color: #17a2b8 !important;
+                        color: #fff !important;
+                    }
+                    
+                    .selectgroup-input:checked + .selectgroup-button-icon[data-status="izin"],
+                    .selectgroup-button-icon.active-izin {
+                        background-color: #ffc107 !important;
+                        border-color: #ffc107 !important;
                         color: #212529 !important;
-                        font-weight: bold !important;
                     }
                     </style>
 
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
+                        const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
+                        const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
+                        const keteranganBox = document.getElementById('keterangan_box');
+                        const keteranganTextarea = keteranganBox ? keteranganBox.querySelector('textarea') : null;
+                        
+                        function updateKeteranganBox() {
+                            const selectedRadio = document.querySelector('input[name="attendance_status"]:checked');
+                            if (selectedRadio && keteranganBox && keteranganTextarea) {
+                                const status = selectedRadio.value;
+                                if (status === 'izin' || status === 'sakit') {
+                                    keteranganBox.style.display = 'block';
+                                    keteranganTextarea.required = (status === 'izin');
+                                } else {
+                                    keteranganBox.style.display = 'none';
+                                    keteranganTextarea.required = false;
+                                }
+                            }
+                        }
+
+                        // Run on load to set initial state
+                        updateKeteranganBox();
+                        
+                        radioButtons.forEach(radio => {
+                            radio.addEventListener('change', function() {
+                                // Remove all active classes from all buttons
+                                statusButtons.forEach(btn => {
+                                    btn.classList.remove('active-hadir', 'active-sakit', 'active-izin');
+                                });
+                                updateKeteranganBox();
+                            });
+                        });
+                        
                         const fotoUpload = document.getElementById('foto_upload');
                         if(fotoUpload) {
                             fotoUpload.addEventListener('change', function() {

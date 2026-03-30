@@ -241,10 +241,40 @@ if ($selected_kelas_id) {
         }
         
         if ($include) {
+            // Check if today has a tutoring schedule (Grade 6)
+            $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = CURDATE()");
+            $stmt_check_sched->execute();
+            $has_les_schedule = $stmt_check_sched->fetchColumn() > 0;
+
+            // Determine table to check
+            // Grade 6 teachers/wali use tb_absensi_les_guru if there's a schedule
+            $use_les_table = false;
+            if ($has_les_schedule) {
+                // Check if teacher teaches Grade 6 or is wali of Grade 6
+                $stmt_is_g6 = $pdo->prepare("
+                    SELECT 1 FROM tb_jadwal_pelajaran WHERE guru_id = ? AND kelas_id = 6
+                    UNION
+                    SELECT 1 FROM tb_kelas WHERE wali_kelas = ? AND id_kelas = 6
+                ");
+                $stmt_is_g6->execute([$teacher['id_guru'], $teacher['nama_guru']]);
+                if ($stmt_is_g6->fetch()) {
+                    $use_les_table = true;
+                }
+            }
+
+            $att_table = $use_les_table ? 'tb_absensi_les_guru' : 'tb_absensi_guru';
+
             // Get current attendance status for today
-            $stmt_att = $pdo->prepare("SELECT status, keterangan, waktu_input FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+            $stmt_att = $pdo->prepare("SELECT status, keterangan, waktu_input FROM $att_table WHERE id_guru = ? AND tanggal = ?");
             $stmt_att->execute([$teacher['id_guru'], date('Y-m-d')]);
             $attendance = $stmt_att->fetch(PDO::FETCH_ASSOC);
+            
+            // If not found in les table, try regular table as fallback
+            if (!$attendance && $use_les_table) {
+                $stmt_att_fallback = $pdo->prepare("SELECT status, keterangan, waktu_input FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+                $stmt_att_fallback->execute([$teacher['id_guru'], date('Y-m-d')]);
+                $attendance = $stmt_att_fallback->fetch(PDO::FETCH_ASSOC);
+            }
             
             $teacher['status_kehadiran'] = $attendance['status'] ?? ''; // Default empty
             $teacher['keterangan'] = $attendance['keterangan'] ?? '';

@@ -407,134 +407,95 @@ include '../templates/user_header.php';
 include '../templates/sidebar.php';
 
 // Handle Attendance Submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance'])) {
-    $attendance_status = $_POST['attendance_status'];
-    $attendance_note = $_POST['attendance_note'] ?? '';
-    
-    // Determine teacher ID based on session
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $current_teacher_id = 0;
     if (isset($teacher['id_guru'])) {
         $current_teacher_id = $teacher['id_guru'];
     } elseif (isset($_SESSION['user_id']) && ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali')) {
-         // Fallback if $teacher not set but user is guru/wali directly
          $current_teacher_id = $_SESSION['user_id'];
     }
-    
+
     if ($current_teacher_id > 0) {
         $current_date = date('Y-m-d');
-        
-        // Check if this should use les attendance (Grade 6 teacher with tutoring schedule)
-        $is_grade_6_guru_check = false;
-        if (!empty($teacher_classes)) {
-            foreach ($teacher_classes as $kelas_check) {
-                $class_name_check = strtoupper($kelas_check['nama_kelas']);
-                if (strpos($class_name_check, '6') !== false || strpos($class_name_check, 'VI') !== false) {
-                    $is_grade_6_guru_check = true;
-                    break;
-                }
-            }
-        }
-        
-        $stmt_check_sched_submit = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
-        $stmt_check_sched_submit->execute([$current_date]);
-        $has_les_schedule_submit = $stmt_check_sched_submit->fetchColumn() > 0;
-        
-        $use_les_attendance_submit = $is_grade_6_guru_check && $has_les_schedule_submit;
-        $attendance_table_submit = $use_les_attendance_submit ? 'tb_absensi_les_guru' : 'tb_absensi_guru';
-        
-        // For tutoring attendance, only check if there's a schedule (not school holidays)
-        // Tutoring can occur on holidays if scheduled in tb_jadwal_les
-        if ($use_les_attendance_submit) {
-            // No holiday check for tutoring - schedule determines if attendance is allowed
-        } else {
-            // Regular attendance still checks holidays
+        $status_to_save = isset($_POST['attendance_status']) ? ucfirst($_POST['attendance_status']) : '';
+        $attendance_note = $_POST['attendance_note'] ?? '';
+        $now_time = date('Y-m-d H:i:s');
+        $nama_guru = isset($_SESSION['nama_guru']) ? $_SESSION['nama_guru'] : 'Guru';
+
+        if (isset($_POST['submit_attendance'])) {
+            // Regular attendance checks holidays
             $holiday = isSchoolHoliday($pdo, $current_date);
             if ($holiday['is_holiday']) {
                 echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({
                             title: 'Hari Libur',
-                            text: 'Absensi ditutup pada hari libur: " . addslashes($holiday['name']) . "',
+                            text: 'Absensi harian ditutup pada hari libur: " . addslashes($holiday['name']) . "',
                             icon: 'warning',
                             timer: 4000,
                             showConfirmButton: true
                         });
                     });
                 </script>";
-                // Stop processing on holidays
-                goto after_submission;
+            } else {
+                // Check if already attended regular
+                $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+                $check_stmt->execute([$current_teacher_id, $current_date]);
+                
+                if ($check_stmt->rowCount() > 0) {
+                    $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
+                    $update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date]);
+                    $msg_text = 'Absensi harian berhasil diperbarui.';
+                } else {
+                    $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
+                    $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time]);
+                    $msg_text = 'Absensi harian berhasil disimpan.';
+                }
+                
+                createNotification($pdo, "$nama_guru telah mengirim kehadiran harian", 'absensi_guru.php', 'absensi_guru');
+                logActivity($pdo, $nama_guru, 'Absensi Guru', "$nama_guru mengisi kehadiran harian: $status_to_save");
+                
+                echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 3000, showConfirmButton: false });
+                    });
+                </script>";
             }
-        }
-        
-        // Check if already attended using correct table
-        $check_stmt = $pdo->prepare("SELECT id_absensi FROM $attendance_table_submit WHERE id_guru = ? AND tanggal = ?");
-        $check_stmt->execute([$current_teacher_id, $current_date]);
-        
-        if ($check_stmt->rowCount() > 0) {
-            // Update existing
-             $update_stmt = $pdo->prepare("UPDATE $attendance_table_submit SET status = ?, keterangan = ? WHERE id_guru = ? AND tanggal = ?");
-             if ($update_stmt->execute([$attendance_status, $attendance_note, $current_teacher_id, $current_date])) {
-                 
-                 // Send notification to admin
-                 $nama_guru = isset($_SESSION['nama_guru']) ? $_SESSION['nama_guru'] : 'Guru';
-                 $waktu = date('H:i');
-                 $tanggal = date('d-m-Y');
-                 $notif_msg = "$nama_guru telah mengirim kehadiran pada pukul $waktu tanggal $tanggal";
-                 createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
-                 
-                 // Log activity
-                 $log_desc = "$nama_guru memperbarui kehadiran: $attendance_status";
-                 if ($attendance_note) $log_desc .= " ($attendance_note)";
-                 $notif_type = $use_les_attendance_submit ? 'Absensi Les Guru' : 'Absensi Guru';
-                 logActivity($pdo, $nama_guru, $notif_type, $log_desc);
-                 
-                 echo "<script>
+        } elseif (isset($_POST['submit_attendance_les'])) {
+            // Tutoring attendance - no holiday check, only schedule check
+            $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
+            $stmt_check_sched->execute([$current_date]);
+            if ($stmt_check_sched->fetchColumn() > 0) {
+                $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
+                $check_stmt->execute([$current_teacher_id, $current_date]);
+                
+                if ($check_stmt->rowCount() > 0) {
+                    $update_stmt = $pdo->prepare("UPDATE tb_absensi_les_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
+                    $update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date]);
+                    $msg_text = 'Absensi les berhasil diperbarui.';
+                } else {
+                    $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
+                    $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time]);
+                    $msg_text = 'Absensi les berhasil disimpan.';
+                }
+                
+                createNotification($pdo, "$nama_guru telah mengirim kehadiran les", 'absensi_les_guru.php', 'absensi_les_guru');
+                logActivity($pdo, $nama_guru, 'Absensi Les Guru', "$nama_guru mengisi kehadiran les: $status_to_save");
+                
+                echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: 'Absensi berhasil diperbarui.',
-                            icon: 'success',
-                            timer: 3000,
-                            timerProgressBar: true,
-                            showConfirmButton: false
-                        });
+                        Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 3000, showConfirmButton: false });
                     });
-                 </script>";
-             }
-        } else {
-            // Insert new
-            $insert_stmt = $pdo->prepare("INSERT INTO $attendance_table_submit (id_guru, tanggal, status, keterangan) VALUES (?, ?, ?, ?)");
-            if ($insert_stmt->execute([$current_teacher_id, $current_date, $attendance_status, $attendance_note])) {
-                 
-                 // Send notification to admin
-                 $nama_guru = isset($_SESSION['nama_guru']) ? $_SESSION['nama_guru'] : 'Guru';
-                 $waktu = date('H:i');
-                 $tanggal = date('d-m-Y');
-                 $notif_msg = "$nama_guru telah mengirim kehadiran pada pukul $waktu tanggal $tanggal";
-                 createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
-                 
-                 // Log activity
-                 $log_desc = "$nama_guru mengisi kehadiran: $attendance_status";
-                 if ($attendance_note) $log_desc .= " ($attendance_note)";
-                 $notif_type = $use_les_attendance_submit ? 'Absensi Les Guru' : 'Absensi Guru';
-                 logActivity($pdo, $nama_guru, $notif_type, $log_desc);
-                 
-                 echo "<script>
+                </script>";
+            } else {
+                echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: 'Absensi berhasil disimpan.',
-                            icon: 'success',
-                            timer: 3000,
-                            timerProgressBar: true,
-                            showConfirmButton: false
-                        });
+                        Swal.fire({ title: 'Gagal', text: 'Tidak ada jadwal les untuk hari ini.', icon: 'error' });
                     });
-                 </script>";
+                </script>";
             }
         }
     }
-    after_submission:
 }
 ?>
 
@@ -654,15 +615,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                                             <div class="selectgroup selectgroup-pills">
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
-                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
                                                 </label>
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
                                                 </label>
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon active-status" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -796,29 +757,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
                         transform: scale(1.1);
                     }
                     
-                    /* Override ALL Stisla styles with maximum specificity */
-                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="hadir"].active-status,
-                    span.selectgroup-button[data-status="hadir"].active-status {
-                        background: #28a745 !important;
-                        color: #fff !important;
-                        font-weight: bold !important;
+                    /* Custom styles for attendance buttons */
+                    .selectgroup-button-icon {
+                        border: 1px solid #e4e6fc !important;
+                        background-color: #fff !important;
+                        color: #6c757d !important;
+                        transition: all 0.3s ease;
                     }
-                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="sakit"].active-status,
-                    span.selectgroup-button[data-status="sakit"].active-status {
-                        background: #17a2b8 !important;
+                    
+                    .selectgroup-input:checked + .selectgroup-button-icon[data-status="hadir"],
+                    .selectgroup-button-icon.active-hadir {
+                        background-color: #28a745 !important;
+                        border-color: #28a745 !important;
                         color: #fff !important;
-                        font-weight: bold !important;
                     }
-                    .selectgroup.selectgroup-pills .selectgroup-item .selectgroup-button[data-status="izin"].active-status,
-                    span.selectgroup-button[data-status="izin"].active-status {
-                        background: #ffc107 !important;
+                    
+                    .selectgroup-input:checked + .selectgroup-button-icon[data-status="sakit"],
+                    .selectgroup-button-icon.active-sakit {
+                        background-color: #17a2b8 !important;
+                        border-color: #17a2b8 !important;
+                        color: #fff !important;
+                    }
+                    
+                    .selectgroup-input:checked + .selectgroup-button-icon[data-status="izin"],
+                    .selectgroup-button-icon.active-izin {
+                        background-color: #ffc107 !important;
+                        border-color: #ffc107 !important;
                         color: #212529 !important;
-                        font-weight: bold !important;
                     }
                     </style>
 
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
+                        const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
+                        const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
+                        
+                        radioButtons.forEach(radio => {
+                            radio.addEventListener('change', function() {
+                                // Remove all active classes from all buttons
+                                statusButtons.forEach(btn => {
+                                    btn.classList.remove('active-hadir', 'active-sakit', 'active-izin');
+                                });
+                            });
+                        });
+                        
                         const fotoUpload = document.getElementById('foto_upload');
                         if(fotoUpload) {
                             fotoUpload.addEventListener('change', function() {
