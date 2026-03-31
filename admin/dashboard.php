@@ -43,6 +43,12 @@ $stmt->execute();
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $jumlah_alpa = isset($result['alpa']) ? (int)$result['alpa'] : 0;
 
+// Include Berhalangan from sholat data
+$stmt = $pdo->prepare("SELECT COUNT(DISTINCT id_siswa) as berhalangan FROM tb_sholat WHERE status = 'Berhalangan' AND tanggal = CURDATE()");
+$stmt->execute();
+$result = $stmt->fetch(PDO::FETCH_ASSOC);
+$jumlah_berhalangan = isset($result['berhalangan']) ? (int)$result['berhalangan'] : 0;
+
 // Delete old activities first (older than 25 hours to avoid deleting recent activities)
 try {
     $delete_stmt = $pdo->prepare("DELETE FROM tb_activity_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
@@ -104,7 +110,8 @@ $trend_stmt = $pdo->prepare(
         SUM(CASE WHEN keterangan = 'Hadir' THEN 1 ELSE 0 END) as hadir,
         SUM(CASE WHEN keterangan = 'Sakit' THEN 1 ELSE 0 END) as sakit,
         SUM(CASE WHEN keterangan = 'Izin' THEN 1 ELSE 0 END) as izin,
-        SUM(CASE WHEN keterangan = 'Alpa' THEN 1 ELSE 0 END) as alpa
+        SUM(CASE WHEN keterangan = 'Alpa' THEN 1 ELSE 0 END) as alpa,
+        0 as berhalangan
     FROM tb_absensi 
     WHERE tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
     GROUP BY DATE(tanggal)
@@ -113,12 +120,35 @@ $trend_stmt = $pdo->prepare(
 $trend_stmt->execute();
 $attendance_trends = $trend_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get Berhalangan trend from tb_sholat
+$sholat_trend_stmt = $pdo->prepare(
+    "SELECT 
+        DATE(tanggal) as tanggal,
+        COUNT(DISTINCT id_siswa) as berhalangan
+    FROM tb_sholat 
+    WHERE tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+      AND status = 'Berhalangan'
+    GROUP BY DATE(tanggal)"
+);
+$sholat_trend_stmt->execute();
+$sholat_trends = $sholat_trend_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// Merge sholat trends
+foreach ($attendance_trends as &$trend) {
+    $tgl = $trend['tanggal'];
+    if (isset($sholat_trends[$tgl])) {
+        $trend['berhalangan'] = $sholat_trends[$tgl];
+    }
+}
+unset($trend);
+
 // Prepare data for chart
 $dates = [];
 $hadir_data = [];
 $sakit_data = [];
 $izin_data = [];
 $alpa_data = [];
+$berhalangan_data = [];
 
 foreach ($attendance_trends as $trend) {
     $dates[] = $trend['tanggal'] ? date('d M', strtotime($trend['tanggal'])) : '';
@@ -126,6 +156,7 @@ foreach ($attendance_trends as $trend) {
     $sakit_data[] = isset($trend['sakit']) ? (int)$trend['sakit'] : 0;
     $izin_data[] = isset($trend['izin']) ? (int)$trend['izin'] : 0;
     $alpa_data[] = isset($trend['alpa']) ? (int)$trend['alpa'] : 0;
+    $berhalangan_data[] = isset($trend['berhalangan']) ? (int)$trend['berhalangan'] : 0;
 }
 
 // Convert arrays to JSON-safe format
@@ -134,6 +165,7 @@ $hadir_data_json = json_encode($hadir_data);
 $sakit_data_json = json_encode($sakit_data);
 $izin_data_json = json_encode($izin_data);
 $alpa_data_json = json_encode($alpa_data);
+$berhalangan_data_json = json_encode($berhalangan_data);
 
 // Get teacher attendance stats
 $stmt = $pdo->prepare("SELECT COUNT(*) as hadir FROM tb_absensi_guru WHERE status = 'Hadir' AND tanggal = CURDATE()");
@@ -233,26 +265,29 @@ $js_page = [
                     var myChart = new Chart(ctx2d, {
                         type: 'bar',
                         data: {
-                            labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'],
+                            labels: ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Berhalangan'],
                             datasets: [{
                                 label: 'Jumlah Siswa',
                                 data: [
                                     " . $jumlah_hadir . ",
                                     " . $jumlah_sakit . ",
                                     " . $jumlah_izin . ",
-                                    " . $jumlah_alpa . "
+                                    " . $jumlah_alpa . ",
+                                    " . $jumlah_berhalangan . "
                                 ],
                                 backgroundColor: [
                                     'rgba(54, 162, 235, 0.2)',
                                     'rgba(255, 99, 132, 0.2)',
                                     'rgba(255, 206, 86, 0.2)',
-                                    'rgba(153, 102, 255, 0.2)'
+                                    'rgba(153, 102, 255, 0.2)',
+                                    'rgba(75, 192, 192, 0.2)'
                                 ],
                                 borderColor: [
                                     'rgba(54, 162, 235, 1)',
                                     'rgba(255,99,132,1)',
                                     'rgba(255, 206, 86, 1)',
-                                    'rgba(153, 102, 255, 1)'
+                                    'rgba(153, 102, 255, 1)',
+                                    'rgba(75, 192, 192, 1)'
                                 ],
                                 borderWidth: 1
                             }]
@@ -330,6 +365,12 @@ $js_page = [
                                 data: " . $alpa_data_json . ",
                                 borderColor: 'rgb(153, 102, 255)',
                                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                fill: false
+                            }, {
+                                label: 'Berhalangan',
+                                data: " . $berhalangan_data_json . ",
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
                                 fill: false
                             }]
                         },

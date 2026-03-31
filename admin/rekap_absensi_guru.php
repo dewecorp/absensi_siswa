@@ -470,12 +470,12 @@ include '../templates/sidebar.php';
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <?php foreach ($monthly_results as $index => $student): ?>
+                                                    <?php foreach ($monthly_results as $index => $row): ?>
                                                     <tr>
                                                         <td class="text-center"><?php echo $index + 1; ?></td>
-                                                        <td><?php echo htmlspecialchars($student['nama_guru']); ?></td>
+                                                        <td><?php echo htmlspecialchars($row['nama_guru']); ?></td>
                                                         <?php for($i=1; $i<=31; $i++): 
-                                                            $status = isset($student['days'][$i]) ? strtolower($student['days'][$i]) : '';
+                                                            $status = isset($row['days'][$i]) ? strtolower($row['days'][$i]) : '';
                                                             $code = '';
                                                             $bg = '';
                                                             
@@ -498,9 +498,9 @@ include '../templates/sidebar.php';
                                                             <?php echo $code; ?>
                                                         </td>
                                                         <?php endfor; ?>
-                                                        <td class="text-center font-weight-bold"><?php echo $student['summary']['Hadir']; ?></td>
-                                                        <td class="text-center font-weight-bold"><?php echo $student['summary']['Sakit']; ?></td>
-                                                        <td class="text-center font-weight-bold"><?php echo $student['summary']['Izin']; ?></td>
+                                                        <td class="text-center font-weight-bold"><?php echo $row['summary']['Hadir']; ?></td>
+                                                        <td class="text-center font-weight-bold"><?php echo $row['summary']['Sakit']; ?></td>
+                                                        <td class="text-center font-weight-bold"><?php echo $row['summary']['Izin']; ?></td>
                                                     </tr>
                                                     <?php endforeach; ?>
                                                 </tbody>
@@ -630,22 +630,22 @@ include '../templates/sidebar.php';
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <?php foreach ($semester_results as $index => $teacher): ?>
+                                                    <?php foreach ($semester_results as $index => $row): ?>
                                                     <tr>
                                                         <td class="text-center"><?php echo $index + 1; ?></td>
-                                                        <td><?php echo htmlspecialchars($teacher['nama_guru']); ?></td>
+                                                        <td><?php echo htmlspecialchars($row['nama_guru']); ?></td>
                                                         <?php 
                                                         // Data per month
                                                         for ($m = $start_month; $m <= $end_month; $m++) {
-                                                            $monthly = $teacher['monthly_totals'][$m];
+                                                            $monthly = $row['monthly_totals'][$m];
                                                             echo '<td class="text-center" style="padding: 2px;">' . ($monthly['Hadir'] > 0 ? $monthly['Hadir'] : '-') . '</td>';
                                                             echo '<td class="text-center" style="padding: 2px;">' . ($monthly['Sakit'] > 0 ? $monthly['Sakit'] : '-') . '</td>';
                                                             echo '<td class="text-center" style="padding: 2px;">' . ($monthly['Izin'] > 0 ? $monthly['Izin'] : '-') . '</td>';
                                                         }
                                                         // Total semester
-                                                        echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $teacher['summary']['Hadir'] . '</td>';
-                                                        echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $teacher['summary']['Sakit'] . '</td>';
-                                                        echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $teacher['summary']['Izin'] . '</td>';
+                                                        echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $row['summary']['Hadir'] . '</td>';
+                                                        echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $row['summary']['Sakit'] . '</td>';
+                                                        echo '<td class="text-center font-weight-bold bg-light" style="padding: 2px;">' . $row['summary']['Izin'] . '</td>';
                                                         ?>
                                                     </tr>
                                                     <?php endforeach; ?>

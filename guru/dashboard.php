@@ -101,8 +101,8 @@ $stmt_check_sched_guru->execute([$today]);
 $has_les_schedule_guru = $stmt_check_sched_guru->fetchColumn() > 0;
 
 // Determine which attendance table to use for STUDENTS
-// Tutoring attendance uses tb_absensi_les, regular uses tb_absensi
-$student_attendance_table = $has_les_schedule_guru ? 'tb_absensi_les' : 'tb_absensi';
+// Main dashboard always shows regular attendance (tb_absensi)
+$student_attendance_table = 'tb_absensi';
 
 foreach ($teacher_classes as $kelas) {
     $stmt = $pdo->prepare("
@@ -136,6 +136,27 @@ foreach ($class_students as $class_id => $students) {
                 case 'Berhalangan': $jumlah_berhalangan++; break;
             }
         }
+    }
+}
+
+// Include Berhalangan from sholat data (siswa putri berhalangan) for all classes taught
+if (!empty($teacher_class_ids)) {
+    $placeholders = str_repeat('?,', count($teacher_class_ids) - 1) . '?';
+    $berhalangan_stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT sh.id_siswa) AS jumlah
+        FROM tb_sholat sh
+        JOIN tb_siswa s ON sh.id_siswa = s.id_siswa
+        WHERE s.id_kelas IN ($placeholders)
+          AND sh.tanggal = ? 
+          AND sh.status = 'Berhalangan'
+    ");
+    $params = array_merge($teacher_class_ids, [$today]);
+    $berhalangan_stmt->execute($params);
+    $berhalangan_row = $berhalangan_stmt->fetch(PDO::FETCH_ASSOC);
+    $jumlah_berhalangan_sholat = (int)($berhalangan_row['jumlah'] ?? 0);
+
+    if ($jumlah_berhalangan_sholat > $jumlah_berhalangan) {
+        $jumlah_berhalangan = $jumlah_berhalangan_sholat;
     }
 }
 
@@ -179,6 +200,32 @@ if (!empty($teacher_class_ids)) {
     );
     $trend_stmt->execute($teacher_class_ids);
     $attendance_trends = $trend_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get Berhalangan trend from tb_sholat to merge with attendance
+    $sholat_trend_stmt = $pdo->prepare(
+        "SELECT 
+            DATE(sh.tanggal) as tanggal,
+            COUNT(DISTINCT sh.id_siswa) as berhalangan_sholat
+        FROM tb_sholat sh
+        JOIN tb_siswa s ON sh.id_siswa = s.id_siswa
+        WHERE s.id_kelas IN ($placeholders)
+          AND sh.tanggal >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND sh.status = 'Berhalangan'
+        GROUP BY DATE(sh.tanggal)"
+    );
+    $sholat_trend_stmt->execute($teacher_class_ids);
+    $sholat_trends = $sholat_trend_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Merge sholat trends into attendance trends
+    foreach ($attendance_trends as &$trend) {
+        $tgl = $trend['tanggal'];
+        if (isset($sholat_trends[$tgl])) {
+            if ($sholat_trends[$tgl] > $trend['berhalangan']) {
+                $trend['berhalangan'] = $sholat_trends[$tgl];
+            }
+        }
+    }
+    unset($trend);
 }
 
 // Prepare data for chart
@@ -581,29 +628,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
 
                                     <?php
-                                    // Check current attendance status - use les table if Grade 6 teacher with tutoring schedule
+                                    // Check current attendance status - ONLY use regular table for dashboard
                                     $today_attendance = null;
                                     if (isset($teacher['id_guru'])) {
-                                        // Check if this should use les attendance (Grade 6 teacher with tutoring schedule)
-                                        $is_grade_6_guru_check_display = false;
-                                        if (!empty($teacher_classes)) {
-                                            foreach ($teacher_classes as $kelas_check_display) {
-                                                $class_name_check_display = strtoupper($kelas_check_display['nama_kelas']);
-                                                if (strpos($class_name_check_display, '6') !== false || strpos($class_name_check_display, 'VI') !== false) {
-                                                    $is_grade_6_guru_check_display = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        
-                                        $stmt_check_sched_display = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
-                                        $stmt_check_sched_display->execute([$today]);
-                                        $has_les_schedule_display = $stmt_check_sched_display->fetchColumn() > 0;
-                                        
-                                        $use_les_attendance_display = $is_grade_6_guru_check_display && $has_les_schedule_display;
-                                        $attendance_table_check = $use_les_attendance_display ? 'tb_absensi_les_guru' : 'tb_absensi_guru';
-                                        
-                                        $stmt_check = $pdo->prepare("SELECT * FROM $attendance_table_check WHERE id_guru = ? AND tanggal = CURDATE()");
+                                        $stmt_check = $pdo->prepare("SELECT * FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = CURDATE()");
                                         $stmt_check->execute([$teacher['id_guru']]);
                                         $today_attendance = $stmt_check->fetch(PDO::FETCH_ASSOC);
                                     }
