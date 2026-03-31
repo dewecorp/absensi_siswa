@@ -430,18 +430,22 @@ switch ($user_level) {
             ]
         ];
 
+        // Jurnal menu for all teachers
+        $jurnal_submenu_guru = [
+            ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php']
+        ];
         if ($is_grade_6_guru) {
-            // Add Jurnal menu for Grade 6 Teachers
-            array_splice($menu_items, 4, 0, [[
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-            ]]);
-            
+            $jurnal_submenu_guru[] = ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
+        }
+        
+        array_splice($menu_items, 4, 0, [[
+            'title' => 'Jurnal',
+            'icon' => 'fas fa-book-open',
+            'submenu' => $jurnal_submenu_guru,
+            'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
+        ]]);
+
+        if ($is_grade_6_guru) {
             // Add Jadwal Les into Jadwal submenu for Grade 6 Teachers
             foreach ($menu_items as &$m_item) {
                 if ($m_item['title'] === 'Jadwal') {
@@ -605,18 +609,22 @@ switch ($user_level) {
             ]
         ];
 
+        // Jurnal menu for all wali
+        $jurnal_submenu_wali = [
+            ['title' => 'Jurnal Mengajar', 'url' => '../wali/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php']
+        ];
         if ($is_grade_6) {
-            // Add Jurnal menu for Grade 6 Wali
-            array_splice($menu_items, 5, 0, [[
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../wali/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../wali/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-            ]]);
-            
+            $jurnal_submenu_wali[] = ['title' => 'Jurnal Les', 'url' => '../wali/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
+        }
+
+        array_splice($menu_items, 5, 0, [[
+            'title' => 'Jurnal',
+            'icon' => 'fas fa-book-open',
+            'submenu' => $jurnal_submenu_wali,
+            'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
+        ]]);
+
+        if ($is_grade_6) {
             // Add Jadwal Les into Jadwal submenu for Grade 6 Wali
             foreach ($menu_items as &$m_item) {
                 if ($m_item['title'] === 'Jadwal') {
