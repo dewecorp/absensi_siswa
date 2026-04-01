@@ -44,40 +44,13 @@ if (isset($_POST['delete_multiple_journal'])) {
     }
 }
 
-// Get all classes (only grade 6)
-$stmt = $pdo->query("SELECT * FROM tb_kelas WHERE nama_kelas LIKE '6%' ORDER BY nama_kelas ASC");
-$classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Set default to first grade 6 class if no filter selected
-if (empty($_GET['kelas']) && count($classes) > 0) {
-    $_GET['kelas'] = $classes[0]['id_kelas'];
-}
-
-// Get all teachers
-$stmt_guru = $pdo->query("SELECT * FROM tb_guru ORDER BY nama_guru ASC");
-$teachers = $stmt_guru->fetchAll(PDO::FETCH_ASSOC);
-
-// Get unique waktu options - hardcoded since tb_jadwal_les doesn't have 'waktu' column
-$waktu_options = ['Pagi', 'Siang', 'Sore'];
-
 // Get journal entries
 $journal_entries = [];
-$class_info = [];
 $filter_title = '';
 
-// Use GET kelas directly since we set it above
+// Build filter conditions - only guru filter
 $where_clauses = [];
 $params = [];
-
-if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
-    $where_clauses[] = "jl.id_kelas = ?";
-    $params[] = $_GET['kelas'];
-    
-    $stmt_class = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
-    $stmt_class->execute([$_GET['kelas']]);
-    $class_info = $stmt_class->fetch(PDO::FETCH_ASSOC);
-    $filter_title .= ($filter_title ? ' - ' : '') . ($class_info['nama_kelas'] ?? '');
-}
 
 if (isset($_GET['guru']) && !empty($_GET['guru'])) {
     $where_clauses[] = "jl.id_guru = ?";
@@ -86,27 +59,24 @@ if (isset($_GET['guru']) && !empty($_GET['guru'])) {
     $stmt_g = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
     $stmt_g->execute([$_GET['guru']]);
     $guru_name = $stmt_g->fetchColumn();
-    $filter_title .= ($filter_title ? ' - ' : '') . $guru_name;
+    $filter_title .= ' - ' . $guru_name;
 }
 
-if (isset($_GET['waktu']) && !empty($_GET['waktu'])) {
-    $where_clauses[] = "jl.waktu = ?";
-    $params[] = $_GET['waktu'];
-    $filter_title .= ($filter_title ? ' - ' : '') . $_GET['waktu'];
+// Always execute query - if no filters, show all journals
+$query = "SELECT jl.*, g.nama_guru, k.nama_kelas 
+          FROM tb_jurnal_les jl 
+          LEFT JOIN tb_guru g ON jl.id_guru = g.id_guru 
+          LEFT JOIN tb_kelas k ON jl.id_kelas = k.id_kelas";
+
+if (!empty($where_clauses)) {
+    $query .= " WHERE " . implode(' AND ', $where_clauses);
 }
 
-if (!empty($params)) {
-    $query = "SELECT jl.*, g.nama_guru, k.nama_kelas 
-              FROM tb_jurnal_les jl 
-              LEFT JOIN tb_guru g ON jl.id_guru = g.id_guru 
-              LEFT JOIN tb_kelas k ON jl.id_kelas = k.id_kelas
-              WHERE " . implode(' AND ', $where_clauses) . "
-              ORDER BY jl.tanggal DESC, jl.waktu";
-              
-    $stmt = $pdo->prepare($query);
-    $stmt->execute($params);
-    $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
+$query .= " ORDER BY jl.tanggal DESC, jl.waktu";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
+$journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Set page title
 $page_title = 'Jurnal Les';
@@ -227,19 +197,65 @@ include '../templates/header.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h4>Data Jurnal Les <?php echo $filter_title ? '- ' . $filter_title : ''; ?></h4>
+                    <h4>Data Jurnal Les 
+                        <?php 
+                        if (!empty($filter_title)) {
+                            echo '- ' . $filter_title;
+                        } else {
+                            echo 'Semua Guru Kelas 6';
+                        }
+                        ?>
+                    </h4>
                     <div class="card-header-action">
                         <div class="btn-group">
-                            <a href="../config/export_jurnal_les_pdf.php?session_type=admin&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&guru=<?php echo $_GET['guru'] ?? ''; ?>" target="_blank" class="btn btn-danger">
+                            <a href="../config/export_jurnal_les_pdf.php?session_type=admin&guru=<?php echo $_GET['guru'] ?? ''; ?>" target="_blank" class="btn btn-danger">
                                 <i class="fas fa-file-pdf"></i> PDF
                             </a>
-                            <a href="../config/export_jurnal_les_excel.php?session_type=admin&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&guru=<?php echo $_GET['guru'] ?? ''; ?>" target="_blank" class="btn btn-success">
+                            <a href="../config/export_jurnal_les_excel.php?session_type=admin&guru=<?php echo $_GET['guru'] ?? ''; ?>" target="_blank" class="btn btn-success">
                                 <i class="fas fa-file-excel"></i> Excel
                             </a>
                         </div>
                     </div>
                 </div>
                 <div class="card-body">
+                    <!-- Filter Section -->
+                    <form method="GET" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Filter Guru</label>
+                                    <select name="guru" class="form-control" onchange="this.form.submit()">
+                                        <option value="">Semua Guru Kelas 6</option>
+                                        <?php 
+                                        // Get ALL grade 6 teachers from schedule (tb_jadwal_pelajaran)
+                                        // This includes teachers who may not have journal entries yet
+                                        $stmt_guru_kelas_6 = $pdo->prepare("
+                                            SELECT DISTINCT g.id_guru, g.nama_guru
+                                            FROM tb_guru g
+                                            INNER JOIN tb_jadwal_pelajaran jp ON g.id_guru = jp.guru_id
+                                            INNER JOIN tb_kelas k ON jp.kelas_id = k.id_kelas
+                                            WHERE k.nama_kelas LIKE '%6%' OR k.nama_kelas LIKE '%VI%'
+                                            UNION
+                                            SELECT id_guru, nama_guru
+                                            FROM tb_guru
+                                            WHERE nama_guru IN (SELECT wali_kelas FROM tb_kelas WHERE nama_kelas LIKE '%6%' OR nama_kelas LIKE '%VI%')
+                                            ORDER BY nama_guru ASC
+                                        ");
+                                        $stmt_guru_kelas_6->execute();
+                                        $guru_kelas_6 = $stmt_guru_kelas_6->fetchAll(PDO::FETCH_ASSOC);
+                                        
+                                        foreach ($guru_kelas_6 as $t): 
+                                        ?>
+                                            <option value="<?php echo $t['id_guru']; ?>" <?php echo (isset($_GET['guru']) && $_GET['guru'] == $t['id_guru']) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($t['nama_guru']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    
                     <?php if (!empty($journal_entries)): ?>
                     <form method="POST" id="delete-multiple-form">
                         <input type="hidden" name="selected-ids" id="selected-ids">
@@ -299,7 +315,12 @@ include '../templates/header.php';
                     </form>
                     <?php else: ?>
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> Belum ada data jurnal les untuk filter yang dipilih.
+                        <i class="fas fa-info-circle"></i> 
+                        <?php if (!empty($where_clauses)): ?>
+                            Belum ada data jurnal les untuk filter yang dipilih. Silakan ubah filter atau reset untuk melihat semua data.
+                        <?php else: ?>
+                            Belum ada data jurnal les. Pastikan guru/wali sudah mengisi jurnal les terlebih dahulu.
+                        <?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
