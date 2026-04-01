@@ -26,7 +26,10 @@ if (isset($_POST['delete_journal'])) {
 
 // Handle Multiple Delete Action
 if (isset($_POST['delete_multiple_journal'])) {
-    $ids = $_POST['ids'] ?? [];
+    // Get IDs from JSON string in selected-ids field
+    $ids_json = $_POST['selected-ids'] ?? '';
+    $ids = !empty($ids_json) ? json_decode($ids_json, true) : [];
+    
     if (!empty($ids)) {
         try {
             $placeholders = str_repeat('?,', count($ids) - 1) . '?';
@@ -94,18 +97,23 @@ $js_libs = [
 ];
 
 // Page specific JS - prepare message variables first
-$msg_alert = '';
+$js_page = [];
 if (isset($message)) {
     $msg_type = $message['type'];
     $msg_icon = ($msg_type == 'success') ? 'success' : 'error';
     $msg_title = ($msg_type == 'success') ? 'Berhasil!' : 'Error';
     $msg_text = addslashes($message['text']);
-    $msg_alert = "Swal.fire({icon: '$msg_icon', title: '$msg_title', text: '$msg_text', timer: 2000});";
-}
-
-$js_page = [];
-if (!empty($msg_alert)) {
-    $js_page[] = "$(document).ready(function() { $msg_alert });";
+    $js_page[] = <<<JS
+    $(document).ready(function() {
+        Swal.fire({
+            icon: '$msg_icon',
+            title: '$msg_title',
+            text: '$msg_text',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    });
+JS;
 }
 
 $js_page[] = <<<JS
@@ -122,7 +130,9 @@ $(document).ready(function() {
     // Delete single confirmation
     $(document).on('click', '.btn-delete', function(e) {
         e.preventDefault();
-        var form = $(this).closest('form');
+        var form = $(this).closest('.delete-form');
+        var journalId = form.find('input[name="id_jurnal"]').val();
+        
         Swal.fire({
             title: 'Apakah Anda yakin?',
             text: 'Data jurnal les yang dihapus tidak dapat dikembalikan!',
@@ -134,13 +144,33 @@ $(document).ready(function() {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                form.submit();
+                // Create and submit form to ensure proper submission
+                var submitForm = $('<form>').attr({
+                    method: 'POST',
+                    action: window.location.href
+                });
+                
+                submitForm.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'id_jurnal',
+                    value: journalId
+                }));
+                
+                submitForm.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'delete_journal',
+                    value: '1'
+                }));
+                
+                $('body').append(submitForm);
+                submitForm.submit();
             }
         });
     });
     
     // Delete multiple confirmation
     $('#delete-selected-btn').on('click', function(e) {
+        e.preventDefault();
         var selectedIds = [];
         $('input[name="ids[]"]:checked').each(function() {
             selectedIds.push($(this).val());
@@ -162,8 +192,26 @@ $(document).ready(function() {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                $('#selected-ids').val(JSON.stringify(selectedIds));
-                $('#delete-multiple-form').submit();
+                // Create and submit form to ensure proper submission
+                var submitForm = $('<form>').attr({
+                    method: 'POST',
+                    action: window.location.href
+                });
+                
+                submitForm.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'selected-ids',
+                    value: JSON.stringify(selectedIds)
+                }));
+                
+                submitForm.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'delete_multiple_journal',
+                    value: '1'
+                }));
+                
+                $('body').append(submitForm);
+                submitForm.submit();
             }
         });
     });
@@ -186,15 +234,6 @@ include '../templates/header.php';
         </div>
 
         <div class="section-body">
-            <?php if (isset($message)): ?>
-                <div class="alert alert-<?php echo $message['type'] == 'success' ? 'success' : 'danger'; ?> alert-dismissible" role="alert">
-                    <?php echo htmlspecialchars($message['text']); ?>
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            <?php endif; ?>
-
             <div class="card">
                 <div class="card-header">
                     <h4>Data Jurnal Les 
@@ -300,7 +339,7 @@ include '../templates/header.php';
                                         <td><?php echo htmlspecialchars($entry['mapel']); ?></td>
                                         <td><?php echo htmlspecialchars($entry['materi']); ?></td>
                                         <td>
-                                            <form method="POST" style="display:inline;">
+                                            <form method="POST" style="display:inline;" class="delete-form">
                                                 <input type="hidden" name="id_jurnal" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="delete_journal" class="btn btn-sm btn-danger btn-delete" title="Hapus">
                                                     <i class="fas fa-trash"></i> Hapus
