@@ -8,11 +8,12 @@ if (!isAuthorized(['guru', 'wali'])) {
 }
 
 // Get teacher information
-if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {
+if ($_SESSION['level'] == 'wali') {
     $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 } else {
+    // Fallback for other roles if needed, though logic is for wali
     $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -41,19 +42,15 @@ if (!empty($teacher['mengajar'])) {
                     $match = true;
                 }
                 if ($match) {
-                    // ONLY ADD GRADE 6 CLASSES
-                    if (strpos(strtolower($kelas['nama_kelas']), '6') !== false || 
-                        strpos(strtolower($kelas['nama_kelas']), 'vi') !== false) {
-                        $exists = false;
-                        foreach ($classes as $existing_class) {
-                            if ($existing_class['id_kelas'] == $kelas['id_kelas']) {
-                                $exists = true;
-                                break;
-                            }
+                    $exists = false;
+                    foreach ($classes as $existing_class) {
+                        if ($existing_class['id_kelas'] == $kelas['id_kelas']) {
+                            $exists = true;
+                            break;
                         }
-                        if (!$exists) {
-                            $classes[] = $kelas;
-                        }
+                    }
+                    if (!$exists) {
+                        $classes[] = $kelas;
                     }
                     break;
                 }
@@ -62,36 +59,38 @@ if (!empty($teacher['mengajar'])) {
     }
 }
 
-// Also add the homeroom class (ONLY IF GRADE 6)
+// Also add the homeroom class
 $stmt_wali = $pdo->prepare("SELECT * FROM tb_kelas WHERE wali_kelas = ?");
 $stmt_wali->execute([$teacher['nama_guru']]);
 $homeroom_class = $stmt_wali->fetch(PDO::FETCH_ASSOC);
 
 if ($homeroom_class) {
-    // Check if homeroom class is grade 6
-    if (strpos(strtolower($homeroom_class['nama_kelas']), '6') !== false || 
-        strpos(strtolower($homeroom_class['nama_kelas']), 'vi') !== false) {
-        $exists = false;
-        foreach ($classes as $c) {
-            if ($c['id_kelas'] == $homeroom_class['id_kelas']) {
-                $exists = true;
-                break;
-            }
+    $exists = false;
+    foreach ($classes as $c) {
+        if ($c['id_kelas'] == $homeroom_class['id_kelas']) {
+            $exists = true;
+            break;
         }
-        if (!$exists) {
-            $classes[] = $homeroom_class;
-        }
+    }
+    if (!$exists) {
+        $classes[] = $homeroom_class;
     }
 }
 
-// VALIDATION: Teacher must have at least one grade 6 class
-if (empty($classes)) {
-    die('<div style="text-align:center;padding:50px;font-family:Arial,sans-serif;">
-        <h2 style="color:#dc3545;">⛔ Akses Ditolak</h2>
-        <p style="font-size:18px;color:#666;">Menu Jurnal Les hanya dapat diakses oleh guru yang mengajar di Kelas 6.</p>
-        <p style="font-size:14px;color:#999;">Anda tidak memiliki jadwal mengajar atau menjadi wali kelas di Kelas 6.</p>
-        <a href="dashboard.php" style="display:inline-block;margin-top:20px;padding:10px 20px;background-color:#007bff;color:white;text-decoration:none;border-radius:5px;">Kembali ke Dashboard</a>
-    </div>');
+// Auto-select Grade 6 classes only (kelas 6)
+$selected_class = 0;
+if (!empty($classes)) {
+    // Find first grade 6 class
+    foreach ($classes as $c) {
+        if (strpos(strtolower($c['nama_kelas']), '6') !== false || strpos(strtolower($c['nama_kelas']), 'vi') !== false) {
+            $selected_class = $c['id_kelas'];
+            break;
+        }
+    }
+    // If no grade 6 found, use first class
+    if ($selected_class == 0 && count($classes) > 0) {
+        $selected_class = $classes[0]['id_kelas'];
+    }
 }
 
 // Handle Form Submission (Add/Edit)
@@ -157,22 +156,6 @@ if (isset($_POST['delete_journal'])) {
         $message = ['type' => 'success', 'text' => 'Data jurnal les berhasil dihapus!'];
     } catch (Exception $e) {
         $message = ['type' => 'error', 'text' => 'Gagal menghapus data: ' . $e->getMessage()];
-    }
-}
-
-// Auto-select Grade 6 classes only (kelas 6)
-$selected_class = 0;
-if (!empty($classes)) {
-    // Find first grade 6 class
-    foreach ($classes as $c) {
-        if (strpos(strtolower($c['nama_kelas']), '6') !== false || strpos(strtolower($c['nama_kelas']), 'vi') !== false) {
-            $selected_class = $c['id_kelas'];
-            break;
-        }
-    }
-    // If no grade 6 found, use first class
-    if ($selected_class == 0 && count($classes) > 0) {
-        $selected_class = $classes[0]['id_kelas'];
     }
 }
 
