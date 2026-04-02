@@ -30,38 +30,77 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
         $id_kelas = $id_kelas_fixed;
         $tanggal = $_POST['tanggal'];
         
-        // Note: Tutoring attendance does NOT check school holidays
-        // It only depends on whether there is a tutoring schedule (tb_jadwal_les)
-        // This allows tutoring on holidays like Fridays if scheduled
-        
-        $saved_count = 0;
-        foreach ($_POST as $key => $value) {
-            if (strpos($key, 'keterangan_') === 0) {
-                $id_siswa = (int)str_replace('keterangan_', '', $key);
-                $status = $value;
-                
-                if (!in_array($status, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
-                    continue;
-                }
-                
-                $check_stmt = $pdo->prepare("SELECT id_absensi_les FROM tb_absensi_les WHERE id_siswa = ? AND tanggal = ?");
-                $check_stmt->execute([$id_siswa, $tanggal]);
-                $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($existing) {
-                    $update_stmt = $pdo->prepare("UPDATE tb_absensi_les SET status = ?, waktu_input = NOW() WHERE id_absensi_les = ?");
-                    $update_stmt->execute([$status, $existing['id_absensi_les']]);
+        // Get current user's guru ID if applicable
+        $current_guru_id = null;
+        $user_level = getUserLevel();
+        if (in_array($user_level, ['guru', 'wali'])) {
+            if (isset($_SESSION['user_id'])) {
+                $id_check = $_SESSION['user_id'];
+                if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+                    $stmt_uid = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+                    $stmt_uid->execute([$id_check]);
+                    $current_guru_id = $stmt_uid->fetchColumn();
                 } else {
-                    $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les (id_siswa, tanggal, status) VALUES (?, ?, ?)");
-                    $insert_stmt->execute([$id_siswa, $tanggal, $status]);
+                    $current_guru_id = $id_check;
                 }
-                $saved_count++;
             }
         }
         
-        $message = ['type' => 'success', 'text' => "Data absensi les berhasil disimpan untuk $saved_count siswa!"];
-        $username = $_SESSION['username'] ?? 'system';
-        logActivity($pdo, $username, 'Input Absensi Les', "Melakukan input absensi les siswa kelas $nama_kelas_fixed untuk $saved_count siswa");
+        // Validate if teacher has schedule for this class and date
+        $validation_error = false;
+        if ($current_guru_id && !in_array($user_level, ['admin', 'tata_usaha', 'kepala_madrasah'])) {
+            // Check if teacher has a les schedule for today
+            $stmt_check_teacher = $pdo->prepare("
+                SELECT COUNT(*) 
+                FROM tb_jadwal_les jl
+                INNER JOIN tb_jadwal_pelajaran jp ON jl.id_guru = jp.guru_id
+                WHERE jl.id_guru = ? 
+                AND jl.tanggal = ?
+                AND jp.kelas_id = ?
+            ");
+            $stmt_check_teacher->execute([$current_guru_id, $tanggal, $id_kelas]);
+            $has_teacher_schedule = $stmt_check_teacher->fetchColumn() > 0;
+            
+            if (!$has_teacher_schedule) {
+                $validation_error = true;
+                $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki jadwal les untuk kelas ini pada tanggal tersebut. Tidak dapat mengisi absensi.'];
+            }
+        }
+        
+        if (!$validation_error) {
+            // Note: Tutoring attendance does NOT check school holidays
+            // It only depends on whether there is a tutoring schedule (tb_jadwal_les)
+            // This allows tutoring on holidays like Fridays if scheduled
+            
+            $saved_count = 0;
+            foreach ($_POST as $key => $value) {
+                if (strpos($key, 'keterangan_') === 0) {
+                    $id_siswa = (int)str_replace('keterangan_', '', $key);
+                    $status = $value;
+                    
+                    if (!in_array($status, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+                        continue;
+                    }
+                    
+                    $check_stmt = $pdo->prepare("SELECT id_absensi_les FROM tb_absensi_les WHERE id_siswa = ? AND tanggal = ?");
+                    $check_stmt->execute([$id_siswa, $tanggal]);
+                    $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($existing) {
+                        $update_stmt = $pdo->prepare("UPDATE tb_absensi_les SET status = ?, waktu_input = NOW() WHERE id_absensi_les = ?");
+                        $update_stmt->execute([$status, $existing['id_absensi_les']]);
+                    } else {
+                        $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les (id_siswa, tanggal, status) VALUES (?, ?, ?)");
+                        $insert_stmt->execute([$id_siswa, $tanggal, $status]);
+                    }
+                    $saved_count++;
+                }
+            }
+            
+            $message = ['type' => 'success', 'text' => "Data absensi les berhasil disimpan untuk $saved_count siswa!"];
+            $username = $_SESSION['username'] ?? 'system';
+            logActivity($pdo, $username, 'Input Absensi Les', "Melakukan input absensi les siswa kelas $nama_kelas_fixed untuk $saved_count siswa");
+        }
     }
 }
 

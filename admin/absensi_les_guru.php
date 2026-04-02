@@ -57,6 +57,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
     $waktu_dt = $waktu_time ? ($tanggal . ' ' . $waktu_time) : date('Y-m-d H:i:s');
     $result = ['success' => false];
     
+    // Validate if teacher is marking attendance for their own scheduled class
+    if ($id_guru > 0 && in_array($user_level, ['guru', 'wali']) && !in_array($user_level, ['admin', 'tata_usaha', 'kepala_madrasah'])) {
+        // Check if the teacher is trying to mark attendance for themselves
+        if ($current_guru_id != $id_guru) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Anda hanya dapat mengisi absensi untuk diri sendiri.']);
+            exit;
+        }
+        
+        // Check if teacher has a les schedule for today
+        $stmt_check_schedule = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM tb_jadwal_les jl
+            INNER JOIN tb_jadwal_pelajaran jp ON jl.id_guru = jp.guru_id
+            WHERE jl.id_guru = ? 
+            AND jl.tanggal = ?
+        ");
+        $stmt_check_schedule->execute([$id_guru, $tanggal]);
+        $has_teacher_les_schedule = $stmt_check_schedule->fetchColumn() > 0;
+        
+        if (!$has_teacher_les_schedule) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Anda tidak memiliki jadwal les untuk hari ini. Tidak dapat mengisi absensi.']);
+            exit;
+        }
+    }
+    
     // Note: Tutoring attendance does NOT check school holidays
     // It only depends on whether there is a tutoring schedule (tb_jadwal_les)
     // This allows tutoring on holidays like Fridays if scheduled
@@ -280,8 +307,8 @@ $(document).ready(function() {
                     });
                 } else if (response && response.error) {
                     Swal.fire({
-                        icon: 'warning',
-                        title: 'Tidak Ada Jadwal',
+                        icon: 'error',
+                        title: 'Gagal!',
                         text: response.error,
                         confirmButtonText: 'OK'
                     }).then(function() {
