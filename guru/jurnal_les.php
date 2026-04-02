@@ -8,14 +8,26 @@ if (!isAuthorized(['guru', 'wali'])) {
 }
 
 // Get teacher information
-if ($_SESSION['level'] == 'wali') {
+$teacher = null;
+
+// Method 1: Direct query from tb_guru (for sessions with id_guru)
+if (isset($_SESSION['user_id']) && ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali')) {
     $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
-} else {
-    // Fallback for other roles if needed, though logic is for wali
+}
+
+// Method 2: Query through tb_pengguna (fallback if method 1 fails)
+if (!$teacher && isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
     $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
     $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Final fallback: try joining tables without checking login_source
+if (!$teacher) {
+    $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g LEFT JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ? OR g.id_guru = ?");
+    $stmt->execute([$_SESSION['user_id'] ?? 0, $_SESSION['user_id'] ?? 0]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
@@ -103,6 +115,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $tanggal = $_POST['tanggal'];
     $id_guru = $teacher['id_guru'];
     
+    // Get waktu from tb_jadwal_les based on the date selected
+    $stmt_waktu_check = $pdo->prepare("SELECT CONCAT(TIME_FORMAT(waktu_mulai, '%H.%i'), ' - ', TIME_FORMAT(waktu_selesai, '%H.%i')) AS waktu_range FROM tb_jadwal_les WHERE id_guru = ? AND tanggal = ? LIMIT 1");
+    $stmt_waktu_check->execute([$id_guru, $tanggal]);
+    $waktu_result = $stmt_waktu_check->fetch(PDO::FETCH_ASSOC);
+    $waktu = $waktu_result ? $waktu_result['waktu_range'] : '';
+    
     // Validate if teacher has les schedule for this date
     $validation_error = false;
     $stmt_check_schedule = $pdo->prepare("
@@ -117,6 +135,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     if (!$has_schedule) {
         $validation_error = true;
         $message = ['type' => 'error', 'text' => 'Anda tidak memiliki jadwal les untuk tanggal tersebut. Tidak dapat mengisi jurnal les.'];
+    }
+    
+    // Also validate if waktu is empty
+    if (empty($waktu)) {
+        $validation_error = true;
+        $message = ['type' => 'error', 'text' => 'Tidak ada jadwal les yang ditemukan untuk tanggal ini.'];
     }
 
     if (!$validation_error) {
