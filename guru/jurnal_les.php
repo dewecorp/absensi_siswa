@@ -41,15 +41,19 @@ if (!empty($teacher['mengajar'])) {
                     $match = true;
                 }
                 if ($match) {
-                    $exists = false;
-                    foreach ($classes as $existing_class) {
-                        if ($existing_class['id_kelas'] == $kelas['id_kelas']) {
-                            $exists = true;
-                            break;
+                    // ONLY ADD GRADE 6 CLASSES
+                    if (strpos(strtolower($kelas['nama_kelas']), '6') !== false || 
+                        strpos(strtolower($kelas['nama_kelas']), 'vi') !== false) {
+                        $exists = false;
+                        foreach ($classes as $existing_class) {
+                            if ($existing_class['id_kelas'] == $kelas['id_kelas']) {
+                                $exists = true;
+                                break;
+                            }
                         }
-                    }
-                    if (!$exists) {
-                        $classes[] = $kelas;
+                        if (!$exists) {
+                            $classes[] = $kelas;
+                        }
                     }
                     break;
                 }
@@ -58,52 +62,84 @@ if (!empty($teacher['mengajar'])) {
     }
 }
 
-// Also add the homeroom class
+// Also add the homeroom class (ONLY IF GRADE 6)
 $stmt_wali = $pdo->prepare("SELECT * FROM tb_kelas WHERE wali_kelas = ?");
 $stmt_wali->execute([$teacher['nama_guru']]);
 $homeroom_class = $stmt_wali->fetch(PDO::FETCH_ASSOC);
 
 if ($homeroom_class) {
-    $exists = false;
-    foreach ($classes as $c) {
-        if ($c['id_kelas'] == $homeroom_class['id_kelas']) {
-            $exists = true;
-            break;
+    // Check if homeroom class is grade 6
+    if (strpos(strtolower($homeroom_class['nama_kelas']), '6') !== false || 
+        strpos(strtolower($homeroom_class['nama_kelas']), 'vi') !== false) {
+        $exists = false;
+        foreach ($classes as $c) {
+            if ($c['id_kelas'] == $homeroom_class['id_kelas']) {
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists) {
+            $classes[] = $homeroom_class;
         }
     }
-    if (!$exists) {
-        $classes[] = $homeroom_class;
-    }
+}
+
+// VALIDATION: Teacher must have at least one grade 6 class
+if (empty($classes)) {
+    die('<div style="text-align:center;padding:50px;font-family:Arial,sans-serif;">
+        <h2 style="color:#dc3545;">⛔ Akses Ditolak</h2>
+        <p style="font-size:18px;color:#666;">Menu Jurnal Les hanya dapat diakses oleh guru yang mengajar di Kelas 6.</p>
+        <p style="font-size:14px;color:#999;">Anda tidak memiliki jadwal mengajar atau menjadi wali kelas di Kelas 6.</p>
+        <a href="dashboard.php" style="display:inline-block;margin-top:20px;padding:10px 20px;background-color:#007bff;color:white;text-decoration:none;border-radius:5px;">Kembali ke Dashboard</a>
+    </div>');
 }
 
 // Handle Form Submission (Add/Edit)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $id_jurnal = !empty($_POST['id_jurnal']) ? (int)$_POST['id_jurnal'] : null;
-    $id_kelas = (int)$_POST['id_kelas'];
-    $waktu = $_POST['waktu'];
+    // Get class from POST first (when form submitted), fallback to GET/filter
+    $id_kelas = isset($_POST['kelas_filter']) ? (int)$_POST['kelas_filter'] : (isset($selected_class) ? $selected_class : 0);
     $mapel = $_POST['mapel'];
     $materi = $_POST['materi'];
     $tanggal = $_POST['tanggal'];
     $id_guru = $teacher['id_guru'];
     
-    try {
-        if ($id_jurnal) {
-            // Update existing record
-            $stmt = $pdo->prepare("UPDATE tb_jurnal_les SET id_kelas = ?, id_guru = ?, waktu = ?, mapel = ?, materi = ?, tanggal = ? WHERE id = ?");
-            $stmt->execute([$id_kelas, $id_guru, $waktu, $mapel, $materi, $tanggal, $id_jurnal]);
-            $message = ['type' => 'info', 'text' => 'Data jurnal les berhasil diperbarui!'];
-        } else {
-            // Insert new record
-            $stmt = $pdo->prepare("INSERT INTO tb_jurnal_les (id_kelas, id_guru, waktu, mapel, materi, tanggal) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$id_kelas, $id_guru, $waktu, $mapel, $materi, $tanggal]);
-            $message = ['type' => 'success', 'text' => 'Data jurnal les berhasil disimpan!'];
+    // Validate if teacher has les schedule for this date
+    $validation_error = false;
+    $stmt_check_schedule = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM tb_jadwal_les 
+        WHERE id_guru = ? 
+        AND tanggal = ?
+    ");
+    $stmt_check_schedule->execute([$id_guru, $tanggal]);
+    $has_schedule = $stmt_check_schedule->fetchColumn() > 0;
+    
+    if (!$has_schedule) {
+        $validation_error = true;
+        $message = ['type' => 'error', 'text' => 'Anda tidak memiliki jadwal les untuk tanggal tersebut. Tidak dapat mengisi jurnal les.'];
+    }
+
+    if (!$validation_error) {
+        try {
+            if ($id_jurnal) {
+                // Update existing record
+                $stmt = $pdo->prepare("UPDATE tb_jurnal_les SET id_kelas = ?, id_guru = ?, waktu = ?, mapel = ?, materi = ?, tanggal = ? WHERE id = ?");
+                $stmt->execute([$id_kelas, $id_guru, $waktu, $mapel, $materi, $tanggal, $id_jurnal]);
+                $message = ['type' => 'info', 'text' => 'Data jurnal les berhasil diperbarui!'];
+            } else {
+                // Insert new record
+                $stmt = $pdo->prepare("INSERT INTO tb_jurnal_les (id_kelas, id_guru, waktu, mapel, materi, tanggal) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$id_kelas, $id_guru, $waktu, $mapel, $materi, $tanggal]);
+                $message = ['type' => 'success', 'text' => 'Data jurnal les berhasil disimpan!'];
+            }
+            
+            $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+            logActivity($pdo, $username, 'Tambah/Edit Jurnal Les', "Guru {$teacher['nama_guru']} menyimpan jurnal les kelas $id_kelas");
+            
+        } catch (Exception $e) {
+            $message = ['type' => 'error', 'text' => 'Gagal menyimpan data: ' . $e->getMessage()];
         }
-        
-        $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-        logActivity($pdo, $username, 'Tambah/Edit Jurnal Les', "Guru {$teacher['nama_guru']} menyimpan jurnal les kelas $id_kelas");
-        
-    } catch (Exception $e) {
-        $message = ['type' => 'error', 'text' => 'Gagal menyimpan data: ' . $e->getMessage()];
     }
 }
 
@@ -124,10 +160,33 @@ if (isset($_POST['delete_journal'])) {
     }
 }
 
-// Get selected class - use auto-selected value
-$selected_class = isset($_GET['kelas']) ? $_GET['kelas'] : '';
-if (empty($selected_class) && count($classes) > 0) {
-    $selected_class = $classes[0]['id_kelas'];
+// Auto-select Grade 6 classes only (kelas 6)
+$selected_class = 0;
+if (!empty($classes)) {
+    // Find first grade 6 class
+    foreach ($classes as $c) {
+        if (strpos(strtolower($c['nama_kelas']), '6') !== false || strpos(strtolower($c['nama_kelas']), 'vi') !== false) {
+            $selected_class = $c['id_kelas'];
+            break;
+        }
+    }
+    // If no grade 6 found, use first class
+    if ($selected_class == 0 && count($classes) > 0) {
+        $selected_class = $classes[0]['id_kelas'];
+    }
+}
+
+// Get journal entries for the auto-selected class
+$journal_entries = [];
+if ($selected_class) {
+    $stmt_journal = $pdo->prepare("SELECT jl.*, g.nama_guru, k.nama_kelas 
+                                    FROM tb_jurnal_les jl 
+                                    LEFT JOIN tb_guru g ON jl.id_guru = g.id_guru 
+                                    LEFT JOIN tb_kelas k ON jl.id_kelas = k.id_kelas 
+                                    WHERE jl.id_kelas = ? AND jl.id_guru = ?
+                                    ORDER BY jl.tanggal DESC, jl.waktu");
+    $stmt_journal->execute([$selected_class, $teacher['id_guru']]);
+    $journal_entries = $stmt_journal->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Get class info
@@ -165,19 +224,6 @@ $stmt_waktu = $pdo->prepare("
 $stmt_waktu->execute([$teacher['id_guru']]);
 $waktu_options = $stmt_waktu->fetchAll(PDO::FETCH_COLUMN, 0);
 
-// Get journal entries for selected class and guru
-$journal_entries = [];
-if ($selected_class) {
-    $stmt_journal = $pdo->prepare("SELECT jl.*, g.nama_guru, k.nama_kelas 
-                                    FROM tb_jurnal_les jl 
-                                    LEFT JOIN tb_guru g ON jl.id_guru = g.id_guru 
-                                    LEFT JOIN tb_kelas k ON jl.id_kelas = k.id_kelas 
-                                    WHERE jl.id_kelas = ? AND jl.id_guru = ?
-                                    ORDER BY jl.tanggal DESC, jl.waktu");
-    $stmt_journal->execute([$selected_class, $teacher['id_guru']]);
-    $journal_entries = $stmt_journal->fetchAll(PDO::FETCH_ASSOC);
-}
-
 // Set page title
 $page_title = 'Jurnal Les';
 
@@ -193,19 +239,24 @@ $js_libs = [
     'https://cdn.jsdelivr.net/npm/sweetalert2@11'
 ];
 
-// Page specific JS - prepare message variables first
-$msg_alert = '';
+// Page specific JS with SweetAlert2 only (no Bootstrap alerts)
+$js_page = [];
 if (isset($message)) {
     $msg_type = $message['type'];
     $msg_icon = ($msg_type == 'success') ? 'success' : ($msg_type == 'info' ? 'info' : 'error');
-    $msg_title = ($msg_type == 'success') ? 'Berhasil!' : ($msg_type == 'info' ? 'Informasi' : 'Error');
+    $msg_title = ($msg_type == 'success') ? 'Berhasil!' : ($msg_type == 'info' ? 'Informasi!' : 'Gagal!');
     $msg_text = addslashes($message['text']);
-    $msg_alert = "Swal.fire({icon: '$msg_icon', title: '$msg_title', text: '$msg_text', timer: 2000, showConfirmButton: false});";
-}
-
-$js_page = [];
-if (!empty($msg_alert)) {
-    $js_page[] = "$(document).ready(function() { $msg_alert });";
+    $js_page[] = <<<JS
+    $(document).ready(function() {
+        Swal.fire({
+            icon: '$msg_icon',
+            title: '$msg_title',
+            text: '$msg_text',
+            timer: 3000,
+            showConfirmButton: false
+        });
+    });
+JS;
 }
 
 $js_page[] = <<<JS
@@ -218,36 +269,37 @@ $(document).ready(function() {
         'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
         'columnDefs': [{ 'orderable': false, 'targets': [6] }]
     });
-
-    // Reset modal on close
-    $('#jurnalModal').on('hidden.bs.modal', function () {
-        $(this).find('form')[0].reset();
-        $('#jurnalModalLabel').text('Tambah Jurnal Les');
-        $('#id_jurnal').val('');
-    });
-
-    // Edit button click
-    $(document).on('click', '.btn-edit', function() {
+    
+    // Edit button handler - properly loads data into modal
+    $(document).on('click', '.btn-edit', function(e) {
+        e.preventDefault();
         var id = $(this).data('id');
         var tanggal = $(this).data('tanggal');
         var waktu = $(this).data('waktu');
         var mapel = $(this).data('mapel');
         var materi = $(this).data('materi');
-
-        $('#jurnalModalLabel').text('Edit Jurnal Les');
-        $('#id_jurnal').val(id);
+        
+        console.log('Editing journal ID:', id);
+        console.log('Data:', { tanggal, waktu, mapel, materi });
+        
+        // Fill form fields
+        $('#journal_id').val(id);
         $('#tanggal').val(tanggal);
         $('#waktu').val(waktu);
         $('#mapel').val(mapel);
         $('#materi').val(materi);
-
+        
+        // Update modal title
+        $('#jurnalModalLabel').text('Edit Jurnal Les');
+        
+        // Show modal
         $('#jurnalModal').modal('show');
     });
     
     // Delete confirmation
     $(document).on('click', '.btn-delete', function(e) {
         e.preventDefault();
-        var form = $(this).closest('form');
+        var form = $(this).closest('.delete-form');
         Swal.fire({
             title: 'Apakah Anda yakin?',
             text: 'Data jurnal les yang dihapus tidak dapat dikembalikan!',
@@ -263,48 +315,46 @@ $(document).ready(function() {
             }
         });
     });
+    
+    // Modal reset on hide
+    $('#jurnalModal').on('hidden.bs.modal', function() {
+        $('#journalForm')[0].reset();
+        $('#journal_id').val('');
+        $('#tanggal').val(new Date().toISOString().split('T')[0]); // Reset to today
+        $('.invalid-feedback').hide();
+        $('.form-control').removeClass('is-invalid');
+        $('#jurnalModalLabel').text('Tambah Jurnal Les');
+    });
 });
 JS;
 
 include '../templates/header.php';
+include '../templates/sidebar.php';
 ?>
 
 <div class="main-content">
     <section class="section">
         <div class="section-header">
             <h1>Jurnal Les</h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
+                <div class="breadcrumb-item">Jurnal</div>
+                <div class="breadcrumb-item">Jurnal Les</div>
+            </div>
         </div>
 
         <div class="section-body">
-            <?php if (empty($classes)): ?>
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    <strong>Belum ada Kelas 6:</strong> Anda belum mengajar atau menjadi wali kelas 6. Jurnal Les hanya tersedia untuk guru kelas 6.
-                </div>
-            <?php elseif (!$class_info): ?>
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-circle"></i> 
-                    <strong>Kelas tidak ditemukan:</strong> Silakan pilih kelas terlebih dahulu.
-                </div>
-            <?php else: ?>
             <div class="card">
                 <div class="card-header">
-                    <h4>Data Jurnal Les - <?php echo htmlspecialchars($class_info['nama_kelas']); ?></h4>
+                    <h4>Jurnal Les Kelas 6</h4>
                     <div class="card-header-action">
-                        <div class="btn-group mr-2">
-                            <a href="../config/export_jurnal_les_pdf.php?session_type=guru&kelas=<?php echo $selected_class; ?>&guru=<?php echo $teacher['id_guru']; ?>" target="_blank" class="btn btn-danger">
-                                <i class="fas fa-file-pdf"></i> PDF
-                            </a>
-                            <a href="../config/export_jurnal_les_excel.php?session_type=guru&kelas=<?php echo $selected_class; ?>&guru=<?php echo $teacher['id_guru']; ?>" target="_blank" class="btn btn-success">
-                                <i class="fas fa-file-excel"></i> Excel
-                            </a>
-                        </div>
                         <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#jurnalModal">
                             <i class="fas fa-plus"></i> Tambah Jurnal Les
                         </button>
                     </div>
                 </div>
                 <div class="card-body">
+                    <?php if (!empty($journal_entries)): ?>
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped table-hover" id="table-jurnal">
                             <thead>
@@ -312,7 +362,7 @@ include '../templates/header.php';
                                     <th>No</th>
                                     <th>Tanggal</th>
                                     <th>Waktu</th>
-                                    <th>Guru</th>
+                                    <th>Kelas</th>
                                     <th>Mapel</th>
                                     <th>Materi</th>
                                     <th>Aksi</th>
@@ -327,7 +377,7 @@ include '../templates/header.php';
                                     <td><?php echo $no++; ?></td>
                                     <td><?php echo date('d/m/Y', strtotime($entry['tanggal'])); ?></td>
                                     <td><?php echo htmlspecialchars($entry['waktu']); ?></td>
-                                    <td><?php echo htmlspecialchars($entry['nama_guru'] ?? '-'); ?></td>
+                                    <td><?php echo htmlspecialchars($entry['nama_kelas']); ?></td>
                                     <td><?php echo htmlspecialchars($entry['mapel']); ?></td>
                                     <td><?php echo htmlspecialchars($entry['materi']); ?></td>
                                     <td>
@@ -341,8 +391,7 @@ include '../templates/header.php';
                                         </button>
                                         <form method="POST" style="display:inline;" class="delete-form">
                                             <input type="hidden" name="id_jurnal" value="<?php echo $entry['id']; ?>">
-                                            <input type="hidden" name="delete_journal" value="1">
-                                            <button type="submit" class="btn btn-sm btn-danger btn-delete" title="Hapus">
+                                            <button type="submit" name="delete_journal" class="btn btn-sm btn-danger btn-delete" title="Hapus">
                                                 <i class="fas fa-trash"></i> Hapus
                                             </button>
                                         </form>
@@ -352,61 +401,60 @@ include '../templates/header.php';
                             </tbody>
                         </table>
                     </div>
+                    <?php else: ?>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Belum ada data jurnal les untuk kelas ini. Silakan tambah data dengan menekan tombol "Tambah Jurnal Les".
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
-            <?php endif; ?>
         </div>
     </section>
 </div>
 
+<!-- Modal for Add/Edit -->
 <div class="modal fade" id="jurnalModal" tabindex="-1" role="dialog" aria-labelledby="jurnalModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="jurnalModalLabel">Tambah Jurnal Les</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form method="POST" id="jurnalForm">
-                    <input type="hidden" name="id_jurnal" id="id_jurnal">
-                    <input type="hidden" name="id_kelas" value="<?php echo $selected_class; ?>">
-                    
-                    <div class="row">
-                        <div class="form-group col-md-6">
-                            <label>Tanggal</label>
-                            <input type="date" name="tanggal" id="tanggal" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
-                        </div>
-                        
-                        <div class="form-group col-md-6">
-                            <label>Waktu Les</label>
-                            <select name="waktu" id="waktu" class="form-control" required>
-                                <?php foreach ($waktu_options as $waktu): ?>
-                                    <option value="<?php echo htmlspecialchars($waktu); ?>"><?php echo htmlspecialchars($waktu); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-
+            <form method="POST" action="" id="journalForm">
+                <input type="hidden" name="id_jurnal" id="journal_id" value="">
+                <input type="hidden" name="kelas_filter" id="kelas_filter" value="<?php echo $selected_class; ?>">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="jurnalModalLabel">Tambah Jurnal Les</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
                     <div class="form-group">
-                        <label>Mata Pelajaran</label>
-                        <select name="mapel" id="mapel" class="form-control" required>
+                        <label for="tanggal">Tanggal <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?php echo date('Y-m-d'); ?>" required>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <small><i class="fas fa-info-circle"></i> <strong>Catatan:</strong> Isi jurnal les sesuai dengan tanggal yang dipilih. Sistem akan otomatis memvalidasi kesesuaian dengan jadwal les Anda.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mapel">Mata Pelajaran <span class="text-danger">*</span></label>
+                        <select class="form-control" id="mapel" name="mapel" required>
                             <option value="">-- Pilih Mata Pelajaran --</option>
-                            <?php foreach ($mapel_options as $mapel_item): ?>
-                                <option value="<?php echo htmlspecialchars($mapel_item); ?>"><?php echo htmlspecialchars($mapel_item); ?></option>
+                            <?php foreach ($mapel_options as $mapel): ?>
+                                <option value="<?php echo htmlspecialchars($mapel); ?>"><?php echo htmlspecialchars($mapel); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     
                     <div class="form-group">
-                        <label>Materi</label>
-                        <textarea name="materi" id="materi" class="form-control" placeholder="Materi Pembelajaran" required></textarea>
+                        <label for="materi">Materi Pokok <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="materi" name="materi" rows="4" placeholder="Tulis materi pokok pembelajaran..." required></textarea>
                     </div>
-                    
-                    <button type="submit" name="save_journal" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" name="save_journal" class="btn btn-primary">Simpan Jurnal Les</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
