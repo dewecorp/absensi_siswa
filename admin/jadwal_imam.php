@@ -89,19 +89,14 @@ if (isset($_GET['print'])) {
 
         <div class="signature-area">
             <?php
-            $bulan_indo = [
-                '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April',
-                '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus',
-                '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
-            ];
-            $tgl_jadwal = $school_profile['tanggal_jadwal'] ?? date('Y-m-d');
-            $d = date('d', strtotime($tgl_jadwal));
-            $m = date('m', strtotime($tgl_jadwal));
-            $y = date('Y', strtotime($tgl_jadwal));
-            $formatted_date = $d . ' ' . ($bulan_indo[$m] ?? $m) . ' ' . $y;
-            $tempat_jadwal = $school_profile['tempat_jadwal'] ?? 'Sukosono';
+            // Use exact same logic as export_jadwal_pdf.php for consistency
+            $tempat = !empty($school_profile['tempat_jadwal']) ? $school_profile['tempat_jadwal'] : 'Jakarta';
+            $tanggal = !empty($school_profile['tanggal_jadwal']) 
+                ? formatDateIndonesia($school_profile['tanggal_jadwal']) 
+                : formatDateIndonesia(date('Y-m-d'));
+            $date_str = $tempat . ', ' . $tanggal;
             ?>
-            <p><?php echo $tempat_jadwal; ?>, <?php echo $formatted_date; ?></p>
+            <p><?php echo $date_str; ?></p>
             <p>Kepala <?php echo $school_profile['nama_sekolah'] ?? $school_profile['nama_madrasah'] ?? 'Madrasah'; ?>,</p>
             <?php 
             $kepala = $school_profile['kepala_madrasah'] ?? 'Musriah, S.Pd.I.';
