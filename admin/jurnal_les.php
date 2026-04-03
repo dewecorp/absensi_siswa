@@ -342,7 +342,7 @@ include '../templates/header.php';
                                             <form method="POST" style="display:inline;" class="delete-form">
                                                 <input type="hidden" name="id_jurnal" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="delete_journal" class="btn btn-sm btn-danger btn-delete" title="Hapus">
-                                                    <i class="fas fa-trash"></i> Hapus
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
                                             </form>
                                         </td>
