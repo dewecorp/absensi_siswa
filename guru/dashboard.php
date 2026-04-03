@@ -613,68 +613,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <!-- Attendance Box for Teacher -->
                     <div class="row">
+                        <?php 
+                        $holiday = isSchoolHoliday($pdo, $today);
+                        if (!$holiday['is_holiday']): 
+                            // Get current regular attendance
+                            $stmt_check_reg = $pdo->prepare("SELECT * FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+                            $stmt_check_reg->execute([$teacher['id_guru'], $today]);
+                            $today_reg_attendance = $stmt_check_reg->fetch(PDO::FETCH_ASSOC);
+                        ?>
+                        <div class="col-12 col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Absensi Harian Guru</h4>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="" id="attendanceFormReg">
+                                        <div class="form-group">
+                                            <label class="d-block font-weight-bold">Status Kehadiran (<?php echo date('d-m-Y'); ?>)</label>
+                                            <div class="selectgroup selectgroup-pills">
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group keterangan-box" style="display: <?php echo ($today_reg_attendance && in_array(strtolower($today_reg_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
+                                            <label>Keterangan</label>
+                                            <textarea name="attendance_note" class="form-control"><?php echo $today_reg_attendance ? htmlspecialchars($today_reg_attendance['keterangan']) : ''; ?></textarea>
+                                        </div>
+                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Simpan Absensi Harian</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <?php else: ?>
+                        <div class="col-12 col-md-6">
+                            <div class="card">
+                                <div class="card-header"><h4>Absensi Harian Guru</h4></div>
+                                <div class="card-body">
+                                    <div class="alert alert-warning">Hari Libur: <?php echo $holiday['name']; ?>. Absensi harian ditutup.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php 
+                        if ($has_les_schedule_guru): 
+                            // Get current les attendance
+                            $stmt_check_les = $pdo->prepare("SELECT * FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
+                            $stmt_check_les->execute([$teacher['id_guru'], $today]);
+                            $today_les_attendance = $stmt_check_les->fetch(PDO::FETCH_ASSOC);
+                        ?>
+                        <div class="col-12 col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Absensi Les Guru (Kelas 6)</h4>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="" id="attendanceFormLes">
+                                        <div class="form-group">
+                                            <label class="d-block font-weight-bold">Status Kehadiran Les (<?php echo date('d-m-Y'); ?>)</label>
+                                            <div class="selectgroup selectgroup-pills">
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group keterangan-box" style="display: <?php echo ($today_les_attendance && in_array(strtolower($today_les_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
+                                            <label>Keterangan</label>
+                                            <textarea name="attendance_note" class="form-control"><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
+                                        </div>
+                                        <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Simpan Absensi Les</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="row">
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Absensi Harian & Jurnal Mengajar</h4>
+                                    <h4>Tautan Cepat</h4>
                                 </div>
                                 <div class="card-body">
-                                    <div class="alert alert-light alert-has-icon">
-                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
-                                        <div class="alert-body">
-                                            <div class="alert-title">Penting</div>
-                                            Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda, <b>Absensi Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
+                                    <div class="row">
+                                        <div class="col-12 col-md-4 mb-2">
+                                            <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
+                                        </div>
+                                        <div class="col-12 col-md-4 mb-2">
+                                            <a href="jurnal_les.php" class="btn btn-dark btn-lg btn-block btn-icon icon-left"><i class="fas fa-book"></i> Isi Jurnal Les</a>
+                                        </div>
+                                        <div class="col-12 col-md-4 mb-2">
+                                            <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
                                         </div>
                                     </div>
-
-                                    <?php
-                                    // Check current attendance status - ONLY use regular table for dashboard
-                                    $today_attendance = null;
-                                    if (isset($teacher['id_guru'])) {
-                                        $stmt_check = $pdo->prepare("SELECT * FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = CURDATE()");
-                                        $stmt_check->execute([$teacher['id_guru']]);
-                                        $today_attendance = $stmt_check->fetch(PDO::FETCH_ASSOC);
-                                    }
-                                    ?>
-
-                                    <form method="POST" action="" id="attendanceForm">
-                                        <div class="form-group">
-                                            <label class="d-block font-weight-bold">Status Kehadiran Hari Ini (<?php echo date('d-m-Y'); ?>)</label>
-                                            <div class="selectgroup selectgroup-pills">
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && in_array(strtolower($today_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
-                                            <label>Keterangan</label>
-                                            <textarea name="attendance_note" class="form-control" placeholder="Masukkan keterangan..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
-                                        </div>
-
-                                        <div class="form-group">
-                                            <div class="row">
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block btn-icon icon-left"><i class="fas fa-save"></i> Simpan Absensi</button>
-                                                </div>
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
-                                                </div>
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -683,28 +734,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
                         const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
-                        const keteranganBox = document.getElementById('keterangan_box');
-                        const keteranganTextarea = keteranganBox.querySelector('textarea');
                         
-                        function updateKeteranganBox() {
-                            const selectedRadio = document.querySelector('input[name="attendance_status"]:checked');
-                            if (selectedRadio) {
-                                const status = selectedRadio.value;
-                                if (status === 'izin' || status === 'sakit') {
-                                    keteranganBox.style.display = 'block';
-                                    keteranganTextarea.required = (status === 'izin');
-                                } else {
-                                    keteranganBox.style.display = 'none';
-                                    keteranganTextarea.required = false;
-                                }
+                        function updateKeteranganBox(radio) {
+                            const form = radio.closest('form');
+                            const keteranganBox = form.querySelector('.keterangan-box');
+                            const keteranganTextarea = keteranganBox.querySelector('textarea');
+                            
+                            const status = radio.value;
+                            if (status === 'izin' || status === 'sakit') {
+                                keteranganBox.style.display = 'block';
+                                keteranganTextarea.required = (status === 'izin');
+                            } else {
+                                keteranganBox.style.display = 'none';
+                                keteranganTextarea.required = false;
                             }
                         }
 
-                        // Run on load to set initial state
-                        updateKeteranganBox();
-                        
                         radioButtons.forEach(radio => {
-                            radio.addEventListener('change', updateKeteranganBox);
+                            radio.addEventListener('change', function() {
+                                updateKeteranganBox(this);
+                            });
                         });
                     });
                     </script>
