@@ -106,7 +106,6 @@ header("Expires: 0");
                 <th>No</th>
                 <th>Tanggal</th>
                 <th>Waktu</th>
-                <th>Kelas</th>
                 <th>Mata Pelajaran</th>
                 <th>Materi Pokok</th>
                 <th>Guru</th>
@@ -115,7 +114,7 @@ header("Expires: 0");
         <tbody>
             <?php if (empty($journal_entries)): ?>
                 <tr>
-                    <td colspan="7" class="text-center">Tidak ada data jurnal les.</td>
+                    <td colspan="6" class="text-center">Tidak ada data jurnal les.</td>
                 </tr>
             <?php else: ?>
                 <?php $no = 1; foreach ($journal_entries as $journal): ?>
@@ -123,7 +122,6 @@ header("Expires: 0");
                     <td class="text-center"><?= $no++ ?></td>
                     <td class="text-center"><?= date('d-m-Y', strtotime($journal['tanggal'])) ?></td>
                     <td class="text-center"><?= htmlspecialchars($journal['waktu']) ?></td>
-                    <td class="text-center"><?= htmlspecialchars($journal['nama_kelas'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($journal['mapel']) ?></td>
                     <td><?= htmlspecialchars($journal['materi']) ?></td>
                     <td><?= htmlspecialchars($journal['nama_guru'] ?? '-') ?></td>

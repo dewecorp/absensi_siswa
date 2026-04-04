@@ -3,12 +3,15 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is logged in and has admin level
-if (!isAuthorized(['admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
+$user_level = getUserLevel();
+$can_manage = ($user_level === 'admin');
+
 // Handle Delete Action
-if (isset($_POST['delete_journal'])) {
+if ($can_manage && isset($_POST['delete_journal'])) {
     $id_jurnal = (int)$_POST['id_jurnal'];
     $current_class = isset($_GET['kelas']) ? $_GET['kelas'] : '';
     
@@ -26,7 +29,7 @@ if (isset($_POST['delete_journal'])) {
 }
 
 // Handle Multiple Delete Action
-if (isset($_POST['delete_multiple_journal'])) {
+if ($can_manage && isset($_POST['delete_multiple_journal'])) {
     $ids = $_POST['ids'] ?? [];
     if (!empty($ids)) {
         try {
@@ -154,12 +157,12 @@ $js_page = [
             'columnDefs': [ {
                 'searchable': false,
                 'orderable': false,
-                'targets': [0, 1]
+                'targets': <?php echo $can_manage ? '[0, 1]' : '[0]'; ?>
             } ]
         });
 
         t.on( 'order.dt search.dt', function () {
-            t.column(1, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+            t.column(<?php echo $can_manage ? '1' : '0'; ?>, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
                 cell.innerHTML = i+1;
             } );
         } ).draw();
@@ -377,9 +380,11 @@ include '../templates/header.php';
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
+                            <?php if ($can_manage): ?>
                             <button id="btn-bulk-delete" class="btn btn-danger" style="display: none;" onclick="bulkDelete()">
                                 <i class="fas fa-trash"></i> Hapus Terpilih
                             </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="card-body">
@@ -387,12 +392,14 @@ include '../templates/header.php';
                             <table class="table table-striped" id="table-jurnal">
                                 <thead>
                                     <tr>
+                                        <?php if ($can_manage): ?>
                                         <th class="text-center" style="width: 40px;">
                                             <div class="custom-checkbox custom-control">
                                                 <input type="checkbox" class="custom-control-input" id="check-all">
                                                 <label class="custom-control-label" for="check-all"></label>
                                             </div>
                                         </th>
+                                        <?php endif; ?>
                                         <th class="text-center" style="width: 50px;">No</th>
                                         <th>Tanggal</th>
                                         <th>Jam Ke</th>
@@ -402,7 +409,7 @@ include '../templates/header.php';
                                         <th>Materi Pokok</th>
                                         <th>Guru</th>
                                         <th>Dibuat Pada</th>
-                                        <?php if (getUserLevel() === 'admin'): ?>
+                                        <?php if ($can_manage): ?>
                                         <th style="width: 100px;">Aksi</th>
                                         <?php endif; ?>
                                     </tr>
@@ -411,12 +418,14 @@ include '../templates/header.php';
                                     <?php if (count($journal_entries) > 0): ?>
                                         <?php foreach ($journal_entries as $journal): ?>
                                         <tr>
+                                            <?php if ($can_manage): ?>
                                             <td class="text-center">
                                                 <div class="custom-checkbox custom-control">
                                                     <input type="checkbox" class="custom-control-input check-item" id="checkbox-<?php echo $journal['id']; ?>" value="<?php echo $journal['id']; ?>">
                                                     <label class="custom-control-label" for="checkbox-<?php echo $journal['id']; ?>"></label>
                                                 </div>
                                             </td>
+                                            <?php endif; ?>
                                             <td class="text-center"></td>
                                             <td><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
                                             <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
@@ -455,7 +464,7 @@ include '../templates/header.php';
                                             <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['nama_guru'] ?? '-'); ?></td>
                                             <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>
-                                            <?php if (getUserLevel() === 'admin'): ?>
+                                            <?php if ($can_manage): ?>
                                             <td>
                                                 <button onclick="confirmDelete(<?php echo $journal['id']; ?>)" class="btn btn-danger btn-sm">
                                                     <i class="fas fa-trash"></i> Hapus

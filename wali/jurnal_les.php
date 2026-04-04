@@ -251,7 +251,7 @@ $(document).ready(function() {
         },
         'pageLength': 50,
         'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-        'columnDefs': [{ 'orderable': false, 'targets': [6] }]
+        'columnDefs': [{ 'orderable': false, 'targets': [5] }]
     });
     
     // Edit button handler - properly loads data into modal

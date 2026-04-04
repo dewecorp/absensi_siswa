@@ -131,18 +131,17 @@ $page_title = "Laporan Jurnal Les" . ($filter_title ? " - " . $filter_title : ""
         <thead>
             <tr>
                 <th width="5%">No</th>
-                <th width="12%">Tanggal</th>
+                <th width="15%">Tanggal</th>
                 <th width="15%">Waktu</th>
-                <th width="12%">Kelas</th>
-                <th width="18%">Mata Pelajaran</th>
-                <th width="20%">Materi Pokok</th>
-                <th width="18%">Guru</th>
+                <th width="20%">Mata Pelajaran</th>
+                <th width="25%">Materi Pokok</th>
+                <th width="20%">Guru</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($journal_entries)): ?>
                 <tr>
-                    <td colspan="7" class="text-center">Tidak ada data jurnal les.</td>
+                    <td colspan="6" class="text-center">Tidak ada data jurnal les.</td>
                 </tr>
             <?php else: ?>
                 <?php $no = 1; foreach ($journal_entries as $journal): ?>
@@ -150,7 +149,6 @@ $page_title = "Laporan Jurnal Les" . ($filter_title ? " - " . $filter_title : ""
                     <td class="text-center"><?= $no++ ?></td>
                     <td class="text-center"><?= date('d-m-Y', strtotime($journal['tanggal'])) ?></td>
                     <td class="text-center"><?= htmlspecialchars($journal['waktu']) ?></td>
-                    <td class="text-center"><?= htmlspecialchars($journal['nama_kelas'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($journal['mapel']) ?></td>
                     <td><?= htmlspecialchars($journal['materi']) ?></td>
                     <td><?= htmlspecialchars($journal['nama_guru'] ?? '-') ?></td>

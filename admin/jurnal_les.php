@@ -3,12 +3,15 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is logged in and has admin level
-if (!isAuthorized(['admin', 'kepala_madrasah'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
+$user_level = getUserLevel();
+$can_manage = ($user_level === 'admin');
+
 // Handle Delete Action
-if (isset($_POST['delete_journal'])) {
+if ($can_manage && isset($_POST['delete_journal'])) {
     $id_jurnal = (int)$_POST['id_jurnal'];
     
     try {
@@ -25,7 +28,7 @@ if (isset($_POST['delete_journal'])) {
 }
 
 // Handle Multiple Delete Action
-if (isset($_POST['delete_multiple_journal'])) {
+if ($can_manage && isset($_POST['delete_multiple_journal'])) {
     // Get IDs from JSON string in selected-ids field
     $ids_json = $_POST['selected-ids'] ?? '';
     $ids = !empty($ids_json) ? json_decode($ids_json, true) : [];
@@ -124,7 +127,11 @@ $(document).ready(function() {
         },
         'pageLength': 50,
         'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-        'columnDefs': [{ 'orderable': false, 'targets': [8] }]
+        'columnDefs': [
+            <?php if ($can_manage): ?>
+            { 'orderable': false, 'targets': [0, 7] }
+            <?php endif; ?>
+        ]
     });
     
     // Delete single confirmation
@@ -299,26 +306,32 @@ include '../templates/header.php';
                     <form method="POST" id="delete-multiple-form">
                         <input type="hidden" name="selected-ids" id="selected-ids">
                         
+                        <?php if ($can_manage): ?>
                         <div class="mb-3">
                             <button type="button" class="btn btn-danger" id="delete-selected-btn">
                                 <i class="fas fa-trash"></i> Hapus Dipilih
                             </button>
                         </div>
+                        <?php endif; ?>
                         
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped table-hover" id="table-jurnal">
                                 <thead>
                                     <tr>
+                                        <?php if ($can_manage): ?>
                                         <th width="30">
                                             <input type="checkbox" id="select-all">
                                         </th>
+                                        <?php endif; ?>
                                         <th>No</th>
                                         <th>Tanggal</th>
                                         <th>Waktu</th>
                                         <th>Guru</th>
                                         <th>Mapel</th>
                                         <th>Materi</th>
+                                        <?php if ($can_manage): ?>
                                         <th>Aksi</th>
+                                        <?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -327,15 +340,18 @@ include '../templates/header.php';
                                     foreach ($journal_entries as $entry): 
                                     ?>
                                     <tr>
+                                        <?php if ($can_manage): ?>
                                         <td>
                                             <input type="checkbox" name="ids[]" value="<?php echo $entry['id']; ?>">
                                         </td>
+                                        <?php endif; ?>
                                         <td><?php echo $no++; ?></td>
                                         <td><?php echo date('d/m/Y', strtotime($entry['tanggal'])); ?></td>
                                         <td><?php echo htmlspecialchars($entry['waktu']); ?></td>
                                         <td><?php echo htmlspecialchars($entry['nama_guru'] ?? '-'); ?></td>
                                         <td><?php echo htmlspecialchars($entry['mapel']); ?></td>
                                         <td><?php echo htmlspecialchars($entry['materi']); ?></td>
+                                        <?php if ($can_manage): ?>
                                         <td>
                                             <form method="POST" style="display:inline;" class="delete-form">
                                                 <input type="hidden" name="id_jurnal" value="<?php echo $entry['id']; ?>">
@@ -344,6 +360,7 @@ include '../templates/header.php';
                                                 </button>
                                             </form>
                                         </td>
+                                        <?php endif; ?>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>

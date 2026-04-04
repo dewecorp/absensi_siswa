@@ -115,6 +115,15 @@ switch ($user_level) {
             ],
 
             [
+                'title' => 'Jurnal',
+                'icon' => 'fas fa-book-open',
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
+            ],
+            [
                 'title' => 'Backup & Restore',
                 'icon' => 'fas fa-hdd',
                 'url' => '../admin/backup_restore.php',
@@ -201,10 +210,13 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
             ],
             [
-                'title' => 'Jurnal Mengajar',
+                'title' => 'Jurnal',
                 'icon' => 'fas fa-book-open',
-                'url' => '../kepala/jurnal_mengajar.php',
-                'active' => $current_page === 'jurnal_mengajar.php'
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../kepala/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=kepala_madrasah', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Logout',
@@ -287,6 +299,15 @@ switch ($user_level) {
                     ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
                 ],
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
+            ],
+            [
+                'title' => 'Jurnal',
+                'icon' => 'fas fa-book-open',
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Backup & Restore',
