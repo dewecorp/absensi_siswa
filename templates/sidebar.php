@@ -113,16 +113,6 @@ switch ($user_level) {
                 'url' => '../admin/pengguna.php',
                 'active' => $current_page === 'pengguna.php'
             ],
-
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-            ],
             [
                 'title' => 'Backup & Restore',
                 'icon' => 'fas fa-hdd',
