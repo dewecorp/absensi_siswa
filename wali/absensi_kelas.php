@@ -275,9 +275,9 @@ endif;
 <?php
 // Prepare JS Libraries
 $js_libs = [
-    'node_modules/datatables/media/js/jquery.dataTables.min.js',
-    'node_modules/datatables.net-bs4/js/dataTables.bootstrap4.min.js',
-    'node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js'
+    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
+    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js'
 ];
 
 // Prepare Page Specific JS

@@ -85,17 +85,17 @@ foreach ($activities as &$activity) {
 }
 
 // Define CSS libraries for this page
-$css_libs = array(
+$css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-    'node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css'
-);
+    'https://cdn.datatables.net/select/1.3.3/css/select.bootstrap4.min.css'
+];
 
 // Define JS libraries for this page
-$js_libs = array(
+$js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-    'node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js'
-);
+    'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js'
+];
 
 // Define page-specific JS
 $js_page = array();

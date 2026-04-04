@@ -19,13 +19,13 @@ $page_title = 'Data Guru';
 if (!isset($css_libs)) {
     $css_libs = [];
 }
-$css_libs[] = 'node_modules/select2/dist/css/select2.min.css';
+$css_libs[] = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css';
 $css_libs[] = 'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css';
 
 if (!isset($js_libs)) {
     $js_libs = [];
 }
-$js_libs[] = 'node_modules/select2/dist/js/select2.full.min.js';
+$js_libs[] = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js';
 $js_libs[] = 'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js';
 $js_libs[] = 'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js';
 

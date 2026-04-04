@@ -75,16 +75,16 @@ $teachers = $teacherStmt->fetchAll(PDO::FETCH_ASSOC);
 // Define CSS libraries for this page
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-    'node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css',
-    '../node_modules/select2/dist/css/select2.min.css'
+    'https://cdn.datatables.net/select/1.3.3/css/select.bootstrap4.min.css',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
 ];
 
 // Define JS libraries for this page
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-    'node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js',
-    '../node_modules/select2/dist/js/select2.full.min.js'
+    'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js'
 ];
 
 // Define page-specific JS
