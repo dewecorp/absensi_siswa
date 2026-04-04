@@ -103,18 +103,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $tanggal = $_POST['tanggal'];
     $id_guru = $teacher['id_guru'];
     
+    // Get waktu from tb_jadwal_les based on date and teacher
+    $stmt_get_waktu = $pdo->prepare("
+        SELECT CONCAT(TIME_FORMAT(waktu_mulai, '%H.%i'), ' - ', TIME_FORMAT(waktu_selesai, '%H.%i')) 
+        FROM tb_jadwal_les 
+        WHERE id_guru = ? AND tanggal = ?
+        LIMIT 1
+    ");
+    $stmt_get_waktu->execute([$id_guru, $tanggal]);
+    $waktu = $stmt_get_waktu->fetchColumn();
+    
     // Validate if teacher has les schedule for this date
     $validation_error = false;
-    $stmt_check_schedule = $pdo->prepare("
-        SELECT COUNT(*) 
-        FROM tb_jadwal_les 
-        WHERE id_guru = ? 
-        AND tanggal = ?
-    ");
-    $stmt_check_schedule->execute([$id_guru, $tanggal]);
-    $has_schedule = $stmt_check_schedule->fetchColumn() > 0;
-    
-    if (!$has_schedule) {
+    if (!$waktu) {
         $validation_error = true;
         $message = ['type' => 'error', 'text' => 'Anda tidak memiliki jadwal les untuk tanggal tersebut. Tidak dapat mengisi jurnal les.'];
     }
