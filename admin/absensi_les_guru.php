@@ -35,21 +35,35 @@ if (in_array($user_level, ['guru', 'wali'])) {
     }
 }
 
-// Check if there is a schedule for today
-$today = date('Y-m-d');
+// Get current date or from GET
+$selected_date = isset($_GET['tanggal']) ? $_GET['tanggal'] : date('Y-m-d');
+$is_admin_exclusive = in_array($user_level, ['admin', 'tata_usaha', 'kepala_madrasah']);
+
+// Check if there is a schedule for selected date
 $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
-$stmt_check_sched->execute([$today]);
+$stmt_check_sched->execute([$selected_date]);
 $has_schedule = $stmt_check_sched->fetchColumn() > 0;
 
 // Handle single teacher submission
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
-    if (!$has_schedule) {
+    $tanggal = $_POST['tanggal'] ?? date('Y-m-d');
+    
+    // Only admin can fill for dates other than today
+    if ($tanggal !== date('Y-m-d') && !$is_admin_exclusive) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'error' => 'Tidak ada jadwal les untuk hari ini.']);
+        echo json_encode(['success' => false, 'error' => 'Hanya Admin yang dapat mengisi absensi untuk tanggal yang sudah lewat.']);
         exit;
     }
-    $tanggal = date('Y-m-d');
+
+    $stmt_check_sched_post = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
+    $stmt_check_sched_post->execute([$tanggal]);
+    if ($stmt_check_sched_post->fetchColumn() <= 0) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Tidak ada jadwal les untuk tanggal ini.']);
+        exit;
+    }
+
     $id_guru = (int)($_POST['id_guru'] ?? 0);
     $status = trim($_POST['status'] ?? '');
     $keterangan = trim($_POST['keterangan'] ?? '');
@@ -58,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
     $result = ['success' => false];
     
     // Validate if teacher is marking attendance for their own scheduled class
-    if ($id_guru > 0 && in_array($user_level, ['guru', 'wali']) && !in_array($user_level, ['admin', 'tata_usaha', 'kepala_madrasah'])) {
+    if ($id_guru > 0 && in_array($user_level, ['guru', 'wali']) && !$is_admin_exclusive) {
         // Check if the teacher is trying to mark attendance for themselves
         if ($current_guru_id != $id_guru) {
             header('Content-Type: application/json');
@@ -66,11 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
             exit;
         }
         
-        // Check if teacher has a les schedule for today
+        // Check if teacher has a les schedule for that date
         $stmt_check_schedule = $pdo->prepare("
             SELECT COUNT(*) 
             FROM tb_jadwal_les jl
-            INNER JOIN tb_jadwal_pelajaran jp ON jl.id_guru = jp.guru_id
             WHERE jl.id_guru = ? 
             AND jl.tanggal = ?
         ");
@@ -79,14 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
         
         if (!$has_teacher_les_schedule) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => 'Anda tidak memiliki jadwal les untuk hari ini. Tidak dapat mengisi absensi.']);
+            echo json_encode(['success' => false, 'error' => 'Anda tidak memiliki jadwal les untuk tanggal ini.']);
             exit;
         }
     }
-    
-    // Note: Tutoring attendance does NOT check school holidays
-    // It only depends on whether there is a tutoring schedule (tb_jadwal_les)
-    // This allows tutoring on holidays like Fridays if scheduled
     
     if ($id_guru > 0) {
         $check = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
@@ -148,9 +157,9 @@ if ($current_guru_id && !in_array($user_level, ['admin', 'tata_usaha', 'kepala_m
 
 $teachers = [];
 foreach ($teachers_list as $teacher) {
-    // Get current attendance status for today
+    // Get current attendance status for selected date
     $stmt_att = $pdo->prepare("SELECT status, keterangan, waktu_input FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
-    $stmt_att->execute([$teacher['id_guru'], date('Y-m-d')]);
+    $stmt_att->execute([$teacher['id_guru'], $selected_date]);
     $attendance = $stmt_att->fetch(PDO::FETCH_ASSOC);
     
     $teacher['status_kehadiran'] = $attendance['status'] ?? ''; 
@@ -186,7 +195,7 @@ if (!$has_schedule) {
         Swal.fire({
             icon: 'info',
             title: 'Tidak Ada Jadwal',
-            text: 'Tidak ada jadwal les untuk hari ini (" . formatDateIndonesia($today) . "). Absensi tidak dapat diisi.',
+            text: 'Tidak ada jadwal les untuk tanggal " . formatDateIndonesia($selected_date) . ". Absensi tidak dapat diisi.',
             confirmButtonText: 'Tutup'
         });
     });
@@ -199,6 +208,7 @@ $(document).ready(function() {
     
     // Variable dari PHP
     var isSingleView = " . ($is_single_view ? 'true' : 'false') . ";
+    var selectedDate = '" . $selected_date . "';
     
     console.log('isSingleView:', isSingleView);
     
@@ -291,7 +301,8 @@ $(document).ready(function() {
                 id_guru: id,
                 status: newStatus,
                 keterangan: ketVal,
-                waktu_input: waktuVal
+                waktu_input: waktuVal,
+                tanggal: selectedDate
             },
             dataType: 'json',
             success: function(response) {
@@ -343,7 +354,8 @@ $(document).ready(function() {
                     id_guru: id,
                     status: status,
                     keterangan: val,
-                    waktu_input: timeVal
+                    waktu_input: timeVal,
+                    tanggal: selectedDate
                 },
                 dataType: 'json',
                 success: function(resp) {
@@ -416,12 +428,18 @@ include '../templates/sidebar.php';
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Data Absensi Les Guru - <?= formatDateIndonesia(date('Y-m-d')) ?></h4>
-                            <?php if (!$has_schedule): ?>
-                                <div class="card-header-action">
+                            <h4>Data Absensi Les Guru - <?= formatDateIndonesia($selected_date) ?></h4>
+                            <div class="card-header-action">
+                                <?php if ($is_admin_exclusive): ?>
+                                    <form method="GET" action="" class="form-inline">
+                                        <div class="input-group">
+                                            <input type="date" name="tanggal" class="form-control" value="<?= $selected_date ?>" onchange="this.form.submit()">
+                                        </div>
+                                    </form>
+                                <?php elseif (!$has_schedule): ?>
                                     <span class="badge badge-warning">Tidak Ada Jadwal Hari Ini</span>
-                                </div>
-                            <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         <div class="card-body">
                             <?php if ($is_single_view): ?>
