@@ -315,7 +315,6 @@ include '../templates/header.php';
                                         <th>No</th>
                                         <th>Tanggal</th>
                                         <th>Waktu</th>
-                                        <th>Kelas</th>
                                         <th>Guru</th>
                                         <th>Mapel</th>
                                         <th>Materi</th>
@@ -334,7 +333,6 @@ include '../templates/header.php';
                                         <td><?php echo $no++; ?></td>
                                         <td><?php echo date('d/m/Y', strtotime($entry['tanggal'])); ?></td>
                                         <td><?php echo htmlspecialchars($entry['waktu']); ?></td>
-                                        <td><?php echo htmlspecialchars($entry['nama_kelas']); ?></td>
                                         <td><?php echo htmlspecialchars($entry['nama_guru'] ?? '-'); ?></td>
                                         <td><?php echo htmlspecialchars($entry['mapel']); ?></td>
                                         <td><?php echo htmlspecialchars($entry['materi']); ?></td>

@@ -346,7 +346,6 @@ include '../templates/sidebar.php';
                                     <th>No</th>
                                     <th>Tanggal</th>
                                     <th>Waktu</th>
-                                    <th>Kelas</th>
                                     <th>Mapel</th>
                                     <th>Materi</th>
                                     <th>Aksi</th>
@@ -361,7 +360,6 @@ include '../templates/sidebar.php';
                                     <td><?php echo $no++; ?></td>
                                     <td><?php echo date('d/m/Y', strtotime($entry['tanggal'])); ?></td>
                                     <td><?php echo htmlspecialchars($entry['waktu']); ?></td>
-                                    <td><?php echo htmlspecialchars($entry['nama_kelas']); ?></td>
                                     <td><?php echo htmlspecialchars($entry['mapel']); ?></td>
                                     <td><?php echo htmlspecialchars($entry['materi']); ?></td>
                                     <td>
