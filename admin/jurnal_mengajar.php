@@ -146,23 +146,26 @@ $js_libs = [
 ];
 
 // Page specific JS
+$targets_val = $can_manage ? '[0, 1]' : '[0]';
+$column_idx = $can_manage ? '1' : '0';
+
 $js_page = [
     "
     $(document).ready(function() {
         var t = $('#table-jurnal').DataTable({
             'language': {
-                'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
+                'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
             },
             'ordering': false, // Disable client-side sorting to respect server-side 'latest' order
             'columnDefs': [ {
                 'searchable': false,
                 'orderable': false,
-                'targets': <?php echo $can_manage ? '[0, 1]' : '[0]'; ?>
+                'targets': $targets_val
             } ]
         });
 
         t.on( 'order.dt search.dt', function () {
-            t.column(<?php echo $can_manage ? '1' : '0'; ?>, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+            t.column($column_idx, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
                 cell.innerHTML = i+1;
             } );
         } ).draw();

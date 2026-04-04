@@ -270,7 +270,7 @@ $js_page[] = <<<JS
 $(document).ready(function() {
     var t = $('#table-jurnal').DataTable({
         'language': {
-            'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
+            'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
         },
         'pageLength': 50,
         'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],

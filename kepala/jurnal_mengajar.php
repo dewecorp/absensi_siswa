@@ -148,7 +148,7 @@ $js_page = [
     $(document).ready(function() {
         var t = $('#table-jurnal').DataTable({
             'language': {
-                'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
+                'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
             },
             'ordering': false,
             'columnDefs': [ {

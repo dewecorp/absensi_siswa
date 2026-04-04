@@ -119,19 +119,20 @@ if (isset($message)) {
 JS;
 }
 
+$column_defs = '';
+if ($can_manage) {
+    $column_defs = "{ 'orderable': false, 'targets': [0, 7] }";
+}
+
 $js_page[] = <<<JS
 $(document).ready(function() {
     var t = $('#table-jurnal').DataTable({
         'language': {
-            'url': '//cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
+            'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
         },
         'pageLength': 50,
         'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-        'columnDefs': [
-            <?php if ($can_manage): ?>
-            { 'orderable': false, 'targets': [0, 7] }
-            <?php endif; ?>
-        ]
+        'columnDefs': [$column_defs]
     });
     
     // Delete single confirmation
@@ -179,12 +180,14 @@ $(document).ready(function() {
     $('#delete-selected-btn').on('click', function(e) {
         e.preventDefault();
         var selectedIds = [];
-        $('input[name="ids[]"]:checked').each(function() {
+        
+        // Use DataTables API to get all checked checkboxes, even on other pages
+        t.$('input[name="ids[]"]:checked').each(function() {
             selectedIds.push($(this).val());
         });
         
         if (selectedIds.length === 0) {
-            Swal.fire('Error', 'Pilih minimal satu data untuk dihapus', 'error');
+            Swal.fire('Info', 'Pilih minimal satu data untuk dihapus', 'info');
             return;
         }
         
@@ -199,26 +202,13 @@ $(document).ready(function() {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Create and submit form to ensure proper submission
-                var submitForm = $('<form>').attr({
-                    method: 'POST',
-                    action: window.location.href
-                });
-                
-                submitForm.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'selected-ids',
-                    value: JSON.stringify(selectedIds)
-                }));
-                
-                submitForm.append($('<input>').attr({
+                $('#selected-ids').val(JSON.stringify(selectedIds));
+                $('<input>').attr({
                     type: 'hidden',
                     name: 'delete_multiple_journal',
                     value: '1'
-                }));
-                
-                $('body').append(submitForm);
-                submitForm.submit();
+                }).appendTo('#delete-multiple-form');
+                $('#delete-multiple-form').submit();
             }
         });
     });
@@ -226,7 +216,7 @@ $(document).ready(function() {
     // Select all checkbox
     $('#select-all').on('click', function() {
         var isChecked = $(this).prop('checked');
-        $('input[name="ids[]"]').prop('checked', isChecked);
+        t.$('input[name="ids[]"]').prop('checked', isChecked);
     });
 });
 JS;
