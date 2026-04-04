@@ -417,12 +417,6 @@ include '../templates/sidebar.php';
                                                     ?>
                                                 </select>
                                             </div>
-                                            
-                                            <div class="form-group col-md-2 d-flex align-items-end">
-                                                <button type="submit" class="btn btn-primary btn-block">
-                                                    <i class="fas fa-search"></i> Cari
-                                                </button>
-                                            </div>
                                         </form>
                                         
                                         <?php if (!empty($daily_results)): ?>
@@ -888,86 +882,35 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    fallbackPrintPDF();
+    var classId = $('#classSelect').val();
+    var monthPicker = $('#monthPicker').val();
+    var url = 'cetak_rekap_absensi.php?type=monthly&class_id=' + classId + '&month=' + monthPicker;
+    window.open(url, '_blank');
+}
+
+function exportDailyToPDF() {
+    var classId = $('#classSelect').val();
+    var datePicker = $('#datePicker').val();
+    var url = 'cetak_rekap_absensi.php?type=daily&class_id=' + classId + '&date=' + datePicker;
+    window.open(url, '_blank');
+}
+
+function exportStudentToPDF() {
+    var classId = $('#classSelect').val();
+    var studentId = $('#studentSelect').val();
+    var url = 'cetak_rekap_absensi.php?type=student&class_id=' + classId + '&student_id=' + studentId;
+    window.open(url, '_blank');
+}
+
+function exportSemesterToPDF() {
+    var classId = $('#classSelect').val();
+    var url = 'cetak_rekap_absensi.php?type=semester&class_id=' + classId;
+    window.open(url, '_blank');
 }
 
 function fallbackPrintPDF() {
-    // Print the table as PDF with F4 landscape format
-    var printWindow = window.open('', '_blank'); // Open in new tab
-    printWindow.document.write('<html><head><title>Rekap Absensi Bulanan</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
-    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
-    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
-    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
-    printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
-    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
-    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; border: 1px solid #000; }');
-    printWindow.document.write('.badge-success { background-color: #28a745; color: black; }');
-    printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
-    printWindow.document.write('.badge-info { background-color: #17a2b8; color: black; }');
-    printWindow.document.write('.badge-danger { background-color: #dc3545; color: black; }');
-    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
-    printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
-    printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
-    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
-    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
-    printWindow.document.write('</style>');
-    printWindow.document.write('</head><body>');
-    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
-    printWindow.document.write('<div class="header">');
-    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
-    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>');
-    printWindow.document.write('<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
-    
-    // Get the table
-    var table = document.querySelector('.table-bordered');
-    if (table) {
-        printWindow.document.write(table.outerHTML);
-    }
-    
-    // Add signatures below the table
-    printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Wali Kelas,</p>');
-    if (classTeacherName) {
-        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
-        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
-        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
-    } else {
-        printWindow.document.write('<br><br><br>');
-    }
-    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
-    printWindow.document.write('</div>');
-    
-    printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
-    
-    if (madrasahHeadSignature) {
-        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
-        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
-        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
-    } else {
-        printWindow.document.write('<br><br><br>');
-    }
-    
-    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
-    printWindow.document.write('</div>');
-    printWindow.document.write('</div>');
-    
-    printWindow.document.write('</div>');
-    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
+    // This function is no longer used but kept for compatibility if needed
+    window.print();
 }
 
 function fallbackSemesterPrintPDF() {
@@ -975,7 +918,7 @@ function fallbackSemesterPrintPDF() {
     var printWindow = window.open('', '_blank'); // Open in new tab
     printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
+    printWindow.document.write('@page { size: legal landscape; margin: 0cm 0.5cm 0.5cm 0.5cm; }'); // Landscape orientation
     printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
@@ -1014,7 +957,7 @@ function fallbackSemesterPrintPDF() {
     // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Wali Kelas,</p>');
+    printWindow.document.write('<p><br>Wali Kelas,</p>');
     if (classTeacherName) {
         var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
         var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
@@ -1100,84 +1043,9 @@ function exportSemesterToExcel() {
 }
 
 function exportSemesterToPDF() {
-    fallbackSemesterPrintPDF();
-}
-
-function fallbackSemesterPrintPDF() {
-    // Print the semester table as PDF with F4 landscape format
-    var printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
-    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
-    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 10px; }');
-    printWindow.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
-    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }'); // Nama Siswa Left Align
-    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.badge { padding: 2px 4px; border-radius: 3px; font-size: 10px; }');
-    printWindow.document.write('.badge-success { background-color: #28a745; color: white; }');
-    printWindow.document.write('.badge-warning { background-color: #ffc107; color: black; }');
-    printWindow.document.write('.badge-info { background-color: #17a2b8; color: white; }');
-    printWindow.document.write('.badge-danger { background-color: #dc3545; color: white; }');
-    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
-    printWindow.document.write('.logo { max-width: 80px; float: left; margin-right: 15px; }');
-    printWindow.document.write('h2, h3, h4 { margin: 5px 0; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 10px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
-    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
-    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
-    printWindow.document.write('</style>');
-    printWindow.document.write('</head><body>');
-    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
-    printWindow.document.write('<div class="header">');
-    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
-    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
-    
-    // Get the semester table
-    var table = document.getElementById('semesterTable');
-    if (table) {
-        printWindow.document.write(table.outerHTML);
-    }
-    
-    // Add signatures below the table
-    printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>Wali Kelas,</p>');
-    if (classTeacherName) {
-        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
-        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
-        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
-    } else {
-        printWindow.document.write('<br><br><br>');
-    }
-    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
-    printWindow.document.write('</div>');
-    
-    printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>Kepala Madrasah,</p>');
-    
-    if (madrasahHeadSignature) {
-        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
-        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
-        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
-    } else {
-        printWindow.document.write('<br><br><br>');
-    }
-    
-    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
-    printWindow.document.write('</div>');
-    printWindow.document.write('</div>');
-    
-    printWindow.document.write('</div>');
-    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
+    var classId = $('#classSelect').val();
+    var url = 'cetak_rekap_absensi.php?type=semester&class_id=' + classId;
+    window.open(url, '_blank');
 }
 
 // Validate form submission - use event delegation on document level

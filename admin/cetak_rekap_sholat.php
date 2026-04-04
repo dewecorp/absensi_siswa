@@ -216,8 +216,8 @@ if ($filter_type == 'daily') {
         
         .signature-wrapper { margin-top: 20px; display: flex; justify-content: space-between; page-break-inside: avoid; }
         .signature-box { text-align: center; width: 35%; page-break-inside: avoid; }
-        .signature-space { height: 60px; margin: 5px 0; position: relative; }
-        .signature-space img { width: 60px; position: absolute; left: 50%; transform: translateX(-50%); top: 0; }
+        .signature-space { height: 85px; margin: 5px 0; position: relative; }
+        .signature-space img { width: 75px; height: 75px; position: absolute; left: 50%; transform: translateX(-50%); top: 0; }
         
         .btn-print { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #4b49ac; color: #fff; border: none; border-radius: 5px; cursor: pointer; z-index: 1000; }
     </style>

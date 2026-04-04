@@ -367,7 +367,7 @@ include '../templates/sidebar.php';
                                         <form method="POST" class="row" id="attendanceFilterForm">
                                             <div class="form-group col-md-3">
                                                 <label>Pilih Kelas</label>
-                                                <select name="class_id" class="form-control selectric" id="classSelect" required>
+                                                <select name="class_id" class="form-control selectric" id="classSelect" required onchange="this.form.submit()">
                                                     <option value="">Pilih Kelas...</option>
                                                     <?php foreach ($classes as $class): ?>
                                                         <option value="<?php echo $class['id_kelas']; ?>" <?php echo ($class_id == $class['id_kelas']) ? 'selected' : ''; ?>>
@@ -379,7 +379,7 @@ include '../templates/sidebar.php';
                                             
                                             <div class="form-group col-md-2">
                                                 <label>Jenis Filter</label>
-                                                <select name="filter_type" class="form-control selectric" id="filterType">
+                                                <select name="filter_type" class="form-control selectric" id="filterType" onchange="this.form.submit()">
                                                     <option value="daily" <?php echo ($filter_type == 'daily') ? 'selected' : ''; ?>>Harian</option>
                                                     <option value="monthly" <?php echo ($filter_type == 'monthly') ? 'selected' : ''; ?>>Bulanan</option>
                                                     <option value="semester" <?php echo ($filter_type == 'semester') ? 'selected' : ''; ?>>Per Semester</option>
@@ -390,18 +390,18 @@ include '../templates/sidebar.php';
                                             <div class="form-group col-md-3 daily-filter" style="<?php echo ($filter_type == 'daily') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Tanggal</label>
                                                 <input type="date" name="attendance_date" class="form-control" 
-                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker">
+                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker" onchange="this.form.submit()">
                                             </div>
                                             
                                             <div class="form-group col-md-3 monthly-filter" style="<?php echo ($filter_type == 'monthly') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Bulan</label>
                                                 <input type="month" name="month_picker" class="form-control" 
-                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker">
+                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker" onchange="this.form.submit()">
                                             </div>
                                             
                                             <div class="form-group col-md-3 student-filter" style="<?php echo ($filter_type == 'student') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Siswa</label>
-                                                <select name="student_id" class="form-control selectric" id="studentSelect">
+                                                <select name="student_id" class="form-control selectric" id="studentSelect" onchange="this.form.submit()">
                                                     <option value="">Pilih Siswa...</option>
                                                     <?php 
                                                     if ($class_id > 0) {
@@ -418,12 +418,6 @@ include '../templates/sidebar.php';
                                                     }
                                                     ?>
                                                 </select>
-                                            </div>
-                                            
-                                            <div class="form-group col-md-2 d-flex align-items-end">
-                                                <button type="submit" class="btn btn-primary btn-block">
-                                                    <i class="fas fa-search"></i> Cari
-                                                </button>
                                             </div>
                                         </form>
                                         
@@ -893,51 +887,17 @@ function exportDailyToExcel() {
 }
 
 function exportDailyToPDF() {
-    var printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Rekap Absensi Harian</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
-    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }');
-    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; position: relative; }');
-    printWindow.document.write('.logo { max-width: 80px; position: absolute; left: 0; top: 0; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
-    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
-    printWindow.document.write('@media print { .no-print { display: none !important; } }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
-    printWindow.document.write('<div class="header">');
-    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
-    printWindow.document.write('<h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3>' + schoolName + '</h3>');
-    printWindow.document.write('<h4>Rekap Absensi Harian - Tanggal: <?php echo date("d-m-Y", strtotime($selected_date)); ?></h4>');
-    printWindow.document.write('</div>');
-    
-    var table = document.getElementById('dailyTable');
-    if (table) printWindow.document.write(table.outerHTML);
-    
-    printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '</p><p>Wali Kelas,</p>');
-    if (classTeacherName) {
-        var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName);
-        printWindow.document.write('<img src="' + qr + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px;"></p>');
-    } else { printWindow.document.write('<br><br><br><br>'); }
-    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p></div>');
-    
-    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '</p><p>Kepala Madrasah,</p>');
-    if (madrasahHeadSignature) {
-        var qrHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName);
-        printWindow.document.write('<img src="' + qrHead + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px;"></p>');
-    } else { printWindow.document.write('<br><br><br><br>'); }
-    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div></div>');
-    
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
+    var classId = $('#classSelect').val();
+    var datePicker = $('#datePicker').val();
+    var url = '../admin/cetak_rekap_absensi.php?type=daily&class_id=' + classId + '&date=' + datePicker;
+    window.open(url, '_blank');
+}
+
+function exportStudentToPDF() {
+    var classId = $('#classSelect').val();
+    var studentId = $('#studentSelect').val();
+    var url = '../admin/cetak_rekap_absensi.php?type=student&class_id=' + classId + '&student_id=' + studentId;
+    window.open(url, '_blank');
 }
 
 function exportStudentToExcel() {
@@ -975,51 +935,10 @@ function exportStudentToExcel() {
 }
 
 function exportStudentToPDF() {
-    var printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Rekap Absensi Siswa</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal portrait; margin: 0.5cm; }');
-    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }');
-    printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; position: relative; }');
-    printWindow.document.write('.logo { max-width: 80px; position: absolute; left: 0; top: 0; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
-    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 9999; }');
-    printWindow.document.write('@media print { .no-print { display: none !important; } }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
-    printWindow.document.write('<div class="header">');
-    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
-    printWindow.document.write('<h2>Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3>' + schoolName + '</h3>');
-    printWindow.document.write('<h4>Rekap Absensi Siswa: <?php echo addslashes($student_results[0]["nama_siswa"] ?? ""); ?></h4>');
-    printWindow.document.write('</div>');
-    
-    var table = document.getElementById('studentTable');
-    if (table) printWindow.document.write(table.outerHTML);
-    
-    printWindow.document.write('<div class="signature-wrapper">');
-    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '</p><p>Wali Kelas,</p>');
-    if (classTeacherName) {
-        var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName);
-        printWindow.document.write('<img src="' + qr + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px;"></p>');
-    } else { printWindow.document.write('<br><br><br><br>'); }
-    printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p></div>');
-    
-    printWindow.document.write('<div class="signature-box"><p>' + schoolCity + ', ' + reportDate + '</p><p>Kepala Madrasah,</p>');
-    if (madrasahHeadSignature) {
-        var qrHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName);
-        printWindow.document.write('<img src="' + qrHead + '" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px;"></p>');
-    } else { printWindow.document.write('<br><br><br><br>'); }
-    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p></div></div>');
-    
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
+    var classId = $('#classSelect').val();
+    var studentId = $('#studentSelect').val();
+    var url = '../admin/cetak_rekap_absensi.php?type=student&class_id=' + classId + '&student_id=' + studentId;
+    window.open(url, '_blank');
 }
 
 function exportToExcel() {
@@ -1073,7 +992,10 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    fallbackPrintPDF();
+    var classId = $('#classSelect').val();
+    var monthPicker = $('#monthPicker').val();
+    var url = '../admin/cetak_rekap_absensi.php?type=monthly&class_id=' + classId + '&month=' + monthPicker;
+    window.open(url, '_blank');
 }
 
 function fallbackPrintPDF() {
@@ -1081,7 +1003,7 @@ function fallbackPrintPDF() {
     var printWindow = window.open('', '_blank'); // New tab
     printWindow.document.write('<html><head><title>Rekap Absensi Bulanan</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
+    printWindow.document.write('@page { size: legal landscape; margin: 0cm 0.5cm 0.5cm 0.5cm; }'); // Landscape orientation
     printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
@@ -1121,7 +1043,6 @@ function fallbackPrintPDF() {
     // Add signatures below the table
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
     if (classTeacherName) {
         var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
@@ -1206,7 +1127,9 @@ function exportSemesterToExcel() {
 }
 
 function exportSemesterToPDF() {
-    fallbackSemesterPrintPDF();
+    var classId = $('#classSelect').val();
+    var url = '../admin/cetak_rekap_absensi.php?type=semester&class_id=' + classId;
+    window.open(url, '_blank');
 }
 
 function fallbackSemesterPrintPDF() {

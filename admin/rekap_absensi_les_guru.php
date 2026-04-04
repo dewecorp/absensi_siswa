@@ -179,10 +179,6 @@ include '../templates/sidebar.php';
                                     <label>Pilih Tanggal</label>
                                     <input type="date" name="attendance_date" class="form-control" value="<?= $selected_date ?>" onchange="this.form.submit()">
                                 </div>
-
-                                <div class="form-group col-md-2 d-flex align-items-end">
-                                    <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-search"></i> Cari</button>
-                                </div>
                             </form>
 
                             <?php if ($filter_type == 'daily' && !empty($daily_results)): ?>
