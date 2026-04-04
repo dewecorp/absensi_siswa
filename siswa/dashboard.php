@@ -13,6 +13,14 @@ $stmt = $pdo->prepare("SELECT s.*, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kel
 $stmt->execute([$id_siswa]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
+$is_grade_6 = false;
+if ($student && $student['nama_kelas']) {
+    $cls_name = strtoupper($student['nama_kelas']);
+    if (strpos($cls_name, '6') !== false || strpos($cls_name, 'VI') !== false) {
+        $is_grade_6 = true;
+    }
+}
+
 if (!$student) {
     echo "Data siswa tidak ditemukan.";
     exit;
@@ -329,6 +337,43 @@ include '../templates/sidebar.php';
             </div>
             <?php endif; ?>
         </div>
+
+        <?php if ($is_grade_6): ?>
+        <div class="row">
+            <!-- Box Khusus Kelas 6 -->
+            <div class="col-12">
+                <div class="card card-info">
+                    <div class="card-header">
+                        <h4>Fitur Khusus Kelas 6</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 col-sm-6 col-12 mb-3">
+                                <a href="jadwal_les.php" class="btn btn-primary btn-lg btn-block py-3">
+                                    <i class="fas fa-calendar-alt mr-2"></i> Jadwal Les Kelas 6
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-sm-6 col-12 mb-3">
+                                <a href="rekap_absensi_les.php" class="btn btn-success btn-lg btn-block py-3">
+                                    <i class="fas fa-history mr-2"></i> Rekap Absensi Les
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-sm-6 col-12 mb-3">
+                                <a href="biaya_ujian.php" class="btn btn-warning btn-lg btn-block py-3 text-white">
+                                    <i class="fas fa-money-bill-wave mr-2"></i> Biaya Ujian
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-sm-6 col-12 mb-3">
+                                <a href="nilai_ujian.php" class="btn btn-info btn-lg btn-block py-3">
+                                    <i class="fas fa-graduation-cap mr-2"></i> Nilai Ujian
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="row">
             <!-- Box Barcode Absensi -->

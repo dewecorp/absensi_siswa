@@ -39,22 +39,26 @@ $nama_kelas = $student_info['nama_kelas'] ?? '';
 $waliKelasName = $student_info['wali_kelas'] ?? '';
 
 // --- 1. Data Absensi Les ---
+// Fetch all schedules for Class 6 and join with student's attendance
 $stmt = $pdo->prepare("
-    SELECT al.*, jl.waktu, jl.mapel, jl.materi
-    FROM tb_absensi_les al
-    LEFT JOIN tb_jadwal_les jl ON al.id_siswa = ? AND al.tanggal = jl.tanggal
-    WHERE al.id_siswa = ?
-    ORDER BY al.tanggal DESC
+    SELECT 
+        jl.tanggal, 
+        jl.hari,
+        al.status
+    FROM tb_jadwal_les jl
+    LEFT JOIN tb_absensi_les al ON jl.tanggal = al.tanggal AND al.id_siswa = ?
+    ORDER BY jl.tanggal ASC
 ");
-// Note: Logic joining might vary based on your schema, 
-// usually we join by date and maybe mapel if exists in attendance table.
-// For now, let's simplify based on common student dashboard patterns.
-$stmt = $pdo->prepare("SELECT * FROM tb_absensi_les WHERE id_siswa = ? ORDER BY tanggal DESC");
 $stmt->execute([$id_siswa]);
 $harian_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Set page title
 $page_title = 'Rekap Absensi Les';
+
+// Define JS libraries for this page
+$js_libs = [
+    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+];
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
@@ -77,7 +81,8 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Data Kehadiran Les - Kelas 6</h4>
                             <div class="card-header-action">
-                                <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Cetak</button>
+                                <button class="btn btn-success" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                                <a href="cetak_rekap_les.php" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
                             </div>
                         </div>
                         <div class="card-body">
@@ -88,13 +93,12 @@ include '../templates/sidebar.php';
                                             <th class="text-center">No</th>
                                             <th>Tanggal</th>
                                             <th>Status</th>
-                                            <th>Keterangan</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php if (empty($harian_data)): ?>
                                             <tr>
-                                                <td colspan="4" class="text-center">Belum ada data absensi les.</td>
+                                                <td colspan="3" class="text-center">Belum ada data absensi les.</td>
                                             </tr>
                                         <?php else: ?>
                                             <?php $no = 1; foreach ($harian_data as $row): ?>
@@ -103,16 +107,23 @@ include '../templates/sidebar.php';
                                                     <td><?= formatDateIndonesia($row['tanggal']) ?></td>
                                                     <td>
                                                         <?php 
-                                                        $status = $row['keterangan'];
+                                                        $status = $row['status'] ?? '';
+                                                        $display_status = '';
                                                         $badge_class = 'badge-secondary';
-                                                        if ($status == 'Hadir') $badge_class = 'badge-success';
-                                                        elseif ($status == 'Sakit') $badge_class = 'badge-warning';
-                                                        elseif ($status == 'Izin') $badge_class = 'badge-info';
-                                                        elseif ($status == 'Alpa') $badge_class = 'badge-danger';
+
+                                                        if ($status == 'Hadir') {
+                                                            $display_status = 'Hadir';
+                                                            $badge_class = 'badge-success';
+                                                        } elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) {
+                                                            $display_status = 'Tidak Hadir (' . $status . ')';
+                                                            $badge_class = 'badge-danger';
+                                                        } else {
+                                                            $display_status = 'Belum Absen';
+                                                            $badge_class = 'badge-warning';
+                                                        }
                                                         ?>
-                                                        <span class="badge <?= $badge_class ?>"><?= $status ?></span>
+                                                        <span class="badge <?= $badge_class ?>"><?= $display_status ?></span>
                                                     </td>
-                                                    <td><?= htmlspecialchars($row['catatan'] ?? '-') ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
@@ -126,5 +137,75 @@ include '../templates/sidebar.php';
         </div>
     </section>
 </div>
+
+<script>
+function exportExcel() {
+    // Create a new workbook
+    var wb = XLSX.utils.book_new();
+    
+    // Header Data
+    var data = [
+        ['<?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN') ?>'],
+        ['<?= strtoupper($school_profile['nama_madrasah'] ?? 'MADRASAH') ?>'],
+        ['<?= $school_profile['alamat'] ?? '' ?>'],
+        ['Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?>'],
+        [''],
+        ['REKAP ABSENSI LES KELAS 6'],
+        [''],
+        ['Nama Siswa', ': <?= $nama_siswa ?>'],
+        ['NISN', ': <?= $nis_siswa ?>'],
+        ['Kelas', ': <?= $nama_kelas ?>'],
+        [''],
+        ['No', 'Hari, Tanggal', 'Status Kehadiran']
+    ];
+
+    // Add Table Body
+    <?php $no = 1; foreach ($harian_data as $row): ?>
+        <?php 
+            $status = $row['status'] ?? '';
+            if ($status == 'Hadir') $st_text = 'Hadir';
+            elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) $st_text = 'Tidak Hadir (' . $status . ')';
+            else $st_text = 'Belum Absen';
+        ?>
+        data.push([
+            '<?= $no++ ?>',
+            '<?= $row['hari'] ?>, <?= formatDateIndonesia($row['tanggal']) ?>',
+            '<?= $st_text ?>'
+        ]);
+    <?php endforeach; ?>
+    
+    // Add Footer (Signature)
+    data.push(['']);
+    data.push(['', '', '<?= $school_profile['tempat_jadwal'] ?? 'Sukosono' ?>, <?= formatDateIndonesia(date('Y-m-d')) ?>']);
+    data.push(['Mengetahui,', '', 'Wali Kelas <?= $nama_kelas ?>']);
+    data.push(['Kepala Madrasah,', '', '']);
+    data.push(['']);
+    data.push(['']);
+    data.push(['( <?= $school_profile['kepala_madrasah'] ?? '-' ?> )', '', '( <?= $waliKelasName ?> )']);
+
+    var ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Column Widths
+    ws['!cols'] = [
+        { wch: 6 },  // No
+        { wch: 35 }, // Tanggal
+        { wch: 30 }  // Status
+    ];
+
+    // Merges for header
+    ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, // Yayasan
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } }, // Madrasah
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 2 } }, // Alamat
+        { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } }, // Tahun Ajaran
+        { s: { r: 5, c: 0 }, e: { r: 5, c: 2 } }  // Title
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi Les");
+    
+    // Write file
+    XLSX.writeFile(wb, "Rekap_Absensi_Les_<?= str_replace(' ', '_', $nama_siswa) ?>.xlsx");
+}
+</script>
 
 <?php include '../templates/footer.php'; ?>

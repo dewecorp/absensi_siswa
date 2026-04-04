@@ -154,10 +154,6 @@ include '../templates/sidebar.php';
                                     <label>Pilih Tanggal</label>
                                     <input type="date" name="attendance_date" class="form-control" value="<?= $selected_date ?>" onchange="this.form.submit()">
                                 </div>
-
-                                <div class="form-group col-md-2 d-flex align-items-end">
-                                    <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-search"></i> Cari</button>
-                                </div>
                             </form>
 
                             <?php if ($filter_type == 'daily' && !empty($daily_results)): ?>
@@ -185,14 +181,22 @@ include '../templates/sidebar.php';
                                                     <td><?= htmlspecialchars($r['nisn']) ?></td>
                                                     <td>
                                                         <?php 
+                                                        $status = $r['status'] ?? '';
+                                                        $display_status = '';
                                                         $badge = 'badge-secondary';
-                                                        $status = $r['status'] ?: 'Belum Absen';
-                                                        if ($status == 'Hadir') $badge = 'badge-success';
-                                                        elseif ($status == 'Sakit') $badge = 'badge-info';
-                                                        elseif ($status == 'Izin') $badge = 'badge-warning';
-                                                        elseif ($status == 'Alpa') $badge = 'badge-danger';
+
+                                                        if ($status == 'Hadir') {
+                                                            $display_status = 'Hadir';
+                                                            $badge = 'badge-success';
+                                                        } elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) {
+                                                            $display_status = 'Tidak Hadir (' . $status . ')';
+                                                            $badge = 'badge-danger';
+                                                        } else {
+                                                            $display_status = 'Belum Absen';
+                                                            $badge = 'badge-warning';
+                                                        }
                                                         ?>
-                                                        <span class="badge <?= $badge ?>"><?= $status ?></span>
+                                                        <span class="badge <?= $badge ?>"><?= $display_status ?></span>
                                                     </td>
                                                     <td><?= $r['waktu_input'] ? date('H:i:s', strtotime($r['waktu_input'])) : '-' ?></td>
                                                 </tr>

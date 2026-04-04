@@ -706,7 +706,7 @@ switch ($user_level) {
                     ['title' => 'Rekap Sholat Berjamaah', 'url' => '../siswa/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
                     ['title' => 'Rekap Sholat Dhuha', 'url' => '../siswa/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
                 ],
-                'active' => in_array($current_page, ['rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php'])
+                'active' => in_array($current_page, ['rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php', 'rekap_absensi_les.php'])
             ],
             [
                 'title' => 'Kalender Pendidikan',
@@ -721,7 +721,9 @@ switch ($user_level) {
             foreach ($menu_items as &$m_item) {
                 if ($m_item['title'] === 'Jadwal') {
                     $m_item['submenu'][] = ['title' => 'Jadwal Les Kelas 6', 'url' => '../siswa/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'];
-                    break;
+                }
+                if ($m_item['title'] === 'Absensi') {
+                    $m_item['submenu'][] = ['title' => 'Rekap Absensi Les', 'url' => '../siswa/rekap_absensi_les.php', 'active' => $current_page === 'rekap_absensi_les.php'];
                 }
             }
 
