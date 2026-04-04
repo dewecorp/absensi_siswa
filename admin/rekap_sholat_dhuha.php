@@ -409,17 +409,17 @@ include '../templates/sidebar.php';
                         <?php if ($filter_type == 'daily'): ?>
                         <div class="form-group col-md-3">
                             <label>Tanggal</label>
-                            <input type="date" name="attendance_date" class="form-control" value="<?php echo htmlspecialchars($selected_date); ?>">
+                            <input type="date" name="attendance_date" class="form-control" value="<?php echo htmlspecialchars($selected_date); ?>" onchange="this.form.submit()">
                         </div>
                         <?php elseif ($filter_type == 'monthly'): ?>
                         <div class="form-group col-md-3">
                             <label>Bulan</label>
-                            <input type="month" name="month_picker" class="form-control" value="<?php echo htmlspecialchars($selected_month); ?>">
+                            <input type="month" name="month_picker" class="form-control" value="<?php echo htmlspecialchars($selected_month); ?>" onchange="this.form.submit()">
                         </div>
                         <?php elseif ($filter_type == 'student'): ?>
                         <div class="form-group col-md-3">
                             <label>Siswa</label>
-                            <select name="student_id" class="form-control selectric">
+                            <select name="student_id" class="form-control selectric" onchange="this.form.submit()">
                                 <option value="">Pilih Siswa...</option>
                                 <?php if (isset($all_students)): foreach($all_students as $s): ?>
                                     <option value="<?php echo $s['id_siswa']; ?>" <?php echo ($selected_student == $s['id_siswa']) ? 'selected' : ''; ?>><?php echo $s['nama_siswa']; ?></option>
@@ -427,10 +427,6 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <?php endif; ?>
-                        
-                        <div class="form-group col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-search"></i> Cari</button>
-                        </div>
                     </form>
 
                     <?php if (!empty($daily_results)): ?>
@@ -712,6 +708,26 @@ var reportDate = '<?php echo $report_date; ?>';
 var studentName = '<?php echo isset($student_results[0]) ? addslashes($student_results[0]['nama_siswa']) : ""; ?>';
 var selectedDate = '<?php echo htmlspecialchars($selected_date); ?>';
 
+function exportToPDF() {
+    var url = 'cetak_rekap_sholat.php?type=dhuha&filter=monthly&class_id=<?php echo $class_id; ?>&month=<?php echo $selected_month; ?>';
+    window.open(url, '_blank');
+}
+
+function exportSemesterToPDF() {
+    var url = 'cetak_rekap_sholat.php?type=dhuha&filter=semester&class_id=<?php echo $class_id; ?>';
+    window.open(url, '_blank');
+}
+
+function exportDailyToPDF() {
+    var url = 'cetak_rekap_sholat.php?type=dhuha&filter=daily&class_id=<?php echo $class_id; ?>&date=<?php echo $selected_date; ?>';
+    window.open(url, '_blank');
+}
+
+function exportStudentToPDF() {
+    var url = 'cetak_rekap_sholat.php?type=dhuha&filter=student&class_id=<?php echo $class_id; ?>&student_id=<?php echo $selected_student; ?>';
+    window.open(url, '_blank');
+}
+
 function replaceIconsWithText(tableClone) {
     // Replace check icons with "v"
     var checkIcons = tableClone.querySelectorAll('.fa-check');
@@ -764,38 +780,33 @@ function exportToPDF() {
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Dhuha</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }');
+    printWindow.document.write('@page { size: legal landscape; margin: 0cm 0.5cm 0.5cm 0.5cm; }');
     printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
-    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 0; }');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 10px; margin-bottom: 10px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 3px; text-align: center; }');
     printWindow.document.write('td:nth-child(2) { text-align: left; white-space: nowrap; }');
     printWindow.document.write('th { background-color: #f2f2f2; font-weight: bold; }');
-    printWindow.document.write('.header { text-align: center; margin-bottom: 15px; }');
-    printWindow.document.write('.fa-check { color: green; font-family: sans-serif; font-style: normal; } .fa-check:before { content: "v"; }');
-    printWindow.document.write('.fa-times { color: red; font-family: sans-serif; font-style: normal; } .fa-times:before { content: "x"; }');
-    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }');
-    printWindow.document.write('.signature-box { text-align: center; width: 45%; }');
+    printWindow.document.write('.header { text-align: center; margin-bottom: 5px; padding-top: 5px; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 15px; display: flex; justify-content: space-between; width: 100%; page-break-inside: avoid; break-inside: avoid; }');
+    printWindow.document.write('.signature-box { text-align: center; width: 45%; page-break-inside: avoid; break-inside: avoid; }');
     printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 9999; }');
-    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
     
     printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     
     printWindow.document.write('<div class="header">');
-    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 80px; vertical-align: middle; margin-right: 15px;">');
+    printWindow.document.write('<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 50px; vertical-align: middle; margin-right: 15px;">');
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
-    printWindow.document.write('<h2 style="margin: 0;">Sistem Absensi Siswa</h2>');
-    printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha - <?php echo htmlspecialchars($js_month_name . " " . $js_month_year, ENT_QUOTES, "UTF-8"); ?></h4></div>');
+    printWindow.document.write('<h2 style="margin: 0; font-size: 14px;">Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<h3 style="margin: 0; font-size: 12px;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
+    printWindow.document.write('<h4 style="margin: 2px 0 0; font-size: 11px;">Rekap Sholat Dhuha - <?php echo htmlspecialchars($js_month_name . " " . $js_month_year, ENT_QUOTES, "UTF-8"); ?></h4></div>');
     printWindow.document.write('</div>');
     
     var table = document.getElementById('monthlyTable');
     if (table) {
         var tableHTML = table.outerHTML;
-        // For PDF print, we can rely on CSS to style icons or replace them
-        // Let's replace icons with characters for simplicity in print view
         tableHTML = tableHTML.replace(/<i class="fas fa-check[^"]*"><\/i>/g, 'v');
         tableHTML = tableHTML.replace(/<i class="fas fa-times[^"]*"><\/i>/g, 'x');
         tableHTML = tableHTML.replace(/<i class="fas fa-ban[^"]*"><\/i>/g, 'b');
@@ -805,12 +816,11 @@ function exportToPDF() {
     // Digital Signature Logic
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Wali Kelas,</p>');
+    printWindow.document.write('<p><br>Wali Kelas,</p>');
     if (classTeacherName) {
         var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
         var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
-        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
+        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 60px; height: 60px; margin: 5px auto; display: block;">');
     } else {
         printWindow.document.write('<br><br><br>');
     }
@@ -821,8 +831,7 @@ function exportToPDF() {
     if (madrasahHeadSignature) {
         var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
         var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
-        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
+        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 60px; height: 60px; margin: 5px auto; display: block;">');
     } else {
         printWindow.document.write('<br><br><br>');
     }
@@ -1076,10 +1085,10 @@ function exportStudentToExcel() {
 }
 
 function exportStudentToPDF() {
-    var printWindow = window.open('', '', 'height=860,width=1300');
+    var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Dhuha Siswa</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: legal portrait; margin: 0.5cm; }');
+    printWindow.document.write('@page { size: legal portrait; margin: 1cm 0.5cm 0.5cm 0.5cm; }');
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
     printWindow.document.write('table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 20px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
