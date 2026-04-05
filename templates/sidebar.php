@@ -26,12 +26,13 @@ switch ($user_level) {
                     ['title' => 'Data Kelas', 'url' => '../admin/data_kelas.php', 'active' => $current_page === 'data_kelas.php'],
                     ['title' => 'Data Siswa', 'url' => '../admin/data_siswa.php', 'active' => $current_page === 'data_siswa.php'],
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php', 'active' => $current_page === 'siswa_baru.php'],
+                    ['title' => 'Data Alumni', 'url' => '../admin/data_alumni.php', 'active' => $current_page === 'data_alumni.php'],
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Jam Mengajar', 'url' => '../admin/jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
                     ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php', 'active' => $current_page === 'kalender_pendidikan.php']
                 ],
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'data_alumni.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php'])
             ],
             [
                 'title' => 'Keuangan',
