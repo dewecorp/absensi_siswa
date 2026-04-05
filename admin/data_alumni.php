@@ -51,20 +51,36 @@ $(document).ready(function() {
 });
 "];
 
-// Ensure tb_alumni table exists
+// Ensure tb_alumni table exists and has all required columns
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS `tb_alumni` (
         `id_alumni` int NOT NULL AUTO_INCREMENT,
         `nama_siswa` varchar(100) NOT NULL,
         `nisn` varchar(20) NOT NULL,
         `jenis_kelamin` enum('L','P') DEFAULT NULL,
+        `tempat_lahir` varchar(100) DEFAULT NULL,
+        `tanggal_lahir` date DEFAULT NULL,
+        `wali` varchar(100) DEFAULT NULL,
         `tahun_lulus` varchar(20) NOT NULL,
         `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (`id_alumni`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    // Check for missing columns and add them if they don't exist
+    $columns_to_check = [
+        'tempat_lahir' => "VARCHAR(100) DEFAULT NULL AFTER jenis_kelamin",
+        'tanggal_lahir' => "DATE DEFAULT NULL AFTER tempat_lahir",
+        'wali' => "VARCHAR(100) DEFAULT NULL AFTER tanggal_lahir"
+    ];
+
+    foreach ($columns_to_check as $col => $definition) {
+        $check = $pdo->query("SHOW COLUMNS FROM `tb_alumni` LIKE '$col'");
+        if ($check->rowCount() == 0) {
+            $pdo->exec("ALTER TABLE `tb_alumni` ADD COLUMN `$col` $definition");
+        }
+    }
 } catch (PDOException $e) {
-    // If table creation fails, it will likely throw again below, but we log it
-    error_log("Error creating tb_alumni: " . $e->getMessage());
+    error_log("Error updating tb_alumni: " . $e->getMessage());
 }
 
 // Get available graduation years for filter
@@ -104,9 +120,21 @@ include '../templates/sidebar.php';
                     <div class="card">
                         <div class="card-header">
                             <h4>Data Alumni</h4>
+                            <?php if ($selected_year): ?>
+                            <div class="card-header-action">
+                                <div class="btn-group btn-pill overflow-hidden" style="border-radius: 30px;">
+                                    <button type="button" class="btn btn-danger px-3" onclick="exportAlumniToPDF()" style="background-color: #ff5e5e; border: none; border-top-left-radius: 30px; border-bottom-left-radius: 30px;">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                    </button>
+                                    <button type="button" class="btn btn-success px-3" onclick="exportAlumniToExcel()" style="background-color: #47c363; border: none; border-top-right-radius: 30px; border-bottom-right-radius: 30px;">
+                                        <i class="fas fa-file-excel"></i> Excel
+                                    </button>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                         </div>
                         <div class="card-body">
-                            <form method="GET" class="mb-4">
+                            <form method="GET" class="mb-4" id="filterForm">
                                 <div class="form-row align-items-end">
                                     <div class="col-md-4">
                                         <label>Filter Tahun Lulus</label>
@@ -137,6 +165,8 @@ include '../templates/sidebar.php';
                                             <th>Nama Siswa</th>
                                             <th>NISN</th>
                                             <th>Jenis Kelamin</th>
+                                            <th>Tempat, Tgl Lahir</th>
+                                            <th>Orang Tua/Wali</th>
                                             <th>Tahun Lulus</th>
                                         </tr>
                                     </thead>
@@ -147,12 +177,57 @@ include '../templates/sidebar.php';
                                                 <td><?= htmlspecialchars($a['nama_siswa']) ?></td>
                                                 <td><?= htmlspecialchars($a['nisn']) ?></td>
                                                 <td><?= $a['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan' ?></td>
+                                                <td><?= htmlspecialchars($a['tempat_lahir'] ?? '-') . ', ' . ($a['tanggal_lahir'] ? date('d-m-Y', strtotime($a['tanggal_lahir'])) : '-') ?></td>
+                                                <td><?= htmlspecialchars($a['wali'] ?? '-') ?></td>
                                                 <td><?= htmlspecialchars($a['tahun_lulus']) ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
                             </div>
+                            
+                            <!-- Hidden Table for Export -->
+                            <?php if ($selected_year): ?>
+                            <div id="exportTableContainer" style="display:none;">
+                                <table border="1">
+                                    <thead>
+                                        <tr>
+                                            <th colspan="7" style="text-align: center; font-size: 16px; font-weight: bold;">DATA ALUMNI TAHUN LULUS <?= $selected_year ?></th>
+                                        </tr>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Nama Siswa</th>
+                                            <th>NISN</th>
+                                            <th>Jenis Kelamin</th>
+                                            <th>Tempat Lahir</th>
+                                            <th>Tanggal Lahir</th>
+                                            <th>Orang Tua/Wali</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php $no = 1; foreach ($alumni as $a): ?>
+                                            <tr>
+                                                <td><?= $no++ ?></td>
+                                                <td><?= htmlspecialchars($a['nama_siswa']) ?></td>
+                                                <td><?= htmlspecialchars($a['nisn']) ?></td>
+                                                <td><?= $a['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan' ?></td>
+                                                <td><?= htmlspecialchars($a['tempat_lahir'] ?? '-') ?></td>
+                                                <td><?= $a['tanggal_lahir'] ? date('d-m-Y', strtotime($a['tanggal_lahir'])) : '-' ?></td>
+                                                <td><?= htmlspecialchars($a['wali'] ?? '-') ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Form for Export -->
+                            <form id="exportForm" method="POST" action="" target="_blank">
+                                <input type="hidden" name="table_data" id="table_data">
+                                <input type="hidden" name="report_title" id="report_title" value="DATA ALUMNI">
+                                <input type="hidden" name="filename" id="filename" value="data_alumni_<?= $selected_year ?>">
+                                <input type="hidden" name="tahun_lulus_export" value="<?= $selected_year ?>">
+                            </form>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -160,5 +235,24 @@ include '../templates/sidebar.php';
         </div>
     </section>
 </div>
+
+<?php
+// Add JavaScript for this page
+$js_page[] = "
+function exportAlumniToPDF() {
+    const tableData = document.getElementById('exportTableContainer').innerHTML;
+    document.getElementById('table_data').value = tableData;
+    document.getElementById('exportForm').action = '../config/pdf_export.php?session_type=admin';
+    document.getElementById('exportForm').submit();
+}
+
+function exportAlumniToExcel() {
+    const tableData = document.getElementById('exportTableContainer').innerHTML;
+    document.getElementById('table_data').value = tableData;
+    document.getElementById('exportForm').action = '../config/excel_export.php?session_type=admin';
+    document.getElementById('exportForm').submit();
+}
+";
+?>
 
 <?php include '../templates/footer.php'; ?>

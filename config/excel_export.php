@@ -138,15 +138,46 @@ $headerStyle = [
 $sheetTitle = substr($report_title, 0, 31);
 $spreadsheet->getActiveSheet()->setTitle($sheetTitle);
 
+// Get school profile for header
+$school_profile = getSchoolProfile($pdo);
+
 // Extract data from HTML table
 $dom = new DOMDocument();
 libxml_use_internal_errors(true); // Suppress warnings for malformed HTML
 $dom->loadHTML('<?xml encoding="UTF-8">' . $table_data);
 libxml_clear_errors();
 
+// Set school header info in Excel
+$spreadsheet->getActiveSheet()->mergeCells('A1:H1');
+$spreadsheet->getActiveSheet()->setCellValue('A1', strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah'));
+$spreadsheet->getActiveSheet()->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+$spreadsheet->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+$spreadsheet->getActiveSheet()->mergeCells('A2:H2');
+$spreadsheet->getActiveSheet()->setCellValue('A2', strtoupper($report_title));
+$spreadsheet->getActiveSheet()->getStyle('A2')->getFont()->setBold(true)->setSize(12);
+$spreadsheet->getActiveSheet()->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+$tahun_lulus = $_POST['tahun_lulus_export'] ?? '';
+$tahun_ajaran = $_POST['tahun_ajaran'] ?? ($school_profile['tahun_ajaran'] ?? '');
+
+if ($tahun_lulus) {
+    $spreadsheet->getActiveSheet()->mergeCells('A3:H3');
+    $spreadsheet->getActiveSheet()->setCellValue('A3', 'TAHUN LULUS: ' . $tahun_lulus);
+    $spreadsheet->getActiveSheet()->getStyle('A3')->getFont()->setBold(true)->setSize(10);
+    $spreadsheet->getActiveSheet()->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+    $rowIndex = 5;
+} elseif ($tahun_ajaran) {
+    $spreadsheet->getActiveSheet()->mergeCells('A3:H3');
+    $spreadsheet->getActiveSheet()->setCellValue('A3', 'Tahun Ajaran: ' . $tahun_ajaran);
+    $spreadsheet->getActiveSheet()->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+    $rowIndex = 5;
+} else {
+    $rowIndex = 4;
+}
+
 $rows = $dom->getElementsByTagName('tr');
 
-$rowIndex = 1;
 foreach ($rows as $row) {
     $cols = $row->getElementsByTagName('th');
     $cellIndex = 'A';

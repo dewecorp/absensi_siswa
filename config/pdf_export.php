@@ -121,9 +121,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chart_image'])) {
     <div class="header">
         <img class="logo" src="../assets/img/' . ($school_profile['logo'] ?? 'logo.png') . '" alt="Logo">
         <div class="info">
-            <h2>' . strtoupper($report_title) . '</h2>
-            <p>' . ($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah') . '</p>
-            <p>Dicetak pada: ' . formatDateIndonesia(date('Y-m-d')) . ' ' . date('H:i:s') . '</p>
+            <h2 style="margin: 0; padding: 0;">' . strtoupper($report_title) . '</h2>
+            ' . (isset($_POST['tahun_lulus_export']) ? '<p style="margin: 0; font-size: 14px; font-weight: bold;">TAHUN LULUS: ' . htmlspecialchars($_POST['tahun_lulus_export']) . '</p>' : '') . '
+            <p style="margin: 5px 0;">' . ($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah') . '</p>
+            ' . (!isset($_POST['tahun_lulus_export']) && (isset($_POST['tahun_ajaran']) || $school_profile['tahun_ajaran']) ? '<p style="margin: 5px 0;">Tahun Ajaran: ' . (isset($_POST['tahun_ajaran']) ? htmlspecialchars($_POST['tahun_ajaran']) : $school_profile['tahun_ajaran']) . '</p>' : '') . '
+            <p style="margin: 5px 0; font-size: 12px;">Dicetak pada: ' . formatDateIndonesia(date('Y-m-d')) . ' ' . date('H:i:s') . '</p>
         </div>
     </div>
 
@@ -301,9 +303,11 @@ $html = '
     <div class="header">
         <img class="logo" src="../assets/img/' . ($school_profile['logo'] ?? 'logo.png') . '" alt="Logo">
         <div class="info">
-            <h2>' . strtoupper($report_title) . '</h2>
-            <p>' . ($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah') . '</p>
-            <p>Dicetak pada: ' . formatDateIndonesia(date('Y-m-d')) . ' ' . date('H:i:s') . '</p>
+            <h2 style="margin: 0; padding: 0;">' . strtoupper($report_title) . '</h2>
+            ' . (isset($_POST['tahun_lulus_export']) ? '<p style="margin: 0; font-size: 14px; font-weight: bold;">TAHUN LULUS: ' . htmlspecialchars($_POST['tahun_lulus_export']) . '</p>' : '') . '
+            <p style="margin: 5px 0;">' . ($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah') . '</p>
+            ' . (!isset($_POST['tahun_lulus_export']) && (isset($_POST['tahun_ajaran']) || $school_profile['tahun_ajaran']) ? '<p style="margin: 5px 0;">Tahun Ajaran: ' . (isset($_POST['tahun_ajaran']) ? htmlspecialchars($_POST['tahun_ajaran']) : $school_profile['tahun_ajaran']) . '</p>' : '') . '
+            <p style="margin: 5px 0; font-size: 12px;">Dicetak pada: ' . formatDateIndonesia(date('Y-m-d')) . ' ' . date('H:i:s') . '</p>
         </div>
     </div>
 ';
