@@ -170,6 +170,7 @@ function importStudentsFromExcelFile($filePath) {
         array_shift($rows);
         
         $rowCount = 0;
+        $updatedCount = 0;
         $errors = [];
         
         foreach ($rows as $index => $row) {
@@ -194,13 +195,30 @@ function importStudentsFromExcelFile($filePath) {
                     continue;
                 }
                 
-                // Insert into database
-                try {
-                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas]);
-                    $rowCount++;
-                } catch (PDOException $e) {
-                    $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
+                // Check if student with same NISN already exists
+                $checkStmt = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE nisn = ?");
+                $checkStmt->execute([$nisn]);
+                $existingStudent = $checkStmt->fetch();
+                
+                if ($existingStudent) {
+                    // Update existing student
+                    try {
+                        $updateStmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, jenis_kelamin=?, tempat_lahir=?, tanggal_lahir=?, wali=?, id_kelas=? WHERE nisn=?");
+                        $updateStmt->execute([$nama_siswa, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas, $nisn]);
+                        $rowCount++;
+                        $updatedCount++;
+                    } catch (PDOException $e) {
+                        $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
+                    }
+                } else {
+                    // Insert new student
+                    try {
+                        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                        $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas]);
+                        $rowCount++;
+                    } catch (PDOException $e) {
+                        $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
+                    }
                 }
             }
         }
@@ -208,6 +226,7 @@ function importStudentsFromExcelFile($filePath) {
         return [
             'success' => true,
             'imported_rows' => $rowCount,
+            'updated_rows' => $updatedCount,
             'errors' => $errors
         ];
     } catch (Exception $e) {
@@ -319,6 +338,7 @@ function importStudentsFromCSV($filePath) {
     }
     
     $rowCount = 0;
+    $updatedCount = 0;
     $errors = [];
     
     // Skip header row
@@ -332,29 +352,46 @@ function importStudentsFromCSV($filePath) {
             $id_kelas = trim($data[3]);
             
             // Validate required fields
-            if (empty($nama_siswa) || empty($nisn) || empty($jenis_kelamin) || empty($id_kelas)) {
-                $errors[] = "Row " . ($rowCount + 2) . ": Missing required fields (Nama Siswa, NISN, Jenis Kelamin, or ID Kelas)";
+            if (empty($nama_siswa) || empty($nisn) || empty($id_kelas)) {
+                $errors[] = "Row " . ($rowCount + 2) . ": Missing required fields (Nama Siswa, NISN, or ID Kelas)";
                 continue;
             }
             
             // Validate jenis_kelamin value
-            if ($jenis_kelamin !== 'L' && $jenis_kelamin !== 'P') {
+            if (!empty($jenis_kelamin) && $jenis_kelamin !== 'L' && $jenis_kelamin !== 'P') {
                 $errors[] = "Row " . ($rowCount + 2) . ": Jenis Kelamin must be 'L' or 'P'";
                 continue;
             }
             
-            // Insert into database
-            try {
-                $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $id_kelas]);
-                $rowCount++;
-            } catch (PDOException $e) {
-                $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();
+            // Check if student with same NISN already exists
+            $checkStmt = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE nisn = ?");
+            $checkStmt->execute([$nisn]);
+            $existingStudent = $checkStmt->fetch();
+            
+            if ($existingStudent) {
+                // Update existing student
+                try {
+                    $updateStmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, jenis_kelamin=?, id_kelas=? WHERE nisn=?");
+                    $updateStmt->execute([$nama_siswa, $jenis_kelamin ?: null, $id_kelas, $nisn]);
+                    $rowCount++;
+                    $updatedCount++;
+                } catch (PDOException $e) {
+                    $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();
+                }
+            } else {
+                // Insert new student
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $id_kelas]);
+                    $rowCount++;
+                } catch (PDOException $e) {
+                    $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();
+                }
             }
-        } elseif (count($data) >= 3) { // Support for backward compatibility
+        } elseif (count($data) >= 2) { // Support for minimal columns
             $nama_siswa = trim($data[0]);
             $nisn = trim($data[1]);
-            $id_kelas = trim($data[2]);
+            $id_kelas = trim($data[2] ?? '');
             
             // Validate required fields
             if (empty($nama_siswa) || empty($nisn)) {
@@ -362,13 +399,30 @@ function importStudentsFromCSV($filePath) {
                 continue;
             }
             
-            // Insert into database without jenis_kelamin
-            try {
-                $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, id_kelas) VALUES (?, ?, ?)");
-                $stmt->execute([$nama_siswa, $nisn, $id_kelas]);
-                $rowCount++;
-            } catch (PDOException $e) {
-                $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();
+            // Check if student with same NISN already exists
+            $checkStmt = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE nisn = ?");
+            $checkStmt->execute([$nisn]);
+            $existingStudent = $checkStmt->fetch();
+            
+            if ($existingStudent) {
+                // Update existing student
+                try {
+                    $updateStmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, id_kelas=? WHERE nisn=?");
+                    $updateStmt->execute([$nama_siswa, $id_kelas ?: null, $nisn]);
+                    $rowCount++;
+                    $updatedCount++;
+                } catch (PDOException $e) {
+                    $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();
+                }
+            } else {
+                // Insert new student
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, id_kelas) VALUES (?, ?, ?)");
+                    $stmt->execute([$nama_siswa, $nisn, $id_kelas ?: null]);
+                    $rowCount++;
+                } catch (PDOException $e) {
+                    $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();
+                }
             }
         }
     }
@@ -377,6 +431,7 @@ function importStudentsFromCSV($filePath) {
     return [
         'success' => true,
         'imported_rows' => $rowCount,
+        'updated_rows' => $updatedCount,
         'errors' => $errors
     ];
 }
