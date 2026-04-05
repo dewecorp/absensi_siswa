@@ -9,9 +9,16 @@ if (!isAuthorized(['admin'])) {
 
 $page_title = 'Kenaikan Kelas';
 
+// Define CSS libraries for this page
+$css_libs = [
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+];
+
 // Define JS libraries for this page
 $js_libs = [
-    'https://cdn.jsdelivr.net/npm/sweetalert2@11'
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
+    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
 ];
 
 // Get school profile for academic years
@@ -339,6 +346,33 @@ require_once '../templates/sidebar.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DataTables
+    const dataTableConfig = {
+        'pageLength': -1,
+        'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+        'language': {
+            'lengthMenu': 'Tampilkan _MENU_ entri',
+            'zeroRecords': 'Tidak ada data yang ditemukan',
+            'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
+            'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
+            'infoFiltered': '(disaring dari _MAX_ total entri)',
+            'search': 'Cari:',
+            'paginate': {
+                'first': 'Pertama',
+                'last': 'Terakhir',
+                'next': 'Selanjutnya',
+                'previous': 'Sebelumnya'
+            }
+        },
+        'columnDefs': [
+            { 'orderable': false, 'targets': 0 }
+        ],
+        'order': [[1, 'asc']]
+    };
+
+    const tableSource = $('#table-source').DataTable(dataTableConfig);
+    const tableTarget = $('#table-target').DataTable(dataTableConfig);
+
     // Show SweetAlert if there's a message
     <?php if (isset($message)): ?>
     Swal.fire({
@@ -351,61 +385,55 @@ document.addEventListener('DOMContentLoaded', function() {
     <?php endif; ?>
 
     const checkAllSource = document.getElementById('checkAllSource');
-    const sourceCheckboxes = document.querySelectorAll('.check-source');
     const promoteBtnContainer = document.getElementById('promote-btn-container');
-    const studentNames = document.querySelectorAll('.student-name');
 
     const checkAllTarget = document.getElementById('checkAllTarget');
-    const targetCheckboxes = document.querySelectorAll('.check-target');
     const demoteBtnContainer = document.getElementById('demote-btn-container');
-    const studentNamesTarget = document.querySelectorAll('.student-name-target');
 
     function togglePromoteBtn() {
-        const anyChecked = Array.from(sourceCheckboxes).some(cb => cb.checked);
+        const anyChecked = $('.check-source:checked').length > 0;
         promoteBtnContainer.style.display = anyChecked ? 'block' : 'none';
     }
 
     function toggleDemoteBtn() {
-        const anyChecked = Array.from(targetCheckboxes).some(cb => cb.checked);
+        const anyChecked = $('.check-target:checked').length > 0;
         demoteBtnContainer.style.display = anyChecked ? 'block' : 'none';
     }
 
     if (checkAllSource) {
         checkAllSource.addEventListener('change', function() {
-            sourceCheckboxes.forEach(cb => cb.checked = this.checked);
+            const rows = tableSource.rows({ 'search': 'applied' }).nodes();
+            $('input[type="checkbox"]', rows).prop('checked', this.checked);
             togglePromoteBtn();
         });
     }
 
-    sourceCheckboxes.forEach(cb => {
-        cb.addEventListener('change', togglePromoteBtn);
+    $('#table-source tbody').on('change', '.check-source', function() {
+        togglePromoteBtn();
     });
 
-    studentNames.forEach(name => {
-        name.addEventListener('click', function() {
-            const cb = this.closest('tr').querySelector('.check-source');
-            cb.checked = !cb.checked;
-            togglePromoteBtn();
-        });
+    $('#table-source tbody').on('click', '.student-name', function() {
+        const cb = $(this).closest('tr').find('.check-source');
+        cb.prop('checked', !cb.prop('checked'));
+        togglePromoteBtn();
     });
 
     if (checkAllTarget) {
         checkAllTarget.addEventListener('change', function() {
-            targetCheckboxes.forEach(cb => cb.checked = this.checked);
+            const rows = tableTarget.rows({ 'search': 'applied' }).nodes();
+            $('input[type="checkbox"]', rows).prop('checked', this.checked);
             toggleDemoteBtn();
         });
     }
 
-    targetCheckboxes.forEach(cb => {
-        cb.addEventListener('change', toggleDemoteBtn);
+    $('#table-target tbody').on('change', '.check-target', function() {
+        toggleDemoteBtn();
     });
 
-    studentNamesTarget.forEach(name => {
-        name.addEventListener('click', function() {
-            const cb = this.closest('tr').querySelector('.check-target');
-            cb.checked = !cb.checked;
-            toggleDemoteBtn();
-        });
+    $('#table-target tbody').on('click', '.student-name-target', function() {
+        const cb = $(this).closest('tr').find('.check-target');
+        cb.prop('checked', !cb.prop('checked'));
+        toggleDemoteBtn();
     });
 });
 </script>
