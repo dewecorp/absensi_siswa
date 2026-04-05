@@ -36,7 +36,7 @@ $import_type = isset($_GET['type']) ? $_GET['type'] : '';
                                 Kolom yang dibutuhkan: Nama Guru, NUPTK, Tempat Lahir, Tanggal Lahir, Jenis Kelamin, Password<br>
                                 Catatan: Kolom Wali Kelas telah dihapus karena diatur di Data Kelas
                             <?php elseif($import_type == 'siswa'): ?>
-                                Kolom yang dibutuhkan: Nama Siswa, NISN, Jenis Kelamin, Kelas ID
+                                Kolom yang dibutuhkan: Nama Siswa, NISN, Jenis Kelamin (L/P), Tempat Lahir, Tanggal Lahir (YYYY-MM-DD), Orang Tua/Wali, Kelas ID
                             <?php endif; ?>
                         </small>
                     </div>
@@ -50,7 +50,13 @@ $import_type = isset($_GET['type']) ? $_GET['type'] : '';
                     <div id="importResult" class="mt-3" style="display: none;"></div>
                 </div>
                 <div class="modal-footer bg-whitesmoke br">
-                    <a href="#" class="btn btn-info" id="downloadTemplateLink" download>Unduh Template Excel</a>
+                    <?php 
+                    $initial_url = "download_template.php?type=" . ($import_type ?: 'siswa');
+                    if (isset($_GET['kelas_id'])) {
+                        $initial_url .= "&kelas_id=" . $_GET['kelas_id'];
+                    }
+                    ?>
+                    <a href="<?php echo $initial_url; ?>" id="downloadTemplateLink" class="btn btn-primary">Unduh Template Excel</a>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-success" id="importSubmitBtn" style="display: none;">Impor Data</button>
                 </div>

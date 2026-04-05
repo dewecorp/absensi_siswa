@@ -40,16 +40,18 @@ if ($_POST['add_siswa'] ?? false) {
     $nama_siswa = sanitizeInput($_POST['nama_siswa'] ?? '');
     $nisn = sanitizeInput($_POST['nisn'] ?? '');
     $jenis_kelamin = sanitizeInput($_POST['jenis_kelamin'] ?? '');
+    $tempat_lahir = sanitizeInput($_POST['tempat_lahir'] ?? '');
+    $tanggal_lahir = sanitizeInput($_POST['tanggal_lahir'] ?? '');
+    $wali = sanitizeInput($_POST['wali'] ?? '');
     $id_kelas = (int)($_POST['id_kelas'] ?? 0);
     
     if ($nama_siswa && $nisn && $jenis_kelamin && $id_kelas) {
         global $pdo;
-        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
-        if ($stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $id_kelas])) {
+        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas])) {
             $message = ['type' => 'success', 'text' => 'Data siswa berhasil ditambahkan!'];
             $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-            $log_result = logActivity($pdo, $username, 'Tambah Siswa', "Menambahkan siswa baru: $nama_siswa");
-            if (!$log_result) error_log("Failed to log activity for Tambah Siswa: $nama_siswa");
+            logActivity($pdo, $username, 'Tambah Siswa', "Menambahkan siswa baru: $nama_siswa");
         } else {
             $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data siswa!'];
         }
@@ -64,6 +66,9 @@ if ($_POST['update_siswa'] ?? false) {
     $nama_siswa = sanitizeInput($_POST['nama_siswa'] ?? '');
     $nisn = sanitizeInput($_POST['nisn'] ?? '');
     $jenis_kelamin = sanitizeInput($_POST['jenis_kelamin'] ?? '');
+    $tempat_lahir = sanitizeInput($_POST['tempat_lahir'] ?? '');
+    $tanggal_lahir = sanitizeInput($_POST['tanggal_lahir'] ?? '');
+    $wali = sanitizeInput($_POST['wali'] ?? '');
     $new_id_kelas = (int)($_POST['id_kelas'] ?? 0);
     
     if ($id_siswa && $nama_siswa && $nisn && $jenis_kelamin && $new_id_kelas) {
@@ -86,8 +91,8 @@ if ($_POST['update_siswa'] ?? false) {
             $current_kelas_name = $current_student['current_kelas_name'] ?? 'Tidak ada kelas';
             
             // Update student data
-            $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, id_kelas = ? WHERE id_siswa = ?");
-            $result = $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $new_id_kelas, $id_siswa]);
+            $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, wali = ?, id_kelas = ? WHERE id_siswa = ?");
+            $result = $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $wali, $new_id_kelas, $id_siswa]);
             
             if ($result) {
                 // Get new class name for logging
@@ -99,12 +104,10 @@ if ($_POST['update_siswa'] ?? false) {
                 // Log the transfer if class changed
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
                 if ($current_id_kelas != $new_id_kelas) {
-                    $log_result = logActivity($pdo, $username, 'Transfer Siswa', "Memindahkan siswa {$nama_siswa} dari kelas {$current_kelas_name} ke kelas {$new_kelas_name}");
-                    if (!$log_result) error_log("Failed to log activity for Transfer Siswa: $nama_siswa");
+                    logActivity($pdo, $username, 'Transfer Siswa', "Memindahkan siswa {$nama_siswa} dari kelas {$current_kelas_name} ke kelas {$new_kelas_name}");
                     $message = ['type' => 'success', 'text' => "Data siswa berhasil diupdate dan dipindahkan dari kelas {$current_kelas_name} ke kelas {$new_kelas_name}!"];
                 } else {
-                    $log_result = logActivity($pdo, $username, 'Edit Siswa', "Mengupdate data siswa: $nama_siswa");
-                    if (!$log_result) error_log("Failed to log activity for Edit Siswa: $nama_siswa");
+                    logActivity($pdo, $username, 'Edit Siswa', "Mengupdate data siswa: $nama_siswa");
                     $message = ['type' => 'success', 'text' => 'Data siswa berhasil diupdate!'];
                 }
                 
@@ -420,7 +423,8 @@ include '../templates/sidebar.php';
                                             <th>Nama Siswa</th>
                                             <th>NISN</th>
                                             <th>Jenis Kelamin</th>
-                                            <th>Kelas</th>
+                                            <th>Tempat, Tgl Lahir</th>
+                                            <th>Orang Tua/Wali</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
@@ -437,7 +441,8 @@ include '../templates/sidebar.php';
                                             <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
                                             <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                             <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
-                                            <td><?php echo htmlspecialchars($student['nama_kelas'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-') . ', ' . ($student['tanggal_lahir'] ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($student['wali'] ?? '-'); ?></td>
                                             <td>
                                                 <a href="cetak_qr_siswa.php?id=<?php echo $student['id_siswa']; ?>" target="_blank" class="btn btn-dark btn-sm" title="Cetak QR Code"><i class="fas fa-qrcode"></i></a>
                                                 <a href="#" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $student['id_siswa']; ?>"><i class="fas fa-edit"></i></a>
@@ -459,32 +464,50 @@ include '../templates/sidebar.php';
                                                         <div class="modal-body">
                                                             <input type="hidden" name="id_siswa" value="<?php echo $student['id_siswa']; ?>">
                                                             <input type="hidden" name="update_siswa" value="1">
-                                                            <div class="form-group">
-                                                                <label>Nama Siswa</label>
-                                                                <input type="text" class="form-control" name="nama_siswa" value="<?php echo htmlspecialchars($student['nama_siswa']); ?>" required>
+                                                            <div class="row">
+                                                                <div class="form-group col-6">
+                                                                    <label>Nama Siswa</label>
+                                                                    <input type="text" class="form-control" name="nama_siswa" value="<?php echo htmlspecialchars($student['nama_siswa']); ?>" required>
+                                                                </div>
+                                                                <div class="form-group col-6">
+                                                                    <label>NISN</label>
+                                                                    <input type="text" class="form-control" name="nisn" value="<?php echo htmlspecialchars($student['nisn']); ?>" required>
+                                                                </div>
+                                                            </div>
+                                                            <div class="row">
+                                                                <div class="form-group col-6">
+                                                                    <label>Jenis Kelamin</label>
+                                                                    <select class="form-control" name="jenis_kelamin" required>
+                                                                        <option value="">Pilih Jenis Kelamin</option>
+                                                                        <option value="L" <?php echo $student['jenis_kelamin'] == 'L' ? 'selected' : ''; ?>>Laki-laki</option>
+                                                                        <option value="P" <?php echo $student['jenis_kelamin'] == 'P' ? 'selected' : ''; ?>>Perempuan</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="form-group col-6">
+                                                                    <label>Kelas</label>
+                                                                    <select class="form-control" name="id_kelas" required>
+                                                                        <option value="">Pilih Kelas</option>
+                                                                        <?php foreach ($kelas_list as $kelas): ?>
+                                                                        <option value="<?php echo $kelas['id_kelas']; ?>" <?php echo $student['id_kelas'] == $kelas['id_kelas'] ? 'selected' : ''; ?>>
+                                                                            <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
+                                                                        </option>
+                                                                        <?php endforeach; ?>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            <div class="row">
+                                                                <div class="form-group col-6">
+                                                                    <label>Tempat Lahir</label>
+                                                                    <input type="text" class="form-control" name="tempat_lahir" value="<?php echo htmlspecialchars($student['tempat_lahir'] ?? ''); ?>">
+                                                                </div>
+                                                                <div class="form-group col-6">
+                                                                    <label>Tanggal Lahir</label>
+                                                                    <input type="date" class="form-control" name="tanggal_lahir" value="<?php echo $student['tanggal_lahir'] ?? ''; ?>">
+                                                                </div>
                                                             </div>
                                                             <div class="form-group">
-                                                                <label>NISN</label>
-                                                                <input type="text" class="form-control" name="nisn" value="<?php echo htmlspecialchars($student['nisn']); ?>" required>
-                                                            </div>
-                                                            <div class="form-group">
-                                                                <label>Jenis Kelamin</label>
-                                                                <select class="form-control" name="jenis_kelamin" required>
-                                                                    <option value="">Pilih Jenis Kelamin</option>
-                                                                    <option value="L" <?php echo $student['jenis_kelamin'] == 'L' ? 'selected' : ''; ?>>Laki-laki</option>
-                                                                    <option value="P" <?php echo $student['jenis_kelamin'] == 'P' ? 'selected' : ''; ?>>Perempuan</option>
-                                                                </select>
-                                                            </div>
-                                                            <div class="form-group">
-                                                                <label>Kelas</label>
-                                                                <select class="form-control" name="id_kelas" required>
-                                                                    <option value="">Pilih Kelas</option>
-                                                                    <?php foreach ($kelas_list as $kelas): ?>
-                                                                    <option value="<?php echo $kelas['id_kelas']; ?>" <?php echo $student['id_kelas'] == $kelas['id_kelas'] ? 'selected' : ''; ?>>
-                                                                        <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
-                                                                    </option>
-                                                                    <?php endforeach; ?>
-                                                                </select>
+                                                                <label>Orang Tua/Wali</label>
+                                                                <input type="text" class="form-control" name="wali" value="<?php echo htmlspecialchars($student['wali'] ?? ''); ?>">
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer bg-whitesmoke br">
@@ -509,7 +532,9 @@ include '../templates/sidebar.php';
                                             <th>Nama Siswa</th>
                                             <th>NISN</th>
                                             <th>Jenis Kelamin</th>
-                                            <th>Kelas</th>
+                                            <th>Tempat Lahir</th>
+                                            <th>Tanggal Lahir</th>
+                                            <th>Orang Tua/Wali</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -519,7 +544,9 @@ include '../templates/sidebar.php';
                                             <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
                                             <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                             <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
-                                            <td><?php echo htmlspecialchars($student['nama_kelas'] ?? $selected_kelas_name); ?></td>
+                                            <td><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-'); ?></td>
+                                            <td><?php echo $student['tanggal_lahir'] ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-'; ?></td>
+                                            <td><?php echo htmlspecialchars($student['wali'] ?? '-'); ?></td>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -551,32 +578,50 @@ include '../templates/sidebar.php';
             <form method="POST" action="">
                 <div class="modal-body">
                     <input type="hidden" name="add_siswa" value="1">
-                    <div class="form-group">
-                        <label>Nama Siswa</label>
-                        <input type="text" class="form-control" name="nama_siswa" required>
+                    <div class="row">
+                        <div class="form-group col-6">
+                            <label>Nama Siswa</label>
+                            <input type="text" class="form-control" name="nama_siswa" required>
+                        </div>
+                        <div class="form-group col-6">
+                            <label>NISN</label>
+                            <input type="text" class="form-control" name="nisn" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group col-6">
+                            <label>Jenis Kelamin</label>
+                            <select class="form-control" name="jenis_kelamin" required>
+                                <option value="">Pilih Jenis Kelamin</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Kelas</label>
+                            <select class="form-control" name="id_kelas" required>
+                                <option value="">Pilih Kelas</option>
+                                <?php foreach ($kelas_list as $kelas): ?>
+                                <option value="<?php echo $kelas['id_kelas']; ?>">
+                                    <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group col-6">
+                            <label>Tempat Lahir</label>
+                            <input type="text" class="form-control" name="tempat_lahir">
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Tanggal Lahir</label>
+                            <input type="date" class="form-control" name="tanggal_lahir">
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label>NISN</label>
-                        <input type="text" class="form-control" name="nisn" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Jenis Kelamin</label>
-                        <select class="form-control" name="jenis_kelamin" required>
-                            <option value="">Pilih Jenis Kelamin</option>
-                            <option value="L">Laki-laki</option>
-                            <option value="P">Perempuan</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Kelas</label>
-                        <select class="form-control" name="id_kelas" required>
-                            <option value="">Pilih Kelas</option>
-                            <?php foreach ($kelas_list as $kelas): ?>
-                            <option value="<?php echo $kelas['id_kelas']; ?>">
-                                <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label>Orang Tua/Wali</label>
+                        <input type="text" class="form-control" name="wali">
                     </div>
                 </div>
                 <div class="modal-footer bg-whitesmoke br">
@@ -746,11 +791,27 @@ window.bulkEdit = function() {
         if (id && id !== 'on') {
             var row = $(this).closest('tr');
             var cells = row.find('td');
+            var fullBirth = cells.eq(5).text().trim();
+            var birthParts = fullBirth.split(', ');
+            var tempat = birthParts[0] || '';
+            var tanggal = birthParts[1] || '';
+            
+            // Convert dd-mm-yyyy to yyyy-mm-dd for input date
+            if (tanggal && tanggal !== '-') {
+                var d = tanggal.split('-');
+                if (d.length === 3) tanggal = d[2] + '-' + d[1] + '-' + d[0];
+            } else {
+                tanggal = '';
+            }
+
             selectedStudents.push({
                 id: id,
                 nama: cells.eq(2).text().trim(),
                 nisn: cells.eq(3).text().trim(),
                 jenis_kelamin: cells.eq(4).text().trim(),
+                tempat_lahir: tempat !== '-' ? tempat : '',
+                tanggal_lahir: tanggal,
+                wali: cells.eq(6).text().trim() !== '-' ? cells.eq(6).text().trim() : '',
                 id_kelas: row.data('id-kelas') || ''
             });
         }
@@ -1074,10 +1135,12 @@ $js_page[] = "
 function exportStudentsToExcel() {
     var c = document.getElementById('exportTableContainer');
     if (!c) return;
+    
+    // We need to ensure we're exporting the full data, but the hidden table already has it
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/excel_export?session_type={$_SESSION['level']}';
+    f.action = '../config/excel_export.php?session_type=admin';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';
@@ -1114,7 +1177,7 @@ function exportStudentsToPDF() {
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/pdf_export?session_type=admin';
+    f.action = '../config/pdf_export.php?session_type=admin';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';

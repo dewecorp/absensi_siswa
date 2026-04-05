@@ -1282,15 +1282,15 @@ $(document).ready(function() {
     // Add the import function separately
     $js_page[] = "<script>
 function setImportType(type) {
-    \$('#importModal input[name=\"import_type\"]').val(type);
-    let templateUrl = '../download_template.php?type=' + type;
-    if (type === 'siswa' && \$('#filter_kelas').length > 0) {
-        let selectedClassId = \$('#filter_kelas').val();
+    $('#importModal input[name=\"import_type\"]').val(type);
+    let templateUrl = 'download_template.php?type=' + type;
+    if (type === 'siswa' && $('#filter_kelas').length > 0) {
+        let selectedClassId = $('#filter_kelas').val();
         if (selectedClassId) {
-            templateUrl += '&class_id=' + selectedClassId;
+            templateUrl += '&kelas_id=' + selectedClassId;
         }
     }
-    \$('#importModal .btn-info').attr('href', templateUrl);
+    $('#importModal #downloadTemplateLink').attr('href', templateUrl);
 }
 </script>";
 

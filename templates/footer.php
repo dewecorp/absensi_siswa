@@ -229,17 +229,17 @@
         $('#importModal #importType').val(type);
         
         // Perbarui tautan unduhan template berdasarkan tipe
-        let templateUrl = '../download_template.php?type=' + type;
+        let templateUrl = 'download_template.php?type=' + type;
         
         // Jika tipe adalah siswa dan ada kelas yang dipilih, tambahkan ID kelas ke URL
         if (type === 'siswa' && $('#filter_kelas').length > 0) {
             let selectedClassId = $('#filter_kelas').val();
             if (selectedClassId) {
-                templateUrl += '&class_id=' + selectedClassId;
+                templateUrl += '&kelas_id=' + selectedClassId;
             }
         }
         
-        $('#importModal .btn-info').attr('href', templateUrl);
+        $('#importModal #downloadTemplateLink').attr('href', templateUrl);
         
         // Reset form dan progress saat modal dibuka
         $('#importForm')[0].reset();

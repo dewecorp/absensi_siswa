@@ -173,47 +173,31 @@ function importStudentsFromExcelFile($filePath) {
         $errors = [];
         
         foreach ($rows as $index => $row) {
-            if (count($row) >= 4) { // Assuming 4 columns: nama_siswa, nisn, jenis_kelamin, id_kelas
+            if (count($row) >= 7) { // 7 columns: nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas
                 $nama_siswa = trim($row[0]);
                 $nisn = trim($row[1]);
                 $jenis_kelamin = trim($row[2]);
-                $id_kelas = trim($row[3]);
+                $tempat_lahir = trim($row[3]);
+                $tanggal_lahir = trim($row[4]);
+                $wali = trim($row[5]);
+                $id_kelas = trim($row[6]);
                 
                 // Validate required fields
-                if (empty($nama_siswa) || empty($nisn) || empty($jenis_kelamin) || empty($id_kelas)) {
-                    $errors[] = "Row " . ($index + 2) . ": Missing required fields (Nama Siswa, NISN, Jenis Kelamin, or ID Kelas)";
+                if (empty($nama_siswa) || empty($nisn) || empty($id_kelas)) {
+                    $errors[] = "Row " . ($index + 2) . ": Missing required fields (Nama Siswa, NISN, or ID Kelas)";
                     continue;
                 }
                 
                 // Validate jenis_kelamin value
-                if ($jenis_kelamin !== 'L' && $jenis_kelamin !== 'P') {
+                if (!empty($jenis_kelamin) && $jenis_kelamin !== 'L' && $jenis_kelamin !== 'P') {
                     $errors[] = "Row " . ($index + 2) . ": Jenis Kelamin must be 'L' or 'P'";
                     continue;
                 }
                 
                 // Insert into database
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
-                    $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $id_kelas]);
-                    $rowCount++;
-                } catch (PDOException $e) {
-                    $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
-                }
-            } elseif (count($row) >= 3) { // Support for backward compatibility
-                $nama_siswa = trim($row[0]);
-                $nisn = trim($row[1]);
-                $id_kelas = trim($row[2]);
-                
-                // Validate required fields
-                if (empty($nama_siswa) || empty($nisn)) {
-                    $errors[] = "Row " . ($index + 2) . ": Missing required fields (Nama Siswa or NISN)";
-                    continue;
-                }
-                
-                // Insert into database without jenis_kelamin
-                try {
-                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, id_kelas) VALUES (?, ?, ?)");
-                    $stmt->execute([$nama_siswa, $nisn, $id_kelas]);
+                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas]);
                     $rowCount++;
                 } catch (PDOException $e) {
                     $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
