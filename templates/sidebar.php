@@ -22,29 +22,27 @@ if (!function_exists('sort_all_menu_items')) {
         foreach ($items as $item) {
             $title = isset($item['title']) ? trim(strip_tags($item['title'])) : 'Untitled';
             
-            // Deduplicate aggressively
-            if (isset($seen_titles[$title])) continue;
-            $seen_titles[$title] = true;
+            // Normalize title for deduplication (e.g. Profil & Pengaturan vs Profil &amp; Pengaturan)
+            $normalized_title = html_entity_decode($title);
+            
+            if (isset($seen_titles[$normalized_title])) continue;
+            $seen_titles[$normalized_title] = true;
 
-            if (strcasecmp($title, 'Dashboard') === 0) {
+            if (strcasecmp($normalized_title, 'Dashboard') === 0) {
                 $dashboard = $item;
-            } elseif (strcasecmp($title, 'Logout') === 0) {
+            } elseif (strcasecmp($normalized_title, 'Logout') === 0) {
                 $logout = $item;
             } else {
-                // Sort submenus if they exist
-                if (isset($item['submenu']) && is_array($item['submenu'])) {
+                if (isset($item['submenu']) && is_array($item['submenu']) && (strpos($normalized_title, 'Absensi') !== false)) {
                     usort($item['submenu'], function($a, $b) {
-                        return strcasecmp(trim($a['title']), trim($b['title']));
+                        return strcasecmp(trim(strip_tags($a['title'])), trim(strip_tags($b['title'])));
                     });
                 }
                 $middle[] = $item;
             }
         }
         
-        // Sort middle items alphabetically
-        usort($middle, function($a, $b) {
-            return strcasecmp(trim($a['title']), trim($b['title']));
-        });
+        // No auto-sorting for middle items (revert to original order)
         
         // Reconstruct
         $new_items = [];

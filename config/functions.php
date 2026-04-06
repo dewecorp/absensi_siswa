@@ -272,11 +272,74 @@ function getCurrentDateIndonesia() {
 
 // Function to format specific date in Indonesian format
 function formatDateIndonesia($date_string) {
+    if (empty($date_string)) return '-';
+    $date = new DateTime($date_string);
     $bulan = array(
         'January' => 'Januari',
         'February' => 'Februari',
         'March' => 'Maret',
         'April' => 'April',
+        'May' => 'Mei',
+        'June' => 'Juni',
+        'July' => 'Juli',
+        'August' => 'Agustus',
+        'September' => 'September',
+        'October' => 'Oktober',
+        'November' => 'November',
+        'December' => 'Desember'
+    );
+    $day = $date->format('d');
+    $month = $bulan[$date->format('F')];
+    $year = $date->format('Y');
+    return "$day $month $year";
+}
+
+/**
+ * Helper function to sort menu items alphabetically, keeping Dashboard first and Logout last
+ * and deduplicating by normalized title.
+ */
+if (!function_exists('sort_all_menu_items')) {
+    function sort_all_menu_items(&$items) {
+        if (empty($items)) return;
+        
+        $dashboard = null;
+        $logout = null;
+        $middle = [];
+        $seen_titles = [];
+
+        foreach ($items as $item) {
+            $title = isset($item['title']) ? trim(strip_tags($item['title'])) : 'Untitled';
+            
+            // Normalize title for deduplication (e.g. Profil & Pengaturan vs Profil &amp; Pengaturan)
+            $normalized_title = html_entity_decode($title);
+            
+            if (isset($seen_titles[$normalized_title])) continue;
+            $seen_titles[$normalized_title] = true;
+
+            if (strcasecmp($normalized_title, 'Dashboard') === 0) {
+                $dashboard = $item;
+            } elseif (strcasecmp($normalized_title, 'Logout') === 0) {
+                $logout = $item;
+            } else {
+                // Sort submenus if they exist and contain "Absensi"
+                if (isset($item['submenu']) && is_array($item['submenu']) && (strpos($normalized_title, 'Absensi') !== false)) {
+                    usort($item['submenu'], function($a, $b) {
+                        return strcasecmp(trim(strip_tags($a['title'])), trim(strip_tags($b['title'])));
+                    });
+                }
+                $middle[] = $item;
+            }
+        }
+        
+        // Reconstruct
+        $new_items = [];
+        if ($dashboard) $new_items[] = $dashboard;
+        foreach ($middle as $m) $new_items[] = $m;
+        if ($logout) $new_items[] = $logout;
+        
+        $items = $new_items;
+    }
+}
         'May' => 'Mei',
         'June' => 'Juni',
         'July' => 'Juli',
