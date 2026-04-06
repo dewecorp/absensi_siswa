@@ -260,6 +260,7 @@ include '../templates/sidebar.php';
                     <div class="form-group">
                         <label>Hari</label>
                         <select class="form-control" name="hari" required>
+                            <option value="">Pilih Hari</option>
                             <?php foreach ($days as $day): ?>
                                 <option value="<?php echo $day; ?>"><?php echo $day; ?></option>
                             <?php endforeach; ?>
@@ -268,6 +269,7 @@ include '../templates/sidebar.php';
                     <div class="form-group">
                         <label>Guru</label>
                         <select class="form-control select2" name="id_guru" required style="width: 100%;">
+                            <option value="">Pilih Guru</option>
                             <?php foreach ($male_teachers as $guru): ?>
                                 <option value="<?php echo $guru['id_guru']; ?>"><?php echo $guru['nama_guru']; ?></option>
                             <?php endforeach; ?>
