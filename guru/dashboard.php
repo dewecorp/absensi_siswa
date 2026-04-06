@@ -451,7 +451,7 @@ $js_page = [
 ];
 
 include '../templates/user_header.php';
-include '../templates/sidebar.php';
+include_once '../templates/sidebar.php';
 
 // Handle Attendance Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

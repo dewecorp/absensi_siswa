@@ -515,7 +515,7 @@ $js_page = [
 
 include '../templates/user_header.php';
 
-include '../templates/sidebar.php';
+include_once '../templates/sidebar.php';
 
 // Start HTML output after including templates
 ?>

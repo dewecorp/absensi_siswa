@@ -402,4 +402,4 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
             </script>
             <?php endif; ?>
 
-            <?php include 'sidebar.php'; ?>
+            <?php include_once 'sidebar.php'; ?>

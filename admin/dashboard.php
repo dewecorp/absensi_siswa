@@ -555,7 +555,7 @@ try {
 }
 
 include '../templates/header.php';
-include '../templates/sidebar.php';
+include_once '../templates/sidebar.php';
 ?>
 
             <!-- Main Content -->

@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['absen_status'])) {
 }
 
 include '../templates/header.php';
-include '../templates/sidebar.php';
+include_once '../templates/sidebar.php';
 ?>
 
 <div class="main-content">
