@@ -166,6 +166,27 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<!-- Custom CSS for Select2 in modal -->
+<style>
+.select2-container--default .select2-selection--single {
+    height: 38px;
+    border: 1px solid #d4d4d4;
+    border-radius: 4px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+.select2-dropdown {
+    z-index: 1060 !important;
+}
+.select2-container--open .select2-dropdown {
+    z-index: 1060 !important;
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -324,6 +345,20 @@ include '../templates/sidebar.php';
 Swal.fire({ icon: '<?php echo $message['type'] == 'danger' ? 'error' : 'success'; ?>', title: '<?php echo $message['text']; ?>', timer: 2000, showConfirmButton: false });
 <?php endif; ?>
 $(document).ready(function() {
-    $('.select2').select2({ dropdownParent: $('.modal') });
+    // Initialize Select2 for add modal
+    $('#modalAdd select.select2').select2({
+        dropdownParent: $('#modalAdd'),
+        placeholder: 'Pilih Guru',
+        allowClear: true
+    });
+    
+    // Initialize Select2 for each edit modal
+    <?php foreach ($schedules as $row): ?>
+    $('#modalEdit<?php echo $row['id']; ?> select.select2').select2({
+        dropdownParent: $('#modalEdit<?php echo $row['id']; ?>'),
+        placeholder: 'Pilih Guru',
+        allowClear: true
+    });
+    <?php endforeach; ?>
 });
 </script>
