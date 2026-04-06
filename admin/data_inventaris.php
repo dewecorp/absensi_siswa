@@ -1,9 +1,26 @@
 <?php
+// Determine session name before including functions.php
+if (isset($_GET['session_type'])) {
+    $type = $_GET['session_type'];
+    $session_name = 'SIS_LOGIN';
+    if ($type == 'admin') $session_name = 'SIS_ADMIN';
+    elseif ($type == 'tata_usaha') $session_name = 'SIS_TU';
+    elseif ($type == 'kepala_madrasah' || $type == 'kepala') $session_name = 'SIS_KEPALA';
+    
+    if (session_status() == PHP_SESSION_NONE) {
+        $save_path = __DIR__ . '/../sessions';
+        if (!file_exists($save_path)) mkdir($save_path, 0777, true);
+        session_save_path($save_path);
+        session_name($session_name);
+        session_start();
+    }
+}
+
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-// Check if user is logged in and has admin level
-if (!isAuthorized(['admin'])) {
+// Check if user is logged in and has proper level
+if (!isAuthorized(['admin', 'tata_usaha', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
@@ -17,7 +34,7 @@ $page_title = 'Data Inventaris Sarpras';
 $user_level = getUserLevel();
 $is_admin = ($user_level === 'admin');
 
-// Handle Form Submission
+// Handle Form Submission (Admin only)
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_admin) {
     if (isset($_POST['action'])) {
@@ -217,6 +234,14 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Daftar Inventaris Sarpras</h4>
                             <div class="card-header-action">
+                                <div class="btn-group mr-2">
+                                    <a href="../config/export_inventaris_pdf?session_type=<?= $user_level ?>" target="_blank" class="btn btn-danger">
+                                        <i class="fas fa-file-pdf"></i> Export PDF
+                                    </a>
+                                    <a href="../config/export_inventaris_excel?session_type=<?= $user_level ?>" target="_blank" class="btn btn-success">
+                                        <i class="fas fa-file-excel"></i> Export Excel
+                                    </a>
+                                </div>
                                 <?php if ($is_admin): ?>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#modalAdd">
                                     <i class="fas fa-plus"></i> Tambah Inventaris
@@ -390,10 +415,6 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Keterangan</label>
-                        <textarea class="form-control" name="keterangan" rows="3" placeholder="Masukkan keterangan (opsional)"></textarea>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -483,10 +504,6 @@ include '../templates/sidebar.php';
                                 <input type="text" class="form-control" id="edit_total" readonly style="background-color: #e9ecef;">
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Keterangan</label>
-                        <textarea class="form-control" name="keterangan" id="edit_keterangan" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -677,7 +694,6 @@ $(document).ready(function() {
             $('#edit_harga_satuan_value').val(parseFloat(data.harga_satuan) || 0);
             $('#edit_status').val(data.status);
             $('#edit_kondisi').val(data.kondisi);
-            $('#edit_keterangan').val(data.keterangan || '');
             $('#edit_total').val('Rp ' + (parseFloat(data.total) || 0).toLocaleString('id-ID'));
             
             console.log('Modal fields populated');

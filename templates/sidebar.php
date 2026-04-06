@@ -262,6 +262,14 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
+                'title' => 'Inventaris Sarpras',
+                'icon' => 'fas fa-boxes',
+                'submenu' => [
+                    ['title' => 'Data Inventaris Sarpras', 'url' => '../admin/data_inventaris.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_inventaris.php']
+                ],
+                'active' => $current_page === 'data_inventaris.php'
+            ],
+            [
                 'title' => 'Logout',
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
@@ -353,6 +361,14 @@ switch ($user_level) {
                     ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php']
                 ],
                 'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
+            ],
+            [
+                'title' => 'Inventaris Sarpras',
+                'icon' => 'fas fa-boxes',
+                'submenu' => [
+                    ['title' => 'Data Inventaris Sarpras', 'url' => '../admin/data_inventaris.php?session_type=tata_usaha', 'active' => $current_page === 'data_inventaris.php']
+                ],
+                'active' => $current_page === 'data_inventaris.php'
             ],
             [
                 'title' => 'Backup & Restore',
