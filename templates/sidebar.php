@@ -168,12 +168,6 @@ switch ($user_level) {
                 'active' => $current_page === 'backup_restore.php'
             ],
             [
-                'title' => 'Log Aktivitas',
-                'icon' => 'fas fa-history',
-                'url' => '../admin/activity_log.php',
-                'active' => $current_page === 'activity_log.php'
-            ],
-            [
                 'title' => 'Logout',
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
@@ -356,12 +350,6 @@ switch ($user_level) {
                 'icon' => 'fas fa-hdd',
                 'url' => '../admin/backup_restore.php',
                 'active' => $current_page === 'backup_restore.php'
-            ],
-            [
-                'title' => 'Log Aktivitas',
-                'icon' => 'fas fa-history',
-                'url' => '../admin/activity_log.php',
-                'active' => $current_page === 'activity_log.php'
             ],
             [
                 'title' => 'Logout',
