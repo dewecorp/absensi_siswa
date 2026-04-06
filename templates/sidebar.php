@@ -96,6 +96,15 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'data_alumni.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php'])
             ],
             [
+                'title' => 'Inventaris Sarpras',
+                'icon' => 'fas fa-boxes',
+                'submenu' => [
+                    ['title' => 'Kategori Inventaris', 'url' => '../admin/kategori_inventaris.php', 'active' => $current_page === 'kategori_inventaris.php'],
+                    ['title' => 'Data Inventaris Sarpras', 'url' => '../admin/data_inventaris.php', 'active' => $current_page === 'data_inventaris.php']
+                ],
+                'active' => in_array($current_page, ['kategori_inventaris.php', 'data_inventaris.php'])
+            ],
+            [
                 'title' => 'Keuangan',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
