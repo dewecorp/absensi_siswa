@@ -404,9 +404,18 @@ function getTeacherAccessibleClasses($pdo, $id_guru, $only_grade_6 = false) {
 
     $wali_ids = [];
     if ($nama_guru !== '') {
+        // Try exact match first
         $stmt = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ?");
         $stmt->execute([$nama_guru]);
         $wali_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // If no match, try partial match (without gelar)
+        if (empty($wali_ids)) {
+            $base_name = explode(',', $nama_guru)[0];
+            $stmt = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas LIKE ?");
+            $stmt->execute([$base_name . '%']);
+            $wali_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        }
     }
 
     $all_ids = array_values(array_unique(array_filter(array_merge($mengajar_ids, $wali_ids), function ($v) {
