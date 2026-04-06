@@ -152,55 +152,6 @@ include '../templates/sidebar.php';
 .dataTables_wrapper {
     width: 100% !important;
 }
-/* Card statistic styling */
-.card-statistic-2 {
-    position: relative;
-    overflow: hidden;
-}
-.card-statistic-2 .card-icon {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-}
-.card-statistic-2 .card-icon i {
-    font-size: 28px;
-    color: white;
-}
-.card-statistic-2 .card-stats {
-    margin-left: 90px;
-    padding: 15px 20px 15px 0;
-}
-.card-statistic-2 .card-stats-title {
-    text-align: left;
-    font-size: 12px;
-    color: #6c757d;
-    margin-bottom: 8px;
-}
-.card-statistic-2 .card-stats-items {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-}
-.card-statistic-2 .card-stats-item {
-    text-align: right;
-}
-.card-statistic-2 .card-stats-item-count {
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 1;
-    margin-bottom: 4px;
-}
-.card-statistic-2 .card-stats-item-label {
-    font-size: 12px;
-    color: #6c757d;
-}
 </style>
 
 <div class="main-content">
@@ -212,51 +163,48 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <!-- Summary Cards -->
             <div class="row">
-                <div class="col-lg-4 col-md-6 col-sm-12">
-                    <div class="card card-statistic-2">
-                        <div class="card-stats">
-                            <div class="card-stats-title">Inventaris Kondisi Baik</div>
-                            <div class="card-stats-items">
-                                <div class="card-stats-item">
-                                    <div class="card-stats-item-count"><?php echo number_format($stats['total_baik'] ?? 0); ?></div>
-                                    <div class="card-stats-item-label">Unit</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-icon shadow-primary bg-primary">
+                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                    <div class="card card-statistic-1">
+                        <div class="card-icon bg-primary">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-md-6 col-sm-12">
-                    <div class="card card-statistic-2">
-                        <div class="card-stats">
-                            <div class="card-stats-title">Inventaris Kondisi Rusak</div>
-                            <div class="card-stats-items">
-                                <div class="card-stats-item">
-                                    <div class="card-stats-item-count"><?php echo number_format($stats['total_rusak'] ?? 0); ?></div>
-                                    <div class="card-stats-item-label">Unit</div>
-                                </div>
+                        <div class="card-wrap">
+                            <div class="card-header">
+                                <h4>Inventaris Baik</h4>
+                            </div>
+                            <div class="card-body">
+                                <?php echo number_format($stats['total_baik'] ?? 0); ?> Unit
                             </div>
                         </div>
-                        <div class="card-icon shadow-danger bg-danger">
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                    <div class="card card-statistic-1">
+                        <div class="card-icon bg-danger">
                             <i class="fas fa-times-circle"></i>
                         </div>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-md-6 col-sm-12">
-                    <div class="card card-statistic-2">
-                        <div class="card-stats">
-                            <div class="card-stats-title">Total Estimasi Nilai Aset</div>
-                            <div class="card-stats-items">
-                                <div class="card-stats-item">
-                                    <div class="card-stats-item-count"><?php echo number_format($stats['total_nilai_aset'] ?? 0, 0, ',', '.'); ?></div>
-                                    <div class="card-stats-item-label">Rupiah</div>
-                                </div>
+                        <div class="card-wrap">
+                            <div class="card-header">
+                                <h4>Inventaris Rusak</h4>
+                            </div>
+                            <div class="card-body">
+                                <?php echo number_format($stats['total_rusak'] ?? 0); ?> Unit
                             </div>
                         </div>
-                        <div class="card-icon shadow-success bg-success">
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                    <div class="card card-statistic-1">
+                        <div class="card-icon bg-success">
                             <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="card-wrap">
+                            <div class="card-header">
+                                <h4>Total Nilai Aset</h4>
+                            </div>
+                            <div class="card-body">
+                                <?php echo number_format($stats['total_nilai_aset'] ?? 0, 0, ',', '.'); ?>
+                            </div>
                         </div>
                     </div>
                 </div>
