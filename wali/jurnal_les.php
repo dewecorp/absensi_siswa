@@ -2,8 +2,8 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-// Check if user is logged in and has guru or wali level (only grade 6)
-if (!isAuthorized(['guru', 'wali'])) {
+// Check if user is logged in and has guru, wali, or admin level
+if (!isAuthorized(['guru', 'wali', 'admin'])) {
     redirect('../login.php');
 }
 
@@ -98,7 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $id_jurnal = !empty($_POST['id_jurnal']) ? (int)$_POST['id_jurnal'] : null;
     // Get class from POST first (when form submitted), fallback to GET/filter
     $id_kelas = isset($_POST['kelas_filter']) ? (int)$_POST['kelas_filter'] : (isset($selected_class) ? $selected_class : 0);
-    $mapel = $_POST['mapel'];
+    $mapel_array = $_POST['mapel']; // Array dari multiselect
+    $mapel = implode(', ', $mapel_array); // Gabungkan dengan koma untuk disimpan
     $materi = $_POST['materi'];
     $tanggal = $_POST['tanggal'];
     $id_guru = $teacher['id_guru'];
@@ -148,14 +149,43 @@ if (isset($_POST['delete_journal'])) {
     $id_jurnal = (int)$_POST['id_jurnal'];
     
     try {
-        $stmt = $pdo->prepare("DELETE FROM tb_jurnal_les WHERE id = ?");
-        $stmt->execute([$id_jurnal]);
+        // Check if user is admin
+        $is_admin = ($_SESSION['level'] === 'admin');
         
-        $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-        logActivity($pdo, $username, 'Hapus Jurnal Les', "Guru {$teacher['nama_guru']} menghapus jurnal les ID: $id_jurnal");
+        // Verify journal exists
+        $stmt_check = $pdo->prepare("SELECT id_guru, id_kelas FROM tb_jurnal_les WHERE id = ?");
+        $stmt_check->execute([$id_jurnal]);
+        $journal = $stmt_check->fetch(PDO::FETCH_ASSOC);
         
-        $message = ['type' => 'success', 'text' => 'Data jurnal les berhasil dihapus!'];
+        if (!$journal) {
+            $message = ['type' => 'error', 'text' => 'Data jurnal les tidak ditemukan!'];
+        } elseif (!$is_admin && $journal['id_guru'] != $teacher['id_guru']) {
+            // Non-admin can only delete their own journals
+            $message = ['type' => 'error', 'text' => 'Anda tidak memiliki izin untuk menghapus data ini!'];
+        } else {
+            // Admin can delete any, teacher can delete own
+            if ($is_admin) {
+                $stmt = $pdo->prepare("DELETE FROM tb_jurnal_les WHERE id = ?");
+                $stmt->execute([$id_jurnal]);
+            } else {
+                $stmt = $pdo->prepare("DELETE FROM tb_jurnal_les WHERE id = ? AND id_guru = ?");
+                $stmt->execute([$id_jurnal, $teacher['id_guru']]);
+            }
+            
+            $deleted_rows = $stmt->rowCount();
+            
+            if ($deleted_rows > 0) {
+                $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $actor = $is_admin ? 'Admin' : "Guru {$teacher['nama_guru']}";
+                logActivity($pdo, $username, 'Hapus Jurnal Les', "$actor menghapus jurnal les ID: $id_jurnal");
+                
+                $message = ['type' => 'success', 'text' => 'Data jurnal les berhasil dihapus!'];
+            } else {
+                $message = ['type' => 'error', 'text' => 'Gagal menghapus data. Silakan coba lagi.'];
+            }
+        }
     } catch (Exception $e) {
+        error_log('Jurnal Les Delete Error: ' . $e->getMessage());
         $message = ['type' => 'error', 'text' => 'Gagal menghapus data: ' . $e->getMessage()];
     }
 }
@@ -212,18 +242,42 @@ $page_title = 'Jurnal Les';
 
 // Define CSS libraries
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
 ];
 
 // Define JS libraries
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-    'https://cdn.jsdelivr.net/npm/sweetalert2@11'
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js'
 ];
 
 // Page specific JS with SweetAlert2 only (no Bootstrap alerts)
 $js_page = [];
+
+// Check for delete success message from sessionStorage
+$js_page[] = <<<JS
+$(document).ready(function() {
+    // Check if there's a delete success message
+    var deleteSuccess = sessionStorage.getItem('deleteSuccess');
+    if (deleteSuccess) {
+        // Clear the message
+        sessionStorage.removeItem('deleteSuccess');
+        
+        // Show success alert
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: deleteSuccess,
+            timer: 3000,
+            showConfirmButton: false
+        });
+    }
+});
+JS;
+
 if (isset($message)) {
     $msg_type = $message['type'];
     $msg_icon = ($msg_type == 'success') ? 'success' : ($msg_type == 'info' ? 'info' : 'error');
@@ -244,6 +298,27 @@ JS;
 
 $js_page[] = <<<JS
 $(document).ready(function() {
+    // Add custom CSS for Select2 compact styling
+    $('head').append('<style>' +
+        '.select2-container .select2-selection--multiple { min-height: 38px !important; height: 38px !important; border: 1px solid #ced4da !important; padding: 0 5px !important; display: flex !important; align-items: center !important; }' +
+        '.select2-container--default.select2-container--focus .select2-selection--multiple { border-color: #80bdff !important; }' +
+        '.select2-container--default .select2-selection--multiple .select2-selection__choice { background-color: #007bff !important; border: 1px solid #007bff !important; color: white !important; padding: 1px 6px !important; margin: 2px 2px !important; border-radius: 3px !important; line-height: 1.5 !important; font-size: 0.875rem !important; }' +
+        '.select2-container--default .select2-selection--multiple .select2-selection__choice__remove { color: white !important; margin-right: 4px !important; float: left !important; }' +
+        '.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover { background-color: rgba(255,255,255,0.3) !important; color: white !important; }' +
+        '.select2-container--default .select2-selection--multiple .select2-selection__rendered { padding: 0 !important; margin: 0 !important; display: flex !important; flex-wrap: wrap !important; align-items: center !important; }' +
+        '.select2-container--default .select2-selection--multiple .select2-search--inline { margin: 0 !important; }' +
+        '.select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field { margin-top: 0 !important; padding: 2px !important; height: 24px !important; }' +
+        '.select2-dropdown { border: 1px solid #ced4da !important; }' +
+        '.select2-search--dropdown .select2-search__field { border: 1px solid #ced4da !important; padding: 5px !important; }' +
+        '</style>');
+    
+    // Initialize Select2 for multiselect mapel
+    $('#mapel').select2({
+        placeholder: '-- Pilih Mata Pelajaran --',
+        allowClear: true,
+        width: '100%'
+    });
+    
     var t = $('#table-jurnal').DataTable({
         'language': {
             'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
@@ -269,7 +344,11 @@ $(document).ready(function() {
         $('#journal_id').val(id);
         $('#tanggal').val(tanggal);
         $('#waktu').val(waktu);
-        $('#mapel').val(mapel);
+        
+        // Handle multiple mapel (split by comma)
+        var mapelArray = mapel.split(', ').map(function(item) { return item.trim(); });
+        $('#mapel').val(mapelArray).trigger('change');
+        
         $('#materi').val(materi);
         
         // Update modal title
@@ -282,7 +361,21 @@ $(document).ready(function() {
     // Delete confirmation
     $(document).on('click', '.btn-delete', function(e) {
         e.preventDefault();
-        var form = $(this).closest('.delete-form');
+        e.stopPropagation();
+        
+        console.log('Delete button clicked');
+        
+        var btn = $(this);
+        var form = btn.closest('.delete-form');
+        var idJurnal = form.find('input[name="id_jurnal"]').val();
+        
+        console.log('Journal ID to delete:', idJurnal);
+        
+        if (typeof Swal === 'undefined') {
+            alert('ERROR: SweetAlert tidak tersedia!');
+            return;
+        }
+        
         Swal.fire({
             title: 'Apakah Anda yakin?',
             text: 'Data jurnal les yang dihapus tidak dapat dikembalikan!',
@@ -291,11 +384,58 @@ $(document).ready(function() {
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
+            cancelButtonText: 'Batal',
+            reverseButtons: true
         }).then((result) => {
+            console.log('Swal result:', result);
+            
             if (result.isConfirmed) {
-                form.submit();
+                console.log('User confirmed delete, sending AJAX request...');
+                
+                // Show loading
+                Swal.fire({
+                    title: 'Menghapus...',
+                    text: 'Mohon tunggu',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Send AJAX request
+                $.ajax({
+                    url: window.location.href,
+                    type: 'POST',
+                    data: {
+                        delete_journal: 1,
+                        id_jurnal: idJurnal
+                    },
+                    success: function(response) {
+                        console.log('Delete successful');
+                        
+                        // Store success message in sessionStorage before reload
+                        sessionStorage.setItem('deleteSuccess', 'Data jurnal les berhasil dihapus!');
+                        
+                        // Reload page to see changes
+                        window.location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Delete failed:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: 'Terjadi kesalahan saat menghapus data.',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                    }
+                });
+            } else {
+                console.log('User cancelled delete');
             }
+        }).catch(err => {
+            console.error('Swal error:', err);
+            alert('Error showing confirmation: ' + err.message);
         });
     });
     
@@ -306,6 +446,7 @@ $(document).ready(function() {
         $('#tanggal').val(new Date().toISOString().split('T')[0]); // Reset to today
         $('.invalid-feedback').hide();
         $('.form-control').removeClass('is-invalid');
+        $('#mapel').val(null).trigger('change'); // Reset Select2 multiselect
         $('#jurnalModalLabel').text('Tambah Jurnal Les');
     });
 });
@@ -418,12 +559,12 @@ include '../templates/sidebar.php';
                     
                     <div class="form-group">
                         <label for="mapel">Mata Pelajaran <span class="text-danger">*</span></label>
-                        <select class="form-control" id="mapel" name="mapel" required>
-                            <option value="">-- Pilih Mata Pelajaran --</option>
+                        <select class="form-control" id="mapel" name="mapel[]" multiple="multiple" required>
                             <?php foreach ($mapel_options as $mapel): ?>
                                 <option value="<?php echo htmlspecialchars($mapel); ?>"><?php echo htmlspecialchars($mapel); ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <small class="form-text text-muted">Anda dapat memilih lebih dari satu mata pelajaran</small>
                     </div>
                     
                     <div class="form-group">
