@@ -24,10 +24,14 @@ $logo_url = $web_root . '/assets/img/' . $logo_file;
 $page_title = 'Mata Pelajaran';
 
 // Ensure schema: add jenis_mapel column if missing
+$has_jenis_mapel = false;
 try {
     $colCheck = $pdo->query("SHOW COLUMNS FROM tb_mata_pelajaran LIKE 'jenis_mapel'");
-    if ($colCheck->rowCount() == 0) {
+    $has_jenis_mapel = $colCheck->rowCount() > 0;
+    if (!$has_jenis_mapel) {
         $pdo->exec("ALTER TABLE tb_mata_pelajaran ADD COLUMN jenis_mapel VARCHAR(20) NULL DEFAULT 'Akademik' AFTER kode_mapel");
+        $colCheck = $pdo->query("SHOW COLUMNS FROM tb_mata_pelajaran LIKE 'jenis_mapel'");
+        $has_jenis_mapel = $colCheck->rowCount() > 0;
     }
 } catch (Exception $e) {
     // Ignore schema change errors to avoid breaking page on limited hosting
@@ -48,8 +52,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($check->fetchColumn() > 0) {
             $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
         } else {
-            $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel, jenis_mapel, kktp) VALUES (?, ?, ?, ?)");
-            if ($stmt->execute([$nama_mapel, $kode_mapel, $jenis_mapel, $kktp])) {
+            if ($has_jenis_mapel) {
+                $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel, jenis_mapel, kktp) VALUES (?, ?, ?, ?)");
+                $ok = $stmt->execute([$nama_mapel, $kode_mapel, $jenis_mapel, $kktp]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel, kktp) VALUES (?, ?, ?)");
+                $ok = $stmt->execute([$nama_mapel, $kode_mapel, $kktp]);
+            }
+
+            if ($ok) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil ditambahkan!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
                 $kktp_log = $kktp !== null ? "dengan KKTP $kktp" : "tanpa KKTP";
@@ -71,8 +82,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($check->fetchColumn() > 0) {
             $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
         } else {
-            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, jenis_mapel=?, kktp=? WHERE id_mapel=?");
-            if ($stmt->execute([$nama_mapel, $kode_mapel, $jenis_mapel, $kktp, $id_mapel])) {
+            if ($has_jenis_mapel) {
+                $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, jenis_mapel=?, kktp=? WHERE id_mapel=?");
+                $ok = $stmt->execute([$nama_mapel, $kode_mapel, $jenis_mapel, $kktp, $id_mapel]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, kktp=? WHERE id_mapel=?");
+                $ok = $stmt->execute([$nama_mapel, $kode_mapel, $kktp, $id_mapel]);
+            }
+
+            if ($ok) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil diupdate!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
                 $kktp_log = $kktp !== null ? "KKTP $kktp" : "tanpa KKTP";

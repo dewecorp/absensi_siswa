@@ -275,7 +275,6 @@ $mapel_stmt = $pdo->prepare("
     FROM tb_mata_pelajaran m
     JOIN tb_jadwal_pelajaran j ON m.id_mapel = j.mapel_id
     WHERE j.guru_id = ?
-    AND (m.jenis_mapel IS NULL OR m.jenis_mapel = 'Akademik')
     AND m.nama_mapel NOT LIKE '%Asmaul Husna%' 
     AND m.nama_mapel NOT LIKE '%Upacara%' 
     AND m.nama_mapel NOT LIKE '%Istirahat%' 
@@ -292,7 +291,6 @@ $schedule_stmt = $pdo->prepare("
     FROM tb_mata_pelajaran m
     JOIN tb_jadwal_pelajaran j ON m.id_mapel = j.mapel_id
     WHERE j.guru_id = ?
-    AND (m.jenis_mapel IS NULL OR m.jenis_mapel = 'Akademik')
     AND m.nama_mapel NOT LIKE '%Asmaul Husna%' 
     AND m.nama_mapel NOT LIKE '%Upacara%' 
     AND m.nama_mapel NOT LIKE '%Istirahat%' 

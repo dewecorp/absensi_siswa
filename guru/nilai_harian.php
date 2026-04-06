@@ -15,12 +15,26 @@ $can_edit = !$is_admin_view;
 $id_guru = null;
 if (!$is_admin_view) {
     $id_guru = $_SESSION['user_id']; // Assuming user_id is id_guru for 'guru' role
+    
     if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
         // If logged in via tb_pengguna, get id_guru
         $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
         $stmt->execute([$_SESSION['user_id']]);
         $id_guru = $stmt->fetchColumn();
     }
+    
+    // Fallback for wali: if still no id_guru, try to find by nama_guru from session
+    if ((!$id_guru || $id_guru == 0) && isset($_SESSION['nama_guru'])) {
+        $stmt = $pdo->prepare("SELECT id_guru FROM tb_guru WHERE nama_guru = ? LIMIT 1");
+        $stmt->execute([$_SESSION['nama_guru']]);
+        $id_guru = $stmt->fetchColumn();
+    }
+    
+    // Debug: Log the resolved id_guru
+    error_log("DEBUG nilai_harian - Session user_id: " . $_SESSION['user_id']);
+    error_log("DEBUG nilai_harian - Resolved id_guru: " . ($id_guru ?? 'NULL'));
+    error_log("DEBUG nilai_harian - Session level: " . ($_SESSION['level'] ?? 'N/A'));
+    error_log("DEBUG nilai_harian - Session nama_guru: " . ($_SESSION['nama_guru'] ?? 'N/A'));
 }
 
 // Fetch classes
@@ -29,37 +43,13 @@ if ($is_admin_view) {
     $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
-    // Get teacher's classes from 'mengajar' column
-    $stmt = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
-    $stmt->execute([$id_guru]);
-    $mengajar_json = $stmt->fetchColumn();
-    $mengajar_ids = json_decode($mengajar_json, true) ?? [];
-
-    if (!empty($mengajar_ids)) {
-        // Handle if IDs are strings or integers
-        $placeholders = str_repeat('?,', count($mengajar_ids) - 1) . '?';
-        
-        // First try to match by ID
-        $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
-        // Duplicate array for OR clause
-        $params = array_merge($mengajar_ids, $mengajar_ids);
-        $stmt->execute($params);
-        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+    $classes = getTeacherAccessibleClasses($pdo, $id_guru);
 }
 
 // Fetch subjects
 $subjects = [];
 if ($is_admin_view) {
-    $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
-        WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik')
-        AND nama_mapel NOT LIKE '%Asmaul Husna%'
-        AND nama_mapel NOT LIKE '%Upacara%'
-        AND nama_mapel NOT LIKE '%Istirahat%'
-        AND nama_mapel NOT LIKE '%Kepramukaan%'
-        AND nama_mapel NOT LIKE '%Ekstrakurikuler%'
-        ORDER BY nama_mapel ASC");
-    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $subjects = getFilteredSubjects($pdo);
 } else {
     // Fetch subjects from schedule
     $stmt = $pdo->prepare("
@@ -67,7 +57,6 @@ if ($is_admin_view) {
         FROM tb_mata_pelajaran mp
         JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
         WHERE jp.guru_id = ?
-        AND (mp.jenis_mapel IS NULL OR mp.jenis_mapel = 'Akademik')
         AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
         AND mp.nama_mapel NOT LIKE '%Upacara%'
         AND mp.nama_mapel NOT LIKE '%Istirahat%'
@@ -77,6 +66,13 @@ if ($is_admin_view) {
     ");
     $stmt->execute([$id_guru]);
     $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    error_log("DEBUG nilai_harian - Subjects count for id_guru $id_guru: " . count($subjects));
+
+    if ($user_role === 'wali' && empty($subjects)) {
+        error_log("DEBUG nilai_harian - Wali with no subjects, falling back to all subjects");
+        $subjects = getFilteredSubjects($pdo);
+    }
 }
 
 // Determine selected class & mapel

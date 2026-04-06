@@ -65,15 +65,23 @@ if (isset($_SESSION['nama_guru']) && !empty($_SESSION['nama_guru'])) {
 } else {
     // For traditional login via tb_pengguna, get teacher name
     if ($_SESSION['level'] == 'wali' || $_SESSION['level'] == 'guru') {
-        // Direct login via NUPTK, user_id is actually the id_guru
+        // Check if user_id is id_guru or id_pengguna
         $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
         $stmt->execute([$_SESSION['user_id']]);
+        $teacher_result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$teacher_result) {
+            // Try to find via tb_pengguna
+            $stmt = $pdo->prepare("SELECT g.nama_guru FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+            $stmt->execute([$_SESSION['user_id']]);
+            $teacher_result = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
     } else {
         // Traditional login via tb_pengguna
         $stmt = $pdo->prepare("SELECT g.nama_guru FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
         $stmt->execute([$_SESSION['user_id']]);
+        $teacher_result = $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    $teacher_result = $stmt->fetch(PDO::FETCH_ASSOC);
     $teacher_name = $teacher_result['nama_guru'] ?? $_SESSION['username'];
     
     // Ensure nama_guru is set in session for consistent navbar display

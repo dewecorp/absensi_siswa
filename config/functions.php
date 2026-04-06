@@ -182,51 +182,255 @@ function isAuthorized($allowed_levels = []) {
 
 // Function to get school profile
 function getSchoolProfile($pdo) {
-    try {
-        // Ensure table exists
-        $pdo->exec("CREATE TABLE IF NOT EXISTS tb_profil_madrasah (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            nama_yayasan VARCHAR(255),
-            nama_madrasah VARCHAR(255),
-            alamat TEXT,
-            kepala_madrasah VARCHAR(255),
-            nip_kepala VARCHAR(50),
-            logo VARCHAR(255),
-            ttd_kepala VARCHAR(255),
-            dashboard_hero_image VARCHAR(255),
-            tahun_ajaran VARCHAR(20),
-            semester ENUM('Ganjil', 'Genap'),
-            tanggal_jadwal DATE,
-            tempat_jadwal VARCHAR(100),
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )");
+    $defaults = [
+        'id' => null,
+        'nama_yayasan' => '',
+        'nama_madrasah' => 'Madrasah',
+        'alamat' => '',
+        'kepala_madrasah' => '',
+        'nama_kepala' => '',
+        'nip_kepala' => '',
+        'logo' => '',
+        'ttd_kepala' => '',
+        'dashboard_hero_image' => '',
+        'tahun_ajaran' => null,
+        'semester' => null,
+        'tanggal_jadwal' => null,
+        'tempat_jadwal' => ''
+    ];
 
-        // Ensure nip_kepala column exists
-        $columns = $pdo->query("SHOW COLUMNS FROM tb_profil_madrasah LIKE 'nip_kepala'")->fetchAll();
-        if (empty($columns)) {
-            $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN nip_kepala VARCHAR(50) AFTER kepala_madrasah");
-        }
-        
-        // Check if profile exists
+    $profile = null;
+    try {
         $stmt = $pdo->query("SELECT * FROM tb_profil_madrasah LIMIT 1");
         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$profile) {
-            // Insert default profile
-            $stmt = $pdo->prepare("INSERT INTO tb_profil_madrasah (nama_yayasan, nama_madrasah, kepala_madrasah, nip_kepala, tahun_ajaran, semester) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute(['Yayasan Pendidikan', 'Madrasah Ibtidaiyah', 'Nama Kepala Madrasah', '-', date('Y') . '/' . (date('Y') + 1), 'Ganjil']);
-            return getSchoolProfile($pdo);
-        }
-
-        // Map old column names to new standard if necessary (for compatibility)
-        if (isset($profile['kepala_madrasah'])) {
-            $profile['nama_kepala'] = $profile['kepala_madrasah'];
-        }
-
-        return $profile;
     } catch (PDOException $e) {
-        return [];
+        $profile = null;
     }
+
+    $result = $profile ? array_merge($defaults, $profile) : $defaults;
+
+    if (!empty($result['semester'])) {
+        if ($result['semester'] === 'Ganjil') $result['semester'] = 'Semester 1';
+        if ($result['semester'] === 'Genap') $result['semester'] = 'Semester 2';
+    }
+
+    if (empty($result['tahun_ajaran']) || empty($result['semester'])) {
+        $period = null;
+
+        try {
+            $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_semester ORDER BY id_nilai DESC LIMIT 1");
+            $period = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $period = null;
+        }
+
+        if (!$period || empty($period['tahun_ajaran']) || empty($period['semester'])) {
+            try {
+                $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_harian_header ORDER BY id_header DESC LIMIT 1");
+                $period = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $period = null;
+            }
+        }
+
+        if (!$period || empty($period['tahun_ajaran']) || empty($period['semester'])) {
+            try {
+                $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_kokurikuler_header ORDER BY id_header DESC LIMIT 1");
+                $period = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $period = null;
+            }
+        }
+
+        if ($period) {
+            if (empty($result['tahun_ajaran']) && !empty($period['tahun_ajaran'])) $result['tahun_ajaran'] = $period['tahun_ajaran'];
+            if (empty($result['semester']) && !empty($period['semester'])) $result['semester'] = $period['semester'];
+        }
+
+        if (empty($result['tahun_ajaran'])) {
+            $y = (int)date('Y');
+            $result['tahun_ajaran'] = $y . '/' . ($y + 1);
+        }
+
+        if (empty($result['semester'])) {
+            $result['semester'] = ((int)date('n') <= 6) ? 'Semester 2' : 'Semester 1';
+        }
+    }
+
+    if (!empty($result['tahun_ajaran'])) $result['tahun_ajaran'] = trim((string)$result['tahun_ajaran']);
+    if (!empty($result['semester'])) $result['semester'] = trim((string)$result['semester']);
+
+    if (!empty($result['tahun_ajaran']) && !empty($result['semester'])) {
+        $has_data = false;
+
+        try {
+            $stmt = $pdo->prepare("SELECT 1 FROM tb_nilai_semester WHERE tahun_ajaran = ? AND semester = ? LIMIT 1");
+            $stmt->execute([$result['tahun_ajaran'], $result['semester']]);
+            if ($stmt->fetchColumn()) $has_data = true;
+        } catch (PDOException $e) {
+        }
+
+        if (!$has_data) {
+            try {
+                $stmt = $pdo->prepare("SELECT 1 FROM tb_nilai_harian_header WHERE tahun_ajaran = ? AND semester = ? LIMIT 1");
+                $stmt->execute([$result['tahun_ajaran'], $result['semester']]);
+                if ($stmt->fetchColumn()) $has_data = true;
+            } catch (PDOException $e) {
+            }
+        }
+
+        if (!$has_data) {
+            try {
+                $stmt = $pdo->prepare("SELECT 1 FROM tb_nilai_kokurikuler_header WHERE tahun_ajaran = ? AND semester = ? LIMIT 1");
+                $stmt->execute([$result['tahun_ajaran'], $result['semester']]);
+                if ($stmt->fetchColumn()) $has_data = true;
+            } catch (PDOException $e) {
+            }
+        }
+
+        if (!$has_data) {
+            $period = null;
+
+            try {
+                $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_semester ORDER BY id_nilai DESC LIMIT 1");
+                $period = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $period = null;
+            }
+
+            if (!$period || empty($period['tahun_ajaran']) || empty($period['semester'])) {
+                try {
+                    $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_harian_header ORDER BY id_header DESC LIMIT 1");
+                    $period = $stmt->fetch(PDO::FETCH_ASSOC);
+                } catch (PDOException $e) {
+                    $period = null;
+                }
+            }
+
+            if (!$period || empty($period['tahun_ajaran']) || empty($period['semester'])) {
+                try {
+                    $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_kokurikuler_header ORDER BY id_header DESC LIMIT 1");
+                    $period = $stmt->fetch(PDO::FETCH_ASSOC);
+                } catch (PDOException $e) {
+                    $period = null;
+                }
+            }
+
+            if ($period && !empty($period['tahun_ajaran']) && !empty($period['semester'])) {
+                $result['tahun_ajaran'] = trim((string)$period['tahun_ajaran']);
+                $result['semester'] = trim((string)$period['semester']);
+            }
+        }
+    }
+
+    if (empty($result['nama_kepala']) && !empty($result['kepala_madrasah'])) {
+        $result['nama_kepala'] = $result['kepala_madrasah'];
+    }
+
+    return $result;
+}
+
+function getFilteredSubjects($pdo) {
+    static $has_jenis_mapel = null;
+
+    if ($has_jenis_mapel === null) {
+        try {
+            $stmt = $pdo->query("SHOW COLUMNS FROM tb_mata_pelajaran LIKE 'jenis_mapel'");
+            $has_jenis_mapel = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $has_jenis_mapel = false;
+        }
+    }
+
+    $sql = "SELECT * FROM tb_mata_pelajaran";
+    $conditions = [
+        "nama_mapel NOT LIKE '%Asmaul Husna%'",
+        "nama_mapel NOT LIKE '%Upacara%'",
+        "nama_mapel NOT LIKE '%Istirahat%'",
+        "nama_mapel NOT LIKE '%Kepramukaan%'",
+        "nama_mapel NOT LIKE '%Ekstrakurikuler%'"
+    ];
+
+    if ($has_jenis_mapel) {
+        $conditions[] = "(jenis_mapel IS NULL OR jenis_mapel = 'Akademik')";
+    }
+
+    if (!empty($conditions)) {
+        $sql .= " WHERE " . implode(" AND ", $conditions);
+    }
+
+    $sql .= " ORDER BY nama_mapel ASC";
+
+    try {
+        $stmt = $pdo->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+function getLoggedInTeacherId($pdo) {
+    $user_id = $_SESSION['user_id'] ?? null;
+    if (!$user_id) return null;
+
+    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_pengguna') {
+        try {
+            $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+            $stmt->execute([$user_id]);
+            $id_guru = $stmt->fetchColumn();
+            return $id_guru ? (int)$id_guru : null;
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+
+    return (int)$user_id;
+}
+
+function getTeacherAccessibleClasses($pdo, $id_guru, $only_grade_6 = false) {
+    if (!$id_guru) return [];
+
+    $stmt = $pdo->prepare("SELECT nama_guru, mengajar FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$id_guru]);
+    $guru = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $nama_guru = $guru['nama_guru'] ?? '';
+    $mengajar_ids = [];
+    if (!empty($guru['mengajar'])) {
+        $decoded = json_decode($guru['mengajar'], true);
+        if (is_array($decoded)) $mengajar_ids = $decoded;
+    }
+
+    $wali_ids = [];
+    if ($nama_guru !== '') {
+        $stmt = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ?");
+        $stmt->execute([$nama_guru]);
+        $wali_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    $all_ids = array_values(array_unique(array_filter(array_merge($mengajar_ids, $wali_ids), function ($v) {
+        return $v !== null && $v !== '';
+    })));
+
+    if (empty($all_ids)) return [];
+
+    $placeholders = implode(',', array_fill(0, count($all_ids), '?'));
+    $params = array_merge($all_ids, $all_ids);
+    $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
+    $stmt->execute($params);
+    $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$only_grade_6) return $classes;
+
+    $filtered = [];
+    foreach ($classes as $c) {
+        $nk = strtoupper($c['nama_kelas'] ?? '');
+        if (strpos($nk, '6') !== false || strpos($nk, 'VI') !== false) {
+            $filtered[] = $c;
+        }
+    }
+    return $filtered;
 }
 
 // Function to format date
@@ -339,23 +543,6 @@ if (!function_exists('sort_all_menu_items')) {
         
         $items = $new_items;
     }
-}
-        'May' => 'Mei',
-        'June' => 'Juni',
-        'July' => 'Juli',
-        'August' => 'Agustus',
-        'September' => 'September',
-        'October' => 'Oktober',
-        'November' => 'November',
-        'December' => 'Desember'
-    );
-    
-    $timestamp = strtotime($date_string);
-    $day = date('d', $timestamp);
-    $month = $bulan[date('F', $timestamp)];
-    $year = date('Y', $timestamp);
-    
-    return "$day $month $year";
 }
 
 // Function to log activity

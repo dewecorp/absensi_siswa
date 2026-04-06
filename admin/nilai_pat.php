@@ -15,16 +15,8 @@ $can_edit = false;
 $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch subjects (Admin sees all, filtered)
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
-    WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik')
-    AND nama_mapel NOT LIKE '%Asmaul Husna%'
-    AND nama_mapel NOT LIKE '%Upacara%'
-    AND nama_mapel NOT LIKE '%Istirahat%'
-    AND nama_mapel NOT LIKE '%Kepramukaan%'
-    AND nama_mapel NOT LIKE '%Ekstrakurikuler%'
-    ORDER BY nama_mapel ASC");
-$subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Fetch subjects
+$subjects = getFilteredSubjects($pdo);
 
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;

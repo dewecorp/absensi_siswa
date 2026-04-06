@@ -66,9 +66,26 @@ $reportDate = formatDateIndonesia(date('Y-m-d'));
 
 // --- Wali Specific Logic ---
 // Get teacher/wali information
+$teacher = null;
+
+// Method 1: Direct query using user_id as id_guru
 $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Method 2: If not found, try via tb_pengguna (for wali login)
+if (!$teacher && isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+    $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Method 3: Fallback by nama_guru from session
+if (!$teacher && isset($_SESSION['nama_guru'])) {
+    $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nama_guru = ? LIMIT 1");
+    $stmt->execute([$_SESSION['nama_guru']]);
+    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
 if (!$teacher) {
     die('Error: Data wali kelas tidak ditemukan');

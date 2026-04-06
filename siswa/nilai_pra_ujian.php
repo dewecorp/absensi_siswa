@@ -37,16 +37,8 @@ $semester_aktif = $school_profile['semester'];
 $selected_jenis = 'Pra Ujian';
 $selected_tipe = isset($_GET['tipe']) ? $_GET['tipe'] : 'nilai_jadi';
 
-// Get Subjects (Mapel) - Filtered (Non-Academic)
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
-    WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik')
-    AND nama_mapel NOT LIKE '%Asmaul Husna%'
-    AND nama_mapel NOT LIKE '%Upacara%'
-    AND nama_mapel NOT LIKE '%Istirahat%'
-    AND nama_mapel NOT LIKE '%Kepramukaan%'
-    AND nama_mapel NOT LIKE '%Ekstrakurikuler%'
-    ORDER BY nama_mapel ASC");
-$subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get Subjects (Mapel)
+$subjects = getFilteredSubjects($pdo);
 
 // Fetch Grades
 $rekap_data = [];

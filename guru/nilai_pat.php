@@ -29,40 +29,19 @@ if ($is_admin_view) {
     $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
-    // Get teacher's classes
-    $stmt = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
-    $stmt->execute([$id_guru]);
-    $mengajar_json = $stmt->fetchColumn();
-    $mengajar_ids = json_decode($mengajar_json, true) ?? [];
-
-    if (!empty($mengajar_ids)) {
-        $placeholders = str_repeat('?,', count($mengajar_ids) - 1) . '?';
-        $params = array_merge($mengajar_ids, $mengajar_ids);
-        $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) OR nama_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
-        $stmt->execute($params);
-        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+    $classes = getTeacherAccessibleClasses($pdo, $id_guru);
 }
 
 // Fetch subjects
 $subjects = [];
 if ($is_admin_view) {
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
-        WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik')
-        AND nama_mapel NOT LIKE '%Asmaul Husna%'
-        AND nama_mapel NOT LIKE '%Upacara%'
-        AND nama_mapel NOT LIKE '%Istirahat%'
-        AND nama_mapel NOT LIKE '%Kepramukaan%'
-        AND nama_mapel NOT LIKE '%Ekstrakurikuler%'
-        ORDER BY nama_mapel ASC");
-    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $subjects = getFilteredSubjects($pdo);
 } else {
     $stmt = $pdo->prepare("
         SELECT DISTINCT mp.* 
         FROM tb_mata_pelajaran mp
         JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
         WHERE jp.guru_id = ?
-        AND (mp.jenis_mapel IS NULL OR mp.jenis_mapel = 'Akademik')
         AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
         AND mp.nama_mapel NOT LIKE '%Upacara%'
         AND mp.nama_mapel NOT LIKE '%Istirahat%'
@@ -72,6 +51,10 @@ $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran
     ");
     $stmt->execute([$id_guru]);
     $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($user_role === 'wali' && empty($subjects)) {
+        $subjects = getFilteredSubjects($pdo);
+    }
 }
 
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
