@@ -317,9 +317,10 @@ switch ($user_level) {
                 'submenu' => [
                     ['title' => 'Jadwal Reguler', 'url' => '../tata_usaha/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
                     ['title' => 'Jadwal Ramadhan', 'url' => '../tata_usaha/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
+                    ['title' => 'Jadwal Les Kelas 6', 'url' => '../admin/jadwal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jadwal_les.php'],
                     ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php?session_type=tata_usaha', 'active' => $current_page === 'jadwal_imam.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php'])
             ],
             [
                 'title' => 'Absensi',

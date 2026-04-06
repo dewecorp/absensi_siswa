@@ -836,97 +836,70 @@ include_once '../templates/sidebar.php';
                     </div>
                     
                     <div class="row">
-                        <div class="col-lg-6 col-md-12 col-12 col-sm-12">
+                        <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Rekap Absensi Guru Hari Ini (Terbaru)</h4>
+                                    <h4>Aktivitas Pengguna <span class="badge badge-primary"><?php echo $total_activities; ?></span></h4>
                                     <div class="card-header-action">
-                                        <a href="../admin/rekap_absensi_guru.php" class="btn btn-primary">Lihat Semua</a>
+                                        <a href="../admin/activity_log.php?session_type=tata_usaha" class="btn btn-primary">Lihat Semua</a>
                                     </div>
                                 </div>
-                                <div class="card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Nama Guru</th>
-                                                    <th>Status</th>
-                                                    <th>Waktu</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if (count($latest_guru_attendance) > 0): ?>
-                                                    <?php foreach ($latest_guru_attendance as $row): ?>
-                                                        <tr>
-                                                            <td><?php echo htmlspecialchars($row['nama_guru']); ?></td>
-                                                            <td>
-                                                                <?php 
-                                                                $badge_class = 'badge-secondary';
-                                                                if ($row['status'] == 'Hadir') $badge_class = 'badge-success';
-                                                                elseif ($row['status'] == 'Sakit') $badge_class = 'badge-danger';
-                                                                elseif ($row['status'] == 'Izin') $badge_class = 'badge-warning';
-                                                                ?>
-                                                                <div class="badge <?php echo $badge_class; ?>"><?php echo $row['status']; ?></div>
-                                                            </td>
-                                                            <td><?php echo isset($row['waktu_input']) && $row['waktu_input'] ? date('H:i:s', strtotime($row['waktu_input'])) : '-'; ?></td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                <?php else: ?>
-                                                    <tr>
-                                                        <td colspan="3" class="text-center">Belum ada data absensi guru hari ini.</td>
-                                                    </tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-6 col-md-12 col-12 col-sm-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h4>Rekap Absensi Siswa Hari Ini (Terbaru)</h4>
-                                    <div class="card-header-action">
-                                        <a href="../admin/rekap_absensi.php" class="btn btn-primary">Lihat Semua</a>
-                                    </div>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Nama Siswa</th>
-                                                    <th>Kelas</th>
-                                                    <th>Status</th>
-                                                    <th>Waktu</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if (count($latest_siswa_attendance) > 0): ?>
-                                                    <?php foreach ($latest_siswa_attendance as $row): ?>
-                                                        <tr>
-                                                            <td><?php echo htmlspecialchars($row['nama_siswa']); ?></td>
-                                                            <td><?php echo htmlspecialchars($row['nama_kelas']); ?></td>
-                                                            <td>
-                                                                <?php 
-                                                                $badge_class = 'badge-secondary';
-                                                                if ($row['keterangan'] == 'Hadir') $badge_class = 'badge-success';
-                                                                elseif ($row['keterangan'] == 'Sakit') $badge_class = 'badge-danger';
-                                                                elseif ($row['keterangan'] == 'Izin') $badge_class = 'badge-warning';
-                                                                elseif ($row['keterangan'] == 'Alpa') $badge_class = 'badge-danger';
-                                                                ?>
-                                                                <div class="badge <?php echo $badge_class; ?>"><?php echo $row['keterangan']; ?></div>
-                                                            </td>
-                                                            <td><?php echo isset($row['jam_masuk']) && $row['jam_masuk'] ? date('H:i:s', strtotime($row['jam_masuk'])) : '-'; ?></td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                <?php else: ?>
-                                                    <tr>
-                                                        <td colspan="4" class="text-center">Belum ada data absensi siswa hari ini.</td>
-                                                    </tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
+                                <div class="card-body">
+                                    <div class="activities" style="max-height: 600px; overflow-y: auto;">
+                                        <?php 
+                                        if (!empty($activities)):
+                                            foreach ($activities as $activity): 
+                                        ?>
+                                        <div class="activity">
+                                            <?php 
+                                                $actColor = function_exists('getActivityColor') ? getActivityColor(htmlspecialchars($activity['action'])) : 'bg-primary';
+                                                $actShadow = str_replace('bg-', 'shadow-', $actColor);
+                                            ?>
+                                            <div class="activity-icon <?php echo $actColor; ?> text-white <?php echo $actShadow; ?>">
+                                                <i class="<?php 
+                                                    if (function_exists('getActivityIcon')) {
+                                                        echo getActivityIcon(htmlspecialchars($activity['action']));
+                                                    } else {
+                                                        echo 'fas fa-info-circle';
+                                                    }
+                                                ?>"></i>
+                                            </div>
+                                            <div class="activity-detail w-100">
+                                                <div class="card shadow-sm border-0 mb-0 w-100" style="background-color: #f8f9fa;">
+                                                    <div class="card-body p-3">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <span class="text-job text-primary font-weight-bold text-capitalize" style="font-size: 14px;">
+                                                                <?php echo htmlspecialchars($activity['display_name']); ?>
+                                                            </span>
+                                                            <small class="text-muted font-weight-bold">
+                                                                <i class="far fa-clock mr-1"></i><?php echo timeAgo($activity['created_at']); ?>
+                                                            </small>
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <span class="badge badge-white border text-primary font-weight-bold shadow-sm" style="font-size: 11px;">
+                                                                <?php echo htmlspecialchars($activity['action']); ?>
+                                                            </span>
+                                                        </div>
+                                                        <p class="mb-2 text-dark" style="line-height: 1.5; font-size: 13px;">
+                                                            <?php echo htmlspecialchars($activity['description']); ?>
+                                                        </p>
+                                                        <div class="text-muted small border-top pt-2 mt-2 d-flex align-items-center" style="font-size: 11px;">
+                                                            <i class="far fa-calendar-alt mr-1"></i> <?php echo date('d M Y', strtotime($activity['created_at'])); ?>
+                                                            <span class="mx-2">•</span>
+                                                            <i class="far fa-clock mr-1"></i> <?php echo date('H:i:s', strtotime($activity['created_at'])); ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php 
+                                            endforeach; 
+                                        else: 
+                                        ?>
+                                        <div class="text-center py-4">
+                                            <p class="text-muted">Tidak ada aktivitas terbaru</p>
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
