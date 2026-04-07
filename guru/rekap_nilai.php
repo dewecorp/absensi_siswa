@@ -76,11 +76,32 @@ $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran = $school_profile['tahun_ajaran'];
 $semester_aktif = $school_profile['semester'];
 
+// Check if selected class is grade 6 (kelas 6)
+$is_grade_6 = false;
+if ($selected_class_id) {
+    $stmt = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+    $stmt->execute([$selected_class_id]);
+    $kelas_name = $stmt->fetchColumn();
+    if ($kelas_name && (strpos(strtolower($kelas_name), '6') !== false || strpos(strtolower($kelas_name), 'vi') !== false)) {
+        $is_grade_6 = true;
+    }
+}
+
 // Data Fetching
 $students = [];
 $rekap_data = [];
 
 if ($selected_class && $selected_jenis) {
+    // Map new exam type names to database values
+    $exam_type_map = [
+        'PTS' => 'UTS',
+        'PAS' => 'UAS',
+        'PAT' => 'PAT',
+        'Pra Ujian Madrasah' => 'Pra Ujian',
+        'Ujian Madrasah' => 'Ujian'
+    ];
+    $db_jenis = $exam_type_map[$selected_jenis] ?? $selected_jenis;
+    
     // Get Students
     $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
     $stmt->execute([$selected_class_id]);
@@ -122,14 +143,14 @@ if ($selected_class && $selected_jenis) {
                     }
                 }
             } else {
-                // Logic for Semester (UTS, UAS, PAT, etc)
+                // Logic for Semester (PTS, PAS, PAT, etc)
                 $stmt = $pdo->prepare("
                     SELECT * FROM tb_nilai_semester 
                     WHERE id_kelas = ? AND id_mapel = ? 
                     AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
                     AND id_siswa = ?
                 ");
-                $stmt->execute([$selected_class_id, $mapel['id_mapel'], $selected_jenis, $tahun_ajaran, $semester_aktif, $student['id_siswa']]);
+                $stmt->execute([$selected_class_id, $mapel['id_mapel'], $db_jenis, $tahun_ajaran, $semester_aktif, $student['id_siswa']]);
                 $grade = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if ($grade) {
@@ -248,11 +269,13 @@ require_once '../templates/sidebar.php';
                                     <select name="jenis" class="form-control" required onchange="this.form.submit()">
                                         <option value="">-- Pilih Jenis --</option>
                                         <option value="Harian" <?= $selected_jenis == 'Harian' ? 'selected' : '' ?>>Nilai Harian (Rerata)</option>
-                                        <option value="UTS" <?= $selected_jenis == 'UTS' ? 'selected' : '' ?>>Nilai Tengah Semester (UTS)</option>
-                                        <option value="UAS" <?= $selected_jenis == 'UAS' ? 'selected' : '' ?>>Nilai Akhir Semester (UAS)</option>
-                                        <option value="PAT" <?= $selected_jenis == 'PAT' ? 'selected' : '' ?>>Nilai Akhir Tahun (PAT)</option>
-                                        <option value="Pra Ujian" <?= $selected_jenis == 'Pra Ujian' ? 'selected' : '' ?>>Nilai Pra Ujian</option>
-                                        <option value="Ujian" <?= $selected_jenis == 'Ujian' ? 'selected' : '' ?>>Nilai Ujian</option>
+                                        <option value="PTS" <?= $selected_jenis == 'PTS' ? 'selected' : '' ?>>Penilaian Tengah Semester (PTS)</option>
+                                        <option value="PAS" <?= $selected_jenis == 'PAS' ? 'selected' : '' ?>>Penilaian Akhir Semester (PAS)</option>
+                                        <option value="PAT" <?= $selected_jenis == 'PAT' ? 'selected' : '' ?>>Penilaian Akhir Tahun (PAT)</option>
+                                        <?php if ($is_grade_6): ?>
+                                        <option value="Pra Ujian Madrasah" <?= $selected_jenis == 'Pra Ujian Madrasah' ? 'selected' : '' ?>>Nilai Pra Ujian Madrasah</option>
+                                        <option value="Ujian Madrasah" <?= $selected_jenis == 'Ujian Madrasah' ? 'selected' : '' ?>>Nilai Ujian Madrasah</option>
+                                        <?php endif; ?>
                                     </select>
                                 </div>
                             </div>

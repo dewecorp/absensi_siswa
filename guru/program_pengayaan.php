@@ -41,13 +41,28 @@ if ($user_role === 'wali' && empty($subjects)) {
     $subjects = getFilteredSubjects($pdo);
 }
 
-// Filter exam types
-$exam_types = ['UTS', 'UAS', 'PAT', 'Pra Ujian', 'Ujian'];
-
-// Selected filters
+// Selected filters - MUST BE BEFORE grade 6 check
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : (count($classes) == 1 ? $classes[0]['id_kelas'] : null);
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
 $selected_exam_type = isset($_GET['jenis']) ? $_GET['jenis'] : null;
+
+// Check if selected class is grade 6 (kelas 6)
+$is_grade_6 = false;
+if ($selected_class_id) {
+    $stmt = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+    $stmt->execute([$selected_class_id]);
+    $kelas_name = $stmt->fetchColumn();
+    if ($kelas_name && (strpos(strtolower($kelas_name), '6') !== false || strpos(strtolower($kelas_name), 'vi') !== false)) {
+        $is_grade_6 = true;
+    }
+}
+
+// Filter exam types - Pra Ujian Madrasah and Ujian Madrasah only for grade 6
+$exam_types = ['PTS', 'PAS', 'PAT'];
+if ($is_grade_6) {
+    $exam_types[] = 'Pra Ujian Madrasah';
+    $exam_types[] = 'Ujian Madrasah';
+}
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
@@ -61,6 +76,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_enrichment_students') {
         $id_kelas = $_GET['id_kelas'];
         $id_mapel = $_GET['id_mapel'];
         $jenis = $_GET['jenis'];
+        
+        // Map new exam type names to database values
+        $exam_type_map = [
+            'PTS' => 'UTS',
+            'PAS' => 'UAS',
+            'PAT' => 'PAT',
+            'Pra Ujian Madrasah' => 'Pra Ujian',
+            'Ujian Madrasah' => 'Ujian'
+        ];
+        $db_jenis = $exam_type_map[$jenis] ?? $jenis;
         
         // Get KKTP for the subject
         $stmt = $pdo->prepare("SELECT kktp FROM tb_mata_pelajaran WHERE id_mapel = ?");
@@ -84,7 +109,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_enrichment_students') {
             )
             ORDER BY s.nama_siswa ASC
         ");
-        $stmt->execute([$id_kelas, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif, $kktp, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
+        // Use $jenis (display name) for tb_program_pengayaan, $db_jenis for tb_nilai_semester
+        $stmt->execute([$id_kelas, $id_mapel, $db_jenis, $tahun_ajaran, $semester_aktif, $kktp, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         echo json_encode(['status' => 'success', 'students' => $students, 'kktp' => $kktp]);
@@ -141,20 +167,30 @@ if (isset($_POST['action']) && $_POST['action'] == 'delete') {
 // Fetch existing enrichment data for the table
 $enrichment_list = [];
 if ($selected_class_id && $selected_mapel_id && $selected_exam_type) {
+    // Map display name to database value for JOIN
+    $exam_type_map = [
+        'PTS' => 'UTS',
+        'PAS' => 'UAS',
+        'PAT' => 'PAT',
+        'Pra Ujian Madrasah' => 'Pra Ujian',
+        'Ujian Madrasah' => 'Ujian'
+    ];
+    $db_exam_type = $exam_type_map[$selected_exam_type] ?? $selected_exam_type;
+    
     $stmt = $pdo->prepare("
         SELECT p.*, s.nama_siswa, n.nilai_asli
         FROM tb_program_pengayaan p
         JOIN tb_siswa s ON p.id_siswa = s.id_siswa
         LEFT JOIN tb_nilai_semester n ON s.id_siswa = n.id_siswa 
             AND n.id_mapel = p.id_mapel 
-            AND n.jenis_semester = p.jenis_ulangan
+            AND n.jenis_semester = ?
             AND n.tahun_ajaran = p.tahun_ajaran
             AND n.semester = p.semester
         WHERE p.id_kelas = ? AND p.id_mapel = ? AND p.jenis_ulangan = ? 
         AND p.tahun_ajaran = ? AND p.semester = ?
         ORDER BY s.nama_siswa ASC
     ");
-    $stmt->execute([$selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
+    $stmt->execute([$db_exam_type, $selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
     $enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 

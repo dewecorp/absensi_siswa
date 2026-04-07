@@ -41,13 +41,28 @@ if ($user_role === 'wali' && empty($subjects)) {
     $subjects = getFilteredSubjects($pdo);
 }
 
-// Filter exam types
-$exam_types = ['UTS', 'UAS', 'PAT', 'Pra Ujian', 'Ujian'];
-
-// Selected filters
+// Selected filters - MUST BE BEFORE grade 6 check
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : (count($classes) == 1 ? $classes[0]['id_kelas'] : null);
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
 $selected_exam_type = isset($_GET['jenis']) ? $_GET['jenis'] : null;
+
+// Check if selected class is grade 6 (kelas 6)
+$is_grade_6 = false;
+if ($selected_class_id) {
+    $stmt = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+    $stmt->execute([$selected_class_id]);
+    $kelas_name = $stmt->fetchColumn();
+    if ($kelas_name && (strpos(strtolower($kelas_name), '6') !== false || strpos(strtolower($kelas_name), 'vi') !== false)) {
+        $is_grade_6 = true;
+    }
+}
+
+// Filter exam types - Pra Ujian Madrasah and Ujian Madrasah only for grade 6
+$exam_types = ['PTS', 'PAS', 'PAT'];
+if ($is_grade_6) {
+    $exam_types[] = 'Pra Ujian Madrasah';
+    $exam_types[] = 'Ujian Madrasah';
+}
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
@@ -61,6 +76,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_remedial_students') {
         $id_kelas = $_GET['id_kelas'];
         $id_mapel = $_GET['id_mapel'];
         $jenis = $_GET['jenis'];
+        
+        // Map new exam type names to database values
+        $exam_type_map = [
+            'PTS' => 'UTS',
+            'PAS' => 'UAS',
+            'PAT' => 'PAT',
+            'Pra Ujian Madrasah' => 'Pra Ujian',
+            'Ujian Madrasah' => 'Ujian'
+        ];
+        $db_jenis = $exam_type_map[$jenis] ?? $jenis;
         
         // Get KKM for the subject
         $stmt = $pdo->prepare("SELECT kktp FROM tb_mata_pelajaran WHERE id_mapel = ?");
@@ -84,7 +109,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_remedial_students') {
             )
             ORDER BY s.nama_siswa ASC
         ");
-        $stmt->execute([$id_kelas, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif, $kkm, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
+        // Use $jenis (display name) for tb_program_remidial, $db_jenis for tb_nilai_semester
+        $stmt->execute([$id_kelas, $id_mapel, $db_jenis, $tahun_ajaran, $semester_aktif, $kkm, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         echo json_encode(['status' => 'success', 'students' => $students, 'kkm' => $kkm]);
@@ -108,6 +134,16 @@ if (isset($_POST['action']) && ($_POST['action'] == 'save' || $_POST['action'] =
         $bentuk = $_POST['bentuk'];
         $nomor_soal = $_POST['nomor_soal'];
         $nilai_tes = $_POST['nilai_tes'];
+        
+        // Map new exam type names to database values
+        $exam_type_map = [
+            'PTS' => 'UTS',
+            'PAS' => 'UAS',
+            'PAT' => 'PAT',
+            'Pra Ujian Madrasah' => 'Pra Ujian',
+            'Ujian Madrasah' => 'Ujian'
+        ];
+        $db_jenis = $exam_type_map[$jenis] ?? $jenis;
         
         // Auto-determine status
         $keterangan = ($nilai_tes >= $kkm) ? 'Tuntas' : 'Tidak Tuntas';
@@ -134,12 +170,12 @@ if (isset($_POST['action']) && ($_POST['action'] == 'save' || $_POST['action'] =
             if ($nilai_jadi > 99) $nilai_jadi = 99;
         }
 
-        // Check if grade record exists
+        // Check if grade record exists - use db_jenis for database query
         $stmt_check = $pdo->prepare("
             SELECT id_nilai FROM tb_nilai_semester 
             WHERE id_siswa = ? AND id_mapel = ? AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
         ");
-        $stmt_check->execute([$id_siswa, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
+        $stmt_check->execute([$id_siswa, $id_mapel, $db_jenis, $tahun_ajaran, $semester_aktif]);
         $existing_grade = $stmt_check->fetch(PDO::FETCH_ASSOC);
 
         if ($existing_grade) {
@@ -148,21 +184,50 @@ if (isset($_POST['action']) && ($_POST['action'] == 'save' || $_POST['action'] =
             ");
             $stmt_update_grade->execute([$nilai_tes, $nilai_jadi, $existing_grade['id_nilai']]);
         } else {
-            $stmt_insert_grade = $pdo->prepare("
-                INSERT INTO tb_nilai_semester (id_siswa, id_mapel, id_kelas, id_guru, jenis_semester, tahun_ajaran, semester, nilai_asli, nilai_remidi, nilai_jadi)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt_insert_grade->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $jenis, $tahun_ajaran, $semester_aktif, $nilai_ulangan, $nilai_tes, $nilai_jadi]);
+            // Try INSERT, if duplicate key error, do UPDATE instead
+            try {
+                $stmt_insert_grade = $pdo->prepare("
+                    INSERT INTO tb_nilai_semester (id_siswa, id_mapel, id_kelas, id_guru, jenis_semester, tahun_ajaran, semester, nilai_asli, nilai_remidi, nilai_jadi)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt_insert_grade->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $db_jenis, $tahun_ajaran, $semester_aktif, $nilai_ulangan, $nilai_tes, $nilai_jadi]);
+            } catch (PDOException $e) {
+                // If duplicate entry, update instead
+                if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                    $stmt_update_grade = $pdo->prepare("
+                        UPDATE tb_nilai_semester SET nilai_remidi = ?, nilai_jadi = ? 
+                        WHERE id_siswa = ? AND id_mapel = ? AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
+                    ");
+                    $stmt_update_grade->execute([$nilai_tes, $nilai_jadi, $id_siswa, $id_mapel, $db_jenis, $tahun_ajaran, $semester_aktif]);
+                } else {
+                    throw $e;
+                }
+            }
         }
         // END: Update to tb_nilai_semester
 
         if ($_POST['action'] == 'save') {
-            $stmt = $pdo->prepare("
-                INSERT INTO tb_program_remidial 
-                (id_siswa, id_mapel, id_kelas, id_guru, jenis_ulangan, tahun_ajaran, semester, kkm, nilai_ulangan, indikator_tidak_dikuasai, bentuk_remidial, nomor_soal, nilai_tes_remidi, keterangan, tanggal) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $jenis, $tahun_ajaran, $semester_aktif, $kkm, $nilai_ulangan, $indikator, $bentuk, $nomor_soal, $nilai_tes, $keterangan, date('Y-m-d')]);
+            // Try INSERT, handle duplicate if exists
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO tb_program_remidial 
+                    (id_siswa, id_mapel, id_kelas, id_guru, jenis_ulangan, tahun_ajaran, semester, kkm, nilai_ulangan, indikator_tidak_dikuasai, bentuk_remidial, nomor_soal, nilai_tes_remidi, keterangan, tanggal) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $jenis, $tahun_ajaran, $semester_aktif, $kkm, $nilai_ulangan, $indikator, $bentuk, $nomor_soal, $nilai_tes, $keterangan, date('Y-m-d')]);
+            } catch (PDOException $e) {
+                // If duplicate entry, update instead
+                if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                    $stmt = $pdo->prepare("
+                        UPDATE tb_program_remidial SET 
+                        kkm = ?, nilai_ulangan = ?, indikator_tidak_dikuasai = ?, bentuk_remidial = ?, nomor_soal = ?, nilai_tes_remidi = ?, keterangan = ?, tanggal = ?
+                        WHERE id_siswa = ? AND id_mapel = ? AND jenis_ulangan = ? AND tahun_ajaran = ? AND semester = ?
+                    ");
+                    $stmt->execute([$kkm, $nilai_ulangan, $indikator, $bentuk, $nomor_soal, $nilai_tes, $keterangan, date('Y-m-d'), $id_siswa, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
+                } else {
+                    throw $e;
+                }
+            }
         } else {
             $stmt = $pdo->prepare("
                 UPDATE tb_program_remidial SET 
@@ -280,15 +345,8 @@ $(document).ready(function() {
             contentType: false,
             success: function(res) {
                 if (res.status === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: 'Data remedial berhasil disimpan dan nilai otomatis diperbarui',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        location.reload();
-                    });
+                    iziToast.success({ title: 'Berhasil', message: 'Data remedial berhasil disimpan dan nilai otomatis diperbarui', position: 'topRight' });
+                    setTimeout(() => location.reload(), 1000);
                 } else {
                     iziToast.error({ title: 'Gagal', message: res.message, position: 'topRight' });
                 }
@@ -315,15 +373,8 @@ $(document).ready(function() {
                     data: { action: 'delete', id_remidi: id },
                     success: function(res) {
                         if (res.status === 'success') {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Terhapus!',
-                                text: 'Data remedial telah dihapus.',
-                                timer: 1500,
-                                showConfirmButton: false
-                            }).then(() => {
-                                location.reload();
-                            });
+                            iziToast.success({ title: 'Terhapus', message: 'Data remedial telah dihapus', position: 'topRight' });
+                            setTimeout(() => location.reload(), 1000);
                         }
                     }
                 });

@@ -20,6 +20,10 @@ if (!$student) {
 }
 
 $id_kelas = $student['id_kelas'];
+$nama_kelas_siswa = $student['nama_kelas'];
+
+// Check if student is in grade 6
+$is_grade_6 = (strpos(strtolower($nama_kelas_siswa), '6') !== false || strpos(strtolower($nama_kelas_siswa), 'vi') !== false);
 
 // Get Active Semester
 $school_profile = getSchoolProfile($pdo);
@@ -79,14 +83,24 @@ foreach ($subjects as $mapel) {
             }
         }
     } else {
-        // Logic for Semester (UTS, UAS, PAT, Pra Ujian, Ujian, Kokurikuler)
+        // Logic for Semester (PTS, PAS, PAT, etc)
+        // Map new exam type names to database values
+        $exam_type_map = [
+            'PTS' => 'UTS',
+            'PAS' => 'UAS',
+            'PAT' => 'PAT',
+            'Pra Ujian Madrasah' => 'Pra Ujian',
+            'Ujian Madrasah' => 'Ujian'
+        ];
+        $db_jenis = $exam_type_map[$selected_jenis] ?? $selected_jenis;
+        
         $stmt = $pdo->prepare("
             SELECT * FROM tb_nilai_semester 
             WHERE id_kelas = ? AND id_mapel = ? 
             AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
             AND id_siswa = ?
         ");
-        $stmt->execute([$id_kelas, $mapel['id_mapel'], $selected_jenis, $tahun_ajaran, $semester_aktif, $id_siswa]);
+        $stmt->execute([$id_kelas, $mapel['id_mapel'], $db_jenis, $tahun_ajaran, $semester_aktif, $id_siswa]);
         $grade = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($grade) {
@@ -154,18 +168,14 @@ require_once '../templates/sidebar.php';
                                     <label>Jenis Penilaian</label>
                                     <select name="jenis" class="form-control" onchange="this.form.submit()">
                                         <option value="Harian" <?= $selected_jenis == 'Harian' ? 'selected' : '' ?>>Nilai Harian (Rerata)</option>
-                                        <option value="UTS" <?= $selected_jenis == 'UTS' ? 'selected' : '' ?>>Nilai Tengah Semester (UTS)</option>
-                                        <option value="UAS" <?= $selected_jenis == 'UAS' ? 'selected' : '' ?>>Nilai Akhir Semester (UAS)</option>
-                                        <option value="PAT" <?= $selected_jenis == 'PAT' ? 'selected' : '' ?>>Nilai Akhir Tahun (PAT)</option>
+                                        <option value="PTS" <?= $selected_jenis == 'PTS' ? 'selected' : '' ?>>Penilaian Tengah Semester (PTS)</option>
+                                        <option value="PAS" <?= $selected_jenis == 'PAS' ? 'selected' : '' ?>>Penilaian Akhir Semester (PAS)</option>
+                                        <option value="PAT" <?= $selected_jenis == 'PAT' ? 'selected' : '' ?>>Penilaian Akhir Tahun (PAT)</option>
                                         <option value="Kokurikuler" <?= $selected_jenis == 'Kokurikuler' ? 'selected' : '' ?>>Nilai Kokurikuler</option>
                                         
-                                        <?php
-                                        // Check Grade 6 for additional options
-                                        $nk = strtoupper($student['nama_kelas']);
-                                        if (strpos($nk, '6') !== false || strpos($nk, 'VI') !== false):
-                                        ?>
-                                            <option value="Pra Ujian" <?= $selected_jenis == 'Pra Ujian' ? 'selected' : '' ?>>Nilai Pra Ujian</option>
-                                            <option value="Ujian" <?= $selected_jenis == 'Ujian' ? 'selected' : '' ?>>Nilai Ujian</option>
+                                        <?php if ($is_grade_6): ?>
+                                            <option value="Pra Ujian Madrasah" <?= $selected_jenis == 'Pra Ujian Madrasah' ? 'selected' : '' ?>>Nilai Pra Ujian Madrasah</option>
+                                            <option value="Ujian Madrasah" <?= $selected_jenis == 'Ujian Madrasah' ? 'selected' : '' ?>>Nilai Ujian Madrasah</option>
                                         <?php endif; ?>
                                     </select>
                                 </div>

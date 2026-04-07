@@ -94,7 +94,7 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Program Remidi - <?= htmlspecialchars($mapel) ?></title>
+    <title>Program Remidi - <?= htmlspecialchars($mapel) ?> - Kelas <?= htmlspecialchars($kelas) ?></title>
     <style>
         @media print {
             @page {

@@ -98,7 +98,7 @@ $enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Program Pengayaan - <?= htmlspecialchars($mapel) ?></title>
+    <title>Program Pengayaan - <?= htmlspecialchars($mapel) ?> - Kelas <?= htmlspecialchars($kelas) ?></title>
     <style>
         @media print {
             @page {
