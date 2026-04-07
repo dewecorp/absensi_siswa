@@ -353,7 +353,7 @@ require_once '../templates/sidebar.php';
             <div class="card">
                 <div class="card-body">
                     <form method="GET" action="" class="mb-4">
-                        <div class="row">
+                        <div class="row align-items-end">
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Kelas</label>
@@ -398,12 +398,23 @@ require_once '../templates/sidebar.php';
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-3 text-right mt-4">
-                                <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
-                                    <button type="button" class="btn btn-primary" id="btn-add-remedial">
-                                        <i class="fas fa-plus"></i> Tambah Data Remidi
-                                    </button>
-                                <?php endif; ?>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
+                                        <div class="btn-group">
+                                            <a href="export_program_remidi_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="fas fa-file-excel"></i> Excel
+                                            </a>
+                                            <a href="export_program_remidi_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-file-pdf"></i> PDF
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-primary" id="btn-add-remedial">
+                                                <i class="fas fa-plus"></i> Tambah Remidi
+                                            </button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </form>
