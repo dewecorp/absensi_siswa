@@ -173,6 +173,7 @@ require_once '../templates/sidebar.php';
 
 <?php
 // Add JavaScript for Chart.js and Export functions
+$session_type_js = $_SESSION['level'] ?? 'admin';
 if (!isset($js_page)) {
     $js_page = [];
 }
@@ -235,7 +236,7 @@ function exportTableToExcel() {
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/excel_export.php?session_type=admin';
+    f.action = '../config/excel_export.php?session_type=' + '$session_type_js';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';
@@ -269,7 +270,7 @@ function exportTableToPDF() {
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/pdf_export.php?session_type=admin';
+    f.action = '../config/pdf_export.php?session_type=' + '$session_type_js';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';
@@ -302,7 +303,7 @@ function exportChartToPDF() {
     var imgData = canvas.toDataURL('image/png', 1.0);
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/pdf_export.php?session_type=admin';
+    f.action = '../config/pdf_export.php?session_type=' + '$session_type_js';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';

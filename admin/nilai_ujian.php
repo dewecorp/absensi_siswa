@@ -165,10 +165,10 @@ require_once '../templates/sidebar.php';
                     <?php if ($selected_class && $selected_mapel): ?>
                         <div class="mb-3 text-right">
                             <div class="btn-group">
-                                <a href="../guru/export_nilai_semester_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-success">
+                                <a href="../guru/export_nilai_semester_excel.php?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-success">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
-                                <a href="../guru/export_nilai_semester_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-danger">
+                                <a href="../guru/export_nilai_semester_pdf.php?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-danger">
                                     <i class="fas fa-file-pdf"></i> Export PDF
                                 </a>
                             </div>
