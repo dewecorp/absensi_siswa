@@ -7,7 +7,7 @@ if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
 }
 
-$page_title = 'Program Remidial';
+$page_title = 'Program Pengayaan';
 $user_role = $_SESSION['level'];
 
 // Get teacher data
@@ -54,20 +54,20 @@ $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran = $school_profile['tahun_ajaran'];
 $semester_aktif = $school_profile['semester'];
 
-// Handle AJAX: Get students needing remedial
-if (isset($_GET['action']) && $_GET['action'] == 'get_remedial_students') {
+// Handle AJAX: Get students eligible for enrichment (nilai >= KKTP)
+if (isset($_GET['action']) && $_GET['action'] == 'get_enrichment_students') {
     header('Content-Type: application/json');
     try {
         $id_kelas = $_GET['id_kelas'];
         $id_mapel = $_GET['id_mapel'];
         $jenis = $_GET['jenis'];
         
-        // Get KKM for the subject
+        // Get KKTP for the subject
         $stmt = $pdo->prepare("SELECT kktp FROM tb_mata_pelajaran WHERE id_mapel = ?");
         $stmt->execute([$id_mapel]);
-        $kkm = $stmt->fetchColumn() ?: 75;
+        $kktp = $stmt->fetchColumn() ?: 75;
 
-        // Get students with grades < KKM
+        // Get students with grades >= KKTP
         $stmt = $pdo->prepare("
             SELECT s.id_siswa, s.nama_siswa, n.nilai_asli
             FROM tb_siswa s
@@ -77,24 +77,24 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_remedial_students') {
             AND n.jenis_semester = ? 
             AND n.tahun_ajaran = ? 
             AND n.semester = ?
-            AND n.nilai_asli < ?
+            AND n.nilai_asli >= ?
             AND s.id_siswa NOT IN (
-                SELECT id_siswa FROM tb_program_remidial 
+                SELECT id_siswa FROM tb_program_pengayaan 
                 WHERE id_mapel = ? AND jenis_ulangan = ? AND tahun_ajaran = ? AND semester = ?
             )
             ORDER BY s.nama_siswa ASC
         ");
-        $stmt->execute([$id_kelas, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif, $kkm, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
+        $stmt->execute([$id_kelas, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif, $kktp, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        echo json_encode(['status' => 'success', 'students' => $students, 'kkm' => $kkm]);
+        echo json_encode(['status' => 'success', 'students' => $students, 'kktp' => $kktp]);
     } catch (Exception $e) {
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
     exit;
 }
 
-// Handle AJAX: Save/Update Remedial
+// Handle AJAX: Save/Update Enrichment
 if (isset($_POST['action']) && ($_POST['action'] == 'save' || $_POST['action'] == 'update')) {
     header('Content-Type: application/json');
     try {
@@ -102,74 +102,20 @@ if (isset($_POST['action']) && ($_POST['action'] == 'save' || $_POST['action'] =
         $id_mapel = $_POST['id_mapel'];
         $id_kelas = $_POST['id_kelas'];
         $jenis = $_POST['jenis_ulangan'];
-        $kkm = $_POST['kkm'];
-        $nilai_ulangan = $_POST['nilai_ulangan'];
-        $indikator = $_POST['indikator'];
         $bentuk = $_POST['bentuk'];
-        $nomor_soal = $_POST['nomor_soal'];
-        $nilai_tes = $_POST['nilai_tes'];
         
-        // Auto-determine status
-        $keterangan = ($nilai_tes >= $kkm) ? 'Tuntas' : 'Tidak Tuntas';
-
-        // START: Update to tb_nilai_semester
-        // Logic from ajax_nilai_semester.php
-        $temp_jadi = ($nilai_tes > $nilai_ulangan) ? $nilai_tes : $nilai_ulangan;
-        $nilai_jadi = $temp_jadi;
-        
-        if ($kkm > 0 && $temp_jadi > 0) {
-            if ($temp_jadi < $kkm) {
-                $nilai_jadi = $kkm;
-            } else {
-                $maxVal = 99;
-                $range = $maxVal - $kkm;
-                $inputRange = 100 - $kkm;
-                if ($range > 0) {
-                    $ratio = ($temp_jadi - $kkm) / $inputRange;
-                    $ratioBoosted = 1 - pow(1 - $ratio, 2);
-                    $nilai_jadi = $kkm + ($range * $ratioBoosted);
-                }
-            }
-            $nilai_jadi = round($nilai_jadi);
-            if ($nilai_jadi > 99) $nilai_jadi = 99;
-        }
-
-        // Check if grade record exists
-        $stmt_check = $pdo->prepare("
-            SELECT id_nilai FROM tb_nilai_semester 
-            WHERE id_siswa = ? AND id_mapel = ? AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
-        ");
-        $stmt_check->execute([$id_siswa, $id_mapel, $jenis, $tahun_ajaran, $semester_aktif]);
-        $existing_grade = $stmt_check->fetch(PDO::FETCH_ASSOC);
-
-        if ($existing_grade) {
-            $stmt_update_grade = $pdo->prepare("
-                UPDATE tb_nilai_semester SET nilai_remidi = ?, nilai_jadi = ? WHERE id_nilai = ?
-            ");
-            $stmt_update_grade->execute([$nilai_tes, $nilai_jadi, $existing_grade['id_nilai']]);
-        } else {
-            $stmt_insert_grade = $pdo->prepare("
-                INSERT INTO tb_nilai_semester (id_siswa, id_mapel, id_kelas, id_guru, jenis_semester, tahun_ajaran, semester, nilai_asli, nilai_remidi, nilai_jadi)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt_insert_grade->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $jenis, $tahun_ajaran, $semester_aktif, $nilai_ulangan, $nilai_tes, $nilai_jadi]);
-        }
-        // END: Update to tb_nilai_semester
-
         if ($_POST['action'] == 'save') {
             $stmt = $pdo->prepare("
-                INSERT INTO tb_program_remidial 
-                (id_siswa, id_mapel, id_kelas, id_guru, jenis_ulangan, tahun_ajaran, semester, kkm, nilai_ulangan, indikator_tidak_dikuasai, bentuk_remidial, nomor_soal, nilai_tes_remidi, keterangan, tanggal) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tb_program_pengayaan 
+                (id_siswa, id_mapel, id_kelas, id_guru, jenis_ulangan, tahun_ajaran, semester, bentuk_pengayaan, tanggal) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $jenis, $tahun_ajaran, $semester_aktif, $kkm, $nilai_ulangan, $indikator, $bentuk, $nomor_soal, $nilai_tes, $keterangan, date('Y-m-d')]);
+            $stmt->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $jenis, $tahun_ajaran, $semester_aktif, $bentuk, date('Y-m-d')]);
         } else {
             $stmt = $pdo->prepare("
-                UPDATE tb_program_remidial SET 
-                kkm = ?, nilai_ulangan = ?, indikator_tidak_dikuasai = ?, bentuk_remidial = ?, nomor_soal = ?, nilai_tes_remidi = ?, keterangan = ?, tanggal = ?
-                WHERE id_remidi = ?
+                UPDATE tb_program_pengayaan SET bentuk_pengayaan = ?, tanggal = ? WHERE id_pengayaan = ?
             ");
-            $stmt->execute([$kkm, $nilai_ulangan, $indikator, $bentuk, $nomor_soal, $nilai_tes, $keterangan, date('Y-m-d'), $_POST['id_remidi']]);
+            $stmt->execute([$bentuk, date('Y-m-d'), $_POST['id_pengayaan']]);
         }
         
         echo json_encode(['status' => 'success']);
@@ -183,8 +129,8 @@ if (isset($_POST['action']) && ($_POST['action'] == 'save' || $_POST['action'] =
 if (isset($_POST['action']) && $_POST['action'] == 'delete') {
     header('Content-Type: application/json');
     try {
-        $stmt = $pdo->prepare("DELETE FROM tb_program_remidial WHERE id_remidi = ?");
-        $stmt->execute([$_POST['id_remidi']]);
+        $stmt = $pdo->prepare("DELETE FROM tb_program_pengayaan WHERE id_pengayaan = ?");
+        $stmt->execute([$_POST['id_pengayaan']]);
         echo json_encode(['status' => 'success']);
     } catch (Exception $e) {
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
@@ -192,19 +138,24 @@ if (isset($_POST['action']) && $_POST['action'] == 'delete') {
     exit;
 }
 
-// Fetch existing remedial data for the table
-$remedial_list = [];
+// Fetch existing enrichment data for the table
+$enrichment_list = [];
 if ($selected_class_id && $selected_mapel_id && $selected_exam_type) {
     $stmt = $pdo->prepare("
-        SELECT r.*, s.nama_siswa 
-        FROM tb_program_remidial r
-        JOIN tb_siswa s ON r.id_siswa = s.id_siswa
-        WHERE r.id_kelas = ? AND r.id_mapel = ? AND r.jenis_ulangan = ? 
-        AND r.tahun_ajaran = ? AND r.semester = ?
+        SELECT p.*, s.nama_siswa, n.nilai_asli
+        FROM tb_program_pengayaan p
+        JOIN tb_siswa s ON p.id_siswa = s.id_siswa
+        LEFT JOIN tb_nilai_semester n ON s.id_siswa = n.id_siswa 
+            AND n.id_mapel = p.id_mapel 
+            AND n.jenis_semester = p.jenis_ulangan
+            AND n.tahun_ajaran = p.tahun_ajaran
+            AND n.semester = p.semester
+        WHERE p.id_kelas = ? AND p.id_mapel = ? AND p.jenis_ulangan = ? 
+        AND p.tahun_ajaran = ? AND p.semester = ?
         ORDER BY s.nama_siswa ASC
     ");
     $stmt->execute([$selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
-    $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 $css_libs = ['https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/css/iziToast.min.css'];
@@ -214,16 +165,16 @@ $js_libs = ['https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/js/iziToast.m
 ob_start();
 ?>
 $(document).ready(function() {
-    $('#btn-add-remedial').on('click', function() {
-        $('#form-remedial')[0].reset();
+    $('#btn-add-enrichment').on('click', function() {
+        $('#form-enrichment')[0].reset();
         $('#form-action').val('save');
         $('#select-siswa').prop('disabled', false);
         
-        // Fetch students who need remedial
+        // Fetch students who are eligible for enrichment
         $.ajax({
-            url: 'program_remidi.php',
+            url: 'program_pengayaan.php',
             data: {
-                action: 'get_remedial_students',
+                action: 'get_enrichment_students',
                 id_kelas: '<?= $selected_class_id ?>',
                 id_mapel: '<?= $selected_mapel_id ?>',
                 jenis: '<?= $selected_exam_type ?>'
@@ -235,60 +186,42 @@ $(document).ready(function() {
                         html += `<option value="${s.id_siswa}" data-grade="${s.nilai_asli}">${s.nama_siswa} (Nilai: ${parseFloat(s.nilai_asli)})</option>`;
                     });
                     $('#select-siswa').html(html);
-                    $('#input-kkm').val(res.kkm);
-                    $('#modal-remedial').modal('show');
+                    $('#modal-enrichment').modal('show');
                 }
             }
         });
     });
 
-    $('#select-siswa').on('change', function() {
-        const selected = $(this).find('option:selected');
-        $('#input-nilai-asli').val(selected.data('grade') || 0);
-    });
-
     $('.btn-edit').on('click', function() {
         const data = $(this).data('data');
-        $('#form-remedial')[0].reset();
+        $('#form-enrichment')[0].reset();
         $('#form-action').val('update');
-        $('#form-id-remidi').val(data.id_remidi);
+        $('#form-id-pengayaan').val(data.id_pengayaan);
         
         // In edit mode, we just show the one student
-        $('#select-siswa').html(`<option value="${data.id_siswa}" selected>${data.nama_siswa}</option>`).prop('disabled', true);
-        $('#input-kkm').val(data.kkm);
-        $('#input-nilai-asli').val(data.nilai_ulangan);
-        $('[name="indikator"]').val(data.indikator_tidak_dikuasai);
-        $('[name="bentuk"]').val(data.bentuk_remidial);
-        $('[name="nomor_soal"]').val(data.nomor_soal);
-        $('#input-nilai-remidi').val(data.nilai_tes_remidi);
+        $('#select-siswa').html(`<option value="${data.id_siswa}" selected>${data.nama_siswa} (Nilai: ${parseFloat(data.nilai_asli)})</option>`).prop('disabled', true);
+        $('[name="bentuk"]').val(data.bentuk_pengayaan);
         
-        $('#modal-remedial').modal('show');
+        $('#modal-enrichment').modal('show');
     });
 
-    $('#form-remedial').on('submit', function(e) {
+    $('#form-enrichment').on('submit', function(e) {
         e.preventDefault();
         const formData = new FormData(this);
         if ($('#form-action').val() === 'update') {
-            formData.append('id_siswa', $('#select-siswa').val()); // Append because disabled field isn't sent
+            formData.append('id_siswa', $('#select-siswa').val());
         }
 
         $.ajax({
-            url: 'program_remidi.php',
+            url: 'program_pengayaan.php',
             method: 'POST',
             data: formData,
             processData: false,
             contentType: false,
             success: function(res) {
                 if (res.status === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: 'Data remedial berhasil disimpan dan nilai otomatis diperbarui',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        location.reload();
-                    });
+                    iziToast.success({ title: 'Berhasil', message: 'Data pengayaan berhasil disimpan', position: 'topRight' });
+                    setTimeout(() => location.reload(), 1000);
                 } else {
                     iziToast.error({ title: 'Gagal', message: res.message, position: 'topRight' });
                 }
@@ -299,7 +232,7 @@ $(document).ready(function() {
     $('.btn-delete').on('click', function() {
         const id = $(this).data('id');
         Swal.fire({
-            title: 'Hapus data remedial?',
+            title: 'Hapus data pengayaan?',
             text: "Data yang dihapus tidak dapat dikembalikan!",
             icon: 'warning',
             showCancelButton: true,
@@ -310,20 +243,13 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: 'program_remidi.php',
+                    url: 'program_pengayaan.php',
                     method: 'POST',
-                    data: { action: 'delete', id_remidi: id },
+                    data: { action: 'delete', id_pengayaan: id },
                     success: function(res) {
                         if (res.status === 'success') {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Terhapus!',
-                                text: 'Data remedial telah dihapus.',
-                                timer: 1500,
-                                showConfirmButton: false
-                            }).then(() => {
-                                location.reload();
-                            });
+                            iziToast.success({ title: 'Terhapus', message: 'Data pengayaan telah dihapus', position: 'topRight' });
+                            setTimeout(() => location.reload(), 1000);
                         }
                     }
                 });
@@ -344,7 +270,7 @@ require_once '../templates/sidebar.php';
             <h1><?= $page_title ?></h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item">Remidial</div>
+                <div class="breadcrumb-item">Pengayaan</div>
                 <div class="breadcrumb-item"><?= $page_title ?></div>
             </div>
         </div>
@@ -404,24 +330,22 @@ require_once '../templates/sidebar.php';
                     <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <button type="button" class="btn btn-primary" id="btn-add-remedial">
-                                    <i class="fas fa-plus"></i> Tambah Data Remidi
+                                <button type="button" class="btn btn-primary" id="btn-add-enrichment">
+                                    <i class="fas fa-plus"></i> Tambah Data Pengayaan
                                 </button>
                             </div>
                             <div class="col-md-6 text-right">
                                 <div class="btn-group">
-                                    <a href="export_program_remidi_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-success">
+                                    <a href="export_program_pengayaan_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-success">
                                         <i class="fas fa-file-excel"></i> Export Excel
                                     </a>
-                                    <a href="export_program_remidi_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-danger">
+                                    <a href="export_program_pengayaan_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-danger">
                                         <i class="fas fa-file-pdf"></i> Export PDF
                                     </a>
                                 </div>
                             </div>
                         </div>
-                    <?php endif; ?>
 
-                    <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead>
@@ -429,40 +353,26 @@ require_once '../templates/sidebar.php';
                                         <th class="text-center" width="4%">No</th>
                                         <th class="text-center" width="10%">Tanggal</th>
                                         <th>Nama Siswa</th>
-                                        <th class="text-center" width="7%">KKM</th>
-                                        <th class="text-center" width="8%">Nilai Asli</th>
-                                        <th width="15%">Indikator</th>
-                                        <th width="15%">Bentuk Remidial</th>
-                                        <th class="text-center" width="8%">No. Soal</th>
-                                        <th class="text-center" width="8%">Nilai Remidi</th>
-                                        <th class="text-center" width="8%">Keterangan</th>
-                                        <th class="text-center" width="10%">Aksi</th>
+                                        <th class="text-center" width="10%">Nilai Ulangan</th>
+                                        <th>Bentuk Pengayaan</th>
+                                        <th class="text-center" width="15%">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php if (empty($remedial_list)): ?>
-                                        <tr><td colspan="11" class="text-center">Belum ada data remedial.</td></tr>
-                                    <?php else: $no = 1; foreach ($remedial_list as $r): ?>
+                                    <?php if (empty($enrichment_list)): ?>
+                                        <tr><td colspan="6" class="text-center">Belum ada data pengayaan.</td></tr>
+                                    <?php else: $no = 1; foreach ($enrichment_list as $p): ?>
                                         <tr>
                                             <td class="text-center"><?= $no++ ?></td>
-                                            <td class="text-center"><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                            <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
-                                            <td class="text-center"><?= (float)$r['kkm'] ?></td>
-                                            <td class="text-center"><?= (float)$r['nilai_ulangan'] ?></td>
-                                            <td><?= htmlspecialchars($r['indikator_tidak_dikuasai']) ?></td>
-                                            <td><?= htmlspecialchars($r['bentuk_remidial']) ?></td>
-                                            <td class="text-center"><?= htmlspecialchars($r['nomor_soal']) ?></td>
-                                            <td class="text-center"><?= (float)$r['nilai_tes_remidi'] ?></td>
+                                            <td class="text-center"><?= date('d/m/Y', strtotime($p['tanggal'])) ?></td>
+                                            <td><?= htmlspecialchars($p['nama_siswa']) ?></td>
+                                            <td class="text-center"><?= (float)$p['nilai_asli'] ?></td>
+                                            <td><?= htmlspecialchars($p['bentuk_pengayaan']) ?></td>
                                             <td class="text-center">
-                                                <span class="badge badge-<?= $r['keterangan'] == 'Tuntas' ? 'success' : 'danger' ?>">
-                                                    <?= $r['keterangan'] ?>
-                                                </span>
-                                            </td>
-                                            <td class="text-center">
-                                                <button class="btn btn-warning btn-sm btn-edit" data-data='<?= json_encode($r) ?>'>
+                                                <button class="btn btn-warning btn-sm btn-edit" data-data='<?= json_encode($p) ?>'>
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-danger btn-sm btn-delete" data-id="<?= $r['id_remidi'] ?>">
+                                                <button class="btn btn-danger btn-sm btn-delete" data-id="<?= $p['id_pengayaan'] ?>">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </td>
@@ -472,7 +382,7 @@ require_once '../templates/sidebar.php';
                             </table>
                         </div>
                     <?php else: ?>
-                        <div class="alert alert-info">Pilih filter di atas untuk melihat data remedial.</div>
+                        <div class="alert alert-info">Pilih filter di atas untuk melihat data pengayaan.</div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -481,76 +391,38 @@ require_once '../templates/sidebar.php';
 </div>
 
 <!-- Modal Form -->
-<div class="modal fade" tabindex="-1" role="dialog" id="modal-remedial">
-    <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade" tabindex="-1" role="dialog" id="modal-enrichment">
+    <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Form Data Remedial</h5>
+                <h5 class="modal-title">Form Data Pengayaan</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form id="form-remedial">
+            <form id="form-enrichment">
                 <input type="hidden" name="action" id="form-action" value="save">
-                <input type="hidden" name="id_remidi" id="form-id-remidi">
+                <input type="hidden" name="id_pengayaan" id="form-id-pengayaan">
                 <input type="hidden" name="id_kelas" value="<?= $selected_class_id ?>">
                 <input type="hidden" name="id_mapel" value="<?= $selected_mapel_id ?>">
                 <input type="hidden" name="jenis_ulangan" value="<?= $selected_exam_type ?>">
                 
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Pilih Siswa (Hanya yang di bawah KKM)</label>
-                                <select name="id_siswa" id="select-siswa" class="form-control" required>
-                                    <option value="">Pilih Siswa</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>KKM/KKTP</label>
-                                <input type="number" name="kkm" id="input-kkm" class="form-control" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Nilai Asli</label>
-                                <input type="number" name="nilai_ulangan" id="input-nilai-asli" class="form-control" readonly>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label>Pilih Siswa (Nilai >= KKTP)</label>
+                        <select name="id_siswa" id="select-siswa" class="form-control" required>
+                            <option value="">Pilih Siswa</option>
+                        </select>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Indikator yang tidak dikuasai</label>
-                                <input type="text" name="indikator" class="form-control" placeholder="Contoh: No. Indikator 1.2" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Bentuk Remidial</label>
-                                <select name="bentuk" class="form-control" required>
-                                    <option value="">Pilih Bentuk Remidial</option>
-                                    <option value="Tes Ulang">Tes Ulang</option>
-                                    <option value="Penugasan">Penugasan</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Nomor Soal yang dikerjakan</label>
-                                <input type="text" name="nomor_soal" class="form-control" placeholder="Contoh: 1, 3, 5" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Nilai Tes Remidi</label>
-                                <input type="number" step="0.01" name="nilai_tes" id="input-nilai-remidi" class="form-control" required>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label>Bentuk Pengayaan</label>
+                        <select name="bentuk" class="form-control" required>
+                            <option value="">Pilih Bentuk Pengayaan</option>
+                            <option value="Pendalaman Materi">Pendalaman Materi</option>
+                            <option value="Pengerjaan Soal HOTS">Pengerjaan Soal HOTS</option>
+                            <option value="Tugas Proyek">Tugas Proyek</option>
+                            <option value="Mentoring Teman Sebaya">Mentoring Teman Sebaya</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer bg-whitesmoke br">

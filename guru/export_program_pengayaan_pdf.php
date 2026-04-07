@@ -61,7 +61,6 @@ $qr_kepala_img = '<img src="' . $qr_kepala_url . '" alt="QR Signature Kepala" st
 $logo_file = $school_profile['logo'] ?? '';
 $logo_path = '';
 if (!empty($logo_file)) {
-    // Try different paths
     $possible_paths = [
         __DIR__ . '/../assets/img/' . $logo_file,
         __DIR__ . '/../uploads/' . $logo_file,
@@ -76,17 +75,22 @@ if (!empty($logo_file)) {
     }
 }
 
-// Get remedial data
+// Get enrichment data
 $stmt = $pdo->prepare("
-    SELECT r.*, s.nama_siswa, s.nisn 
-    FROM tb_program_remidial r
-    JOIN tb_siswa s ON r.id_siswa = s.id_siswa
-    WHERE r.id_kelas = ? AND r.id_mapel = ? AND r.jenis_ulangan = ? 
-    AND r.tahun_ajaran = ? AND r.semester = ?
+    SELECT p.*, s.nama_siswa, n.nilai_asli
+    FROM tb_program_pengayaan p
+    JOIN tb_siswa s ON p.id_siswa = s.id_siswa
+    LEFT JOIN tb_nilai_semester n ON s.id_siswa = n.id_siswa 
+        AND n.id_mapel = p.id_mapel 
+        AND n.jenis_semester = p.jenis_ulangan
+        AND n.tahun_ajaran = p.tahun_ajaran
+        AND n.semester = p.semester
+    WHERE p.id_kelas = ? AND p.id_mapel = ? AND p.jenis_ulangan = ? 
+    AND p.tahun_ajaran = ? AND p.semester = ?
     ORDER BY s.nama_siswa ASC
 ");
 $stmt->execute([$selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
-$remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Set headers for PDF (print dialog)
 ?>
@@ -94,7 +98,7 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Program Remidi - <?= htmlspecialchars($mapel) ?></title>
+    <title>Program Pengayaan - <?= htmlspecialchars($mapel) ?></title>
     <style>
         @media print {
             @page {
@@ -143,45 +147,40 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
             text-transform: uppercase;
         }
         .header p {
-            margin: 2px 0;
-            font-size: 10pt;
+            margin: 3px 0;
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
         }
         .info-section {
-            margin: 15px 0;
-            font-size: 10pt;
+            margin-bottom: 15px;
         }
         .info-section table {
             width: 100%;
-            border: none;
+            border-collapse: collapse;
         }
         .info-section td {
-            padding: 2px 5px;
+            padding: 3px 5px;
             border: none;
         }
         .info-label {
-            width: 140px;
             font-weight: bold;
+            width: 15%;
         }
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 9pt;
+            margin-top: 10px;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
         }
         .data-table th {
             background-color: #4CAF50;
             color: #000;
             font-weight: bold;
-            padding: 6px 4px;
-            border: 1px solid #000;
             text-align: center;
-        }
-        .data-table td {
-            padding: 5px 4px;
-            border: 1px solid #000;
-        }
-        .data-table tr:nth-child(even) {
-            background-color: #f9f9f9;
         }
         .text-center {
             text-align: center;
@@ -202,27 +201,10 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
             flex: 1;
         }
         .signature-space {
-            height: 10px; /* Minimal space between text and QR code */
+            height: 30px;
         }
         .signature-top-space {
             height: 20px;
-        }
-        .btn-print {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12pt;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        .btn-print:hover {
-            background-color: #45a049;
         }
     </style>
 </head>
@@ -234,8 +216,8 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <img src="<?= $logo_path ?>" alt="Logo">
         </div>
         <?php endif; ?>
-        <h2 style="text-transform: uppercase;">Program Remidial</h2>
-        <p style="font-size: 12pt; font-weight: bold; text-transform: uppercase;"><?= htmlspecialchars(strtoupper($school_profile['nama_madrasah'] ?? 'MADRASAH')) ?></p>
+        <h2>Program Pengayaan</h2>
+        <p><?= htmlspecialchars(strtoupper($school_profile['nama_madrasah'] ?? 'MADRASAH')) ?></p>
         <p><?= htmlspecialchars($school_profile['alamat'] ?? '') ?></p>
     </div>
 
@@ -268,43 +250,28 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <thead>
             <tr>
                 <th width="4%">No</th>
-                <th width="9%">Tanggal</th>
-                <th width="18%">Nama Siswa</th>
-                <th width="7%">KKM</th>
-                <th width="9%">Nilai Asli</th>
-                <th width="16%">Indikator Tidak Dikuasai</th>
-                <th width="16%">Bentuk Remidial</th>
-                <th width="7%">No. Soal</th>
-                <th width="9%">Nilai Remidi</th>
-                <th width="10%">Keterangan</th>
+                <th width="10%">Tanggal</th>
+                <th width="28%">Nama Siswa</th>
+                <th width="10%">Nilai Ulangan</th>
+                <th width="48%">Bentuk Pengayaan</th>
             </tr>
         </thead>
         <tbody>
-            <?php if (empty($remedial_list)): ?>
+            <?php if (empty($enrichment_list)): ?>
                 <tr>
-                    <td colspan="11" class="text-center">Tidak ada data remedial</td>
+                    <td colspan="5" class="text-center">Tidak ada data</td>
                 </tr>
             <?php else: 
                 $no = 1;
-                foreach ($remedial_list as $r): 
+                foreach ($enrichment_list as $p): 
             ?>
                 <tr>
                     <td class="text-center"><?= $no++ ?></td>
-                    <td class="text-center"><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                    <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
-                    <td class="text-center"><?= number_format($r['kkm'], 0) ?></td>
-                    <td class="text-center"><?= number_format($r['nilai_ulangan'], 0) ?></td>
-                    <td><?= htmlspecialchars($r['indikator_tidak_dikuasai']) ?></td>
-                    <td><?= htmlspecialchars($r['bentuk_remidial']) ?></td>
-                    <td class="text-center"><?= htmlspecialchars($r['nomor_soal']) ?></td>
-                    <td class="text-center"><?= number_format($r['nilai_tes_remidi'], 0) ?></td>
-                    <td class="text-center">
-                        <span style="color: <?= $r['keterangan'] == 'Tuntas' ? 'green' : 'red' ?>; font-weight: bold;">
-                            <?= htmlspecialchars($r['keterangan']) ?>
-                        </span>
-                    </td>
+                    <td class="text-center"><?= date('d/m/Y', strtotime($p['tanggal'])) ?></td>
+                    <td><?= htmlspecialchars($p['nama_siswa']) ?></td>
+                    <td class="text-center"><?= number_format($p['nilai_asli'], 0) ?></td>
+                    <td><?= htmlspecialchars($p['bentuk_pengayaan']) ?></td>
                 </tr>
-
             <?php 
                 endforeach;
             endif; 
@@ -340,4 +307,3 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </script>
 </body>
 </html>
-
