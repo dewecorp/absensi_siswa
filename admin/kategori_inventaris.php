@@ -67,6 +67,10 @@ include '../templates/sidebar.php';
     <section class="section">
         <div class="section-header">
             <h1>Kategori Inventaris Sarpras</h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
+                <div class="breadcrumb-item">Kategori Inventaris</div>
+            </div>
         </div>
 
         <div class="section-body">
