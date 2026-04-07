@@ -481,6 +481,15 @@ switch ($user_level) {
                 'active' => in_array($current_page, $nilai_urls_guru)
             ],
             [
+                'title' => 'Remidial',
+                'icon' => 'fas fa-notes-medical',
+                'submenu' => [
+                    ['title' => 'Program Remidi', 'url' => '../guru/program_remidi.php', 'active' => $current_page === 'program_remidi.php'],
+                    ['title' => 'Program Pengayaan', 'url' => '../guru/program_pengayaan.php', 'active' => $current_page === 'program_pengayaan.php']
+                ],
+                'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
+            ],
+            [
                 'title' => 'Keuangan',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
@@ -667,6 +676,15 @@ switch ($user_level) {
                 'icon' => 'fas fa-graduation-cap',
                 'submenu' => $nilai_submenu,
                 'active' => in_array($current_page, $nilai_urls)
+            ],
+            [
+                'title' => 'Remidial',
+                'icon' => 'fas fa-notes-medical',
+                'submenu' => [
+                    ['title' => 'Program Remidi', 'url' => '../guru/program_remidi.php?session_type=wali', 'active' => $current_page === 'program_remidi.php'],
+                    ['title' => 'Program Pengayaan', 'url' => '../guru/program_pengayaan.php?session_type=wali', 'active' => $current_page === 'program_pengayaan.php']
+                ],
+                'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
             ],
             [
                 'title' => 'Keuangan',
