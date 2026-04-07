@@ -353,8 +353,8 @@ require_once '../templates/sidebar.php';
             <div class="card">
                 <div class="card-body">
                     <form method="GET" action="" class="mb-4">
-                        <div class="row align-items-end">
-                            <div class="col-md-3">
+                        <div class="row">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Kelas</label>
                                     <?php if (count($classes) > 1): ?>
@@ -372,7 +372,7 @@ require_once '../templates/sidebar.php';
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Mata Pelajaran</label>
                                     <select name="mapel" class="form-control" onchange="this.form.submit()">
@@ -385,7 +385,7 @@ require_once '../templates/sidebar.php';
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Jenis Ulangan</label>
                                     <select name="jenis" class="form-control" onchange="this.form.submit()">
@@ -398,26 +398,28 @@ require_once '../templates/sidebar.php';
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>&nbsp;</label>
-                                    <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
-                                        <div class="btn-group">
-                                            <a href="export_program_remidi_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-sm btn-success">
-                                                <i class="fas fa-file-excel"></i> Excel
-                                            </a>
-                                            <a href="export_program_remidi_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-file-pdf"></i> PDF
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-primary" id="btn-add-remedial">
-                                                <i class="fas fa-plus"></i> Tambah Remidi
-                                            </button>
-                                        </div>
-                                    <?php endif; ?>
+                        </div>
+                    </form>
+
+                    <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-primary" id="btn-add-remedial">
+                                    <i class="fas fa-plus"></i> Tambah Data Remidi
+                                </button>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <div class="btn-group">
+                                    <a href="export_program_remidi_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-success">
+                                        <i class="fas fa-file-excel"></i> Export Excel
+                                    </a>
+                                    <a href="export_program_remidi_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="btn btn-danger">
+                                        <i class="fas fa-file-pdf"></i> Export PDF
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                    </form>
+                    <?php endif; ?>
 
                     <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
                         <div class="table-responsive">
@@ -526,7 +528,11 @@ require_once '../templates/sidebar.php';
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Bentuk Remidial</label>
-                                <input type="text" name="bentuk" class="form-control" placeholder="Contoh: Penugasan / Tes Ulang" required>
+                                <select name="bentuk" class="form-control" required>
+                                    <option value="">Pilih Bentuk Remidial</option>
+                                    <option value="Tes Ulang">Tes Ulang</option>
+                                    <option value="Penugasan">Penugasan</option>
+                                </select>
                             </div>
                         </div>
                     </div>
