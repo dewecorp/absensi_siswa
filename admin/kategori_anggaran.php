@@ -150,11 +150,6 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <h2 class="section-title">Data Kategori Anggaran</h2>
-            <p class="section-lead">
-                Kelola data kategori anggaran untuk RAB.
-            </p>
-
             <div class="row">
                 <div class="col-12">
                     <div class="card">
