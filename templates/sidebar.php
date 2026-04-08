@@ -917,7 +917,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 <div class="main-sidebar">
     <aside id="sidebar-wrapper">
         <div class="sidebar-brand">
-            <a href="dashboard.php" style="line-height: 1.2; display: inline-block; padding: 12px 0;">SISTEM INFORMASI MADRASAH</a>
+            <a href="dashboard.php" style="line-height: 1.2; display: inline-block; padding: 12px 0;">Sistem Informasi Madrasah</a>
         </div>
         <div class="sidebar-brand sidebar-brand-sm">
             <a href="dashboard.php">SIM</a>

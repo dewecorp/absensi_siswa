@@ -186,7 +186,7 @@ if ($filter_type == 'daily') {
 <body>
     <div class="header">
         <img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">
-        <h2>SISTEM ABSENSI SISWA</h2>
+        <h2>Sistem Informasi Madrasah</h2>
         <h3><?= htmlspecialchars($school_name) ?></h3>
         <h4><?= htmlspecialchars($title) ?></h4>
         <p>Kelas: <?= htmlspecialchars($class_name) ?> | Tahun Ajaran: <?= htmlspecialchars($academic_year) ?> | Semester: <?= htmlspecialchars($active_semester) ?></p>

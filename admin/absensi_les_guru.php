@@ -14,7 +14,7 @@ if (!isAuthorized(['admin', 'tata_usaha', 'guru', 'wali'])) {
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
-$school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Absensi Siswa');
+$school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah');
 
 // Set page title
 $page_title = 'Absensi Les Guru';

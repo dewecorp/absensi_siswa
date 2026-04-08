@@ -420,7 +420,7 @@ var reportDate = '$report_date';
                 
                 // Add application name and school info
                 var headerDiv = document.createElement('div');
-                headerDiv.innerHTML = '<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\"><div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>';
+                headerDiv.innerHTML = '<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\"><div style=\"display: inline-block;\"><h2>Sistem Informasi Madrasah</h2>';
                 headerDiv.innerHTML += '<h3>" . $school_name_js . "</h3>';
                 headerDiv.innerHTML += '<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">';
                 
@@ -475,7 +475,7 @@ var reportDate = '$report_date';
                 printWindow.document.write('</head><body>');
                 printWindow.document.write('<div class=\"header-container\">');
                 printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\">');
-                printWindow.document.write('<div style=\"display: inline-block;\"><h2>Sistem Absensi Siswa</h2>');
+                printWindow.document.write('<div style=\"display: inline-block;\"><h2>Sistem Informasi Madrasah</h2>');
                 printWindow.document.write('<h3>" . $school_name_js . "</h3>');
                 printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">');
                 printWindow.document.write('</div>');

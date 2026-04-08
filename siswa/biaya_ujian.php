@@ -16,7 +16,7 @@ $page_title = 'Biaya Ujian';
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
-$school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Absensi Siswa');
+$school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah');
 
 // --- DATABASE MIGRATION START ---
 try {

@@ -22,7 +22,7 @@ if (!isLoggedIn()) {
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-    <title><?php echo isset($page_title) ? $page_title : 'Dashboard'; ?> | Sistem Absensi Siswa</title>
+    <title><?php echo isset($page_title) ? $page_title : 'Dashboard'; ?> | Sistem Informasi Madrasah</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="../assets/img/logo_1768301957.png">

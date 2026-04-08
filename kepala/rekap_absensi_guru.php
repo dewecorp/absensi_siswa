@@ -704,7 +704,7 @@ include '../templates/sidebar.php';
                     
                     // Create header info
                     var ws = XLSX.utils.aoa_to_sheet([
-                        ['<?php echo $school_profile["nama_madrasah"] ?? "Sistem Absensi Siswa"; ?>'],
+                        ['<?php echo $school_profile["nama_madrasah"] ?? "Sistem Informasi Madrasah"; ?>'],
                         ['Rekap Absensi Guru - ' + titleInfo],
                         ['Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?>'],
                         [''] // Spacer
@@ -773,7 +773,7 @@ include '../templates/sidebar.php';
                     
                     printWindow.document.write('<div class="header">');
                     printWindow.document.write('<h2>' + title + '</h2>');
-                    printWindow.document.write('<p><?php echo $school_profile["nama_madrasah"] ?? "Sistem Absensi Siswa"; ?></p>');
+                    printWindow.document.write('<p><?php echo $school_profile["nama_madrasah"] ?? "Sistem Informasi Madrasah"; ?></p>');
                     printWindow.document.write('<p>Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>');
                     printWindow.document.write('<p>Dicetak pada: ' + new Date().toLocaleString('id-ID') + '</p>');
                     printWindow.document.write('</div>');

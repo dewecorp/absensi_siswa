@@ -116,7 +116,7 @@ $sheet = $spreadsheet->getActiveSheet();
 
 // Set Properties
 $spreadsheet->getProperties()
-    ->setCreator("Sistem Absensi Siswa")
+    ->setCreator("Sistem Informasi Madrasah")
     ->setTitle("Nilai Harian " . $class_info['nama_kelas']);
 
 // Header Info

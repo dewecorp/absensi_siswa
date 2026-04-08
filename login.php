@@ -136,7 +136,7 @@ $school_profile = getSchoolProfile($pdo);
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-    <title>Login | Sistem Absensi Siswa</title>
+    <title>Login | Sistem Informasi Madrasah</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="assets/img/logo_1768301957.png">
@@ -165,7 +165,7 @@ $school_profile = getSchoolProfile($pdo);
                             <div class="mx-auto text-center">
                                 <img src="assets/img/<?php echo $school_profile['logo'] ?: 'logo.png'; ?>" alt="Logo Madrasah" width="80" height="80" class="mb-3 d-block mx-auto">
                                 <h5 class="mb-2"><?php echo strtoupper($school_profile['nama_madrasah']); ?></h5>
-                                <h6 class="mb-0">SISTEM INFORMASI MADRASAH</h6>
+                                <h6 class="mb-0">Sistem Informasi Madrasah</h6>
                             </div>
                         </div>
                         <div class="card-body">

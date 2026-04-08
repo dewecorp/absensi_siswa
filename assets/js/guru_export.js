@@ -4,7 +4,7 @@ function exportToExcel() {
     
     // Add application name and school info
     var headerDiv = document.createElement('div');
-    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>';
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3>' + (typeof schoolName !== 'undefined' ? schoolName : 'MI Sultan Fattah Sukosono') + '</h3>';
     headerDiv.innerHTML += '<h4>Data Guru - Tanggal ' + new Date().toLocaleDateString('id-ID') + '</h4></div><br style="clear: both;">';
     
@@ -67,7 +67,7 @@ function exportToPDF() {
     printWindow.document.write('</head><body>');
     printWindow.document.write('<div class="header">');
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
-    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Absensi Siswa</h2>');
+    printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3>' + (typeof schoolName !== 'undefined' ? schoolName : 'MI Sultan Fattah Sukosono') + '</h3>');
     printWindow.document.write('<h4>Data Guru - Tanggal ' + new Date().toLocaleDateString('id-ID') + '</h4></div><br style="clear: both;">');
     

@@ -7,7 +7,7 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
 }
 
 $school_profile = getSchoolProfile($pdo);
-$school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Absensi Siswa');
+$school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah');
 $foundation_name = strtoupper($school_profile['nama_yayasan'] ?? '');
 $school_address = $school_profile['alamat'] ?? '';
 $tahun_ajaran = $school_profile['tahun_ajaran'] ?? date('Y');

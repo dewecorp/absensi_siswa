@@ -14,7 +14,7 @@ if (!isAuthorized(['admin'])) {
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
-$school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Absensi Siswa');
+$school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah');
 $logo_file = $school_profile['logo'] ?? 'logo.png';
 $web_root = dirname(dirname($_SERVER['PHP_SELF']));
 $web_root = $web_root == '/' || $web_root == '\\' ? '' : $web_root;

@@ -112,11 +112,11 @@ $spreadsheet = new Spreadsheet();
 
 // Set document properties
 $spreadsheet->getProperties()
-    ->setCreator("Sistem Absensi Siswa")
-    ->setLastModifiedBy("Sistem Absensi Siswa")
+    ->setCreator("Sistem Informasi Madrasah")
+    ->setLastModifiedBy("Sistem Informasi Madrasah")
     ->setTitle($report_title . " - " . date('Y-m-d'))
     ->setSubject($report_title)
-    ->setDescription("Data dari sistem absensi siswa");
+    ->setDescription("Data dari Sistem Informasi Madrasah");
 
 // Add some basic styles
 $headerStyle = [

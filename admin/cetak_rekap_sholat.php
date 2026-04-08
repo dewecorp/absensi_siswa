@@ -229,7 +229,7 @@ if ($filter_type == 'daily') {
         <?php if (!empty($school_profile['logo'])): ?>
             <img src="../assets/img/<?= $school_profile['logo'] ?>" alt="Logo">
         <?php endif; ?>
-        <h2>Sistem Absensi Siswa</h2>
+        <h2>Sistem Informasi Madrasah</h2>
         <h3><?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH') ?></h3>
         <h4><?= strtoupper($title) ?> - 
             <?php 
