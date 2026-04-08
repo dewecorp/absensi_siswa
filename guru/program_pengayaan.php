@@ -32,6 +32,7 @@ $stmt = $pdo->prepare("
     AND mp.nama_mapel NOT LIKE '%Istirahat%'
     AND mp.nama_mapel NOT LIKE '%Kepramukaan%'
     AND mp.nama_mapel NOT LIKE '%Ekstrakurikuler%'
+    AND (mp.jenis_mapel IS NULL OR mp.jenis_mapel = 'Akademik')
     ORDER BY mp.nama_mapel ASC
 ");
 $stmt->execute([$id_guru]);

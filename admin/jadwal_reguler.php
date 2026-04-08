@@ -131,7 +131,7 @@ if ($user_role === 'wali' && $wali_kelas_id) {
 }
 
 // Get all subjects (for mapping)
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY kode_mapel ASC");
 $mapels = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $mapel_map = [];
 foreach ($mapels as $m) {

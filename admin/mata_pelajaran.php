@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Get all subjects
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
+$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY kode_mapel ASC");
 $mata_pelajaran = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Define CSS libraries for this page
@@ -164,6 +164,7 @@ $js_page[] = "
 $(document).ready(function() {
     // Initialize DataTable
     $('#table-1').DataTable({
+        \"order\": [[1, 'asc']],  // Sort by Kode Mapel (column index 1) ascending
         \"columnDefs\": [
             { \"sortable\": false, \"targets\": [5] }
         ],
