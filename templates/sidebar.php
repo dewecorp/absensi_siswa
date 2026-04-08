@@ -137,6 +137,15 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
             ],
+            [
+                'title' => 'Remidial',
+                'icon' => 'fas fa-graduation-cap',
+                'submenu' => [
+                    ['title' => 'Program Remidi', 'url' => '../admin/program_remidi.php', 'active' => $current_page === 'program_remidi.php'],
+                    ['title' => 'Program Pengayaan', 'url' => '../admin/program_pengayaan.php', 'active' => $current_page === 'program_pengayaan.php']
+                ],
+                'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
+            ],
 
             [
                 'title' => 'Jadwal',
@@ -343,6 +352,15 @@ switch ($user_level) {
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
+            ],
+            [
+                'title' => 'Remidial',
+                'icon' => 'fas fa-graduation-cap',
+                'submenu' => [
+                    ['title' => 'Program Remidi', 'url' => '../tata_usaha/program_remidi.php', 'active' => $current_page === 'program_remidi.php'],
+                    ['title' => 'Program Pengayaan', 'url' => '../tata_usaha/program_pengayaan.php', 'active' => $current_page === 'program_pengayaan.php']
+                ],
+                'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
             ],
             [
                 'title' => 'Keuangan',
