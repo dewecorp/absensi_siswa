@@ -44,6 +44,16 @@ $qr_kepala_content = 'Validasi Tanda Tangan Digital Kepala Madrasah: ' . $kepala
 $qr_kepala_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_kepala_content);
 $qr_kepala_img = '<img src="' . $qr_kepala_url . '" alt="QR Signature Kepala" style="width: 60px; height: 60px; margin: 5px auto; display: block;">';
 
+// Map display name to database value for JOIN
+$exam_type_map = [
+    'PTS' => 'UTS',
+    'PAS' => 'UAS',
+    'PAT' => 'PAT',
+    'Pra Ujian Madrasah' => 'Pra Ujian',
+    'Ujian Madrasah' => 'Ujian'
+];
+$db_exam_type = $exam_type_map[$selected_exam_type] ?? $selected_exam_type;
+
 // Get enrichment data with guru name
 $stmt = $pdo->prepare("
     SELECT p.*, s.nama_siswa, g.nama_guru, n.nilai_asli
@@ -52,14 +62,14 @@ $stmt = $pdo->prepare("
     LEFT JOIN tb_guru g ON p.id_guru = g.id_guru
     LEFT JOIN tb_nilai_semester n ON s.id_siswa = n.id_siswa 
         AND n.id_mapel = p.id_mapel 
-        AND n.jenis_semester = p.jenis_ulangan
+        AND n.jenis_semester = ?
         AND n.tahun_ajaran = p.tahun_ajaran
         AND n.semester = p.semester
     WHERE p.id_kelas = ? AND p.id_mapel = ? AND p.jenis_ulangan = ? 
     AND p.tahun_ajaran = ? AND p.semester = ?
     ORDER BY s.nama_siswa ASC
 ");
-$stmt->execute([$selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
+$stmt->execute([$db_exam_type, $selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
 $enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Logo - Check multiple possible locations

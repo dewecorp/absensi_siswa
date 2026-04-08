@@ -37,6 +37,22 @@ $mapel = $stmt->fetchColumn();
 
 // Get Kepala Madrasah name for signature
 $kepala_madrasah = $school_profile['kepala_madrasah'] ?? '';
+$nip_kepala = $school_profile['nip_kepala'] ?? '';
+
+// Digital Signature QR Code for Kepala Madrasah
+$qr_kepala_content = 'Validasi Tanda Tangan Digital Kepala Madrasah: ' . $kepala_madrasah . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah') . ' - Program Pengayaan';
+$qr_kepala_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_kepala_content);
+$qr_kepala_img = '<img src="' . $qr_kepala_url . '" alt="QR Signature Kepala" style="width: 60px; height: 60px; margin: 5px auto; display: block;">';
+
+// Map display name to database value for JOIN
+$exam_type_map = [
+    'PTS' => 'UTS',
+    'PAS' => 'UAS',
+    'PAT' => 'PAT',
+    'Pra Ujian Madrasah' => 'Pra Ujian',
+    'Ujian Madrasah' => 'Ujian'
+];
+$db_exam_type = $exam_type_map[$selected_exam_type] ?? $selected_exam_type;
 
 // Get enrichment data with guru name
 $stmt = $pdo->prepare("
@@ -46,14 +62,14 @@ $stmt = $pdo->prepare("
     LEFT JOIN tb_guru g ON p.id_guru = g.id_guru
     LEFT JOIN tb_nilai_semester n ON s.id_siswa = n.id_siswa 
         AND n.id_mapel = p.id_mapel 
-        AND n.jenis_semester = p.jenis_ulangan
+        AND n.jenis_semester = ?
         AND n.tahun_ajaran = p.tahun_ajaran
         AND n.semester = p.semester
     WHERE p.id_kelas = ? AND p.id_mapel = ? AND p.jenis_ulangan = ? 
     AND p.tahun_ajaran = ? AND p.semester = ?
     ORDER BY s.nama_siswa ASC
 ");
-$stmt->execute([$selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
+$stmt->execute([$db_exam_type, $selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
 $enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Logo - Check multiple possible locations
@@ -137,15 +153,13 @@ header("Expires: 0");
         .text-center {
             text-align: center;
         }
-        .signature-section {
-            margin-top: 40px;
-            text-align: right;
-        }
-        .signature-box {
-            display: inline-block;
-            text-align: center;
-            min-width: 200px;
-        }
+        .signature-table { width: 100%; margin-top: 30px; border-collapse: collapse; }
+        .signature-table td { border: none; vertical-align: top; }
+        .sig { text-align: center; }
+        .sig-date { margin-bottom: 6px; }
+        .sig-title { margin-bottom: 8px; font-weight: bold; }
+        .sig-qr { margin: 6px 0; }
+        .sig-name { margin-top: 40px; border-top: 2px solid #000; padding-top: 5px; }
     </style>
 </head>
 <body>
@@ -217,18 +231,26 @@ header("Expires: 0");
     </table>
 
     <!-- Signature Section - Only Kepala Madrasah -->
-    <div class="signature-section">
-        <div class="signature-box">
-            <p><?= date('d F Y') ?></p>
-            <p>Kepala Madrasah</p>
-            <?php if (!empty($kepala_madrasah)): ?>
-            <br><br><br>
-            <p><strong><?= htmlspecialchars($kepala_madrasah) ?></strong></p>
-            <?php else: ?>
-            <br><br><br>
-            <p><strong>_________________________</strong></p>
-            <?php endif; ?>
-        </div>
-    </div>
+    <table class="signature-table">
+        <tr>
+            <td style="width:60%"></td>
+            <td style="width:40%">
+                <div class="sig">
+                    <div class="sig-date"><?= date('d F Y') ?></div>
+                    <div class="sig-title">Kepala Madrasah</div>
+                    <?php if (!empty($kepala_madrasah)): ?>
+                        <div class="sig-qr"><?= $qr_kepala_img ?></div>
+                        <div class="sig-name">
+                            <strong><?= htmlspecialchars($kepala_madrasah) ?></strong><br>
+                            NIP. <?= htmlspecialchars($nip_kepala ?: '-') ?>
+                        </div>
+                    <?php else: ?>
+                        <br><br><br>
+                        <p><strong>_________________________</strong></p>
+                    <?php endif; ?>
+                </div>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

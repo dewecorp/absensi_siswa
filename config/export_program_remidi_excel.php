@@ -37,18 +37,39 @@ $mapel = $stmt->fetchColumn();
 
 // Get Kepala Madrasah name for signature
 $kepala_madrasah = $school_profile['kepala_madrasah'] ?? '';
+$nip_kepala = $school_profile['nip_kepala'] ?? '';
 
-// Get remedial data with guru name
+// Digital Signature QR Code for Kepala Madrasah
+$qr_kepala_content = 'Validasi Tanda Tangan Digital Kepala Madrasah: ' . $kepala_madrasah . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah') . ' - Program Remidi';
+$qr_kepala_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_kepala_content);
+$qr_kepala_img = '<img src="' . $qr_kepala_url . '" alt="QR Signature Kepala" style="width: 60px; height: 60px; margin: 5px auto; display: block;">';
+
+// Map display name to database value for JOIN
+$exam_type_map = [
+    'PTS' => 'UTS',
+    'PAS' => 'UAS',
+    'PAT' => 'PAT',
+    'Pra Ujian Madrasah' => 'Pra Ujian',
+    'Ujian Madrasah' => 'Ujian'
+];
+$db_exam_type = $exam_type_map[$selected_exam_type] ?? $selected_exam_type;
+
+// Get remedial data with guru name and original score
 $stmt = $pdo->prepare("
-    SELECT r.*, s.nama_siswa, s.nisn, g.nama_guru 
+    SELECT r.*, s.nama_siswa, s.nisn, g.nama_guru, n.nilai_asli
     FROM tb_program_remidial r
     JOIN tb_siswa s ON r.id_siswa = s.id_siswa
     LEFT JOIN tb_guru g ON r.id_guru = g.id_guru
+    LEFT JOIN tb_nilai_semester n ON s.id_siswa = n.id_siswa 
+        AND n.id_mapel = r.id_mapel 
+        AND n.jenis_semester = ?
+        AND n.tahun_ajaran = r.tahun_ajaran
+        AND n.semester = r.semester
     WHERE r.id_kelas = ? AND r.id_mapel = ? AND r.jenis_ulangan = ? 
     AND r.tahun_ajaran = ? AND r.semester = ?
     ORDER BY s.nama_siswa ASC
 ");
-$stmt->execute([$selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
+$stmt->execute([$db_exam_type, $selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
 $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Logo - Check multiple possible locations
@@ -143,21 +164,13 @@ header("Expires: 0");
         .text-center {
             text-align: center;
         }
-        .signature-section {
-            margin-top: 40px;
-            text-align: right;
-            page-break-inside: avoid;
-        }
-        .signature-box {
-            display: inline-block;
-            text-align: center;
-            min-width: 250px;
-        }
-        .signature-line {
-            margin-top: 80px;
-            border-top: 2px solid #000;
-            padding-top: 5px;
-        }
+        .signature-table { width: 100%; margin-top: 30px; border-collapse: collapse; }
+        .signature-table td { border: none; vertical-align: top; }
+        .sig { text-align: center; }
+        .sig-date { margin-bottom: 6px; }
+        .sig-title { margin-bottom: 8px; font-weight: bold; }
+        .sig-qr { margin: 6px 0; }
+        .sig-name { margin-top: 40px; border-top: 2px solid #000; padding-top: 5px; }
     </style>
 </head>
 <body>
@@ -229,7 +242,7 @@ header("Expires: 0");
                     <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
                     <td><?= htmlspecialchars($r['nama_guru'] ?? '-') ?></td>
                     <td class="text-center"><?= number_format($r['kkm'], 0) ?></td>
-                    <td class="text-center"><?= number_format($r['nilai_ulangan'], 0) ?></td>
+                    <td class="text-center"><?= number_format($r['nilai_asli'] ?? $r['nilai_ulangan'], 0) ?></td>
                     <td><?= htmlspecialchars($r['indikator_tidak_dikuasai']) ?></td>
                     <td><?= htmlspecialchars($r['bentuk_remidial']) ?></td>
                     <td class="text-center"><?= htmlspecialchars($r['nomor_soal']) ?></td>
@@ -245,19 +258,26 @@ header("Expires: 0");
     </table>
 
     <!-- Signature Section - Only Kepala Madrasah -->
-    <div class="signature-section">
-        <div class="signature-box">
-            <p><?= date('d F Y') ?></p>
-            <p>Kepala Madrasah</p>
-            <?php if (!empty($kepala_madrasah)): ?>
-            <div class="signature-line">
-                <strong><?= htmlspecialchars($kepala_madrasah) ?></strong>
-            </div>
-            <?php else: ?>
-            <br><br><br>
-            <p><strong>_________________________</strong></p>
-            <?php endif; ?>
-        </div>
-    </div>
+    <table class="signature-table">
+        <tr>
+            <td style="width:60%"></td>
+            <td style="width:40%">
+                <div class="sig">
+                    <div class="sig-date"><?= date('d F Y') ?></div>
+                    <div class="sig-title">Kepala Madrasah</div>
+                    <?php if (!empty($kepala_madrasah)): ?>
+                        <div class="sig-qr"><?= $qr_kepala_img ?></div>
+                        <div class="sig-name">
+                            <strong><?= htmlspecialchars($kepala_madrasah) ?></strong><br>
+                            NIP. <?= htmlspecialchars($nip_kepala ?: '-') ?>
+                        </div>
+                    <?php else: ?>
+                        <br><br><br>
+                        <p><strong>_________________________</strong></p>
+                    <?php endif; ?>
+                </div>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
