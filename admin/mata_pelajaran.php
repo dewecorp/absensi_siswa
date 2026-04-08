@@ -139,8 +139,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Get all subjects
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY kode_mapel ASC");
+// Get all subjects - order by kode_mapel with natural sorting (numeric aware)
+// Handle mixed alphanumeric codes: letters first, then numbers
+$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY 
+    CASE 
+        WHEN kode_mapel REGEXP '^[0-9]+$' THEN 1
+        ELSE 0
+    END,
+    CASE 
+        WHEN kode_mapel REGEXP '^[0-9]+$' THEN CAST(kode_mapel AS UNSIGNED)
+        ELSE 999999
+    END,
+    kode_mapel ASC");
 $mata_pelajaran = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Define CSS libraries for this page
@@ -161,12 +171,26 @@ $js_page = [];
 
 // Add JavaScript
 $js_page[] = "
+// Natural sort plugin for DataTables
+jQuery.fn.dataTableExt.oSort['natural-asc'] = function(a, b) {
+    var x = a.toString().replace(/<[^>]*>/g, ''); // Remove HTML tags
+    var y = b.toString().replace(/<[^>]*>/g, '');
+    return x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' });
+};
+
+jQuery.fn.dataTableExt.oSort['natural-desc'] = function(a, b) {
+    var x = a.toString().replace(/<[^>]*>/g, '');
+    var y = b.toString().replace(/<[^>]*>/g, '');
+    return y.localeCompare(x, undefined, { numeric: true, sensitivity: 'base' });
+};
+
 $(document).ready(function() {
     // Initialize DataTable
-    $('#table-1').DataTable({
+    var table = $('#table-1').DataTable({
         \"order\": [[1, 'asc']],  // Sort by Kode Mapel (column index 1) ascending
         \"columnDefs\": [
-            { \"sortable\": false, \"targets\": [5] }
+            { \"type\": \"natural\", \"targets\": [1] },  // Natural sort for Kode Mapel
+            { \"sortable\": false, \"targets\": [0, 5] }  // No sorting for No and Aksi columns
         ],
         \"language\": {
             \"lengthMenu\": \"Tampilkan _MENU_ entri\",
@@ -182,6 +206,22 @@ $(document).ready(function() {
                 \"previous\": \"Sebelumnya\"
             }
         }
+    });
+    
+    // Update row numbers after DataTables draws
+    $('#table-1').on('draw.dt', function() {
+        var info = table.page.info();
+        $('#table-1 tbody tr').each(function(index) {
+            var currentPageNumber = info.page * info.length + (index + 1);
+            $(this).find('td:first-child').text(currentPageNumber);
+        });
+    });
+    
+    // Initial row numbering
+    var info = table.page.info();
+    $('#table-1 tbody tr').each(function(index) {
+        var currentPageNumber = info.page * info.length + (index + 1);
+        $(this).find('td:first-child').text(currentPageNumber);
     });
 
     // Handle Edit Button
@@ -399,11 +439,10 @@ include '../templates/sidebar.php';
                                     </thead>
                                     <tbody>
                                         <?php 
-                                        $no = 1;
                                         foreach ($mata_pelajaran as $row): 
                                         ?>
                                         <tr>
-                                            <td class="text-center"><?= $no++ ?></td>
+                                            <td class="text-center"></td>
                                             <td><?= htmlspecialchars($row['kode_mapel'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['nama_mapel']) ?></td>
                                             <td><?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?></td>

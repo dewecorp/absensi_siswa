@@ -359,13 +359,13 @@ function getFilteredSubjects($pdo) {
         $sql .= " WHERE " . implode(" AND ", $conditions);
     }
 
-    $sql .= " ORDER BY kode_mapel ASC";
+    $sql .= " ORDER BY CAST(kode_mapel AS UNSIGNED), kode_mapel ASC";
 
     try {
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY kode_mapel ASC");
+        $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY CAST(kode_mapel AS UNSIGNED), kode_mapel ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

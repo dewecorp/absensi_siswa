@@ -58,8 +58,8 @@ if ($kelas_id) {
 }
 
 // Get Mapel Map
-// Sort by Kode Mapel naturally (1, 2, 10 instead of 1, 10, 2)
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY LENGTH(kode_mapel), kode_mapel ASC");
+// Sort by Nama Mapel alphabetically
+$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY nama_mapel ASC");
 $mapels = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Filter Non-Academic Subjects
