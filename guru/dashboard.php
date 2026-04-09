@@ -943,7 +943,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h4>Total Siswa</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $total_siswa; ?>
+                                        <strong><?php echo $total_siswa; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -958,7 +958,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h4>Total Kelas</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $total_kelas; ?>
+                                        <strong><?php echo $total_kelas; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -974,7 +974,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h4>Kehadiran Hari Ini</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $persentase_hadir; ?>%
+                                        <strong><?php echo $persentase_hadir; ?>%</strong>
                                     </div>
                                 </div>
                             </div>
@@ -993,7 +993,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h4>Hadir</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_hadir; ?>
+                                        <strong><?php echo $jumlah_hadir; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -1008,7 +1008,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h4>Sakit</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_sakit; ?>
+                                        <strong><?php echo $jumlah_sakit; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -1023,7 +1023,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h4>Izin</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_izin; ?>
+                                        <strong><?php echo $jumlah_izin; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -1038,7 +1038,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h4>Berhalangan</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_berhalangan; ?>
+                                        <strong><?php echo $jumlah_berhalangan; ?></strong>
                                     </div>
                                 </div>
                             </div>

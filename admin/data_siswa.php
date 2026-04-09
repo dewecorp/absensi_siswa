@@ -290,8 +290,25 @@ $kelas_options_js = json_encode($kelas_options_js_array);
 
 // Get students if a class is selected
 $students = [];
+$total_laki = 0;
+$total_perempuan = 0;
+$total_siswa = 0;
+
 if ($selected_kelas_id > 0) {
     $students = getStudentsByClass($pdo, $selected_kelas_id);
+    $total_siswa = count($students);
+    foreach ($students as $s) {
+        if ($s['jenis_kelamin'] == 'L') $total_laki++;
+        elseif ($s['jenis_kelamin'] == 'P') $total_perempuan++;
+    }
+} else {
+    // If no class selected, get overall stats
+    $stmt_all = $pdo->query("SELECT jenis_kelamin, COUNT(*) as jumlah FROM tb_siswa GROUP BY jenis_kelamin");
+    while ($row = $stmt_all->fetch(PDO::FETCH_ASSOC)) {
+        if ($row['jenis_kelamin'] == 'L') $total_laki = (int)$row['jumlah'];
+        elseif ($row['jenis_kelamin'] == 'P') $total_perempuan = (int)$row['jumlah'];
+    }
+    $total_siswa = $total_laki + $total_perempuan;
 }
 $selected_kelas_name = '';
 if ($selected_kelas_id > 0) {
@@ -391,11 +408,11 @@ include '../templates/sidebar.php';
                             <?php endif; ?>
                             
                             <!-- Filter Section -->
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <label for="filter_kelas">Pilih Kelas:</label>
+                            <div class="row mb-4">
+                                <div class="col-md-4 mb-3 mb-md-0">
+                                    <label for="filter_kelas" class="font-weight-bold">Pilih Kelas:</label>
                                     <form method="GET" id="kelasForm">
-                                        <select class="form-control" id="filter_kelas" name="kelas_id" onchange="this.form.submit()">
+                                        <select class="form-control selectric" id="filter_kelas" name="kelas_id" onchange="this.form.submit()">
                                             <option value="">Semua Kelas</option>
                                             <?php foreach ($kelas_list as $kelas): ?>
                                             <option value="<?php echo $kelas['id_kelas']; ?>" <?php echo $selected_kelas_id == $kelas['id_kelas'] ? 'selected' : ''; ?>>
@@ -404,6 +421,55 @@ include '../templates/sidebar.php';
                                             <?php endforeach; ?>
                                         </select>
                                     </form>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="row">
+                                        <div class="col-sm-4">
+                                            <div class="card card-statistic-1 mb-0 shadow-none border">
+                                                <div class="card-icon bg-primary" style="width: 40px; height: 40px; line-height: 40px;">
+                                                    <i class="fas fa-users" style="font-size: 15px;"></i>
+                                                </div>
+                                                <div class="card-wrap">
+                                                    <div class="card-header" style="padding: 5px 10px;">
+                                                        <h4 style="font-size: 10px;">Total Siswa</h4>
+                                                    </div>
+                                                    <div class="card-body" style="padding: 0 10px 5px; font-size: 18px;">
+                                                        <?php echo $total_siswa; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-4">
+                                            <div class="card card-statistic-1 mb-0 shadow-none border">
+                                                <div class="card-icon bg-info" style="width: 40px; height: 40px; line-height: 40px;">
+                                                    <i class="fas fa-mars" style="font-size: 15px;"></i>
+                                                </div>
+                                                <div class="card-wrap">
+                                                    <div class="card-header" style="padding: 5px 10px;">
+                                                        <h4 style="font-size: 10px;">Laki-laki</h4>
+                                                    </div>
+                                                    <div class="card-body" style="padding: 0 10px 5px; font-size: 18px;">
+                                                        <?php echo $total_laki; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-4">
+                                            <div class="card card-statistic-1 mb-0 shadow-none border">
+                                                <div class="card-icon bg-warning" style="width: 40px; height: 40px; line-height: 40px;">
+                                                    <i class="fas fa-venus" style="font-size: 15px;"></i>
+                                                </div>
+                                                <div class="card-wrap">
+                                                    <div class="card-header" style="padding: 5px 10px;">
+                                                        <h4 style="font-size: 10px;">Perempuan</h4>
+                                                    </div>
+                                                    <div class="card-body" style="padding: 0 10px 5px; font-size: 18px;">
+                                                        <?php echo $total_perempuan; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             

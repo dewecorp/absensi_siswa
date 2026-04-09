@@ -53,11 +53,19 @@ $wali_kelas = $wali_kelas_stmt->fetch(PDO::FETCH_ASSOC);
 
 // Get student count for the wali's class
 if ($wali_kelas) {
-    $stmt = $pdo->prepare("SELECT COUNT(*) as total_siswa FROM tb_siswa WHERE id_kelas = ?");
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total_siswa, 
+                                 SUM(CASE WHEN jenis_kelamin = 'L' THEN 1 ELSE 0 END) as total_laki,
+                                 SUM(CASE WHEN jenis_kelamin = 'P' THEN 1 ELSE 0 END) as total_perempuan
+                          FROM tb_siswa WHERE id_kelas = ?");
     $stmt->execute([$wali_kelas['id_kelas']]);
-    $total_siswa = $stmt->fetch(PDO::FETCH_ASSOC)['total_siswa'];
+    $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+    $total_siswa = $stats['total_siswa'] ?? 0;
+    $total_laki = $stats['total_laki'] ?? 0;
+    $total_perempuan = $stats['total_perempuan'] ?? 0;
 } else {
     $total_siswa = 0;
+    $total_laki = 0;
+    $total_perempuan = 0;
 }
 
 // Get today's attendance statistics for the wali's class
@@ -860,7 +868,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Total Kelas Ajar</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $total_kelas_ajar; ?>
+                                        <strong><?php echo $total_kelas_ajar; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -875,7 +883,11 @@ include_once '../templates/sidebar.php';
                                         <h4>Total Siswa</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $total_siswa; ?>
+                                        <strong><?php echo $total_siswa; ?></strong>
+                                        <div class="text-muted small mt-1">
+                                            <span title="Laki-laki"><i class="fas fa-mars text-info"></i> <strong><?php echo $total_laki; ?></strong></span> &nbsp; 
+                                            <span title="Perempuan"><i class="fas fa-venus text-warning"></i> <strong><?php echo $total_perempuan; ?></strong></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -890,7 +902,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Hadir</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_hadir; ?>
+                                        <strong><?php echo $jumlah_hadir; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -905,7 +917,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Sakit</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_sakit; ?>
+                                        <strong><?php echo $jumlah_sakit; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -923,7 +935,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Izin</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_izin; ?>
+                                        <strong><?php echo $jumlah_izin; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -938,7 +950,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Alpa</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_alpa; ?>
+                                        <strong><?php echo $jumlah_alpa; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -953,7 +965,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Berhalangan</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_berhalangan; ?>
+                                        <strong><?php echo $jumlah_berhalangan; ?></strong>
                                     </div>
                                 </div>
                             </div>

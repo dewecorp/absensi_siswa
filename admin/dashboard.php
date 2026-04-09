@@ -11,17 +11,27 @@ if (!isAuthorized(['admin'])) {
 $page_title = 'Dashboard';
 
 // Get statistics
-$stmt = $pdo->query("SELECT COUNT(*) as total_siswa FROM tb_siswa");
+$stmt = $pdo->query("SELECT COUNT(*) as total_siswa, 
+                             SUM(CASE WHEN jenis_kelamin = 'L' THEN 1 ELSE 0 END) as total_laki,
+                             SUM(CASE WHEN jenis_kelamin = 'P' THEN 1 ELSE 0 END) as total_perempuan
+                      FROM tb_siswa");
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $total_siswa = isset($result['total_siswa']) ? (int)$result['total_siswa'] : 0;
+$siswa_laki = isset($result['total_laki']) ? (int)$result['total_laki'] : 0;
+$siswa_perempuan = isset($result['total_perempuan']) ? (int)$result['total_perempuan'] : 0;
 
 $stmt = $pdo->query("SELECT COUNT(*) as total_kelas FROM tb_kelas");
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $total_kelas = isset($result['total_kelas']) ? (int)$result['total_kelas'] : 0;
 
-$stmt = $pdo->query("SELECT COUNT(*) as total_guru FROM tb_guru");
+$stmt = $pdo->query("SELECT COUNT(*) as total_guru,
+                             SUM(CASE WHEN jenis_kelamin = 'Laki-laki' THEN 1 ELSE 0 END) as total_laki,
+                             SUM(CASE WHEN jenis_kelamin = 'Perempuan' THEN 1 ELSE 0 END) as total_perempuan
+                      FROM tb_guru");
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $total_guru = isset($result['total_guru']) ? (int)$result['total_guru'] : 0;
+$guru_laki = isset($result['total_laki']) ? (int)$result['total_laki'] : 0;
+$guru_perempuan = isset($result['total_perempuan']) ? (int)$result['total_perempuan'] : 0;
 
 $stmt = $pdo->prepare("SELECT COUNT(*) as hadir FROM tb_absensi WHERE keterangan = 'Hadir' AND tanggal = CURDATE()");
 $stmt->execute();
@@ -672,7 +682,11 @@ include_once '../templates/sidebar.php';
                                         <h4>Total Siswa</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $total_siswa; ?>
+                                        <strong><?php echo $total_siswa; ?></strong>
+                                        <div class="text-muted small mt-1">
+                                            <span title="Laki-laki"><i class="fas fa-mars text-info"></i> <strong><?php echo $siswa_laki; ?></strong></span> &nbsp; 
+                                            <span title="Perempuan"><i class="fas fa-venus text-warning"></i> <strong><?php echo $siswa_perempuan; ?></strong></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -687,7 +701,11 @@ include_once '../templates/sidebar.php';
                                         <h4>Total Guru</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $total_guru; ?>
+                                        <strong><?php echo $total_guru; ?></strong>
+                                        <div class="text-muted small mt-1">
+                                            <span title="Laki-laki"><i class="fas fa-mars text-info"></i> <strong><?php echo $guru_laki; ?></strong></span> &nbsp; 
+                                            <span title="Perempuan"><i class="fas fa-venus text-warning"></i> <strong><?php echo $guru_perempuan; ?></strong></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -702,7 +720,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Total Kelas</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $total_kelas; ?>
+                                        <strong><?php echo $total_kelas; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -720,7 +738,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Siswa Hadir</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_hadir; ?>
+                                        <strong><?php echo $jumlah_hadir; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -735,7 +753,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Siswa Sakit</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_sakit; ?>
+                                        <strong><?php echo $jumlah_sakit; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -750,7 +768,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Siswa Izin</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_izin; ?>
+                                        <strong><?php echo $jumlah_izin; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -765,7 +783,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Siswa Alpa</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $jumlah_alpa; ?>
+                                        <strong><?php echo $jumlah_alpa; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -783,7 +801,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Guru Hadir</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $guru_hadir; ?>
+                                        <strong><?php echo $guru_hadir; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -798,7 +816,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Guru Sakit</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $guru_sakit; ?>
+                                        <strong><?php echo $guru_sakit; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -813,7 +831,7 @@ include_once '../templates/sidebar.php';
                                         <h4>Guru Izin</h4>
                                     </div>
                                     <div class="card-body">
-                                        <?php echo $guru_izin; ?>
+                                        <strong><?php echo $guru_izin; ?></strong>
                                     </div>
                                 </div>
                             </div>
