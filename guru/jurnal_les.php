@@ -161,6 +161,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
             $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
             logActivity($pdo, $username, 'Tambah/Edit Jurnal Les', "Guru {$teacher['nama_guru']} menyimpan jurnal les kelas $id_kelas");
             
+            // Add notification for Admin/Kepala
+            if (in_array($_SESSION['level'], ['guru', 'wali'])) {
+                $nama_guru = $teacher['nama_guru'];
+                $role_label = ($_SESSION['level'] == 'wali') ? 'Wali' : 'Guru';
+                $action_label = $id_jurnal ? 'memperbarui' : 'mengisi';
+                $msg = "$nama_guru ($role_label) telah $action_label jurnal les pada " . date('d-m-Y H:i');
+                createNotification($pdo, $msg, 'jurnal_les.php');
+            }
         } catch (Exception $e) {
             $message = ['type' => 'error', 'text' => 'Gagal menyimpan data: ' . $e->getMessage()];
         }

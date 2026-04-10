@@ -107,6 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
                     $stmt = $pdo->prepare("UPDATE tb_absensi_les_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_absensi = ?");
                     if ($stmt->execute([ucfirst($status), $keterangan, $waktu_dt, $existing['id_absensi']])) {
                         $result['success'] = true;
+                        
+                        // Add notification for Admin/Kepala
+                        if (in_array($user_level, ['guru', 'wali'])) {
+                            $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
+                            $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
+                            $msg = "$nama_guru ($role_label) telah memperbarui absensi les (dirinya) pada " . date('d-m-Y H:i');
+                            createNotification($pdo, $msg, 'absensi_les_guru.php');
+                        }
                     }
                 } else {
                     $stmt = $pdo->prepare("DELETE FROM tb_absensi_les_guru WHERE id_absensi = ?");
@@ -119,6 +127,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
                     $stmt = $pdo->prepare("INSERT INTO tb_absensi_les_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
                     if ($stmt->execute([$id_guru, $tanggal, ucfirst($status), $keterangan, $waktu_dt])) {
                         $result['success'] = true;
+                        
+                        // Add notification for Admin/Kepala
+                        if (in_array($user_level, ['guru', 'wali'])) {
+                            $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
+                            $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
+                            $msg = "$nama_guru ($role_label) telah mengisi absensi les (dirinya) pada " . date('d-m-Y H:i');
+                            createNotification($pdo, $msg, 'absensi_les_guru.php');
+                        }
                     }
                 }
             }

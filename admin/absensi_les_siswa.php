@@ -100,6 +100,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             $message = ['type' => 'success', 'text' => "Data absensi les berhasil disimpan untuk $saved_count siswa!"];
             $username = $_SESSION['username'] ?? 'system';
             logActivity($pdo, $username, 'Input Absensi Les', "Melakukan input absensi les siswa kelas $nama_kelas_fixed untuk $saved_count siswa");
+
+            // Add notification for Admin/Kepala
+            if (in_array($user_level, ['guru', 'wali'])) {
+                $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
+                $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
+                $msg = "$nama_guru ($role_label) telah mengisi absensi les siswa kelas $nama_kelas_fixed pada " . date('d-m-Y H:i');
+                createNotification($pdo, $msg, 'absensi_les_siswa.php');
+            }
         }
     }
 }
