@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
                         if (in_array($user_level, ['guru', 'wali'])) {
                             $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
                             $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
-                            $msg = "$nama_guru ($role_label) telah memperbarui absensi les (dirinya) pada " . date('d-m-Y H:i');
+                            $msg = "$nama_guru ($role_label) telah memperbarui absensi les pada " . date('d-m-Y H:i');
                             createNotification($pdo, $msg, 'absensi_les_guru.php');
                         }
                     }
