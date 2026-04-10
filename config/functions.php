@@ -484,6 +484,36 @@ function getCurrentDateIndonesia() {
 }
 
 // Function to format specific date in Indonesian format
+// Function to check if a date is a holiday based on kalender pendidikan
+function isHoliday($pdo, $date) {
+    // 1. Check if Friday (Jumat) - Weekly Holiday
+    $dayOfWeek = date('w', strtotime($date));
+    if ($dayOfWeek == 5) {
+        return ['is_holiday' => true, 'name' => 'Hari Jumat (Libur Mingguan)'];
+    }
+
+    // 2. Check in tb_kalender_pendidikan for events with warna = 'danger' (Libur)
+    try {
+        $stmt = $pdo->prepare("
+            SELECT nama_kegiatan 
+            FROM tb_kalender_pendidikan 
+            WHERE ? BETWEEN tgl_mulai AND tgl_selesai 
+            AND warna = 'danger' 
+            LIMIT 1
+        ");
+        $stmt->execute([$date]);
+        $holiday = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($holiday) {
+            return ['is_holiday' => true, 'name' => $holiday['nama_kegiatan']];
+        }
+    } catch (PDOException $e) {
+        // Fallback if table doesn't exist or other DB error
+    }
+
+    return ['is_holiday' => false, 'name' => ''];
+}
+
 function formatDateIndonesia($date_string) {
     if (empty($date_string)) return '-';
     $date = new DateTime($date_string);

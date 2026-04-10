@@ -4,106 +4,71 @@ require_once 'config/functions.php';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $login_identifier = sanitizeInput($_POST['username']); // This can be username, NUPTK, or other identifier
-    $password = $_POST['password'];
+    $login_identifier = trim(sanitizeInput($_POST['username']));
+    $password = trim($_POST['password']);
     
-    // First, try to find the user in tb_pengguna table
+    $authenticated = false;
+    $user_data = null;
+    $user_type = '';
+
+    // 1. Try Admin/Staff (tb_pengguna)
     $stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");
     $stmt->execute([$login_identifier]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // If not found in tb_pengguna, try to find in tb_guru using NUPTK
-    if (!$user) {
-        // Try Guru first
-        $stmt = $pdo->prepare("SELECT *, 'guru' as level FROM tb_guru WHERE nuptk = ?");
+    if ($user && verifyPassword($password, $user['password'])) {
+        $authenticated = true;
+        $user_data = $user;
+        $user_type = 'pengguna';
+    }
+
+    // 2. Try Guru (tb_guru) if not authenticated
+    if (!$authenticated) {
+        $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nuptk = ?");
         $stmt->execute([$login_identifier]);
-        $guru_user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($guru_user && $guru_user['password'] && password_verify($password, $guru_user['password'])) {
-            // Check if this guru is also a homeroom teacher
-            $level = 'guru';
+        $guru = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($guru) {
+            $auth_guru = false;
+            if (!empty($guru['password']) && password_verify($password, $guru['password'])) $auth_guru = true;
+            if (!$auth_guru && $password === $guru['nuptk']) $auth_guru = true;
             
-            // Check if this teacher is assigned as wali_kelas in tb_kelas table
-            $wali_check = $pdo->prepare("SELECT COUNT(*) FROM tb_kelas WHERE wali_kelas = ?");
-            $wali_check->execute([$guru_user['nama_guru']]);
-            $is_wali_kelas = $wali_check->fetchColumn() > 0;
-            
-            if ($is_wali_kelas) {
-                $level = 'wali';
-            }
-            
-            // Start user specific session
-            startUserSession($level);
-
-            // Set session variables
-            $_SESSION['user_id'] = $guru_user['id_guru'];
-            $_SESSION['username'] = $guru_user['nuptk'];
-            $_SESSION['level'] = $level;
-            $_SESSION['nama_guru'] = $guru_user['nama_guru'];
-            $_SESSION['login_success_msg'] = "Selamat datang, " . $guru_user['nama_guru'] . "!";
-            
-            // Redirect will be handled by JavaScript for SweetAlert
-            $redirect_url = '';
-            switch ($level) {
-                case 'wali': $redirect_url = 'wali/dashboard.php'; break;
-                case 'guru': $redirect_url = 'guru/dashboard.php'; break;
-            }
-            $show_swal = true;
-            
-            // Log login activity
-            $username = isset($guru_user['nuptk']) ? $guru_user['nuptk'] : 'system';
-            $log_result = logActivity($pdo, $username, 'Login', 'Teacher logged in successfully using NUPTK');
-            if (!$log_result) error_log("Failed to log activity for Login: Teacher");
-            
-            // Redirect is now handled at the end of the script if $show_swal is true
-        } else {
-            // If not found in tb_guru, try tb_siswa using NISN
-            $stmt = $pdo->prepare("SELECT *, 'siswa' as level FROM tb_siswa WHERE nisn = ?");
-            $stmt->execute([$login_identifier]);
-            $siswa_user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($siswa_user && $siswa_user['password'] && password_verify($password, $siswa_user['password'])) {
-                // Start user specific session
-                startUserSession('siswa');
-
-                // Set session variables
-                $_SESSION['user_id'] = $siswa_user['id_siswa'];
-                $_SESSION['username'] = $siswa_user['nisn'];
-                $_SESSION['level'] = 'siswa';
-                $_SESSION['nama_siswa'] = $siswa_user['nama_siswa'];
-                $_SESSION['id_kelas'] = $siswa_user['id_kelas'];
-                $_SESSION['login_success_msg'] = "Selamat datang, " . $siswa_user['nama_siswa'] . "!";
-
-                $redirect_url = 'siswa/dashboard.php';
-                $show_swal = true;
-
-                // Log login activity
-                $username = isset($siswa_user['nisn']) ? $siswa_user['nisn'] : 'system';
-                // logActivity might fail if user is not in expected format, but let's try
-                // Actually logActivity takes username, action, description.
-                if (function_exists('logActivity')) {
-                    logActivity($pdo, $username, 'Login', 'Student logged in successfully using NISN');
-                }
-            } else {
-                $error = "Username/NUPTK/NISN atau password salah!";
+            if ($auth_guru) {
+                $authenticated = true;
+                $user_data = $guru;
+                $user_type = 'guru';
             }
         }
-    } else {
-        // User found in tb_pengguna, verify password
-        if ($user && verifyPassword($password, $user['password'])) {
-            // Start user specific session
-            startUserSession($user['level']);
+    }
 
-            // Set session variables
-            $_SESSION['user_id'] = $user['id_pengguna'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['level'] = $user['level'];
+    // 3. Try Student (tb_siswa) if not authenticated
+    if (!$authenticated) {
+        $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE nisn = ?");
+        $stmt->execute([$login_identifier]);
+        $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($siswa) {
+            $auth_siswa = false;
+            if (!empty($siswa['password']) && password_verify($password, $siswa['password'])) $auth_siswa = true;
+            if (!$auth_siswa && $password === $siswa['nisn']) $auth_siswa = true;
+            
+            if ($auth_siswa) {
+                $authenticated = true;
+                $user_data = $siswa;
+                $user_type = 'siswa';
+            }
+        }
+    }
+
+    if ($authenticated) {
+        if ($user_type === 'pengguna') {
+            startUserSession($user_data['level']);
+            $_SESSION['user_id'] = $user_data['id_pengguna'];
+            $_SESSION['username'] = $user_data['username'];
+            $_SESSION['level'] = $user_data['level'];
             $_SESSION['login_source'] = 'tb_pengguna';
-            $display_name = !empty($user['nama']) ? $user['nama'] : $user['username'];
+            $display_name = !empty($user_data['nama']) ? $user_data['nama'] : $user_data['username'];
             $_SESSION['login_success_msg'] = "Selamat datang, " . $display_name . "!";
 
             $redirect_url = '';
-            switch ($user['level']) {
+            switch ($user_data['level']) {
                 case 'admin': $redirect_url = 'admin/dashboard.php'; break;
                 case 'guru': $redirect_url = 'guru/dashboard.php'; break;
                 case 'wali': $redirect_url = 'wali/dashboard.php'; break;
@@ -111,19 +76,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 case 'tata_usaha': $redirect_url = 'tata_usaha/dashboard.php'; break;
             }
             $show_swal = true;
-            
-            // Prevent Session Fixation
             session_regenerate_id(true);
-
-            // Log login activity
-            $username = isset($user['username']) ? $user['username'] : 'system';
-            $log_result = logActivity($pdo, $username, 'Login', 'User logged in successfully');
-            if (!$log_result) error_log("Failed to log activity for Login: User");
+            logActivity($pdo, $user_data['username'], 'Login', 'User logged in successfully');
+        } elseif ($user_type === 'guru') {
+            $level = 'guru';
+            $wali_check = $pdo->prepare("SELECT COUNT(*) FROM tb_kelas WHERE wali_kelas = ?");
+            $wali_check->execute([$user_data['nama_guru']]);
+            if ($wali_check->fetchColumn() > 0) $level = 'wali';
             
-            // Redirect is now handled at the end of the script if $show_swal is true
-        } else {
-            $error = "Username atau password salah!";
+            startUserSession($level);
+            $_SESSION['user_id'] = $user_data['id_guru'];
+            $_SESSION['username'] = $user_data['nuptk'];
+            $_SESSION['level'] = $level;
+            $_SESSION['nama_guru'] = $user_data['nama_guru'];
+            $_SESSION['login_success_msg'] = "Selamat datang, " . $user_data['nama_guru'] . "!";
+            
+            $redirect_url = ($level === 'wali') ? 'wali/dashboard.php' : 'guru/dashboard.php';
+            $show_swal = true;
+            logActivity($pdo, $user_data['nuptk'], 'Login', 'Teacher logged in successfully using NUPTK');
+        } elseif ($user_type === 'siswa') {
+            startUserSession('siswa');
+            $_SESSION['user_id'] = $user_data['id_siswa'];
+            $_SESSION['username'] = $user_data['nisn'];
+            $_SESSION['level'] = 'siswa';
+            $_SESSION['nama_siswa'] = $user_data['nama_siswa'];
+            $_SESSION['id_kelas'] = $user_data['id_kelas'];
+            $_SESSION['login_success_msg'] = "Selamat datang, " . $user_data['nama_siswa'] . "!";
+
+            $redirect_url = 'siswa/dashboard.php';
+            $show_swal = true;
+            logActivity($pdo, $user_data['nisn'], 'Login', 'Student logged in successfully using NISN');
         }
+    } else {
+        $error = "Username/NUPTK/NISN atau password salah!";
     }
 }
 
@@ -182,9 +167,9 @@ $school_profile = getSchoolProfile($pdo);
 
                             <form method="POST" action="">
                                 <div class="form-group">
-                                    <label for="username">Username atau NUPTK</label>
-                                    <input id="username" type="text" class="form-control" name="username" placeholder="Admin: Username | Guru/Wali: NUPTK" tabindex="1" required autofocus>
-                                    <small class="form-text text-muted">Guru dan Wali Kelas menggunakan NUPTK untuk login</small>
+                                    <label for="username">Username / NUPTK / NISN</label>
+                                    <input id="username" type="text" class="form-control" name="username" placeholder="Admin: Username | Guru: NUPTK | Siswa: NISN" tabindex="1" required autofocus>
+                                    <small class="form-text text-muted">Gunakan NISN (Siswa) atau NUPTK (Guru) untuk login</small>
                                 </div>
 
                                 <div class="form-group">

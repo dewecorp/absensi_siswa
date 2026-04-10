@@ -99,7 +99,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $jenis = $_POST['jenis'] ?? 'Reguler'; // Capture jenis input
     $id_guru = $teacher['id_guru'];
     
-    if (isset($_POST['id_jurnal']) && !empty($_POST['id_jurnal'])) {
+    // Holiday Validation
+    $holiday_check = isHoliday($pdo, $tanggal);
+    if ($holiday_check['is_holiday']) {
+        $message = ['type' => 'error', 'text' => 'Gagal menyimpan jurnal. Tanggal ' . date('d-m-Y', strtotime($tanggal)) . ' adalah hari libur (' . $holiday_check['name'] . ').'];
+    } else {
+        if (isset($_POST['id_jurnal']) && !empty($_POST['id_jurnal'])) {
         // Edit
         $id_jurnal = (int)$_POST['id_jurnal'];
         // Check ownership
@@ -148,6 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         
         $message = ['type' => 'success', 'text' => 'Jurnal berhasil ditambahkan!'];
     }
+}
 }
 
 // Handle Delete
