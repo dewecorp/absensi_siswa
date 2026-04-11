@@ -633,16 +633,20 @@ include_once '../templates/sidebar.php';
 
                     <!-- Attendance Box for Teacher -->
                     <div class="row">
-                        <div class="col-12 col-md-6">
-                            <div class="card">
+                        <?php
+                        $show_les_box_wali = ($is_grade_6_wali && $has_les_schedule);
+                        $col_class_wali = $show_les_box_wali ? 'col-12 col-md-6' : 'col-12';
+                        ?>
+                        <div class="<?php echo $col_class_wali; ?>">
+                            <div class="card card-primary">
                                 <div class="card-header">
                                     <h4>Absensi Harian & Jurnal Mengajar</h4>
                                 </div>
                                 <div class="card-body">
-                                    <div class="alert alert-light alert-has-icon">
-                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
+                                    <div class="alert alert-light alert-has-icon shadow-sm border">
+                                        <div class="alert-icon text-primary"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
-                                            <div class="alert-title">Penting</div>
+                                            <div class="alert-title font-weight-bold">Penting</div>
                                             Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda, <b>Absensi Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
                                         </div>
                                     </div>
@@ -658,7 +662,7 @@ include_once '../templates/sidebar.php';
                                     ?>
 
                                     <form method="POST" action="" id="attendanceForm">
-                                        <div class="form-group">
+                                        <div class="form-group mb-4">
                                             <label class="d-block font-weight-bold">Status Kehadiran Hari Ini (<?php echo date('d-m-Y'); ?>)</label>
                                             <div class="selectgroup selectgroup-pills">
                                                 <label class="selectgroup-item">
@@ -681,28 +685,28 @@ include_once '../templates/sidebar.php';
                                             <textarea name="attendance_note" class="form-control" placeholder="Masukkan keterangan..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
 
-                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Simpan Absensi</button>
+                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi</button>
                                     </form>
                                 </div>
                             </div>
                         </div>
 
-                        <?php if ($is_grade_6_wali && $has_les_schedule): ?>
+                        <?php if ($show_les_box_wali): ?>
                         <div class="col-12 col-md-6">
-                            <div class="card">
+                            <div class="card card-dark">
                                 <div class="card-header">
                                     <h4>Absensi Les & Jurnal Les (Kelas 6)</h4>
                                 </div>
                                 <div class="card-body">
-                                    <div class="alert alert-light alert-has-icon">
-                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
+                                    <div class="alert alert-light alert-has-icon shadow-sm border">
+                                        <div class="alert-icon text-dark"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
-                                            <div class="alert-title">Penting</div>
+                                            <div class="alert-title font-weight-bold">Penting</div>
                                             Jangan lupa untuk mengisi <b>Absensi Les</b> Anda, <b>Absensi Siswa Les</b>, serta <b>Jurnal Les</b> sesuai jadwal Anda.
                                         </div>
                                     </div>
                                     <form method="POST" action="" id="attendanceFormLes">
-                                        <div class="form-group">
+                                        <div class="form-group mb-4">
                                             <label class="d-block font-weight-bold">Status Kehadiran Les (<?php echo date('d-m-Y'); ?>)</label>
                                             <div class="selectgroup selectgroup-pills">
                                                 <label class="selectgroup-item">
@@ -724,7 +728,7 @@ include_once '../templates/sidebar.php';
                                             <textarea name="attendance_note_les" class="form-control"><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
                                         
-                                        <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Simpan Absensi Les</button>
+                                        <button type="submit" name="submit_attendance_les" class="btn btn-dark btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
                                     </form>
                                 </div>
                             </div>
@@ -740,16 +744,19 @@ include_once '../templates/sidebar.php';
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-12 col-md-4 mb-2">
-                                            <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
+                                        <?php 
+                                        $btn_col_wali = $is_grade_6_wali ? 'col-12 col-md-4' : 'col-12 col-md-6';
+                                        ?>
+                                        <div class="<?php echo $btn_col_wali; ?> mb-2">
+                                            <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left shadow-sm"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
                                         </div>
                                         <?php if ($is_grade_6_wali): ?>
-                                        <div class="col-12 col-md-4 mb-2">
-                                            <a href="jurnal_les.php" class="btn btn-dark btn-lg btn-block btn-icon icon-left"><i class="fas fa-book"></i> Isi Jurnal Les</a>
+                                        <div class="<?php echo $btn_col_wali; ?> mb-2">
+                                            <a href="jurnal_les.php" class="btn btn-dark btn-lg btn-block btn-icon icon-left shadow-sm"><i class="fas fa-book"></i> Isi Jurnal Les</a>
                                         </div>
                                         <?php endif; ?>
-                                        <div class="col-12 col-md-4 mb-2">
-                                            <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
+                                        <div class="<?php echo $btn_col_wali; ?> mb-2">
+                                            <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left shadow-sm" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
                                         </div>
                                     </div>
                                 </div>
