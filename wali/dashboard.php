@@ -86,7 +86,7 @@ $has_les_schedule = $stmt_check_sched->fetchColumn() > 0;
 
 // Get tutoring attendance if schedule exists
 $today_les_attendance = null;
-if ($has_les_schedule && $teacher) {
+if ($has_les_schedule && $teacher && isset($teacher['id_guru'])) {
     $stmt_check_les = $pdo->prepare("SELECT * FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
     $stmt_check_les->execute([$teacher['id_guru'], $today]);
     $today_les_attendance = $stmt_check_les->fetch(PDO::FETCH_ASSOC);
@@ -643,7 +643,8 @@ include_once '../templates/sidebar.php';
                     <!-- Attendance Box for Teacher -->
                     <div class="row">
                         <?php
-                        $show_les_box_wali = ($is_grade_6_wali && $has_les_schedule);
+                        // Box les selalu muncul untuk kelas 6, cek apakah ada jadwal hari ini
+                        $show_les_box_wali = $is_grade_6_wali; // Selalu tampilkan untuk kelas 6
                         $col_class_wali = $show_les_box_wali ? 'col-12 col-md-6' : 'col-12';
                         ?>
                         <div class="<?php echo $col_class_wali; ?>">
@@ -680,19 +681,42 @@ include_once '../templates/sidebar.php';
                                                 </label>
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
                                                 </label>
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
                                         </div>
 
-                                        <div class="form-group" id="keterangan_box" style="display: <?php echo ($today_attendance && in_array($today_attendance['status'], ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
+                                        <?php 
+                                        // Show keterangan as info if already saved with sakit/izin
+                                        $show_keterangan_info = ($today_attendance && in_array(strtolower($today_attendance['status']), ['sakit', 'izin']) && !empty($today_attendance['keterangan']));
+                                        ?>
+
+                                        <div class="form-group" id="keterangan_box" style="display: <?php echo $show_keterangan_info ? 'none' : (($today_attendance && in_array($today_attendance['status'], ['izin', 'sakit'])) ? 'block' : 'none'); ?>;">
                                             <label>Keterangan</label>
                                             <textarea name="attendance_note" class="form-control" placeholder="Masukkan keterangan..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
+
+                                        <?php if ($show_keterangan_info): ?>
+                                        <div class="form-group" id="keterangan_info" style="display: block;">
+                                            <label>Keterangan</label>
+                                            <div class="alert alert-light border shadow-sm mb-2">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <i class="fas fa-info-circle text-info mr-2"></i>
+                                                        <span><?php echo htmlspecialchars($today_attendance['keterangan']); ?></span>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit-keterangan" onclick="editKeterangan('attendanceForm', 'keterangan_box', 'keterangan_info')">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="attendance_note" value="<?php echo htmlspecialchars($today_attendance['keterangan']); ?>">
+                                        </div>
+                                        <?php endif; ?>
 
                                         <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi</button>
                                     </form>
@@ -707,6 +731,7 @@ include_once '../templates/sidebar.php';
                                     <h4>Absensi Les & Jurnal Les (Kelas 6)</h4>
                                 </div>
                                 <div class="card-body">
+                                    <?php if ($has_les_schedule): ?>
                                     <div class="alert alert-light alert-has-icon shadow-sm border">
                                         <div class="alert-icon text-dark"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
@@ -724,21 +749,54 @@ include_once '../templates/sidebar.php';
                                                 </label>
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status_les" value="sakit" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
                                                 </label>
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status_les" value="izin" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
                                         </div>
-                                        <div class="form-group keterangan-box-les" style="display: <?php echo ($today_les_attendance && in_array(strtolower($today_les_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
+
+                                        <?php 
+                                        // Show keterangan as info if already saved with sakit/izin
+                                        $show_keterangan_info_les = ($today_les_attendance && in_array(strtolower($today_les_attendance['status']), ['sakit', 'izin']) && !empty($today_les_attendance['keterangan']));
+                                        ?>
+
+                                        <div class="form-group keterangan-box-les" id="keterangan_box_les" style="display: <?php echo $show_keterangan_info_les ? 'none' : (($today_les_attendance && in_array(strtolower($today_les_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'); ?>;">
                                             <label>Keterangan</label>
                                             <textarea name="attendance_note_les" class="form-control"><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
+
+                                        <?php if ($show_keterangan_info_les): ?>
+                                        <div class="form-group" id="keterangan_info_les" style="display: block;">
+                                            <label>Keterangan</label>
+                                            <div class="alert alert-light border shadow-sm mb-2">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <i class="fas fa-info-circle text-info mr-2"></i>
+                                                        <span><?php echo htmlspecialchars($today_les_attendance['keterangan']); ?></span>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit-keterangan" onclick="editKeterangan('attendanceFormLes', 'keterangan_box_les', 'keterangan_info_les')">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="attendance_note_les" value="<?php echo htmlspecialchars($today_les_attendance['keterangan']); ?>">
+                                        </div>
+                                        <?php endif; ?>
                                         
                                         <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
                                     </form>
+                                    <?php else: ?>
+                                    <div class="alert alert-info shadow-sm">
+                                        <div class="alert-body">
+                                            <div class="alert-title font-weight-bold">Informasi</div>
+                                            Tidak ada jadwal les untuk hari ini (<?php echo date('d-m-Y'); ?>).
+                                        </div>
+                                    </div>
+                                    <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-book mr-2"></i> Lihat Jadwal & Jurnal Les</a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -866,25 +924,42 @@ include_once '../templates/sidebar.php';
                     
                     .selectgroup-input:checked + .selectgroup-button-icon[data-status="sakit"],
                     .selectgroup-button-icon.active-sakit {
-                        background-color: #17a2b8 !important;
-                        border-color: #17a2b8 !important;
-                        color: #fff !important;
-                    }
-                    
-                    .selectgroup-input:checked + .selectgroup-button-icon[data-status="izin"],
-                    .selectgroup-button-icon.active-izin {
                         background-color: #ffc107 !important;
                         border-color: #ffc107 !important;
                         color: #212529 !important;
                     }
+                    
+                    .selectgroup-input:checked + .selectgroup-button-icon[data-status="izin"],
+                    .selectgroup-button-icon.active-izin {
+                        background-color: #17a2b8 !important;
+                        border-color: #17a2b8 !important;
+                        color: #fff !important;
+                    }
                     </style>
 
                     <script>
+                    // Function to edit keterangan
+                    function editKeterangan(formId, boxId, infoId) {
+                        const keteranganBox = document.getElementById(boxId);
+                        const keteranganInfo = document.getElementById(infoId);
+                        
+                        if (keteranganBox && keteranganInfo) {
+                            keteranganBox.style.display = 'block';
+                            keteranganInfo.style.display = 'none';
+                            
+                            // Focus on textarea
+                            const textarea = keteranganBox.querySelector('textarea');
+                            if (textarea) {
+                                textarea.focus();
+                            }
+                        }
+                    }
+
                     document.addEventListener('DOMContentLoaded', function() {
                         const radioButtons = document.querySelectorAll('input[name="attendance_status"], input[name="attendance_status_les"]');
                         const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
                         const keteranganBox = document.getElementById('keterangan_box');
-                        const keteranganBoxLes = document.querySelector('.keterangan-box-les');
+                        const keteranganBoxLes = document.getElementById('keterangan_box_les');
                         
                         function updateKeteranganBox(radio) {
                             const form = radio.closest('form');
