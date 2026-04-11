@@ -408,14 +408,16 @@ include '../templates/sidebar.php';
                                                     <table class="table table-sm table-bordered" style="font-size: 13px;">
                                                         <thead class="bg-light">
                                                             <tr>
+                                                                <th class="py-1 text-center" style="width: 50px;">No</th>
                                                                 <th class="py-1">Nama Siswa</th>
                                                                 <th class="py-1">Kelas</th>
                                                                 <th class="py-1">Keterangan</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            <?php foreach ($absent_summary as $abs): ?>
+                                                            <?php $no_abs = 1; foreach ($absent_summary as $abs): ?>
                                                                 <tr>
+                                                                    <td class="py-1 text-center"><?php echo $no_abs++; ?></td>
                                                                     <td class="py-1"><?php echo htmlspecialchars($abs['nama_siswa']); ?></td>
                                                                     <td class="py-1"><?php echo htmlspecialchars($abs['nama_kelas']); ?></td>
                                                                     <td class="py-1">
