@@ -343,11 +343,12 @@ $(document).ready(function() {
         '.select2-search--dropdown .select2-search__field { border: 1px solid #ced4da !important; padding: 5px !important; }' +
         '</style>');
     
-    // Initialize Select2 for multiselect mapel
-    $('#mapel').select2({
+    // Initialize Select2 for multiselect mapel (inside modal)
+    $('#jurnalModal #mapel').select2({
         placeholder: '-- Pilih Mata Pelajaran --',
         allowClear: true,
-        width: '100%'
+        width: '100%',
+        dropdownParent: $('#jurnalModal')
     });
     
     var t = $('#table-jurnal').DataTable({

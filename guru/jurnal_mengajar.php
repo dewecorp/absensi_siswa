@@ -114,8 +114,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
             $stmt = $pdo->prepare("UPDATE tb_jurnal SET id_kelas=?, jam_ke=?, mapel=?, materi=?, tanggal=?, jenis=? WHERE id=?");
             $stmt->execute([$id_kelas, $jam_ke, $mapel, $materi, $tanggal, $jenis, $id_jurnal]);
 
-            // Notification
             $nama_guru = $teacher['nama_guru'];
+            $role_label = ($_SESSION['level'] == 'wali') ? 'Wali' : 'Guru';
             $nama_kelas_log = $id_kelas;
             foreach ($classes as $c) {
                 if ($c['id_kelas'] == $id_kelas) {
@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
                 }
             }
             
-            $notif_msg = "$nama_guru memperbarui jurnal $mapel kelas $nama_kelas_log";
+            $notif_msg = "$nama_guru ($role_label) memperbarui jurnal $mapel kelas $nama_kelas_log pada " . date('d-m-Y H:i');
             createNotification($pdo, $notif_msg, 'jurnal_mengajar.php?kelas=' . $id_kelas, 'jurnal_mengajar');
 
             // Log activity
@@ -142,9 +142,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         
         // Send notification to admin
         $nama_guru = $teacher['nama_guru'];
-        $waktu = date('H:i');
-        $tanggal_notif = date('d-m-Y');
-        $notif_msg = "$nama_guru telah membuat jurnal $mapel pada pukul $waktu tanggal $tanggal_notif";
+        $role_label = ($_SESSION['level'] == 'wali') ? 'Wali' : 'Guru';
+        $nama_kelas_log = $id_kelas;
+        foreach ($classes as $c) {
+            if ($c['id_kelas'] == $id_kelas) {
+                $nama_kelas_log = $c['nama_kelas'];
+                break;
+            }
+        }
+        $notif_msg = "$nama_guru ($role_label) telah mengisi jurnal $mapel kelas $nama_kelas_log pada " . date('d-m-Y H:i');
         createNotification($pdo, $notif_msg, 'jurnal_mengajar.php?kelas=' . $id_kelas, 'jurnal_mengajar');
         
         // Log activity
@@ -276,20 +282,7 @@ foreach ($jam_ramadhan_list as $jam) {
     ];
 }
 
-$mapel_stmt = $pdo->prepare("
-    SELECT DISTINCT m.nama_mapel 
-    FROM tb_mata_pelajaran m
-    JOIN tb_jadwal_pelajaran j ON m.id_mapel = j.mapel_id
-    WHERE j.guru_id = ?
-    AND m.nama_mapel NOT LIKE '%Asmaul Husna%' 
-    AND m.nama_mapel NOT LIKE '%Upacara%' 
-    AND m.nama_mapel NOT LIKE '%Istirahat%' 
-    AND m.nama_mapel NOT LIKE '%Kepramukaan%' 
-    AND m.nama_mapel NOT LIKE '%Ekstrakurikuler%'
-    ORDER BY m.nama_mapel ASC
-");
-$mapel_stmt->execute([$teacher['id_guru']]);
-$mapel_list = $mapel_stmt->fetchAll(PDO::FETCH_ASSOC);
+$mapel_list = getFilteredSubjects($pdo);
 
 // Get schedule map (class_id => [mapels])
 $schedule_stmt = $pdo->prepare("
@@ -347,14 +340,7 @@ $js_page = [
         \$mapelSelect.empty();
         \$mapelSelect.append('<option value=\"\">-- Pilih Mata Pelajaran --</option>');
         
-        var mapels = [];
-        // If class is selected and we have schedule for it, use it
-        if (classId && teacherSchedule[classId]) {
-            mapels = teacherSchedule[classId];
-        } else {
-            // Otherwise show all mapels available to this teacher
-            mapels = allMapels;
-        }
+        var mapels = allMapels;
         
         mapels.forEach(function(mapel) {
             var option = new Option(mapel, mapel, false, false);
@@ -405,8 +391,15 @@ $js_page = [
             } );
         } ).draw();
 
-        $('.select2').select2({
+        // Initialize Select2 for filter (main page)
+        $('.select2').not('#jurnalModal .select2').select2({
             width: '100%'
+        });
+
+        // Initialize Select2 inside modal (to fix search input issue)
+        $('#jurnalModal .select2').select2({
+            width: '100%',
+            dropdownParent: $('#jurnalModal')
         });
         
         $('#jenis_jadwal').change(function() {
