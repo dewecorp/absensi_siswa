@@ -23,6 +23,25 @@ if (!$teacher) {
     die('Error: Teacher data not found');
 }
 
+// AJAX Handler for fetching waktu les
+if (isset($_POST['get_waktu_les']) && isset($_POST['tanggal'])) {
+    header('Content-Type: application/json');
+    $tanggal = $_POST['tanggal'];
+    $id_guru = $teacher['id_guru'];
+    
+    $stmt = $pdo->prepare("SELECT waktu_mulai, waktu_selesai FROM tb_jadwal_les WHERE id_guru = ? AND tanggal = ? LIMIT 1");
+    $stmt->execute([$id_guru, $tanggal]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($result) {
+        $waktu = date('H.i', strtotime($result['waktu_mulai'])) . ' - ' . date('H.i', strtotime($result['waktu_selesai']));
+        echo json_encode(['success' => true, 'waktu' => $waktu]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Tidak ada jadwal les pada tanggal ini.']);
+    }
+    exit;
+}
+
 // Get classes
 $classes = [];
 if (!empty($teacher['mengajar'])) {
@@ -228,17 +247,7 @@ $stmt_mapel = $pdo->prepare("
 $stmt_mapel->execute([$teacher['id_guru']]);
 $mapel_options = $stmt_mapel->fetchAll(PDO::FETCH_COLUMN);
 
-    // Get unique waktu options from tb_jadwal_les for the logged-in teacher, filtered by selected class
-$stmt_waktu = $pdo->prepare("
-    SELECT DISTINCT CONCAT(TIME_FORMAT(jl.waktu_mulai, '%H.%i'), ' - ', TIME_FORMAT(jl.waktu_selesai, '%H.%i')) AS waktu_range, jl.waktu_mulai 
-    FROM tb_jadwal_les jl
-    WHERE jl.id_guru = ?
-    ORDER BY jl.waktu_mulai
-");
-$stmt_waktu->execute([$teacher['id_guru']]);
-$waktu_options = $stmt_waktu->fetchAll(PDO::FETCH_COLUMN, 0);
-
-// Set page title
+    // Set page title
 $page_title = 'Jurnal Les';
 
 // Define CSS libraries
@@ -321,7 +330,52 @@ $(document).ready(function() {
         width: '100%',
         dropdownParent: $('#jurnalModal')
     });
+
+    // Handle date change to fetch waktu les automatically
+    function updateWaktuLes(tanggal) {
+        if (!tanggal) {
+            $('#waktu').val('');
+            $('#waktu_status').text('').removeClass('text-danger text-success');
+            return;
+        }
+
+        $.ajax({
+            url: window.location.href,
+            type: 'POST',
+            data: {
+                get_waktu_les: 1,
+                tanggal: tanggal
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    $('#waktu').val(response.waktu);
+                    $('#waktu_status').text('').removeClass('text-danger text-success');
+                    $('button[name="save_journal"]').prop('disabled', false);
+                } else {
+                    $('#waktu').val('');
+                    $('#waktu_status').text(response.message).addClass('text-danger').removeClass('text-success');
+                    $('button[name="save_journal"]').prop('disabled', true);
+                }
+            },
+            error: function() {
+                $('#waktu').val('');
+                $('#waktu_status').text('Gagal memuat jadwal.').addClass('text-danger').removeClass('text-success');
+            }
+        });
+    }
+
+    $('#tanggal').on('change', function() {
+        updateWaktuLes($(this).val());
+    });
     
+    // Check waktu les when modal is shown (for "Tambah")
+    $('#jurnalModal').on('shown.bs.modal', function () {
+        if ($('#journal_id').val() == '') { // Only for new entry
+            updateWaktuLes($('#tanggal').val());
+        }
+    });
+
     var t = $('#table-jurnal').DataTable({
         'language': {
             'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
@@ -453,6 +507,8 @@ $(document).ready(function() {
         $('.form-control').removeClass('is-invalid');
         $('#mapel').val(null).trigger('change'); // Reset Select2 multiselect
         $('#jurnalModalLabel').text('Tambah Jurnal Les');
+        $('button[name="save_journal"]').prop('disabled', false); // Enable save button
+        $('#waktu_status').text('').removeClass('text-danger text-success');
     });
 });
 JS;
@@ -560,13 +616,8 @@ include '../templates/sidebar.php';
                     
                     <div class="form-group">
                         <label for="waktu">Waktu Les <span class="text-danger">*</span></label>
-                        <select class="form-control" id="waktu" name="waktu" required>
-                            <option value="">-- Pilih Waktu --</option>
-                            <?php foreach ($waktu_options as $w_opt): ?>
-                                <option value="<?php echo htmlspecialchars($w_opt); ?>"><?php echo htmlspecialchars($w_opt); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small class="form-text text-muted">Pilih slot waktu sesuai jadwal les Anda</small>
+                        <input type="text" class="form-control bg-light" id="waktu" name="waktu" placeholder="Otomatis dari jadwal..." readonly required>
+                        <small id="waktu_status" class="form-text"></small>
                     </div>
                     
                     <div class="form-group">
