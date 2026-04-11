@@ -388,8 +388,8 @@ include '../templates/sidebar.php';
                                                     
                                                     $summary_items = [
                                                         ['label' => 'Total Tidak Hadir', 'count' => $total_absent, 'color' => 'dark'],
-                                                        ['label' => 'Sakit', 'count' => $counts['Sakit'], 'color' => '#3abaf4'],
-                                                        ['label' => 'Izin', 'count' => $counts['Izin'], 'color' => '#ffa426'],
+                                                        ['label' => 'Sakit', 'count' => $counts['Sakit'], 'color' => '#ffa426'],
+                                                        ['label' => 'Izin', 'count' => $counts['Izin'], 'color' => '#3abaf4'],
                                                         ['label' => 'Alpa', 'count' => $counts['Alpa'], 'color' => '#fc544b']
                                                     ];
                                                     ?>
@@ -422,7 +422,7 @@ include '../templates/sidebar.php';
                                                                     <td class="py-1"><?php echo htmlspecialchars($abs['nama_kelas']); ?></td>
                                                                     <td class="py-1">
                                                                         <span class="badge <?php 
-                                                                            echo $abs['keterangan'] == 'Sakit' ? 'badge-info' : ($abs['keterangan'] == 'Izin' ? 'badge-warning' : 'badge-danger'); 
+                                                                            echo $abs['keterangan'] == 'Sakit' ? 'badge-warning' : ($abs['keterangan'] == 'Izin' ? 'badge-info' : 'badge-danger'); 
                                                                         ?>">
                                                                             <?php echo $abs['keterangan']; ?>
                                                                         </span>
