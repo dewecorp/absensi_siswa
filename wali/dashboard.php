@@ -858,7 +858,7 @@ include_once '../templates/sidebar.php';
                     </script>
 
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
                                     <i class="fas fa-chalkboard"></i>
@@ -873,7 +873,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-users"></i>
@@ -892,14 +892,14 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-check-circle"></i>
                                 </div>
                                 <div class="card-wrap">
                                     <div class="card-header">
-                                        <h4>Hadir</h4>
+                                        <h4>Siswa Hadir</h4>
                                     </div>
                                     <div class="card-body">
                                         <strong><?php echo $jumlah_hadir; ?></strong>
@@ -907,6 +907,9 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    
+                    <div class="row">
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
@@ -914,7 +917,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                                 <div class="card-wrap">
                                     <div class="card-header">
-                                        <h4>Sakit</h4>
+                                        <h4>Siswa Sakit</h4>
                                     </div>
                                     <div class="card-body">
                                         <strong><?php echo $jumlah_sakit; ?></strong>
@@ -922,10 +925,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-info">
                                     <i class="fas fa-file-alt"></i>
@@ -940,7 +940,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-times-circle"></i>
@@ -955,7 +955,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-4 col-sm-6 col-12">
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-ban"></i>

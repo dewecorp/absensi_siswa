@@ -936,7 +936,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
-                                    <i class="far fa-user"></i>
+                                    <i class="fas fa-chalkboard"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Total Kelas Ajar</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <strong><?php echo $total_kelas; ?></strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-success">
+                                    <i class="fas fa-users"></i>
                                 </div>
                                 <div class="card-wrap">
                                     <div class="card-header">
@@ -948,33 +963,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-warning">
-                                    <i class="fas fa-school"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Total Kelas</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $total_kelas; ?></strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         
                         <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-info">
-                                    <i class="fas fa-users"></i>
+                                <div class="card-icon bg-success">
+                                    <i class="fas fa-check-circle"></i>
                                 </div>
                                 <div class="card-wrap">
                                     <div class="card-header">
-                                        <h4>Kehadiran Hari Ini</h4>
+                                        <h4>Siswa Hadir</h4>
                                     </div>
                                     <div class="card-body">
-                                        <strong><?php echo $persentase_hadir; ?>%</strong>
+                                        <strong><?php echo $jumlah_hadir; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -985,27 +985,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="row">
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-success">
-                                    <i class="fas fa-user-check"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Hadir</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $jumlah_hadir; ?></strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                            <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-heartbeat"></i>
                                 </div>
                                 <div class="card-wrap">
                                     <div class="card-header">
-                                        <h4>Sakit</h4>
+                                        <h4>Siswa Sakit</h4>
                                     </div>
                                     <div class="card-body">
                                         <strong><?php echo $jumlah_sakit; ?></strong>
@@ -1024,6 +1009,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                     <div class="card-body">
                                         <strong><?php echo $jumlah_izin; ?></strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-danger">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Alpa</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <strong><?php echo $jumlah_alpa; ?></strong>
                                     </div>
                                 </div>
                             </div>
