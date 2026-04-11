@@ -101,24 +101,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $mapel_array = $_POST['mapel']; // Array dari multiselect
     $mapel = implode(', ', $mapel_array); // Gabungkan dengan koma untuk disimpan
     $materi = $_POST['materi'];
-    $tanggal = $_POST['tanggal'];
+    $tanggal = $_POST['tanggal']; // Format: YYYY-MM-DD
     $id_guru = $teacher['id_guru'];
     
-    // Get waktu from tb_jadwal_les based on date and teacher
-    $stmt_get_waktu = $pdo->prepare("
-        SELECT CONCAT(TIME_FORMAT(waktu_mulai, '%H.%i'), ' - ', TIME_FORMAT(waktu_selesai, '%H.%i')) 
-        FROM tb_jadwal_les 
-        WHERE id_guru = ? AND tanggal = ?
-        LIMIT 1
-    ");
-    $stmt_get_waktu->execute([$id_guru, $tanggal]);
-    $waktu = $stmt_get_waktu->fetchColumn();
+    // Get waktu directly from POST
+    $waktu = isset($_POST['waktu']) ? $_POST['waktu'] : '';
     
-    // Validate if teacher has les schedule for this date
+    // Validate if waktu is selected
     $validation_error = false;
-    if (!$waktu) {
+    if (empty($waktu)) {
         $validation_error = true;
-        $message = ['type' => 'error', 'text' => 'Anda tidak memiliki jadwal les untuk tanggal tersebut. Tidak dapat mengisi jurnal les.'];
+        $message = ['type' => 'error', 'text' => 'Silakan pilih waktu les yang sesuai.'];
     }
 
     if (!$validation_error) {
@@ -235,12 +228,12 @@ $stmt_mapel = $pdo->prepare("
 $stmt_mapel->execute([$teacher['id_guru']]);
 $mapel_options = $stmt_mapel->fetchAll(PDO::FETCH_COLUMN);
 
-// Get unique waktu options from tb_jadwal_les for the logged-in teacher, ensuring start time is before end time
+    // Get unique waktu options from tb_jadwal_les for the logged-in teacher, filtered by selected class
 $stmt_waktu = $pdo->prepare("
-    SELECT DISTINCT CONCAT(TIME_FORMAT(waktu_mulai, '%H.%i'), ' - ', TIME_FORMAT(waktu_selesai, '%H.%i')) AS waktu_range, waktu_mulai 
-    FROM tb_jadwal_les 
-    WHERE id_guru = ? AND waktu_mulai < waktu_selesai 
-    ORDER BY waktu_mulai
+    SELECT DISTINCT CONCAT(TIME_FORMAT(jl.waktu_mulai, '%H.%i'), ' - ', TIME_FORMAT(jl.waktu_selesai, '%H.%i')) AS waktu_range, jl.waktu_mulai 
+    FROM tb_jadwal_les jl
+    WHERE jl.id_guru = ?
+    ORDER BY jl.waktu_mulai
 ");
 $stmt_waktu->execute([$teacher['id_guru']]);
 $waktu_options = $stmt_waktu->fetchAll(PDO::FETCH_COLUMN, 0);
@@ -306,6 +299,7 @@ JS;
 
 $js_page[] = <<<JS
 $(document).ready(function() {
+    
     // Add custom CSS for Select2 compact styling
     $('head').append('<style>' +
         '.select2-container .select2-selection--multiple { min-height: 38px !important; height: 38px !important; border: 1px solid #ced4da !important; padding: 0 5px !important; display: flex !important; align-items: center !important; }' +
@@ -352,6 +346,8 @@ $(document).ready(function() {
         // Fill form fields
         $('#journal_id').val(id);
         $('#tanggal').val(tanggal);
+        
+        // Set waktu value in dropdown
         $('#waktu').val(waktu);
         
         // Handle multiple mapel (split by comma)
@@ -562,8 +558,15 @@ include '../templates/sidebar.php';
                         <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?php echo date('Y-m-d'); ?>" required>
                     </div>
                     
-                    <div class="alert alert-info">
-                        <small><i class="fas fa-info-circle"></i> <strong>Catatan:</strong> Isi jurnal les sesuai dengan tanggal yang dipilih. Sistem akan otomatis memvalidasi kesesuaian dengan jadwal les Anda.</small>
+                    <div class="form-group">
+                        <label for="waktu">Waktu Les <span class="text-danger">*</span></label>
+                        <select class="form-control" id="waktu" name="waktu" required>
+                            <option value="">-- Pilih Waktu --</option>
+                            <?php foreach ($waktu_options as $w_opt): ?>
+                                <option value="<?php echo htmlspecialchars($w_opt); ?>"><?php echo htmlspecialchars($w_opt); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">Pilih slot waktu sesuai jadwal les Anda</small>
                     </div>
                     
                     <div class="form-group">
