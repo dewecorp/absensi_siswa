@@ -516,18 +516,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
                 $check_stmt->execute([$current_teacher_id, $current_date]);
                 
+                $status_to_save_les = isset($_POST['attendance_status_les']) ? ucfirst($_POST['attendance_status_les']) : '';
+                $attendance_note_les = $_POST['attendance_note_les'] ?? '';
+
                 if ($check_stmt->rowCount() > 0) {
                     $update_stmt = $pdo->prepare("UPDATE tb_absensi_les_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
-                    $update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date]);
+                    $update_stmt->execute([$status_to_save_les, $attendance_note_les, $now_time, $current_teacher_id, $current_date]);
                     $msg_text = 'Absensi les berhasil diperbarui.';
                 } else {
                     $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
-                    $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time]);
+                    $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save_les, $attendance_note_les, $now_time]);
                     $msg_text = 'Absensi les berhasil disimpan.';
                 }
                 
                 createNotification($pdo, "$nama_guru telah mengirim kehadiran les", 'absensi_les_guru.php', 'absensi_les_guru');
-                logActivity($pdo, $nama_guru, 'Absensi Les Guru', "$nama_guru mengisi kehadiran les: $status_to_save");
+                logActivity($pdo, $nama_guru, 'Absensi Les Guru', "$nama_guru mengisi kehadiran les: $status_to_save_les");
                 
                 echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
@@ -700,24 +703,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <label class="d-block font-weight-bold">Status Kehadiran Les (<?php echo date('d-m-Y'); ?>)</label>
                                             <div class="selectgroup selectgroup-pills">
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
+                                                    <input type="radio" name="attendance_status_les" value="hadir" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
                                                     <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
                                                 </label>
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
+                                                    <input type="radio" name="attendance_status_les" value="sakit" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
                                                     <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
                                                 </label>
                                                 <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
+                                                    <input type="radio" name="attendance_status_les" value="izin" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
                                                     <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
                                         </div>
                                         <div class="form-group keterangan-box" style="display: <?php echo ($today_les_attendance && in_array(strtolower($today_les_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
                                             <label>Keterangan</label>
-                                            <textarea name="attendance_note" class="form-control"><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
+                                            <textarea name="attendance_note_les" class="form-control"><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
-                                        <button type="submit" name="submit_attendance_les" class="btn btn-dark btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
+                                        <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
                                     </form>
                                 </div>
                             </div>
@@ -741,7 +744,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
                                         <?php if ($is_grade_6_guru): ?>
                                         <div class="<?php echo $btn_col; ?> mb-2">
-                                            <a href="jurnal_les.php" class="btn btn-dark btn-lg btn-block btn-icon icon-left shadow-sm"><i class="fas fa-book"></i> Isi Jurnal Les</a>
+                                            <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block btn-icon icon-left shadow-sm"><i class="fas fa-book"></i> Isi Jurnal Les</a>
                                         </div>
                                         <?php endif; ?>
                                         <div class="<?php echo $btn_col; ?> mb-2">
@@ -755,11 +758,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
+                        const radioButtons = document.querySelectorAll('input[name="attendance_status"], input[name="attendance_status_les"]');
+                        const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
                         
                         function updateKeteranganBox(radio) {
                             const form = radio.closest('form');
                             const keteranganBox = form.querySelector('.keterangan-box');
+                            if (!keteranganBox) return;
                             const keteranganTextarea = keteranganBox.querySelector('textarea');
                             
                             const status = radio.value;
@@ -774,6 +779,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         radioButtons.forEach(radio => {
                             radio.addEventListener('change', function() {
+                                const form = this.closest('form');
+                                form.querySelectorAll('.selectgroup-button-icon').forEach(btn => {
+                                    btn.classList.remove('active-hadir', 'active-sakit', 'active-izin');
+                                });
+                                
+                                // Add active class to clicked button
+                                const label = this.closest('label');
+                                const btn = label.querySelector('.selectgroup-button-icon');
+                                if (this.value === 'hadir') btn.classList.add('active-hadir');
+                                if (this.value === 'sakit') btn.classList.add('active-sakit');
+                                if (this.value === 'izin') btn.classList.add('active-izin');
+                                
                                 updateKeteranganBox(this);
                             });
                         });
@@ -888,18 +905,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
-                        const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
-                        
-                        radioButtons.forEach(radio => {
-                            radio.addEventListener('change', function() {
-                                // Remove all active classes from all buttons
-                                statusButtons.forEach(btn => {
-                                    btn.classList.remove('active-hadir', 'active-sakit', 'active-izin');
-                                });
-                            });
-                        });
-                        
                         const fotoUpload = document.getElementById('foto_upload');
                         if(fotoUpload) {
                             fotoUpload.addEventListener('change', function() {

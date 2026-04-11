@@ -245,16 +245,11 @@ $hero_bg = !empty($school_profile['dashboard_hero_image'])
     : '../assets/img/unsplash/eberhard-grossgasteiger-1207565-unsplash.jpg';
 
 // Handle Attendance Submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance'])) {
-    $attendance_status = $_POST['attendance_status'];
-    $attendance_note = $_POST['attendance_note'] ?? '';
-    
-    // Determine teacher ID based on session
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $current_teacher_id = 0;
     if (isset($teacher['id_guru'])) {
         $current_teacher_id = $teacher['id_guru'];
     } elseif (isset($_SESSION['user_id']) && ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali')) {
-         // Fallback if $teacher not set but user is guru/wali directly
          $current_teacher_id = $_SESSION['user_id'];
     }
     
@@ -264,6 +259,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
         $nama_guru = $_SESSION['nama_guru'] ?? 'Wali Kelas';
 
         if (isset($_POST['submit_attendance'])) {
+            $attendance_status = $_POST['attendance_status'];
+            $attendance_note = $_POST['attendance_note'] ?? '';
             // Dashboard attendance is ALWAYS regular (tb_absensi_guru)
             // Regular attendance still checks holidays
             $holiday = isSchoolHoliday($pdo, $current_date);
@@ -338,30 +335,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
             }
         } elseif (isset($_POST['submit_attendance_les'])) {
             // Tutoring attendance - specific for Grade 6
-            $status_to_save = ucfirst($_POST['attendance_status_les']);
-            $attendance_note = $_POST['attendance_note_les'] ?? '';
+            // Check if there is a schedule today
+            $stmt_check_sched_post = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
+            $stmt_check_sched_post->execute([$current_date]);
+            
+            if ($stmt_check_sched_post->fetchColumn() > 0) {
+                $status_to_save_les = isset($_POST['attendance_status_les']) ? ucfirst($_POST['attendance_status_les']) : '';
+                $attendance_note_les = $_POST['attendance_note_les'] ?? '';
 
-            $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
-            $check_stmt->execute([$current_teacher_id, $current_date]);
-            
-            if ($check_stmt->rowCount() > 0) {
-                $update_stmt = $pdo->prepare("UPDATE tb_absensi_les_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
-                $update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date]);
-                $msg_text = 'Absensi les berhasil diperbarui.';
+                $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
+                $check_stmt->execute([$current_teacher_id, $current_date]);
+                
+                if ($check_stmt->rowCount() > 0) {
+                    $update_stmt = $pdo->prepare("UPDATE tb_absensi_les_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
+                    $update_stmt->execute([$status_to_save_les, $attendance_note_les, $now_time, $current_teacher_id, $current_date]);
+                    $msg_text = 'Absensi les berhasil diperbarui.';
+                } else {
+                    $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
+                    $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save_les, $attendance_note_les, $now_time]);
+                    $msg_text = 'Absensi les berhasil disimpan.';
+                }
+                
+                createNotification($pdo, "$nama_guru (Wali) telah mengirim kehadiran les", 'absensi_les_guru.php', 'absensi_les_guru');
+                logActivity($pdo, $nama_guru, 'Absensi Les Guru', "$nama_guru mengisi kehadiran les: $status_to_save_les");
+                
+                echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 3000, showConfirmButton: false });
+                    });
+                </script>";
             } else {
-                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
-                $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time]);
-                $msg_text = 'Absensi les berhasil disimpan.';
+                echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({ title: 'Gagal', text: 'Tidak ada jadwal les untuk hari ini.', icon: 'error' });
+                    });
+                </script>";
             }
-            
-            createNotification($pdo, "$nama_guru (Wali) telah mengirim kehadiran les", 'absensi_les_guru.php', 'absensi_les_guru');
-            logActivity($pdo, $nama_guru, 'Absensi Les Guru', "$nama_guru mengisi kehadiran les: $status_to_save");
-            
-            echo "<script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 3000, showConfirmButton: false }).then(() => { location.reload(); });
-                });
-            </script>";
         }
     }
     after_submission_wali:
@@ -728,7 +737,7 @@ include_once '../templates/sidebar.php';
                                             <textarea name="attendance_note_les" class="form-control"><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
                                         
-                                        <button type="submit" name="submit_attendance_les" class="btn btn-dark btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
+                                        <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
                                     </form>
                                 </div>
                             </div>
@@ -752,7 +761,7 @@ include_once '../templates/sidebar.php';
                                         </div>
                                         <?php if ($is_grade_6_wali): ?>
                                         <div class="<?php echo $btn_col_wali; ?> mb-2">
-                                            <a href="jurnal_les.php" class="btn btn-dark btn-lg btn-block btn-icon icon-left shadow-sm"><i class="fas fa-book"></i> Isi Jurnal Les</a>
+                                            <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block btn-icon icon-left shadow-sm"><i class="fas fa-book"></i> Isi Jurnal Les</a>
                                         </div>
                                         <?php endif; ?>
                                         <div class="<?php echo $btn_col_wali; ?> mb-2">
@@ -872,17 +881,17 @@ include_once '../templates/sidebar.php';
 
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
-                        const radioButtonsLes = document.querySelectorAll('input[name="attendance_status_les"]');
+                        const radioButtons = document.querySelectorAll('input[name="attendance_status"], input[name="attendance_status_les"]');
                         const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
                         const keteranganBox = document.getElementById('keterangan_box');
                         const keteranganBoxLes = document.querySelector('.keterangan-box-les');
                         
-                        function updateKeteranganBox(formId) {
-                            if (formId === 'attendanceForm') {
-                                const selectedRadio = document.querySelector('input[name="attendance_status"]:checked');
-                                if (selectedRadio && keteranganBox) {
-                                    const status = selectedRadio.value;
+                        function updateKeteranganBox(radio) {
+                            const form = radio.closest('form');
+                            const status = radio.value;
+                            
+                            if (form.id === 'attendanceForm') {
+                                if (keteranganBox) {
                                     const keteranganTextarea = keteranganBox.querySelector('textarea');
                                     if (status === 'izin' || status === 'sakit') {
                                         keteranganBox.style.display = 'block';
@@ -892,10 +901,8 @@ include_once '../templates/sidebar.php';
                                         keteranganTextarea.required = false;
                                     }
                                 }
-                            } else if (formId === 'attendanceFormLes') {
-                                const selectedRadio = document.querySelector('input[name="attendance_status_les"]:checked');
-                                if (selectedRadio && keteranganBoxLes) {
-                                    const status = selectedRadio.value;
+                            } else if (form.id === 'attendanceFormLes') {
+                                if (keteranganBoxLes) {
                                     const keteranganTextarea = keteranganBoxLes.querySelector('textarea');
                                     if (status === 'izin' || status === 'sakit') {
                                         keteranganBoxLes.style.display = 'block';
@@ -908,27 +915,21 @@ include_once '../templates/sidebar.php';
                             }
                         }
 
-                        // Run on load to set initial state
-                        updateKeteranganBox('attendanceForm');
-                        updateKeteranganBox('attendanceFormLes');
-                        
                         radioButtons.forEach(radio => {
                             radio.addEventListener('change', function() {
                                 const form = this.closest('form');
                                 form.querySelectorAll('.selectgroup-button-icon').forEach(btn => {
                                     btn.classList.remove('active-hadir', 'active-sakit', 'active-izin');
                                 });
-                                updateKeteranganBox('attendanceForm');
-                            });
-                        });
-
-                        radioButtonsLes.forEach(radio => {
-                            radio.addEventListener('change', function() {
-                                const form = this.closest('form');
-                                form.querySelectorAll('.selectgroup-button-icon').forEach(btn => {
-                                    btn.classList.remove('active-hadir', 'active-sakit', 'active-izin');
-                                });
-                                updateKeteranganBox('attendanceFormLes');
+                                
+                                // Add active class to clicked button
+                                const label = this.closest('label');
+                                const btn = label.querySelector('.selectgroup-button-icon');
+                                if (this.value === 'hadir') btn.classList.add('active-hadir');
+                                if (this.value === 'sakit') btn.classList.add('active-sakit');
+                                if (this.value === 'izin') btn.classList.add('active-izin');
+                                
+                                updateKeteranganBox(this);
                             });
                         });
                         
