@@ -84,6 +84,14 @@ $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tang
 $stmt_check_sched->execute([$today]);
 $has_les_schedule = $stmt_check_sched->fetchColumn() > 0;
 
+// Get tutoring attendance if schedule exists
+$today_les_attendance = null;
+if ($has_les_schedule && $teacher) {
+    $stmt_check_les = $pdo->prepare("SELECT * FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
+    $stmt_check_les->execute([$teacher['id_guru'], $today]);
+    $today_les_attendance = $stmt_check_les->fetch(PDO::FETCH_ASSOC);
+}
+
 // Determine which attendance table to use for STUDENTS
 // Main dashboard always shows regular attendance (tb_absensi)
 $student_attendance_table = 'tb_absensi';
@@ -252,79 +260,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_attendance']))
     
     if ($current_teacher_id > 0) {
         $current_date = date('Y-m-d');
-        
-        // Dashboard attendance is ALWAYS regular (tb_absensi_guru)
-        // Regular attendance still checks holidays
-        $holiday = isSchoolHoliday($pdo, $current_date);
-        if ($holiday['is_holiday']) {
+        $now_time = date('Y-m-d H:i:s');
+        $nama_guru = $_SESSION['nama_guru'] ?? 'Wali Kelas';
+
+        if (isset($_POST['submit_attendance'])) {
+            // Dashboard attendance is ALWAYS regular (tb_absensi_guru)
+            // Regular attendance still checks holidays
+            $holiday = isSchoolHoliday($pdo, $current_date);
+            if ($holiday['is_holiday']) {
+                echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            title: 'Hari Libur',
+                            text: 'Absensi ditutup pada hari libur: " . addslashes($holiday['name']) . "',
+                            icon: 'warning',
+                            timer: 4000,
+                            showConfirmButton: true
+                        });
+                    });
+                </script>";
+                goto after_submission_wali;
+            }
+            
+            // Check if already attended regular
+            $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
+            $check_stmt->execute([$current_teacher_id, $current_date]);
+            
+            $status_to_save = ucfirst($_POST['attendance_status']);
+            $attendance_note = $_POST['attendance_note'] ?? '';
+            
+            if ($check_stmt->rowCount() > 0) {
+                // Update existing
+                 $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
+                 if ($update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date])) {
+                     echo "<script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            Swal.fire({
+                                title: 'Berhasil!',
+                                text: 'Absensi berhasil diperbarui.',
+                                icon: 'success',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            });
+                        });
+                     </script>";
+                 }
+            } else {
+                // Insert new
+                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
+                if ($insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time])) {
+                     
+                     // Send notification to admin
+                     $waktu = date('H:i');
+                     $tanggal_indo = date('d-m-Y');
+                     $notif_msg = "$nama_guru (Wali) telah mengirim kehadiran pada pukul $waktu tanggal $tanggal_indo";
+                     createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
+
+                     // Log activity
+                     $log_desc = "$nama_guru (Wali) memperbarui kehadiran: " . $_POST['attendance_status'];
+                     if ($attendance_note) $log_desc .= " ($attendance_note)";
+                     logActivity($pdo, $nama_guru, 'Absensi Guru', $log_desc);
+
+                     echo "<script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            Swal.fire({
+                                title: 'Berhasil!',
+                                text: 'Absensi berhasil disimpan.',
+                                icon: 'success',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            });
+                        });
+                     </script>";
+                }
+            }
+        } elseif (isset($_POST['submit_attendance_les'])) {
+            // Tutoring attendance - specific for Grade 6
+            $status_to_save = ucfirst($_POST['attendance_status_les']);
+            $attendance_note = $_POST['attendance_note_les'] ?? '';
+
+            $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
+            $check_stmt->execute([$current_teacher_id, $current_date]);
+            
+            if ($check_stmt->rowCount() > 0) {
+                $update_stmt = $pdo->prepare("UPDATE tb_absensi_les_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
+                $update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date]);
+                $msg_text = 'Absensi les berhasil diperbarui.';
+            } else {
+                $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
+                $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time]);
+                $msg_text = 'Absensi les berhasil disimpan.';
+            }
+            
+            createNotification($pdo, "$nama_guru (Wali) telah mengirim kehadiran les", 'absensi_les_guru.php', 'absensi_les_guru');
+            logActivity($pdo, $nama_guru, 'Absensi Les Guru', "$nama_guru mengisi kehadiran les: $status_to_save");
+            
             echo "<script>
                 document.addEventListener('DOMContentLoaded', function() {
-                    Swal.fire({
-                        title: 'Hari Libur',
-                        text: 'Absensi ditutup pada hari libur: " . addslashes($holiday['name']) . "',
-                        icon: 'warning',
-                        timer: 4000,
-                        showConfirmButton: true
-                    });
+                    Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 3000, showConfirmButton: false }).then(() => { location.reload(); });
                 });
             </script>";
-            goto after_submission_wali;
-        }
-        
-        // Check if already attended regular
-        $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
-        $check_stmt->execute([$current_teacher_id, $current_date]);
-        
-        $status_to_save = ucfirst($attendance_status);
-        $now_time = date('Y-m-d H:i:s');
-        
-        if ($check_stmt->rowCount() > 0) {
-            // Update existing
-             $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
-             if ($update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date])) {
-                 echo "<script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: 'Absensi berhasil diperbarui.',
-                            icon: 'success',
-                            timer: 3000,
-                            timerProgressBar: true,
-                            showConfirmButton: false
-                        });
-                    });
-                 </script>";
-             }
-        } else {
-            // Insert new
-            $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
-            if ($insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time])) {
-                 
-                 // Send notification to admin
-                 $nama_guru = $_SESSION['nama_guru'] ?? 'Wali Kelas';
-                 $waktu = date('H:i');
-                 $tanggal_indo = date('d-m-Y');
-                 $notif_msg = "$nama_guru (Wali) telah mengirim kehadiran pada pukul $waktu tanggal $tanggal_indo";
-                 createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
-
-                 // Log activity
-                 $log_desc = "$nama_guru (Wali) memperbarui kehadiran: $attendance_status";
-                 if ($attendance_note) $log_desc .= " ($attendance_note)";
-                 logActivity($pdo, $nama_guru, 'Absensi Guru', $log_desc);
-
-                 echo "<script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: 'Absensi berhasil disimpan.',
-                            icon: 'success',
-                            timer: 3000,
-                            timerProgressBar: true,
-                            showConfirmButton: false
-                        });
-                    });
-                 </script>";
-            }
         }
     }
     after_submission_wali:
@@ -387,18 +424,18 @@ $js_page = [
                                     " . $jumlah_berhalangan . "
                                 ],
                                 backgroundColor: [
+                                    'rgba(75, 192, 192, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)',
                                     'rgba(54, 162, 235, 0.2)',
                                     'rgba(255, 99, 132, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)',
-                                    'rgba(153, 102, 255, 0.2)',
-                                    'rgba(220, 53, 69, 0.2)'
+                                    'rgba(149, 87, 245, 0.2)'
                                 ],
                                 borderColor: [
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255,99,132,1)',
+                                    'rgba(75, 192, 192, 1)',
                                     'rgba(255, 206, 86, 1)',
-                                    'rgba(153, 102, 255, 1)',
-                                    'rgba(220, 53, 69, 1)'
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(149, 87, 245, 1)'
                                 ],
                                 borderWidth: 1
                             }]
@@ -455,32 +492,32 @@ $js_page = [
                             datasets: [{
                                 label: 'Hadir',
                                 data: " . $hadir_data_json . ",
-                                borderColor: 'rgb(54, 162, 235)',
-                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
                                 fill: false
                             }, {
                                 label: 'Sakit',
                                 data: " . $sakit_data_json . ",
-                                borderColor: 'rgb(255, 99, 132)',
-                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                                fill: false
-                            }, {
-                                label: 'Izin',
-                                data: " . $izin_data_json . ",
                                 borderColor: 'rgb(255, 206, 86)',
                                 backgroundColor: 'rgba(255, 206, 86, 0.2)',
                                 fill: false
                             }, {
+                                label: 'Izin',
+                                data: " . $izin_data_json . ",
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                fill: false
+                            }, {
                                 label: 'Alpa',
                                 data: " . $alpa_data_json . ",
-                                borderColor: 'rgb(153, 102, 255)',
-                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
                                 fill: false
                             }, {
                                 label: 'Berhalangan',
                                 data: " . $berhalangan_data_json . ",
-                                borderColor: 'rgb(220, 53, 69)',
-                                backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                                borderColor: 'rgb(149, 87, 245)',
+                                backgroundColor: 'rgba(149, 87, 245, 0.2)',
                                 fill: false
                             }]
                         },
@@ -596,7 +633,7 @@ include_once '../templates/sidebar.php';
 
                     <!-- Attendance Box for Teacher -->
                     <div class="row">
-                        <div class="col-12">
+                        <div class="col-12 col-md-6">
                             <div class="card">
                                 <div class="card-header">
                                     <h4>Absensi Harian & Jurnal Mengajar</h4>
@@ -644,20 +681,77 @@ include_once '../templates/sidebar.php';
                                             <textarea name="attendance_note" class="form-control" placeholder="Masukkan keterangan..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
                                         </div>
 
+                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Simpan Absensi</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <?php if ($is_grade_6_wali && $has_les_schedule): ?>
+                        <div class="col-12 col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Absensi Les & Jurnal Les (Kelas 6)</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-light alert-has-icon">
+                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
+                                        <div class="alert-body">
+                                            <div class="alert-title">Penting</div>
+                                            Jangan lupa untuk mengisi <b>Absensi Les</b> Anda, <b>Absensi Siswa Les</b>, serta <b>Jurnal Les</b> sesuai jadwal Anda.
+                                        </div>
+                                    </div>
+                                    <form method="POST" action="" id="attendanceFormLes">
                                         <div class="form-group">
-                                            <div class="row">
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block btn-icon icon-left"><i class="fas fa-save"></i> Simpan Absensi</button>
-                                                </div>
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
-                                                </div>
-                                                <div class="col-12 col-md-4 mb-2">
-                                                    <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
-                                                </div>
+                                            <label class="d-block font-weight-bold">Status Kehadiran Les (<?php echo date('d-m-Y'); ?>)</label>
+                                            <div class="selectgroup selectgroup-pills">
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status_les" value="hadir" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status_les" value="sakit" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
+                                                </label>
+                                                <label class="selectgroup-item">
+                                                    <input type="radio" name="attendance_status_les" value="izin" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
+                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
+                                                </label>
                                             </div>
                                         </div>
+                                        <div class="form-group keterangan-box-les" style="display: <?php echo ($today_les_attendance && in_array(strtolower($today_les_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'; ?>;">
+                                            <label>Keterangan</label>
+                                            <textarea name="attendance_note_les" class="form-control"><?php echo $today_les_attendance ? htmlspecialchars($today_les_attendance['keterangan']) : ''; ?></textarea>
+                                        </div>
+                                        
+                                        <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Simpan Absensi Les</button>
                                     </form>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Tautan Cepat</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-12 col-md-4 mb-2">
+                                            <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
+                                        </div>
+                                        <?php if ($is_grade_6_wali): ?>
+                                        <div class="col-12 col-md-4 mb-2">
+                                            <a href="jurnal_les.php" class="btn btn-dark btn-lg btn-block btn-icon icon-left"><i class="fas fa-book"></i> Isi Jurnal Les</a>
+                                        </div>
+                                        <?php endif; ?>
+                                        <div class="col-12 col-md-4 mb-2">
+                                            <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -772,34 +866,62 @@ include_once '../templates/sidebar.php';
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
                         const radioButtons = document.querySelectorAll('input[name="attendance_status"]');
+                        const radioButtonsLes = document.querySelectorAll('input[name="attendance_status_les"]');
                         const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
                         const keteranganBox = document.getElementById('keterangan_box');
-                        const keteranganTextarea = keteranganBox ? keteranganBox.querySelector('textarea') : null;
+                        const keteranganBoxLes = document.querySelector('.keterangan-box-les');
                         
-                        function updateKeteranganBox() {
-                            const selectedRadio = document.querySelector('input[name="attendance_status"]:checked');
-                            if (selectedRadio && keteranganBox && keteranganTextarea) {
-                                const status = selectedRadio.value;
-                                if (status === 'izin' || status === 'sakit') {
-                                    keteranganBox.style.display = 'block';
-                                    keteranganTextarea.required = (status === 'izin');
-                                } else {
-                                    keteranganBox.style.display = 'none';
-                                    keteranganTextarea.required = false;
+                        function updateKeteranganBox(formId) {
+                            if (formId === 'attendanceForm') {
+                                const selectedRadio = document.querySelector('input[name="attendance_status"]:checked');
+                                if (selectedRadio && keteranganBox) {
+                                    const status = selectedRadio.value;
+                                    const keteranganTextarea = keteranganBox.querySelector('textarea');
+                                    if (status === 'izin' || status === 'sakit') {
+                                        keteranganBox.style.display = 'block';
+                                        keteranganTextarea.required = (status === 'izin');
+                                    } else {
+                                        keteranganBox.style.display = 'none';
+                                        keteranganTextarea.required = false;
+                                    }
+                                }
+                            } else if (formId === 'attendanceFormLes') {
+                                const selectedRadio = document.querySelector('input[name="attendance_status_les"]:checked');
+                                if (selectedRadio && keteranganBoxLes) {
+                                    const status = selectedRadio.value;
+                                    const keteranganTextarea = keteranganBoxLes.querySelector('textarea');
+                                    if (status === 'izin' || status === 'sakit') {
+                                        keteranganBoxLes.style.display = 'block';
+                                        keteranganTextarea.required = (status === 'izin');
+                                    } else {
+                                        keteranganBoxLes.style.display = 'none';
+                                        keteranganTextarea.required = false;
+                                    }
                                 }
                             }
                         }
 
                         // Run on load to set initial state
-                        updateKeteranganBox();
+                        updateKeteranganBox('attendanceForm');
+                        updateKeteranganBox('attendanceFormLes');
                         
                         radioButtons.forEach(radio => {
                             radio.addEventListener('change', function() {
-                                // Remove all active classes from all buttons
-                                statusButtons.forEach(btn => {
+                                const form = this.closest('form');
+                                form.querySelectorAll('.selectgroup-button-icon').forEach(btn => {
                                     btn.classList.remove('active-hadir', 'active-sakit', 'active-izin');
                                 });
-                                updateKeteranganBox();
+                                updateKeteranganBox('attendanceForm');
+                            });
+                        });
+
+                        radioButtonsLes.forEach(radio => {
+                            radio.addEventListener('change', function() {
+                                const form = this.closest('form');
+                                form.querySelectorAll('.selectgroup-button-icon').forEach(btn => {
+                                    btn.classList.remove('active-hadir', 'active-sakit', 'active-izin');
+                                });
+                                updateKeteranganBox('attendanceFormLes');
                             });
                         });
                         
@@ -957,7 +1079,7 @@ include_once '../templates/sidebar.php';
                         </div>
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-danger">
+                                <div class="card-icon" style="background-color: #9557f5; color: #fff;">
                                     <i class="fas fa-ban"></i>
                                 </div>
                                 <div class="card-wrap">

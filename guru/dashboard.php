@@ -314,18 +314,18 @@ $js_page = [
                                     " . $jumlah_berhalangan . "
                                 ],
                                 backgroundColor: [
+                                    'rgba(75, 192, 192, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)',
                                     'rgba(54, 162, 235, 0.2)',
                                     'rgba(255, 99, 132, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)',
-                                    'rgba(153, 102, 255, 0.2)',
-                                    'rgba(220, 53, 69, 0.2)'
+                                    'rgba(149, 87, 245, 0.2)'
                                 ],
                                 borderColor: [
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255,99,132,1)',
+                                    'rgba(75, 192, 192, 1)',
                                     'rgba(255, 206, 86, 1)',
-                                    'rgba(153, 102, 255, 1)',
-                                    'rgba(220, 53, 69, 1)'
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(149, 87, 245, 1)'
                                 ],
                                 borderWidth: 1
                             }]
@@ -384,32 +384,32 @@ $js_page = [
                             datasets: [{
                                 label: 'Hadir',
                                 data: " . $hadir_data_json . ",
-                                borderColor: 'rgb(54, 162, 235)',
-                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
                                 fill: false
                             }, {
                                 label: 'Sakit',
                                 data: " . $sakit_data_json . ",
-                                borderColor: 'rgb(255, 99, 132)',
-                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                                fill: false
-                            }, {
-                                label: 'Izin',
-                                data: " . $izin_data_json . ",
                                 borderColor: 'rgb(255, 206, 86)',
                                 backgroundColor: 'rgba(255, 206, 86, 0.2)',
                                 fill: false
                             }, {
+                                label: 'Izin',
+                                data: " . $izin_data_json . ",
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                fill: false
+                            }, {
                                 label: 'Alpa',
                                 data: " . $alpa_data_json . ",
-                                borderColor: 'rgb(153, 102, 255)',
-                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
                                 fill: false
                             }, {
                                 label: 'Berhalangan',
                                 data: " . $berhalangan_data_json . ",
-                                borderColor: 'rgb(220, 53, 69)',
-                                backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                                borderColor: 'rgb(149, 87, 245)',
+                                backgroundColor: 'rgba(149, 87, 245, 0.2)',
                                 fill: false
                             }]
                         },
@@ -627,6 +627,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <h4>Absensi Harian Guru</h4>
                                 </div>
                                 <div class="card-body">
+                                    <div class="alert alert-light alert-has-icon">
+                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
+                                        <div class="alert-body">
+                                            <div class="alert-title">Penting</div>
+                                            Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda, <b>Absensi Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
+                                        </div>
+                                    </div>
                                     <form method="POST" action="" id="attendanceFormReg">
                                         <div class="form-group">
                                             <label class="d-block font-weight-bold">Status Kehadiran (<?php echo date('d-m-Y'); ?>)</label>
@@ -678,6 +685,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <h4>Absensi Les Guru (Kelas 6)</h4>
                                 </div>
                                 <div class="card-body">
+                                    <div class="alert alert-light alert-has-icon">
+                                        <div class="alert-icon"><i class="far fa-bell"></i></div>
+                                        <div class="alert-body">
+                                            <div class="alert-title">Penting</div>
+                                            Jangan lupa untuk mengisi <b>Absensi Les</b> Anda, <b>Absensi Siswa Les</b>, serta <b>Jurnal Les</b> sesuai jadwal Anda.
+                                        </div>
+                                    </div>
                                     <form method="POST" action="" id="attendanceFormLes">
                                         <div class="form-group">
                                             <label class="d-block font-weight-bold">Status Kehadiran Les (<?php echo date('d-m-Y'); ?>)</label>
@@ -1030,7 +1044,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-danger">
+                                <div class="card-icon" style="background-color: #9557f5; color: #fff;">
                                     <i class="fas fa-ban"></i>
                                 </div>
                                 <div class="card-wrap">
@@ -1044,15 +1058,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="row">
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Statistik Kehadiran Siswa Hari Ini</h4>
+                                    <h4>Grafik Kehadiran Siswa Hari Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="myChart" height="220" style="width:100%; display:block; max-width:100%;"></canvas>
+                                    <canvas id="myChart" style="width:100%; height: 220px;"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -1065,219 +1079,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <h4>Trend Kehadiran Bulan Ini</h4>
                                 </div>
                                 <div class="card-body">
-                                    <canvas id="trendChart" height="240" style="width:100%; display:block; max-width:100%;"></canvas>
+                                    <canvas id="trendChart" style="width:100%; height: 240px;"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <?php if (!empty($teacher_classes)): ?>
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h4>Status Kehadiran Siswa Hari Ini</h4>
+                    
+                    <div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="qrCodeModalLabel">QR Code Presensi Guru</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
                                 </div>
-                                <div class="card-body">
-                                    <?php if (count($teacher_classes) > 1): ?>
-                                    <!-- Tabs for multiple classes -->
-                                    <ul class="nav nav-tabs" id="classTabs" role="tablist">
-                                        <?php foreach ($teacher_classes as $index => $kelas): ?>
-                                        <li class="nav-item">
-                                            <a class="nav-link <?php echo $index === 0 ? 'active' : ''; ?>" 
-                                               id="tab-<?php echo $kelas['id_kelas']; ?>" 
-                                               data-toggle="tab" 
-                                               href="#content-<?php echo $kelas['id_kelas']; ?>" 
-                                               role="tab">
-                                                <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
-                                            </a>
-                                        </li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                    <div class="tab-content" id="classTabContent">
-                                        <?php foreach ($teacher_classes as $index => $kelas): ?>
-                                        <div class="tab-pane fade <?php echo $index === 0 ? 'show active' : ''; ?>" 
-                                             id="content-<?php echo $kelas['id_kelas']; ?>" 
-                                             role="tabpanel">
-                                            <div class="table-responsive mt-3">
-                                                <table class="table table-striped table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>No</th>
-                                                            <th>Nama Siswa</th>
-                                                            <th>NISN</th>
-                                                            <th>Status Kehadiran</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <?php 
-                                                        $students = $class_students[$kelas['id_kelas']] ?? [];
-                                                        if (empty($students)): ?>
-                                                        <tr>
-                                                            <td colspan="4" class="text-center">Tidak ada siswa dalam kelas ini</td>
-                                                        </tr>
-                                                        <?php else: ?>
-                                                        <?php foreach ($students as $idx => $student): ?>
-                                                        <tr>
-                                                            <td><?php echo $idx + 1; ?></td>
-                                                            <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
-                                                            <td><?php echo htmlspecialchars($student['nisn']); ?></td>
-                                                            <td>
-                                                                <?php 
-                                                                $status = $student['keterangan'] ?? 'Belum Diisi';
-                                                                $badge_class = '';
-                                                                switch($status) {
-                                                                    case 'Hadir':
-                                                                        $badge_class = 'badge-success';
-                                                                        break;
-                                                                    case 'Sakit':
-                                                                        $badge_class = 'badge-info';
-                                                                        break;
-                                                                    case 'Izin':
-                                                                        $badge_class = 'badge-warning';
-                                                                        break;
-                                                                    case 'Alpa':
-                                                                        $badge_class = 'badge-danger';
-                                                                        break;
-                                                                    default:
-                                                                        $badge_class = 'badge-secondary';
-                                                                }
-                                                                ?>
-                                                                <span class="badge <?php echo $badge_class; ?>">
-                                                                    <?php echo htmlspecialchars($status); ?>
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                        <?php endforeach; ?>
-                                                        <?php endif; ?>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                    <?php else: ?>
-                                    <!-- Single class - no tabs needed -->
-                                    <?php $kelas = $teacher_classes[0]; ?>
-                                    <div class="table-responsive mt-3">
-                                        <table class="table table-striped table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th>No</th>
-                                                    <th>Nama Siswa</th>
-                                                    <th>NISN</th>
-                                                    <th>Status Kehadiran</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php 
-                                                $students = $class_students[$kelas['id_kelas']] ?? [];
-                                                if (empty($students)): ?>
-                                                <tr>
-                                                    <td colspan="4" class="text-center">Tidak ada siswa dalam kelas ini</td>
-                                                </tr>
-                                                <?php else: ?>
-                                                <?php foreach ($students as $idx => $student): ?>
-                                                <tr>
-                                                    <td><?php echo $idx + 1; ?></td>
-                                                    <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
-                                                    <td><?php echo htmlspecialchars($student['nisn']); ?></td>
-                                                    <td>
-                                                        <?php 
-                                                        $status = $student['keterangan'] ?? 'Belum Diisi';
-                                                        $badge_class = '';
-                                                        switch($status) {
-                                                            case 'Hadir':
-                                                                $badge_class = 'badge-success';
-                                                                break;
-                                                            case 'Sakit':
-                                                                $badge_class = 'badge-info';
-                                                                break;
-                                                            case 'Izin':
-                                                                $badge_class = 'badge-warning';
-                                                                break;
-                                                            case 'Alpa':
-                                                                $badge_class = 'badge-danger';
-                                                                break;
-                                                            default:
-                                                                $badge_class = 'badge-secondary';
-                                                        }
-                                                        ?>
-                                                        <span class="badge <?php echo $badge_class; ?>">
-                                                            <?php echo htmlspecialchars($status); ?>
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <?php endif; ?>
+                                <div class="modal-body text-center">
+                                    <div id="qrcode" class="mb-3"></div>
+                                    <p class="font-weight-bold"><?php echo htmlspecialchars($teacher['nama_guru']); ?></p>
+                                    <p class="text-muted"><?php echo htmlspecialchars($teacher['nuptk']); ?></p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <?php endif; ?>
+
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var qrcode = new QRCode(document.getElementById("qrcode"), {
+                            text: "<?php echo $teacher['nuptk']; ?>",
+                            width: 256,
+                            height: 256,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.H
+                        });
+                    });
+                    </script>
                 </section>
             </div>
-</div>
 
-<?php
-?>
-<!-- Modal QR Code -->
-<div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="qrCodeModalLabel">QR Code Guru</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body text-center">
-                <p>Gunakan QR Code ini untuk absensi kehadiran.</p>
-                <?php if (!empty($teacher['nuptk'])): ?>
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=<?php echo $teacher['nuptk']; ?>" alt="QR Code" class="img-fluid" style="width: 250px; height: 250px;">
-                    <h5 class="mt-3"><?php echo htmlspecialchars($teacher['nama_guru']); ?></h5>
-                    <p class="text-muted">NUPTK: <?php echo htmlspecialchars($teacher['nuptk']); ?></p>
-                <?php else: ?>
-                    <div class="alert alert-warning">NUPTK belum tersedia. Silakan hubungi admin.</div>
-                <?php endif; ?>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-            </div>
-        </div>
-    </div>
-</div>
-<?php
-?>
-<!-- Modal QR Code -->
-<div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="qrCodeModalLabel">QR Code Guru</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body text-center">
-                <p>Gunakan QR Code ini untuk absensi kehadiran.</p>
-                <?php if (!empty($teacher['nuptk'])): ?>
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=<?php echo $teacher['nuptk']; ?>" alt="QR Code" class="img-fluid" style="width: 250px; height: 250px;">
-                    <h5 class="mt-3"><?php echo htmlspecialchars($teacher['nama_guru']); ?></h5>
-                    <p class="text-muted">NUPTK: <?php echo htmlspecialchars($teacher['nuptk']); ?></p>
-                <?php else: ?>
-                    <div class="alert alert-warning">NUPTK belum tersedia. Silakan hubungi admin.</div>
-                <?php endif; ?>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-            </div>
-        </div>
-    </div>
-</div>
-<?php
-include '../templates/user_footer.php';
+<?php 
+include '../templates/user_footer.php'; 
 ?>

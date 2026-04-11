@@ -273,15 +273,17 @@ $js_page = [
                                     " . $jumlah_alpa . "
                                 ],
                                 backgroundColor: [
+                                    'rgba(75, 192, 192, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)',
                                     'rgba(54, 162, 235, 0.2)',
                                     'rgba(255, 99, 132, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)',
                                     'rgba(153, 102, 255, 0.2)'
                                 ],
                                 borderColor: [
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255,99,132,1)',
+                                    'rgba(75, 192, 192, 1)',
                                     'rgba(255, 206, 86, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 99, 132, 1)',
                                     'rgba(153, 102, 255, 1)'
                                 ],
                                 borderWidth: 1
@@ -339,26 +341,26 @@ $js_page = [
                             datasets: [{
                                 label: 'Hadir',
                                 data: " . $hadir_data_json . ",
-                                borderColor: 'rgb(54, 162, 235)',
-                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
                                 fill: false
                             }, {
                                 label: 'Sakit',
                                 data: " . $sakit_data_json . ",
-                                borderColor: 'rgb(255, 99, 132)',
-                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                                fill: false
-                            }, {
-                                label: 'Izin',
-                                data: " . $izin_data_json . ",
                                 borderColor: 'rgb(255, 206, 86)',
                                 backgroundColor: 'rgba(255, 206, 86, 0.2)',
                                 fill: false
                             }, {
+                                label: 'Izin',
+                                data: " . $izin_data_json . ",
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                fill: false
+                            }, {
                                 label: 'Alpa',
                                 data: " . $alpa_data_json . ",
-                                borderColor: 'rgb(153, 102, 255)',
-                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
                                 fill: false
                             }]
                         },
@@ -413,14 +415,14 @@ $js_page = [
                                     " . $guru_izin . "
                                 ],
                                 backgroundColor: [
-                                    'rgba(54, 162, 235, 0.2)',
-                                    'rgba(255, 99, 132, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)'
+                                    'rgba(75, 192, 192, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)',
+                                    'rgba(54, 162, 235, 0.2)'
                                 ],
                                 borderColor: [
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255,99,132,1)',
-                                    'rgba(255, 206, 86, 1)'
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(54, 162, 235, 1)'
                                 ],
                                 borderWidth: 1
                             }]
@@ -477,22 +479,22 @@ $js_page = [
                             datasets: [{
                                 label: 'Hadir',
                                 data: " . $guru_hadir_data_json . ",
-                                borderColor: 'rgb(54, 162, 235)',
-                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
                                 fill: false,
                                 tension: 0.4
                             }, {
                                 label: 'Sakit',
                                 data: " . $guru_sakit_data_json . ",
-                                borderColor: 'rgb(255, 99, 132)',
-                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderColor: 'rgb(255, 206, 86)',
+                                backgroundColor: 'rgba(255, 206, 86, 0.2)',
                                 fill: false,
                                 tension: 0.4
                             }, {
                                 label: 'Izin',
                                 data: " . $guru_izin_data_json . ",
-                                borderColor: 'rgb(255, 206, 86)',
-                                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
                                 fill: false,
                                 tension: 0.4
                             }]
@@ -714,7 +716,7 @@ include_once '../templates/sidebar.php';
                         </div>
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-danger">
+                                <div class="card-icon bg-warning">
                                     <i class="fas fa-user-injured"></i>
                                 </div>
                                 <div class="card-wrap">
@@ -729,7 +731,7 @@ include_once '../templates/sidebar.php';
                         </div>
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-warning">
+                                <div class="card-icon bg-info">
                                     <i class="fas fa-user-clock"></i>
                                 </div>
                                 <div class="card-wrap">
@@ -744,7 +746,7 @@ include_once '../templates/sidebar.php';
                         </div>
                         <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-secondary">
+                                <div class="card-icon bg-danger">
                                     <i class="fas fa-user-slash"></i>
                                 </div>
                                 <div class="card-wrap">
@@ -777,7 +779,7 @@ include_once '../templates/sidebar.php';
                         </div>
                         <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-danger">
+                                <div class="card-icon bg-warning">
                                     <i class="fas fa-user-injured"></i>
                                 </div>
                                 <div class="card-wrap">
@@ -792,7 +794,7 @@ include_once '../templates/sidebar.php';
                         </div>
                         <div class="col-lg-4 col-md-6 col-sm-6 col-12">
                             <div class="card card-statistic-1">
-                                <div class="card-icon bg-warning">
+                                <div class="card-icon bg-info">
                                     <i class="fas fa-user-clock"></i>
                                 </div>
                                 <div class="card-wrap">
