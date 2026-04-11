@@ -75,18 +75,43 @@ if ($filter_type == 'daily') {
         $attendance_map[$row['id_siswa']][$row['day']] = $row['keterangan'];
     }
     
+    // Get holidays for the month
+    $holidays = getHolidays($pdo, $year, $month);
+    $num_days = cal_days_in_month(CAL_GREGORIAN, (int)$month, (int)$year);
+    
     foreach ($students as $student) {
         $row = $student;
         $row['days'] = [];
         $summary = ['H' => 0, 'S' => 0, 'I' => 0, 'A' => 0, 'B' => 0];
         for ($i = 1; $i <= 31; $i++) {
+            if ($i > $num_days) {
+                $row['days'][$i] = '-'; // Outside month range
+                continue;
+            }
+            
+            $date_str = sprintf('%04d-%02d-%02d', $year, $month, $i);
             $status = $attendance_map[$student['id_siswa']][$i] ?? '';
             $display = '';
-            if ($status == 'Hadir') { $display = 'H'; $summary['H']++; }
-            elseif ($status == 'Sakit') { $display = 'S'; $summary['S']++; }
-            elseif ($status == 'Izin') { $display = 'I'; $summary['I']++; }
-            elseif ($status == 'Alpa') { $display = 'A'; $summary['A']++; }
-            elseif ($status == 'Berhalangan') { $display = 'B'; $summary['B']++; }
+            
+            if ($status == 'Hadir') { 
+                $display = 'H'; 
+                $summary['H']++; 
+            } elseif ($status == 'Sakit') { 
+                $display = 'S'; 
+                $summary['S']++; 
+            } elseif ($status == 'Izin') { 
+                $display = 'I'; 
+                $summary['I']++; 
+            } elseif ($status == 'Alpa') { 
+                $display = 'A'; 
+                $summary['A']++; 
+            } elseif ($status == 'Berhalangan') { 
+                $display = 'B'; 
+                $summary['B']++; 
+            } elseif (isset($holidays[$date_str])) {
+                $display = 'L'; // Holiday
+            }
+            
             $row['days'][$i] = $display;
         }
         $row['summary'] = $summary;
@@ -234,7 +259,12 @@ if ($filter_type == 'daily') {
                 <tr>
                     <td><?= $no++ ?></td>
                     <td class="text-left" style="white-space: nowrap;"><?= htmlspecialchars($row['nama_siswa']) ?></td>
-                    <?php for($i=1; $i<=31; $i++) echo "<td>{$row['days'][$i]}</td>"; ?>
+                    <?php for($i=1; $i<=31; $i++): 
+                        $val = $row['days'][$i];
+                        $style = ($val == 'L') ? 'color: red; font-weight: bold;' : '';
+                    ?>
+                        <td style="<?= $style ?>"><?= $val ?></td>
+                    <?php endfor; ?>
                     <td><?= $row['summary']['H'] ?></td><td><?= $row['summary']['S'] ?></td><td><?= $row['summary']['I'] ?></td><td><?= $row['summary']['A'] ?></td><td><?= $row['summary']['B'] ?></td>
                 </tr>
                 <?php endforeach; ?>
