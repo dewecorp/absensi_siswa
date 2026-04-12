@@ -214,55 +214,6 @@ include_once '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
-
-            <div class="col-12 mb-4">
-                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
-                    <div class="card-body pb-2">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 font-weight-bold">Menu Utama</h6>
-                            <span class="badge badge-success badge-pill">Semua Fitur</span>
-                        </div>
-                        <?php
-                        $mobile_menu_groups = function_exists('get_mobile_menu_groups') ? get_mobile_menu_groups($menu_items) : ['single' => [], 'grouped' => []];
-                        $single_items = $mobile_menu_groups['single'];
-                        $grouped_items = $mobile_menu_groups['grouped'];
-                        ?>
-                        <?php if (!empty($single_items) || !empty($grouped_items)): ?>
-                            <?php if (!empty($single_items)): ?>
-                                <div class="row">
-                                    <?php foreach ($single_items as $item): ?>
-                                        <div class="col-3 mb-3">
-                                            <a href="<?php echo $item['url']; ?>" class="text-decoration-none text-center d-block">
-                                                <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
-                                                    <i class="<?php echo $item['icon']; ?> text-success" style="font-size: 1.4rem;"></i>
-                                                </div>
-                                            <div class="mobile-menu-label small text-dark"><?php echo $item['title']; ?></div>
-                                            </a>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-                            <?php foreach ($grouped_items as $group): ?>
-                                <div class="mt-3">
-                                    <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
-                                    <div class="row">
-                                        <?php foreach ($group['items'] as $subitem): ?>
-                                            <div class="col-3 mb-3">
-                                                <a href="<?php echo $subitem['url']; ?>" class="text-decoration-none text-center d-block">
-                                                    <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
-                                                        <i class="<?php echo $group['icon']; ?> text-success" style="font-size: 1.4rem;"></i>
-                                                    </div>
-                                                        <div class="mobile-menu-label small text-dark"><?php echo $subitem['title']; ?></div>
-                                                </a>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div class="row">
@@ -520,6 +471,58 @@ include_once '../templates/sidebar.php';
                             <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?php echo $student['nisn']; ?>" alt="QR Code NISN" class="img-fluid border p-2">
                         </div>
                         <div class="font-weight-bold text-xl"><?php echo htmlspecialchars($student['nisn']); ?></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Utama - Last Position -->
+        <div class="row d-lg-none mt-4">
+            <div class="col-12 mb-4">
+                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                    <div class="card-body pb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0 font-weight-bold">Menu Utama</h6>
+                            <span class="badge badge-success badge-pill">Semua Fitur</span>
+                        </div>
+                        <?php
+                        $mobile_menu_groups = function_exists('get_mobile_menu_groups') ? get_mobile_menu_groups($menu_items) : ['single' => [], 'grouped' => []];
+                        $single_items = $mobile_menu_groups['single'];
+                        $grouped_items = $mobile_menu_groups['grouped'];
+                        ?>
+                        <?php if (!empty($single_items) || !empty($grouped_items)): ?>
+                            <?php if (!empty($single_items)): ?>
+                                <div class="row">
+                                    <?php foreach ($single_items as $item): ?>
+                                        <div class="col-3 mb-3">
+                                            <a href="<?php echo $item['url']; ?>" class="text-decoration-none text-center d-block">
+                                                <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
+                                                    <i class="<?php echo $item['icon']; ?> text-success" style="font-size: 1.4rem;"></i>
+                                                </div>
+                                            <div class="mobile-menu-label small text-dark"><?php echo $item['title']; ?></div>
+                                            </a>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php foreach ($grouped_items as $group): ?>
+                                <div class="mt-3">
+                                    <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
+                                    <div class="row">
+                                        <?php foreach ($group['items'] as $subitem): ?>
+                                            <div class="col-3 mb-3">
+                                                <a href="<?php echo $subitem['url']; ?>" class="text-decoration-none text-center d-block">
+                                                    <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
+                                                        <i class="<?php echo $group['icon']; ?> text-success" style="font-size: 1.4rem;"></i>
+                                                    </div>
+                                                        <div class="mobile-menu-label small text-dark"><?php echo $subitem['title']; ?></div>
+                                                </a>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
