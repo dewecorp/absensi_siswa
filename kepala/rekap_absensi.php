@@ -65,6 +65,21 @@ $active_semester = $school_profile['semester'] ?? 'Semester 1';
 $school_city = $school_profile['tempat_jadwal'] ?? '';
 $reportDate = formatDateIndonesia(date('Y-m-d'));
 
+// Get Summary of Absent Students (Sakit, Izin, Alpa) for ALL classes on selected date (for daily view)
+$absent_summary = [];
+if ($filter_type == 'daily' && !empty($selected_date)) {
+    $summary_stmt = $pdo->prepare("
+        SELECT s.nama_siswa, k.nama_kelas, a.keterangan 
+        FROM tb_absensi a
+        JOIN tb_siswa s ON a.id_siswa = s.id_siswa
+        JOIN tb_kelas k ON s.id_kelas = k.id_kelas
+        WHERE a.tanggal = ? AND a.keterangan IN ('Sakit', 'Izin', 'Alpa')
+        ORDER BY k.nama_kelas ASC, s.nama_siswa ASC
+    ");
+    $summary_stmt->execute([$selected_date]);
+    $absent_summary = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 // Get all classes
 $stmt = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -357,6 +372,79 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="section-body">
+                        <?php if ($filter_type == 'daily'): ?>
+                            <!-- Ringkasan Ketidakhadiran Harian (Semua Kelas) - Box Tersendiri di Atas Filter -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card card-statistic-1 border">
+                                        <div class="card-header pb-0">
+                                            <h4>Ringkasan Ketidakhadiran Seluruh Kelas (<?php echo date('d-m-Y', strtotime($selected_date)); ?>)</h4>
+                                        </div>
+                                        <div class="card-body pt-0">
+                                            <?php if (!empty($absent_summary)): ?>
+                                                <div class="row mt-3">
+                                                    <?php 
+                                                    $counts = ['Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+                                                    foreach ($absent_summary as $abs) $counts[$abs['keterangan']]++;
+                                                    $total_absent = array_sum($counts);
+                                                    
+                                                    $summary_items = [
+                                                        ['label' => 'Total Tidak Hadir', 'count' => $total_absent, 'color' => 'dark'],
+                                                        ['label' => 'Sakit', 'count' => $counts['Sakit'], 'color' => '#ffa426'],
+                                                        ['label' => 'Izin', 'count' => $counts['Izin'], 'color' => '#3abaf4'],
+                                                        ['label' => 'Alpa', 'count' => $counts['Alpa'], 'color' => '#fc544b']
+                                                    ];
+                                                    ?>
+                                                    <?php foreach ($summary_items as $item): ?>
+                                                    <div class="col-md-3">
+                                                        <div class="card mb-3" style="background-color: <?php echo $item['color'] == 'dark' ? '#343a40' : $item['color']; ?>; color: #ffffff !important;">
+                                                            <div class="card-body p-3 text-center">
+                                                                <div class="text-small font-weight-bold" style="color: #ffffff !important; margin-bottom: 2px;"><?php echo $item['label']; ?></div>
+                                                                <div class="h5 mb-0 font-weight-bold" style="color: #ffffff !important;"><?php echo $item['count']; ?> Siswa</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                                <div class="table-responsive mt-2">
+                                                    <table class="table table-sm table-bordered" style="font-size: 13px;">
+                                                        <thead class="bg-light">
+                                                            <tr>
+                                                                <th class="py-1 text-center" style="width: 50px;">No</th>
+                                                                <th class="py-1">Nama Siswa</th>
+                                                                <th class="py-1">Kelas</th>
+                                                                <th class="py-1">Keterangan</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <?php $no_abs = 1; foreach ($absent_summary as $abs): ?>
+                                                                <tr>
+                                                                    <td class="py-1 text-center"><?php echo $no_abs++; ?></td>
+                                                                    <td class="py-1"><?php echo htmlspecialchars($abs['nama_siswa']); ?></td>
+                                                                    <td class="py-1"><?php echo htmlspecialchars($abs['nama_kelas']); ?></td>
+                                                                    <td class="py-1">
+                                                                        <span class="badge <?php 
+                                                                            echo $abs['keterangan'] == 'Sakit' ? 'badge-warning' : ($abs['keterangan'] == 'Izin' ? 'badge-info' : 'badge-danger'); 
+                                                                        ?>">
+                                                                            <?php echo $abs['keterangan']; ?>
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="alert alert-light mt-3 text-center">
+                                                    Semua siswa hadir atau belum ada data absensi untuk tanggal ini.
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <div class="row">
                             <div class="col-12">
                                 <div class="card">
