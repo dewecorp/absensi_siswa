@@ -242,6 +242,7 @@ $stmt_mapel = $pdo->prepare("
     AND m.nama_mapel NOT LIKE '%Istirahat%' 
     AND m.nama_mapel NOT LIKE '%Kepramukaan%' 
     AND m.nama_mapel NOT LIKE '%Ekstrakurikuler%'
+    AND m.nama_mapel NOT LIKE '%Ramadhanku%'
     ORDER BY m.nama_mapel ASC
 ");
 $stmt_mapel->execute([$teacher['id_guru']]);
