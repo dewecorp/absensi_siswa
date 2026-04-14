@@ -294,8 +294,8 @@ function updateBadge(selectElement) {
     badge.removeClass('badge-success badge-info badge-warning badge-danger badge-secondary');
     switch(selectedValue) {
         case 'Hadir': badge.addClass('badge-success'); break;
-        case 'Sakit': badge.addClass('badge-info'); break;
-        case 'Izin': badge.addClass('badge-warning'); break;
+        case 'Sakit': badge.addClass('badge-warning'); break;
+        case 'Izin': badge.addClass('badge-info'); break;
         case 'Alpa': badge.addClass('badge-danger'); break;
         default: badge.addClass('badge-secondary');
     }
@@ -531,10 +531,10 @@ include '../templates/user_header.php';
                                                             echo 'badge-success';
                                                             break;
                                                         case 'Sakit':
-                                                            echo 'badge-info';
+                                                            echo 'badge-warning';
                                                             break;
                                                         case 'Izin':
-                                                            echo 'badge-warning';
+                                                            echo 'badge-info';
                                                             break;
                                                         case 'Alpa':
                                                             echo 'badge-danger';

@@ -193,7 +193,21 @@ include '../templates/sidebar.php';
                                             <?php foreach ($students as $index => $student): ?>
                                             <tr>
                                                 <td><?php echo $index + 1; ?></td>
-                                                <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
+                                                <td>
+                                                    <?php echo htmlspecialchars($student['nama_siswa']); ?>
+                                                    <span class="ml-2 badge <?php 
+                                                        $status_badge = $student['keterangan'] ?? 'Hadir';
+                                                        switch($status_badge) {
+                                                            case 'Hadir': echo 'badge-success'; break;
+                                                            case 'Sakit': echo 'badge-warning'; break;
+                                                            case 'Izin': echo 'badge-info'; break;
+                                                            case 'Alpa': echo 'badge-danger'; break;
+                                                            default: echo 'badge-secondary';
+                                                        }
+                                                    ?>" id="badge_<?php echo $student['id_siswa']; ?>">
+                                                        <?php echo $status_badge; ?>
+                                                    </span>
+                                                </td>
                                                 <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                                 <td>
                                                     <select class="form-control student-status" id="status_<?php echo $student['id_siswa']; ?>" name="keterangan_<?php echo $student['id_siswa']; ?>" <?php echo !$has_schedule ? 'disabled' : ''; ?>>
@@ -271,6 +285,25 @@ $(document).ready(function() {
     
     $('#tanggalInput').on('change', function() {
         $('#filterForm').submit();
+    });
+
+    // Handle status change to update badge
+    $('.student-status').on('change', function() {
+        var selectedOption = this.options[this.selectedIndex].text;
+        var selectedValue = this.value;
+        var studentId = this.id.replace('status_', '');
+        var badge = $('#badge_' + studentId);
+        
+        badge.text(selectedOption);
+        badge.removeClass('badge-success badge-warning badge-info badge-danger badge-secondary');
+        
+        switch(selectedValue) {
+            case 'Hadir': badge.addClass('badge-success'); break;
+            case 'Sakit': badge.addClass('badge-warning'); break;
+            case 'Izin': badge.addClass('badge-info'); break;
+            case 'Alpa': badge.addClass('badge-danger'); break;
+            default: badge.addClass('badge-secondary');
+        }
     });
 });
 ";
