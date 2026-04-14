@@ -104,6 +104,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     if ($holiday_check['is_holiday']) {
         $message = ['type' => 'error', 'text' => 'Gagal menyimpan jurnal. Tanggal ' . date('d-m-Y', strtotime($tanggal)) . ' adalah hari libur (' . $holiday_check['name'] . ').'];
     } else {
+        // Check for duplicate jam_ke (only for new entries)
+        if (!isset($_POST['id_jurnal']) || empty($_POST['id_jurnal'])) {
+            $jam_ke_array = is_array($jam_ke_input) ? $jam_ke_input : explode(',', $jam_ke);
+            $duplicate_jam = [];
+            
+            foreach ($jam_ke_array as $jam) {
+                $jam = trim($jam);
+                if (empty($jam)) continue;
+                
+                $check_jam = $pdo->prepare("SELECT id FROM tb_jurnal WHERE tanggal = ? AND id_kelas = ? AND jenis = ? AND FIND_IN_SET(?, jam_ke)");
+                $check_jam->execute([$tanggal, $id_kelas, $jenis, $jam]);
+                
+                if ($check_jam->rowCount() > 0) {
+                    $duplicate_jam[] = $jam;
+                }
+            }
+            
+            if (!empty($duplicate_jam)) {
+                $jam_list = implode(', ', $duplicate_jam);
+                $message = ['type' => 'error', 'text' => 'Jam ke-' . $jam_list . ' sudah terisi pada tanggal ini. Pilih jam lain.'];
+                $has_duplicate = true;
+            }
+        }
+        
+        if (!isset($has_duplicate)) {
         if (isset($_POST['id_jurnal']) && !empty($_POST['id_jurnal'])) {
         // Edit
         $id_jurnal = (int)$_POST['id_jurnal'];
@@ -158,6 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         logActivity($pdo, $teacher['nama_guru'], 'Tambah Jurnal', $log_desc);
         
         $message = ['type' => 'success', 'text' => 'Jurnal berhasil ditambahkan!'];
+    }
     }
 }
 }
