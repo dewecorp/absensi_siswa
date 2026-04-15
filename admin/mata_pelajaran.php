@@ -23,6 +23,9 @@ $logo_file = $school_profile['logo'] ?? 'logo.png';
 $web_root = dirname(dirname($_SERVER['PHP_SELF']));
 $web_root = $web_root == '/' || $web_root == '\\' ? '' : $web_root;
 $logo_url = $web_root . '/assets/img/' . $logo_file;
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$logo_absolute_url = $scheme . '://' . $host . $logo_url;
 
 // Set page title
 $page_title = 'Mata Pelajaran';
@@ -181,6 +184,7 @@ $js_page = [];
 
 // Add JavaScript
 $no_sort_targets = $is_readonly ? "[0]" : "[0, 5]";
+$export_session_type = addslashes($user_level ?: 'admin');
 $js_page[] = "
 // Natural sort plugin for DataTables
 jQuery.fn.dataTableExt.oSort['natural-asc'] = function(a, b) {
@@ -310,39 +314,81 @@ $(document).ready(function() {
     $('.export-btn').on('click', function(e) {
         e.preventDefault();
         var type = $(this).data('type');
-        
-        // Clone table, optionally remove 'Aksi' column if present
-        var table = $('#table-1').clone();
+
+        // Build export table from full DataTables data (all pages, with current filter/search)
+        var sourceTable = $('#table-1');
         var aksiIndex = -1;
-        table.find('thead th').each(function(i) {
-            var t = $(this).text().trim().toLowerCase();
-            if (t === 'aksi') aksiIndex = i;
+        var exportHeaders = [];
+        sourceTable.find('thead th').each(function(i) {
+            var text = $(this).text().trim();
+            if (text.toLowerCase() === 'aksi') {
+                aksiIndex = i;
+                return;
+            }
+            exportHeaders.push(text);
         });
-        if (aksiIndex >= 0) {
-            table.find('tr').each(function() {
-                $(this).find('th, td').eq(aksiIndex).remove();
+
+        var exportTable = $('<table class=\"table table-striped\"></table>');
+        var thead = $('<thead><tr></tr></thead>');
+        exportHeaders.forEach(function(h) {
+            thead.find('tr').append('<th>' + h + '</th>');
+        });
+        exportTable.append(thead);
+
+        var tbody = $('<tbody></tbody>');
+        var allRows = table.rows({ search: 'applied', order: 'applied' }).data().toArray();
+        allRows.forEach(function(rowData, rowIdx) {
+            var tr = $('<tr></tr>');
+            var exportColIdx = 0;
+
+            rowData.forEach(function(cell, colIdx) {
+                if (colIdx === aksiIndex) return;
+
+                var cellText = $('<div>' + (cell == null ? '' : cell) + '</div>').text().trim();
+                if (exportColIdx === 0) {
+                    // Re-number based on full filtered dataset, not current page.
+                    cellText = String(rowIdx + 1);
+                }
+                tr.append('<td>' + cellText + '</td>');
+                exportColIdx++;
             });
-        }
+
+            tbody.append(tr);
+        });
+        exportTable.append(tbody);
         
         if (type === 'pdf') {
-            var printWindow = window.open('', '_blank');
-            printWindow.document.write('<html><head><title>Data Mata Pelajaran</title>');
-            printWindow.document.write('<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\">');
-            printWindow.document.write('<style>body { padding: 20px; } .table { width: 100%; margin-bottom: 1rem; color: #212529; } .table th, .table td { padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6; } .table thead th { vertical-align: bottom; border-bottom: 2px solid #dee2e6; } .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(0, 0, 0, 0.05); } @media print { .no-print { display: none; } }</style>');
-            printWindow.document.write('</head><body>');
-            
-            var headerContent = '<div class=\"row mb-4 border-bottom pb-3 align-items-center\" style=\"border-bottom: 2px solid #000 !important;\">' +
-                '<div class=\"col-2 text-center\">' +
-                '<img src=\"$logo_url\" style=\"max-height: 80px; width: auto;\">' +
+            var pdfStyles = '<style>' +
+                'body { font-family: Arial, sans-serif; color: #000; margin: 0; padding: 24px 42px 24px 24px; font-size: 12px; }' +
+                '.report-header { border-bottom: 2px solid #111827; margin-bottom: 16px; padding-bottom: 12px; display: flex; align-items: center; }' +
+                '.report-logo { width: 90px; text-align: center; }' +
+                '.report-logo img { max-height: 72px; width: auto; }' +
+                '.report-title { flex: 1; text-align: center; padding-right: 90px; }' +
+                '.report-title h1 { margin: 0; font-size: 24px; letter-spacing: .4px; text-transform: uppercase; font-weight: 700; color: #000; }' +
+                '.report-title h2 { margin: 4px 0 0; font-size: 22px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; }' +
+                '.report-title h2 { color: #000; }' +
+                '.report-meta { margin: 8px 0 14px; font-size: 11px; color: #000; }' +
+                '.report-table { width: calc(100% - 18px); border-collapse: collapse; margin-top: 8px; margin-right: 18px; color: #000; }' +
+                '.report-table th { background: #e5e7eb; color: #000; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: .3px; border: 1px solid #cbd5e1; padding: 8px 10px; }' +
+                '.report-table td { border: 1px solid #d1d5db; padding: 7px 10px; font-size: 12px; }' +
+                '.report-table tbody tr:nth-child(even) { background: #f9fafb; }' +
+                '.text-center { text-align: center; }' +
+                '.signature { margin-top: 36px; display: flex; justify-content: flex-end; page-break-inside: avoid; }' +
+                '.signature-box { width: 290px; text-align: center; }' +
+                '.signature-box .name { margin-top: 12px; font-weight: 700; text-decoration: none; color: #000; }' +
+                '@media print { body { padding: 0; } }' +
+                '</style>';
+
+            exportTable.removeClass();
+            exportTable.addClass('report-table');
+            exportTable.find('th:first-child, td:first-child, th:last-child, td:last-child').addClass('text-center');
+            var logoAbsoluteUrl = '$logo_absolute_url';
+
+            var headerContent = '<div class=\"report-header\">' +
+                '<div class=\"report-logo\"><img src=\"' + logoAbsoluteUrl + '\" alt=\"Logo Madrasah\" onerror=\"this.style.display=\\'none\\'\"></div>' +
+                '<div class=\"report-title\"><h1>$school_name</h1><h2>Data Mata Pelajaran</h2></div>' +
                 '</div>' +
-                '<div class=\"col-10 text-center\">' +
-                '<h2 style=\"margin: 0; font-weight: bold; font-family: Arial, sans-serif;\">$school_name</h2>' +
-                '<h4 style=\"margin: 5px 0 0; font-weight: normal;\">DATA MATA PELAJARAN</h4>' +
-                '</div>' +
-                '</div>';
-                
-            printWindow.document.write(headerContent);
-            printWindow.document.write(table[0].outerHTML);
+                '<div class=\"report-meta\">Dicetak pada: " . formatDateIndonesia(date('Y-m-d')) . "</div>';
 
             // Add signature block
             var madrasahHeadName = '" . addslashes($school_profile['kepala_madrasah'] ?? '.........................') . "';
@@ -351,33 +397,38 @@ $(document).ready(function() {
             var schoolCity = '" . addslashes($school_profile['tempat_jadwal'] ?? 'Padang') . "';
             var reportDate = '" . formatDateIndonesia(date('Y-m-d')) . "';
 
-            printWindow.document.write('<div style=\"margin-top: 30px; display: flex; justify-content: flex-end; width: 100%; page-break-inside: avoid;\">');
-            printWindow.document.write('<div style=\"text-align: center; width: 300px;\">');
-            printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+            var signatureContent = '<div class=\"signature\"><div class=\"signature-box\">' +
+                '<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>';
             if (madrasahHeadSignature) {
                 var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
                 var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
-                printWindow.document.write('<img src=\"' + qrUrl + '\" alt=\"QR Signature\" style=\"width: 80px; height: 80px; margin: 10px auto; display: block;\">');
-                printWindow.document.write('<p style=\"font-size: 10px; margin-top: 0;\"></p>');
+                signatureContent += '<img src=\"' + qrUrl + '\" alt=\"QR Signature\" style=\"width: 78px; height: 78px; margin: 10px auto; display: block;\">';
             } else {
-                printWindow.document.write('<br><br><br><br><br>');
+                signatureContent += '<br><br><br><br><br>';
             }
-            printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
-            printWindow.document.write('</div>');
-            printWindow.document.write('</div>');
+            signatureContent += '<p class=\"name\">' + madrasahHeadName + '</p></div></div>';
 
-            printWindow.document.write('<script>window.onload = function() { window.print(); window.close(); }<\/script>');
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
+            var pdfHtml = '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Data Mata Pelajaran</title>' +
+                pdfStyles +
+                '</head><body>' +
+                headerContent +
+                exportTable[0].outerHTML +
+                signatureContent +
+                '<script>window.onload = function() { window.print(); };<\/script>' +
+                '</body></html>';
+
+            var pdfBlob = new Blob([pdfHtml], { type: 'text/html' });
+            var pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
         } else {
-            var url = '../config/excel_export?session_type=admin';
+            var url = '../config/excel_export?session_type=$export_session_type';
             var form = $('<form method=\"POST\" action=\"' + url + '\" target=\"_blank\">' +
                 '<input type=\"hidden\" name=\"table_data\" value=\"\">' +
                 '<input type=\"hidden\" name=\"report_title\" value=\"Data Mata Pelajaran\">' +
                 '<input type=\"hidden\" name=\"filename\" value=\"data_mata_pelajaran\">' +
                 '</form>');
                 
-            form.find('input[name=\"table_data\"]').val(table[0].outerHTML);
+            form.find('input[name=\"table_data\"]').val(exportTable[0].outerHTML);
             $('body').append(form);
             form.submit();
             form.remove();
@@ -435,15 +486,12 @@ include '../templates/sidebar.php';
                                     <i class="fas fa-cog"></i> Set KKTP Global
                                 </button>
                                 <?php endif; ?>
-                                <div class="dropdown d-inline mr-2">
-                                    <button class="btn btn-success dropdown-toggle" type="button" id="exportDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <i class="fas fa-file-export"></i> Export
-                                    </button>
-                                    <div class="dropdown-menu" aria-labelledby="exportDropdown">
-                                        <a class="dropdown-item export-btn" href="#" data-type="excel"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a class="dropdown-item export-btn" href="#" data-type="pdf"><i class="fas fa-file-pdf"></i> PDF</a>
-                                    </div>
-                                </div>
+                                <a href="#" class="btn btn-success ml-1 export-btn" data-type="excel">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </a>
+                                <a href="#" class="btn btn-danger ml-1 export-btn" data-type="pdf">
+                                    <i class="fas fa-file-pdf"></i> Export PDF
+                                </a>
                             </div>
                         </div>
                         <div class="card-body">
