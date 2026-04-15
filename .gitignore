@@ -23,6 +23,9 @@ desktop.ini
 *.log
 logs/
 
+# PHP session files (if any)
+sessions/
+
 # Uploads (jika tidak ingin di-commit)
 uploads/*
 !uploads/.gitkeep

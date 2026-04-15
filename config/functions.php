@@ -81,12 +81,12 @@ if (session_status() == PHP_SESSION_NONE) {
     }
 
     // --- SESSION CONFIGURATION ---
-    // Use custom save path to avoid system cron cleanup (fix for hosting 30min timeout)
-    $save_path = __DIR__ . '/../sessions';
-    if (!file_exists($save_path)) {
-        mkdir($save_path, 0777, true);
+    // Store session files outside the project folder to avoid untracked session files in repo.
+    // (Requested: no need to copy/manage `sessions/` folder.)
+    $tmp = sys_get_temp_dir();
+    if (is_string($tmp) && $tmp !== '') {
+        session_save_path($tmp);
     }
-    session_save_path($save_path);
 
     // Set session lifetime to 24 hours (86400 seconds)
     // This ensures the server keeps the session file for at least 24h

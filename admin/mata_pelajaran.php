@@ -8,9 +8,13 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check if user is logged in and has admin level
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'guru', 'wali'])) {
     redirect('../login.php');
 }
+
+// Read-only view for guru & wali (no CRUD)
+$user_level = getUserLevel();
+$is_readonly = in_array($user_level, ['guru', 'wali'], true);
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
@@ -39,7 +43,7 @@ try {
 
 // Handle form submissions
 $message = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if (!$is_readonly && $_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_mapel'])) {
         $nama_mapel = trim($_POST['nama_mapel']);
         $kode_mapel = trim($_POST['kode_mapel']);
@@ -139,19 +143,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Get all subjects - order by kode_mapel with natural sorting (numeric aware)
-// Handle mixed alphanumeric codes: letters first, then numbers
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY 
-    CASE 
-        WHEN kode_mapel REGEXP '^[0-9]+$' THEN 1
-        ELSE 0
-    END,
-    CASE 
-        WHEN kode_mapel REGEXP '^[0-9]+$' THEN CAST(kode_mapel AS UNSIGNED)
-        ELSE 999999
-    END,
-    kode_mapel ASC");
-$mata_pelajaran = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get subjects
+if ($is_readonly) {
+    // Guru/Wali: akademik only
+    $mata_pelajaran = getFilteredSubjects($pdo);
+} else {
+    // Admin: all
+    // Order by kode_mapel with natural sorting (numeric aware)
+    $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY 
+        CASE 
+            WHEN kode_mapel REGEXP '^[0-9]+$' THEN 1
+            ELSE 0
+        END,
+        CASE 
+            WHEN kode_mapel REGEXP '^[0-9]+$' THEN CAST(kode_mapel AS UNSIGNED)
+            ELSE 999999
+        END,
+        kode_mapel ASC");
+    $mata_pelajaran = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -170,6 +180,7 @@ $js_libs = [
 $js_page = [];
 
 // Add JavaScript
+$no_sort_targets = $is_readonly ? "[0]" : "[0, 5]";
 $js_page[] = "
 // Natural sort plugin for DataTables
 jQuery.fn.dataTableExt.oSort['natural-asc'] = function(a, b) {
@@ -190,7 +201,7 @@ $(document).ready(function() {
         \"order\": [[1, 'asc']],  // Sort by Kode Mapel (column index 1) ascending
         \"columnDefs\": [
             { \"type\": \"natural\", \"targets\": [1] },  // Natural sort for Kode Mapel
-            { \"sortable\": false, \"targets\": [0, 5] }  // No sorting for No and Aksi columns
+            { \"sortable\": false, \"targets\": $no_sort_targets }  // No sorting for No (and Aksi if exists)
         ],
         \"language\": {
             \"lengthMenu\": \"Tampilkan _MENU_ entri\",
@@ -300,9 +311,18 @@ $(document).ready(function() {
         e.preventDefault();
         var type = $(this).data('type');
         
-        // Clone table to remove action column
+        // Clone table, optionally remove 'Aksi' column if present
         var table = $('#table-1').clone();
-        table.find('th:last-child, td:last-child').remove();
+        var aksiIndex = -1;
+        table.find('thead th').each(function(i) {
+            var t = $(this).text().trim().toLowerCase();
+            if (t === 'aksi') aksiIndex = i;
+        });
+        if (aksiIndex >= 0) {
+            table.find('tr').each(function() {
+                $(this).find('th, td').eq(aksiIndex).remove();
+            });
+        }
         
         if (type === 'pdf') {
             var printWindow = window.open('', '_blank');
@@ -407,12 +427,14 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Data Mata Pelajaran</h4>
                             <div class="card-header-action">
+                                <?php if (!$is_readonly): ?>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#addModal">
                                     <i class="fas fa-plus"></i> Tambah Mapel
                                 </button>
                                 <button class="btn btn-info ml-1" data-toggle="modal" data-target="#globalKktpModal">
                                     <i class="fas fa-cog"></i> Set KKTP Global
                                 </button>
+                                <?php endif; ?>
                                 <div class="dropdown d-inline mr-2">
                                     <button class="btn btn-success dropdown-toggle" type="button" id="exportDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <i class="fas fa-file-export"></i> Export
@@ -432,9 +454,13 @@ include '../templates/sidebar.php';
                                             <th class="text-center" width="5%">No</th>
                                             <th>Kode Mapel</th>
                                             <th>Mata Pelajaran</th>
-                                            <th>Jenis</th>
+                                            <?php if (!$is_readonly): ?>
+                                                <th>Jenis</th>
+                                            <?php endif; ?>
                                             <th>KKTP</th>
-                                            <th width="15%">Aksi</th>
+                                            <?php if (!$is_readonly): ?>
+                                                <th width="15%">Aksi</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -445,23 +471,27 @@ include '../templates/sidebar.php';
                                             <td class="text-center"></td>
                                             <td><?= htmlspecialchars($row['kode_mapel'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['nama_mapel']) ?></td>
-                                            <td><?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?></td>
+                                            <?php if (!$is_readonly): ?>
+                                                <td><?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?></td>
+                                            <?php endif; ?>
                                             <td><?= $row['kktp'] !== null ? htmlspecialchars($row['kktp']) : '-' ?></td>
-                                            <td>
-                                                <button class="btn btn-warning btn-sm edit-btn" 
-                                                        data-id="<?= $row['id_mapel'] ?>"
-                                                        data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>"
-                                                        data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>"
-                                                        data-jenis="<?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?>"
-                                                        data-kktp="<?= htmlspecialchars($row['kktp'] ?? '') ?>">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm delete-btn" 
-                                                        data-id="<?= $row['id_mapel'] ?>"
-                                                        data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
+                                            <?php if (!$is_readonly): ?>
+                                                <td>
+                                                    <button class="btn btn-warning btn-sm edit-btn" 
+                                                            data-id="<?= $row['id_mapel'] ?>"
+                                                            data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>"
+                                                            data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>"
+                                                            data-jenis="<?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?>"
+                                                            data-kktp="<?= htmlspecialchars($row['kktp'] ?? '') ?>">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm delete-btn" 
+                                                            data-id="<?= $row['id_mapel'] ?>"
+                                                            data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            <?php endif; ?>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -475,6 +505,7 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
+<?php if (!$is_readonly): ?>
 <!-- Add Modal -->
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -588,5 +619,6 @@ include '../templates/sidebar.php';
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <?php include '../templates/footer.php'; ?>

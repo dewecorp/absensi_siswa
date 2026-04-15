@@ -493,6 +493,12 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
+                'title' => 'Mata Pelajaran',
+                'icon' => 'fas fa-book',
+                'url' => '../admin/mata_pelajaran.php?session_type=guru',
+                'active' => $current_page === 'mata_pelajaran.php'
+            ],
+            [
                 'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_guru,
@@ -679,6 +685,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-fire',
                 'url' => '../wali/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Mata Pelajaran',
+                'icon' => 'fas fa-book',
+                'url' => '../admin/mata_pelajaran.php?session_type=wali',
+                'active' => $current_page === 'mata_pelajaran.php'
             ],
             [
                 'title' => 'Jadwal',
