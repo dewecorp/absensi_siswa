@@ -143,16 +143,15 @@ $guru_hadir_data_json = json_encode($guru_hadir_data);
 $guru_sakit_data_json = json_encode($guru_sakit_data);
 $guru_izin_data_json = json_encode($guru_izin_data);
 
-// Get recent journal data
-$stmt_journal = $pdo->prepare("
-    SELECT j.*, g.nama_guru, k.nama_kelas 
-    FROM tb_jurnal j 
-    LEFT JOIN tb_guru g ON j.id_guru = g.id_guru 
-    LEFT JOIN tb_kelas k ON j.id_kelas = k.id_kelas 
-    ORDER BY j.tanggal DESC, j.jam_ke ASC 
-    LIMIT 50");
-$stmt_journal->execute();
-$recent_journals = $stmt_journal->fetchAll(PDO::FETCH_ASSOC);
+// Get daily teacher attendance recap for dashboard table
+$stmt_teacher_daily = $pdo->prepare("
+    SELECT g.id_guru, g.nama_guru, g.nuptk, a.status, a.keterangan, a.waktu_input
+    FROM tb_guru g
+    LEFT JOIN tb_absensi_guru a ON g.id_guru = a.id_guru AND a.tanggal = CURDATE()
+    ORDER BY g.nama_guru ASC
+");
+$stmt_teacher_daily->execute();
+$teacher_daily_recap = $stmt_teacher_daily->fetchAll(PDO::FETCH_ASSOC);
 
 // Get recent activities from the activity log
 $activities = []; // Initialize as empty array
@@ -819,9 +818,9 @@ include_once '../templates/sidebar.php';
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Jurnal Mengajar Terbaru</h4>
+                                    <h4>Rekap Harian Absensi Guru</h4>
                                     <div class="card-header-action">
-                                        <a href="../admin/jurnal_mengajar.php" class="btn btn-primary">Lihat Semua</a>
+                                        <a href="../kepala/rekap_absensi_guru.php" class="btn btn-primary">Lihat Rekap</a>
                                     </div>
                                 </div>
                                 <div class="card-body">
@@ -830,30 +829,50 @@ include_once '../templates/sidebar.php';
                                             <thead style="position: sticky; top: 0; background-color: #fff; z-index: 1;">
                                                 <tr>
                                                     <th>No</th>
-                                                    <th>Tanggal</th>
-                                                    <th>Kelas</th>
                                                     <th>Guru</th>
-                                                    <th>Mata Pelajaran</th>
-                                                    <th>Materi Pokok</th>
-                                                    <th>Jam Ke</th>
+                                                    <th>NUPTK</th>
+                                                    <th>Status</th>
+                                                    <th>Waktu Input</th>
+                                                    <th>Keterangan</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php if (count($recent_journals) > 0): ?>
-                                                    <?php $no = 1; foreach ($recent_journals as $journal): ?>
+                                                <?php if (count($teacher_daily_recap) > 0): ?>
+                                                    <?php $no = 1; foreach ($teacher_daily_recap as $recap): ?>
                                                     <tr>
                                                         <td><?php echo $no++; ?></td>
-                                                        <td><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
-                                                        <td><?php echo htmlspecialchars($journal['nama_kelas']); ?></td>
-                                                        <td><?php echo htmlspecialchars($journal['nama_guru']); ?></td>
-                                                        <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
-                                                        <td><?php echo htmlspecialchars($journal['materi']); ?></td>
-                                                        <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
+                                                        <td><?php echo htmlspecialchars($recap['nama_guru']); ?></td>
+                                                        <td><?php echo htmlspecialchars($recap['nuptk'] ?? '-'); ?></td>
+                                                        <td>
+                                                            <?php
+                                                            $status = $recap['status'] ?? 'Belum Absen';
+                                                            $status_lower = strtolower($status);
+                                                            $badge_class = 'badge-secondary';
+                                                            if ($status_lower === 'hadir') {
+                                                                $badge_class = 'badge-success';
+                                                            } elseif ($status_lower === 'sakit') {
+                                                                $badge_class = 'badge-warning';
+                                                            } elseif ($status_lower === 'izin') {
+                                                                $badge_class = 'badge-info';
+                                                            } elseif ($status_lower === 'alpa') {
+                                                                $badge_class = 'badge-danger';
+                                                            }
+                                                            ?>
+                                                            <span class="badge <?php echo $badge_class; ?>"><?php echo htmlspecialchars($status); ?></span>
+                                                        </td>
+                                                        <td>
+                                                            <?php
+                                                            echo !empty($recap['waktu_input'])
+                                                                ? date('H:i:s', strtotime($recap['waktu_input']))
+                                                                : '-';
+                                                            ?>
+                                                        </td>
+                                                        <td><?php echo htmlspecialchars($recap['keterangan'] ?? '-'); ?></td>
                                                     </tr>
                                                     <?php endforeach; ?>
                                                 <?php else: ?>
                                                     <tr>
-                                                        <td colspan="7" class="text-center">Belum ada data jurnal.</td>
+                                                        <td colspan="6" class="text-center">Belum ada data absensi guru hari ini.</td>
                                                     </tr>
                                                 <?php endif; ?>
                                             </tbody>

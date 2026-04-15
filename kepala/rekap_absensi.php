@@ -455,7 +455,7 @@ include '../templates/sidebar.php';
                                         <form method="POST" class="row" id="attendanceFilterForm">
                                             <div class="form-group col-md-3">
                                                 <label>Pilih Kelas</label>
-                                                <select name="class_id" class="form-control selectric" id="classSelect" required onchange="this.form.submit()">
+                                                <select name="class_id" class="form-control selectric" id="classSelect" required>
                                                     <option value="">Pilih Kelas...</option>
                                                     <?php foreach ($classes as $class): ?>
                                                         <option value="<?php echo $class['id_kelas']; ?>" <?php echo ($class_id == $class['id_kelas']) ? 'selected' : ''; ?>>
@@ -467,7 +467,7 @@ include '../templates/sidebar.php';
                                             
                                             <div class="form-group col-md-2">
                                                 <label>Jenis Filter</label>
-                                                <select name="filter_type" class="form-control selectric" id="filterType" onchange="this.form.submit()">
+                                                <select name="filter_type" class="form-control selectric" id="filterType">
                                                     <option value="daily" <?php echo ($filter_type == 'daily') ? 'selected' : ''; ?>>Harian</option>
                                                     <option value="monthly" <?php echo ($filter_type == 'monthly') ? 'selected' : ''; ?>>Bulanan</option>
                                                     <option value="semester" <?php echo ($filter_type == 'semester') ? 'selected' : ''; ?>>Per Semester</option>
@@ -478,18 +478,18 @@ include '../templates/sidebar.php';
                                             <div class="form-group col-md-3 daily-filter" style="<?php echo ($filter_type == 'daily') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Tanggal</label>
                                                 <input type="date" name="attendance_date" class="form-control" 
-                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker" onchange="this.form.submit()">
+                                                       value="<?php echo htmlspecialchars($selected_date); ?>" id="datePicker">
                                             </div>
                                             
                                             <div class="form-group col-md-3 monthly-filter" style="<?php echo ($filter_type == 'monthly') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Bulan</label>
                                                 <input type="month" name="month_picker" class="form-control" 
-                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker" onchange="this.form.submit()">
+                                                       value="<?php echo htmlspecialchars($selected_month); ?>" id="monthPicker">
                                             </div>
                                             
                                             <div class="form-group col-md-3 student-filter" style="<?php echo ($filter_type == 'student') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Siswa</label>
-                                                <select name="student_id" class="form-control selectric" id="studentSelect" onchange="this.form.submit()">
+                                                <select name="student_id" class="form-control selectric" id="studentSelect">
                                                     <option value="">Pilih Siswa...</option>
                                                     <?php 
                                                     if ($class_id > 0) {
@@ -506,6 +506,11 @@ include '../templates/sidebar.php';
                                                     }
                                                     ?>
                                                 </select>
+                                            </div>
+                                            <div class="form-group col-md-1 d-flex align-items-end">
+                                                <button type="submit" class="btn btn-primary btn-block">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
                                             </div>
                                         </form>
                                         
