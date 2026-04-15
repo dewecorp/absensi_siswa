@@ -1177,6 +1177,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                     </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Status Kehadiran Siswa Hari Ini</h4>
+                                </div>
+                                <div class="card-body">
+                                    <?php if (!empty($teacher_classes)): ?>
+                                        <?php $use_class_tabs = count($teacher_classes) >= 2; ?>
+
+                                        <?php if ($use_class_tabs): ?>
+                                            <ul class="nav nav-tabs mb-3" id="attendanceClassTabs" role="tablist">
+                                                <?php foreach ($teacher_classes as $tab_index => $kelas): ?>
+                                                    <?php $is_active_tab = $tab_index === 0; ?>
+                                                    <li class="nav-item" role="presentation">
+                                                        <a
+                                                            class="nav-link <?php echo $is_active_tab ? 'active' : ''; ?>"
+                                                            id="kelas-tab-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                            data-toggle="tab"
+                                                            href="#kelas-panel-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                            role="tab"
+                                                            aria-controls="kelas-panel-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                            aria-selected="<?php echo $is_active_tab ? 'true' : 'false'; ?>"
+                                                        >
+                                                            Kelas <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
+                                                        </a>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        <?php endif; ?>
+
+                                        <div class="tab-content" id="attendanceClassTabsContent">
+                                            <?php foreach ($teacher_classes as $panel_index => $kelas): ?>
+                                                <?php
+                                                $is_active_panel = $panel_index === 0;
+                                                $students_in_class = $class_students[$kelas['id_kelas']] ?? [];
+                                                ?>
+                                                <div
+                                                    class="tab-pane fade <?php echo $is_active_panel ? 'show active' : ''; ?>"
+                                                    id="kelas-panel-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                    role="tabpanel"
+                                                    aria-labelledby="kelas-tab-<?php echo (int)$kelas['id_kelas']; ?>"
+                                                >
+                                                    <div class="table-responsive">
+                                                        <table class="table table-striped table-bordered mb-0">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th style="width: 60px;">No</th>
+                                                                    <th>Nama Siswa</th>
+                                                                    <th style="width: 180px;">NISN</th>
+                                                                    <th style="width: 180px;">Status Kehadiran</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php if (!empty($students_in_class)): ?>
+                                                                    <?php foreach ($students_in_class as $idx => $siswa): ?>
+                                                                        <?php
+                                                                        $status = $siswa['keterangan'] ?? 'Belum Absen';
+                                                                        $badge_class = '';
+                                                                        switch (strtolower($status)) {
+                                                                            case 'hadir':
+                                                                                $badge_class = 'badge-success';
+                                                                                break;
+                                                                            case 'sakit':
+                                                                                $badge_class = 'badge-warning';
+                                                                                break;
+                                                                            case 'izin':
+                                                                                $badge_class = 'badge-info';
+                                                                                break;
+                                                                            case 'alpa':
+                                                                            case 'berhalangan':
+                                                                                $badge_class = 'badge-danger';
+                                                                                break;
+                                                                            default:
+                                                                                $badge_class = 'badge-secondary';
+                                                                        }
+                                                                        ?>
+                                                                        <tr>
+                                                                            <td><?php echo $idx + 1; ?></td>
+                                                                            <td><?php echo htmlspecialchars($siswa['nama_siswa']); ?></td>
+                                                                            <td><?php echo htmlspecialchars($siswa['nisn']); ?></td>
+                                                                            <td>
+                                                                                <span class="badge <?php echo $badge_class; ?>">
+                                                                                    <?php echo htmlspecialchars($status); ?>
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                <?php else: ?>
+                                                                    <tr>
+                                                                        <td colspan="4" class="text-center">Tidak ada siswa dalam kelas ini</td>
+                                                                    </tr>
+                                                                <?php endif; ?>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="text-center text-muted py-4">Belum ada kelas yang diajar.</div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
                         <div class="modal-dialog" role="document">
