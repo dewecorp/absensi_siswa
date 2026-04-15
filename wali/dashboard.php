@@ -1244,10 +1244,10 @@ include_once '../templates/sidebar.php';
                                                                         $badge_class = 'badge-success';
                                                                         break;
                                                                     case 'sakit':
-                                                                        $badge_class = 'badge-info';
+                                                                        $badge_class = 'badge-warning';
                                                                         break;
                                                                     case 'izin':
-                                                                        $badge_class = 'badge-warning';
+                                                                        $badge_class = 'badge-info';
                                                                         break;
                                                                     case 'alpa':
                                                                     case 'berhalangan':
