@@ -8,9 +8,10 @@ if (isset($_GET['session_type'])) {
     elseif ($type == 'kepala_madrasah' || $type == 'kepala') $session_name = 'SIS_KEPALA';
     
     if (session_status() == PHP_SESSION_NONE) {
-        $save_path = __DIR__ . '/../sessions';
-        if (!file_exists($save_path)) mkdir($save_path, 0777, true);
-        session_save_path($save_path);
+        $save_path = sys_get_temp_dir();
+        if (is_string($save_path) && $save_path !== '') {
+            session_save_path($save_path);
+        }
         session_name($session_name);
         session_start();
     }
@@ -239,10 +240,10 @@ include '../templates/sidebar.php';
                             <h4>Daftar Inventaris Sarpras</h4>
                             <div class="card-header-action">
                                 <div class="btn-group mr-2">
-                                    <a href="../config/export_inventaris_pdf?session_type=<?= $user_level ?>" target="_blank" class="btn btn-danger">
+                                    <a href="../config/export_inventaris_pdf.php?session_type=<?= urlencode($user_level) ?>" target="_blank" class="btn btn-danger">
                                         <i class="fas fa-file-pdf"></i> Export PDF
                                     </a>
-                                    <a href="../config/export_inventaris_excel?session_type=<?= $user_level ?>" target="_blank" class="btn btn-success">
+                                    <a href="../config/export_inventaris_excel.php?session_type=<?= urlencode($user_level) ?>" target="_blank" class="btn btn-success">
                                         <i class="fas fa-file-excel"></i> Export Excel
                                     </a>
                                 </div>

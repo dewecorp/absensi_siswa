@@ -11,9 +11,10 @@ if (isset($_REQUEST['session_type'])) {
     elseif ($type == 'kepala_madrasah' || $type == 'kepala') $session_name = 'SIS_KEPALA';
     
     if (session_status() == PHP_SESSION_NONE) {
-        $save_path = __DIR__ . '/../sessions';
-        if (!file_exists($save_path)) mkdir($save_path, 0777, true);
-        session_save_path($save_path);
+        $save_path = sys_get_temp_dir();
+        if (is_string($save_path) && $save_path !== '') {
+            session_save_path($save_path);
+        }
         session_name($session_name);
         session_start();
     }
