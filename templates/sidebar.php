@@ -215,10 +215,14 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Kalender Pendidikan',
-                'icon' => 'fas fa-calendar-alt',
-                'url' => '../admin/kalender_pendidikan.php?session_type=kepala_madrasah',
-                'active' => $current_page === 'kalender_pendidikan.php'
+                'title' => 'Data Utama',
+                'icon' => 'fas fa-database',
+                'submenu' => [
+                    ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=kepala_madrasah', 'active' => $current_page === 'mata_pelajaran.php'],
+                    ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=kepala_madrasah', 'active' => $current_page === 'kalender_pendidikan.php'],
+                    ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=kepala_madrasah', 'active' => $current_page === 'siswa_baru.php']
+                ],
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -313,16 +317,14 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Kalender Pendidikan',
-                'icon' => 'fas fa-calendar-alt',
-                'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'],
-                'active' => $current_page === 'kalender_pendidikan.php'
-            ],
-            [
-                'title' => 'Data Siswa Baru',
-                'icon' => 'fas fa-users',
-                'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'],
-                'active' => $current_page === 'siswa_baru.php'
+                'title' => 'Data Utama',
+                'icon' => 'fas fa-database',
+                'submenu' => [
+                    ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=tata_usaha', 'active' => $current_page === 'mata_pelajaran.php'],
+                    ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'kalender_pendidikan.php'],
+                    ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'siswa_baru.php']
+                ],
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -493,10 +495,13 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Mata Pelajaran',
-                'icon' => 'fas fa-book',
-                'url' => '../admin/mata_pelajaran.php?session_type=guru',
-                'active' => $current_page === 'mata_pelajaran.php'
+                'title' => 'Data Utama',
+                'icon' => 'fas fa-database',
+                'submenu' => [
+                    ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=guru', 'active' => $current_page === 'mata_pelajaran.php'],
+                    ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=guru', 'active' => $current_page === 'kalender_pendidikan.php']
+                ],
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -540,12 +545,7 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php'])
             ],
-            [
-                'title' => 'Kalender Pendidikan',
-                'icon' => 'fas fa-calendar-alt',
-                'url' => '../admin/kalender_pendidikan.php?session_type=guru',
-                'active' => $current_page === 'kalender_pendidikan.php'
-            ]
+            
         ];
 
         // Jurnal menu for all teachers
@@ -687,10 +687,13 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Mata Pelajaran',
-                'icon' => 'fas fa-book',
-                'url' => '../admin/mata_pelajaran.php?session_type=wali',
-                'active' => $current_page === 'mata_pelajaran.php'
+                'title' => 'Data Utama',
+                'icon' => 'fas fa-database',
+                'submenu' => [
+                    ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=wali', 'active' => $current_page === 'mata_pelajaran.php'],
+                    ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=wali', 'active' => $current_page === 'kalender_pendidikan.php']
+                ],
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -734,12 +737,7 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
-            [
-                'title' => 'Kalender Pendidikan',
-                'icon' => 'fas fa-calendar-alt',
-                'url' => '../admin/kalender_pendidikan.php?session_type=wali',
-                'active' => $current_page === 'kalender_pendidikan.php'
-            ]
+            
         ];
 
         // Jurnal menu for all wali

@@ -7,14 +7,14 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in and has admin level
-if (!isAuthorized(['admin', 'guru', 'wali'])) {
+// Check if user is logged in and has allowed level
+if (!isAuthorized(['admin', 'guru', 'wali', 'tata_usaha', 'kepala_madrasah', 'kepala'])) {
     redirect('../login.php');
 }
 
-// Read-only view for guru & wali (no CRUD)
+// Read-only view for non-admin users (no CRUD)
 $user_level = getUserLevel();
-$is_readonly = in_array($user_level, ['guru', 'wali'], true);
+$is_readonly = $user_level !== 'admin';
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);

@@ -7,13 +7,14 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in and has admin level
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+// Check if user is logged in and has allowed level
+if (!isAuthorized(['admin', 'tata_usaha', 'kepala_madrasah', 'kepala'])) {
     redirect('../login.php');
 }
 
 // Set page title
 $page_title = 'Data Siswa Baru';
+$export_session_type = $_SESSION['level'] ?? 'admin';
 
 // Get current academic year from school profile
 $school_profile = getSchoolProfile($pdo);
@@ -292,7 +293,7 @@ function exportTableToExcel() {
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/excel_export.php?session_type=admin';
+    f.action = '../config/excel_export.php?session_type=" . urlencode($export_session_type) . "';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';
@@ -326,7 +327,7 @@ function exportTableToPDF() {
     var html = c.innerHTML;
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/pdf_export.php?session_type=admin';
+    f.action = '../config/pdf_export.php?session_type=" . urlencode($export_session_type) . "';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';
@@ -359,7 +360,7 @@ function exportChartToPDF() {
     var imgData = canvas.toDataURL('image/png', 1.0);
     var f = document.createElement('form');
     f.method = 'POST';
-    f.action = '../config/pdf_export.php?session_type=admin';
+    f.action = '../config/pdf_export.php?session_type=" . urlencode($export_session_type) . "';
     f.target = '_blank';
     var i1 = document.createElement('input');
     i1.type = 'hidden';

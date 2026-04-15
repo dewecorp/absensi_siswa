@@ -164,7 +164,14 @@ function isLoggedIn() {
 
 // Function to get user level
 function getUserLevel() {
-    return isset($_SESSION['level']) ? $_SESSION['level'] : '';
+    $level = isset($_SESSION['level']) ? $_SESSION['level'] : '';
+    if ($level === 'kepala') {
+        return 'kepala_madrasah';
+    }
+    if ($level === 'tu') {
+        return 'tata_usaha';
+    }
+    return $level;
 }
 
 // Function to check user authorization
@@ -176,8 +183,20 @@ function isAuthorized($allowed_levels = []) {
     if (empty($allowed_levels)) {
         return true;
     }
-    
-    return in_array(getUserLevel(), $allowed_levels);
+
+    $current_level = getUserLevel();
+    $normalized_allowed_levels = [];
+    foreach ($allowed_levels as $level) {
+        if ($level === 'kepala') {
+            $normalized_allowed_levels[] = 'kepala_madrasah';
+        } elseif ($level === 'tu') {
+            $normalized_allowed_levels[] = 'tata_usaha';
+        } else {
+            $normalized_allowed_levels[] = $level;
+        }
+    }
+
+    return in_array($current_level, $normalized_allowed_levels, true);
 }
 
 // Function to get school profile
