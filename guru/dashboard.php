@@ -96,9 +96,13 @@ foreach ($teacher_classes as $kelas) {
     }
 }
 
-$stmt_check_sched_guru = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
-$stmt_check_sched_guru->execute([$today]);
-$has_les_schedule_guru = $stmt_check_sched_guru->fetchColumn() > 0;
+// Hanya true jika guru ini punya jadwal les pada tanggal tersebut
+$has_les_schedule_guru = false;
+if ($teacher && !empty($teacher['id_guru'])) {
+    $stmt_check_sched_guru = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ? AND id_guru = ?");
+    $stmt_check_sched_guru->execute([$today, $teacher['id_guru']]);
+    $has_les_schedule_guru = (int)$stmt_check_sched_guru->fetchColumn() > 0;
+}
 
 // Debug: Log the conditions for troubleshooting
 // error_log("Guru Dashboard - is_grade_6_guru: " . ($is_grade_6_guru ? 'true' : 'false') . ", has_les_schedule_guru: " . ($has_les_schedule_guru ? 'true' : 'false'));
@@ -512,8 +516,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif (isset($_POST['submit_attendance_les'])) {
             // Tutoring attendance - no holiday check, only schedule check
-            $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
-            $stmt_check_sched->execute([$current_date]);
+            $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ? AND id_guru = ?");
+            $stmt_check_sched->execute([$current_date, $current_teacher_id]);
             if ($stmt_check_sched->fetchColumn() > 0) {
                 $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
                 $check_stmt->execute([$current_teacher_id, $current_date]);

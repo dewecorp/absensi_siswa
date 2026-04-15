@@ -80,9 +80,13 @@ if ($wali_kelas) {
     }
 }
 
-$stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
-$stmt_check_sched->execute([$today]);
-$has_les_schedule = $stmt_check_sched->fetchColumn() > 0;
+// Hanya true jika guru ini punya jadwal les pada tanggal tersebut (bukan sekadar ada jadwal untuk guru lain)
+$has_les_schedule = false;
+if ($teacher && !empty($teacher['id_guru'])) {
+    $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ? AND id_guru = ?");
+    $stmt_check_sched->execute([$today, $teacher['id_guru']]);
+    $has_les_schedule = (int)$stmt_check_sched->fetchColumn() > 0;
+}
 
 // Get tutoring attendance if schedule exists
 $today_les_attendance = null;
@@ -336,8 +340,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (isset($_POST['submit_attendance_les'])) {
             // Tutoring attendance - specific for Grade 6
             // Check if there is a schedule today
-            $stmt_check_sched_post = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ?");
-            $stmt_check_sched_post->execute([$current_date]);
+            $stmt_check_sched_post = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ? AND id_guru = ?");
+            $stmt_check_sched_post->execute([$current_date, $current_teacher_id]);
             
             if ($stmt_check_sched_post->fetchColumn() > 0) {
                 $status_to_save_les = isset($_POST['attendance_status_les']) ? ucfirst($_POST['attendance_status_les']) : '';
