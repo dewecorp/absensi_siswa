@@ -84,6 +84,13 @@ switch ($user_level) {
             ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
         ];
 
+        $ekstrakurikuler_submenu_admin = [
+            ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php', 'active' => $current_page === 'data_ekstrakurikuler.php'],
+            ['title' => 'Data Pembina Ekstra', 'url' => '../admin/data_pembina_ekstrakurikuler.php', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
+            ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php', 'active' => $current_page === 'data_pembina_pramuka.php'],
+            ['title' => 'Data Barung', 'url' => '../admin/data_barung.php', 'active' => $current_page === 'data_barung.php']
+        ];
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -112,6 +119,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_admin,
                 'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'absensi_les_siswa.php', 'rekap_absensi.php', 'rekap_absensi_les_siswa.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Ekstrakurikuler',
+                'icon' => 'fas fa-users',
+                'submenu' => $ekstrakurikuler_submenu_admin,
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php'])
             ],
             [
                 'title' => 'Jadwal',
