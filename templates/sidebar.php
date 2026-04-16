@@ -96,6 +96,34 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'data_alumni.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php'])
             ],
             [
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => $absensi_submenu_admin,
+                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'absensi_les_siswa.php', 'rekap_absensi.php', 'rekap_absensi_les_siswa.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Jadwal',
+                'icon' => 'fas fa-calendar-alt',
+                'submenu' => [
+                    ['title' => 'Jadwal Reguler', 'url' => '../admin/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
+                    ['title' => 'Jadwal Les', 'url' => '../admin/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
+                    ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
+                    ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php', 'active' => $current_page === 'jadwal_seragam.php'],
+                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../admin/jadwal_seragam_siswa.php', 'active' => $current_page === 'jadwal_seragam_siswa.php']
+                ],
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php'])
+            ],
+            [
+                'title' => 'Jurnal',
+                'icon' => 'fas fa-book-open',
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
+            ],
+            [
                 'title' => 'Inventaris Sarpras',
                 'icon' => 'fas fa-boxes',
                 'submenu' => [
@@ -114,12 +142,6 @@ switch ($user_level) {
                     ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
                 ],
                 'active' => in_array($current_page, ['kategori_anggaran.php', 'rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
-            ],
-            [
-                'title' => 'Absensi',
-                'icon' => 'fas fa-calendar-check',
-                'submenu' => $absensi_submenu_admin,
-                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'absensi_les_siswa.php', 'rekap_absensi.php', 'rekap_absensi_les_siswa.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -145,29 +167,6 @@ switch ($user_level) {
                     ['title' => 'Program Pengayaan', 'url' => '../admin/program_pengayaan.php', 'active' => $current_page === 'program_pengayaan.php']
                 ],
                 'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
-            ],
-
-            [
-                'title' => 'Jadwal',
-                'icon' => 'fas fa-calendar-alt',
-                'submenu' => [
-                    ['title' => 'Jadwal Reguler', 'url' => '../admin/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../admin/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
-                    ['title' => 'Jadwal Les', 'url' => '../admin/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
-                    ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
-                    ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php', 'active' => $current_page === 'jadwal_seragam.php'],
-                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../admin/jadwal_seragam_siswa.php', 'active' => $current_page === 'jadwal_seragam_siswa.php']
-                ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php'])
-            ],
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Pengaturan',
@@ -225,6 +224,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
             ],
             [
+                'title' => 'Rekap Absensi',
+                'icon' => 'fas fa-file-alt',
+                'submenu' => $rekap_absensi_submenu_kepala,
+                'active' => in_array($current_page, ['rekap_absensi_guru.php', 'rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
                 'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
@@ -238,6 +243,15 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php'])
             ],
             [
+                'title' => 'Jurnal',
+                'icon' => 'fas fa-book-open',
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../kepala/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=kepala_madrasah', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
+            ],
+            [
                 'title' => 'Keuangan',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
@@ -246,12 +260,6 @@ switch ($user_level) {
                     ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
                 ],
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
-            ],
-            [
-                'title' => 'Rekap Absensi',
-                'icon' => 'fas fa-file-alt',
-                'submenu' => $rekap_absensi_submenu_kepala,
-                'active' => in_array($current_page, ['rekap_absensi_guru.php', 'rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -268,15 +276,6 @@ switch ($user_level) {
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
-            ],
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../kepala/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=kepala_madrasah', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Inventaris Sarpras',
@@ -327,6 +326,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
             ],
             [
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => $absensi_submenu_tu,
+                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
                 'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
@@ -340,10 +345,13 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php'])
             ],
             [
-                'title' => 'Absensi',
-                'icon' => 'fas fa-calendar-check',
-                'submenu' => $absensi_submenu_tu,
-                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+                'title' => 'Jurnal',
+                'icon' => 'fas fa-book-open',
+                'submenu' => [
+                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_mengajar.php'],
+                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -379,15 +387,6 @@ switch ($user_level) {
                     ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
                 ],
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
-            ],
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
                 'title' => 'Inventaris Sarpras',
@@ -510,6 +509,17 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
+                'title' => 'Jadwal',
+                'icon' => 'fas fa-calendar-alt',
+                'submenu' => [
+                    ['title' => 'Jadwal Reguler', 'url' => '../guru/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../guru/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
+                    ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php?session_type=guru', 'active' => $current_page === 'jadwal_imam.php'],
+                    ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=guru', 'active' => $current_page === 'jadwal_seragam.php']
+                ],
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php'])
+            ],
+            [
                 'title' => 'Nilai Siswa',
                 'icon' => 'fas fa-graduation-cap',
                 'submenu' => $nilai_submenu_guru,
@@ -534,18 +544,6 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
-            [
-                'title' => 'Jadwal',
-                'icon' => 'fas fa-calendar-alt',
-                'submenu' => [
-                    ['title' => 'Jadwal Reguler', 'url' => '../guru/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../guru/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
-                    ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php?session_type=guru', 'active' => $current_page === 'jadwal_imam.php'],
-                    ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=guru', 'active' => $current_page === 'jadwal_seragam.php']
-                ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php'])
-            ],
-            
         ];
 
         // Jurnal menu for all teachers
@@ -556,6 +554,7 @@ switch ($user_level) {
             $jurnal_submenu_guru[] = ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
         }
         
+        // Place Jurnal right after Jadwal (under Absensi)
         array_splice($menu_items, 4, 0, [[
             'title' => 'Jurnal',
             'icon' => 'fas fa-book-open',
@@ -696,6 +695,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php'])
             ],
             [
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => $absensi_submenu_wali,
+                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
                 'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
@@ -705,12 +710,6 @@ switch ($user_level) {
                     ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=wali', 'active' => $current_page === 'jadwal_seragam.php']
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php'])
-            ],
-            [
-                'title' => 'Absensi',
-                'icon' => 'fas fa-calendar-check',
-                'submenu' => $absensi_submenu_wali,
-                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -748,7 +747,8 @@ switch ($user_level) {
             $jurnal_submenu_wali[] = ['title' => 'Jurnal Les', 'url' => '../wali/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
         }
 
-        array_splice($menu_items, 5, 0, [[
+        // Place Jurnal right after Jadwal (under Absensi)
+        array_splice($menu_items, 4, 0, [[
             'title' => 'Jurnal',
             'icon' => 'fas fa-book-open',
             'submenu' => $jurnal_submenu_wali,
@@ -812,6 +812,16 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => [
+                    ['title' => 'Rekap Absensi Harian', 'url' => '../siswa/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
+                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../siswa/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
+                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../siswa/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
+                ],
+                'active' => in_array($current_page, ['rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php', 'rekap_absensi_les.php'])
+            ],
+            [
                 'title' => 'Jadwal',
                 'icon' => 'fas fa-calendar-alt',
                 'submenu' => [
@@ -825,16 +835,6 @@ switch ($user_level) {
                 'icon' => 'fas fa-book',
                 'submenu' => $nilai_submenu_siswa,
                 'active' => in_array($current_page, ['rekap_nilai.php', 'nilai_pra_ujian.php', 'nilai_ujian.php'])
-            ],
-            [
-                'title' => 'Absensi',
-                'icon' => 'fas fa-calendar-check',
-                'submenu' => [
-                    ['title' => 'Rekap Absensi Harian', 'url' => '../siswa/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
-                    ['title' => 'Rekap Sholat Berjamaah', 'url' => '../siswa/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
-                    ['title' => 'Rekap Sholat Dhuha', 'url' => '../siswa/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
-                ],
-                'active' => in_array($current_page, ['rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php', 'rekap_absensi_les.php'])
             ],
             [
                 'title' => 'Kalender Pendidikan',
