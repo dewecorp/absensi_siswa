@@ -34,9 +34,21 @@ if (!function_exists('sort_all_menu_items')) {
                 $logout = $item;
             } else {
                 if (isset($item['submenu']) && is_array($item['submenu']) && (strpos($normalized_title, 'Absensi') !== false)) {
-                    usort($item['submenu'], function($a, $b) {
-                        return strcasecmp(trim(strip_tags($a['title'])), trim(strip_tags($b['title'])));
-                    });
+                    // Do not sort submenu A–Z. Only move "Scan Absensi" to the very top
+                    // while preserving the existing order of the other items.
+                    $scan_index = null;
+                    foreach ($item['submenu'] as $idx => $sub) {
+                        $t = trim(strip_tags($sub['title'] ?? ''));
+                        if (strcasecmp($t, 'Scan Absensi') === 0) {
+                            $scan_index = $idx;
+                            break;
+                        }
+                    }
+                    if ($scan_index !== null) {
+                        $scan_item = $item['submenu'][$scan_index];
+                        array_splice($item['submenu'], $scan_index, 1);
+                        array_unshift($item['submenu'], $scan_item);
+                    }
                 }
                 $middle[] = $item;
             }
@@ -57,6 +69,7 @@ if (!function_exists('sort_all_menu_items')) {
 switch ($user_level) {
     case 'admin':
         $absensi_submenu_admin = [
+            ['title' => 'Scan Absensi', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
             ['title' => 'Absensi Guru', 'url' => '../admin/absensi_guru.php', 'active' => $current_page === 'absensi_guru.php'],
             ['title' => 'Absensi Les Guru', 'url' => '../admin/absensi_les_guru.php', 'active' => $current_page === 'absensi_les_guru.php'],
             ['title' => 'Absensi Les Siswa', 'url' => '../admin/absensi_les_siswa.php', 'active' => $current_page === 'absensi_les_siswa.php'],
@@ -68,8 +81,7 @@ switch ($user_level) {
             ['title' => 'Rekap Absensi Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php', 'active' => $current_page === 'rekap_absensi_les_guru.php'],
             ['title' => 'Rekap Absensi Siswa', 'url' => '../admin/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
             ['title' => 'Rekap Sholat Berjamaah', 'url' => '../admin/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
-            ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php'],
-            ['title' => 'Scan Absensi', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php']
+            ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
         ];
 
         $menu_items = [
@@ -297,6 +309,7 @@ switch ($user_level) {
         
     case 'tata_usaha':
         $absensi_submenu_tu = [
+            ['title' => 'Scan Absensi', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
             ['title' => 'Absensi Guru', 'url' => '../admin/absensi_guru.php', 'active' => $current_page === 'absensi_guru.php'],
             ['title' => 'Absensi Sholat Berjamaah', 'url' => '../admin/sholat_berjamaah.php', 'active' => $current_page === 'sholat_berjamaah.php'],
             ['title' => 'Absensi Sholat Dhuha', 'url' => '../admin/sholat_dhuha.php', 'active' => $current_page === 'sholat_dhuha.php'],
@@ -304,8 +317,7 @@ switch ($user_level) {
             ['title' => 'Rekap Absensi Guru', 'url' => '../admin/rekap_absensi_guru.php', 'active' => $current_page === 'rekap_absensi_guru.php'],
             ['title' => 'Rekap Absensi Siswa', 'url' => '../admin/rekap_absensi.php', 'active' => $current_page === 'rekap_absensi.php'],
             ['title' => 'Rekap Sholat Berjamaah', 'url' => '../admin/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
-            ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php'],
-            ['title' => 'Scan Absensi', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php']
+            ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
         ];
 
         $menu_items = [

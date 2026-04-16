@@ -48,7 +48,32 @@ include '../templates/sidebar.php';
                                     border-radius: 5px;
                                 }
                             </style>
+                            <div class="mb-3">
+                                <div class="btn-group btn-group-toggle d-flex" role="group" aria-label="Mode Scan">
+                                    <button type="button" id="mode-camera" class="btn btn-primary flex-fill">Kamera</button>
+                                    <button type="button" id="mode-scanner" class="btn btn-outline-primary flex-fill">Scanner</button>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    Mode <b>Scanner</b> untuk alat scan yang bertindak sebagai keyboard (scan → otomatis masuk → tersimpan).
+                                </small>
+                            </div>
+
                             <div id="reader"></div>
+                            <div id="scanner-input-wrap" style="display:none;">
+                                <div class="form-group">
+                                    <label>Hasil Scan (otomatis)</label>
+                                    <input type="text" id="scanner-input" class="form-control form-control-lg" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Arahkan scanner ke QR/Barcode...">
+                                    <small class="text-muted">Tidak perlu mengetik. Cukup scan, sistem akan menyimpan otomatis.</small>
+                                </div>
+                                <div class="alert alert-light border mb-0">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-info-circle text-primary mr-2"></i>
+                                        <div>
+                                            Pastikan kursor aktif di kolom input. Jika tidak, klik sekali pada kolom ini.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="mt-3 text-center">
                                 <button id="start-scan" class="btn btn-primary btn-lg btn-block">
                                     <i class="fas fa-camera"></i> Mulai Scan
@@ -117,6 +142,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const html5QrCode = new Html5Qrcode("reader");
     let isScanning = false;
     const beepSound = document.getElementById('beep-sound');
+    let scanMode = 'camera'; // 'camera' | 'scanner'
+    let scannerDebounceTimer = null;
     
     // Fallback if beep sound file doesn't exist
     function playWebAudioBeep() {
@@ -173,6 +200,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function processAttendance(nisn) {
+        const value = (nisn ?? '').toString().trim();
+        if (!value) return;
+
         // Show loading state
         Swal.fire({
             title: 'Memproses...',
@@ -187,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
             url: 'process_scan.php',
             type: 'POST',
             dataType: 'json',
-            data: { nisn: nisn },
+            data: { nisn: value },
             success: function(response) {
                 if (response.success) {
                     Swal.fire({
@@ -200,6 +230,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     updateResultView(response.data);
                     addToLog(response.data);
+
+                    // Clear scanner input for next scan
+                    const scannerInput = document.getElementById('scanner-input');
+                    if (scannerInput) scannerInput.value = '';
                 } else {
                     Swal.fire({
                         icon: response.icon || 'error',
@@ -264,6 +298,92 @@ document.addEventListener('DOMContentLoaded', function() {
     const startButton = document.getElementById('start-scan');
     const stopButton = document.getElementById('stop-scan');
     const cameraSelect = document.getElementById('camera-select');
+    const modeCameraBtn = document.getElementById('mode-camera');
+    const modeScannerBtn = document.getElementById('mode-scanner');
+    const readerEl = document.getElementById('reader');
+    const scannerWrap = document.getElementById('scanner-input-wrap');
+    const scannerInput = document.getElementById('scanner-input');
+
+    function setMode(mode) {
+        scanMode = mode;
+
+        if (mode === 'camera') {
+            modeCameraBtn.classList.add('btn-primary');
+            modeCameraBtn.classList.remove('btn-outline-primary');
+            modeScannerBtn.classList.add('btn-outline-primary');
+            modeScannerBtn.classList.remove('btn-primary');
+
+            if (readerEl) readerEl.style.display = 'block';
+            if (scannerWrap) scannerWrap.style.display = 'none';
+            startButton.style.display = isScanning ? 'none' : 'block';
+            stopButton.style.display = isScanning ? 'block' : 'none';
+            cameraSelect.closest('.mt-3').style.display = 'block';
+        } else {
+            // Stop camera if running
+            if (isScanning) {
+                html5QrCode.stop().then(() => {
+                    startButton.style.display = 'block';
+                    stopButton.style.display = 'none';
+                    cameraSelect.disabled = false;
+                    isScanning = false;
+                    if (readerEl) readerEl.innerHTML = '';
+                }).catch(() => {});
+            }
+
+            modeScannerBtn.classList.add('btn-primary');
+            modeScannerBtn.classList.remove('btn-outline-primary');
+            modeCameraBtn.classList.add('btn-outline-primary');
+            modeCameraBtn.classList.remove('btn-primary');
+
+            if (readerEl) readerEl.style.display = 'none';
+            if (scannerWrap) scannerWrap.style.display = 'block';
+            startButton.style.display = 'none';
+            stopButton.style.display = 'none';
+            cameraSelect.closest('.mt-3').style.display = 'none';
+
+            // Focus scanner input
+            setTimeout(() => {
+                if (scannerInput) scannerInput.focus();
+            }, 50);
+        }
+    }
+
+    // Scanner input handling (auto-submit)
+    function submitScannerValue(raw) {
+        const value = (raw ?? '').toString().trim();
+        if (!value) return;
+
+        // reuse same duplicate prevention window used by camera
+        if (window.lastScannedCode === value && (Date.now() - window.lastScanTime < 3000)) {
+            if (scannerInput) scannerInput.value = '';
+            return;
+        }
+
+        window.lastScannedCode = value;
+        window.lastScanTime = Date.now();
+        playBeep();
+        processAttendance(value);
+    }
+
+    if (scannerInput) {
+        scannerInput.addEventListener('keydown', (e) => {
+            if (scanMode !== 'scanner') return;
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitScannerValue(scannerInput.value);
+            }
+        });
+
+        // Some scanners don't send Enter; submit after short idle time
+        scannerInput.addEventListener('input', () => {
+            if (scanMode !== 'scanner') return;
+            if (scannerDebounceTimer) clearTimeout(scannerDebounceTimer);
+            scannerDebounceTimer = setTimeout(() => {
+                // Only submit if there's content and user hasn't typed more
+                submitScannerValue(scannerInput.value);
+            }, 250);
+        });
+    }
 
     // Check if context is secure
     const isSecureContext = window.isSecureContext;
@@ -344,8 +464,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize
     initCamera();
+    setMode('camera');
+
+    if (modeCameraBtn) modeCameraBtn.addEventListener('click', () => setMode('camera'));
+    if (modeScannerBtn) modeScannerBtn.addEventListener('click', () => setMode('scanner'));
 
     startButton.addEventListener('click', () => {
+        if (scanMode !== 'camera') return;
         const cameraId = cameraSelect.value;
         if (!cameraId) {
             Swal.fire('Warning', 'Pilih kamera terlebih dahulu', 'warning');
@@ -372,6 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     stopButton.addEventListener('click', () => {
+        if (scanMode !== 'camera') return;
         html5QrCode.stop().then(() => {
             startButton.style.display = 'block';
             stopButton.style.display = 'none';

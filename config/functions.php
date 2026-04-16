@@ -583,11 +583,22 @@ if (!function_exists('sort_all_menu_items')) {
             } elseif (strcasecmp($normalized_title, 'Logout') === 0) {
                 $logout = $item;
             } else {
-                // Sort submenus if they exist and contain "Absensi"
+                // Do not sort submenu A–Z. Only move "Scan Absensi" to the very top
+                // while preserving the existing order of the other items.
                 if (isset($item['submenu']) && is_array($item['submenu']) && (strpos($normalized_title, 'Absensi') !== false)) {
-                    usort($item['submenu'], function($a, $b) {
-                        return strcasecmp(trim(strip_tags($a['title'])), trim(strip_tags($b['title'])));
-                    });
+                    $scan_index = null;
+                    foreach ($item['submenu'] as $idx => $sub) {
+                        $t = trim(strip_tags($sub['title'] ?? ''));
+                        if (strcasecmp($t, 'Scan Absensi') === 0) {
+                            $scan_index = $idx;
+                            break;
+                        }
+                    }
+                    if ($scan_index !== null) {
+                        $scan_item = $item['submenu'][$scan_index];
+                        array_splice($item['submenu'], $scan_index, 1);
+                        array_unshift($item['submenu'], $scan_item);
+                    }
                 }
                 $middle[] = $item;
             }
