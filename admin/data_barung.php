@@ -10,6 +10,7 @@ if (!isAuthorized(['admin'])) {
     redirect('../login.php');
 }
 
+$school_profile = getSchoolProfile($pdo);
 $page_title = 'Data Barung';
 
 // DataTables
@@ -19,6 +20,7 @@ $css_libs = [
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
 
 // --- Ensure schema (best-effort) ---
@@ -482,7 +484,7 @@ if ($message) {
     ";
 }
 
-$js_page[] = "
+$js_page[] = <<<'JS_BLOCK'
 $(document).ready(function() {
     var table = $('#table-1').DataTable({
         'order': [[1, 'asc']],
@@ -531,7 +533,7 @@ $(document).ready(function() {
         var tingkat = $(this).data('tingkat') || '';
         Swal.fire({
             title: 'Konfirmasi Hapus',
-            text: 'Apakah Anda yakin ingin menghapus \"' + nama + '\"?',
+            text: 'Apakah Anda yakin ingin menghapus "' + nama + '"?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
@@ -540,10 +542,10 @@ $(document).ready(function() {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                var form = $('<form method=\"POST\" action=\"\">' +
-                    '<input type=\"hidden\" name=\"id_peserta_didik_barung\" value=\"' + id + '\">' +
-                    '<input type=\"hidden\" name=\"id_tingkat_barung\" value=\"' + tingkat + '\">' +
-                    '<input type=\"hidden\" name=\"delete_peserta_didik\" value=\"1\">' +
+                var form = $('<form method="POST" action="">' +
+                    '<input type="hidden" name="id_peserta_didik_barung" value="' + id + '">' +
+                    '<input type="hidden" name="id_tingkat_barung" value="' + tingkat + '">' +
+                    '<input type="hidden" name="delete_peserta_didik" value="1">' +
                     '</form>');
                 $('body').append(form);
                 form.submit();
@@ -600,12 +602,12 @@ $(document).ready(function() {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                var form = $('<form method=\"POST\" action=\"\">' +
-                    '<input type=\"hidden\" name=\"id_tingkat_barung\" value=\"<?= (int)$selected_tingkat_id ?>\">' +
-                    '<input type=\"hidden\" name=\"delete_peserta_didik_multiple\" value=\"1\">' +
+                var form = $('<form method="POST" action="">' +
+                    '<input type="hidden" name="id_tingkat_barung" value="' + $('#id_tingkat_barung_hidden').val() + '">' +
+                    '<input type="hidden" name="delete_peserta_didik_multiple" value="1">' +
                     '</form>');
                 ids.forEach(function(id) {
-                    form.append('<input type=\"hidden\" name=\"selected_ids[]\" value=\"' + id + '\">');
+                    form.append('<input type="hidden" name="selected_ids[]" value="' + id + '">');
                 });
                 $('body').append(form);
                 form.submit();
@@ -661,7 +663,7 @@ $(document).ready(function() {
             var icon = (resp.type === 'success') ? 'success' : (resp.type === 'warning' ? 'warning' : 'error');
             Swal.fire({ icon: icon, title: resp.ok ? 'Berhasil!' : 'Perhatian!', text: resp.message })
                 .then(function() {
-                    var tingkat = resp.selected_tingkat_id || $('select[name=\"id_tingkat_barung\"]', form).val() || '';
+                    var tingkat = resp.selected_tingkat_id || $('select[name="id_tingkat_barung"]', form).val() || '';
                     var url = new URL(window.location.href);
                     if (tingkat) url.searchParams.set('tingkat', tingkat);
                     url.searchParams.delete('download_template');
@@ -673,7 +675,120 @@ $(document).ready(function() {
         xhr.send(formData);
     });
 });
-";
+
+function exportToExcel() {
+    var table = document.getElementById('table-1');
+    if (!table) return;
+    
+    var schoolName = $('#schoolName').val() || 'MADRASAH';
+    var academicYear = $('#academicYear').val() || '-';
+    var tingkatName = $('#tingkatName').val() || '';
+    
+    // Clone table to remove checkbox and actions columns
+    var newTable = table.cloneNode(true);
+    var rows = newTable.rows;
+    for (var i = 0; i < rows.length; i++) {
+        rows[i].deleteCell(-1); // Remove last column (Aksi)
+        rows[i].deleteCell(0);  // Remove first column (Checkbox)
+    }
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        
+        var headerAOA = [
+            [schoolName.toUpperCase()],
+            ["DATA PESERTA DIDIK BARUNG"],
+            ["TINGKAT: " + tingkatName.toUpperCase()],
+            ["TAHUN AJARAN: " + academicYear],
+            []
+        ];
+        var finalWS = XLSX.utils.aoa_to_sheet(headerAOA);
+        XLSX.utils.sheet_add_dom(finalWS, newTable, { origin: -1 });
+        
+        XLSX.utils.book_append_sheet(wb, finalWS, "Data Barung");
+        XLSX.writeFile(wb, 'data_peserta_didik_barung_' + tingkatName.replace(/\s+/g, '_') + '_' + academicYear.replace(/\//g, '-') + '.xlsx');
+    } else {
+        var html = newTable.outerHTML;
+        var a = document.createElement('a');
+        a.href = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.download = 'data_peserta_didik_barung.xls';
+        a.click();
+    }
+}
+
+function exportToPDF() {
+    var table = document.getElementById('table-1');
+    if (!table) return;
+    
+    var schoolName = $('#schoolName').val() || 'MADRASAH';
+    var schoolLogo = $('#schoolLogo').val() || '';
+    var academicYear = $('#academicYear').val() || '-';
+    var tingkatName = $('#tingkatName').val() || '';
+    var headName = $('#headName').val() || '-';
+    var headNip = $('#headNip').val() || '-';
+    var printPlace = $('#printPlace').val() || 'Padang';
+    var printDate = $('#printDate').val() || '';
+    
+    // Generate QR Code content
+    var qrContent = "Dokumen Sah: " + schoolName + "\nKepala Madrasah: " + headName + "\nNIP: " + headNip;
+    var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" + encodeURIComponent(qrContent);
+    
+    // Create a new window for printing
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Data Peserta Didik Barung ' + academicYear + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #000; padding: 8px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f2f2f2; }');
+    printWindow.document.write('h2, h3 { text-align: center; margin: 2px 0; }');
+    printWindow.document.write('.header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; position: relative; }');
+    printWindow.document.write('.logo { position: absolute; left: 0; top: 0; height: 70px; }');
+    printWindow.document.write('.header-text { text-align: center; width: 100%; }');
+    printWindow.document.write('.signature-container { margin-top: 30px; float: right; text-align: left; width: 250px; }');
+    printWindow.document.write('.signature-space { height: 100px; display: flex; align-items: center; justify-content: center; }');
+    printWindow.document.write('.qr-code { height: 80px; width: 80px; }');
+    printWindow.document.write('.no-print { display: none; }');
+    printWindow.document.write('</style></head><body>');
+    
+    printWindow.document.write('<div class="header-container">');
+    if (schoolLogo) {
+        printWindow.document.write('<img src="' + schoolLogo + '" class="logo">');
+    }
+    printWindow.document.write('<div class="header-text">');
+    printWindow.document.write('<h2>' + schoolName.toUpperCase() + '</h2>');
+    printWindow.document.write('<h3>DATA PESERTA DIDIK BARUNG</h3>');
+    printWindow.document.write('<h3>TINGKAT: ' + tingkatName.toUpperCase() + '</h3>');
+    printWindow.document.write('<h3>TAHUN AJARAN: ' + academicYear + '</h3>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<hr style="border: 1px solid #000; margin-bottom: 20px;">');
+    
+    // Clone and clean up table
+    var cleanTable = table.cloneNode(true);
+    var rows = cleanTable.rows;
+    for (var i = 0; i < rows.length; i++) {
+        rows[i].deleteCell(-1); // Remove action column
+        rows[i].deleteCell(0);  // Remove checkbox column
+    }
+    
+    printWindow.document.write(cleanTable.outerHTML);
+    
+    // Add signature section
+    printWindow.document.write('<div class="signature-container">');
+    printWindow.document.write('<p>' + printPlace + ', ' + printDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<div class="signature-space">');
+    printWindow.document.write('<img src="' + qrUrl + '" class="qr-code">');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<p><strong>' + headName + '</strong></p>');
+    printWindow.document.write('<p>NIP. ' + headNip + '</p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); }<\/script>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+}
+JS_BLOCK;
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
@@ -693,13 +808,19 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <div class="card">
                 <div class="card-header">
-                    <h4>Data Barung</h4>
+                    <h4>Data Peserta Didik Barung (<?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : 'Semua') ?>)</h4>
                     <div class="card-header-action">
-                        <button class="btn btn-primary" data-toggle="modal" data-target="#addModal" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
-                            <i class="fas fa-plus"></i> Tambah Peserta Didik
+                        <button type="button" class="btn btn-success" onclick="exportToExcel()" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                            <i class="fas fa-file-excel"></i> Excel
                         </button>
-                        <button class="btn btn-success ml-1" data-toggle="modal" data-target="#importModal" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
-                            <i class="fas fa-file-excel"></i> Import Excel
+                        <button type="button" class="btn btn-warning ml-1" onclick="exportToPDF()" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                        <button class="btn btn-primary ml-1" data-toggle="modal" data-target="#addModal" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                            <i class="fas fa-plus"></i> Tambah
+                        </button>
+                        <button class="btn btn-info ml-1" data-toggle="modal" data-target="#importModal" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                            <i class="fas fa-file-import"></i> Import
                         </button>
                         <button class="btn btn-danger ml-1 d-none" id="btn-delete-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-trash"></i> Hapus Terpilih
@@ -708,6 +829,15 @@ include '../templates/sidebar.php';
                 </div>
 
                 <div class="card-body">
+                    <input type="hidden" id="schoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH') ?>">
+                    <input type="hidden" id="schoolLogo" value="<?= !empty($school_profile['logo']) ? '../assets/img/' . $school_profile['logo'] : '' ?>">
+                    <input type="hidden" id="academicYear" value="<?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?>">
+                    <input type="hidden" id="headName" value="<?= htmlspecialchars($school_profile['nama_kepala'] ?? '-') ?>">
+                    <input type="hidden" id="headNip" value="<?= htmlspecialchars($school_profile['nip_kepala'] ?? '-') ?>">
+                    <input type="hidden" id="printPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang') ?>">
+                    <input type="hidden" id="printDate" value="<?= date('d F Y') ?>">
+                    <input type="hidden" id="tingkatName" value="<?= htmlspecialchars($selected_tingkat_name) ?>">
+                    <input type="hidden" id="id_tingkat_barung_hidden" value="<?= (int)$selected_tingkat_id ?>">
                     <?php if ($schema_error || $fetch_error || $table_error): ?>
                         <div class="alert alert-danger">
                             <strong>Terjadi masalah pada database.</strong><br>
@@ -764,8 +894,8 @@ include '../templates/sidebar.php';
                                             <td><?= !empty($row['tanggal_lahir']) ? htmlspecialchars($row['tanggal_lahir']) : '' ?></td>
                                             <td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
-                                                    data-id="<?= (int)($row['id_peserta_didik_barung'] ?? 0) ?>"
-                                                    data-tingkat="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
+                                                    data-id="<?= (int)$row['id_peserta_didik_barung'] ?>"
+                                                    data-tingkat="<?= (int)$row['id_tingkat_barung'] ?>"
                                                     data-nama="<?= htmlspecialchars($row['nama_peserta_didik'] ?? '', ENT_QUOTES) ?>"
                                                     data-nta="<?= htmlspecialchars($row['nta'] ?? '', ENT_QUOTES) ?>"
                                                     data-tempat="<?= htmlspecialchars($row['tempat_lahir'] ?? '', ENT_QUOTES) ?>"
@@ -774,8 +904,8 @@ include '../templates/sidebar.php';
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button class="btn btn-danger btn-sm delete-btn"
-                                                    data-id="<?= (int)($row['id_peserta_didik_barung'] ?? 0) ?>"
-                                                    data-tingkat="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
+                                                    data-id="<?= (int)$row['id_peserta_didik_barung'] ?>"
+                                                    data-tingkat="<?= (int)$row['id_tingkat_barung'] ?>"
                                                     data-nama="<?= htmlspecialchars($row['nama_peserta_didik'] ?? '', ENT_QUOTES) ?>"
                                                     type="button">
                                                     <i class="fas fa-trash"></i>
@@ -932,17 +1062,14 @@ include '../templates/sidebar.php';
                        href="?tingkat=<?= (int)$selected_tingkat_id ?>&download_template=1&format=xlsx">
                         Download Template (XLSX)
                     </a>
-                    <a class="btn btn-outline-primary import-template-btn" target="_blank"
-                       href="?tingkat=<?= (int)$selected_tingkat_id ?>&download_template=1&format=csv">
-                        Download Template (CSV)
-                    </a>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal" id="importCloseBtn">Batal</button>
-                    <button type="submit" class="btn btn-success" id="importSubmitBtn">Import</button>
+                    <button type="button" class="btn btn-secondary" id="importCloseBtn" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="importSubmitBtn">Import Data</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<?php include '../templates/footer.php'; ?>
-
+<?php
+include '../templates/footer.php';
+?>

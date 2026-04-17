@@ -12,6 +12,7 @@ if (!isAuthorized(['admin'])) {
     redirect('../login.php');
 }
 
+$school_profile = getSchoolProfile($pdo);
 $page_title = 'Data Pembina Ekstrakurikuler';
 
 // DataTables
@@ -21,6 +22,7 @@ $css_libs = [
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
 
 // --- Ensure best-effort schema (create if missing) ---
@@ -258,9 +260,9 @@ if ($message) {
     ";
 }
 
-$js_page[] = "
+$js_page[] = <<<'JS_BLOCK'
 $(document).ready(function() {
-    var hasEkstra = " . (!empty($ekstrakurikuler_list) ? 'true' : 'false') . ";
+    var hasEkstra = $('#hasEkstra').val() === 'true';
 
     // Add button behavior:
     // - Pembina boleh ditambah langsung dari halaman ini.
@@ -335,9 +337,9 @@ $(document).ready(function() {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                var form = $('<form method=\"POST\" action=\"\">' +
-                    '<input type=\"hidden\" name=\"id_pembina_ekstrakurikuler\" value=\"' + id_map + '\">' +
-                    '<input type=\"hidden\" name=\"delete_pembina_ekstrakurikuler\" value=\"1\">' +
+                var form = $('<form method="POST" action="">' +
+                    '<input type="hidden" name="id_pembina_ekstrakurikuler" value="' + id_map + '">' +
+                    '<input type="hidden" name="delete_pembina_ekstrakurikuler" value="1">' +
                     '</form>');
                 $('body').append(form);
                 form.submit();
@@ -355,7 +357,132 @@ $(document).ready(function() {
         });
     }).draw();
 });
-";
+
+function exportToExcel() {
+    var table = document.getElementById('table-1');
+    if (!table) return;
+    
+    var schoolName = $('#schoolName').val() || 'MADRASAH';
+    var academicYear = $('#academicYear').val() || '-';
+    
+    // Clone table to remove actions column
+    var newTable = table.cloneNode(true);
+    var rows = newTable.rows;
+    for (var i = 0; i < rows.length; i++) {
+        rows[i].deleteCell(-1); // Remove last column (Aksi)
+    }
+    
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.table_to_sheet(newTable);
+        
+        // Add header rows
+        XLSX.utils.sheet_add_aoa(ws, [
+            [schoolName],
+            ["Data Pembina Ekstrakurikuler"],
+            ["Tahun Ajaran: " + academicYear],
+            []
+        ], { origin: "A1" });
+        
+        // Adjust data position
+        var range = XLSX.utils.decode_range(ws['!ref']);
+        // If we add 4 rows, we need to shift existing data
+        // Actually XLSX.utils.table_to_sheet starts at A1. 
+        // Let's use a different approach: build AOA then append table
+        
+        var headerAOA = [
+            [schoolName.toUpperCase()],
+            ["DATA PEMBINA EKSTRAKURIKULER"],
+            ["TAHUN AJARAN: " + academicYear],
+            []
+        ];
+        var finalWS = XLSX.utils.aoa_to_sheet(headerAOA);
+        XLSX.utils.sheet_add_dom(finalWS, newTable, { origin: -1 });
+        
+        XLSX.utils.book_append_sheet(wb, finalWS, "Data Pembina Ekstra");
+        XLSX.writeFile(wb, 'data_pembina_ekstrakurikuler_' + academicYear.replace(/\//g, '-') + '.xlsx');
+    } else {
+        var html = newTable.outerHTML;
+        var a = document.createElement('a');
+        a.href = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
+        a.download = 'data_pembina_ekstrakurikuler.xls';
+        a.click();
+    }
+}
+
+function exportToPDF() {
+    var table = document.getElementById('table-1');
+    if (!table) return;
+    
+    var schoolName = $('#schoolName').val() || 'MADRASAH';
+    var schoolLogo = $('#schoolLogo').val() || '';
+    var academicYear = $('#academicYear').val() || '-';
+    var headName = $('#headName').val() || '-';
+    var headNip = $('#headNip').val() || '-';
+    var printPlace = $('#printPlace').val() || 'Padang';
+    var printDate = $('#printDate').val() || '';
+    
+    // Generate QR Code content
+    var qrContent = "Dokumen Sah: " + schoolName + "\nKepala Madrasah: " + headName + "\nNIP: " + headNip;
+    var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" + encodeURIComponent(qrContent);
+    
+    // Create a new window for printing
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Data Pembina Ekstrakurikuler ' + academicYear + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #000; padding: 8px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f2f2f2; }');
+    printWindow.document.write('h2, h3 { text-align: center; margin: 2px 0; }');
+    printWindow.document.write('.header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; position: relative; }');
+    printWindow.document.write('.logo { position: absolute; left: 0; top: 0; height: 70px; }');
+    printWindow.document.write('.header-text { text-align: center; width: 100%; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: flex-end; }');
+    printWindow.document.write('.signature-box { width: 250px; text-align: left; }');
+    printWindow.document.write('.signature-space { padding: 10px 0; }');
+    printWindow.document.write('.qr-code { height: 80px; width: 80px; object-fit: contain; }');
+    printWindow.document.write('.no-print { display: none; }');
+    printWindow.document.write('</style></head><body>');
+    
+    printWindow.document.write('<div class="header-container">');
+    if (schoolLogo) {
+        printWindow.document.write('<img src="' + schoolLogo + '" class="logo">');
+    }
+    printWindow.document.write('<div class="header-text">');
+    printWindow.document.write('<h2>' + schoolName.toUpperCase() + '</h2>');
+    printWindow.document.write('<h3>DATA PEMBINA EKSTRAKURIKULER</h3>');
+    printWindow.document.write('<h3>TAHUN AJARAN: ' + academicYear + '</h3>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<hr style="border: 1px solid #000; margin-bottom: 20px;">');
+    
+    // Clone and clean up table
+    var cleanTable = table.cloneNode(true);
+    var rows = cleanTable.rows;
+    for (var i = 0; i < rows.length; i++) {
+        rows[i].deleteCell(-1); // Remove action column
+    }
+    
+    printWindow.document.write(cleanTable.outerHTML);
+    
+    // Add signature section
+    printWindow.document.write('<div class="signature-wrapper">');
+    printWindow.document.write('<div class="signature-box">');
+    printWindow.document.write('<p>' + printPlace + ', ' + printDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<div class="signature-space">');
+    printWindow.document.write('<img src="' + qrUrl + '" class="qr-code">');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<p style="margin-bottom: 0;"><strong>' + headName + '</strong></p>');
+    printWindow.document.write('<p style="margin-top: 0;">NIP. ' + headNip + '</p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); }<\/script>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+}
+JS_BLOCK;
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
@@ -377,6 +504,12 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Data Pembina Ekstrakurikuler</h4>
                     <div class="card-header-action">
+                        <button type="button" class="btn btn-success" onclick="exportToExcel()">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="exportToPDF()">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
                         <button class="btn btn-primary" id="btn-add-mapping" type="button">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
@@ -384,6 +517,14 @@ include '../templates/sidebar.php';
                 </div>
 
                 <div class="card-body">
+                    <input type="hidden" id="hasEkstra" value="<?= !empty($ekstrakurikuler_list) ? 'true' : 'false' ?>">
+                    <input type="hidden" id="schoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH') ?>">
+                    <input type="hidden" id="schoolLogo" value="<?= !empty($school_profile['logo']) ? '../assets/img/' . $school_profile['logo'] : '' ?>">
+                    <input type="hidden" id="academicYear" value="<?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?>">
+                    <input type="hidden" id="headName" value="<?= htmlspecialchars($school_profile['nama_kepala'] ?? '-') ?>">
+                    <input type="hidden" id="headNip" value="<?= htmlspecialchars($school_profile['nip_kepala'] ?? '-') ?>">
+                    <input type="hidden" id="printPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang') ?>">
+                    <input type="hidden" id="printDate" value="<?= date('d F Y') ?>">
                     <?php if (!empty($schema_error) || !empty($fetch_error) || !empty($table_error)): ?>
                         <div class="alert alert-danger">
                             <strong>Terjadi masalah.</strong><br>
