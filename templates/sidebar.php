@@ -90,7 +90,8 @@ switch ($user_level) {
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Tingkat Barung', 'url' => '../admin/data_tingkat_barung.php', 'active' => $current_page === 'data_tingkat_barung.php'],
             ['title' => 'Data Barung', 'url' => '../admin/data_barung.php', 'active' => $current_page === 'data_barung.php'],
-            ['title' => 'Kenaikan Tingkat', 'url' => '../admin/kenaikan_tingkat.php', 'active' => $current_page === 'kenaikan_tingkat.php']
+            ['title' => 'Kenaikan Tingkat', 'url' => '../admin/kenaikan_tingkat.php', 'active' => $current_page === 'kenaikan_tingkat.php'],
+            ['title' => 'Cetak Surat Keterangan', 'url' => '../admin/cetak_surat_keterangan.php', 'active' => $current_page === 'cetak_surat_keterangan.php']
         ];
 
         $menu_items = [
@@ -126,7 +127,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_admin,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'data_tingkat_barung.php', 'kenaikan_tingkat.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'data_tingkat_barung.php', 'kenaikan_tingkat.php', 'cetak_surat_keterangan.php'])
             ],
             [
                 'title' => 'Jadwal',

@@ -744,9 +744,11 @@ function exportToPDF() {
     printWindow.document.write('.header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; position: relative; }');
     printWindow.document.write('.logo { position: absolute; left: 0; top: 0; height: 70px; }');
     printWindow.document.write('.header-text { text-align: center; width: 100%; }');
-    printWindow.document.write('.signature-container { margin-top: 30px; float: right; text-align: left; width: 250px; }');
-    printWindow.document.write('.signature-space { height: 100px; display: flex; align-items: center; justify-content: center; }');
-    printWindow.document.write('.qr-code { height: 80px; width: 80px; }');
+    printWindow.document.write('.signature-container { margin-top: 40px; float: right; text-align: left; width: 280px; }');
+    printWindow.document.write('.signature-header { text-align: left; margin-bottom: 5px; }');
+    printWindow.document.write('.signature-space { height: 90px; display: flex; align-items: flex-end; justify-content: flex-start; margin-bottom: 5px; }');
+    printWindow.document.write('.qr-code { height: 80px; width: 80px; margin-right: 10px; }');
+    printWindow.document.write('.signature-info { text-align: left; }');
     printWindow.document.write('.no-print { display: none; }');
     printWindow.document.write('</style></head><body>');
     
@@ -775,13 +777,17 @@ function exportToPDF() {
     
     // Add signature section
     printWindow.document.write('<div class="signature-container">');
+    printWindow.document.write('<div class="signature-header">');
     printWindow.document.write('<p>' + printPlace + ', ' + printDate + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-space">');
     printWindow.document.write('<img src="' + qrUrl + '" class="qr-code">');
     printWindow.document.write('</div>');
+    printWindow.document.write('<div class="signature-info">');
     printWindow.document.write('<p><strong>' + headName + '</strong></p>');
     printWindow.document.write('<p>NIP. ' + headNip + '</p>');
+    printWindow.document.write('</div>');
     printWindow.document.write('</div>');
     
     printWindow.document.write('<script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); }<\/script>');
