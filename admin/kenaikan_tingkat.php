@@ -101,13 +101,12 @@ function findAdjacentTingkatId(array $list, int $sourceId, int $dir): ?int {
     return (int)($list[$newIdx]['id_tingkat_barung'] ?? 0) ?: null;
 }
 
-$mode = $_GET['mode'] ?? 'promote'; // promote | demote
 $source_id = isset($_GET['source_tingkat']) ? (int)$_GET['source_tingkat'] : null;
-$target_id = isset($_GET['target_tingkat']) ? (int)$_GET['target_tingkat'] : null;
+$target_id = null;
 
-// Automatic target based on source + mode
+// Automatic target based on source
 if ($source_id) {
-    $target_id = findAdjacentTingkatId($tingkat_list, $source_id, $mode === 'demote' ? -1 : 1);
+    $target_id = findAdjacentTingkatId($tingkat_list, $source_id, 1);
 }
 
 // Handle Promotion/Demotion (move selected peserta didik)
@@ -140,15 +139,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_members']) |
             $message = ['type' => 'success', 'text' => ($is_demotion ? 'Berhasil membatalkan kenaikan ' : 'Berhasil menaikkan ') . $count . ' peserta didik.'];
 
             // Keep UI consistent after action
-            $mode = $is_demotion ? 'demote' : 'promote';
-            $source_id = $source_tingkat_id;
-            $target_id = $target_tingkat_id;
+            $source_id = $is_demotion ? $target_tingkat_id : $source_tingkat_id;
+            $target_id = $is_demotion ? $source_tingkat_id : $target_tingkat_id;
         } catch (Exception $e) {
             $pdo->rollBack();
             $message = ['type' => 'danger', 'text' => 'Gagal memproses data: ' . $e->getMessage()];
         }
     } else {
-        $message = ['type' => 'warning', 'text' => 'Pilih tingkat asal, tingkat tujuan, dan minimal 1 peserta didik.'];
+        $message = ['type' => 'warning', 'text' => 'Pilih minimal 1 peserta didik.'];
     }
 }
 
@@ -221,14 +219,7 @@ require_once '../templates/sidebar.php';
             </div>
         <?php endif; ?>
 
-        <div class="mode-switcher mb-3">
-            <a href="?mode=promote" class="btn <?= $mode === 'promote' ? 'btn-primary' : 'btn-outline-primary' ?>">
-                <i class="fas fa-arrow-up"></i> Naik Tingkat
-            </a>
-            <a href="?mode=demote" class="btn <?= $mode === 'demote' ? 'btn-danger' : 'btn-outline-danger' ?>">
-                <i class="fas fa-arrow-down"></i> Batal Naik
-            </a>
-        </div>
+
 
         <div class="row">
             <div class="col-md-6">
@@ -236,8 +227,6 @@ require_once '../templates/sidebar.php';
                     <div class="card-header">Tingkat Asal</div>
                     <div class="card-body">
                         <form method="GET" id="sourceForm">
-                            <input type="hidden" name="mode" value="<?= htmlspecialchars($mode) ?>">
-                            <?php if ($target_id): ?><input type="hidden" name="target_tingkat" value="<?= (int)$target_id ?>"><?php endif; ?>
                             <div class="form-group">
                                 <label>Tingkat</label>
                                 <select name="source_tingkat" class="form-control" onchange="this.form.submit()">
@@ -249,7 +238,7 @@ require_once '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </select>
                                 <small class="text-muted">
-                                    Tingkat tujuan akan dipilih otomatis (<?= $mode === 'demote' ? 'tingkat sebelumnya' : 'tingkat berikutnya' ?>).
+                                    Tingkat tujuan akan dipilih otomatis (tingkat berikutnya).
                                 </small>
                             </div>
                         </form>
@@ -261,7 +250,7 @@ require_once '../templates/sidebar.php';
                                 </div>
                             <?php endif; ?>
 
-                            <form method="POST">
+                            <form method="POST" id="promoteForm">
                                 <input type="hidden" name="source_tingkat_id" value="<?= (int)$source_id ?>">
                                 <input type="hidden" name="target_tingkat_id" value="<?= (int)$target_id ?>">
 
@@ -289,17 +278,9 @@ require_once '../templates/sidebar.php';
                                 </div>
 
                                 <div id="promote-btn-container" class="action-btn-container">
-                                    <?php if ($source_id && $target_id && count($source_members) > 0): ?>
-                                        <?php if ($mode === 'demote'): ?>
-                                            <button type="submit" name="demote_members" class="btn btn-danger btn-block">
-                                                <i class="fas fa-arrow-down"></i> Proses Batal Naik
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="submit" name="promote_members" class="btn btn-primary btn-block">
-                                                <i class="fas fa-arrow-up"></i> Proses Naik Tingkat
-                                            </button>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
+                                    <button type="submit" name="promote_members" class="btn btn-primary btn-block">
+                                        <i class="fas fa-arrow-up"></i> Proses Naik Tingkat
+                                    </button>
                                 </div>
                             </form>
                         <?php endif; ?>
@@ -323,26 +304,39 @@ require_once '../templates/sidebar.php';
                                 Tingkat tujuan memiliki <?= count($target_members) ?> peserta didik.
                             </div>
 
-                            <div class="table-responsive">
-                                <table class="table table-sm table-striped table-bordered" id="table-target">
-                                    <thead>
-                                        <tr>
-                                            <th width="40px">No</th>
-                                            <th width="120px">NTA</th>
-                                            <th>Nama</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php $no=1; foreach ($target_members as $m): ?>
+                            <form method="POST" id="demoteForm">
+                                <input type="hidden" name="source_tingkat_id" value="<?= (int)$target_id ?>">
+                                <input type="hidden" name="target_tingkat_id" value="<?= (int)$source_id ?>">
+
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped table-bordered" id="table-target">
+                                        <thead>
                                             <tr>
-                                                <td><?= $no++ ?></td>
-                                                <td><?= htmlspecialchars($m['nta'] ?? '') ?></td>
-                                                <td><?= htmlspecialchars($m['nama_peserta_didik'] ?? '') ?></td>
+                                                <th width="30px"><input type="checkbox" id="checkAllTarget"></th>
+                                                <th width="40px">No</th>
+                                                <th width="120px">NTA</th>
+                                                <th>Nama</th>
                                             </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            <?php $no=1; foreach ($target_members as $m): ?>
+                                                <tr>
+                                                    <td><input type="checkbox" name="members[]" value="<?= (int)($m['id_peserta_didik_barung'] ?? 0) ?>" class="check-target"></td>
+                                                    <td><?= $no++ ?></td>
+                                                    <td><?= htmlspecialchars($m['nta'] ?? '') ?></td>
+                                                    <td class="member-name" style="cursor: pointer; color: #6777ef;"><?= htmlspecialchars($m['nama_peserta_didik'] ?? '') ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div id="demote-btn-container" class="action-btn-container">
+                                    <button type="submit" name="demote_members" class="btn btn-danger btn-block">
+                                        <i class="fas fa-arrow-down"></i> Proses Batal Naik
+                                    </button>
+                                </div>
+                            </form>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -376,8 +370,18 @@ document.addEventListener('DOMContentLoaded', function() {
         'order': [[1, 'asc']]
     };
 
-    const tableSource = $('#table-source').DataTable(dataTableConfig);
-    $('#table-target').DataTable(Object.assign({}, dataTableConfig, { columnDefs: [] }));
+    const tableSource = $('#table-source').DataTable(Object.assign({}, dataTableConfig, {
+        'columnDefs': [
+            { 'orderable': false, 'targets': 0 }
+        ],
+        'order': [[1, 'asc']]
+    }));
+    const tableTarget = $('#table-target').DataTable(Object.assign({}, dataTableConfig, {
+        'columnDefs': [
+            { 'orderable': false, 'targets': 0 }
+        ],
+        'order': [[1, 'asc']]
+    }));
 
     <?php if (isset($message)): ?>
     Swal.fire({
@@ -391,16 +395,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const checkAllSource = document.getElementById('checkAllSource');
     const promoteBtnContainer = document.getElementById('promote-btn-container');
+    const checkAllTarget = document.getElementById('checkAllTarget');
+    const demoteBtnContainer = document.getElementById('demote-btn-container');
 
     function toggleActionBtn() {
-        const anyChecked = $('.check-source:checked').length > 0;
-        if (promoteBtnContainer) promoteBtnContainer.style.display = anyChecked ? 'block' : 'none';
+        // Use DataTable API to find checked boxes across all pages/filtered results
+        const anySourceChecked = tableSource.$('.check-source:checked').length > 0;
+        if (promoteBtnContainer) promoteBtnContainer.style.display = anySourceChecked ? 'block' : 'none';
+
+        const anyTargetChecked = tableTarget.$('.check-target:checked').length > 0;
+        if (demoteBtnContainer) demoteBtnContainer.style.display = anyTargetChecked ? 'block' : 'none';
+
+        // Update "Check All" state based on individual checkboxes
+        if (checkAllSource) {
+            const allSource = tableSource.$('.check-source', { search: 'applied' });
+            const checkedSource = tableSource.$('.check-source:checked', { search: 'applied' });
+            checkAllSource.checked = allSource.length > 0 && allSource.length === checkedSource.length;
+        }
+        if (checkAllTarget) {
+            const allTarget = tableTarget.$('.check-target', { search: 'applied' });
+            const checkedTarget = tableTarget.$('.check-target:checked', { search: 'applied' });
+            checkAllTarget.checked = allTarget.length > 0 && allTarget.length === checkedTarget.length;
+        }
     }
+
+    // Initial call to set button visibility
+    toggleActionBtn();
 
     if (checkAllSource) {
         checkAllSource.addEventListener('change', function() {
             const rows = tableSource.rows({ 'search': 'applied' }).nodes();
-            $('input[type="checkbox"]', rows).prop('checked', this.checked);
+            $('input[type="checkbox"].check-source', rows).prop('checked', this.checked);
+            toggleActionBtn();
+        });
+    }
+
+    if (checkAllTarget) {
+        checkAllTarget.addEventListener('change', function() {
+            const rows = tableTarget.rows({ 'search': 'applied' }).nodes();
+            $('input[type="checkbox"].check-target', rows).prop('checked', this.checked);
             toggleActionBtn();
         });
     }
@@ -409,10 +442,18 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleActionBtn();
     });
 
+    $('#table-target tbody').on('change', '.check-target', function() {
+        toggleActionBtn();
+    });
+
     $('#table-source tbody').on('click', '.member-name', function() {
         const cb = $(this).closest('tr').find('.check-source');
-        cb.prop('checked', !cb.prop('checked'));
-        toggleActionBtn();
+        cb.prop('checked', !cb.prop('checked')).trigger('change');
+    });
+
+    $('#table-target tbody').on('click', '.member-name', function() {
+        const cb = $(this).closest('tr').find('.check-target');
+        cb.prop('checked', !cb.prop('checked')).trigger('change');
     });
 });
 </script>

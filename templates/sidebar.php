@@ -120,13 +120,13 @@ switch ($user_level) {
                 'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_admin,
-                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'absensi_les_siswa.php', 'rekap_absensi.php', 'rekap_absensi_les_siswa.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'absensi_les_siswa.php', 'rekap_absensi.php', 'rekap_absensi_les_siswa.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php', 'absensi_les_guru.php', 'rekap_absensi_les_guru.php'])
             ],
             [
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_admin,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'data_tingkat_barung.php', 'kenaikan_tingkat.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -254,7 +254,7 @@ switch ($user_level) {
                 'title' => 'Rekap Absensi',
                 'icon' => 'fas fa-file-alt',
                 'submenu' => $rekap_absensi_submenu_kepala,
-                'active' => in_array($current_page, ['rekap_absensi_guru.php', 'rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php'])
+                'active' => in_array($current_page, ['rekap_absensi_guru.php', 'rekap_absensi.php', 'rekap_sholat.php', 'rekap_sholat_dhuha.php', 'rekap_absensi_les_siswa.php', 'rekap_absensi_les_guru.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -533,7 +533,7 @@ switch ($user_level) {
                 'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_guru,
-                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php', 'absensi_les_siswa.php', 'rekap_absensi_les_siswa.php', 'rekap_absensi_les_guru.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -903,6 +903,18 @@ switch ($user_level) {
     default:
         $menu_items = [];
         break;
+}
+
+// Automatically set parent active if any child is active
+foreach ($menu_items as &$item) {
+    if (isset($item['submenu']) && is_array($item['submenu'])) {
+        foreach ($item['submenu'] as $subitem) {
+            if (isset($subitem['active']) && $subitem['active']) {
+                $item['active'] = true;
+                break;
+            }
+        }
+    }
 }
 
 // Sort all menu items alphabetically, keeping Dashboard first and Logout last
