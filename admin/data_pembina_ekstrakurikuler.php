@@ -103,8 +103,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_pembina_ekstrakurikuler'])) {
         $id_pembina = ensureId($_POST['id_pembina'] ?? 0);
         $id_ekstrakurikuler = ensureId($_POST['id_ekstrakurikuler'] ?? 0);
+        $nama_pembina = trim((string)($_POST['nama_pembina'] ?? ''));
 
-        if ($id_pembina > 0 && $id_ekstrakurikuler > 0) {
+        // Add flow: user provides pembina name; we reuse existing or create new.
+        if ($nama_pembina !== '') {
+            try {
+                // Try find existing (case-insensitive best-effort)
+                $find = $pdo->prepare("SELECT id_pembina FROM tb_pembina WHERE LOWER(nama_pembina) = LOWER(?) LIMIT 1");
+                $find->execute([$nama_pembina]);
+                $existingId = (int)($find->fetchColumn() ?: 0);
+                if ($existingId > 0) {
+                    $id_pembina = $existingId;
+                } else {
+                    $ins = $pdo->prepare("INSERT INTO tb_pembina (nama_pembina) VALUES (?)");
+                    $ins->execute([$nama_pembina]);
+                    $id_pembina = (int)$pdo->lastInsertId();
+                }
+            } catch (Exception $e) {
+                $message = ['type' => 'danger', 'text' => 'Gagal menambahkan pembina baru: ' . $e->getMessage()];
+            }
+        }
+
+        if (!$message && $id_pembina > 0 && $id_ekstrakurikuler > 0) {
             try {
                 $stmt = $pdo->prepare("INSERT INTO tb_pembina_ekstrakurikuler (id_pembina, id_ekstrakurikuler) VALUES (?, ?)");
                 $ok = $stmt->execute([$id_pembina, $id_ekstrakurikuler]);
@@ -121,7 +141,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = ['type' => 'danger', 'text' => 'Gagal menambahkan: ' . $e->getMessage()];
             }
         } else {
-            $message = ['type' => 'warning', 'text' => 'Harap pilih pembina dan ekstrakurikuler.'];
+            if (!$message) {
+                $message = ['type' => 'warning', 'text' => 'Harap isi nama pembina dan pilih ekstrakurikuler.'];
+            }
         }
     }
 
@@ -130,24 +152,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id_map = ensureId($_POST['id_pembina_ekstrakurikuler'] ?? 0);
         $id_pembina = ensureId($_POST['edit_id_pembina'] ?? 0);
         $id_ekstrakurikuler = ensureId($_POST['edit_id_ekstrakurikuler'] ?? 0);
+        $edit_nama_pembina = trim((string)($_POST['edit_nama_pembina'] ?? ''));
 
-        if ($id_map > 0 && $id_pembina > 0 && $id_ekstrakurikuler > 0) {
+        if ($id_map > 0 && $id_pembina > 0 && $id_ekstrakurikuler > 0 && $edit_nama_pembina !== '') {
             try {
-                $stmt = $pdo->prepare("UPDATE tb_pembina_ekstrakurikuler SET id_pembina = ?, id_ekstrakurikuler = ? WHERE id_pembina_ekstrakurikuler = ?");
-                $ok = $stmt->execute([$id_pembina, $id_ekstrakurikuler, $id_map]);
+                $pdo->beginTransaction();
+
+                // Update pembina name (fix typo) then update mapping
+                $stmtNama = $pdo->prepare("UPDATE tb_pembina SET nama_pembina = ? WHERE id_pembina = ?");
+                $stmtNama->execute([$edit_nama_pembina, $id_pembina]);
+
+                $stmt = $pdo->prepare("UPDATE tb_pembina_ekstrakurikuler SET id_ekstrakurikuler = ? WHERE id_pembina_ekstrakurikuler = ? AND id_pembina = ?");
+                $ok = $stmt->execute([$id_ekstrakurikuler, $id_map, $id_pembina]);
+
+                $pdo->commit();
 
                 if ($ok) {
                     $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                    logActivity($pdo, $username, 'Update Pembina Ekstrakurikuler', "Map ID {$id_map}: Pembina {$id_pembina} -> Ekstrakurikuler {$id_ekstrakurikuler}");
+                    logActivity($pdo, $username, 'Update Pembina Ekstrakurikuler', "Map ID {$id_map}: Pembina {$id_pembina} ({$edit_nama_pembina}) -> Ekstrakurikuler {$id_ekstrakurikuler}");
                     $message = ['type' => 'success', 'text' => 'Data pembina ekstrakurikuler berhasil diperbarui!'];
                 } else {
                     $message = ['type' => 'danger', 'text' => 'Gagal memperbarui data.'];
                 }
             } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 $message = ['type' => 'danger', 'text' => 'Gagal memperbarui: ' . $e->getMessage()];
             }
         } else {
-            $message = ['type' => 'warning', 'text' => 'Harap lengkapi input edit.'];
+            $message = ['type' => 'warning', 'text' => 'Harap lengkapi input edit (nama pembina dan ekstrakurikuler).'];
         }
     }
 
@@ -228,6 +260,25 @@ if ($message) {
 
 $js_page[] = "
 $(document).ready(function() {
+    var hasEkstra = " . (!empty($ekstrakurikuler_list) ? 'true' : 'false') . ";
+
+    // Add button behavior:
+    // - Pembina boleh ditambah langsung dari halaman ini.
+    // - Ekstrakurikuler tetap wajib ada (dipilih dari master).
+    $('#btn-add-mapping').on('click', function(e) {
+        e.preventDefault();
+        if (!hasEkstra) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Ekstrakurikuler belum ada',
+                text: 'Silakan tambah data Ekstrakurikuler terlebih dahulu, lalu kembali ke halaman ini.',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        $('#addModal').modal('show');
+    });
+
     $('#table-1').DataTable({
         'order': [[0, 'asc']],
         'columnDefs': [
@@ -236,6 +287,7 @@ $(document).ready(function() {
         'language': {
             'lengthMenu': 'Tampilkan _MENU_ entri',
             'zeroRecords': 'Tidak ada data yang ditemukan',
+            'emptyTable': 'Belum ada data.',
             'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
             'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
             'search': 'Cari:',
@@ -258,6 +310,7 @@ $(document).ready(function() {
 
         $('#edit_id_pembina_ekstrakurikuler').val(id_map);
         $('#edit_id_pembina').val(id_pembina);
+        $('#edit_nama_pembina').val(nama_pembina);
         $('#edit_id_ekstrakurikuler').val(id_ekstrakurikuler);
 
         $('#editModalLabel').text('Edit Pembina Ekstrakurikuler');
@@ -292,15 +345,15 @@ $(document).ready(function() {
         });
     });
 
-    // Row numbers
-    $('#table-1').on('draw.dt', function() {
-        var table = $(this).DataTable();
-        var info = table.page.info();
+    // Row numbers (safe even when table is empty)
+    var dt = $('#table-1').DataTable();
+    dt.on('order.dt search.dt draw.dt', function() {
+        var info = dt.page.info();
         var start = info.page * info.length;
-        $('#table-1 tbody tr').each(function(i) {
-            $(this).find('td:first-child').text(start + i + 1);
+        dt.column(0, { search: 'applied', order: 'applied' }).nodes().each(function(cell, i) {
+            $(cell).text(start + i + 1);
         });
-    });
+    }).draw();
 });
 ";
 
@@ -324,7 +377,7 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Data Pembina Ekstrakurikuler</h4>
                     <div class="card-header-action">
-                        <button class="btn btn-primary" data-toggle="modal" data-target="#addModal" <?php echo (empty($pembina_list) || empty($ekstrakurikuler_list)) ? 'disabled' : ''; ?>>
+                        <button class="btn btn-primary" id="btn-add-mapping" type="button">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
                     </div>
@@ -395,10 +448,6 @@ include '../templates/sidebar.php';
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted">Belum ada data.</td>
-                                    </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -425,14 +474,7 @@ include '../templates/sidebar.php';
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Nama Pembina</label>
-                        <select class="form-control" name="id_pembina" required>
-                            <option value="">Pilih Pembina</option>
-                            <?php foreach ($pembina_list as $p): ?>
-                                <option value="<?= (int)($p['id_pembina'] ?? 0) ?>">
-                                    <?= htmlspecialchars($p['nama_pembina'] ?? '') ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <input type="text" class="form-control" name="nama_pembina" placeholder="Contoh: Bapak/Ibu Ahmad" required autocomplete="off">
                     </div>
 
                     <div class="form-group">
@@ -471,18 +513,12 @@ include '../templates/sidebar.php';
             <form method="POST" action="">
                 <input type="hidden" name="update_pembina_ekstrakurikuler" value="1">
                 <input type="hidden" name="id_pembina_ekstrakurikuler" id="edit_id_pembina_ekstrakurikuler" value="">
+                <input type="hidden" name="edit_id_pembina" id="edit_id_pembina" value="">
 
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Nama Pembina</label>
-                        <select class="form-control" name="edit_id_pembina" id="edit_id_pembina" required>
-                            <option value="">Pilih Pembina</option>
-                            <?php foreach ($pembina_list as $p): ?>
-                                <option value="<?= (int)($p['id_pembina'] ?? 0) ?>">
-                                    <?= htmlspecialchars($p['nama_pembina'] ?? '') ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <input type="text" class="form-control" name="edit_nama_pembina" id="edit_nama_pembina" value="" required autocomplete="off">
                     </div>
 
                     <div class="form-group">
