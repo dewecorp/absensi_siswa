@@ -1,4 +1,7 @@
-<?php
+﻿<?php
+// Suppress deprecated warnings for PHP 8.1+
+error_reporting(E_ALL & ~E_DEPRECATED);
+
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -322,7 +325,7 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($participant['tempat_lahir'] ?? '-') ?></td>
                                         <td><?= !empty($participant['tanggal_lahir']) ? date('d-m-Y', strtotime($participant['tanggal_lahir'])) : '-' ?></td>
                                         <td>
-                                            <button class="btn btn-sm btn-success" onclick="printSingleLetter(<?php echo json_encode($participant['id_peserta_didik']) ?>, <?php echo json_encode($participant['nama_peserta_didik']) ?>, <?php echo json_encode($participant['nta']) ?>)">
+                                            <button class="btn btn-sm btn-success btn-print-single" data-id="<?= htmlspecialchars($participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>" data-nta="<?= htmlspecialchars($participant['nta'] ?? '') ?>">
                                                 <i class="fas fa-print"></i> Cetak Surat
                                             </button>
                                         </td>
@@ -435,12 +438,22 @@ include '../templates/sidebar.php';
         return;
     }
     
+    // Escape HTML to prevent syntax errors
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+    
+    const safeNama = escapeHtml(nama);
+    const safeNta = escapeHtml(nta);
+    
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Surat Keterangan - ${nama}</title>
+            <title>Surat Keterangan - ${safeNama}</title>
             <style>
                 @media print {
                     @page { size: A4; margin: 0; }
@@ -524,8 +537,8 @@ include '../templates/sidebar.php';
                 </div>
                 
                 <table class="student-info">
-                    <tr><td width="150">Nama</td><td>: <strong>${nama}</strong></td></tr>
-                    <tr><td>NTA</td><td>: ${nta}</td></tr>
+                    <tr><td width="150">Nama</td><td>: <strong>${safeNama}</strong></td></tr>
+                    <tr><td>NTA</td><td>: ${safeNta}</td></tr>
                 </table>
                 
                 <div class="body-text">
@@ -577,9 +590,19 @@ function printAllLetters() {
         return;
     }
     
+    // Escape HTML to prevent syntax errors
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+    
     let allContent = '';
     
     participants.forEach((p, index) => {
+        const safeNama = escapeHtml(p.nama);
+        const safeNta = escapeHtml(p.nta);
+        
         allContent += `
             <div style="page-break-after: always; position: relative; width: 100%; height: 100vh;">
                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
@@ -599,8 +622,8 @@ function printAllLetters() {
                     </div>
                     
                     <table style="margin: 20px 0; padding-left: 40px;">
-                        <tr><td width="150">Nama</td><td>: <strong>${p.nama}</strong></td></tr>
-                        <tr><td>NTA</td><td>: ${p.nta}</td></tr>
+                        <tr><td width="150">Nama</td><td>: <strong>${safeNama}</strong></td></tr>
+                        <tr><td>NTA</td><td>: ${safeNta}</td></tr>
                     </table>
                     
                     <div style="text-align: justify; line-height: 1.8; margin: 20px 0;">
@@ -649,4 +672,29 @@ function printAllLetters() {
         printWindow.print();
     };
 }
+
+// Event listener for print buttons using data attributes
+$(document).on('click', '.btn-print-single', function(e) {
+    e.preventDefault();
+    
+    const id = $(this).data('id');
+    const nama = $(this).data('nama');
+    const nta = $(this).data('nta');
+    
+    // Validate data
+    if (!id || !nama) {
+        alert('Error: Data peserta didik tidak lengkap!');
+        console.error('Missing data:', {id, nama, nta});
+        return;
+    }
+    
+    // Check if function exists
+    if (typeof printSingleLetter === 'function') {
+        printSingleLetter(id, nama, nta);
+    } else {
+        alert('Error: Fungsi print tidak ditemukan. Silakan refresh halaman.');
+        console.error('printSingleLetter function not found');
+    }
+});
 </script>
+
