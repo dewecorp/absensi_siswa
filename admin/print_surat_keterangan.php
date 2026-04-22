@@ -13,6 +13,11 @@ if (!isAuthorized(['admin'])) {
     redirect('../login.php');
 }
 
+// Prevent browser cache so layout changes are always reflected
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 $mode = (string)($_GET['mode'] ?? 'single'); // single | all
 $autoPrint = (int)($_GET['auto'] ?? 1) === 1;
 
@@ -67,6 +72,7 @@ $ketua_gudep = $print_settings_data['ketua_gudep'] ?: '........................'
 $nta_ketua_gudep = $print_settings_data['nta_ketua_gudep'] ?: '';
 $logo_pramuka = $print_settings_data['logo_pramuka'] ? ('../uploads/' . $print_settings_data['logo_pramuka']) : '';
 $bingkai = '../assets/img/template_surat_keterangan.png';
+$asset_ver = (string)time();
 
 $formatTanggalIndo = function ($value) {
     $v = trim((string)$value);
@@ -135,6 +141,13 @@ if (empty($participants)) {
     exit;
 }
 
+$page_title_print = 'Print Surat Keterangan';
+if ($mode === 'single' && !empty($participants[0]['nama_peserta_didik'])) {
+    $page_title_print .= ' - ' . (string)$participants[0]['nama_peserta_didik'];
+} elseif ($mode === 'all') {
+    $page_title_print .= ' - Semua Peserta Didik';
+}
+
 // Dynamic nomor surat: mulai dari peserta didik pertama (001, 002, ...)
 foreach ($participants as $idx => $row) {
     $participants[$idx]['nomor_urut'] = str_pad((string)($idx + 1), 3, '0', STR_PAD_LEFT);
@@ -149,10 +162,10 @@ function h($v) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Print Surat Keterangan</title>
+  <title><?= h($page_title_print) ?></title>
   <style>
     @media print {
-      @page { size: A4; margin: 0; }
+      @page { size: 210mm 330mm; margin: 0; }
       body { margin: 0; }
       .toolbar { display: none !important; }
     }
@@ -171,18 +184,20 @@ function h($v) {
     .hint { font-size: 12px; color: #6b7280; }
 
     .page {
-      width: 210mm; min-height: 297mm;
-      margin: 12px auto; background: #fff;
+      width: 210mm; min-height: 330mm;
+      margin: 0 auto 12px; background: #fff;
       position: relative;
+      overflow: hidden;
       page-break-after: always;
       box-shadow: 0 8px 18px rgba(0,0,0,0.08);
     }
     .page:last-child { page-break-after: auto; }
     .bg {
       position: absolute; inset: 0;
-      width: 216mm; height: 303mm;
-      top: -3mm; left: -3mm;
+      width: 210mm; height: 330mm;
+      top: 1mm; left: 0;
       object-fit: contain;
+      object-position: center top;
       z-index: 0;
       pointer-events: none;
       user-select: none;
@@ -192,12 +207,12 @@ function h($v) {
       z-index: 1;
       box-sizing: border-box;
       width: 156mm;          /* tighter safe text area inside frame */
-      min-height: 245mm;
+      min-height: 278mm;
       margin: 24mm auto 0;
       padding: 0;
     }
-    .center { text-align: center; }
-    .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 10mm auto 6mm; display:block; }
+    .center { text-align: center; margin-top: 22mm; }
+    .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 34mm auto 10mm; display:block; }
     .h1 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin: 0; }
     .h2 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin: 2mm 0 0; }
     .script { font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive; font-size: 26pt; margin: 6mm 0 0; }
@@ -209,12 +224,13 @@ function h($v) {
     .colon { width: 4mm; text-align: center; }
     .value { font-weight: 700; }
     .para { margin: 3mm 0; text-align: justify; padding: 0; }
-    .sign { margin-top: 12mm; font-size: 12pt; }
+    .sign { margin-top: 16mm; font-size: 12pt; }
     .sign-table { width: 100%; }
     .sign-table td { vertical-align: top; }
     .sign-right { width: 44%; padding-right: 2mm; }
-    .name { font-weight: 800; text-decoration: underline; }
-    .ketua-block { margin-top: 14mm; }
+    .name { font-weight: 800; text-decoration: underline; margin-bottom: 1mm; }
+    .nta { margin-top: 1mm; }
+    .ketua-block { margin-top: 28mm; }
   </style>
 </head>
 <body>
@@ -229,12 +245,12 @@ function h($v) {
 
   <?php foreach ($participants as $p): ?>
     <div class="page">
-      <img class="bg" src="<?= h($bingkai) ?>" alt="Bingkai Surat">
+      <img class="bg" src="<?= h($bingkai) ?>?v=<?= h($asset_ver) ?>" alt="Bingkai Surat">
       <div class="content">
         <?php $nomor_surat_full = ($p['nomor_urut'] ?? '001') . '/20.' . $nomor_gudep_part . '/' . $tahun_surat; ?>
         <div class="center">
           <?php if (!empty($logo_pramuka)): ?>
-            <img class="logo" src="<?= h($logo_pramuka) ?>" alt="Logo Pramuka">
+            <img class="logo" src="<?= h($logo_pramuka) ?>?v=<?= h($asset_ver) ?>" alt="Logo Pramuka">
           <?php endif; ?>
           <p class="h1">GERAKAN PRAMUKA</p>
           <p class="h2">GUGUS DEPAN <?= h($gugus_depan ?: '........') ?></p>
@@ -291,10 +307,10 @@ function h($v) {
                   <div>Dikeluarkan di : <?= h($tempat_surat) ?></div>
                   <div>Pada Tanggal : <?= h($formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '')) ?></div>
                   <div class="center ketua-block">Ketua Gugus Depan</div>
-                  <div style="height: 18mm;"></div>
+                  <div style="height: 8mm;"></div>
                   <div class="center name"><?= h($ketua_gudep) ?></div>
                   <?php if ($nta_ketua_gudep !== ''): ?>
-                    <div class="center">NTA : <?= h($nta_ketua_gudep) ?></div>
+                    <div class="center nta">NTA : <?= h($nta_ketua_gudep) ?></div>
                   <?php endif; ?>
                 </td>
               </tr>

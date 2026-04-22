@@ -13,6 +13,10 @@ if (!isAuthorized(['admin'])) {
     redirect('../login.php');
 }
 
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 $tingkat_id = (int)($_GET['tingkat'] ?? 0);
 if ($tingkat_id <= 0) {
     header('Content-Type: text/plain; charset=utf-8');
@@ -203,9 +207,9 @@ foreach ($export_participants as $p) {
             <div>Dikeluarkan di : ' . htmlspecialchars((string)$tempat_surat, ENT_QUOTES, 'UTF-8') . '</div>
             <div>Pada Tanggal : ' . htmlspecialchars((string)$tanggal_surat_indo, ENT_QUOTES, 'UTF-8') . '</div>
             <div class="center ketua-block">Ketua Gugus Depan</div>
-            <div style="height: 18mm;"></div>
+            <div style="height: 8mm;"></div>
             <div class="center name">' . htmlspecialchars((string)$ketua_gudep, ENT_QUOTES, 'UTF-8') . '</div>
-            ' . ($nta_ketua_gudep !== '' ? '<div class="center">NTA : ' . htmlspecialchars((string)$nta_ketua_gudep, ENT_QUOTES, 'UTF-8') . '</div>' : '') . '
+            ' . ($nta_ketua_gudep !== '' ? '<div class="center nta">NTA : ' . htmlspecialchars((string)$nta_ketua_gudep, ENT_QUOTES, 'UTF-8') . '</div>' : '') . '
           </div>
         </div>
       </div>
@@ -217,22 +221,22 @@ $html = '<!doctype html>
 <head>
   <meta charset="utf-8">
   <style>
-    @page { margin: 0; }
+    @page { margin: 0; size: 210mm 330mm; }
     body { margin: 0; font-family: DejaVu Sans, Arial, sans-serif; }
-    .page { position: relative; width: 210mm; height: 297mm; page-break-after: always; }
+    .page { position: relative; width: 210mm; height: 330mm; page-break-after: always; overflow: hidden; }
     .page:last-child { page-break-after: auto; }
-    .bg { position: absolute; top: -3mm; left: -3mm; width: 216mm; height: 303mm; object-fit: contain; z-index: 0; }
+    .bg { position: absolute; top: 1mm; left: 0; width: 210mm; height: 330mm; object-fit: contain; object-position: center top; z-index: 0; }
     .content {
       position: relative;
       z-index: 1;
       box-sizing: border-box;
       width: 156mm;          /* tighter safe text area inside frame */
-      min-height: 245mm;
+      min-height: 278mm;
       margin: 24mm auto 0;
       padding: 0;
     }
-    .center { text-align: center; }
-    .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 10mm auto 6mm; display:block; }
+    .center { text-align: center; margin-top: 22mm; }
+    .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 34mm auto 10mm; display:block; }
     .h1 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; }
     .h2 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin-top: 2mm; }
     .script { font-family: DejaVu Sans, Arial, sans-serif; font-style: italic; font-size: 26pt; margin-top: 6mm; }
@@ -242,10 +246,11 @@ $html = '<!doctype html>
     .label { width: 42mm; padding-left: 8mm; }
     .colon { width: 4mm; text-align: center; }
     .value { font-weight: 700; }
-    .sign { margin-top: 12mm; font-size: 12pt; }
+    .sign { margin-top: 16mm; font-size: 12pt; }
     .sign-right { width: 72mm; margin-left: auto; padding-right: 2mm; }
-    .name { font-weight: 800; text-decoration: underline; }
-    .ketua-block { margin-top: 14mm; }
+    .name { font-weight: 800; text-decoration: underline; margin-bottom: 1mm; }
+    .nta { margin-top: 1mm; }
+    .ketua-block { margin-top: 28mm; }
   </style>
 </head>
 <body>' . $pages_html . '</body></html>';
@@ -254,11 +259,23 @@ $dompdf = new Dompdf\Dompdf([
     'isRemoteEnabled' => false,
     'isHtml5ParserEnabled' => true,
 ]);
-$dompdf->setPaper('A4', 'portrait');
+$dompdf->setPaper([0, 0, 595.28, 935.43], 'portrait'); // F4: 210mm x 330mm
 $dompdf->loadHtml($html, 'UTF-8');
 $dompdf->render();
 
-$filename = 'surat_keterangan_tingkat_' . $tingkat_id . '.pdf';
+$slugify = function (string $value): string {
+    $value = trim($value);
+    $value = preg_replace('/[^A-Za-z0-9]+/', '_', $value) ?? '';
+    $value = trim($value, '_');
+    return $value !== '' ? strtolower($value) : 'peserta_didik';
+};
+
+if (count($export_participants) === 1) {
+    $student_name = (string)($export_participants[0]['nama_peserta_didik'] ?? '');
+    $filename = 'surat_keterangan_' . $slugify($student_name) . '.pdf';
+} else {
+    $filename = 'surat_keterangan_tingkat_' . $tingkat_id . '_' . count($export_participants) . '_siswa.pdf';
+}
 $dompdf->stream($filename, ['Attachment' => false]);
 exit;
 
