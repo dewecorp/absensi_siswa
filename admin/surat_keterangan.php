@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Suppress deprecated warnings for PHP 8.1+
 error_reporting(E_ALL & ~E_DEPRECATED);
 
@@ -14,7 +14,7 @@ if (!isAuthorized(['admin'])) {
 }
 
 $school_profile = getSchoolProfile($pdo);
-$page_title = 'Cetak Surat Keterangan';
+$page_title = 'Surat Keterangan';
 
 // DataTables
 $css_libs = [
@@ -78,14 +78,17 @@ if ($selected_tingkat_id > 0) {
     }
 }
 
-
 // Fetch print settings (needed for POST handler)
 $print_settings_data = [
     'ketua_gudep' => '',
+    'nta_ketua_gudep' => '',
+    'gugus_depan' => '03.016',
+    'nomor_surat' => '',
     'tempat_pelantikan' => '',
     'tempat_surat' => '',
     'tanggal_surat' => date('d F Y'),
-    'bingkai_surat' => ''
+    'logo_pramuka' => '',
+    'template_surat' => ''
 ];
 
 try {
@@ -93,10 +96,14 @@ try {
     if ($settings_tmp) {
         $print_settings_data = [
             'ketua_gudep' => $settings_tmp['ketua_gudep'] ?? '',
+            'nta_ketua_gudep' => $settings_tmp['nta_ketua_gudep'] ?? '',
+            'gugus_depan' => $settings_tmp['gugus_depan'] ?? '03.016',
+            'nomor_surat' => $settings_tmp['nomor_surat'] ?? '',
             'tempat_pelantikan' => $settings_tmp['tempat_pelantikan'] ?? '',
             'tempat_surat' => $settings_tmp['tempat_surat'] ?? '',
             'tanggal_surat' => $settings_tmp['tanggal_surat'] ?? date('d F Y'),
-            'bingkai_surat' => $settings_tmp['bingkai_surat'] ?? ''
+            'logo_pramuka' => $settings_tmp['logo_pramuka'] ?? ($settings_tmp['bingkai_surat'] ?? ''),
+            'template_surat' => $settings_tmp['template_surat'] ?? ''
         ];
     }
 } catch (Exception $e) {
@@ -106,57 +113,56 @@ try {
 // Handle save print settings
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])) {
     $ketua_gudep = $_POST['ketua_gudep'] ?? '';
+    $nta_ketua_gudep = $_POST['nta_ketua_gudep'] ?? '';
+    $gugus_depan = $_POST['gugus_depan'] ?? '03.016';
+    $nomor_surat = $_POST['nomor_surat'] ?? '';
     $tempat_pelantikan = $_POST['tempat_pelantikan'] ?? '';
     $tempat_surat = $_POST['tempat_surat'] ?? '';
     $tanggal_surat = $_POST['tanggal_surat'] ?? '';
-    $bingkai_surat = $print_settings_data['bingkai_surat']; // Keep existing by default
+    $logo_pramuka = $print_settings_data['logo_pramuka'] ?? ''; // Keep existing by default
     $template_surat = $print_settings_data['template_surat'] ?? '';
+
+    // Ensure columns exist (safe no-op if already exists)
+    try {
+        $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN nta_ketua_gudep VARCHAR(50) NULL");
+    } catch (Exception $e) { /* ignore */ }
+    try {
+        $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN gugus_depan VARCHAR(50) NULL");
+    } catch (Exception $e) { /* ignore */ }
+    try {
+        $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN nomor_surat VARCHAR(100) NULL");
+    } catch (Exception $e) { /* ignore */ }
+    try {
+        $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN logo_pramuka VARCHAR(255) NULL");
+    } catch (Exception $e) { /* ignore */ }
+    try {
+        $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN template_surat VARCHAR(255) NULL");
+    } catch (Exception $e) { /* ignore */ }
     
-    // Handle file upload for bingkai
-    if (isset($_FILES['bingkai_surat_file']) && $_FILES['bingkai_surat_file']['error'] == 0) {
+    // Handle file upload for logo pramuka
+    if (isset($_FILES['logo_pramuka_file']) && $_FILES['logo_pramuka_file']['error'] == 0) {
         $allowed = ['jpg', 'jpeg', 'png', 'gif'];
-        $filename = $_FILES['bingkai_surat_file']['name'];
+        $filename = $_FILES['logo_pramuka_file']['name'];
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         
         if (in_array($ext, $allowed)) {
-            $max_size = 5 * 1024 * 1024; // 5MB
-            if ($_FILES['bingkai_surat_file']['size'] <= $max_size) {
-                $new_filename = 'bingkai_' . time() . '.' . $ext;
+            $max_size = 2 * 1024 * 1024; // 2MB
+            if ($_FILES['logo_pramuka_file']['size'] <= $max_size) {
+                $new_filename = 'logo_pramuka_' . time() . '.' . $ext;
                 $upload_dir = __DIR__ . '/../uploads/';
                 
                 if (!is_dir($upload_dir)) {
                     mkdir($upload_dir, 0755, true);
                 }
                 
-                if (move_uploaded_file($_FILES['bingkai_surat_file']['tmp_name'], $upload_dir . $new_filename)) {
-                    $bingkai_surat = $new_filename;
+                if (move_uploaded_file($_FILES['logo_pramuka_file']['tmp_name'], $upload_dir . $new_filename)) {
+                    $logo_pramuka = $new_filename;
                 }
             }
         }
     }
     
-    // Handle file upload for template
-    if (isset($_FILES['template_surat_file']) && $_FILES['template_surat_file']['error'] == 0) {
-        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
-        $filename = $_FILES['template_surat_file']['name'];
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        
-        if (in_array($ext, $allowed)) {
-            $max_size = 5 * 1024 * 1024; // 5MB
-            if ($_FILES['template_surat_file']['size'] <= $max_size) {
-                $new_filename = 'template_' . time() . '.' . $ext;
-                $upload_dir = __DIR__ . '/../uploads/';
-                
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0755, true);
-                }
-                
-                if (move_uploaded_file($_FILES['template_surat_file']['tmp_name'], $upload_dir . $new_filename)) {
-                    $template_surat = $new_filename;
-                }
-            }
-        }
-    }
+    // Template surat upload has been removed from the edit modal.
     
     try {
         // Check if settings exist
@@ -166,16 +172,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
             // Update
             $stmt = $pdo->prepare("
                 UPDATE tb_pengaturan_cetak_barung 
-                SET ketua_gudep = ?, tempat_pelantikan = ?, tempat_surat = ?, tanggal_surat = ?, bingkai_surat = ?, template_surat = ?
+                SET ketua_gudep = ?, nta_ketua_gudep = ?, gugus_depan = ?, nomor_surat = ?, tempat_pelantikan = ?, tempat_surat = ?, tanggal_surat = ?, logo_pramuka = ?, template_surat = ?
             ");
-            $stmt->execute([$ketua_gudep, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $bingkai_surat, $template_surat]);
+            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat]);
         } else {
             // Insert
             $stmt = $pdo->prepare("
-                INSERT INTO tb_pengaturan_cetak_barung (ketua_gudep, tempat_pelantikan, tempat_surat, tanggal_surat, bingkai_surat, template_surat)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO tb_pengaturan_cetak_barung (ketua_gudep, nta_ketua_gudep, gugus_depan, nomor_surat, tempat_pelantikan, tempat_surat, tanggal_surat, logo_pramuka, template_surat)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$ketua_gudep, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $bingkai_surat, $template_surat]);
+            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat]);
         }
         
         $message = ['type' => 'success', 'text' => 'Pengaturan cetak berhasil disimpan!'];
@@ -190,10 +196,13 @@ try {
     if ($settings) {
         $print_settings_data = [
             'ketua_gudep' => $settings['ketua_gudep'] ?? '',
+            'nta_ketua_gudep' => $settings['nta_ketua_gudep'] ?? '',
+            'gugus_depan' => $settings['gugus_depan'] ?? '03.016',
+            'nomor_surat' => $settings['nomor_surat'] ?? '',
             'tempat_pelantikan' => $settings['tempat_pelantikan'] ?? '',
             'tempat_surat' => $settings['tempat_surat'] ?? '',
             'tanggal_surat' => $settings['tanggal_surat'] ?? date('d F Y'),
-            'bingkai_surat' => $settings['bingkai_surat'] ?? '',
+            'logo_pramuka' => $settings['logo_pramuka'] ?? '',
             'template_surat' => $settings['template_surat'] ?? ''
         ];
     }
@@ -202,6 +211,57 @@ try {
 }
 
 $custom_script = '';
+
+// Page-specific JS (rendered by templates/footer.php after libraries)
+$js_print_letters = <<<'JS'
+// Print single letter
+function printSingleLetter(id, nama, nta) {
+  if (!id) {
+    Swal.fire('Error', 'ID peserta didik tidak valid.', 'error');
+    return;
+  }
+  const url = `print_surat_keterangan.php?mode=single&id=${encodeURIComponent(id)}&auto=1`;
+  window.open(url, '_blank');
+}
+
+// Print all letters
+function printAllLetters() {
+  const params = new URLSearchParams(window.location.search);
+  const tingkat = params.get('tingkat') || '';
+  if (!tingkat) {
+    Swal.fire('Peringatan', 'Pilih tingkat terlebih dahulu.', 'warning');
+    return;
+  }
+  const url = `print_surat_keterangan.php?mode=all&tingkat=${encodeURIComponent(tingkat)}&auto=1`;
+  window.open(url, '_blank');
+}
+
+function exportPDF() {
+  const params = new URLSearchParams(window.location.search);
+  const tingkat = params.get('tingkat') || '';
+  const url = `export_surat_keterangan_pdf.php?tingkat=${encodeURIComponent(tingkat)}`;
+  window.open(url, '_blank');
+}
+
+// Event listener for print buttons using data attributes
+$(document).on('click', '.btn-print-single', function (e) {
+  e.preventDefault();
+
+  const id = $(this).data('id');
+  const nama = $(this).data('nama');
+  const nta = $(this).data('nta');
+
+  if (!id || !nama) {
+    Swal.fire('Error', 'Data peserta didik tidak lengkap!', 'error');
+    console.error('Missing data:', { id, nama, nta });
+    return;
+  }
+
+  printSingleLetter(id, nama, nta);
+});
+JS;
+
+$js_page = [$js_print_letters];
 
 // Settings for print
 $print_settings = [
@@ -220,7 +280,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Cetak Surat Keterangan</h1>
+            <h1>Surat Keterangan</h1>
         </div>
 
         <div class="section-body">
@@ -252,6 +312,18 @@ include '../templates/sidebar.php';
                                 <p class="font-weight-bold"><?= htmlspecialchars($print_settings_data['ketua_gudep'] ?: '-') ?></p>
                             </div>
                             <div class="form-group">
+                                <label>NTA Ketua Gudep:</label>
+                                <p class="font-weight-bold"><?= htmlspecialchars($print_settings_data['nta_ketua_gudep'] ?: '-') ?></p>
+                            </div>
+                            <div class="form-group">
+                                <label>Gugus Depan:</label>
+                                <p class="font-weight-bold"><?= htmlspecialchars($print_settings_data['gugus_depan'] ?: '-') ?></p>
+                            </div>
+                            <div class="form-group">
+                                <label>Nomor Surat:</label>
+                                <p class="font-weight-bold"><?= htmlspecialchars($print_settings_data['nomor_surat'] ?: '-') ?></p>
+                            </div>
+                            <div class="form-group">
                                 <label>Tempat Pelantikan:</label>
                                 <p class="font-weight-bold"><?= htmlspecialchars($print_settings_data['tempat_pelantikan'] ?: '-') ?></p>
                             </div>
@@ -268,11 +340,11 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
                                             
-                        <?php if (!empty($print_settings_data['bingkai_surat'])): ?>
+                        <?php if (!empty($print_settings_data['logo_pramuka'])): ?>
                     <div class="form-group">
-                        <label>Bingkai Surat:</label>
+                        <label>Logo Pramuka:</label>
                         <div class="mt-2">
-                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['bingkai_surat']) ?>" alt="Bingkai Surat" class="img-thumbnail" style="max-height: 200px;">
+                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['logo_pramuka']) ?>" alt="Logo Pramuka" class="img-thumbnail" style="max-height: 200px;">
                         </div>
                     </div>
                     <?php endif; ?>
@@ -283,7 +355,7 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Surat Keterangan Kenaikan Tingkat</h4>
                     <div class="card-header-action">
-                        <button class="btn btn-info" onclick="printAllLetters()" id="btnPrintAll" style="display:none;">
+                        <button class="btn btn-info" onclick="printAllLetters()" id="btnPrintAll" <?= empty($participants) ? 'disabled' : '' ?>>
                             <i class="fas fa-print"></i> Cetak Semua Surat
                         </button>
                         <button class="btn btn-primary" onclick="exportPDF()">
@@ -325,7 +397,7 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($participant['tempat_lahir'] ?? '-') ?></td>
                                         <td><?= !empty($participant['tanggal_lahir']) ? date('d-m-Y', strtotime($participant['tanggal_lahir'])) : '-' ?></td>
                                         <td>
-                                            <button class="btn btn-sm btn-success btn-print-single" data-id="<?= htmlspecialchars($participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>" data-nta="<?= htmlspecialchars($participant['nta'] ?? '') ?>">
+                                            <button class="btn btn-sm btn-success btn-print-single" data-id="<?= htmlspecialchars($participant['id_peserta_didik_barung'] ?? $participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>" data-nta="<?= htmlspecialchars($participant['nta'] ?? '') ?>">
                                                 <i class="fas fa-print"></i> Cetak Surat
                                             </button>
                                         </td>
@@ -345,8 +417,6 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
-<?php include '../templates/footer.php'; ?>
-
     <!-- Modal Edit Data Cetak -->
     <div class="modal fade" id="editDataCetakModal" tabindex="-1" role="dialog" aria-labelledby="editDataCetakModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
@@ -365,6 +435,21 @@ include '../templates/sidebar.php';
                             <label>Ketua Gudep:</label>
                             <input type="text" name="ketua_gudep" class="form-control" value="<?= htmlspecialchars($print_settings_data['ketua_gudep']) ?>" placeholder="Nama Ketua Gudep">
                         </div>
+
+                        <div class="form-group">
+                            <label>NTA Ketua Gudep:</label>
+                            <input type="text" name="nta_ketua_gudep" class="form-control" value="<?= htmlspecialchars($print_settings_data['nta_ketua_gudep'] ?? '') ?>" placeholder="NTA Ketua Gudep">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Gugus Depan:</label>
+                            <input type="text" name="gugus_depan" class="form-control" value="<?= htmlspecialchars($print_settings_data['gugus_depan'] ?? '03.016') ?>" placeholder="Contoh: 03.016">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nomor Surat:</label>
+                            <input type="text" name="nomor_surat" class="form-control" value="<?= htmlspecialchars($print_settings_data['nomor_surat'] ?? '') ?>" placeholder="Contoh: 002/20.03.016/2025">
+                        </div>
                         
                         <div class="form-group">
                             <label>Tempat Pelantikan:</label>
@@ -382,34 +467,22 @@ include '../templates/sidebar.php';
                         </div>
                         
                         <div class="form-group">
-                            <label>Bingkai Surat (gambar):</label>
+                            <label>Logo Pramuka (gambar):</label>
                             <div class="custom-file">
-                                <input type="file" name="bingkai_surat_file" class="custom-file-input" id="bingkaiSuratFile" accept="image/*">
-                                <label class="custom-file-label" for="bingkaiSuratFile">Pilih gambar bingkai...</label>
+                                <input type="file" name="logo_pramuka_file" class="custom-file-input" id="logoPramukaFile" accept="image/*">
+                                <label class="custom-file-label" for="logoPramukaFile">Pilih logo pramuka...</label>
                             </div>
                             <small class="text-muted">Format: JPG, PNG, maksimal 2MB</small>
                                                     
-                        <?php if (!empty($print_settings_data['bingkai_surat'])): ?>
+                        <?php if (!empty($print_settings_data['logo_pramuka'])): ?>
                             <div class="mt-2">
-                                <img src="../uploads/<?= htmlspecialchars($print_settings_data['bingkai_surat']) ?>" alt="Bingkai Saat Ini" class="img-thumbnail" style="max-height: 150px;">
-                                <p class="text-muted mb-0 mt-1"><small>Bingkai saat ini</small></p>
+                                <img src="../uploads/<?= htmlspecialchars($print_settings_data['logo_pramuka']) ?>" alt="Logo Pramuka Saat Ini" class="img-thumbnail" style="max-height: 150px;">
+                                <p class="text-muted mb-0 mt-1"><small>Logo saat ini</small></p>
                             </div>
                             <?php endif; ?>
                         </div>
 
-                        <div class="form-group">
-                            <label>Template Surat Keterangan (gambar):</label>
-                            <div class="custom-file">
-                                <input type="file" name="template_surat_file" class="custom-file-input" id="templateSuratFile" accept="image/*">
-                                <label class="custom-file-label" for="templateSuratFile">Pilih template surat...</label>
-                            </div>
-                            <small class="text-muted">Format: JPG, PNG, maksimal 5MB</small>
-                            <?php if (!empty($print_settings_data['template_surat'])): ?>
-                            <div class="mt-2">
-                                <img src="../uploads/<?php echo htmlspecialchars($print_settings_data['template_surat']); ?>" alt="Template" class="img-thumbnail" style="max-height: 200px;">
-                            </div>
-                            <?php endif; ?>
-                        </div>
+                        <!-- Upload Template Surat dihapus sesuai permintaan -->
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -422,279 +495,6 @@ include '../templates/sidebar.php';
         </div>
     </div>
 
-    <!-- Hidden field for template path -->
-    <input type="hidden" id="templateSurat" value="<?= !empty($print_settings_data['template_surat']) ? '../uploads/' . htmlspecialchars($print_settings_data['template_surat']) : '' ?>">
-
-    <script>
-    // Print single letter
-    function printSingleLetter(id, nama, nta) {
-    const templatePath = $('#templateSurat').val();
-    const tempatSurat = <?php echo json_encode(!empty($print_settings_data['tempat_surat']) ? $print_settings_data['tempat_surat'] : '................') ?>;
-    const tanggalSurat = <?php echo json_encode(!empty($print_settings_data['tanggal_surat']) ? $print_settings_data['tanggal_surat'] : date('d F Y')) ?>;
-    const ketuaGudep = <?php echo json_encode(!empty($print_settings_data['ketua_gudep']) ? $print_settings_data['ketua_gudep'] : '........................') ?>;
-    
-    if (!templatePath) {
-        swal('Peringatan', 'Silakan upload template surat terlebih dahulu melalui Edit Data Cetak', 'warning');
-        return;
-    }
-    
-    // Escape HTML to prevent syntax errors
-    const escapeHtml = (text) => {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    };
-    
-    const safeNama = escapeHtml(nama);
-    const safeNta = escapeHtml(nta);
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Surat Keterangan - ${safeNama}</title>
-            <style>
-                @media print {
-                    @page { size: A4; margin: 0; }
-                    body { margin: 0; }
-                }
-                body { 
-                    font-family: Arial, sans-serif; 
-                    margin: 0; 
-                    padding: 0;
-                    position: relative;
-                }
-                .template-bg {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    z-index: 0;
-                }
-                .template-bg img {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: contain;
-                }
-                .content {
-                    position: relative;
-                    z-index: 1;
-                    padding: 60px 80px;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 30px;
-                }
-                .header h2 {
-                    margin: 5px 0;
-                    font-size: 18px;
-                }
-                .title {
-                    text-align: center;
-                    margin: 30px 0;
-                    text-decoration: underline;
-                    font-size: 16px;
-                    font-weight: bold;
-                }
-                .body-text {
-                    text-align: justify;
-                    line-height: 1.8;
-                    margin: 20px 0;
-                }
-                .student-info {
-                    margin: 20px 0;
-                    padding-left: 40px;
-                }
-                .student-info td {
-                    padding: 5px;
-                }
-                .signature-section {
-                    margin-top: 50px;
-                    text-align: right;
-                }
-                .signature-space {
-                    height: 80px;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="template-bg">
-                <img src="${templatePath}" alt="Template">
-            </div>
-            <div class="content">
-                <div class="header">
-                    <h2>SURAT KETERANGAN KENAIKAN TINGKAT</h2>
-                </div>
-                
-                <div class="title">
-                    SURAT KETERANGAN
-                </div>
-                
-                <div class="body-text">
-                    Yang bertanda tangan di bawah ini menerangkan bahwa:
-                </div>
-                
-                <table class="student-info">
-                    <tr><td width="150">Nama</td><td>: <strong>${safeNama}</strong></td></tr>
-                    <tr><td>NTA</td><td>: ${safeNta}</td></tr>
-                </table>
-                
-                <div class="body-text">
-                    Telah dinyatakan <strong>NAIK TINGKAT</strong> dalam Gerakan Pramuka.
-                    Demikian surat keterangan ini dibuat untuk dapat dipergunakan sebagaimana mestinya.
-                </div>
-                
-                <div class="signature-section">
-                    <p>${tempatSurat}, ${tanggalSurat}</p>
-                    <p>Ketua Gudep,</p>
-                    <div class="signature-space"></div>
-                    <p><strong>${ketuaGudep}</strong></p>
-                </div>
-            </div>
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-    
-    // Add print script after document is closed
-    printWindow.onload = function() {
-        printWindow.print();
-    };
-}
-
-// Print all letters
-function printAllLetters() {
-    const templatePath = $('#templateSurat').val();
-    const tempatSurat = <?php echo json_encode(!empty($print_settings_data['tempat_surat']) ? $print_settings_data['tempat_surat'] : '................') ?>;
-    const tanggalSurat = <?php echo json_encode(!empty($print_settings_data['tanggal_surat']) ? $print_settings_data['tanggal_surat'] : date('d F Y')) ?>;
-    const ketuaGudep = <?php echo json_encode(!empty($print_settings_data['ketua_gudep']) ? $print_settings_data['ketua_gudep'] : '........................') ?>;
-    
-    if (!templatePath) {
-        swal('Peringatan', 'Silakan upload template surat terlebih dahulu melalui Edit Data Cetak', 'warning');
-        return;
-    }
-    
-    const participants = [];
-    <?php foreach ($participants as $p): ?>
-    participants.push({
-        id: <?php echo json_encode($p['id_peserta_didik']) ?>,
-        nama: <?php echo json_encode($p['nama_peserta_didik']) ?>,
-        nta: <?php echo json_encode($p['nta']) ?>
-    });
-    <?php endforeach; ?>
-    
-    if (participants.length === 0) {
-        swal('Peringatan', 'Tidak ada data peserta didik', 'warning');
-        return;
-    }
-    
-    // Escape HTML to prevent syntax errors
-    const escapeHtml = (text) => {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    };
-    
-    let allContent = '';
-    
-    participants.forEach((p, index) => {
-        const safeNama = escapeHtml(p.nama);
-        const safeNta = escapeHtml(p.nta);
-        
-        allContent += `
-            <div style="page-break-after: always; position: relative; width: 100%; height: 100vh;">
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-                    <img src="${templatePath}" style="width: 100%; height: 100%; object-fit: contain;">
-                </div>
-                <div style="position: relative; z-index: 1; padding: 60px 80px;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h2 style="margin: 5px 0; font-size: 18px;">SURAT KETERANGAN KENAIKAN TINGKAT</h2>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 30px 0; text-decoration: underline; font-size: 16px; font-weight: bold;">
-                        SURAT KETERANGAN
-                    </div>
-                    
-                    <div style="text-align: justify; line-height: 1.8; margin: 20px 0;">
-                        Yang bertanda tangan di bawah ini menerangkan bahwa:
-                    </div>
-                    
-                    <table style="margin: 20px 0; padding-left: 40px;">
-                        <tr><td width="150">Nama</td><td>: <strong>${safeNama}</strong></td></tr>
-                        <tr><td>NTA</td><td>: ${safeNta}</td></tr>
-                    </table>
-                    
-                    <div style="text-align: justify; line-height: 1.8; margin: 20px 0;">
-                        Telah dinyatakan <strong>NAIK TINGKAT</strong> dalam Gerakan Pramuka.
-                        Demikian surat keterangan ini dibuat untuk dapat dipergunakan sebagaimana mestinya.
-                    </div>
-                    
-                    <div style="margin-top: 50px; text-align: right;">
-                        <p>${tempatSurat}, ${tanggalSurat}</p>
-                        <p>Ketua Gudep,</p>
-                        <div style="height: 80px;"></div>
-                        <p><strong>${ketuaGudep}</strong></p>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Semua Surat Keterangan</title>
-            <style>
-                @media print {
-                    @page { size: A4; margin: 0; }
-                    body { margin: 0; }
-                }
-                body { 
-                    font-family: Arial, sans-serif; 
-                    margin: 0; 
-                    padding: 0;
-                }
-            </style>
-        </head>
-        <body>
-            ${allContent}
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-    
-    // Add print script after document is closed
-    printWindow.onload = function() {
-        printWindow.print();
-    };
-}
-
-// Event listener for print buttons using data attributes
-$(document).on('click', '.btn-print-single', function(e) {
-    e.preventDefault();
-    
-    const id = $(this).data('id');
-    const nama = $(this).data('nama');
-    const nta = $(this).data('nta');
-    
-    // Validate data
-    if (!id || !nama) {
-        alert('Error: Data peserta didik tidak lengkap!');
-        console.error('Missing data:', {id, nama, nta});
-        return;
-    }
-    
-    // Check if function exists
-    if (typeof printSingleLetter === 'function') {
-        printSingleLetter(id, nama, nta);
-    } else {
-        alert('Error: Fungsi print tidak ditemukan. Silakan refresh halaman.');
-        console.error('printSingleLetter function not found');
-    }
-});
-</script>
+    <!-- Template surat sudah dihapus -->
+<?php include '../templates/footer.php'; ?>
 
