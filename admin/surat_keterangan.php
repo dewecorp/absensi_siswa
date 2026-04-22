@@ -82,6 +82,7 @@ if ($selected_tingkat_id > 0) {
 $print_settings_data = [
     'ketua_gudep' => '',
     'nta_ketua_gudep' => '',
+    'nomor_gudep' => '',
     'gugus_depan' => '03.016',
     'nomor_surat' => '',
     'tempat_pelantikan' => '',
@@ -97,6 +98,7 @@ try {
         $print_settings_data = [
             'ketua_gudep' => $settings_tmp['ketua_gudep'] ?? '',
             'nta_ketua_gudep' => $settings_tmp['nta_ketua_gudep'] ?? '',
+            'nomor_gudep' => $settings_tmp['nomor_gudep'] ?? '',
             'gugus_depan' => $settings_tmp['gugus_depan'] ?? '03.016',
             'nomor_surat' => $settings_tmp['nomor_surat'] ?? '',
             'tempat_pelantikan' => $settings_tmp['tempat_pelantikan'] ?? '',
@@ -114,8 +116,9 @@ try {
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])) {
     $ketua_gudep = $_POST['ketua_gudep'] ?? '';
     $nta_ketua_gudep = $_POST['nta_ketua_gudep'] ?? '';
-    $gugus_depan = $_POST['gugus_depan'] ?? '03.016';
-    $nomor_surat = $_POST['nomor_surat'] ?? '';
+    $nomor_gudep = $_POST['nomor_gudep'] ?? '';
+    $gugus_depan = $_POST['gugus_depan'] ?? ($print_settings_data['gugus_depan'] ?? '03.016');
+    $nomor_surat = $_POST['nomor_surat'] ?? ($print_settings_data['nomor_surat'] ?? '');
     $tempat_pelantikan = $_POST['tempat_pelantikan'] ?? '';
     $tempat_surat = $_POST['tempat_surat'] ?? '';
     $tanggal_surat = $_POST['tanggal_surat'] ?? '';
@@ -125,6 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
     // Ensure columns exist (safe no-op if already exists)
     try {
         $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN nta_ketua_gudep VARCHAR(50) NULL");
+    } catch (Exception $e) { /* ignore */ }
+    try {
+        $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN nomor_gudep VARCHAR(50) NULL");
     } catch (Exception $e) { /* ignore */ }
     try {
         $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN gugus_depan VARCHAR(50) NULL");
@@ -172,16 +178,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
             // Update
             $stmt = $pdo->prepare("
                 UPDATE tb_pengaturan_cetak_barung 
-                SET ketua_gudep = ?, nta_ketua_gudep = ?, gugus_depan = ?, nomor_surat = ?, tempat_pelantikan = ?, tempat_surat = ?, tanggal_surat = ?, logo_pramuka = ?, template_surat = ?
+                SET ketua_gudep = ?, nta_ketua_gudep = ?, nomor_gudep = ?, gugus_depan = ?, nomor_surat = ?, tempat_pelantikan = ?, tempat_surat = ?, tanggal_surat = ?, logo_pramuka = ?, template_surat = ?
             ");
-            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat]);
+            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat]);
         } else {
             // Insert
             $stmt = $pdo->prepare("
-                INSERT INTO tb_pengaturan_cetak_barung (ketua_gudep, nta_ketua_gudep, gugus_depan, nomor_surat, tempat_pelantikan, tempat_surat, tanggal_surat, logo_pramuka, template_surat)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tb_pengaturan_cetak_barung (ketua_gudep, nta_ketua_gudep, nomor_gudep, gugus_depan, nomor_surat, tempat_pelantikan, tempat_surat, tanggal_surat, logo_pramuka, template_surat)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat]);
+            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat]);
         }
         
         $message = ['type' => 'success', 'text' => 'Pengaturan cetak berhasil disimpan!'];
@@ -197,6 +203,7 @@ try {
         $print_settings_data = [
             'ketua_gudep' => $settings['ketua_gudep'] ?? '',
             'nta_ketua_gudep' => $settings['nta_ketua_gudep'] ?? '',
+            'nomor_gudep' => $settings['nomor_gudep'] ?? '',
             'gugus_depan' => $settings['gugus_depan'] ?? '03.016',
             'nomor_surat' => $settings['nomor_surat'] ?? '',
             'tempat_pelantikan' => $settings['tempat_pelantikan'] ?? '',
@@ -317,7 +324,7 @@ include '../templates/sidebar.php';
                             </div>
                             <div class="form-group">
                                 <label>Gugus Depan:</label>
-                                <p class="font-weight-bold"><?= htmlspecialchars($print_settings_data['gugus_depan'] ?: '-') ?></p>
+                                <p class="font-weight-bold"><?= htmlspecialchars(($print_settings_data['nomor_gudep'] ?? '') ?: ($print_settings_data['gugus_depan'] ?? '-') ) ?></p>
                             </div>
                             <div class="form-group">
                                 <label>Nomor Surat:</label>
@@ -442,14 +449,11 @@ include '../templates/sidebar.php';
                         </div>
 
                         <div class="form-group">
-                            <label>Gugus Depan:</label>
-                            <input type="text" name="gugus_depan" class="form-control" value="<?= htmlspecialchars($print_settings_data['gugus_depan'] ?? '03.016') ?>" placeholder="Contoh: 03.016">
+                            <label>Nomor Gudep:</label>
+                            <input type="text" name="nomor_gudep" class="form-control" value="<?= htmlspecialchars($print_settings_data['nomor_gudep'] ?? '') ?>" placeholder="Contoh: 03.016">
                         </div>
 
-                        <div class="form-group">
-                            <label>Nomor Surat:</label>
-                            <input type="text" name="nomor_surat" class="form-control" value="<?= htmlspecialchars($print_settings_data['nomor_surat'] ?? '') ?>" placeholder="Contoh: 002/20.03.016/2025">
-                        </div>
+                        <!-- Input Gugus Depan dan Nomor Surat dihapus dari modal -->
                         
                         <div class="form-group">
                             <label>Tempat Pelantikan:</label>

@@ -20,6 +20,7 @@ $autoPrint = (int)($_GET['auto'] ?? 1) === 1;
 $print_settings_data = [
     'ketua_gudep' => '',
     'nta_ketua_gudep' => '',
+    'nomor_gudep' => '',
     'gugus_depan' => '03.016',
     'nomor_surat' => '',
     'tempat_surat' => '',
@@ -35,6 +36,7 @@ try {
         $print_settings_data = [
             'ketua_gudep' => $settings['ketua_gudep'] ?? '',
             'nta_ketua_gudep' => $settings['nta_ketua_gudep'] ?? '',
+            'nomor_gudep' => $settings['nomor_gudep'] ?? '',
             'gugus_depan' => $settings['gugus_depan'] ?? '03.016',
             'nomor_surat' => $settings['nomor_surat'] ?? '',
             'tempat_surat' => $settings['tempat_surat'] ?? '',
@@ -58,15 +60,13 @@ $formatTanggal = function ($value) {
 
 $tempat_surat = $print_settings_data['tempat_surat'] ?: '................';
 $tanggal_surat = $formatTanggal($print_settings_data['tanggal_surat'] ?: date('d-m-Y'));
-$gugus_depan = trim((string)($print_settings_data['gugus_depan'] ?? '03.016'));
+$gugus_depan = trim((string)(($print_settings_data['nomor_gudep'] ?? '') ?: ($print_settings_data['gugus_depan'] ?? '03.016')));
 $nomor_surat = trim((string)($print_settings_data['nomor_surat'] ?? ''));
 $tempat_pelantikan = trim((string)($print_settings_data['tempat_pelantikan'] ?? ''));
 $ketua_gudep = $print_settings_data['ketua_gudep'] ?: '........................';
 $nta_ketua_gudep = $print_settings_data['nta_ketua_gudep'] ?: '';
 $logo_pramuka = $print_settings_data['logo_pramuka'] ? ('../uploads/' . $print_settings_data['logo_pramuka']) : '';
-$bingkai = !empty($print_settings_data['bingkai_surat'])
-    ? ('../uploads/' . $print_settings_data['bingkai_surat'])
-    : '../assets/img/bingkai_surat_keterangan.png';
+$bingkai = '../assets/img/template_surat_keterangan.png';
 
 $formatTanggalIndo = function ($value) {
     $v = trim((string)$value);
@@ -87,6 +87,9 @@ $hariIndo = function ($value) {
     $hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     return $hari[(int)date('w', $ts)] ?? '';
 };
+
+$tahun_surat = date('Y', strtotime((string)($print_settings_data['tanggal_surat'] ?? date('Y-m-d'))));
+$nomor_gudep_part = $gugus_depan !== '' ? $gugus_depan : '...';
 
 $participants = [];
 if ($mode === 'all') {
@@ -132,6 +135,11 @@ if (empty($participants)) {
     exit;
 }
 
+// Dynamic nomor surat: mulai dari peserta didik pertama (001, 002, ...)
+foreach ($participants as $idx => $row) {
+    $participants[$idx]['nomor_urut'] = str_pad((string)($idx + 1), 3, '0', STR_PAD_LEFT);
+}
+
 function h($v) {
     return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 }
@@ -172,32 +180,41 @@ function h($v) {
     .page:last-child { page-break-after: auto; }
     .bg {
       position: absolute; inset: 0;
-      width: 210mm; height: 297mm;
+      width: 216mm; height: 303mm;
+      top: -3mm; left: -3mm;
       object-fit: contain;
       z-index: 0;
       pointer-events: none;
       user-select: none;
     }
-    .content { position: relative; z-index: 1; padding: 18mm 22mm 18mm 22mm; }
+    .content {
+      position: relative;
+      z-index: 1;
+      box-sizing: border-box;
+      width: 156mm;          /* tighter safe text area inside frame */
+      min-height: 245mm;
+      margin: 24mm auto 0;
+      padding: 0;
+    }
     .center { text-align: center; }
-    .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 0 auto 3mm; display:block; }
+    .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 10mm auto 6mm; display:block; }
     .h1 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin: 0; }
-    .h2 { font-weight: 700; letter-spacing: 0.5px; font-size: 13pt; margin: 2mm 0 0; }
+    .h2 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin: 2mm 0 0; }
     .script { font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive; font-size: 26pt; margin: 6mm 0 0; }
-    .nomor { font-size: 11pt; margin: 1mm 0 0; }
-    .body { margin-top: 6mm; font-size: 11pt; line-height: 1.6; }
-    .label-table { width: 100%; margin: 5mm 0 4mm; font-size: 11pt; }
+    .nomor { font-size: 12pt; margin: 1mm 0 0; }
+    .body { margin-top: 6mm; font-size: 12pt; line-height: 1.6; }
+    .label-table { width: 96%; margin: 5mm auto 4mm; font-size: 12pt; }
     .label-table td { padding: 1mm 0; vertical-align: top; }
-    .label { width: 40mm; padding-left: 18mm; }
+    .label { width: 42mm; padding-left: 8mm; }
     .colon { width: 4mm; text-align: center; }
     .value { font-weight: 700; }
-    .para { margin: 3mm 0; text-align: justify; padding: 0 6mm; }
-    .sign { margin-top: 8mm; font-size: 11pt; }
+    .para { margin: 3mm 0; text-align: justify; padding: 0; }
+    .sign { margin-top: 12mm; font-size: 12pt; }
     .sign-table { width: 100%; }
     .sign-table td { vertical-align: top; }
-    .sign-right { width: 55%; padding-right: 10mm; }
-    .line { border-top: 1px solid #111; width: 52mm; margin: 10mm 0 2mm auto; }
+    .sign-right { width: 44%; padding-right: 2mm; }
     .name { font-weight: 800; text-decoration: underline; }
+    .ketua-block { margin-top: 14mm; }
   </style>
 </head>
 <body>
@@ -214,6 +231,7 @@ function h($v) {
     <div class="page">
       <img class="bg" src="<?= h($bingkai) ?>" alt="Bingkai Surat">
       <div class="content">
+        <?php $nomor_surat_full = ($p['nomor_urut'] ?? '001') . '/20.' . $nomor_gudep_part . '/' . $tahun_surat; ?>
         <div class="center">
           <?php if (!empty($logo_pramuka)): ?>
             <img class="logo" src="<?= h($logo_pramuka) ?>" alt="Logo Pramuka">
@@ -221,7 +239,7 @@ function h($v) {
           <p class="h1">GERAKAN PRAMUKA</p>
           <p class="h2">GUGUS DEPAN <?= h($gugus_depan ?: '........') ?></p>
           <div class="script">Surat Keterangan</div>
-          <div class="nomor">Nomor : <?= h($nomor_surat ?: '.....................') ?></div>
+          <div class="nomor">Nomor : <?= h($nomor_surat_full) ?></div>
         </div>
 
         <div class="body">
@@ -272,8 +290,7 @@ function h($v) {
                 <td class="sign-right">
                   <div>Dikeluarkan di : <?= h($tempat_surat) ?></div>
                   <div>Pada Tanggal : <?= h($formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '')) ?></div>
-                  <div class="line"></div>
-                  <div class="center">Ketua Gugus Depan</div>
+                  <div class="center ketua-block">Ketua Gugus Depan</div>
                   <div style="height: 18mm;"></div>
                   <div class="center name"><?= h($ketua_gudep) ?></div>
                   <?php if ($nta_ketua_gudep !== ''): ?>
