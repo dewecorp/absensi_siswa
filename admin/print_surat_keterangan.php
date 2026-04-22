@@ -18,8 +18,10 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-$mode = (string)($_GET['mode'] ?? 'single'); // single | all
+$mode = (string)($_GET['mode'] ?? 'single'); // single | all | data
 $autoPrint = (int)($_GET['auto'] ?? 1) === 1;
+$format = (string)($_GET['format'] ?? 'html'); // html | pdf | print
+$tingkat_name = '';
 
 // Load settings
 $print_settings_data = [
@@ -73,6 +75,7 @@ $nta_ketua_gudep = $print_settings_data['nta_ketua_gudep'] ?: '';
 $logo_pramuka = $print_settings_data['logo_pramuka'] ? ('../uploads/' . $print_settings_data['logo_pramuka']) : '';
 $bingkai = '../assets/img/template_surat_keterangan.png';
 $asset_ver = (string)time();
+$school_profile = getSchoolProfile($pdo);
 
 $formatTanggalIndo = function ($value) {
     $v = trim((string)$value);
@@ -98,8 +101,8 @@ $tahun_surat = date('Y', strtotime((string)($print_settings_data['tanggal_surat'
 $nomor_gudep_part = $gugus_depan !== '' ? $gugus_depan : '...';
 
 $participants = [];
-if ($mode === 'all') {
-    $tingkat_id = (int)($_GET['tingkat'] ?? 0);
+$tingkat_id = (int)($_GET['tingkat'] ?? 0);
+if ($mode === 'all' || $mode === 'data') {
     if ($tingkat_id > 0) {
         $tingkat_stmt = $pdo->prepare("SELECT nama_tingkat FROM tb_tingkat_barung WHERE id_tingkat_barung = ? LIMIT 1");
         $tingkat_stmt->execute([$tingkat_id]);
@@ -119,7 +122,7 @@ if ($mode === 'all') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id > 0) {
         $stmt = $pdo->prepare("
-            SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta, p.tempat_lahir, p.tanggal_lahir, t.nama_tingkat
+            SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta, p.tempat_lahir, p.tanggal_lahir, t.nama_tingkat
             FROM tb_peserta_didik_barung
             p
             LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
@@ -130,6 +133,24 @@ if ($mode === 'all') {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
             $tingkat_name = $row['nama_tingkat'] ?? '';
+            // Resolve actual order number in the selected tingkat (same as table order)
+            $seq_stmt = $pdo->prepare("
+                SELECT COUNT(*) + 1 AS nomor_urut
+                FROM tb_peserta_didik_barung
+                WHERE id_tingkat_barung = ?
+                  AND (
+                    nama_peserta_didik < ?
+                    OR (nama_peserta_didik = ? AND id_peserta_didik_barung < ?)
+                  )
+            ");
+            $seq_stmt->execute([
+                (int)$row['id_tingkat_barung'],
+                (string)$row['nama_peserta_didik'],
+                (string)$row['nama_peserta_didik'],
+                (int)$row['id_peserta_didik_barung']
+            ]);
+            $seq_row = $seq_stmt->fetch(PDO::FETCH_ASSOC);
+            $row['nomor_urut'] = str_pad((string)($seq_row['nomor_urut'] ?? 1), 3, '0', STR_PAD_LEFT);
             $participants = [$row];
         }
     }
@@ -141,16 +162,189 @@ if (empty($participants)) {
     exit;
 }
 
+// Build printable title/filename base: Surat_keterangan_tingkat_MULA
+$tingkat_name_for_file = trim((string)($tingkat_name ?? ''));
+if ($tingkat_name_for_file === '') {
+    $tingkat_name_for_file = (string)$tingkat_id;
+}
+$tingkat_name_for_file = preg_replace('/[^A-Za-z0-9]+/', '_', strtoupper($tingkat_name_for_file)) ?? (string)$tingkat_id;
+$tingkat_name_for_file = trim($tingkat_name_for_file, '_');
+$doc_base_name = 'Surat_keterangan_tingkat_' . $tingkat_name_for_file;
+
+if ($mode === 'data' && $format === 'print') {
+    $school_name = (string)($school_profile['nama_madrasah'] ?? $school_profile['nama_sekolah'] ?? 'Sistem Informasi Madrasah');
+    $school_year = (string)($school_profile['tahun_ajaran'] ?? '-');
+    $school_logo = !empty($school_profile['logo']) ? ('../assets/img/' . $school_profile['logo']) : '';
+    $print_date = $formatTanggalIndo($print_settings_data['tanggal_surat'] ?? date('Y-m-d'));
+    $qr_payload = "Ketua Gudep: {$ketua_gudep}\nNTA: {$nta_ketua_gudep}\nTanggal: {$print_date}\nDokumen: {$doc_base_name}";
+    $qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . rawurlencode($qr_payload);
+
+    $rows_html = '';
+    foreach ($participants as $idx => $p) {
+        $nama = h($p['nama_peserta_didik'] ?? '');
+        $nta = h($p['nta'] ?? '');
+        $tempat_lahir = h($p['tempat_lahir'] ?? '-');
+        $tanggal_lahir = !empty($p['tanggal_lahir']) ? date('d-m-Y', strtotime((string)$p['tanggal_lahir'])) : '-';
+        $rows_html .= '<tr>'
+            . '<td>' . ($idx + 1) . '</td>'
+            . '<td>' . $nama . '</td>'
+            . '<td>' . $nta . '</td>'
+            . '<td>' . $tempat_lahir . '</td>'
+            . '<td>' . h($tanggal_lahir) . '</td>'
+            . '</tr>';
+    }
+    ?>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= h($doc_base_name) ?>.pdf</title>
+  <style>
+    @media print { @page { size: A4; margin: 12mm; } }
+    body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; }
+    .wrap { max-width: 980px; margin: 10px auto; background: #fff; }
+    .content { padding: 12mm; }
+    .header { display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 10px; }
+    .header-logo { width: 56px; height: 56px; object-fit: contain; }
+    .header-title h2 { margin: 0; font-size: 20px; }
+    .header-title .meta { margin-top: 3px; color: #444; font-size: 13px; }
+    h3 { margin: 10px 0 6px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #555; padding: 6px 8px; text-align: left; }
+    th { background: #f3f3f3; }
+    .signature-wrap { margin-top: 10mm; display: flex; justify-content: flex-end; }
+    .signature-box { width: 270px; text-align: center; }
+    .signature-meta { text-align: left; margin-bottom: 8px; }
+    .signature-name { font-weight: 700; text-decoration: underline; margin-top: 6px; }
+    .signature-nta { margin-top: 2px; }
+    .signature-qr { width: 90px; height: 90px; margin: 4px auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="content">
+      <div class="header">
+        <?php if ($school_logo): ?>
+          <img class="header-logo" src="<?= h($school_logo) ?>?v=<?= h($asset_ver) ?>" alt="Logo Sekolah">
+        <?php endif; ?>
+        <div class="header-title">
+          <h2><?= h($school_name) ?></h2>
+          <div class="meta">Tahun Ajaran: <strong><?= h($school_year) ?></strong></div>
+        </div>
+      </div>
+
+      <h3>Data Surat Keterangan</h3>
+      <div style="margin-bottom:8mm;">Tingkat: <strong><?= h($tingkat_name ?: ('ID ' . $tingkat_id)) ?></strong></div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:8%;">No</th>
+            <th style="width:34%;">Nama Peserta Didik</th>
+            <th style="width:18%;">NTA</th>
+            <th style="width:22%;">Tempat Lahir</th>
+            <th style="width:18%;">Tanggal Lahir</th>
+          </tr>
+        </thead>
+        <tbody><?= $rows_html ?></tbody>
+      </table>
+
+      <div class="signature-wrap">
+        <div class="signature-box">
+          <div class="signature-meta">
+            <div>Dikeluarkan di: <?= h($tempat_surat) ?></div>
+            <div>Tanggal: <?= h($print_date) ?></div>
+          </div>
+          <div>Ketua Gudep,</div>
+          <img class="signature-qr" src="<?= h($qr_url) ?>" alt="QR Tanda Tangan" referrerpolicy="no-referrer">
+          <div class="signature-name"><?= h($ketua_gudep) ?></div>
+          <div class="signature-nta">NTA: <?= h($nta_ketua_gudep ?: '-') ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <?php if ($autoPrint): ?>
+  <script>
+    window.addEventListener('load', () => setTimeout(() => window.print(), 250));
+  </script>
+  <?php endif; ?>
+</body>
+</html>
+<?php
+    exit;
+}
+
+if ($format === 'pdf' && $mode === 'data') {
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "Vendor autoload tidak ditemukan. Jalankan: composer install";
+        exit;
+    }
+    require_once $autoload;
+
+    $rows_html = '';
+    foreach ($participants as $idx => $p) {
+        $nama = h($p['nama_peserta_didik'] ?? '');
+        $nta = h($p['nta'] ?? '');
+        $tempat_lahir = h($p['tempat_lahir'] ?? '-');
+        $tanggal_lahir = !empty($p['tanggal_lahir']) ? date('d-m-Y', strtotime((string)$p['tanggal_lahir'])) : '-';
+        $rows_html .= '<tr>'
+            . '<td>' . ($idx + 1) . '</td>'
+            . '<td>' . $nama . '</td>'
+            . '<td>' . $nta . '</td>'
+            . '<td>' . $tempat_lahir . '</td>'
+            . '<td>' . h($tanggal_lahir) . '</td>'
+            . '</tr>';
+    }
+
+    $judul_tingkat = h($tingkat_name ?: ('ID ' . $tingkat_id));
+    $html = '<!doctype html><html><head><meta charset="utf-8"><style>'
+        . '@page { margin: 16mm; size: A4; }'
+        . 'body{font-family:DejaVu Sans,Arial,sans-serif;font-size:11pt;}'
+        . 'h2{margin:0 0 3mm 0;}'
+        . '.meta{margin-bottom:6mm;color:#444;}'
+        . 'table{width:100%;border-collapse:collapse;}'
+        . 'th,td{border:1px solid #555;padding:6px 8px;vertical-align:top;}'
+        . 'th{background:#f3f3f3;text-align:left;}'
+        . '</style></head><body>'
+        . '<h2>Data Surat Keterangan</h2>'
+        . '<div class="meta">Tingkat: <strong>' . $judul_tingkat . '</strong></div>'
+        . '<table><thead><tr>'
+        . '<th style="width:8%;">No</th>'
+        . '<th style="width:34%;">Nama Peserta Didik</th>'
+        . '<th style="width:18%;">NTA</th>'
+        . '<th style="width:22%;">Tempat Lahir</th>'
+        . '<th style="width:18%;">Tanggal Lahir</th>'
+        . '</tr></thead><tbody>' . $rows_html . '</tbody></table>'
+        . '</body></html>';
+
+    $dompdf = new Dompdf\Dompdf([
+        'isRemoteEnabled' => false,
+        'isHtml5ParserEnabled' => true,
+    ]);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->loadHtml($html, 'UTF-8');
+    $dompdf->render();
+    $filename = $doc_base_name . '.pdf';
+    $dompdf->stream($filename, ['Attachment' => false]);
+    exit;
+}
+
 $page_title_print = 'Print Surat Keterangan';
 if ($mode === 'single' && !empty($participants[0]['nama_peserta_didik'])) {
     $page_title_print .= ' - ' . (string)$participants[0]['nama_peserta_didik'];
 } elseif ($mode === 'all') {
-    $page_title_print .= ' - Semua Peserta Didik';
+    $page_title_print = $doc_base_name;
+} elseif ($mode === 'data') {
+    $page_title_print = $doc_base_name;
 }
 
 // Dynamic nomor surat: mulai dari peserta didik pertama (001, 002, ...)
 foreach ($participants as $idx => $row) {
-    $participants[$idx]['nomor_urut'] = str_pad((string)($idx + 1), 3, '0', STR_PAD_LEFT);
+    if (empty($participants[$idx]['nomor_urut'])) {
+        $participants[$idx]['nomor_urut'] = str_pad((string)($idx + 1), 3, '0', STR_PAD_LEFT);
+    }
 }
 
 function h($v) {
@@ -215,7 +409,7 @@ function h($v) {
     .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 34mm auto 10mm; display:block; }
     .h1 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin: 0; }
     .h2 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin: 2mm 0 0; }
-    .script { font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive; font-size: 26pt; margin: 6mm 0 0; }
+    .script { font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive; font-size: 32pt; margin: 6mm 0 0; }
     .nomor { font-size: 12pt; margin: 1mm 0 0; }
     .body { margin-top: 6mm; font-size: 12pt; line-height: 1.6; }
     .label-table { width: 96%; margin: 5mm auto 4mm; font-size: 12pt; }

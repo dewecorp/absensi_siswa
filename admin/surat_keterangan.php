@@ -233,8 +233,7 @@ function printSingleLetter(id, nama, nta) {
 
 // Print all letters
 function printAllLetters() {
-  const params = new URLSearchParams(window.location.search);
-  const tingkat = params.get('tingkat') || '';
+  const tingkat = ($('#selectedTingkatId').val() || '').toString();
   if (!tingkat) {
     Swal.fire('Peringatan', 'Pilih tingkat terlebih dahulu.', 'warning');
     return;
@@ -244,8 +243,11 @@ function printAllLetters() {
 }
 
 function exportPDF() {
-  const params = new URLSearchParams(window.location.search);
-  const tingkat = params.get('tingkat') || '';
+  const tingkat = ($('#selectedTingkatId').val() || '').toString();
+  if (!tingkat) {
+    Swal.fire('Peringatan', 'Pilih tingkat terlebih dahulu.', 'warning');
+    return;
+  }
   const url = `export_surat_keterangan_pdf.php?tingkat=${encodeURIComponent(tingkat)}`;
   window.open(url, '_blank');
 }
@@ -299,6 +301,7 @@ include '../templates/sidebar.php';
             <input type="hidden" id="headNip" value="<?= htmlspecialchars($print_settings['head_nip']) ?>">
             <input type="hidden" id="printPlace" value="<?= htmlspecialchars($print_settings['print_place']) ?>">
             <input type="hidden" id="tingkatName" value="<?= htmlspecialchars($selected_tingkat_name) ?>">
+            <input type="hidden" id="selectedTingkatId" value="<?= (int)$selected_tingkat_id ?>">
             <input type="hidden" id="printDate" value="<?= date('d F Y') ?>">
 
             <!-- Data Cetak Box -->

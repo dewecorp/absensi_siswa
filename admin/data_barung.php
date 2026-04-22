@@ -13,6 +13,25 @@ if (!isAuthorized(['admin'])) {
 $school_profile = getSchoolProfile($pdo);
 $page_title = 'Data Barung';
 
+// Print signature settings (Ketua Gudep)
+$print_settings_data = [
+    'ketua_gudep' => $school_profile['nama_kepala'] ?? '-',
+    'nta_ketua_gudep' => $school_profile['nip_kepala'] ?? '-',
+    'tempat_surat' => $school_profile['tempat_jadwal'] ?? 'Padang',
+    'tanggal_surat' => date('d F Y'),
+];
+try {
+    $settings = $pdo->query("SELECT * FROM tb_pengaturan_cetak_barung LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    if ($settings) {
+        $print_settings_data['ketua_gudep'] = $settings['ketua_gudep'] ?? $print_settings_data['ketua_gudep'];
+        $print_settings_data['nta_ketua_gudep'] = $settings['nta_ketua_gudep'] ?? $print_settings_data['nta_ketua_gudep'];
+        $print_settings_data['tempat_surat'] = $settings['tempat_surat'] ?? $print_settings_data['tempat_surat'];
+        $print_settings_data['tanggal_surat'] = $settings['tanggal_surat'] ?? $print_settings_data['tanggal_surat'];
+    }
+} catch (Exception $e) {
+    // ignore: keep fallback from school profile
+}
+
 // DataTables
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
@@ -724,13 +743,13 @@ function exportToPDF() {
     var schoolLogo = $('#schoolLogo').val() || '';
     var academicYear = $('#academicYear').val() || '-';
     var tingkatName = $('#tingkatName').val() || '';
-    var headName = $('#headName').val() || '-';
-    var headNip = $('#headNip').val() || '-';
+    var ketuaGudep = $('#ketuaGudep').val() || '-';
+    var ntaKetuaGudep = $('#ntaKetuaGudep').val() || '-';
     var printPlace = $('#printPlace').val() || 'Padang';
     var printDate = $('#printDate').val() || '';
     
     // Generate QR Code content
-    var qrContent = "Dokumen Sah: " + schoolName + "\nKepala Madrasah: " + headName + "\nNIP: " + headNip;
+    var qrContent = "Dokumen Sah: " + schoolName + "\nKetua Gudep: " + ketuaGudep + "\nNTA: " + ntaKetuaGudep;
     var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" + encodeURIComponent(qrContent);
     
     // Create a new window for printing
@@ -779,14 +798,14 @@ function exportToPDF() {
     printWindow.document.write('<div class="signature-container">');
     printWindow.document.write('<div class="signature-header">');
     printWindow.document.write('<p>' + printPlace + ', ' + printDate + '</p>');
-    printWindow.document.write('<p>Kepala Madrasah,</p>');
+    printWindow.document.write('<p>Ketua Gudep,</p>');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-space">');
     printWindow.document.write('<img src="' + qrUrl + '" class="qr-code">');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-info">');
-    printWindow.document.write('<p><strong>' + headName + '</strong></p>');
-    printWindow.document.write('<p>NIP. ' + headNip + '</p>');
+    printWindow.document.write('<p><strong>' + ketuaGudep + '</strong></p>');
+    printWindow.document.write('<p>NTA. ' + ntaKetuaGudep + '</p>');
     printWindow.document.write('</div>');
     printWindow.document.write('</div>');
     
@@ -838,10 +857,10 @@ include '../templates/sidebar.php';
                     <input type="hidden" id="schoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH') ?>">
                     <input type="hidden" id="schoolLogo" value="<?= !empty($school_profile['logo']) ? '../assets/img/' . $school_profile['logo'] : '' ?>">
                     <input type="hidden" id="academicYear" value="<?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?>">
-                    <input type="hidden" id="headName" value="<?= htmlspecialchars($school_profile['nama_kepala'] ?? '-') ?>">
-                    <input type="hidden" id="headNip" value="<?= htmlspecialchars($school_profile['nip_kepala'] ?? '-') ?>">
-                    <input type="hidden" id="printPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang') ?>">
-                    <input type="hidden" id="printDate" value="<?= date('d F Y') ?>">
+                    <input type="hidden" id="ketuaGudep" value="<?= htmlspecialchars($print_settings_data['ketua_gudep'] ?? '-') ?>">
+                    <input type="hidden" id="ntaKetuaGudep" value="<?= htmlspecialchars($print_settings_data['nta_ketua_gudep'] ?? '-') ?>">
+                    <input type="hidden" id="printPlace" value="<?= htmlspecialchars($print_settings_data['tempat_surat'] ?? 'Padang') ?>">
+                    <input type="hidden" id="printDate" value="<?= htmlspecialchars($print_settings_data['tanggal_surat'] ?? date('d F Y')) ?>">
                     <input type="hidden" id="tingkatName" value="<?= htmlspecialchars($selected_tingkat_name) ?>">
                     <input type="hidden" id="id_tingkat_barung_hidden" value="<?= (int)$selected_tingkat_id ?>">
                     <?php if ($schema_error || $fetch_error || $table_error): ?>
