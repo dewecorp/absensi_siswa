@@ -148,6 +148,12 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
             page-break-inside: avoid;
             break-inside: avoid;
         }
+        .sign-table { width: 100%; border: none; margin-top: 10px; }
+        .sign-table td { border: none; width: 50%; text-align: center; vertical-align: top; }
+        .sign-date-row { min-height: 16px; font-size: 12px; margin: 0 0 2px 0; }
+        .sign-role { font-size: 12px; margin: 0 0 6px 0; }
+        .sign-qr-wrap { height: 92px; display: flex; align-items: center; justify-content: center; }
+        .sign-name { font-size: 13px; margin: 6px 0 0 0; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -225,39 +231,39 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
         </tbody>
     </table>
     
-    <div class="no-break" style="margin-top: 10px; width: 100%; padding: 0 35px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div style="text-align: center; width: 260px;">
-            <p style="font-size: 12px; margin: 0 0 6px 0;">Wali Kelas,</p>
-            <?php
-            if ($nama_guru) {
-                $qrContent = 'Validasi Tanda Tangan Digital: ' . $nama_guru . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
-                $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContent);
-                echo '<img src="' . $qrUrl . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
-                echo '<p style="font-size: 10px; margin-top: 0;"></p>';
-            } else {
-                echo '<br><br><br><br><br>';
-            }
-            ?>
-            <p style="font-size: 13px; margin: 6px 0 0 0;"><b><?= htmlspecialchars($nama_guru ?? '.........................') ?></b></p>
-        </div>
-
-        <div style="text-align: center; width: 260px;">
-            <p style="font-size: 12px; margin: 0 0 2px 0; white-space: normal; word-break: break-word;"><?= htmlspecialchars($school_city) ?>, <?= htmlspecialchars($report_date) ?></p>
-            <p style="font-size: 12px; margin: 0 0 6px 0;">Kepala Madrasah,</p>
-            <?php
-            if ($madrasah_head_signature) {
-                $qrContentHead = 'Validasi Tanda Tangan Digital: ' . $madrasah_head_name . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
-                $qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContentHead);
-                echo '<img src="' . $qrUrlHead . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
-                echo '<p style="font-size: 10px; margin-top: 0;"></p>';
-            } else {
-                echo '<br><br><br><br><br>';
-            }
-            ?>
-            <p style="font-size: 13px; margin: 6px 0 0 0;"><b><?= htmlspecialchars($madrasah_head_name) ?></b></p>
-        </div>
-        </div>
+    <div class="no-break" style="width: 100%; padding: 0 35px;">
+        <table class="sign-table">
+            <tr>
+                <td>
+                    <p class="sign-date-row">&nbsp;</p>
+                    <p class="sign-role">Wali Kelas,</p>
+                    <div class="sign-qr-wrap">
+                        <?php
+                        if ($nama_guru) {
+                            $qrContent = 'Validasi Tanda Tangan Digital: ' . $nama_guru . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+                            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContent);
+                            echo '<img src="' . $qrUrl . '" alt="QR Signature" style="width: 80px; height: 80px; display: block;">';
+                        }
+                        ?>
+                    </div>
+                    <p class="sign-name"><?= htmlspecialchars($nama_guru ?? '.........................') ?></p>
+                </td>
+                <td>
+                    <p class="sign-date-row"><?= htmlspecialchars($school_city) ?>, <?= htmlspecialchars($report_date) ?></p>
+                    <p class="sign-role">Kepala Madrasah,</p>
+                    <div class="sign-qr-wrap">
+                        <?php
+                        if ($madrasah_head_signature) {
+                            $qrContentHead = 'Validasi Tanda Tangan Digital: ' . $madrasah_head_name . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+                            $qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qrContentHead);
+                            echo '<img src="' . $qrUrlHead . '" alt="QR Signature" style="width: 80px; height: 80px; display: block;">';
+                        }
+                        ?>
+                    </div>
+                    <p class="sign-name"><?= htmlspecialchars($madrasah_head_name) ?></p>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <script>
