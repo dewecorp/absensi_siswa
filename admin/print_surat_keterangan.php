@@ -18,6 +18,7 @@ try {
     $required_cols = [
         'promoted_from_tingkat_id' => "INT NULL",
         'promoted_at' => "DATETIME NULL",
+        'sku_kecakapan_lulus_at' => "DATETIME NULL",
         'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
     ];
     foreach ($required_cols as $col => $typeDef) {
@@ -135,10 +136,9 @@ if ($mode === 'all' || $mode === 'data') {
         $ordered_tingkat = $pdo->query("
             SELECT id_tingkat_barung, nama_tingkat
             FROM tb_tingkat_barung
-            WHERE LOWER(REPLACE(nama_tingkat, ' ', '')) NOT IN ('pramula', 'pra-mula')
-              AND LOWER(nama_tingkat) != 'pra mula'
             ORDER BY
                 CASE
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('pramula', 'pra-mula') OR LOWER(nama_tingkat) = 'pra mula' THEN 0
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 1
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 2
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 3
@@ -165,8 +165,13 @@ if ($mode === 'all' || $mode === 'data') {
             FROM tb_peserta_didik_barung
             WHERE id_tingkat_barung = ?
               AND IFNULL(status, 'aktif') = 'aktif'
-              AND promoted_at IS NOT NULL
-              AND promoted_from_tingkat_id = ?
+              AND (
+                sku_kecakapan_lulus_at IS NOT NULL
+                OR (
+                  promoted_at IS NOT NULL
+                  AND promoted_from_tingkat_id = ?
+                )
+              )
             ORDER BY nama_peserta_didik ASC
         ");
         $stmt->execute([$tingkat_id, $prev_tingkat_id]);
@@ -176,31 +181,69 @@ if ($mode === 'all' || $mode === 'data') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id > 0) {
         $stmt = $pdo->prepare("
-            SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta, p.tempat_lahir, p.tanggal_lahir, t.nama_tingkat
-            FROM tb_peserta_didik_barung
-            p
+            SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta, p.tempat_lahir, p.tanggal_lahir,
+                   p.promoted_at, p.promoted_from_tingkat_id, p.sku_kecakapan_lulus_at, t.nama_tingkat
+            FROM tb_peserta_didik_barung p
             LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
             WHERE p.id_peserta_didik_barung = ?
               AND IFNULL(p.status, 'aktif') = 'aktif'
-              AND p.promoted_at IS NOT NULL
             LIMIT 1
         ");
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
+            $ordered_surat = $pdo->query("
+                SELECT id_tingkat_barung, nama_tingkat FROM tb_tingkat_barung
+                ORDER BY
+                    CASE
+                        WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('pramula', 'pra-mula') OR LOWER(nama_tingkat) = 'pra mula' THEN 0
+                        WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 1
+                        WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 2
+                        WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 3
+                        WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 4
+                        ELSE 99
+                    END,
+                    nama_tingkat ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+            $tid_row = (int)($row['id_tingkat_barung'] ?? 0);
+            $prev_for_row = 0;
+            foreach ($ordered_surat as $ix => $otr) {
+                if ((int)($otr['id_tingkat_barung'] ?? 0) === $tid_row && $ix > 0) {
+                    $prev_for_row = (int)($ordered_surat[$ix - 1]['id_tingkat_barung'] ?? 0);
+                    break;
+                }
+            }
+            $ok_sku = !empty($row['sku_kecakapan_lulus_at']);
+            $ok_promoted = !empty($row['promoted_at'])
+                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $prev_for_row && $prev_for_row > 0;
+            if (!$ok_sku && !$ok_promoted) {
+                $row = null;
+            }
+        }
+        if ($row) {
             $tingkat_name = $row['nama_tingkat'] ?? '';
-            // Resolve actual order number in the selected tingkat (same as table order)
+            $tid_kb = (int)$row['id_tingkat_barung'];
+
+            // Nomor urut di antara peserta yang berhak surat pada tingkat yang sama
             $seq_stmt = $pdo->prepare("
-                SELECT COUNT(*) + 1 AS nomor_urut
-                FROM tb_peserta_didik_barung
-                WHERE id_tingkat_barung = ?
+                SELECT COUNT(*) + 1 AS nomor_urut FROM tb_peserta_didik_barung px
+                WHERE px.id_tingkat_barung = ?
+                  AND IFNULL(px.status,'aktif')='aktif'
                   AND (
-                    nama_peserta_didik < ?
-                    OR (nama_peserta_didik = ? AND id_peserta_didik_barung < ?)
+                    px.sku_kecakapan_lulus_at IS NOT NULL
+                    OR (
+                      px.promoted_at IS NOT NULL
+                      AND px.promoted_from_tingkat_id = ?
+                    )
+                  )
+                  AND (
+                    px.nama_peserta_didik < ?
+                    OR (px.nama_peserta_didik = ? AND px.id_peserta_didik_barung < ?)
                   )
             ");
             $seq_stmt->execute([
-                (int)$row['id_tingkat_barung'],
+                $tid_kb,
+                $prev_for_row,
                 (string)$row['nama_peserta_didik'],
                 (string)$row['nama_peserta_didik'],
                 (int)$row['id_peserta_didik_barung']
@@ -257,7 +300,7 @@ if ($mode === 'data' && $format === 'print') {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= h($doc_base_name) ?>.pdf</title>
   <style>
-    @media print { @page { size: A4; margin: 12mm; } }
+    @media print { @page { size: 215mm 330mm; margin: 12mm; } }
     body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; }
     .wrap { max-width: 980px; margin: 10px auto; background: #fff; }
     .content { padding: 12mm; }
@@ -356,7 +399,7 @@ if ($format === 'pdf' && $mode === 'data') {
 
     $judul_tingkat = h($tingkat_name ?: ('ID ' . $tingkat_id));
     $html = '<!doctype html><html><head><meta charset="utf-8"><style>'
-        . '@page { margin: 16mm; size: A4; }'
+        . '@page { margin: 16mm; size: 215mm 330mm; }'
         . 'body{font-family:DejaVu Sans,Arial,sans-serif;font-size:11pt;}'
         . 'h2{margin:0 0 3mm 0;}'
         . '.meta{margin-bottom:6mm;color:#444;}'
@@ -379,7 +422,9 @@ if ($format === 'pdf' && $mode === 'data') {
         'isRemoteEnabled' => false,
         'isHtml5ParserEnabled' => true,
     ]);
-    $dompdf->setPaper('A4', 'portrait');
+    /** F4 (Folio Indonesia): 215 × 330 mm portrait */
+    $f4Portrait = [0.0, 0.0, 215 * 72 / 25.4, 330 * 72 / 25.4];
+    $dompdf->setPaper($f4Portrait, 'portrait');
     $dompdf->loadHtml($html, 'UTF-8');
     $dompdf->render();
     $filename = $doc_base_name . '.pdf';
@@ -415,7 +460,7 @@ function h($v) {
   <title><?= h($page_title_print) ?></title>
   <style>
     @media print {
-      @page { size: 210mm 330mm; margin: 0; }
+      @page { size: 215mm 330mm; margin: 0; }
       body { margin: 0; }
       .toolbar { display: none !important; }
     }

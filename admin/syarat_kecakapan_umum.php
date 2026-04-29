@@ -1,0 +1,1233 @@
+<?php
+/**
+ * Syarat Kecakapan Umum (SKU) — checklist per butir untuk anggota Pramuka per tingkat.
+ * Lulus SKU → sku_kecakapan_lulus_at sehingga muncul di Surat Keterangan (bersama jalur kenaikan).
+ */
+
+require_once '../config/database.php';
+require_once '../config/functions.php';
+
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isAuthorized(['admin', 'tata_usaha'])) {
+    redirect('../login.php');
+}
+
+$page_title = 'Syarat Kecakapan Umum';
+
+$js_libs = [
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+];
+
+$ensureSkuSchema = static function () use ($pdo): void {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS tb_sku_kecakapan_butir (
+            id_butir INT AUTO_INCREMENT PRIMARY KEY,
+            id_tingkat_barung INT NOT NULL,
+            teks_butir VARCHAR(500) NOT NULL,
+            urutan INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_sku_butir_tingkat (id_tingkat_barung)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS tb_sku_kecakapan_nilai (
+            id_peserta_didik_barung INT NOT NULL,
+            id_butir INT NOT NULL,
+            PRIMARY KEY (id_peserta_didik_barung, id_butir),
+            INDEX idx_sku_nilai_butir (id_butir)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+    $colNilaiDate = $pdo->query("SHOW COLUMNS FROM tb_sku_kecakapan_nilai LIKE 'tanggal_ujian'");
+    if (!$colNilaiDate || !$colNilaiDate->fetch(PDO::FETCH_ASSOC)) {
+        $pdo->exec("ALTER TABLE tb_sku_kecakapan_nilai ADD COLUMN tanggal_ujian DATE NULL AFTER id_butir");
+    }
+
+    $colStmt = $pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE 'sku_kecakapan_lulus_at'");
+    if (!$colStmt || !$colStmt->fetch(PDO::FETCH_ASSOC)) {
+        $pdo->exec('ALTER TABLE tb_peserta_didik_barung ADD COLUMN sku_kecakapan_lulus_at DATETIME NULL');
+    }
+};
+
+try {
+    $ensureSkuSchema();
+} catch (Exception $e) {
+    // best effort — halaman bisa menampilkan error kosong query
+}
+
+// Unduh template import butir SKU (baris 1 = header per kolom) — format Excel (.xlsx)
+if (isset($_GET['download_template_sku'])) {
+    $filename = 'template_butir_sku.xlsx';
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        header('HTTP/1.1 500 Internal Server Error');
+        exit('Composer autoload tidak ditemukan. Jalankan: composer install');
+    }
+    require_once $autoload;
+    try {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Butir SKU');
+        $contoh = ['Hafal rukun iman', 'Tertib ibadah harian', 'Mampu membaca doa'];
+        $col = 1;
+        foreach ($contoh as $label) {
+            $sheet->setCellValueByColumnAndRow($col, 1, $label);
+            $col++;
+        }
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+    } catch (Throwable $e) {
+        if (!headers_sent()) {
+            header('HTTP/1.1 500 Internal Server Error');
+        }
+        exit('Gagal membuat template Excel.');
+    }
+    exit;
+}
+
+/**
+ * Hitung label status satu peserta untuk satu tingkat.
+ *
+ * @return array{label: string, ok: bool}
+ */
+function sku_compute_status_cell(PDO $pdo, int $id_peserta, int $id_tingkat): array
+{
+    $stTot = $pdo->prepare('SELECT COUNT(*) FROM tb_sku_kecakapan_butir WHERE id_tingkat_barung = ?');
+    $stTot->execute([$id_tingkat]);
+    $total = (int)$stTot->fetchColumn();
+    if ($total <= 0) {
+        return ['label' => '—', 'ok' => false];
+    }
+    $stDone = $pdo->prepare('
+        SELECT COUNT(*)
+        FROM tb_sku_kecakapan_nilai n
+        INNER JOIN tb_sku_kecakapan_butir b ON b.id_butir = n.id_butir AND b.id_tingkat_barung = ?
+        WHERE n.id_peserta_didik_barung = ?
+    ');
+    $stDone->execute([$id_tingkat, $id_peserta]);
+    $done = (int)$stDone->fetchColumn();
+
+    return [
+        'label' => ($done >= $total) ? 'Lulus' : 'Tidak Lulus',
+        'ok' => ($done >= $total),
+    ];
+}
+
+/** Set flag SKU lulus satu peserta. */
+function sku_recompute_single(PDO $pdo, int $id_peserta, int $id_tingkat): void
+{
+    $stTot = $pdo->prepare('SELECT COUNT(*) FROM tb_sku_kecakapan_butir WHERE id_tingkat_barung = ?');
+    $stTot->execute([$id_tingkat]);
+    $total = (int)$stTot->fetchColumn();
+    if ($total <= 0) {
+        $upd = $pdo->prepare('UPDATE tb_peserta_didik_barung SET sku_kecakapan_lulus_at = NULL WHERE id_peserta_didik_barung = ? LIMIT 1');
+        $upd->execute([$id_peserta]);
+
+        return;
+    }
+    $stDone = $pdo->prepare('
+        SELECT COUNT(*)
+        FROM tb_sku_kecakapan_nilai n
+        INNER JOIN tb_sku_kecakapan_butir b ON b.id_butir = n.id_butir AND b.id_tingkat_barung = ?
+        WHERE n.id_peserta_didik_barung = ?
+    ');
+    $stDone->execute([$id_tingkat, $id_peserta]);
+    $done = (int)$stDone->fetchColumn();
+    if ($done === $total && $done > 0) {
+        $pdo->prepare('UPDATE tb_peserta_didik_barung SET sku_kecakapan_lulus_at = NOW() WHERE id_peserta_didik_barung = ? LIMIT 1')
+            ->execute([$id_peserta]);
+    } else {
+        $pdo->prepare('UPDATE tb_peserta_didik_barung SET sku_kecakapan_lulus_at = NULL WHERE id_peserta_didik_barung = ? LIMIT 1')
+            ->execute([$id_peserta]);
+    }
+}
+
+function sku_recompute_tingkat(PDO $pdo, int $id_tingkat): void
+{
+    $st = $pdo->prepare('
+        SELECT id_peserta_didik_barung FROM tb_peserta_didik_barung
+        WHERE id_tingkat_barung = ? AND IFNULL(status, \'aktif\') = \'aktif\'
+    ');
+    $st->execute([$id_tingkat]);
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN, 0) as $pid) {
+        sku_recompute_single($pdo, (int)$pid, $id_tingkat);
+    }
+}
+
+/** ----- AJAX ----- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST['sku_ajax'] === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    $action = (string)($_POST['action'] ?? '');
+    $id_tingkat = (int)($_POST['id_tingkat_barung'] ?? 0);
+
+    try {
+        $ensureSkuSchema();
+        if ($id_tingkat <= 0) {
+            echo json_encode(['ok' => false, 'msg' => 'Tingkat tidak valid.']);
+            exit;
+        }
+
+        if ($action === 'toggle') {
+            $id_p = (int)($_POST['id_peserta_didik_barung'] ?? 0);
+            $id_b = (int)($_POST['id_butir'] ?? 0);
+            $on = isset($_POST['checked']) && (trim((string)$_POST['checked']) === '1'
+                || strtolower((string)$_POST['checked']) === 'true');
+            if ($id_p <= 0 || $id_b <= 0) {
+                echo json_encode(['ok' => false, 'msg' => 'Data tidak lengkap.']);
+                exit;
+            }
+            $chk = $pdo->prepare('SELECT id_tingkat_barung FROM tb_sku_kecakapan_butir WHERE id_butir = ? LIMIT 1');
+            $chk->execute([$id_b]);
+            if ((int)$chk->fetchColumn() !== $id_tingkat) {
+                echo json_encode(['ok' => false, 'msg' => 'Butir tidak sesuai tingkat.']);
+                exit;
+            }
+            $ps = $pdo->prepare('SELECT id_tingkat_barung FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung = ? LIMIT 1');
+            $ps->execute([$id_p]);
+            if ((int)$ps->fetchColumn() !== $id_tingkat) {
+                echo json_encode(['ok' => false, 'msg' => 'Peserta tidak sesuai tingkat.']);
+                exit;
+            }
+            if ($on) {
+                $ins = $pdo->prepare('INSERT INTO tb_sku_kecakapan_nilai (id_peserta_didik_barung, id_butir, tanggal_ujian) VALUES (?, ?, ?)');
+                try {
+                    $ins->execute([$id_p, $id_b, date('Y-m-d')]);
+                } catch (Exception $ignored) {
+                    // duplicate
+                }
+                $pdo->prepare('UPDATE tb_sku_kecakapan_nilai SET tanggal_ujian = COALESCE(tanggal_ujian, ?) WHERE id_peserta_didik_barung = ? AND id_butir = ?')
+                    ->execute([date('Y-m-d'), $id_p, $id_b]);
+            } else {
+                $pdo->prepare('DELETE FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung = ? AND id_butir = ?')
+                    ->execute([$id_p, $id_b]);
+            }
+            sku_recompute_single($pdo, $id_p, $id_tingkat);
+            $status = sku_compute_status_cell($pdo, $id_p, $id_tingkat);
+            $stDt = $pdo->prepare('SELECT tanggal_ujian FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung = ? AND id_butir = ? LIMIT 1');
+            $stDt->execute([$id_p, $id_b]);
+            $tgl = (string)($stDt->fetchColumn() ?? '');
+            echo json_encode([
+                'ok' => true,
+                'status_label' => $status['label'],
+                'status_ok' => $status['ok'],
+                'tanggal_ujian' => $tgl,
+            ]);
+            exit;
+        }
+
+        if ($action === 'set_tanggal') {
+            $id_p = (int)($_POST['id_peserta_didik_barung'] ?? 0);
+            $id_b = (int)($_POST['id_butir'] ?? 0);
+            $tgl = trim((string)($_POST['tanggal_ujian'] ?? ''));
+            if ($id_p <= 0 || $id_b <= 0) {
+                echo json_encode(['ok' => false, 'msg' => 'Data tidak lengkap.']);
+                exit;
+            }
+            if ($tgl !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl)) {
+                echo json_encode(['ok' => false, 'msg' => 'Format tanggal tidak valid.']);
+                exit;
+            }
+            $chk = $pdo->prepare('SELECT id_tingkat_barung FROM tb_sku_kecakapan_butir WHERE id_butir = ? LIMIT 1');
+            $chk->execute([$id_b]);
+            if ((int)$chk->fetchColumn() !== $id_tingkat) {
+                echo json_encode(['ok' => false, 'msg' => 'Butir tidak sesuai tingkat.']);
+                exit;
+            }
+            $ps = $pdo->prepare('SELECT id_tingkat_barung FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung = ? LIMIT 1');
+            $ps->execute([$id_p]);
+            if ((int)$ps->fetchColumn() !== $id_tingkat) {
+                echo json_encode(['ok' => false, 'msg' => 'Peserta tidak sesuai tingkat.']);
+                exit;
+            }
+            $up = $pdo->prepare('UPDATE tb_sku_kecakapan_nilai SET tanggal_ujian = ? WHERE id_peserta_didik_barung = ? AND id_butir = ?');
+            $up->execute([$tgl !== '' ? $tgl : null, $id_p, $id_b]);
+            if ($up->rowCount() === 0 && $tgl !== '') {
+                $pdo->prepare('INSERT INTO tb_sku_kecakapan_nilai (id_peserta_didik_barung, id_butir, tanggal_ujian) VALUES (?, ?, ?)')
+                    ->execute([$id_p, $id_b, $tgl]);
+            }
+            $existsSt = $pdo->prepare('SELECT COUNT(*) FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung = ? AND id_butir = ?');
+            $existsSt->execute([$id_p, $id_b]);
+            $checkedNow = ((int)$existsSt->fetchColumn()) > 0;
+            sku_recompute_single($pdo, $id_p, $id_tingkat);
+            $status = sku_compute_status_cell($pdo, $id_p, $id_tingkat);
+            echo json_encode([
+                'ok' => true,
+                'status_label' => $status['label'],
+                'status_ok' => $status['ok'],
+                'tanggal_ujian' => $tgl,
+                'checked' => $checkedNow,
+            ]);
+            exit;
+        }
+
+        if ($action === 'add_butir') {
+            $teks = trim((string)($_POST['teks_butir'] ?? ''));
+            if ($teks === '') {
+                echo json_encode(['ok' => false, 'msg' => 'Teks butir tidak boleh kosong.']);
+                exit;
+            }
+            if (mb_strlen($teks) > 500) {
+                echo json_encode(['ok' => false, 'msg' => 'Teks butir maksimal 500 karakter.']);
+                exit;
+            }
+            $mx = $pdo->prepare('SELECT COALESCE(MAX(urutan), 0) FROM tb_sku_kecakapan_butir WHERE id_tingkat_barung = ?');
+            $mx->execute([$id_tingkat]);
+            $next = ((int)$mx->fetchColumn()) + 1;
+            $pdo->prepare('INSERT INTO tb_sku_kecakapan_butir (id_tingkat_barung, teks_butir, urutan) VALUES (?, ?, ?)')
+                ->execute([$id_tingkat, $teks, $next]);
+            sku_recompute_tingkat($pdo, $id_tingkat);
+            echo json_encode(['ok' => true]);
+            exit;
+        }
+
+        if ($action === 'edit_butir') {
+            $id_b = (int)($_POST['id_butir'] ?? 0);
+            $teks = trim((string)($_POST['teks_butir'] ?? ''));
+            if ($id_b <= 0 || $teks === '') {
+                echo json_encode(['ok' => false, 'msg' => 'Data tidak lengkap.']);
+                exit;
+            }
+            if (mb_strlen($teks) > 500) {
+                echo json_encode(['ok' => false, 'msg' => 'Teks butir maksimal 500 karakter.']);
+                exit;
+            }
+            $own = $pdo->prepare('SELECT id_butir FROM tb_sku_kecakapan_butir WHERE id_butir = ? AND id_tingkat_barung = ? LIMIT 1');
+            $own->execute([$id_b, $id_tingkat]);
+            if (!$own->fetch(PDO::FETCH_ASSOC)) {
+                echo json_encode(['ok' => false, 'msg' => 'Butir tidak ditemukan di tingkat ini.']);
+                exit;
+            }
+            $pdo->prepare('UPDATE tb_sku_kecakapan_butir SET teks_butir = ? WHERE id_butir = ? AND id_tingkat_barung = ?')
+                ->execute([$teks, $id_b, $id_tingkat]);
+            echo json_encode(['ok' => true]);
+            exit;
+        }
+
+        if ($action === 'delete_butir') {
+            $id_b = (int)($_POST['id_butir'] ?? 0);
+            if ($id_b <= 0) {
+                echo json_encode(['ok' => false, 'msg' => 'ID tidak valid.']);
+                exit;
+            }
+            $pdo->prepare('DELETE FROM tb_sku_kecakapan_nilai WHERE id_butir = ?')->execute([$id_b]);
+            $pdo->prepare('DELETE FROM tb_sku_kecakapan_butir WHERE id_butir = ? AND id_tingkat_barung = ?')
+                ->execute([$id_b, $id_tingkat]);
+            sku_recompute_tingkat($pdo, $id_tingkat);
+            echo json_encode(['ok' => true]);
+            exit;
+        }
+
+        echo json_encode(['ok' => false, 'msg' => 'Aksi tidak dikenal.']);
+    } catch (Exception $e) {
+        echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_sku_butir'])) {
+    $is_ajax_import = isset($_POST['ajax']) && (string)$_POST['ajax'] === '1';
+    $id_tingkat = (int)($_POST['id_tingkat_barung'] ?? 0);
+    $import_ok = false;
+    $import_msg = 'Tidak ada file yang diproses.';
+    if ($id_tingkat > 0 && isset($_FILES['file_import']) && is_array($_FILES['file_import']) && (int)$_FILES['file_import']['error'] === UPLOAD_ERR_OK) {
+        try {
+            $ensureSkuSchema();
+            $tmp = (string)$_FILES['file_import']['tmp_name'];
+            $name = (string)$_FILES['file_import']['name'];
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            $rows = [];
+            $isSkuHeader = static function (string $text): bool {
+                $t = strtolower(trim($text));
+                if ($t === '') {
+                    return false;
+                }
+                $t = preg_replace('/\s+/u', ' ', $t);
+                if (in_array($t, ['no', 'nomor', 'nama', 'nama peserta didik', 'status', 'lulus/tidak lulus', 'lulus / tidak lulus'], true)) {
+                    return false;
+                }
+                if (preg_match('/^\d+$/', $t)) {
+                    return false;
+                }
+                return true;
+            };
+
+            if (in_array($ext, ['csv', 'txt'], true)) {
+                $fh = fopen($tmp, 'rb');
+                if ($fh) {
+                    $header = fgetcsv($fh, 0, ',', '"');
+                    if (is_array($header)) {
+                        foreach ($header as $cell) {
+                            $t = trim((string)$cell);
+                            if ($isSkuHeader($t)) {
+                                $rows[] = $t;
+                            }
+                        }
+                    }
+                    fclose($fh);
+                }
+            } elseif (in_array($ext, ['xlsx', 'xls'], true)) {
+                $autoload = __DIR__ . '/../vendor/autoload.php';
+                if (file_exists($autoload)) {
+                    require_once $autoload;
+                    $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($tmp);
+                    $reader->setReadDataOnly(true);
+                    $sheet = $reader->load($tmp)->getSheet(0);
+                    $highestCol = (string)$sheet->getHighestColumn();
+                    $maxIdx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestCol);
+                    for ($c = 1; $c <= $maxIdx; $c++) {
+                        $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c) . '1';
+                        $v = trim((string)$sheet->getCell($cell)->getValue());
+                        if ($isSkuHeader($v)) {
+                            $rows[] = $v;
+                        }
+                    }
+                }
+            }
+            $rows = array_values(array_unique(array_filter($rows)));
+            $mx = $pdo->prepare('SELECT COALESCE(MAX(urutan), 0) FROM tb_sku_kecakapan_butir WHERE id_tingkat_barung = ?');
+            $mx->execute([$id_tingkat]);
+            $base = (int)$mx->fetchColumn();
+            $ins = $pdo->prepare('INSERT INTO tb_sku_kecakapan_butir (id_tingkat_barung, teks_butir, urutan) VALUES (?, ?, ?)');
+            foreach ($rows as $i => $txt) {
+                $ins->execute([$id_tingkat, $txt, $base + $i + 1]);
+            }
+            sku_recompute_tingkat($pdo, $id_tingkat);
+            $import_ok = true;
+            $import_msg = 'Import: ' . count($rows) . ' butir ditambahkan.';
+            $_SESSION['sku_flash_ok'] = $import_msg;
+        } catch (Exception $e) {
+            $import_ok = false;
+            $import_msg = $e->getMessage();
+            $_SESSION['sku_flash_err'] = $import_msg;
+        }
+    } else {
+        $import_ok = false;
+        $import_msg = 'File import tidak valid.';
+    }
+
+    if ($is_ajax_import) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => $import_ok,
+            'msg' => $import_msg,
+            'tingkat' => $id_tingkat,
+        ]);
+        exit;
+    }
+
+    header('Location: syarat_kecakapan_umum.php?tingkat=' . $id_tingkat);
+    exit;
+}
+
+$tingkat_list = [];
+try {
+    $tingkat_list = $pdo->query('
+        SELECT id_tingkat_barung, nama_tingkat
+        FROM tb_tingkat_barung
+        ORDER BY
+            CASE
+                WHEN LOWER(REPLACE(nama_tingkat, \' \', \'\')) IN (\'pramula\', \'pra-mula\')
+                  OR LOWER(nama_tingkat) = \'pra mula\' THEN 0
+                WHEN LOWER(REPLACE(nama_tingkat, \' \', \'\')) IN (\'mula\') THEN 1
+                WHEN LOWER(REPLACE(nama_tingkat, \' \', \'\')) IN (\'bantu\') THEN 2
+                WHEN LOWER(REPLACE(nama_tingkat, \' \', \'\')) IN (\'tata\') THEN 3
+                WHEN LOWER(REPLACE(nama_tingkat, \' \', \'\')) IN (\'garuda\') THEN 4
+                ELSE 99
+            END,
+            nama_tingkat ASC
+    ')->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+}
+
+$selected_tingkat_id = (int)($_GET['tingkat'] ?? 0);
+if ($selected_tingkat_id <= 0 && !empty($tingkat_list)) {
+    $selected_tingkat_id = (int)($tingkat_list[0]['id_tingkat_barung'] ?? 0);
+}
+
+$selected_tingkat_name = '';
+foreach ($tingkat_list as $t) {
+    if ((int)($t['id_tingkat_barung'] ?? 0) === $selected_tingkat_id) {
+        $selected_tingkat_name = (string)($t['nama_tingkat'] ?? '');
+        break;
+    }
+}
+
+$sku_butir_rows = [];
+$peserta_rows = [];
+$checks_map = [];
+$tanggal_map = [];
+if ($selected_tingkat_id > 0) {
+    try {
+        $b = $pdo->prepare('
+            SELECT id_butir, teks_butir, urutan FROM tb_sku_kecakapan_butir
+            WHERE id_tingkat_barung = ? ORDER BY urutan ASC, id_butir ASC
+        ');
+        $b->execute([$selected_tingkat_id]);
+        $sku_butir_rows = $b->fetchAll(PDO::FETCH_ASSOC);
+
+        $stP = $pdo->prepare('
+            SELECT id_peserta_didik_barung, nama_peserta_didik FROM tb_peserta_didik_barung
+            WHERE id_tingkat_barung = ? AND IFNULL(status, \'aktif\') = \'aktif\'
+            ORDER BY nama_peserta_didik ASC
+        ');
+        $stP->execute([$selected_tingkat_id]);
+        $peserta_rows = $stP->fetchAll(PDO::FETCH_ASSOC);
+
+        $ids_p = [];
+        foreach ($peserta_rows as $pr) {
+            $ids_p[] = (int)$pr['id_peserta_didik_barung'];
+        }
+        if ($ids_p !== []) {
+            $ph = implode(',', array_fill(0, count($ids_p), '?'));
+            $stN = $pdo->prepare(
+                'SELECT id_peserta_didik_barung, id_butir, tanggal_ujian FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung IN (' . $ph . ')'
+            );
+            $stN->execute($ids_p);
+            while ($rw = $stN->fetch(PDO::FETCH_ASSOC)) {
+                $pid = (int)$rw['id_peserta_didik_barung'];
+                $bid = (int)$rw['id_butir'];
+                $checks_map[$pid][$bid] = true;
+                $tanggal_map[$pid][$bid] = (string)($rw['tanggal_ujian'] ?? '');
+            }
+        }
+    } catch (Exception $e) {
+        $sku_butir_rows = [];
+        $peserta_rows = [];
+    }
+}
+
+$school_profile = getSchoolProfile($pdo);
+$sku_print_settings = [
+    'ketua_gudep' => '',
+    'nta_ketua_gudep' => '',
+    'tempat_surat' => '',
+    'tanggal_surat' => date('Y-m-d'),
+];
+try {
+    $stSkuPrint = $pdo->query("SELECT ketua_gudep, nta_ketua_gudep, tempat_surat, tanggal_surat FROM tb_pengaturan_cetak_barung LIMIT 1");
+    $rwSkuPrint = $stSkuPrint ? $stSkuPrint->fetch(PDO::FETCH_ASSOC) : null;
+    if (is_array($rwSkuPrint)) {
+        $sku_print_settings['ketua_gudep'] = (string)($rwSkuPrint['ketua_gudep'] ?? '');
+        $sku_print_settings['nta_ketua_gudep'] = (string)($rwSkuPrint['nta_ketua_gudep'] ?? '');
+        $sku_print_settings['tempat_surat'] = (string)($rwSkuPrint['tempat_surat'] ?? '');
+        $sku_print_settings['tanggal_surat'] = (string)($rwSkuPrint['tanggal_surat'] ?? date('Y-m-d'));
+    }
+} catch (Exception $e) {
+    // best effort
+}
+
+/** Ekspor data rekap SKU (Excel / PDF); membutuhkan data tingkat dipilih yang sudah di-load di atas */
+if (isset($_GET['export'])) {
+    $export_fmt = strtolower(trim((string)($_GET['export'] ?? '')));
+    if (($export_fmt === 'xlsx' || $export_fmt === 'pdf') && $selected_tingkat_id > 0) {
+        $school_name = htmlspecialchars((string)($school_profile['nama_sekolah'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $tingkat_esc = htmlspecialchars($selected_tingkat_name, ENT_QUOTES, 'UTF-8');
+        $tingkat_slug = preg_replace('/[^a-z0-9]+/i', '_', trim((string)$selected_tingkat_name));
+        $tingkat_slug = trim((string)$tingkat_slug, '_');
+        if ($tingkat_slug === '') {
+            $tingkat_slug = 'tingkat';
+        }
+        $tahun_ajaran_raw = (string)($school_profile['tahun_ajaran'] ?? date('Y'));
+        $tahun_ajaran_slug = preg_replace('/[^a-z0-9]+/i', '_', strtolower($tahun_ajaran_raw));
+        $tahun_ajaran_slug = trim((string)$tahun_ajaran_slug, '_');
+        if ($tahun_ajaran_slug === '') {
+            $tahun_ajaran_slug = date('Y');
+        }
+        $sku_export_base = 'Data_SKU_' . $tingkat_slug . '_' . $tahun_ajaran_slug;
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        if ($export_fmt === 'xlsx') {
+            $autoload = __DIR__ . '/../vendor/autoload.php';
+            if (!file_exists($autoload)) {
+                header('HTTP/1.1 500 Internal Server Error');
+                exit('Jalankan: composer install');
+            }
+            require_once $autoload;
+            try {
+                $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+                $sheet = $spreadsheet->getActiveSheet();
+                $sheet->setTitle('SKU');
+                $sheet->setCellValue('A1', (string)($school_profile['nama_sekolah'] ?? 'Syarat Kecakapan Umum'));
+                $sheet->setCellValue('A2', 'SKU Pramuka — ' . ($selected_tingkat_name ?: 'Tingkat'));
+                $sheet->setCellValue('A3', 'Dicetak: ' . date('d/m/Y H:i'));
+                $hdrRow = 5;
+                $sheet->setCellValueByColumnAndRow(1, $hdrRow, 'No.');
+                $sheet->setCellValueByColumnAndRow(2, $hdrRow, 'Nama Peserta Didik');
+                $c = 3;
+                foreach ($sku_butir_rows as $bb) {
+                    $label = '#' . (int)$bb['urutan'] . ' ' . mb_substr((string)$bb['teks_butir'], 0, 80);
+                    $sheet->setCellValueByColumnAndRow($c, $hdrRow, $label);
+                    $c++;
+                }
+                $nb = count($sku_butir_rows);
+                $statusCol = 3 + $nb;
+                $sheet->setCellValueByColumnAndRow($statusCol, $hdrRow, 'Status');
+                $lastColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($statusCol);
+                $sheet->getStyle('A' . $hdrRow . ':' . $lastColLetter . $hdrRow)->getFont()->setBold(true);
+                $row = $hdrRow + 1;
+                $nom = 1;
+                foreach ($peserta_rows as $p) {
+                    $pid = (int)$p['id_peserta_didik_barung'];
+                    $sheet->setCellValueByColumnAndRow(1, $row, $nom++);
+                    $sheet->setCellValueByColumnAndRow(2, $row, (string)$p['nama_peserta_didik']);
+                    $cc = 3;
+                    foreach ($sku_butir_rows as $bb) {
+                        $bid = (int)$bb['id_butir'];
+                        $on = !empty($checks_map[$pid][$bid]);
+                        $sheet->setCellValueByColumnAndRow($cc, $row, $on ? 'Ya' : 'Tidak');
+                        $cc++;
+                    }
+                    $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
+                    $sheet->setCellValueByColumnAndRow($statusCol, $row, $inf['label']);
+                    $row++;
+                }
+                $spreadsheet->getActiveSheet()->getColumnDimension('A')->setWidth(6);
+                $spreadsheet->getActiveSheet()->getColumnDimension('B')->setWidth(38);
+                for ($ci = 3; $ci <= $statusCol; ++$ci) {
+                    $spreadsheet->getActiveSheet()->getColumnDimension(
+                        \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($ci)
+                    )->setWidth($ci < $statusCol ? 16 : 18);
+                }
+                $fname = $sku_export_base . '.xlsx';
+                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                header('Content-Disposition: attachment; filename="' . $fname . '"');
+                header('Cache-Control: max-age=0');
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+                $writer->save('php://output');
+            } catch (Throwable $e) {
+                if (!headers_sent()) {
+                    header('HTTP/1.1 500 Internal Server Error');
+                }
+                exit('Gagal mengekspor Excel.');
+            }
+            exit;
+        }
+        if ($export_fmt === 'pdf') {
+            $print_now = !isset($_GET['autoprint']) || (string)$_GET['autoprint'] !== '0';
+            $preview_title = $sku_export_base;
+            $school_name_print = (string)($school_profile['nama_madrasah'] ?? $school_profile['nama_sekolah'] ?? 'MADRASAH');
+            $school_year_print = (string)($school_profile['tahun_ajaran'] ?? '-');
+            $school_logo = !empty($school_profile['logo']) ? ('../assets/img/' . $school_profile['logo']) : '';
+            $asset_ver = (string)time();
+            $tempat_surat = trim((string)($sku_print_settings['tempat_surat'] ?? '')) ?: '................';
+            $tanggal_surat = trim((string)($sku_print_settings['tanggal_surat'] ?? ''));
+            $tanggal_surat = $tanggal_surat !== '' && strtotime($tanggal_surat) !== false ? date('d-m-Y', strtotime($tanggal_surat)) : date('d-m-Y');
+            $ketua_gudep = trim((string)($sku_print_settings['ketua_gudep'] ?? '')) ?: '........................';
+            $nta_ketua_gudep = trim((string)($sku_print_settings['nta_ketua_gudep'] ?? '')) ?: '-';
+            $qr_payload = "Ketua Gudep: {$ketua_gudep}\nNTA: {$nta_ketua_gudep}\nTanggal: {$tanggal_surat}\nDokumen: Rekap SKU {$selected_tingkat_name}";
+            $qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . rawurlencode($qr_payload);
+            header('Content-Type: text/html; charset=UTF-8');
+            ?>
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?= htmlspecialchars($preview_title, ENT_QUOTES, 'UTF-8') ?></title>
+    <style>
+        @page { size: 330mm 215mm; margin: 8mm; } /* F4 landscape */
+        body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; color: #111; }
+        .toolbar {
+            position: sticky; top: 0; z-index: 5;
+            display: flex; gap: 8px; align-items: center; justify-content: space-between;
+            padding: 10px 12px; background: #fff; border-bottom: 1px solid #e5e7eb;
+        }
+        .toolbar .left { display: flex; gap: 8px; align-items: center; }
+        .toolbar button, .toolbar a {
+            font-size: 14px; padding: 8px 10px; border-radius: 8px;
+            border: 1px solid #d1d5db; background: #fff; cursor: pointer; text-decoration: none; color: #111827;
+        }
+        .toolbar button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .hint { font-size: 12px; color: #6b7280; }
+        .wrap { max-width: 1600px; margin: 10px auto; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+        .content { padding: 8mm; }
+        .header { display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 10px; }
+        .header-logo { width: 56px; height: 56px; object-fit: contain; }
+        .header-title h2 { margin: 0; font-size: 20px; text-align: left; }
+        .header-title .meta { margin-top: 3px; color: #444; font-size: 13px; text-align: left; }
+        h3 { margin: 10px 0 6px 0; }
+        .meta { margin-bottom: 8px; color: #555; font-size: 12px; text-align: center; }
+        .tanggal { text-align: right; font-size: 11px; color: #555; margin-bottom: 6px; }
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 10px; }
+        th, td { border: 1px solid #444; padding: 3px; text-align: center; vertical-align: middle; word-wrap: break-word; }
+        th { background: #eaeaea; font-weight: 700; }
+        td.nama, th.nama { text-align: left; padding-left: 6px; }
+        .signature-wrap {
+            margin-top: 6mm;
+            display: flex;
+            justify-content: flex-end;
+            page-break-inside: avoid;
+            break-inside: avoid-page;
+        }
+        .signature-box {
+            width: 250px;
+            text-align: center;
+            page-break-inside: avoid;
+            break-inside: avoid-page;
+        }
+        .signature-meta { text-align: left; margin-bottom: 8px; font-size: 12px; }
+        .signature-name { font-weight: 700; text-decoration: underline; margin-top: 6px; }
+        .signature-nta { margin-top: 2px; font-size: 12px; }
+        .signature-qr { width: 82px; height: 82px; margin: 4px auto; display: block; }
+        @media print {
+            body { background: #fff; }
+            .toolbar { display: none !important; }
+            .wrap { max-width: none; margin: 0; box-shadow: none; }
+            .signature-wrap, .signature-box { page-break-inside: avoid !important; break-inside: avoid-page !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="toolbar">
+    <div class="left">
+        <button class="primary" type="button" onclick="window.print()">Print</button>
+        <button type="button" onclick="window.location.reload()">Reload</button>
+        <a href="syarat_kecakapan_umum.php?tingkat=<?= (int)$selected_tingkat_id ?>">Kembali</a>
+    </div>
+    <div class="hint">Preview cetak SKU F4 landscape. Reload tetap didukung.</div>
+</div>
+<div class="wrap">
+    <div class="content">
+        <div class="tanggal">Dicetak: <?= htmlspecialchars(date('d/m/Y H:i'), ENT_QUOTES, 'UTF-8') ?></div>
+        <div class="header">
+            <?php if ($school_logo): ?>
+                <img class="header-logo" src="<?= htmlspecialchars($school_logo, ENT_QUOTES, 'UTF-8') ?>?v=<?= htmlspecialchars($asset_ver, ENT_QUOTES, 'UTF-8') ?>" alt="Logo Sekolah">
+            <?php endif; ?>
+            <div class="header-title">
+                <h2><?= htmlspecialchars($school_name_print, ENT_QUOTES, 'UTF-8') ?></h2>
+                <div class="meta">Tahun Ajaran: <strong><?= htmlspecialchars($school_year_print, ENT_QUOTES, 'UTF-8') ?></strong></div>
+            </div>
+        </div>
+        <h3>Rekap Syarat Kecakapan Umum</h3>
+        <div class="meta">Tingkat: <strong><?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : 'Tingkat', ENT_QUOTES, 'UTF-8') ?></strong></div>
+        <table>
+            <thead>
+            <tr>
+                <th style="width:28px;">No</th>
+                <th class="nama" style="width:160px;">Nama Peserta Didik</th>
+                <?php foreach ($sku_butir_rows as $bb): ?>
+                    <th style="font-size:9px;line-height:1.2;">
+                        #<?= (int)$bb['urutan'] ?><br>
+                        <?= htmlspecialchars((string)mb_substr((string)$bb['teks_butir'], 0, 45), ENT_QUOTES, 'UTF-8') ?>
+                    </th>
+                <?php endforeach; ?>
+                <th style="width:64px;">Status</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php if ($peserta_rows === []): ?>
+                <tr>
+                    <td colspan="<?= 3 + count($sku_butir_rows) ?>">Belum ada anggota aktif untuk tingkat ini.</td>
+                </tr>
+            <?php else: ?>
+                <?php $nomPrint = 1; foreach ($peserta_rows as $p): ?>
+                    <?php
+                        $pid = (int)$p['id_peserta_didik_barung'];
+                        $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
+                    ?>
+                    <tr>
+                        <td><?= $nomPrint++ ?></td>
+                        <td class="nama"><?= htmlspecialchars((string)$p['nama_peserta_didik'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <?php foreach ($sku_butir_rows as $bb): ?>
+                            <?php
+                                $bid = (int)$bb['id_butir'];
+                                $on = !empty($checks_map[$pid][$bid]);
+                            ?>
+                            <td><?= $on ? '✓' : '—' ?></td>
+                        <?php endforeach; ?>
+                        <td><?= htmlspecialchars($inf['label'], ENT_QUOTES, 'UTF-8') ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            </tbody>
+        </table>
+
+        <div class="signature-wrap">
+            <div class="signature-box">
+                <div class="signature-meta">
+                    <div>Dikeluarkan di: <?= htmlspecialchars($tempat_surat, ENT_QUOTES, 'UTF-8') ?></div>
+                    <div>Tanggal: <?= htmlspecialchars($tanggal_surat, ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+                <div>Ketua Gudep,</div>
+                <img class="signature-qr" src="<?= htmlspecialchars($qr_url, ENT_QUOTES, 'UTF-8') ?>" alt="QR Tanda Tangan" referrerpolicy="no-referrer">
+                <div class="signature-name"><?= htmlspecialchars($ketua_gudep, ENT_QUOTES, 'UTF-8') ?></div>
+                <div class="signature-nta">NTA: <?= htmlspecialchars($nta_ketua_gudep, ENT_QUOTES, 'UTF-8') ?></div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php if ($print_now): ?>
+<script>
+window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); }, 250);
+});
+</script>
+<?php endif; ?>
+</body>
+</html>
+<?php
+            exit;
+        }
+    }
+}
+
+$flash_ok = isset($_SESSION['sku_flash_ok']) ? (string)$_SESSION['sku_flash_ok'] : '';
+$flash_err = isset($_SESSION['sku_flash_err']) ? (string)$_SESSION['sku_flash_err'] : '';
+unset($_SESSION['sku_flash_ok'], $_SESSION['sku_flash_err']);
+
+$js_page = [];
+if ($flash_ok !== '') {
+    $js_page[] = 'Swal.fire({icon:\'success\',title:\'Berhasil\',text:'
+        . json_encode($flash_ok) . ',timer:2200,showConfirmButton:false});';
+}
+if ($flash_err !== '') {
+    $js_page[] = 'Swal.fire({icon:\'error\',title:\'Import\',text:' . json_encode($flash_err) . '});';
+}
+
+$js_page[] = <<< 'SKUJS'
+$(function(){
+  var TID = parseInt($('#skuTingkatId').data('tid'), 10) || 0;
+  if (!TID) return;
+  $('.sku-check').on('change', function() {
+    var $cb = $(this);
+    var fd = new FormData();
+    fd.append('sku_ajax','1');
+    fd.append('action','toggle');
+    fd.append('id_tingkat_barung', String(TID));
+    fd.append('id_peserta_didik_barung', String($cb.data('peserta')));
+    fd.append('id_butir', String($cb.data('butir')));
+    fd.append('checked', $cb.is(':checked') ? '1' : '0');
+    $.ajax({ url: window.location.pathname, method: 'POST', data: fd, processData:false, contentType:false, dataType:'json' })
+    .done(function(resp){
+      if (!resp || !resp.ok){ Swal.fire('Error', (resp && resp.msg) ? resp.msg : 'Gagal menyimpan', 'error'); $cb.prop('checked', !$cb.is(':checked')); return; }
+      var key = '[data-peserta="' + $cb.data('peserta') + '"][data-butir="' + $cb.data('butir') + '"]';
+      var $date = $('.sku-date' + key);
+      if ($date.length) {
+        if ($cb.is(':checked')) {
+          if (resp.tanggal_ujian) $date.val(resp.tanggal_ujian);
+        } else {
+          $date.val('');
+        }
+      }
+      $('.sku-status-cell[data-peserta="' + $cb.data('peserta') + '"]')
+        .toggleClass('text-success', !!resp.status_ok).toggleClass('text-danger', !resp.status_ok)
+        .text(resp.status_label || '—');
+    }).fail(function(){ Swal.fire('Error', 'Permintaan gagal', 'error'); $cb.prop('checked', !$cb.is(':checked')); });
+  });
+
+  $('.sku-date').on('change', function() {
+    var $dt = $(this);
+    var peserta = parseInt($dt.data('peserta'), 10);
+    var butir = parseInt($dt.data('butir'), 10);
+    if (!peserta || !butir || !TID) return;
+    var fd = new FormData();
+    fd.append('sku_ajax','1');
+    fd.append('action','set_tanggal');
+    fd.append('id_tingkat_barung', String(TID));
+    fd.append('id_peserta_didik_barung', String(peserta));
+    fd.append('id_butir', String(butir));
+    fd.append('tanggal_ujian', $dt.val() || '');
+    $.ajax({ url: window.location.pathname, method: 'POST', data: fd, processData:false, contentType:false, dataType:'json' })
+    .done(function(resp){
+      if (!resp || !resp.ok) { Swal.fire('Error', (resp && resp.msg) ? resp.msg : 'Gagal menyimpan tanggal', 'error'); return; }
+      var key = '[data-peserta="' + peserta + '"][data-butir="' + butir + '"]';
+      if (resp.checked) $('.sku-check' + key).prop('checked', true);
+      $('.sku-status-cell[data-peserta="' + peserta + '"]')
+        .toggleClass('text-success', !!resp.status_ok).toggleClass('text-danger', !resp.status_ok)
+        .text(resp.status_label || '—');
+    }).fail(function(){
+      Swal.fire('Error', 'Permintaan gagal', 'error');
+    });
+  });
+
+  $('.sku-date').on('click focus', function() {
+    if (typeof this.showPicker === 'function') {
+      try { this.showPicker(); } catch (e) {}
+    }
+  });
+
+  $('#btnSkuSaveButir').on('click', function(){
+    var teks = ($('#teks_butir_baru').val() || '').trim();
+    if (!teks || !TID) return;
+    var fd = new FormData();
+    fd.append('sku_ajax','1'); fd.append('action','add_butir'); fd.append('id_tingkat_barung', String(TID)); fd.append('teks_butir', teks);
+    $.ajax({ url: window.location.pathname, method: 'POST', data: fd, processData:false, contentType:false, dataType:'json' })
+    .done(function(resp){ if (resp && resp.ok) window.location.reload(); else Swal.fire('Perhatian', (resp&&resp.msg)||'Gagal', 'warning'); });
+  });
+
+  $('.btn-edit-butir').on('click', function(){
+    var $b = $(this);
+    var bid = parseInt($b.data('butir'), 10);
+    if (!bid || !TID) return;
+    var teks = $b.attr('data-sku-teks') || '';
+    $('#sku_edit_butir_id').val(String(bid));
+    $('#sku_edit_butir_text').val(teks);
+    $('#modalSkuEdit').modal('show');
+  });
+  $('#btnSkuUpdateButir').on('click', function(){
+    var bid = parseInt($('#sku_edit_butir_id').val(), 10);
+    var teks = ($('#sku_edit_butir_text').val() || '').trim();
+    if (!bid || !TID || !teks) return;
+    var fd = new FormData();
+    fd.append('sku_ajax','1'); fd.append('action','edit_butir'); fd.append('id_tingkat_barung', String(TID));
+    fd.append('id_butir', String(bid)); fd.append('teks_butir', teks);
+    $.ajax({ url: window.location.pathname, method: 'POST', data: fd, processData:false, contentType:false, dataType:'json' })
+    .done(function(resp){
+      if (resp && resp.ok) { $('#modalSkuEdit').modal('hide'); window.location.reload(); }
+      else Swal.fire('Perhatian', (resp&&resp.msg)||'Gagal menyimpan', 'warning');
+    });
+  });
+
+  $('.btn-del-butir').on('click', function(e){
+    e.stopPropagation();
+    var bid = parseInt($(this).data('butir'), 10);
+    if (!bid || !TID) return;
+    Swal.fire({title:'Hapus kolom SKU?', text:'Data centang siswa untuk butir ini ikut hilang.', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33', confirmButtonText:'Ya'})
+    .then(function(r){
+      if (!r.isConfirmed) return;
+      var fd = new FormData();
+      fd.append('sku_ajax','1'); fd.append('action','delete_butir'); fd.append('id_tingkat_barung', String(TID)); fd.append('id_butir', String(bid));
+      $.ajax({ url: window.location.pathname, method: 'POST', data: fd, processData:false, contentType:false, dataType:'json' })
+      .done(function(resp){ if (resp && resp.ok) window.location.reload(); else Swal.fire('Gagal', (resp&&resp.msg)||'', 'error'); });
+    });
+  });
+
+  // Upload import butir SKU dengan progress bar
+  $('#skuImportForm').on('submit', function(e){
+    e.preventDefault();
+    var form = this;
+    var fd = new FormData(form);
+    fd.append('ajax', '1');
+    var $barWrap = $('#skuImportProgressWrap');
+    var $bar = $('#skuImportProgressBar');
+    var $status = $('#skuImportStatus');
+    var $btnSubmit = $('#skuImportSubmitBtn');
+    var $btnClose = $('#skuImportCloseBtn');
+    $barWrap.removeClass('d-none');
+    $bar.css('width', '0%').attr('aria-valuenow', 0).text('0%');
+    $status.text('Mengunggah file...');
+    $btnSubmit.prop('disabled', true);
+    $btnClose.prop('disabled', true);
+
+    $.ajax({
+      url: window.location.pathname,
+      method: 'POST',
+      data: fd,
+      processData: false,
+      contentType: false,
+      dataType: 'json',
+      xhr: function() {
+        var xhr = new window.XMLHttpRequest();
+        xhr.upload.addEventListener('progress', function(evt) {
+          if (!evt.lengthComputable) return;
+          var pct = Math.round((evt.loaded / evt.total) * 100);
+          if (pct > 100) pct = 100;
+          $bar.css('width', pct + '%').attr('aria-valuenow', pct).text(pct + '%');
+          if (pct >= 100) $status.text('Memproses butir SKU...');
+        }, false);
+        return xhr;
+      }
+    }).done(function(resp){
+      if (resp && resp.ok) {
+        Swal.fire({icon:'success', title:'Berhasil', text:resp.msg || 'Import selesai'})
+          .then(function(){ window.location.href = 'syarat_kecakapan_umum.php?tingkat=' + encodeURIComponent(resp.tingkat || TID); });
+      } else {
+        Swal.fire('Gagal', (resp && resp.msg) ? resp.msg : 'Import gagal', 'error');
+      }
+    }).fail(function(){
+      Swal.fire('Gagal', 'Upload gagal. Coba lagi.', 'error');
+    }).always(function(){
+      $btnSubmit.prop('disabled', false);
+      $btnClose.prop('disabled', false);
+    });
+  });
+});
+SKUJS;
+
+require_once '../templates/header.php';
+require_once '../templates/sidebar.php';
+?>
+
+<div class="main-content">
+    <section class="section">
+        <div class="section-header">
+            <h1>Syarat Kecakapan Umum</h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></div>
+                <div class="breadcrumb-item">Ekstrakurikuler</div>
+                <div class="breadcrumb-item">SKU</div>
+            </div>
+        </div>
+
+        <div class="section-body">
+            <div class="card">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <h4 class="mb-0">
+                        SKU Pramuka
+                        <?= $selected_tingkat_name !== '' ? '<span class="badge badge-light border text-dark ml-2">' . htmlspecialchars($selected_tingkat_name) . '</span>' : '' ?>
+                    </h4>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#modalSkuAdd"
+                            <?= $selected_tingkat_id <= 0 ? 'disabled' : '' ?>><i class="fas fa-plus"></i> Tambah kolom</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#modalSkuImport"
+                            <?= $selected_tingkat_id <= 0 ? 'disabled' : '' ?>><i class="fas fa-file-import"></i> Import SKU</button>
+                        <a class="btn btn-outline-success btn-sm <?= $selected_tingkat_id <= 0 ? 'disabled text-muted' : '' ?>"
+                            href="<?= $selected_tingkat_id > 0 ? 'syarat_kecakapan_umum.php?tingkat=' . (int)$selected_tingkat_id . '&export=xlsx' : '#' ?>">
+                            <i class="fas fa-file-excel"></i> Ekspor Excel</a>
+                        <a class="btn btn-outline-danger btn-sm <?= $selected_tingkat_id <= 0 ? 'disabled text-muted' : '' ?>"
+                            <?= $selected_tingkat_id > 0 ? 'target="_blank" rel="noopener noreferrer"' : '' ?>
+                            href="<?= $selected_tingkat_id > 0 ? 'syarat_kecakapan_umum.php?tingkat=' . (int)$selected_tingkat_id . '&export=pdf' : '#' ?>">
+                            <i class="fas fa-file-pdf"></i> Ekspor PDF</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <span id="skuTingkatId" data-tid="<?= (int)$selected_tingkat_id ?>" class="d-none"></span>
+
+                    <?php if (empty($tingkat_list)): ?>
+                        <div class="alert alert-warning mb-0">Belum ada data tingkat Pramuka. Tambahkan di menu <strong>Data Tingkat Barung</strong>.</div>
+                    <?php else: ?>
+                        <div class="d-flex flex-wrap mb-4" style="gap:8px;">
+                            <?php foreach ($tingkat_list as $t): ?>
+                                <?php
+                                    $tid = (int)($t['id_tingkat_barung'] ?? 0);
+                                    $active = ($tid === $selected_tingkat_id);
+                                ?>
+                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>">
+                                    <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <?php if ($selected_tingkat_id > 0): ?>
+                            <p class="text-muted small mb-2">
+                                Daftar mengikuti <strong>Data Anggota Pramuka</strong> tingkat aktif —
+                                kolom butir SKU bisa ditambahkan manual, diubah, atau dihapus, serta diimpor dari Excel (template .xlsx: satu baris, tiap kolom satu teks butir).
+                                <strong>Lulus</strong> = seluruh butir terselesaikan untuk tingkat tersebut; otomatis muncul di <strong>Surat Keterangan</strong>.
+                            </p>
+
+                            <div class="table-responsive rounded border sku-table-wrap mb-3" style="max-height:74vh;">
+                                <table class="table table-sm table-bordered mb-0 align-middle sku-main-table">
+                                    <thead class="thead-light sku-thead-stick">
+                                        <tr>
+                                            <th rowspan="3" class="sticky-sku sku-th-no text-center py-3">NO</th>
+                                            <th rowspan="3" class="sticky-sku sku-th-nama">NAMA PESERTA DIDIK</th>
+                                            <th colspan="<?= max(1, count($sku_butir_rows)) ?>" class="text-center py-1 border sku-meta-title-cell">
+                                                <small class="text-uppercase font-weight-bold">Syarat kecakapan umum — per butir SKU</small>
+                                            </th>
+                                            <th rowspan="3" class="sticky-sku-r sku-th-status text-center bg-light">STATUS</th>
+                                        </tr>
+                                        <tr class="sku-th-num-row">
+                                            <?php foreach ($sku_butir_rows as $bb): ?>
+                                                <th class="text-center sku-col sku-th-butir-num font-weight-bold text-primary px-2 py-1" title="<?= htmlspecialchars($bb['teks_butir']) ?>">
+                                                    <?= (int)$bb['urutan'] ?>
+                                                </th>
+                                            <?php endforeach; ?>
+                                            <?php if (empty($sku_butir_rows)): ?>
+                                                <th class="text-center text-muted sku-col sku-th-butir-num py-2">—</th>
+                                            <?php endif; ?>
+                                        </tr>
+                                        <tr>
+                                            <?php foreach ($sku_butir_rows as $bb): ?>
+                                                <th class="sku-th-vertical text-center sku-col py-2" title="<?= htmlspecialchars($bb['teks_butir']) ?>">
+                                                    <span class="sku-vtext"><?= nl2br(htmlspecialchars($bb['teks_butir'])) ?></span>
+                                                    <div class="mt-1 d-flex justify-content-center align-items-center sku-col-actions" style="gap:4px;">
+                                                        <button type="button" class="btn btn-xxs btn-outline-primary btn-edit-butir px-1"
+                                                                data-butir="<?= (int)$bb['id_butir'] ?>"
+                                                                data-sku-teks="<?= htmlspecialchars((string)$bb['teks_butir'], ENT_QUOTES, 'UTF-8') ?>"
+                                                                title="Ubah kolom"><i class="fas fa-edit"></i></button>
+                                                        <button type="button" class="btn btn-xxs btn-outline-danger btn-del-butir px-1"
+                                                                data-butir="<?= (int)$bb['id_butir'] ?>" title="Hapus kolom"><i class="fas fa-times"></i></button>
+                                                    </div>
+                                                </th>
+                                            <?php endforeach; ?>
+                                            <?php if (empty($sku_butir_rows)): ?>
+                                                <th class="text-center text-muted sku-col py-4">Belum ada butir SKU</th>
+                                            <?php endif; ?>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($peserta_rows)): ?>
+                                            <tr>
+                                                <td colspan="<?= 3 + max(1, count($sku_butir_rows)) ?>" class="text-center text-muted py-5">
+                                                    Tidak ada anggota aktif untuk tingkat ini. Tambahkan di <strong>Data Anggota Pramuka</strong>.
+                                                </td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php $nom = 1; foreach ($peserta_rows as $p): ?>
+                                                <?php
+                                                    $pid = (int)$p['id_peserta_didik_barung'];
+                                                    $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
+                                                ?>
+                                                <tr>
+                                                    <td class="text-center sticky-sku sku-th-no"><?= $nom++ ?></td>
+                                                    <td class="sticky-sku sku-th-nama font-weight-bold"><?= htmlspecialchars((string)$p['nama_peserta_didik']) ?></td>
+                                                    <?php foreach ($sku_butir_rows as $bb): ?>
+                                                        <?php
+                                                            $bid = (int)$bb['id_butir'];
+                                                            $on = !empty($checks_map[$pid][$bid]);
+                                                            $tgl_ujian = (string)($tanggal_map[$pid][$bid] ?? '');
+                                                        ?>
+                                                        <td class="text-center sku-col align-middle">
+                                                            <label class="mb-0">
+                                                                <input type="checkbox" class="sku-check" data-peserta="<?= $pid ?>" data-butir="<?= $bid ?>" <?= $on ? 'checked' : '' ?> />
+                                                            </label>
+                                                            <input type="date"
+                                                                   class="form-control form-control-sm mt-1 sku-date"
+                                                                   data-peserta="<?= $pid ?>"
+                                                                   data-butir="<?= $bid ?>"
+                                                                   value="<?= htmlspecialchars($tgl_ujian, ENT_QUOTES, 'UTF-8') ?>" />
+                                                        </td>
+                                                    <?php endforeach; ?>
+                                                    <?php if (empty($sku_butir_rows)): ?>
+                                                        <td class="sku-col">&nbsp;</td>
+                                                    <?php endif; ?>
+                                                    <td class="text-center sku-status-cell sticky-sku-r font-weight-bold <?= $inf['ok'] ? 'text-success' : 'text-danger' ?>"
+                                                        data-peserta="<?= $pid ?>">
+                                                        <?= htmlspecialchars($inf['label']) ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="modalSkuAdd" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Tambah kolom SKU</h5><button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body"><textarea class="form-control" id="teks_butir_baru" rows="4" placeholder="Contoh: Hafal rukun iman"></textarea></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Batal</button>
+                <button class="btn btn-primary" type="button" id="btnSkuSaveButir">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSkuEdit" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ubah kolom SKU</h5><button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="sku_edit_butir_id" value="">
+                <textarea class="form-control" id="sku_edit_butir_text" rows="5" maxlength="500" placeholder="Teks butir SKU"></textarea>
+                <small class="text-muted">Maks. 500 karakter.</small>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Batal</button>
+                <button class="btn btn-primary" type="button" id="btnSkuUpdateButir">Simpan perubahan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSkuImport" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" method="post" enctype="multipart/form-data" action="" id="skuImportForm">
+            <input type="hidden" name="import_sku_butir" value="1">
+            <input type="hidden" name="id_tingkat_barung" value="<?= (int)$selected_tingkat_id ?>">
+            <div class="modal-header">
+                <h5 class="modal-title">Import butir SKU</h5><button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>Excel (.xlsx, .xls) atau CSV / TXT</label>
+                <input type="file" name="file_import" accept=".csv,.txt,.xlsx,.xls" required class="form-control-file">
+                <small class="form-text text-muted">Import membaca <strong>baris pertama</strong> sebagai judul kolom butir SKU. Template Excel (.xlsx) unduhan hanya berisi contoh butir per kolom; kolom No/Nama/Status (jika ada) diabaikan.</small>
+                <div class="mt-3 d-none" id="skuImportProgressWrap">
+                    <div class="progress" style="height:18px;">
+                        <div id="skuImportProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                    <small class="text-muted d-block mt-2" id="skuImportStatus">Menunggu upload...</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-outline-primary" href="syarat_kecakapan_umum.php?download_template_sku=1">
+                    <i class="fas fa-download"></i> Unduh Template
+                </a>
+                <button class="btn btn-secondary" type="button" data-dismiss="modal" id="skuImportCloseBtn">Batal</button>
+                <button class="btn btn-primary" type="submit" id="skuImportSubmitBtn"><i class="fas fa-upload"></i> Unggah</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.sku-table-wrap {
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+    box-shadow:inset -6px 0 8px -6px rgba(0,0,0,.12);
+    position: relative;
+}
+.sku-main-table { min-width: 640px; border-collapse: separate; border-spacing: 0; }
+
+/* Header tiga baris ikut menempel saat scroll vertikal dalam panel */
+.sku-main-table thead.sku-thead-stick {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 21;
+}
+.sku-main-table thead.sku-thead-stick th {
+    background-color: #e9ecef;
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,.08);
+}
+
+/* Baris judul gabungan & sel tengah butir: sedikit di atas kolom data saat tumpang-tindih */
+.sku-main-table thead.sku-thead-stick th.sku-meta-title-cell { background: #eef2fb !important; z-index: 22; }
+
+/* Sticky horizontal: No, Nama, Status */
+.sticky-sku { position:sticky; left:0; z-index:8; background:#fbfbfc!important; min-width:40px;}
+.sku-th-nama { position:sticky; left:48px; z-index:9; background:#fdfdfd!important; min-width:240px; box-shadow: 3px 0 6px -4px rgba(0,0,0,.28);}
+.sticky-sku-r { position:sticky; right:0; z-index:8; background:#eef6ff!important;}
+
+.sku-main-table thead.sku-thead-stick th.sticky-sku,
+.sku-main-table thead.sku-thead-stick th.sku-th-nama,
+.sku-main-table thead.sku-thead-stick th.sticky-sku-r {
+    z-index: 25;
+}
+.sku-main-table thead.sku-thead-stick th.sticky-sku { background: #e9ecef !important; }
+.sku-main-table thead.sku-thead-stick th.sku-th-nama { background: #e9ecef !important; }
+.sku-main-table thead.sku-thead-stick th.sticky-sku-r { background: #e9ecef !important; }
+
+.sku-meta-title-cell { background:#eef2fb!important;}
+.sku-th-vertical { vertical-align:bottom!important; padding:12px 4px!important; max-height:260px!important;}
+.sku-vtext {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    display:inline-block;
+    max-height:210px;
+    overflow:hidden;
+    font-size:.78rem;
+    line-height:1.22;
+}
+.sku-col { min-width:38px;}
+.btn-xxs { font-size:.72rem;line-height:1;padding:2px;}
+tbody .sku-th-nama {
+    white-space: nowrap;
+}
+</style>
+
+<?php require_once '../templates/footer.php'; ?>

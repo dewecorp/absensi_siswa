@@ -92,9 +92,9 @@ switch ($user_level) {
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php', 'active' => $current_page === 'data_barung.php'],
             ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
             ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php', 'active' => $current_page === 'data_anggota_rebana.php'],
-            ['title' => 'Kenaikan Tingkat', 'url' => '../admin/kenaikan_tingkat.php', 'active' => $current_page === 'kenaikan_tingkat.php'],
+            ['title' => 'Pengaturan Cetak Suket', 'url' => '../admin/pengaturan_cetak_suket.php', 'active' => $current_page === 'pengaturan_cetak_suket.php'],
+            ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php', 'active' => $current_page === 'syarat_kecakapan_umum.php'],
             ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php', 'active' => $current_page === 'surat_keterangan.php'],
-            ['title' => 'Pengaturan Cetak Suket', 'url' => '../admin/pengaturan_cetak_suket.php', 'active' => $current_page === 'pengaturan_cetak_suket.php']
         ];
 
         $menu_items = [
@@ -131,7 +131,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_admin,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_tingkat_barung.php', 'kenaikan_tingkat.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_tingkat_barung.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -347,9 +347,9 @@ switch ($user_level) {
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=tata_usaha', 'active' => $current_page === 'data_barung.php'],
             ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=tata_usaha', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
             ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=tata_usaha', 'active' => $current_page === 'data_anggota_rebana.php'],
-            ['title' => 'Kenaikan Tingkat', 'url' => '../admin/kenaikan_tingkat.php?session_type=tata_usaha', 'active' => $current_page === 'kenaikan_tingkat.php'],
+            ['title' => 'Pengaturan Cetak Suket', 'url' => '../admin/pengaturan_cetak_suket.php?session_type=tata_usaha', 'active' => $current_page === 'pengaturan_cetak_suket.php'],
+            ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=tata_usaha', 'active' => $current_page === 'syarat_kecakapan_umum.php'],
             ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php?session_type=tata_usaha', 'active' => $current_page === 'surat_keterangan.php'],
-            ['title' => 'Pengaturan Cetak Suket', 'url' => '../admin/pengaturan_cetak_suket.php?session_type=tata_usaha', 'active' => $current_page === 'pengaturan_cetak_suket.php']
         ];
 
         $menu_items = [
@@ -379,7 +379,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_tu,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_tingkat_barung.php', 'data_barung.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'kenaikan_tingkat.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_tingkat_barung.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
             ],
             [
                 'title' => 'Jadwal',

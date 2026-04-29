@@ -18,6 +18,7 @@ try {
     $required_cols = [
         'promoted_from_tingkat_id' => "INT NULL",
         'promoted_at' => "DATETIME NULL",
+        'sku_kecakapan_lulus_at' => "DATETIME NULL",
         'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
     ];
     foreach ($required_cols as $col => $typeDef) {
@@ -36,19 +37,20 @@ $page_title = 'Surat Keterangan';
 
 // Tabel tidak memakai DataTables — hindari ekstra parsing/heap setelah cetak/pemakaian lain
 
-// Fetch tingkat list (exclude Pra Mula)
+// Fetch semua tingkat dulu (untuk rantai kenaikan), lalu buat list tampilan tanpa Pra Mula
+$all_tingkat_list = [];
 $tingkat_list = [];
 try {
-    $tingkat_list = $pdo->query("
+    $all_tingkat_list = $pdo->query("
             SELECT id_tingkat_barung, nama_tingkat
             FROM tb_tingkat_barung
-            WHERE LOWER(REPLACE(nama_tingkat, ' ', '')) NOT IN ('pramula', 'pra-mula') 
-              AND LOWER(nama_tingkat) != 'pra mula'
             ORDER BY
                 CASE
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('pramula', 'pra-mula') OR LOWER(nama_tingkat) = 'pra mula' THEN 0
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 1
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 2
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 3
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 4
                     ELSE 99
                 END,
                 nama_tingkat ASC
@@ -58,8 +60,29 @@ try {
     // ignore
 }
 
+$isPraMula = static function (string $name): bool {
+    $n = strtolower(trim($name));
+    $k = strtolower(str_replace(' ', '', $n));
+    return $n === 'pra mula' || $k === 'pramula' || $k === 'pra-mula';
+};
+
+foreach ($all_tingkat_list as $t) {
+    $nm = (string)($t['nama_tingkat'] ?? '');
+    if (!$isPraMula($nm)) {
+        $tingkat_list[] = $t;
+    }
+}
+
 $selected_tingkat_id = (int)($_GET['tingkat'] ?? 0);
-if ($selected_tingkat_id <= 0 && !empty($tingkat_list)) {
+// Jika URL masih membawa tingkat Pra Mula, fallback ke tingkat pertama yang tampil
+$is_selected_visible = false;
+foreach ($tingkat_list as $t) {
+    if ((int)($t['id_tingkat_barung'] ?? 0) === $selected_tingkat_id) {
+        $is_selected_visible = true;
+        break;
+    }
+}
+if (($selected_tingkat_id <= 0 || !$is_selected_visible) && !empty($tingkat_list)) {
     $selected_tingkat_id = (int)($tingkat_list[0]['id_tingkat_barung'] ?? 0);
 }
 
@@ -76,14 +99,14 @@ foreach ($tingkat_list as $t) {
 $prev_tingkat_id = 0;
 if ($selected_tingkat_id > 0) {
     $idx_selected = null;
-    foreach ($tingkat_list as $idx => $t) {
+    foreach ($all_tingkat_list as $idx => $t) {
         if ((int)($t['id_tingkat_barung'] ?? 0) === $selected_tingkat_id) {
             $idx_selected = $idx;
             break;
         }
     }
     if ($idx_selected !== null && $idx_selected > 0) {
-        $prev_tingkat_id = (int)($tingkat_list[$idx_selected - 1]['id_tingkat_barung'] ?? 0);
+        $prev_tingkat_id = (int)($all_tingkat_list[$idx_selected - 1]['id_tingkat_barung'] ?? 0);
     }
 }
 
@@ -96,8 +119,13 @@ if ($selected_tingkat_id > 0) {
             FROM tb_peserta_didik_barung
             WHERE id_tingkat_barung = ?
               AND IFNULL(status, 'aktif') = 'aktif'
-              AND promoted_at IS NOT NULL
-              AND promoted_from_tingkat_id = ?
+              AND (
+                sku_kecakapan_lulus_at IS NOT NULL
+                OR (
+                  promoted_at IS NOT NULL
+                  AND promoted_from_tingkat_id = ?
+                )
+              )
             ORDER BY nama_peserta_didik ASC
         ");
         $stmt->execute([$selected_tingkat_id, $prev_tingkat_id]);
