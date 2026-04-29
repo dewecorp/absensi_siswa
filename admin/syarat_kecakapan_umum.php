@@ -164,8 +164,12 @@ $can_interact_sku = $can_manage_sku || (!$sku_assignment_missing && $assigned_ti
 
 $page_title = 'Syarat Kecakapan Umum';
 
+$css_libs = [
+    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css',
+];
 $js_libs = [
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js',
 ];
 
 $ensureSkuSchema = static function () use ($pdo): void {
@@ -1066,21 +1070,26 @@ if ($flash_err !== '') {
 
 $js_page[] = <<< 'SKUJS'
 $(function(){
+  if (!document.getElementById('skuToastrIconFix')) {
+    var styleFix = document.createElement('style');
+    styleFix.id = 'skuToastrIconFix';
+    styleFix.textContent = '.toast-success:before{content:"✓"!important;font-family:Arial,sans-serif!important;font-weight:700!important;}';
+    document.head.appendChild(styleFix);
+  }
   var TID = parseInt($('#skuTingkatId').data('tid'), 10) || 0;
   if (!TID) return;
   function notifyPromotedAndReload() {
-    if (typeof toastr !== 'undefined' && toastr && typeof toastr.success === 'function') {
+    if (typeof toastr !== 'undefined' && toastr) {
+      toastr.options = {
+        closeButton: true,
+        progressBar: true,
+        timeOut: 1400,
+        extendedTimeOut: 300,
+        positionClass: 'toast-top-right'
+      };
       toastr.success('Siswa lulus SKU dan dipindahkan ke tingkat berikutnya.', 'Naik tingkat otomatis');
-      setTimeout(function(){ window.location.reload(); }, 1200);
-      return;
     }
-    Swal.fire({
-      icon: 'success',
-      title: 'Naik tingkat otomatis',
-      text: 'Siswa lulus SKU dan dipindahkan ke tingkat berikutnya.',
-      timer: 1200,
-      showConfirmButton: false
-    }).then(function(){ window.location.reload(); });
+    setTimeout(function(){ window.location.reload(); }, 1200);
   }
   $('.sku-check').on('change', function() {
     var $cb = $(this);
