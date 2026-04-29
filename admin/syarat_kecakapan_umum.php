@@ -710,7 +710,13 @@ if (isset($_GET['export'])) {
                     foreach ($sku_butir_rows as $bb) {
                         $bid = (int)$bb['id_butir'];
                         $on = !empty($checks_map[$pid][$bid]);
-                        $sheet->setCellValueByColumnAndRow($cc, $row, $on ? 'Ya' : 'Tidak');
+                        $tgl = (string)($tanggal_map[$pid][$bid] ?? '');
+                        if ($on) {
+                            $val = ($tgl !== '') ? ('Ya (' . date('d-m-Y', strtotime($tgl)) . ')') : 'Ya';
+                        } else {
+                            $val = ($tgl !== '') ? ('Tanggal: ' . date('d-m-Y', strtotime($tgl))) : 'Tidak';
+                        }
+                        $sheet->setCellValueByColumnAndRow($cc, $row, $val);
                         $cc++;
                     }
                     $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
@@ -761,7 +767,7 @@ if (isset($_GET['export'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars($preview_title, ENT_QUOTES, 'UTF-8') ?></title>
     <style>
-        @page { size: 330mm 215mm; margin: 8mm; } /* F4 landscape */
+        @page { size: 330mm 215mm; margin: 5mm 8mm 8mm 8mm; } /* F4 landscape */
         body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; color: #111; }
         .toolbar {
             position: sticky; top: 0; z-index: 5;
@@ -788,6 +794,23 @@ if (isset($_GET['export'])) {
         th, td { border: 1px solid #444; padding: 3px; text-align: center; vertical-align: middle; word-wrap: break-word; }
         th { background: #eaeaea; font-weight: 700; }
         td.nama, th.nama { text-align: left; padding-left: 6px; }
+        th.sku-print-th-vertical {
+            width: 24px;
+            min-width: 24px;
+            height: 165px;
+            vertical-align: bottom;
+            padding: 2px 1px;
+        }
+        .sku-print-vtext {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            display: inline-block;
+            max-height: 155px;
+            overflow: hidden;
+            line-height: 1.05;
+            font-size: 9px;
+            text-align: left;
+        }
         .signature-wrap {
             margin-top: 6mm;
             display: flex;
@@ -842,9 +865,8 @@ if (isset($_GET['export'])) {
                 <th style="width:28px;">No</th>
                 <th class="nama" style="width:160px;">Nama Peserta Didik</th>
                 <?php foreach ($sku_butir_rows as $bb): ?>
-                    <th style="font-size:9px;line-height:1.2;">
-                        #<?= (int)$bb['urutan'] ?><br>
-                        <?= htmlspecialchars((string)mb_substr((string)$bb['teks_butir'], 0, 45), ENT_QUOTES, 'UTF-8') ?>
+                    <th class="sku-print-th-vertical">
+                        <span class="sku-print-vtext">#<?= (int)$bb['urutan'] ?> <?= htmlspecialchars((string)$bb['teks_butir'], ENT_QUOTES, 'UTF-8') ?></span>
                     </th>
                 <?php endforeach; ?>
                 <th style="width:64px;">Status</th>
@@ -868,8 +890,12 @@ if (isset($_GET['export'])) {
                             <?php
                                 $bid = (int)$bb['id_butir'];
                                 $on = !empty($checks_map[$pid][$bid]);
+                                $tgl = (string)($tanggal_map[$pid][$bid] ?? '');
                             ?>
-                            <td><?= $on ? '✓' : '—' ?></td>
+                            <td>
+                                <?= $on ? '✓' : '—' ?>
+                                <?php if ($tgl !== ''): ?><br><small><?= htmlspecialchars(date('d-m-Y', strtotime($tgl)), ENT_QUOTES, 'UTF-8') ?></small><?php endif; ?>
+                            </td>
                         <?php endforeach; ?>
                         <td><?= htmlspecialchars($inf['label'], ENT_QUOTES, 'UTF-8') ?></td>
                     </tr>
@@ -1359,6 +1385,24 @@ require_once '../templates/sidebar.php';
 .btn-xxs { font-size:.72rem;line-height:1;padding:2px;}
 tbody .sku-th-nama {
     white-space: nowrap;
+}
+@media (max-width: 991.98px) {
+    /* Mobile: matikan sticky agar tabel mudah digeser & dicentang */
+    .sku-main-table thead.sku-thead-stick {
+        position: static !important;
+    }
+    .sticky-sku,
+    .sku-th-nama,
+    .sticky-sku-r,
+    .sku-main-table thead.sku-thead-stick th.sticky-sku,
+    .sku-main-table thead.sku-thead-stick th.sku-th-nama,
+    .sku-main-table thead.sku-thead-stick th.sticky-sku-r {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        z-index: auto !important;
+        box-shadow: none !important;
+    }
 }
 </style>
 
