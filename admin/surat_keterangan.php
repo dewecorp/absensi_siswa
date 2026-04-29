@@ -16,6 +16,8 @@ if (!isAuthorized(['admin', 'tata_usaha'])) {
 // Ensure kolom kelulusan SKU ada (sumber data surat)
 try {
     $required_cols = [
+        'promoted_from_tingkat_id' => "INT NULL",
+        'promoted_at' => "DATETIME NULL",
         'sku_kecakapan_lulus_at' => "DATETIME NULL",
         'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
     ];
@@ -98,49 +100,42 @@ foreach ($tingkat_list as $t) {
     }
 }
 
-// Sumber data surat per tingkat:
-// - Mula: ambil yang lulus dari Pra Mula + Mula
-// - Bantu/Tata/Garuda: ambil yang lulus dari tingkat itu sendiri
-$source_tingkat_ids = [];
+// Tingkat sebelumnya untuk validasi kenaikan otomatis SKU
+$prev_tingkat_id = 0;
 if ($selected_tingkat_id > 0) {
-    $selected_is_mula = false;
-    foreach ($all_tingkat_list as $t) {
+    $idx_selected = null;
+    foreach ($all_tingkat_list as $idx => $t) {
         if ((int)($t['id_tingkat_barung'] ?? 0) === $selected_tingkat_id) {
-            $selected_is_mula = $isMula((string)($t['nama_tingkat'] ?? ''));
+            $idx_selected = $idx;
             break;
         }
     }
-    if ($selected_is_mula) {
-        foreach ($all_tingkat_list as $t) {
-            $tid = (int)($t['id_tingkat_barung'] ?? 0);
-            $tnm = (string)($t['nama_tingkat'] ?? '');
-            if ($tid > 0 && ($isPraMula($tnm) || $isMula($tnm))) {
-                $source_tingkat_ids[] = $tid;
-            }
-        }
-    } else {
-        $source_tingkat_ids[] = $selected_tingkat_id;
+    if ($idx_selected !== null && $idx_selected > 0) {
+        $prev_tingkat_id = (int)($all_tingkat_list[$idx_selected - 1]['id_tingkat_barung'] ?? 0);
     }
 }
-$source_tingkat_ids = array_values(array_unique(array_filter(array_map('intval', $source_tingkat_ids), static fn($v) => $v > 0)));
 
 // Fetch peserta didik for selected tingkat
 $participants = [];
 if ($selected_tingkat_id > 0) {
     try {
-        if ($source_tingkat_ids !== []) {
-            $placeholders = implode(',', array_fill(0, count($source_tingkat_ids), '?'));
-            $stmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
             SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
             FROM tb_peserta_didik_barung
             WHERE IFNULL(status, 'aktif') = 'aktif'
-              AND id_tingkat_barung IN ($placeholders)
-              AND sku_kecakapan_lulus_at IS NOT NULL
+              AND id_tingkat_barung = ?
+              AND (
+                sku_kecakapan_lulus_at IS NOT NULL
+                OR (
+                    promoted_at IS NOT NULL
+                    AND promoted_from_tingkat_id = ?
+                    AND ? > 0
+                )
+              )
             ORDER BY nama_peserta_didik ASC
         ");
-            $stmt->execute($source_tingkat_ids);
-            $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
+        $stmt->execute([$selected_tingkat_id, $prev_tingkat_id, $prev_tingkat_id]);
+        $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // ignore
     }

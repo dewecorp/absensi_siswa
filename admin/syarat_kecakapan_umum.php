@@ -109,6 +109,25 @@ if (!function_exists('is_current_guru_pembina_pramuka')) {
         return false;
     }
 }
+if (!function_exists('resolve_current_id_guru_for_sku')) {
+    function resolve_current_id_guru_for_sku(PDO $pdo): int
+    {
+        $idGuru = (int)($_SESSION['user_id'] ?? 0);
+        if ($idGuru <= 0) {
+            return 0;
+        }
+        if (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_pengguna') {
+            try {
+                $st = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ? LIMIT 1");
+                $st->execute([$idGuru]);
+                $idGuru = (int)($st->fetchColumn() ?: 0);
+            } catch (Exception $e) {
+                return 0;
+            }
+        }
+        return $idGuru;
+    }
+}
 
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -117,13 +136,31 @@ if (session_status() == PHP_SESSION_NONE) {
 $can_manage_sku = isAuthorized(['admin', 'tata_usaha']);
 $can_view_sku = $can_manage_sku;
 $is_pembina_pramuka_login = false;
+$assigned_tingkat_id = 0;
+$sku_assignment_missing = false;
 if (!$can_view_sku && (isAuthorized(['guru']) || isAuthorized(['wali']))) {
     $is_pembina_pramuka_login = is_current_guru_pembina_pramuka($pdo);
     $can_view_sku = $is_pembina_pramuka_login;
+    if ($can_view_sku) {
+        $idGuruLogin = resolve_current_id_guru_for_sku($pdo);
+        if ($idGuruLogin > 0) {
+            try {
+                $stAssign = $pdo->prepare("SELECT id_tingkat_barung FROM tb_pembina_pramuka WHERE id_guru = ? LIMIT 1");
+                $stAssign->execute([$idGuruLogin]);
+                $assigned_tingkat_id = (int)($stAssign->fetchColumn() ?: 0);
+            } catch (Exception $e) {
+                $assigned_tingkat_id = 0;
+            }
+        }
+        if ($assigned_tingkat_id <= 0) {
+            $sku_assignment_missing = true;
+        }
+    }
 }
 if (!$can_view_sku) {
     redirect('../login.php');
 }
+$can_interact_sku = $can_manage_sku || (!$sku_assignment_missing && $assigned_tingkat_id > 0);
 
 $page_title = 'Syarat Kecakapan Umum';
 
@@ -159,6 +196,14 @@ $ensureSkuSchema = static function () use ($pdo): void {
     $colStmt = $pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE 'sku_kecakapan_lulus_at'");
     if (!$colStmt || !$colStmt->fetch(PDO::FETCH_ASSOC)) {
         $pdo->exec('ALTER TABLE tb_peserta_didik_barung ADD COLUMN sku_kecakapan_lulus_at DATETIME NULL');
+    }
+    $colPromFrom = $pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE 'promoted_from_tingkat_id'");
+    if (!$colPromFrom || !$colPromFrom->fetch(PDO::FETCH_ASSOC)) {
+        $pdo->exec('ALTER TABLE tb_peserta_didik_barung ADD COLUMN promoted_from_tingkat_id INT NULL');
+    }
+    $colPromAt = $pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE 'promoted_at'");
+    if (!$colPromAt || !$colPromAt->fetch(PDO::FETCH_ASSOC)) {
+        $pdo->exec('ALTER TABLE tb_peserta_didik_barung ADD COLUMN promoted_at DATETIME NULL');
     }
 };
 
@@ -233,6 +278,33 @@ function sku_compute_status_cell(PDO $pdo, int $id_peserta, int $id_tingkat): ar
 }
 
 /** Set flag SKU lulus satu peserta. */
+function sku_next_tingkat_id(PDO $pdo, int $id_tingkat): int
+{
+    static $ordered = null;
+    if ($ordered === null) {
+        $ordered = $pdo->query("
+            SELECT id_tingkat_barung
+            FROM tb_tingkat_barung
+            ORDER BY
+                CASE
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('pramula', 'pra-mula') OR LOWER(nama_tingkat) = 'pra mula' THEN 0
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 1
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 2
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 3
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 4
+                    ELSE 99
+                END,
+                nama_tingkat ASC
+        ")->fetchAll(PDO::FETCH_COLUMN, 0);
+    }
+    $ids = array_values(array_map('intval', is_array($ordered) ? $ordered : []));
+    $pos = array_search($id_tingkat, $ids, true);
+    if ($pos === false) {
+        return 0;
+    }
+    return (int)($ids[$pos + 1] ?? 0);
+}
+
 function sku_recompute_single(PDO $pdo, int $id_peserta, int $id_tingkat): void
 {
     $stTot = $pdo->prepare('SELECT COUNT(*) FROM tb_sku_kecakapan_butir WHERE id_tingkat_barung = ?');
@@ -255,6 +327,20 @@ function sku_recompute_single(PDO $pdo, int $id_peserta, int $id_tingkat): void
     if ($done === $total && $done > 0) {
         $pdo->prepare('UPDATE tb_peserta_didik_barung SET sku_kecakapan_lulus_at = NOW() WHERE id_peserta_didik_barung = ? LIMIT 1')
             ->execute([$id_peserta]);
+        $next_tingkat_id = sku_next_tingkat_id($pdo, $id_tingkat);
+        if ($next_tingkat_id > 0) {
+            $pdo->prepare("
+                UPDATE tb_peserta_didik_barung
+                SET id_tingkat_barung = ?,
+                    promoted_from_tingkat_id = ?,
+                    promoted_at = NOW(),
+                    sku_kecakapan_lulus_at = NULL
+                WHERE id_peserta_didik_barung = ?
+                  AND id_tingkat_barung = ?
+                  AND IFNULL(status, 'aktif') = 'aktif'
+                LIMIT 1
+            ")->execute([$next_tingkat_id, $id_tingkat, $id_peserta, $id_tingkat]);
+        }
     } else {
         $pdo->prepare('UPDATE tb_peserta_didik_barung SET sku_kecakapan_lulus_at = NULL WHERE id_peserta_didik_barung = ? LIMIT 1')
             ->execute([$id_peserta]);
@@ -281,6 +367,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
 
     try {
         $ensureSkuSchema();
+        if (!$can_manage_sku && !$can_interact_sku) {
+            echo json_encode(['ok' => false, 'msg' => 'Tingkat ampuan pembina belum diatur.']);
+            exit;
+        }
+        if (!$can_manage_sku && $assigned_tingkat_id > 0 && $id_tingkat !== $assigned_tingkat_id) {
+            echo json_encode(['ok' => false, 'msg' => 'Anda hanya boleh mengisi SKU pada tingkat yang diampu.']);
+            exit;
+        }
         if ($id_tingkat <= 0) {
             echo json_encode(['ok' => false, 'msg' => 'Tingkat tidak valid.']);
             exit;
@@ -321,6 +415,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
                     ->execute([$id_p, $id_b]);
             }
             sku_recompute_single($pdo, $id_p, $id_tingkat);
+            $stPes = $pdo->prepare('SELECT id_tingkat_barung FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung = ? LIMIT 1');
+            $stPes->execute([$id_p]);
+            $new_tingkat_id = (int)($stPes->fetchColumn() ?: 0);
+            $promoted = $new_tingkat_id > 0 && $new_tingkat_id !== $id_tingkat;
             $status = sku_compute_status_cell($pdo, $id_p, $id_tingkat);
             $stDt = $pdo->prepare('SELECT tanggal_ujian FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung = ? AND id_butir = ? LIMIT 1');
             $stDt->execute([$id_p, $id_b]);
@@ -330,6 +428,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
                 'status_label' => $status['label'],
                 'status_ok' => $status['ok'],
                 'tanggal_ujian' => $tgl,
+                'promoted' => $promoted,
+                'new_tingkat_id' => $new_tingkat_id,
             ]);
             exit;
         }
@@ -368,6 +468,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
             $existsSt->execute([$id_p, $id_b]);
             $checkedNow = ((int)$existsSt->fetchColumn()) > 0;
             sku_recompute_single($pdo, $id_p, $id_tingkat);
+            $stPes = $pdo->prepare('SELECT id_tingkat_barung FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung = ? LIMIT 1');
+            $stPes->execute([$id_p]);
+            $new_tingkat_id = (int)($stPes->fetchColumn() ?: 0);
+            $promoted = $new_tingkat_id > 0 && $new_tingkat_id !== $id_tingkat;
             $status = sku_compute_status_cell($pdo, $id_p, $id_tingkat);
             echo json_encode([
                 'ok' => true,
@@ -375,6 +479,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
                 'status_ok' => $status['ok'],
                 'tanggal_ujian' => $tgl,
                 'checked' => $checkedNow,
+                'promoted' => $promoted,
+                'new_tingkat_id' => $new_tingkat_id,
             ]);
             exit;
         }
@@ -575,6 +681,9 @@ try {
 }
 
 $selected_tingkat_id = (int)($_GET['tingkat'] ?? 0);
+if (!$can_manage_sku && $assigned_tingkat_id > 0) {
+    $selected_tingkat_id = $assigned_tingkat_id;
+}
 if ($selected_tingkat_id <= 0 && !empty($tingkat_list)) {
     $selected_tingkat_id = (int)($tingkat_list[0]['id_tingkat_barung'] ?? 0);
 }
@@ -584,6 +693,15 @@ foreach ($tingkat_list as $t) {
     if ((int)($t['id_tingkat_barung'] ?? 0) === $selected_tingkat_id) {
         $selected_tingkat_name = (string)($t['nama_tingkat'] ?? '');
         break;
+    }
+}
+$assigned_tingkat_name = '';
+if ($assigned_tingkat_id > 0) {
+    foreach ($tingkat_list as $t) {
+        if ((int)($t['id_tingkat_barung'] ?? 0) === $assigned_tingkat_id) {
+            $assigned_tingkat_name = (string)($t['nama_tingkat'] ?? '');
+            break;
+        }
     }
 }
 
@@ -950,6 +1068,20 @@ $js_page[] = <<< 'SKUJS'
 $(function(){
   var TID = parseInt($('#skuTingkatId').data('tid'), 10) || 0;
   if (!TID) return;
+  function notifyPromotedAndReload() {
+    if (typeof toastr !== 'undefined' && toastr && typeof toastr.success === 'function') {
+      toastr.success('Siswa lulus SKU dan dipindahkan ke tingkat berikutnya.', 'Naik tingkat otomatis');
+      setTimeout(function(){ window.location.reload(); }, 1200);
+      return;
+    }
+    Swal.fire({
+      icon: 'success',
+      title: 'Naik tingkat otomatis',
+      text: 'Siswa lulus SKU dan dipindahkan ke tingkat berikutnya.',
+      timer: 1200,
+      showConfirmButton: false
+    }).then(function(){ window.location.reload(); });
+  }
   $('.sku-check').on('change', function() {
     var $cb = $(this);
     var fd = new FormData();
@@ -962,6 +1094,10 @@ $(function(){
     $.ajax({ url: window.location.pathname, method: 'POST', data: fd, processData:false, contentType:false, dataType:'json' })
     .done(function(resp){
       if (!resp || !resp.ok){ Swal.fire('Error', (resp && resp.msg) ? resp.msg : 'Gagal menyimpan', 'error'); $cb.prop('checked', !$cb.is(':checked')); return; }
+      if (resp.promoted) {
+        notifyPromotedAndReload();
+        return;
+      }
       var key = '[data-peserta="' + $cb.data('peserta') + '"][data-butir="' + $cb.data('butir') + '"]';
       var $date = $('.sku-date' + key);
       if ($date.length) {
@@ -992,6 +1128,10 @@ $(function(){
     $.ajax({ url: window.location.pathname, method: 'POST', data: fd, processData:false, contentType:false, dataType:'json' })
     .done(function(resp){
       if (!resp || !resp.ok) { Swal.fire('Error', (resp && resp.msg) ? resp.msg : 'Gagal menyimpan tanggal', 'error'); return; }
+      if (resp.promoted) {
+        notifyPromotedAndReload();
+        return;
+      }
       var key = '[data-peserta="' + peserta + '"][data-butir="' + butir + '"]';
       if (resp.checked) $('.sku-check' + key).prop('checked', true);
       $('.sku-status-cell[data-peserta="' + peserta + '"]')
@@ -1127,6 +1267,9 @@ require_once '../templates/sidebar.php';
                     <h4 class="mb-0">
                         SKU Pramuka
                         <?= $selected_tingkat_name !== '' ? '<span class="badge badge-light border text-dark ml-2">' . htmlspecialchars($selected_tingkat_name) . '</span>' : '' ?>
+                        <?php if (!$can_manage_sku && $assigned_tingkat_name !== ''): ?>
+                            <span class="badge badge-info ml-2">Tingkat ampuan Anda: <?= htmlspecialchars($assigned_tingkat_name) ?></span>
+                        <?php endif; ?>
                     </h4>
                     <div class="d-flex flex-wrap gap-2">
                         <?php if ($can_manage_sku): ?>
@@ -1155,12 +1298,28 @@ require_once '../templates/sidebar.php';
                                 <?php
                                     $tid = (int)($t['id_tingkat_barung'] ?? 0);
                                     $active = ($tid === $selected_tingkat_id);
+                                    $is_locked_other = (!$can_manage_sku && $assigned_tingkat_id > 0 && $tid !== $assigned_tingkat_id);
                                 ?>
-                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>">
-                                    <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
-                                </a>
+                                <?php if ($is_locked_other): ?>
+                                    <span class="btn btn-sm btn-outline-secondary disabled" title="Hanya tingkat yang Anda ampu yang dapat diakses">
+                                        <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>">
+                                        <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
+                                    </a>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         </div>
+                        <?php if ($sku_assignment_missing): ?>
+                            <div class="alert alert-warning py-2">
+                                Tingkat ampuan pembina belum diatur. Silakan set kolom <strong>Pembina Tingkat</strong> pada menu <strong>Data Pembina Pramuka</strong>.
+                            </div>
+                        <?php elseif (!$can_manage_sku && $assigned_tingkat_id > 0): ?>
+                            <div class="alert alert-info py-2">
+                                Anda hanya dapat mengisi SKU pada tingkat yang diampu.
+                            </div>
+                        <?php endif; ?>
 
                         <?php if ($selected_tingkat_id > 0): ?>
                             <p class="text-muted small mb-2">
@@ -1235,13 +1394,13 @@ require_once '../templates/sidebar.php';
                                                         ?>
                                                         <td class="text-center sku-col align-middle">
                                                             <label class="mb-0">
-                                                                <input type="checkbox" class="sku-check" data-peserta="<?= $pid ?>" data-butir="<?= $bid ?>" <?= $on ? 'checked' : '' ?> />
+                                                                <input type="checkbox" class="sku-check" data-peserta="<?= $pid ?>" data-butir="<?= $bid ?>" <?= $on ? 'checked' : '' ?> <?= $can_interact_sku ? '' : 'disabled' ?> />
                                                             </label>
                                                             <input type="date"
                                                                    class="form-control form-control-sm mt-1 sku-date"
                                                                    data-peserta="<?= $pid ?>"
                                                                    data-butir="<?= $bid ?>"
-                                                                   value="<?= htmlspecialchars($tgl_ujian, ENT_QUOTES, 'UTF-8') ?>" />
+                                                                   value="<?= htmlspecialchars($tgl_ujian, ENT_QUOTES, 'UTF-8') ?>" <?= $can_interact_sku ? '' : 'disabled' ?> />
                                                         </td>
                                                     <?php endforeach; ?>
                                                     <?php if (empty($sku_butir_rows)): ?>

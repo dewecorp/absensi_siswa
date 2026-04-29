@@ -166,7 +166,7 @@ function barung_kelas_nomor_for_slug(?string $slug): array
 {
     switch ($slug) {
         case 'pra_mula':
-            return [1];
+            return [1, 2];
         case 'mula':
             return [2, 3, 4];
         case 'bantu':
@@ -1054,7 +1054,7 @@ $barung_modal_tabs_kelas = count($available_siswa_by_kelas) > 1;
 $barung_kelas_hint = '';
 switch ($barung_tingkat_slug) {
     case 'pra_mula':
-        $barung_kelas_hint = 'Kelas 1';
+        $barung_kelas_hint = 'Kelas 1–2';
         break;
     case 'mula':
         $barung_kelas_hint = 'Kelas 2–4';

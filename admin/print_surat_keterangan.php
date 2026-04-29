@@ -16,6 +16,8 @@ if (!isAuthorized(['admin', 'tata_usaha'])) {
 // Ensure kolom kelulusan SKU ada (untuk validasi cetak)
 try {
     $required_cols = [
+        'promoted_from_tingkat_id' => "INT NULL",
+        'promoted_at' => "DATETIME NULL",
         'sku_kecakapan_lulus_at' => "DATETIME NULL",
         'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
     ];
@@ -146,51 +148,31 @@ if ($mode === 'all' || $mode === 'data') {
                 nama_tingkat ASC
         ")->fetchAll(PDO::FETCH_ASSOC);
 
-        $isPraMula = static function (string $name): bool {
-            $n = strtolower(trim($name));
-            $k = strtolower(str_replace(' ', '', $n));
-            return $n === 'pra mula' || $k === 'pramula' || $k === 'pra-mula';
-        };
-        $isMula = static function (string $name): bool {
-            $n = strtolower(trim($name));
-            $k = strtolower(str_replace(' ', '', $n));
-            return $n === 'mula' || $k === 'mula';
-        };
-
-        $source_tingkat_ids = [];
-        $selected_is_mula = false;
-        foreach ($ordered_tingkat as $t) {
-            if ((int)($t['id_tingkat_barung'] ?? 0) === $tingkat_id) {
-                $selected_is_mula = $isMula((string)($t['nama_tingkat'] ?? ''));
+        $prev_tingkat_id = 0;
+        foreach ($ordered_tingkat as $idx => $t) {
+            if ((int)($t['id_tingkat_barung'] ?? 0) === $tingkat_id && $idx > 0) {
+                $prev_tingkat_id = (int)($ordered_tingkat[$idx - 1]['id_tingkat_barung'] ?? 0);
                 break;
             }
         }
-        if ($selected_is_mula) {
-            foreach ($ordered_tingkat as $t) {
-                $tid = (int)($t['id_tingkat_barung'] ?? 0);
-                $tnm = (string)($t['nama_tingkat'] ?? '');
-                if ($tid > 0 && ($isPraMula($tnm) || $isMula($tnm))) {
-                    $source_tingkat_ids[] = $tid;
-                }
-            }
-        } else {
-            $source_tingkat_ids[] = $tingkat_id;
-        }
-        $source_tingkat_ids = array_values(array_unique(array_filter(array_map('intval', $source_tingkat_ids), static fn($v) => $v > 0)));
 
-        if ($source_tingkat_ids !== []) {
-            $placeholders = implode(',', array_fill(0, count($source_tingkat_ids), '?'));
-            $stmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
             SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
             FROM tb_peserta_didik_barung
             WHERE IFNULL(status, 'aktif') = 'aktif'
-              AND id_tingkat_barung IN ($placeholders)
-              AND sku_kecakapan_lulus_at IS NOT NULL
+              AND id_tingkat_barung = ?
+              AND (
+                sku_kecakapan_lulus_at IS NOT NULL
+                OR (
+                    promoted_at IS NOT NULL
+                    AND promoted_from_tingkat_id = ?
+                    AND ? > 0
+                )
+              )
             ORDER BY nama_peserta_didik ASC
         ");
-            $stmt->execute($source_tingkat_ids);
-            $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
+        $stmt->execute([$tingkat_id, $prev_tingkat_id, $prev_tingkat_id]);
+        $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } else {
     $id = (int)($_GET['id'] ?? 0);
@@ -198,7 +180,7 @@ if ($mode === 'all' || $mode === 'data') {
     if ($id > 0 && $requested_tingkat_id > 0) {
         $stmt = $pdo->prepare("
             SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta, p.tempat_lahir, p.tanggal_lahir,
-                   p.sku_kecakapan_lulus_at, t.nama_tingkat
+                   p.sku_kecakapan_lulus_at, p.promoted_at, p.promoted_from_tingkat_id, t.nama_tingkat
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
             WHERE p.id_peserta_didik_barung = ?
@@ -221,40 +203,20 @@ if ($mode === 'all' || $mode === 'data') {
                     END,
                     nama_tingkat ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
-            $isPraMula = static function (string $name): bool {
-                $n = strtolower(trim($name));
-                $k = strtolower(str_replace(' ', '', $n));
-                return $n === 'pra mula' || $k === 'pramula' || $k === 'pra-mula';
-            };
-            $isMula = static function (string $name): bool {
-                $n = strtolower(trim($name));
-                $k = strtolower(str_replace(' ', '', $n));
-                return $n === 'mula' || $k === 'mula';
-            };
-            $source_for_target = [];
-            $target_is_mula = false;
-            foreach ($ordered_surat as $otr) {
-                if ((int)($otr['id_tingkat_barung'] ?? 0) === $requested_tingkat_id) {
-                    $target_is_mula = $isMula((string)($otr['nama_tingkat'] ?? ''));
+            $prev_for_target = 0;
+            foreach ($ordered_surat as $ix => $otr) {
+                if ((int)($otr['id_tingkat_barung'] ?? 0) === $requested_tingkat_id && $ix > 0) {
+                    $prev_for_target = (int)($ordered_surat[$ix - 1]['id_tingkat_barung'] ?? 0);
                     break;
                 }
             }
-            if ($target_is_mula) {
-                foreach ($ordered_surat as $otr) {
-                    $tid = (int)($otr['id_tingkat_barung'] ?? 0);
-                    $tnm = (string)($otr['nama_tingkat'] ?? '');
-                    if ($tid > 0 && ($isPraMula($tnm) || $isMula($tnm))) {
-                        $source_for_target[] = $tid;
-                    }
-                }
-            } else {
-                $source_for_target[] = $requested_tingkat_id;
-            }
-            $source_for_target = array_values(array_unique(array_filter(array_map('intval', $source_for_target), static fn($v) => $v > 0)));
             $tid_row = (int)($row['id_tingkat_barung'] ?? 0);
-            $ok_lulus_prev_for_target = in_array($tid_row, $source_for_target, true)
-                && !empty($row['sku_kecakapan_lulus_at'])
-                && $source_for_target !== [];
+            $ok_target_lulus = $tid_row === $requested_tingkat_id && !empty($row['sku_kecakapan_lulus_at']);
+            $ok_target_promoted = $tid_row === $requested_tingkat_id
+                && !empty($row['promoted_at'])
+                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $prev_for_target
+                && $prev_for_target > 0;
+            $ok_lulus_prev_for_target = $ok_target_lulus || $ok_target_promoted;
             if (!$ok_lulus_prev_for_target) {
                 $row = null;
             }
@@ -269,22 +231,31 @@ if ($mode === 'all' || $mode === 'data') {
         }
         if ($row) {
             // Nomor urut di antara peserta yang berhak surat pada tingkat yang sama
-            $placeholdersSeq = implode(',', array_fill(0, count($source_for_target), '?'));
             $seq_stmt = $pdo->prepare("
                 SELECT COUNT(*) + 1 AS nomor_urut FROM tb_peserta_didik_barung px
                 WHERE IFNULL(px.status,'aktif')='aktif'
-                  AND px.id_tingkat_barung IN ($placeholdersSeq)
-                  AND px.sku_kecakapan_lulus_at IS NOT NULL
+                  AND px.id_tingkat_barung = ?
+                  AND (
+                    px.sku_kecakapan_lulus_at IS NOT NULL
+                    OR (
+                        px.promoted_at IS NOT NULL
+                        AND px.promoted_from_tingkat_id = ?
+                        AND ? > 0
+                    )
+                  )
                   AND (
                     px.nama_peserta_didik < ?
                     OR (px.nama_peserta_didik = ? AND px.id_peserta_didik_barung < ?)
                   )
             ");
-            $seqParams = array_merge($source_for_target, [
+            $seqParams = [
+                $requested_tingkat_id,
+                $prev_for_target,
+                $prev_for_target,
                 (string)$row['nama_peserta_didik'],
                 (string)$row['nama_peserta_didik'],
                 (int)$row['id_peserta_didik_barung']
-            ]);
+            ];
             $seq_stmt->execute($seqParams);
             $seq_row = $seq_stmt->fetch(PDO::FETCH_ASSOC);
             $row['nomor_urut'] = str_pad((string)($seq_row['nomor_urut'] ?? 1), 3, '0', STR_PAD_LEFT);

@@ -39,6 +39,7 @@ try {
                 id_guru INT NULL,
                 nama_pembina VARCHAR(100) NOT NULL,
                 jabatan VARCHAR(100) NOT NULL,
+                id_tingkat_barung INT NULL,
                 UNIQUE KEY uniq_id_guru (id_guru)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
@@ -48,6 +49,7 @@ try {
             'id_guru' => "INT NULL",
             'nama_pembina' => "VARCHAR(100) NOT NULL",
             'jabatan' => "VARCHAR(100) NOT NULL",
+            'id_tingkat_barung' => "INT NULL",
         ];
         foreach ($required_cols as $col => $typeDef) {
             $colStmt = $pdo->query("SHOW COLUMNS FROM {$table_name} LIKE '" . addslashes($col) . "'");
@@ -81,6 +83,25 @@ $jabatan_options = [
     'Pembina Gudep' => 'Pembina Gudep',
     'Pembina Satuan' => 'Pembina Satuan',
 ];
+$tingkat_options = [];
+try {
+    $tingkat_options = $pdo->query("
+        SELECT id_tingkat_barung, nama_tingkat
+        FROM tb_tingkat_barung
+        ORDER BY
+            CASE
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('pramula', 'pra-mula') OR LOWER(nama_tingkat) = 'pra mula' THEN 0
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 1
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 2
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 3
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 4
+                ELSE 99
+            END,
+            nama_tingkat ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $tingkat_options = [];
+}
 
 // --- CRUD handling ---
 $message = null;
@@ -93,9 +114,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_pembina_pramuka'])) {
         $id_guru = (int)($_POST['id_guru'] ?? 0);
         $jabatan = sanitizeInput($_POST['jabatan'] ?? '');
+        $id_tingkat_barung = (int)($_POST['id_tingkat_barung'] ?? 0);
 
-        if ($id_guru <= 0 || $jabatan === '') {
-            $message = ['type' => 'warning', 'text' => 'Harap pilih guru pembina dan jabatan.'];
+        if ($id_guru <= 0 || $jabatan === '' || $id_tingkat_barung <= 0) {
+            $message = ['type' => 'warning', 'text' => 'Harap pilih guru pembina, jabatan, dan pembina tingkat.'];
         } elseif (!isset($jabatan_options[$jabatan])) {
             $message = ['type' => 'warning', 'text' => 'Pilihan jabatan tidak valid.'];
         } else {
@@ -111,11 +133,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ((int)$dup->fetchColumn() > 0) {
                         $message = ['type' => 'warning', 'text' => 'Guru tersebut sudah terdaftar sebagai pembina Pramuka.'];
                     } else {
-                        $stmt = $pdo->prepare("INSERT INTO {$table_name} (id_guru, nama_pembina, jabatan) VALUES (?, ?, ?)");
-                        $ok = $stmt->execute([$id_guru, $nama_guru, $jabatan]);
+                        $stmt = $pdo->prepare("INSERT INTO {$table_name} (id_guru, nama_pembina, jabatan, id_tingkat_barung) VALUES (?, ?, ?, ?)");
+                        $ok = $stmt->execute([$id_guru, $nama_guru, $jabatan, $id_tingkat_barung]);
                         if ($ok) {
                             $username = $_SESSION['username'] ?? 'system';
-                            logActivity($pdo, $username, 'Tambah Pembina Pramuka', "{$nama_guru} - {$jabatan}");
+                            logActivity($pdo, $username, 'Tambah Pembina Pramuka', "{$nama_guru} - {$jabatan} (tingkat ID {$id_tingkat_barung})");
                             $message = ['type' => 'success', 'text' => 'Data pembina pramuka berhasil ditambahkan!'];
                         } else {
                             $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data pembina pramuka.'];
@@ -133,9 +155,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id_pembina_pramuka'] ?? 0);
         $id_guru = (int)($_POST['id_guru'] ?? 0);
         $jabatan = sanitizeInput($_POST['jabatan'] ?? '');
+        $id_tingkat_barung = (int)($_POST['id_tingkat_barung'] ?? 0);
 
-        if ($id <= 0 || $id_guru <= 0 || $jabatan === '') {
-            $message = ['type' => 'warning', 'text' => 'Harap pilih guru pembina dan jabatan.'];
+        if ($id <= 0 || $id_guru <= 0 || $jabatan === '' || $id_tingkat_barung <= 0) {
+            $message = ['type' => 'warning', 'text' => 'Harap pilih guru pembina, jabatan, dan pembina tingkat.'];
         } elseif (!isset($jabatan_options[$jabatan])) {
             $message = ['type' => 'warning', 'text' => 'Pilihan jabatan tidak valid.'];
         } else {
@@ -151,11 +174,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ((int)$dup->fetchColumn() > 0) {
                         $message = ['type' => 'warning', 'text' => 'Guru tersebut sudah terdaftar sebagai pembina Pramuka lain.'];
                     } else {
-                        $stmt = $pdo->prepare("UPDATE {$table_name} SET id_guru = ?, nama_pembina = ?, jabatan = ? WHERE id_pembina_pramuka = ?");
-                        $ok = $stmt->execute([$id_guru, $nama_guru, $jabatan, $id]);
+                        $stmt = $pdo->prepare("UPDATE {$table_name} SET id_guru = ?, nama_pembina = ?, jabatan = ?, id_tingkat_barung = ? WHERE id_pembina_pramuka = ?");
+                        $ok = $stmt->execute([$id_guru, $nama_guru, $jabatan, $id_tingkat_barung, $id]);
                         if ($ok) {
                             $username = $_SESSION['username'] ?? 'system';
-                            logActivity($pdo, $username, 'Update Pembina Pramuka', "ID {$id}: {$nama_guru} - {$jabatan}");
+                            logActivity($pdo, $username, 'Update Pembina Pramuka', "ID {$id}: {$nama_guru} - {$jabatan} (tingkat ID {$id_tingkat_barung})");
                             $message = ['type' => 'success', 'text' => 'Data pembina pramuka berhasil diperbarui!'];
                         } else {
                             $message = ['type' => 'danger', 'text' => 'Gagal memperbarui data.'];
@@ -216,9 +239,10 @@ $rows = [];
 $fetch_error = null;
 try {
     $stmt = $pdo->query("
-        SELECT p.id_pembina_pramuka, p.id_guru, p.nama_pembina, p.jabatan, g.nama_guru
+        SELECT p.id_pembina_pramuka, p.id_guru, p.nama_pembina, p.jabatan, p.id_tingkat_barung, g.nama_guru, t.nama_tingkat
         FROM {$table_name} p
         LEFT JOIN tb_guru g ON g.id_guru = p.id_guru
+        LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
         ORDER BY COALESCE(g.nama_guru, p.nama_pembina) ASC
     ");
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -253,11 +277,14 @@ if ($message) {
 
 $js_page[] = <<<'JS_BLOCK'
 $(document).ready(function() {
+    var canManage = $('#canManagePembinaPramuka').val() === 'true';
+    var columnDefs = [];
+    if (canManage) {
+        columnDefs.push({ 'sortable': false, 'targets': [4] });
+    }
     var table = $('#table-1').DataTable({
         'order': [[1, 'asc']],
-        'columnDefs': [
-            { 'sortable': false, 'targets': [3] }
-        ],
+        'columnDefs': columnDefs,
         'language': {
             'lengthMenu': 'Tampilkan _MENU_ entri',
             'zeroRecords': 'Tidak ada data yang ditemukan',
@@ -289,6 +316,7 @@ $(document).ready(function() {
             $('#edit_id_guru').val(String(idGuru));
         }
         $('#edit_jabatan').val($(this).data('jabatan') || '');
+        $('#edit_id_tingkat_barung').val(String($(this).data('id-tingkat') || ''));
         $('#editModal').modal('show');
     });
 
@@ -320,6 +348,7 @@ $(document).ready(function() {
 });
 
 function exportToExcel() {
+    var canManage = $('#canManagePembinaPramuka').val() === 'true';
     var table = document.getElementById('table-1');
     if (!table) return;
     
@@ -329,11 +358,11 @@ function exportToExcel() {
     // Clone table to remove actions column
     var newTable = table.cloneNode(true);
     var rows = newTable.rows;
-    <?php if ($can_manage_pembina_pramuka): ?>
-    for (var i = 0; i < rows.length; i++) {
-        rows[i].deleteCell(-1); // Remove last column (Aksi)
+    if (canManage) {
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].deleteCell(-1); // Remove last column (Aksi)
+        }
     }
-    <?php endif; ?>
     
     if (typeof XLSX !== 'undefined') {
         var wb = XLSX.utils.book_new();
@@ -359,6 +388,7 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
+    var canManage = $('#canManagePembinaPramuka').val() === 'true';
     var table = document.getElementById('table-1');
     if (!table) return;
     
@@ -407,11 +437,11 @@ function exportToPDF() {
     // Clone and clean up table
     var cleanTable = table.cloneNode(true);
     var rows = cleanTable.rows;
-    <?php if ($can_manage_pembina_pramuka): ?>
-    for (var i = 0; i < rows.length; i++) {
-        rows[i].deleteCell(-1); // Remove action column
+    if (canManage) {
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].deleteCell(-1); // Remove action column
+        }
     }
-    <?php endif; ?>
     
     printWindow.document.write(cleanTable.outerHTML);
     
@@ -469,6 +499,7 @@ include '../templates/sidebar.php';
                 </div>
 
                 <div class="card-body">
+                    <input type="hidden" id="canManagePembinaPramuka" value="<?= $can_manage_pembina_pramuka ? 'true' : 'false' ?>">
                     <input type="hidden" id="schoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH') ?>">
                     <input type="hidden" id="schoolLogo" value="<?= !empty($school_profile['logo']) ? '../assets/img/' . $school_profile['logo'] : '' ?>">
                     <input type="hidden" id="academicYear" value="<?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?>">
@@ -491,6 +522,7 @@ include '../templates/sidebar.php';
                                     <th class="text-center" width="6%">No</th>
                                     <th>Nama Pembina</th>
                                     <th>Jabatan</th>
+                                    <th>Pembina Tingkat</th>
                                     <?php if ($can_manage_pembina_pramuka): ?><th width="15%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
@@ -506,10 +538,12 @@ include '../templates/sidebar.php';
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
                                             <td><?= htmlspecialchars($nama_tampil) ?></td>
                                             <td><?= htmlspecialchars($row['jabatan'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($row['nama_tingkat'] ?? '-') ?></td>
                                             <?php if ($can_manage_pembina_pramuka): ?><td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)($row['id_pembina_pramuka'] ?? 0) ?>"
                                                     data-id-guru="<?= (int)($row['id_guru'] ?? 0) ?>"
+                                                    data-id-tingkat="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
                                                     data-nama="<?= htmlspecialchars($nama_tampil, ENT_QUOTES) ?>"
                                                     data-jabatan="<?= htmlspecialchars($row['jabatan'] ?? '', ENT_QUOTES) ?>"
                                                     type="button">
@@ -525,7 +559,7 @@ include '../templates/sidebar.php';
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="<?= $can_manage_pembina_pramuka ? '4' : '3' ?>" class="text-center text-muted">Tidak ada data.</td></tr>
+                                    <tr><td colspan="<?= $can_manage_pembina_pramuka ? '5' : '4' ?>" class="text-center text-muted">Tidak ada data.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -571,6 +605,15 @@ include '../templates/sidebar.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Pembina Tingkat</label>
+                        <select name="id_tingkat_barung" class="form-control" required>
+                            <option value="">-- Pilih Tingkat Pramuka --</option>
+                            <?php foreach ($tingkat_options as $t): ?>
+                                <option value="<?= (int)($t['id_tingkat_barung'] ?? 0) ?>"><?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -611,6 +654,15 @@ include '../templates/sidebar.php';
                             <option value="">-- Pilih Jabatan --</option>
                             <?php foreach ($jabatan_select_opts as $val => $label): ?>
                                 <option value="<?= htmlspecialchars($val) ?>"><?= htmlspecialchars($label) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pembina Tingkat</label>
+                        <select name="id_tingkat_barung" id="edit_id_tingkat_barung" class="form-control" required>
+                            <option value="">-- Pilih Tingkat Pramuka --</option>
+                            <?php foreach ($tingkat_options as $t): ?>
+                                <option value="<?= (int)($t['id_tingkat_barung'] ?? 0) ?>"><?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
