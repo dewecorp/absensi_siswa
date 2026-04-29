@@ -170,7 +170,7 @@ function barung_kelas_nomor_for_slug(?string $slug): array
         case 'mula':
             return [2, 3, 4];
         case 'bantu':
-            return [5, 6];
+            return [2, 3, 4, 5, 6];
         case 'tata':
             return [4, 5, 6];
         case 'garuda':
@@ -541,8 +541,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
                         (id_tingkat_barung, id_siswa, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, status, tanggal_masuk, tanggal_keluar)
                     VALUES (?, ?, ?, ?, ?, ?, \'aktif\', NOW(), NULL)
                 ');
+                $chkOtherActive = $pdo->prepare('
+                    SELECT t.nama_tingkat
+                    FROM tb_peserta_didik_barung p
+                    LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
+                    WHERE IFNULL(p.status, \'aktif\') = \'aktif\'
+                      AND p.id_tingkat_barung <> ?
+                      AND p.id_siswa = ?
+                    LIMIT 1
+                ');
                 $pdo->beginTransaction();
                 $added = 0;
+                $blocked_other_tingkat = 0;
                 foreach ($picked as $sid) {
                     $stmt_siswa->execute([$sid]);
                     $row = $stmt_siswa->fetch(PDO::FETCH_ASSOC);
@@ -560,6 +570,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
                         continue;
                     }
                     $id_s_insert = ensureInt($row['id_siswa'] ?? 0);
+                    if ($id_s_insert > 0) {
+                        $chkOtherActive->execute([$id_tingkat, $id_s_insert]);
+                        if ($chkOtherActive->fetchColumn()) {
+                            $blocked_other_tingkat++;
+                            continue;
+                        }
+                    }
                     $nisn_tr = trim((string)($row['nisn'] ?? ''));
                     $chkDup = $pdo->prepare('
                         SELECT 1 FROM tb_peserta_didik_barung
@@ -597,7 +614,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
 
                 $username = $_SESSION['username'] ?? 'system';
                 logActivity($pdo, $username, 'Tambah Peserta Didik Barung (Kolektif)', "Tingkat ID {$id_tingkat}: ditambahkan {$added} dari data siswa");
-                $message = ['type' => 'success', 'text' => "Berhasil menambahkan {$added} peserta dari data siswa."];
+                if ($blocked_other_tingkat > 0) {
+                    $message = ['type' => 'warning', 'text' => "Berhasil menambahkan {$added} peserta. {$blocked_other_tingkat} siswa dilewati karena masih aktif di tingkat pramuka lain."];
+                } else {
+                    $message = ['type' => 'success', 'text' => "Berhasil menambahkan {$added} peserta dari data siswa."];
+                }
                 $selected_tingkat_id = $id_tingkat;
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) {
@@ -930,17 +951,78 @@ CASE
 END AS sudah_terdaftar
 SQL_TD_NO_ID;
 
+        $caseTingkatLain = $pdd_has_id_siswa ? <<<'SQL_OTH_WITH_ID'
+CASE
+    WHEN EXISTS (
+        SELECT 1 FROM tb_peserta_didik_barung p2
+        WHERE IFNULL(p2.status, 'aktif') = 'aktif'
+          AND p2.id_tingkat_barung <> ?
+          AND (
+            (p2.id_siswa IS NOT NULL AND p2.id_siswa = s.id_siswa)
+            OR (p2.id_siswa IS NULL AND TRIM(IFNULL(p2.nta, '')) <> ''
+                AND NULLIF(TRIM(s.nisn), '') IS NOT NULL
+                AND CONVERT(TRIM(p2.nta) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                    = CONVERT(TRIM(s.nisn) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
+          )
+    ) THEN 1
+    ELSE 0
+END AS sudah_di_tingkat_lain,
+(
+    SELECT COALESCE(NULLIF(TRIM(t2.nama_tingkat), ''), '-')
+    FROM tb_peserta_didik_barung p2
+    LEFT JOIN tb_tingkat_barung t2 ON t2.id_tingkat_barung = p2.id_tingkat_barung
+    WHERE IFNULL(p2.status, 'aktif') = 'aktif'
+      AND p2.id_tingkat_barung <> ?
+      AND (
+        (p2.id_siswa IS NOT NULL AND p2.id_siswa = s.id_siswa)
+        OR (p2.id_siswa IS NULL AND TRIM(IFNULL(p2.nta, '')) <> ''
+            AND NULLIF(TRIM(s.nisn), '') IS NOT NULL
+            AND CONVERT(TRIM(p2.nta) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                = CONVERT(TRIM(s.nisn) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
+      )
+    ORDER BY p2.id_peserta_didik_barung DESC
+    LIMIT 1
+) AS tingkat_aktif_lain
+SQL_OTH_WITH_ID
+            : <<<'SQL_OTH_NO_ID'
+CASE
+    WHEN EXISTS (
+        SELECT 1 FROM tb_peserta_didik_barung p2
+        WHERE IFNULL(p2.status, 'aktif') = 'aktif'
+          AND p2.id_tingkat_barung <> ?
+          AND TRIM(IFNULL(p2.nta, '')) <> ''
+          AND NULLIF(TRIM(s.nisn), '') IS NOT NULL
+          AND CONVERT(TRIM(p2.nta) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+              = CONVERT(TRIM(s.nisn) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+    ) THEN 1
+    ELSE 0
+END AS sudah_di_tingkat_lain,
+(
+    SELECT COALESCE(NULLIF(TRIM(t2.nama_tingkat), ''), '-')
+    FROM tb_peserta_didik_barung p2
+    LEFT JOIN tb_tingkat_barung t2 ON t2.id_tingkat_barung = p2.id_tingkat_barung
+    WHERE IFNULL(p2.status, 'aktif') = 'aktif'
+      AND p2.id_tingkat_barung <> ?
+      AND TRIM(IFNULL(p2.nta, '')) <> ''
+      AND NULLIF(TRIM(s.nisn), '') IS NOT NULL
+      AND CONVERT(TRIM(p2.nta) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+          = CONVERT(TRIM(s.nisn) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+    ORDER BY p2.id_peserta_didik_barung DESC
+    LIMIT 1
+) AS tingkat_aktif_lain
+SQL_OTH_NO_ID;
+
         if (!empty($id_kelas_allow)) {
             $placeholders = implode(',', array_fill(0, count($id_kelas_allow), '?'));
             $sql_avail =
                 'SELECT s.id_siswa, s.nisn, s.nama_siswa,' .
                 " COALESCE(NULLIF(TRIM(k.nama_kelas), ''), CONCAT('#id ', CAST(s.id_kelas AS CHAR))) AS nama_kelas," .
-                trim($caseSudahTd) .
+                trim($caseSudahTd) . ',' . trim($caseTingkatLain) .
                 ' FROM tb_siswa s' .
                 ' LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas' .
                 ' WHERE s.id_kelas IN (' . $placeholders . ')' .
                 ' ORDER BY nama_kelas ASC, s.nama_siswa ASC';
-            $params_avail = array_merge([$selected_tingkat_id], $id_kelas_allow);
+            $params_avail = array_merge([$selected_tingkat_id, $selected_tingkat_id, $selected_tingkat_id], $id_kelas_allow);
             $st_avail = $pdo->prepare($sql_avail);
             $st_avail->execute($params_avail);
             $available_siswa_barung = $st_avail->fetchAll(PDO::FETCH_ASSOC);
@@ -955,7 +1037,9 @@ SQL_TD_NO_ID;
 $available_siswa_by_kelas = [];
 $available_siswa_selectable_count = 0;
 foreach ($available_siswa_barung as $rowSb) {
-    if ((int)($rowSb['sudah_terdaftar'] ?? 0) !== 1) {
+    $is_di_tingkat_ini = (int)($rowSb['sudah_terdaftar'] ?? 0) === 1;
+    $is_di_tingkat_lain = (int)($rowSb['sudah_di_tingkat_lain'] ?? 0) === 1;
+    if (!$is_di_tingkat_ini && !$is_di_tingkat_lain) {
         $available_siswa_selectable_count++;
     }
     $nk = (string)($rowSb['nama_kelas'] ?? '-');
@@ -976,7 +1060,7 @@ switch ($barung_tingkat_slug) {
         $barung_kelas_hint = 'Kelas 2–4';
         break;
     case 'bantu':
-        $barung_kelas_hint = 'Kelas 5–6';
+        $barung_kelas_hint = 'Kelas 2–6';
         break;
     case 'tata':
         $barung_kelas_hint = 'Kelas 4–6';
@@ -1642,10 +1726,15 @@ include '../templates/sidebar.php';
                                                     </thead>
                                                     <tbody>
                                                         <?php foreach ($rows_tab as $s): ?>
-                                                            <?php $sudah_terdaftar = (int)($s['sudah_terdaftar'] ?? 0) === 1; ?>
+                                                            <?php
+                                                            $sudah_terdaftar = (int)($s['sudah_terdaftar'] ?? 0) === 1;
+                                                            $terdaftar_lain = (int)($s['sudah_di_tingkat_lain'] ?? 0) === 1;
+                                                            $label_tingkat_lain = trim((string)($s['tingkat_aktif_lain'] ?? ''));
+                                                            $is_disabled_pick = $sudah_terdaftar || $terdaftar_lain;
+                                                            ?>
                                                             <tr>
                                                                 <td class="text-center">
-                                                                    <?php if ($sudah_terdaftar): ?>
+                                                                    <?php if ($is_disabled_pick): ?>
                                                                         <input type="checkbox" disabled>
                                                                     <?php else: ?>
                                                                         <input type="checkbox" class="check-siswa-barung" name="selected_siswa[]" value="<?= (int)$s['id_siswa'] ?>">
@@ -1656,6 +1745,8 @@ include '../templates/sidebar.php';
                                                                     <?= htmlspecialchars($s['nama_siswa'] ?? '') ?>
                                                                     <?php if ($sudah_terdaftar): ?>
                                                                         <span class="badge badge-secondary ml-1">sudah terdaftar</span>
+                                                                    <?php elseif ($terdaftar_lain): ?>
+                                                                        <span class="badge badge-warning ml-1">aktif di tingkat <?= htmlspecialchars($label_tingkat_lain !== '' ? $label_tingkat_lain : 'lain') ?></span>
                                                                     <?php endif; ?>
                                                                 </td>
                                                             </tr>
@@ -1682,10 +1773,15 @@ include '../templates/sidebar.php';
                                         </thead>
                                         <tbody>
                                             <?php foreach ($available_siswa_barung as $s): ?>
-                                                <?php $sudah_terdaftar = (int)($s['sudah_terdaftar'] ?? 0) === 1; ?>
+                                                <?php
+                                                $sudah_terdaftar = (int)($s['sudah_terdaftar'] ?? 0) === 1;
+                                                $terdaftar_lain = (int)($s['sudah_di_tingkat_lain'] ?? 0) === 1;
+                                                $label_tingkat_lain = trim((string)($s['tingkat_aktif_lain'] ?? ''));
+                                                $is_disabled_pick = $sudah_terdaftar || $terdaftar_lain;
+                                                ?>
                                                 <tr>
                                                     <td class="text-center">
-                                                        <?php if ($sudah_terdaftar): ?>
+                                                        <?php if ($is_disabled_pick): ?>
                                                             <input type="checkbox" disabled>
                                                         <?php else: ?>
                                                             <input type="checkbox" class="check-siswa-barung" name="selected_siswa[]" value="<?= (int)$s['id_siswa'] ?>">
@@ -1697,6 +1793,8 @@ include '../templates/sidebar.php';
                                                         <?= htmlspecialchars($s['nama_siswa'] ?? '') ?>
                                                         <?php if ($sudah_terdaftar): ?>
                                                             <span class="badge badge-secondary ml-1">sudah terdaftar</span>
+                                                        <?php elseif ($terdaftar_lain): ?>
+                                                            <span class="badge badge-warning ml-1">aktif di tingkat <?= htmlspecialchars($label_tingkat_lain !== '' ? $label_tingkat_lain : 'lain') ?></span>
                                                         <?php endif; ?>
                                                     </td>
                                                 </tr>
@@ -1710,7 +1808,7 @@ include '../templates/sidebar.php';
                                 <?php if (!empty($barung_avail_kelas_tidak_terpetakan)): ?>
                                     <strong>Belum ada kelas yang dikenali sebagai bagian tingkat ini.</strong> Nama kelas di master harus bisa dipetakan ke kelas 1–6 (biasanya «I», «II», … «VI», atau angka «1», «2», … atau <code>id_kelas</code> bernilai 1–6 untuk kelas 1–6). Perbarui nama kelas di menu Kelas atau pastikan siswa sudah ada di kelas yang sesuai.
                                 <?php else: ?>
-                                    Tidak ada siswa baru yang dapat ditambahkan pada rentang kelas ini (semua siswa kelas tersebut sudah terdaftar di tingkat ini, atau tidak ada siswa pada kelas-kelas itu di Data Siswa).
+                                    Tidak ada siswa baru yang dapat ditambahkan pada rentang kelas ini (semua siswa kelas tersebut sudah terdaftar di tingkat ini/tingkat lain, atau tidak ada siswa pada kelas-kelas itu di Data Siswa).
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
