@@ -13,11 +13,9 @@ if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
-// Ensure kolom penanda kenaikan ada (untuk filter data surat)
+// Ensure kolom kelulusan SKU ada (sumber data surat)
 try {
     $required_cols = [
-        'promoted_from_tingkat_id' => "INT NULL",
-        'promoted_at' => "DATETIME NULL",
         'sku_kecakapan_lulus_at' => "DATETIME NULL",
         'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
     ];
@@ -117,18 +115,12 @@ if ($selected_tingkat_id > 0) {
         $stmt = $pdo->prepare("
             SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
             FROM tb_peserta_didik_barung
-            WHERE id_tingkat_barung = ?
-              AND IFNULL(status, 'aktif') = 'aktif'
-              AND (
-                sku_kecakapan_lulus_at IS NOT NULL
-                OR (
-                  promoted_at IS NOT NULL
-                  AND promoted_from_tingkat_id = ?
-                )
-              )
+            WHERE IFNULL(status, 'aktif') = 'aktif'
+              AND id_tingkat_barung = ?
+              AND sku_kecakapan_lulus_at IS NOT NULL
             ORDER BY nama_peserta_didik ASC
         ");
-        $stmt->execute([$selected_tingkat_id, $prev_tingkat_id]);
+        $stmt->execute([$prev_tingkat_id]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // ignore
@@ -145,7 +137,8 @@ function printSingleLetter(id, nama, nta) {
     Swal.fire('Error', 'ID peserta didik tidak valid.', 'error');
     return;
   }
-  const url = `print_surat_keterangan.php?mode=single&id=${encodeURIComponent(id)}&auto=1`;
+  const tingkat = ($('#selectedTingkatId').val() || '').toString();
+  const url = `print_surat_keterangan.php?mode=single&id=${encodeURIComponent(id)}&tingkat=${encodeURIComponent(tingkat)}&auto=1`;
   const w = window.open(url, '_blank');
   if (w) {
     w.opener = null;

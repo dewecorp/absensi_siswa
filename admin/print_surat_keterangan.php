@@ -13,11 +13,9 @@ if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
-// Ensure kolom penanda kenaikan ada (untuk validasi cetak)
+// Ensure kolom kelulusan SKU ada (untuk validasi cetak)
 try {
     $required_cols = [
-        'promoted_from_tingkat_id' => "INT NULL",
-        'promoted_at' => "DATETIME NULL",
         'sku_kecakapan_lulus_at' => "DATETIME NULL",
         'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
     ];
@@ -163,26 +161,21 @@ if ($mode === 'all' || $mode === 'data') {
         $stmt = $pdo->prepare("
             SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
             FROM tb_peserta_didik_barung
-            WHERE id_tingkat_barung = ?
-              AND IFNULL(status, 'aktif') = 'aktif'
-              AND (
-                sku_kecakapan_lulus_at IS NOT NULL
-                OR (
-                  promoted_at IS NOT NULL
-                  AND promoted_from_tingkat_id = ?
-                )
-              )
+            WHERE IFNULL(status, 'aktif') = 'aktif'
+              AND id_tingkat_barung = ?
+              AND sku_kecakapan_lulus_at IS NOT NULL
             ORDER BY nama_peserta_didik ASC
         ");
-        $stmt->execute([$tingkat_id, $prev_tingkat_id]);
+        $stmt->execute([$prev_tingkat_id]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } else {
     $id = (int)($_GET['id'] ?? 0);
-    if ($id > 0) {
+    $requested_tingkat_id = (int)($_GET['tingkat'] ?? 0);
+    if ($id > 0 && $requested_tingkat_id > 0) {
         $stmt = $pdo->prepare("
             SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta, p.tempat_lahir, p.tanggal_lahir,
-                   p.promoted_at, p.promoted_from_tingkat_id, p.sku_kecakapan_lulus_at, t.nama_tingkat
+                   p.sku_kecakapan_lulus_at, t.nama_tingkat
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
             WHERE p.id_peserta_didik_barung = ?
@@ -205,45 +198,43 @@ if ($mode === 'all' || $mode === 'data') {
                     END,
                     nama_tingkat ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
-            $tid_row = (int)($row['id_tingkat_barung'] ?? 0);
-            $prev_for_row = 0;
+            $prev_for_target = 0;
             foreach ($ordered_surat as $ix => $otr) {
-                if ((int)($otr['id_tingkat_barung'] ?? 0) === $tid_row && $ix > 0) {
-                    $prev_for_row = (int)($ordered_surat[$ix - 1]['id_tingkat_barung'] ?? 0);
+                if ((int)($otr['id_tingkat_barung'] ?? 0) === $requested_tingkat_id && $ix > 0) {
+                    $prev_for_target = (int)($ordered_surat[$ix - 1]['id_tingkat_barung'] ?? 0);
                     break;
                 }
             }
-            $ok_sku = !empty($row['sku_kecakapan_lulus_at']);
-            $ok_promoted = !empty($row['promoted_at'])
-                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $prev_for_row && $prev_for_row > 0;
-            if (!$ok_sku && !$ok_promoted) {
+            $tid_row = (int)($row['id_tingkat_barung'] ?? 0);
+            $ok_lulus_prev_for_target = $tid_row === $prev_for_target
+                && !empty($row['sku_kecakapan_lulus_at'])
+                && $prev_for_target > 0;
+            if (!$ok_lulus_prev_for_target) {
                 $row = null;
+            }
+            if ($row) {
+                foreach ($ordered_surat as $otr) {
+                    if ((int)($otr['id_tingkat_barung'] ?? 0) === $requested_tingkat_id) {
+                        $tingkat_name = (string)($otr['nama_tingkat'] ?? '');
+                        break;
+                    }
+                }
             }
         }
         if ($row) {
-            $tingkat_name = $row['nama_tingkat'] ?? '';
-            $tid_kb = (int)$row['id_tingkat_barung'];
-
             // Nomor urut di antara peserta yang berhak surat pada tingkat yang sama
             $seq_stmt = $pdo->prepare("
                 SELECT COUNT(*) + 1 AS nomor_urut FROM tb_peserta_didik_barung px
-                WHERE px.id_tingkat_barung = ?
-                  AND IFNULL(px.status,'aktif')='aktif'
-                  AND (
-                    px.sku_kecakapan_lulus_at IS NOT NULL
-                    OR (
-                      px.promoted_at IS NOT NULL
-                      AND px.promoted_from_tingkat_id = ?
-                    )
-                  )
+                WHERE IFNULL(px.status,'aktif')='aktif'
+                  AND px.id_tingkat_barung = ?
+                  AND px.sku_kecakapan_lulus_at IS NOT NULL
                   AND (
                     px.nama_peserta_didik < ?
                     OR (px.nama_peserta_didik = ? AND px.id_peserta_didik_barung < ?)
                   )
             ");
             $seq_stmt->execute([
-                $tid_kb,
-                $prev_for_row,
+                $prev_for_target,
                 (string)$row['nama_peserta_didik'],
                 (string)$row['nama_peserta_didik'],
                 (int)$row['id_peserta_didik_barung']

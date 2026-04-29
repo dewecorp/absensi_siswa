@@ -267,6 +267,7 @@ if ($message) {
 
 $js_page[] = <<<'JS_BLOCK'
 $(document).ready(function() {
+    var canManage = $('#canManagePembinaEkstra').val() === 'true';
     var hasEkstra = $('#hasEkstra').val() === 'true';
 
     // Add button behavior:
@@ -286,13 +287,14 @@ $(document).ready(function() {
         $('#addModal').modal('show');
     });
 
+    var columnDefs = [];
+    if (canManage) {
+        columnDefs.push({ 'sortable': false, 'targets': [3] }); // Aksi
+    }
+
     $('#table-1').DataTable({
         'order': [[0, 'asc']],
-        'columnDefs': [
-            <?php if ($can_manage_pembina_ekstra): ?>
-            { 'sortable': false, 'targets': [3] } // Aksi
-            <?php endif; ?>
-        ],
+        'columnDefs': columnDefs,
         'language': {
             'lengthMenu': 'Tampilkan _MENU_ entri',
             'zeroRecords': 'Tidak ada data yang ditemukan',
@@ -366,6 +368,7 @@ $(document).ready(function() {
 });
 
 function exportToExcel() {
+    var canManage = $('#canManagePembinaEkstra').val() === 'true';
     var table = document.getElementById('table-1');
     if (!table) return;
     
@@ -375,11 +378,11 @@ function exportToExcel() {
     // Clone table to remove actions column
     var newTable = table.cloneNode(true);
     var rows = newTable.rows;
-    <?php if ($can_manage_pembina_ekstra): ?>
-    for (var i = 0; i < rows.length; i++) {
-        rows[i].deleteCell(-1); // Remove last column (Aksi)
+    if (canManage) {
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].deleteCell(-1); // Remove last column (Aksi)
+        }
     }
-    <?php endif; ?>
     
     if (typeof XLSX !== 'undefined') {
         var wb = XLSX.utils.book_new();
@@ -420,6 +423,7 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
+    var canManage = $('#canManagePembinaEkstra').val() === 'true';
     var table = document.getElementById('table-1');
     if (!table) return;
     
@@ -468,11 +472,11 @@ function exportToPDF() {
     // Clone and clean up table
     var cleanTable = table.cloneNode(true);
     var rows = cleanTable.rows;
-    <?php if ($can_manage_pembina_ekstra): ?>
-    for (var i = 0; i < rows.length; i++) {
-        rows[i].deleteCell(-1); // Remove action column
+    if (canManage) {
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].deleteCell(-1); // Remove action column
+        }
     }
-    <?php endif; ?>
     
     printWindow.document.write(cleanTable.outerHTML);
     
@@ -531,6 +535,7 @@ include '../templates/sidebar.php';
 
                 <div class="card-body">
                     <input type="hidden" id="hasEkstra" value="<?= !empty($ekstrakurikuler_list) ? 'true' : 'false' ?>">
+                    <input type="hidden" id="canManagePembinaEkstra" value="<?= $can_manage_pembina_ekstra ? 'true' : 'false' ?>">
                     <input type="hidden" id="schoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH') ?>">
                     <input type="hidden" id="schoolLogo" value="<?= !empty($school_profile['logo']) ? '../assets/img/' . $school_profile['logo'] : '' ?>">
                     <input type="hidden" id="academicYear" value="<?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?>">
