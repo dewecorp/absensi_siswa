@@ -103,19 +103,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             if (strpos($key, 'keterangan_') === 0) {
                 $id_siswa = (int)str_replace('keterangan_', '', $key);
                 $keterangan = $value;
-                
-                // Validate keterangan value
-                if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Berhalangan'])) {
-                    continue; // Skip invalid values
-                }
-                
+
                 // Check if attendance already exists for this student and date
                 $check_stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
                 $check_stmt->execute([$id_siswa, $tanggal]);
+                $existing_row = $check_stmt->fetch(PDO::FETCH_ASSOC);
+
+                // Reset ke Belum Absen (klik ulang tombol aktif)
+                if ($keterangan === '') {
+                    if ($existing_row) {
+                        $delete_stmt = $pdo->prepare("DELETE FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
+                        $delete_stmt->execute([$id_siswa, $tanggal]);
+                        $saved_count++;
+                    }
+                    continue;
+                }
+
+                // Validate keterangan value
+                if (!in_array($keterangan, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+                    continue; // Skip invalid values
+                }
                 
                 $current_time = date('H:i:s');
                 
-                if ($check_stmt->rowCount() > 0) {
+                if ($existing_row) {
                     // Update existing record
                     $update_stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ?, jam_masuk = IF(? = 'Hadir', IF(jam_masuk IS NULL, ?, jam_masuk), NULL) WHERE id_siswa = ? AND tanggal = ?");
                     $update_stmt->execute([$keterangan, $keterangan, $current_time, $id_siswa, $tanggal]);
@@ -285,12 +296,9 @@ var madrasahHeadName = '" . addslashes(htmlspecialchars($school_profile['kepala_
 var classTeacherName = '" . addslashes(htmlspecialchars($teacher['nama_guru'] ?? 'Guru Kelas', ENT_QUOTES, 'UTF-8')) . "';
 var madrasahHeadSignature = '" . ($school_profile['ttd_kepala'] ?? '') . "';
 
-function updateBadge(selectElement) {
-    var selectedOption = selectElement.options[selectElement.selectedIndex].text;
-    var selectedValue = selectElement.options[selectElement.selectedIndex].value;
-    var studentId = selectElement.name.replace('keterangan_', '');
+function updateBadgeByValue(studentId, selectedValue) {
     var badge = $('#badge_' + studentId);
-    badge.text(selectedOption);
+    badge.text(selectedValue ? selectedValue : 'Belum Absen');
     badge.removeClass('badge-success badge-info badge-warning badge-danger badge-secondary');
     switch(selectedValue) {
         case 'Hadir': badge.addClass('badge-success'); break;
@@ -343,6 +351,23 @@ function initDataTable() {
 }
 $(document).ready(function() {
     initDataTable();
+
+    $(document).on('click', '.btn-absensi-siswa', function() {
+        var studentId = $(this).data('id');
+        var status = $(this).data('status');
+        var input = $('#status_' + studentId);
+        var currentStatus = input.val();
+        var nextStatus = (currentStatus === status) ? '' : status;
+        var group = $(this).closest('.attendance-btn-group');
+
+        group.find('.btn-absensi-siswa').removeClass('active');
+        if (nextStatus !== '') {
+            group.find('.btn-absensi-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
+        }
+
+        input.val(nextStatus);
+        updateBadgeByValue(studentId, nextStatus);
+    });
     
     // Handle form submission to ensure all inputs are sent
     // Intercept form submission to collect all select values from all DataTables pages
@@ -355,7 +380,7 @@ $(document).ready(function() {
             return; // Let other forms submit normally
         }
         
-        // If DataTable is initialized, collect all select values
+        // If DataTable is initialized, collect all status values
         if ($.fn.DataTable.isDataTable('#table-1')) {
             e.preventDefault(); // Prevent default submission
             e.stopPropagation(); // Stop event propagation
@@ -371,14 +396,14 @@ $(document).ready(function() {
             
             // Wait for DOM to update, then collect all values
             setTimeout(function() {
-                // Collect all select values from all rows (now all visible)
+                // Collect all status hidden values from all rows (now all visible)
                 var collectedCount = 0;
-                table.find('tbody select[name^=\"keterangan_\"]').each(function() {
+                table.find('tbody input.student-status-input[name^=\"keterangan_\"]').each(function() {
                     var select = $(this);
                     var name = select.attr('name');
                     var value = select.val();
                     
-                    if (name && value) {
+                    if (name) {
                         allSelectValues[name] = value;
                         collectedCount++;
                     }
@@ -539,9 +564,6 @@ include '../templates/user_header.php';
                                                         case 'Alpa':
                                                             echo 'badge-danger';
                                                             break;
-                                                        case 'Berhalangan':
-                                                            echo 'badge-danger';
-                                                            break;
                                                         default:
                                                             echo 'badge-secondary';
                                                     }
@@ -551,12 +573,14 @@ include '../templates/user_header.php';
                                             </td>
                                             <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                             <td>
-                                                <select class="form-control" name="keterangan_<?php echo $student['id_siswa']; ?>" onchange="updateBadge(this)">
-                                                    <option value="Hadir" <?php echo ($student['keterangan'] ?? 'Hadir') === 'Hadir' ? 'selected' : ''; ?>>Hadir</option>
-                                                    <option value="Sakit" <?php echo ($student['keterangan'] ?? '') === 'Sakit' ? 'selected' : ''; ?>>Sakit</option>
-                                                    <option value="Izin" <?php echo ($student['keterangan'] ?? '') === 'Izin' ? 'selected' : ''; ?>>Izin</option>
-                                                    <option value="Alpa" <?php echo ($student['keterangan'] ?? '') === 'Alpa' ? 'selected' : ''; ?>>Alpa</option>
-                                                </select>
+                                                <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
+                                                <div class="btn-group btn-group-sm attendance-btn-group" role="group">
+                                                    <button type="button" class="btn btn-success btn-absensi-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir"><i class="fas fa-check"></i> Hadir</button>
+                                                    <button type="button" class="btn btn-warning btn-absensi-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit"><i class="fas fa-procedures"></i> Sakit</button>
+                                                    <button type="button" class="btn btn-info btn-absensi-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin"><i class="fas fa-envelope-open-text"></i> Izin</button>
+                                                    <button type="button" class="btn btn-danger btn-absensi-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa"><i class="fas fa-user-times"></i> Alpa</button>
+                                                </div>
+                                                <input type="hidden" class="student-status-input" name="keterangan_<?php echo $student['id_siswa']; ?>" id="status_<?php echo $student['id_siswa']; ?>" value="<?php echo htmlspecialchars($status_now, ENT_QUOTES); ?>">
                                             </td>
                                         </tr>
                                         <?php endforeach; ?>

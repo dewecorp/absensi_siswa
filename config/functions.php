@@ -367,7 +367,9 @@ function getFilteredSubjects($pdo) {
         "nama_mapel NOT LIKE '%Upacara%'",
         "nama_mapel NOT LIKE '%Istirahat%'",
         "nama_mapel NOT LIKE '%Kepramukaan%'",
-        "nama_mapel NOT LIKE '%Ekstrakurikuler%'"
+        "nama_mapel NOT LIKE '%Ekstrakurikuler%'",
+        "nama_mapel NOT LIKE '%PJOK%'",
+        "nama_mapel NOT LIKE '%Ramadhanku%'"
     ];
 
     if ($has_jenis_mapel) {

@@ -77,14 +77,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                 if (strpos($key, 'keterangan_') === 0) {
                     $id_siswa = (int)str_replace('keterangan_', '', $key);
                     $status = $value;
-                    
-                    if (!in_array($status, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
-                        continue;
-                    }
-                    
+
                     $check_stmt = $pdo->prepare("SELECT id_absensi_les FROM tb_absensi_les WHERE id_siswa = ? AND tanggal = ?");
                     $check_stmt->execute([$id_siswa, $tanggal]);
                     $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
+
+                    // Reset ke Belum Absen (hapus record absensi jika ada)
+                    if ($status === '') {
+                        if ($existing) {
+                            $delete_stmt = $pdo->prepare("DELETE FROM tb_absensi_les WHERE id_absensi_les = ?");
+                            $delete_stmt->execute([$existing['id_absensi_les']]);
+                            $saved_count++;
+                        }
+                        continue;
+                    }
+
+                    if (!in_array($status, ['Hadir', 'Sakit', 'Izin', 'Alpa'])) {
+                        continue;
+                    }
                     
                     if ($existing) {
                         $update_stmt = $pdo->prepare("UPDATE tb_absensi_les SET status = ?, waktu_input = NOW() WHERE id_absensi_les = ?");
@@ -210,12 +220,22 @@ include '../templates/sidebar.php';
                                                 </td>
                                                 <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                                 <td>
-                                                    <select class="form-control student-status" id="status_<?php echo $student['id_siswa']; ?>" name="keterangan_<?php echo $student['id_siswa']; ?>" <?php echo !$has_schedule ? 'disabled' : ''; ?>>
-                                                        <option value="Hadir" <?php echo ($student['keterangan'] ?? 'Hadir') === 'Hadir' ? 'selected' : ''; ?>>Hadir</option>
-                                                        <option value="Sakit" <?php echo ($student['keterangan'] ?? '') === 'Sakit' ? 'selected' : ''; ?>>Sakit</option>
-                                                        <option value="Izin" <?php echo ($student['keterangan'] ?? '') === 'Izin' ? 'selected' : ''; ?>>Izin</option>
-                                                        <option value="Alpa" <?php echo ($student['keterangan'] ?? '') === 'Alpa' ? 'selected' : ''; ?>>Alpa</option>
-                                                    </select>
+                                                    <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
+                                                    <div class="btn-group btn-group-sm attendance-btn-group <?php echo !$has_schedule ? 'disabled' : ''; ?>" role="group">
+                                                        <button type="button" class="btn btn-success btn-absensi-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir">
+                                                            <i class="fas fa-check"></i> Hadir
+                                                        </button>
+                                                        <button type="button" class="btn btn-warning btn-absensi-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit">
+                                                            <i class="fas fa-procedures"></i> Sakit
+                                                        </button>
+                                                        <button type="button" class="btn btn-info btn-absensi-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin">
+                                                            <i class="fas fa-envelope-open-text"></i> Izin
+                                                        </button>
+                                                        <button type="button" class="btn btn-danger btn-absensi-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa">
+                                                            <i class="fas fa-user-times"></i> Alpa
+                                                        </button>
+                                                    </div>
+                                                    <input type="hidden" class="student-status-input" id="status_<?php echo $student['id_siswa']; ?>" name="keterangan_<?php echo $student['id_siswa']; ?>" value="<?php echo htmlspecialchars($status_now, ENT_QUOTES); ?>">
                                                 </td>
                                             </tr>
                                             <?php endforeach; ?>
@@ -280,24 +300,36 @@ $(document).ready(function() {
         'pageLength': 50
     });
     
-    // No alert on dropdown change - just allow user to change values
-    // User can click 'Simpan Semua Perubahan' button to save
-    
     $('#tanggalInput').on('change', function() {
         $('#filterForm').submit();
     });
 
-    // Handle status change to update badge
-    $('.student-status').on('change', function() {
-        var selectedOption = this.options[this.selectedIndex].text;
-        var selectedValue = this.value;
-        var studentId = this.id.replace('status_', '');
+    $('.attendance-btn-group.disabled .btn-absensi-siswa').prop('disabled', true);
+
+    // Handle klik tombol status untuk tiap siswa
+    $('.btn-absensi-siswa').on('click', function() {
+        if ($(this).prop('disabled')) {
+            return;
+        }
+        var studentId = $(this).data('id');
+        var status = $(this).data('status');
+        var input = $('#status_' + studentId);
         var badge = $('#badge_' + studentId);
-        
-        badge.text(selectedOption);
+        var currentStatus = input.val();
+
+        // Klik ulang status yang sama = reset ke Belum Absen
+        var nextStatus = (currentStatus === status) ? '' : status;
+        var group = $(this).closest('.attendance-btn-group');
+        group.find('.btn-absensi-siswa').removeClass('active');
+        if (nextStatus !== '') {
+            group.find('.btn-absensi-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
+        }
+
+        input.val(nextStatus);
+        badge.text(nextStatus !== '' ? nextStatus : 'Belum Absen');
         badge.removeClass('badge-success badge-warning badge-info badge-danger badge-secondary');
-        
-        switch(selectedValue) {
+
+        switch(nextStatus) {
             case 'Hadir': badge.addClass('badge-success'); break;
             case 'Sakit': badge.addClass('badge-warning'); break;
             case 'Izin': badge.addClass('badge-info'); break;

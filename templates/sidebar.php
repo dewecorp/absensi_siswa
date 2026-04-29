@@ -88,10 +88,13 @@ switch ($user_level) {
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Ekstra', 'url' => '../admin/data_pembina_ekstrakurikuler.php', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php', 'active' => $current_page === 'data_pembina_pramuka.php'],
-            ['title' => 'Data Tingkat Barung', 'url' => '../admin/data_tingkat_barung.php', 'active' => $current_page === 'data_tingkat_barung.php'],
-            ['title' => 'Data Barung', 'url' => '../admin/data_barung.php', 'active' => $current_page === 'data_barung.php'],
+            ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php', 'active' => $current_page === 'data_tingkat_barung.php'],
+            ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php', 'active' => $current_page === 'data_barung.php'],
+            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
+            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php', 'active' => $current_page === 'data_anggota_rebana.php'],
             ['title' => 'Kenaikan Tingkat', 'url' => '../admin/kenaikan_tingkat.php', 'active' => $current_page === 'kenaikan_tingkat.php'],
-            ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php', 'active' => $current_page === 'surat_keterangan.php']
+            ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php', 'active' => $current_page === 'surat_keterangan.php'],
+            ['title' => 'Pengaturan Cetak Suket', 'url' => '../admin/pengaturan_cetak_suket.php', 'active' => $current_page === 'pengaturan_cetak_suket.php']
         ];
 
         $menu_items = [
@@ -110,12 +113,13 @@ switch ($user_level) {
                     ['title' => 'Data Siswa', 'url' => '../admin/data_siswa.php', 'active' => $current_page === 'data_siswa.php'],
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php', 'active' => $current_page === 'siswa_baru.php'],
                     ['title' => 'Data Alumni', 'url' => '../admin/data_alumni.php', 'active' => $current_page === 'data_alumni.php'],
+                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Jam Mengajar', 'url' => '../admin/jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
                     ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php', 'active' => $current_page === 'kalender_pendidikan.php']
                 ],
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'data_alumni.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -127,7 +131,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_admin,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'data_tingkat_barung.php', 'kenaikan_tingkat.php', 'surat_keterangan.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_tingkat_barung.php', 'kenaikan_tingkat.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -152,7 +156,7 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
             ],
             [
-                'title' => 'Inventaris Sarpras',
+                'title' => 'Inventaris',
                 'icon' => 'fas fa-boxes',
                 'submenu' => [
                     ['title' => 'Kategori Inventaris', 'url' => '../admin/kategori_inventaris.php', 'active' => $current_page === 'kategori_inventaris.php'],
@@ -182,10 +186,9 @@ switch ($user_level) {
                     ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
                     ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
                     ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
-                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
-                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
+                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
             ],
             [
                 'title' => 'Remidial',
@@ -306,7 +309,7 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
             ],
             [
-                'title' => 'Inventaris Sarpras',
+                'title' => 'Inventaris',
                 'icon' => 'fas fa-boxes',
                 'submenu' => [
                     ['title' => 'Data Inventaris Sarpras', 'url' => '../admin/data_inventaris.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_inventaris.php']
@@ -417,7 +420,7 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
             [
-                'title' => 'Inventaris Sarpras',
+                'title' => 'Inventaris',
                 'icon' => 'fas fa-boxes',
                 'submenu' => [
                     ['title' => 'Data Inventaris Sarpras', 'url' => '../admin/data_inventaris.php?session_type=tata_usaha', 'active' => $current_page === 'data_inventaris.php']
@@ -681,11 +684,6 @@ switch ($user_level) {
         // Menu Rekap Nilai untuk wali kelas
         $nilai_submenu[] = ['title' => 'Rekap Nilai', 'url' => '../guru/rekap_nilai.php?session_type=wali', 'active' => $current_page === 'rekap_nilai.php'];
         
-        // Data Nilai Ujian hanya untuk wali kelas 6
-        if ($is_grade_6) {
-            $nilai_submenu[] = ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=wali', 'active' => $current_page === 'data_nilai_ujian.php'];
-        }
-        
         $nilai_urls = array_map(function($item) {
             return basename($item['url']);
         }, $nilai_submenu);
@@ -706,6 +704,18 @@ switch ($user_level) {
             $absensi_submenu_wali[] = ['title' => 'Rekap Absensi Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php?session_type=wali', 'active' => $current_page === 'rekap_absensi_les_guru.php'];
         }
 
+        $data_utama_submenu_wali = [
+            ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=wali', 'active' => $current_page === 'mata_pelajaran.php'],
+            ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=wali', 'active' => $current_page === 'kalender_pendidikan.php']
+        ];
+        if ($is_grade_6) {
+            $data_utama_submenu_wali[] = ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=wali', 'active' => $current_page === 'data_nilai_ujian.php'];
+        }
+
+        $data_utama_urls_wali = array_map(function($item) {
+            return basename($item['url']);
+        }, $data_utama_submenu_wali);
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -716,11 +726,8 @@ switch ($user_level) {
             [
                 'title' => 'Data Utama',
                 'icon' => 'fas fa-database',
-                'submenu' => [
-                    ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=wali', 'active' => $current_page === 'mata_pelajaran.php'],
-                    ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=wali', 'active' => $current_page === 'kalender_pendidikan.php']
-                ],
-                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php'])
+                'submenu' => $data_utama_submenu_wali,
+                'active' => in_array($current_page, $data_utama_urls_wali)
             ],
             [
                 'title' => 'Absensi',

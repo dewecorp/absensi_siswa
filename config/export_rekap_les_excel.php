@@ -39,11 +39,24 @@ $school_profile = getSchoolProfile($pdo);
 // Get filter parameters
 $filter_type = $_GET['filter_type'] ?? 'all';
 $selected_date = $_GET['date'] ?? date('Y-m-d');
+$absent_summary = [];
 
 // Get all scheduled dates based on filter
 if ($filter_type == 'daily') {
     $scheduled_dates = [$selected_date];
     $report_title = "REKAP ABSENSI LES HARIAN SISWA KELAS " . $nama_kelas_fixed;
+
+    $stmt_abs = $pdo->prepare("
+        SELECT s.nama_siswa, s.nisn, al.status AS keterangan
+        FROM tb_absensi_les al
+        JOIN tb_siswa s ON s.id_siswa = al.id_siswa
+        WHERE al.tanggal = ?
+          AND s.id_kelas = ?
+          AND al.status IN ('Sakit', 'Izin', 'Alpa')
+        ORDER BY s.nama_siswa ASC
+    ");
+    $stmt_abs->execute([$selected_date, $id_kelas_fixed]);
+    $absent_summary = $stmt_abs->fetchAll(PDO::FETCH_ASSOC);
 } else {
     $stmt_sched = $pdo->query("SELECT DISTINCT tanggal FROM tb_jadwal_les ORDER BY tanggal ASC");
     $scheduled_dates = $stmt_sched->fetchAll(PDO::FETCH_COLUMN);
@@ -83,6 +96,38 @@ header("Expires: 0");
     <tr>
         <td colspan="<?= count($scheduled_dates) + 4 ?>" class="text-center">Tanggal: <?= formatDateIndonesia($selected_date) ?></td>
     </tr>
+    <?php
+        $counts_abs = ['Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+        foreach ($absent_summary as $abx) {
+            if (isset($counts_abs[$abx['keterangan']])) {
+                $counts_abs[$abx['keterangan']]++;
+            }
+        }
+    ?>
+    <tr>
+        <td colspan="<?= count($scheduled_dates) + 4 ?>" class="font-bold">Ringkasan Ketidakhadiran Les: Sakit <?= (int)$counts_abs['Sakit'] ?> | Izin <?= (int)$counts_abs['Izin'] ?> | Alpa <?= (int)$counts_abs['Alpa'] ?></td>
+    </tr>
+    <?php if (!empty($absent_summary)): ?>
+    <tr>
+        <td colspan="<?= count($scheduled_dates) + 4 ?>" class="font-bold">Detail Ketidakhadiran:</td>
+    </tr>
+    <tr>
+        <td class="font-bold text-center">No</td>
+        <td class="font-bold">Nama Siswa</td>
+        <td class="font-bold text-center">NISN</td>
+        <td class="font-bold text-center">Keterangan</td>
+        <td colspan="<?= count($scheduled_dates) ?>"></td>
+    </tr>
+    <?php foreach ($absent_summary as $idx_abs => $abs): ?>
+    <tr>
+        <td class="text-center"><?= (int)($idx_abs + 1) ?></td>
+        <td><?= htmlspecialchars($abs['nama_siswa']) ?></td>
+        <td class="text-center"><?= htmlspecialchars($abs['nisn']) ?></td>
+        <td class="text-center"><?= htmlspecialchars($abs['keterangan']) ?></td>
+        <td colspan="<?= count($scheduled_dates) ?>"></td>
+    </tr>
+    <?php endforeach; ?>
+    <?php endif; ?>
     <?php endif; ?>
     <tr><td colspan="<?= count($scheduled_dates) + ($filter_type == 'daily' ? 4 : 6) ?>"></td></tr>
     <thead>

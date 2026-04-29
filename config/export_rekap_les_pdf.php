@@ -39,12 +39,25 @@ $school_profile = getSchoolProfile($pdo);
 // Get filter parameters
 $filter_type = $_GET['filter_type'] ?? 'all';
 $selected_date = $_GET['date'] ?? date('Y-m-d');
+$absent_summary = [];
 
 // Get all scheduled dates based on filter
 if ($filter_type == 'daily') {
     $scheduled_dates = [$selected_date];
     $page_title = "Rekap Absensi Les Harian Kelas " . $nama_kelas_fixed . " - " . formatDateIndonesia($selected_date);
     $page_size = "A4 portrait";
+
+    $stmt_abs = $pdo->prepare("
+        SELECT s.nama_siswa, s.nisn, al.status AS keterangan
+        FROM tb_absensi_les al
+        JOIN tb_siswa s ON s.id_siswa = al.id_siswa
+        WHERE al.tanggal = ?
+          AND s.id_kelas = ?
+          AND al.status IN ('Sakit', 'Izin', 'Alpa')
+        ORDER BY s.nama_siswa ASC
+    ");
+    $stmt_abs->execute([$selected_date, $id_kelas_fixed]);
+    $absent_summary = $stmt_abs->fetchAll(PDO::FETCH_ASSOC);
 } else {
     $stmt_sched = $pdo->query("SELECT DISTINCT tanggal FROM tb_jadwal_les ORDER BY tanggal ASC");
     $scheduled_dates = $stmt_sched->fetchAll(PDO::FETCH_COLUMN);
@@ -116,6 +129,45 @@ foreach ($records as $r) {
             <p style="margin-top: 5px;">Tanggal: <?= formatDateIndonesia($selected_date) ?></p>
         <?php endif; ?>
     </div>
+
+    <?php if ($filter_type == 'daily'): ?>
+        <?php
+            $counts_abs = ['Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+            foreach ($absent_summary as $abx) {
+                if (isset($counts_abs[$abx['keterangan']])) {
+                    $counts_abs[$abx['keterangan']]++;
+                }
+            }
+        ?>
+        <div style="margin-bottom:10px; font-size:10pt;">
+            <strong>Ringkasan Ketidakhadiran Les:</strong>
+            Sakit <?= (int)$counts_abs['Sakit'] ?> |
+            Izin <?= (int)$counts_abs['Izin'] ?> |
+            Alpa <?= (int)$counts_abs['Alpa'] ?>
+        </div>
+        <?php if (!empty($absent_summary)): ?>
+            <table style="margin-bottom:10px;">
+                <thead>
+                    <tr>
+                        <th width="30">No</th>
+                        <th>Nama Siswa</th>
+                        <th width="100">NISN</th>
+                        <th width="90">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($absent_summary as $idx_abs => $abs): ?>
+                        <tr>
+                            <td><?= (int)($idx_abs + 1) ?></td>
+                            <td class="text-left"><?= htmlspecialchars($abs['nama_siswa']) ?></td>
+                            <td><?= htmlspecialchars($abs['nisn']) ?></td>
+                            <td><strong><?= htmlspecialchars($abs['keterangan']) ?></strong></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+    <?php endif; ?>
 
     <table>
         <thead>

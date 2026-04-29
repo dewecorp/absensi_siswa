@@ -11,7 +11,7 @@ if (!isAuthorized(['admin'])) {
 }
 
 $school_profile = getSchoolProfile($pdo);
-$page_title = 'Data Barung';
+$page_title = 'Data Anggota Pramuka';
 
 // Print signature settings (Ketua Gudep)
 $print_settings_data = [
@@ -65,10 +65,14 @@ try {
             CREATE TABLE tb_peserta_didik_barung (
                 id_peserta_didik_barung INT AUTO_INCREMENT PRIMARY KEY,
                 id_tingkat_barung INT NOT NULL,
+                id_siswa INT NULL,
                 nama_peserta_didik VARCHAR(120) NOT NULL,
                 nta VARCHAR(50) NOT NULL,
                 tempat_lahir VARCHAR(120) NULL,
                 tanggal_lahir DATE NULL,
+                status ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif',
+                tanggal_masuk DATETIME NULL,
+                tanggal_keluar DATETIME NULL,
                 INDEX idx_tingkat (id_tingkat_barung)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
@@ -77,13 +81,34 @@ try {
         $required_cols = [
             'tempat_lahir' => "VARCHAR(120) NULL",
             'tanggal_lahir' => "DATE NULL",
+            'id_siswa' => "INT NULL",
+            'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
+            'tanggal_masuk' => "DATETIME NULL",
+            'tanggal_keluar' => "DATETIME NULL",
         ];
         foreach ($required_cols as $col => $typeDef) {
             $colStmt = $pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE '" . addslashes($col) . "'");
             $has_col = (bool)$colStmt->fetch(PDO::FETCH_ASSOC);
             if (!$has_col) {
                 $pdo->exec("ALTER TABLE tb_peserta_didik_barung ADD COLUMN {$col} {$typeDef}");
+                if ($col === 'id_siswa') {
+                    try {
+                        $pdo->exec("
+                            UPDATE tb_peserta_didik_barung p
+                            INNER JOIN tb_siswa s ON TRIM(IFNULL(p.nta, '')) <> ''
+                              AND TRIM(IFNULL(p.nta, '')) = TRIM(IFNULL(s.nisn, ''))
+                            SET p.id_siswa = s.id_siswa
+                            WHERE p.id_siswa IS NULL
+                        ");
+                    } catch (Exception $ignored) {
+                    }
+                }
             }
+        }
+        // Pastikan data lama dianggap aktif
+        try {
+            $pdo->exec("UPDATE tb_peserta_didik_barung SET status = 'aktif' WHERE status IS NULL OR TRIM(status) = ''");
+        } catch (Exception $ignored) {
         }
     }
 } catch (Exception $e) {
@@ -92,6 +117,124 @@ try {
 
 function ensureInt($v): int {
     return (int)($v ?? 0);
+}
+
+/**
+ * Mengenali tingkat Pramuka (tab) menjadi slug untuk pemetaan kelas.
+ */
+function barung_resolve_tingkat_slug(?string $nama_tingkat): ?string
+{
+    $raw = trim((string)$nama_tingkat);
+    if ($raw === '') {
+        return null;
+    }
+    /** Mengabaikan spasi/hyphen/unicode hyphen — "Pra Mula"/"pra‑mula" → pramula */
+    $compact = strtolower(preg_replace('/[^a-z]/u', '', $raw));
+
+    /** Cadangan pola lama tanpa menghapus spasi dalam string */
+    $n = strtolower(preg_replace('/\s+/u', ' ', $raw));
+    $k = str_replace([' ', '_', '-'], '', $n);
+
+    $try = [$compact !== '' ? $compact : null, $k !== '' ? $k : null];
+    foreach ($try as $t) {
+        if ($t === null || $t === '') {
+            continue;
+        }
+        if ($t === 'pramula') {
+            return 'pra_mula';
+        }
+        if ($t === 'mula') {
+            return 'mula';
+        }
+        if ($t === 'bantu') {
+            return 'bantu';
+        }
+        if ($t === 'tata') {
+            return 'tata';
+        }
+    }
+    return null;
+}
+
+/** Kelas nominal (MI 1–6) berdasarkan tab tingkat aktif */
+function barung_kelas_nomor_for_slug(?string $slug): array
+{
+    switch ($slug) {
+        case 'pra_mula':
+            return [1];
+        case 'mula':
+            return [2, 3, 4];
+        case 'bantu':
+            return [5, 6];
+        case 'tata':
+            return [4, 5, 6];
+        default:
+            return [];
+    }
+}
+
+/**
+ * Nomor kelas MI 1–6 dari baris tb_kelas.
+ * Banyak madrasah menyimpan nama "I"–"VI" atau id_kelas 1–6 = kelas 1–6.
+ */
+function barung_nomor_mi_dari_tb_kelas_row(int $id_kelas, string $nama_kelas): ?int
+{
+    $t = trim($nama_kelas);
+    /** Normalisasi digit Arab (Asia) → Latin */
+    static $digitsAr = [
+        "\u{0660}" => '0', "\u{0661}" => '1', "\u{0662}" => '2', "\u{0663}" => '3', "\u{0664}" => '4',
+        "\u{0665}" => '5', "\u{0666}" => '6', "\u{0667}" => '7', "\u{0668}" => '8', "\u{0669}" => '9',
+    ];
+    if ($t !== '') {
+        $t = strtr($t, $digitsAr);
+    }
+    /** Buang awalan «Kelas» agar "Kelas I" → "I" (bukan "KELASI" yang tidak dikenali) */
+    $t = preg_replace('/^kelas[\h:.\-_\/]*/iu', '', $t);
+    $t = trim($t);
+    $compact = $t !== '' ? preg_replace('/\s+/u', '', mb_strtoupper($t, 'UTF-8')) : '';
+
+    /** Persis satu token Romawi */
+    $romanToken = [
+        'I' => 1, 'II' => 2, 'III' => 3, 'IV' => 4, 'V' => 5, 'VI' => 6,
+    ];
+    if ($compact !== '' && isset($romanToken[$compact])) {
+        return $romanToken[$compact];
+    }
+
+    /** Awalan Romawi; urutan VI|IV|III|II|V|I di regex (bukan prefix "V" untuk "VI") */
+    if ($compact !== '' && preg_match('/^(VI|IV|III|II|V|I)/u', $compact, $mr)) {
+        $mapRom = ['VI' => 6, 'IV' => 4, 'III' => 3, 'II' => 2, 'V' => 5, 'I' => 1];
+
+        return $mapRom[$mr[1]];
+    }
+
+    if ($t !== '') {
+        if (preg_match('/\b(?:0*)([1-6])\b/u', $t, $m)) {
+            return (int)$m[1];
+        }
+        if (preg_match('/(?:^|[^\d])([1-6])(?:[^\d]|$)/u', $t, $m)) {
+            return (int)$m[1];
+        }
+        /** Sisa token terakhir (mis. "I A" / "B - I") */
+        if (preg_match('/(?:^|[\s\-\/])(VI|IV|III|II|V|I)(?:$|[^\p{L}])/u', $t, $m2)) {
+            $mapRom = ['VI' => 6, 'IV' => 4, 'III' => 3, 'II' => 2, 'V' => 5, 'I' => 1];
+
+            return $mapRom[strtoupper($m2[1])];
+        }
+    }
+
+    /** Fallback: skema lama id_kelas 1..6 = kelas 1..6 */
+    if ($id_kelas >= 1 && $id_kelas <= 6) {
+        return $id_kelas;
+    }
+
+    return null;
+}
+
+/** Hanya dari teks (tanpa fallback id) — dipakai bila konteks tidak punya id_kelas */
+function barung_nama_kelas_ke_nomor(string $nama_kelas): ?int
+{
+    return barung_nomor_mi_dari_tb_kelas_row(0, $nama_kelas);
 }
 
 // --- Fetch tingkat list ---
@@ -273,8 +416,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         $pdo->beginTransaction();
                         $stmtIns = $pdo->prepare("
-                            INSERT INTO tb_peserta_didik_barung (id_tingkat_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir)
-                            VALUES (?, ?, ?, ?, ?)
+                            INSERT INTO tb_peserta_didik_barung
+                                (id_tingkat_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, status, tanggal_masuk, tanggal_keluar)
+                            VALUES (?, ?, ?, ?, ?, 'aktif', NOW(), NULL)
                         ");
 
                         for ($r = $startRow; $r <= $highestRow; $r++) {
@@ -297,14 +441,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                             $tgl = $tgl !== '' ? substr($tgl, 0, 10) : null;
 
-                            if ($nama === '' && $nta === '') {
+                            if ($nama === '' && trim((string)$nta) === '') {
                                 $skipped++;
                                 continue;
                             }
-                            if ($nama === '' || $nta === '') {
+                            if ($nama === '') {
                                 $skipped++;
                                 continue;
                             }
+                            $nta = trim((string)$nta);
 
                             $stmtIns->execute([$id_tingkat, $nama, $nta, ($tempat !== '' ? $tempat : null), $tgl]);
                             $inserted++;
@@ -340,7 +485,123 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Add peserta
+    // Tambah kolektif dari data siswa (per pemetaan kelas tingkat tab)
+    if (isset($_POST['add_peserta_kolektif'])) {
+        $id_tingkat = ensureInt($_POST['id_tingkat_barung'] ?? 0);
+        $picked = isset($_POST['selected_siswa']) && is_array($_POST['selected_siswa']) ? $_POST['selected_siswa'] : [];
+        $picked = array_values(array_filter(array_map('intval', $picked), static function ($v) {
+            return $v > 0;
+        }));
+
+        $nama_thr = '';
+        try {
+            $tt = $pdo->prepare('SELECT nama_tingkat FROM tb_tingkat_barung WHERE id_tingkat_barung = ? LIMIT 1');
+            $tt->execute([$id_tingkat]);
+            $nama_thr = (string)($tt->fetchColumn() ?: '');
+        } catch (Exception $e) {
+            $nama_thr = '';
+        }
+        $slug_thr = barung_resolve_tingkat_slug($nama_thr);
+        $allowed_nums = barung_kelas_nomor_for_slug($slug_thr);
+
+        if ($id_tingkat <= 0) {
+            $message = ['type' => 'warning', 'text' => 'Tingkat tidak valid.'];
+        } elseif ($slug_thr === null || $allowed_nums === []) {
+            $message = ['type' => 'warning', 'text' => 'Pemetaan kelas otomatis hanya untuk tingkat Pra Mula, Mula, Bantu, atau Tata.'];
+        } elseif (empty($picked)) {
+            $message = ['type' => 'warning', 'text' => 'Pilih minimal satu siswa.'];
+        } else {
+            try {
+                $kelas_rows = $pdo->query('SELECT id_kelas, nama_kelas FROM tb_kelas')->fetchAll(PDO::FETCH_ASSOC);
+                $id_kelas_ok = [];
+                foreach ($kelas_rows as $kr) {
+                    $nom = barung_nomor_mi_dari_tb_kelas_row((int)($kr['id_kelas'] ?? 0), (string)($kr['nama_kelas'] ?? ''));
+                    if ($nom !== null && in_array($nom, $allowed_nums, true)) {
+                        $id_kelas_ok[(int)$kr['id_kelas']] = true;
+                    }
+                }
+                $id_kelas_ok = array_keys($id_kelas_ok);
+
+                $stmt_siswa = $pdo->prepare('
+                    SELECT s.id_siswa, s.nisn, s.nama_siswa, s.tempat_lahir, s.tanggal_lahir, s.id_kelas
+                    FROM tb_siswa s
+                    WHERE s.id_siswa = ?
+                    LIMIT 1
+                ');
+                $ins = $pdo->prepare('
+                    INSERT INTO tb_peserta_didik_barung
+                        (id_tingkat_barung, id_siswa, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, status, tanggal_masuk, tanggal_keluar)
+                    VALUES (?, ?, ?, ?, ?, ?, \'aktif\', NOW(), NULL)
+                ');
+                $pdo->beginTransaction();
+                $added = 0;
+                foreach ($picked as $sid) {
+                    $stmt_siswa->execute([$sid]);
+                    $row = $stmt_siswa->fetch(PDO::FETCH_ASSOC);
+                    if (!$row) {
+                        continue;
+                    }
+                    $id_kelas = (int)($row['id_kelas'] ?? 0);
+                    if ($id_kelas <= 0 || !in_array($id_kelas, $id_kelas_ok, true)) {
+                        continue;
+                    }
+                    /** NTA disimpan kosong; bisa diisi lewat Edit */
+                    $nta = '';
+                    $nama = sanitizeInput((string)($row['nama_siswa'] ?? ''));
+                    if ($nama === '') {
+                        continue;
+                    }
+                    $id_s_insert = ensureInt($row['id_siswa'] ?? 0);
+                    $nisn_tr = trim((string)($row['nisn'] ?? ''));
+                    $chkDup = $pdo->prepare('
+                        SELECT 1 FROM tb_peserta_didik_barung
+                        WHERE id_tingkat_barung = ?
+                          AND IFNULL(status, \'aktif\') = \'aktif\'
+                          AND (
+                            (id_siswa IS NOT NULL AND id_siswa = ?)
+                            OR (id_siswa IS NULL AND TRIM(IFNULL(nta, \'\')) <> \'\'
+                                AND TRIM(nta) = ? AND ? <> \'\')
+                            OR (id_siswa IS NULL AND TRIM(IFNULL(nta, \'\')) = \'\'
+                                AND LOWER(TRIM(nama_peserta_didik)) = LOWER(TRIM(?)))
+                          )
+                        LIMIT 1
+                    ');
+                    $chkDup->execute([$id_tingkat, $id_s_insert, $nisn_tr, $nisn_tr, $nama]);
+                    if ($chkDup->fetchColumn()) {
+                        continue;
+                    }
+                    $tp = trim((string)($row['tempat_lahir'] ?? ''));
+                    $tempat_sql = sanitizeInput($tp);
+                    $tgl_raw = !empty($row['tanggal_lahir']) ? trim((string)$row['tanggal_lahir']) : '';
+                    $tgl_sql = $tgl_raw !== '' ? substr($tgl_raw, 0, 10) : null;
+
+                    $ins->execute([
+                        $id_tingkat,
+                        ($id_s_insert > 0 ? $id_s_insert : null),
+                        $nama,
+                        $nta,
+                        ($tempat_sql !== '' ? $tempat_sql : null),
+                        $tgl_sql,
+                    ]);
+                    $added++;
+                }
+                $pdo->commit();
+
+                $username = $_SESSION['username'] ?? 'system';
+                logActivity($pdo, $username, 'Tambah Peserta Didik Barung (Kolektif)', "Tingkat ID {$id_tingkat}: ditambahkan {$added} dari data siswa");
+                $message = ['type' => 'success', 'text' => "Berhasil menambahkan {$added} peserta dari data siswa."];
+                $selected_tingkat_id = $id_tingkat;
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $message = ['type' => 'danger', 'text' => 'Gagal tambah kolektif: ' . $e->getMessage()];
+                $selected_tingkat_id = $id_tingkat > 0 ? $id_tingkat : $selected_tingkat_id;
+            }
+        }
+    }
+
+    // Add peserta manual
     if (isset($_POST['add_peserta_didik'])) {
         $id_tingkat = ensureInt($_POST['id_tingkat_barung'] ?? 0);
         $nama = sanitizeInput($_POST['nama_peserta_didik'] ?? '');
@@ -349,13 +610,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tgl = sanitizeInput($_POST['tanggal_lahir'] ?? '');
         $tgl = $tgl !== '' ? substr($tgl, 0, 10) : null;
 
-        if ($id_tingkat <= 0 || $nama === '' || $nta === '') {
-            $message = ['type' => 'warning', 'text' => 'Harap lengkapi tingkat, nama peserta didik, dan NTA.'];
+        if ($id_tingkat <= 0 || $nama === '') {
+            $message = ['type' => 'warning', 'text' => 'Harap lengkapi tingkat dan nama peserta didik. NTA bisa dikosongkan dulu.'];
         } else {
             try {
                 $stmt = $pdo->prepare("
-                    INSERT INTO tb_peserta_didik_barung (id_tingkat_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO tb_peserta_didik_barung
+                        (id_tingkat_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, status, tanggal_masuk, tanggal_keluar)
+                    VALUES (?, ?, ?, ?, ?, 'aktif', NOW(), NULL)
                 ");
                 $ok = $stmt->execute([$id_tingkat, $nama, $nta, ($tempat !== '' ? $tempat : null), $tgl]);
                 if ($ok) {
@@ -382,8 +644,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tgl = sanitizeInput($_POST['tanggal_lahir'] ?? '');
         $tgl = $tgl !== '' ? substr($tgl, 0, 10) : null;
 
-        if ($id_peserta <= 0 || $id_tingkat <= 0 || $nama === '' || $nta === '') {
-            $message = ['type' => 'warning', 'text' => 'Harap lengkapi data edit.'];
+        if ($id_peserta <= 0 || $id_tingkat <= 0 || $nama === '') {
+            $message = ['type' => 'warning', 'text' => 'Nama peserta tidak boleh kosong. NTA bisa dikosongkan.'];
         } else {
             try {
                 $stmt = $pdo->prepare("
@@ -406,8 +668,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Delete peserta
-    if (isset($_POST['delete_peserta_didik'])) {
+    // Keluarkan peserta (soft delete)
+    if (isset($_POST['keluarkan_peserta_didik'])) {
         $id_peserta = ensureInt($_POST['id_peserta_didik_barung'] ?? 0);
         $id_tingkat = ensureInt($_POST['id_tingkat_barung'] ?? 0);
 
@@ -419,14 +681,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $nameStmt->execute([$id_peserta]);
                 $nama = (string)($nameStmt->fetchColumn() ?: '-');
 
-                $stmt = $pdo->prepare("DELETE FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung = ?");
+                $stmt = $pdo->prepare("
+                    UPDATE tb_peserta_didik_barung
+                    SET status = 'keluar', tanggal_keluar = NOW()
+                    WHERE id_peserta_didik_barung = ?
+                    LIMIT 1
+                ");
                 $ok = $stmt->execute([$id_peserta]);
                 if ($ok) {
                     $username = $_SESSION['username'] ?? 'system';
-                    logActivity($pdo, $username, 'Hapus Peserta Didik Barung', "ID {$id_peserta}: {$nama}");
-                    $message = ['type' => 'success', 'text' => 'Peserta didik berhasil dihapus!'];
+                    logActivity($pdo, $username, 'Keluarkan Peserta Didik Barung', "ID {$id_peserta}: {$nama}");
+                    $message = ['type' => 'success', 'text' => 'Peserta didik berhasil dikeluarkan dari daftar.'];
                 } else {
-                    $message = ['type' => 'danger', 'text' => 'Gagal menghapus data.'];
+                    $message = ['type' => 'danger', 'text' => 'Gagal mengeluarkan peserta didik.'];
                 }
                 if ($id_tingkat > 0) $selected_tingkat_id = $id_tingkat;
             } catch (Exception $e) {
@@ -435,34 +702,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Multiple delete peserta (by selected checkboxes)
-    if (isset($_POST['delete_peserta_didik_multiple'])) {
+    // Multiple keluarkan peserta (by selected checkboxes)
+    if (isset($_POST['keluarkan_peserta_didik_multiple'])) {
         $id_tingkat = ensureInt($_POST['id_tingkat_barung'] ?? 0);
         $selected = $_POST['selected_ids'] ?? [];
         if (!is_array($selected)) $selected = [];
         $selected = array_values(array_filter(array_map('intval', $selected), fn($v) => $v > 0));
 
         if ($id_tingkat <= 0 || empty($selected)) {
-            $message = ['type' => 'warning', 'text' => 'Pilih minimal 1 peserta didik untuk dihapus.'];
+            $message = ['type' => 'warning', 'text' => 'Pilih minimal 1 peserta didik untuk dikeluarkan.'];
         } else {
             try {
                 $pdo->beginTransaction();
                 $placeholders = str_repeat('?,', count($selected) - 1) . '?';
-                $sql = "DELETE FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung IN ($placeholders) AND id_tingkat_barung = ?";
+                $sql = "
+                    UPDATE tb_peserta_didik_barung
+                    SET status = 'keluar', tanggal_keluar = NOW()
+                    WHERE id_peserta_didik_barung IN ($placeholders)
+                      AND id_tingkat_barung = ?
+                ";
                 $params = array_merge($selected, [$id_tingkat]);
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($params);
                 $deleted = (int)$stmt->rowCount();
 
                 $username = $_SESSION['username'] ?? 'system';
-                logActivity($pdo, $username, 'Hapus Peserta Didik Barung (Multiple)', "Tingkat ID {$id_tingkat}: deleted {$deleted}");
+                logActivity($pdo, $username, 'Keluarkan Peserta Didik Barung (Multiple)', "Tingkat ID {$id_tingkat}: {$deleted} peserta");
                 $pdo->commit();
 
-                $message = ['type' => 'success', 'text' => "Berhasil menghapus {$deleted} peserta didik."];
+                $message = ['type' => 'success', 'text' => "Berhasil mengeluarkan {$deleted} peserta didik dari daftar."];
                 $selected_tingkat_id = $id_tingkat;
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
-                $message = ['type' => 'danger', 'text' => 'Gagal menghapus data: ' . $e->getMessage()];
+                $message = ['type' => 'danger', 'text' => 'Gagal mengeluarkan data: ' . $e->getMessage()];
+            }
+        }
+    }
+
+    // Update banyak sekaligus (dari modal tabel edit)
+    if (isset($_POST['update_peserta_bulk'])) {
+        $id_tingkat = ensureInt($_POST['id_tingkat_barung'] ?? 0);
+        $bulk_id = $_POST['bulk_id'] ?? [];
+        $bulk_nama = $_POST['bulk_nama'] ?? [];
+        $bulk_nta = $_POST['bulk_nta'] ?? [];
+        $bulk_tempat = $_POST['bulk_tempat'] ?? [];
+        $bulk_tgl = $_POST['bulk_tanggal'] ?? [];
+        if (!is_array($bulk_id)) {
+            $bulk_id = [];
+        }
+
+        if ($id_tingkat <= 0 || empty($bulk_id)) {
+            $message = ['type' => 'warning', 'text' => 'Tidak ada data yang dikirim untuk diperbarui.'];
+        } else {
+            try {
+                $stmtUp = $pdo->prepare('
+                    UPDATE tb_peserta_didik_barung
+                    SET nama_peserta_didik = ?, nta = ?, tempat_lahir = ?, tanggal_lahir = ?
+                    WHERE id_peserta_didik_barung = ? AND id_tingkat_barung = ?
+                ');
+                $pdo->beginTransaction();
+                $updated = 0;
+                $n = count($bulk_id);
+                for ($i = 0; $i < $n; $i++) {
+                    $idp = ensureInt($bulk_id[$i] ?? 0);
+                    $nama = sanitizeInput($bulk_nama[$i] ?? '');
+                    $nta = sanitizeInput($bulk_nta[$i] ?? '');
+                    $tempat = sanitizeInput($bulk_tempat[$i] ?? '');
+                    $tgl = sanitizeInput($bulk_tgl[$i] ?? '');
+                    $tgl = $tgl !== '' ? substr($tgl, 0, 10) : null;
+                    if ($idp <= 0 || $nama === '') {
+                        continue;
+                    }
+                    $stmtUp->execute([
+                        $nama,
+                        $nta,
+                        ($tempat !== '' ? $tempat : null),
+                        $tgl,
+                        $idp,
+                        $id_tingkat,
+                    ]);
+                    $updated++;
+                }
+                if ($updated === 0) {
+                    $pdo->rollBack();
+                    $message = ['type' => 'warning', 'text' => 'Tidak ada baris valid (nama wajib; NTA boleh kosong).'];
+                } else {
+                    $pdo->commit();
+
+                    $username = $_SESSION['username'] ?? 'system';
+                    logActivity($pdo, $username, 'Update Peserta Didik Barung (Multiple)', "Tingkat ID {$id_tingkat}: {$updated} baris");
+                    $message = ['type' => 'success', 'text' => "Berhasil memperbarui {$updated} peserta didik."];
+                    $selected_tingkat_id = $id_tingkat;
+                }
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $message = ['type' => 'danger', 'text' => 'Gagal memperbarui data: ' . $e->getMessage()];
             }
         }
     }
@@ -477,6 +813,7 @@ if ($selected_tingkat_id > 0) {
             SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, id_tingkat_barung
             FROM tb_peserta_didik_barung
             WHERE id_tingkat_barung = ?
+              AND IFNULL(status, 'aktif') = 'aktif'
             ORDER BY nama_peserta_didik ASC
         ");
         $stmt->execute([$selected_tingkat_id]);
@@ -485,6 +822,146 @@ if ($selected_tingkat_id > 0) {
         $table_error = $e->getMessage();
     }
 }
+
+/** Siswa di tb_kelas sesuai tab (untuk modal tambah kolektif); belum ada di tingkat ini */
+$barung_tingkat_slug = barung_resolve_tingkat_slug($selected_tingkat_name);
+$barung_kelas_allowed = barung_kelas_nomor_for_slug($barung_tingkat_slug);
+$available_siswa_barung = [];
+$barung_avail_kelas_tidak_terpetakan = false;
+$barung_avail_sql_error = null;
+if ($selected_tingkat_id > 0 && $barung_tingkat_slug !== null && $barung_kelas_allowed !== []) {
+    try {
+        $kelas_all = $pdo->query('SELECT id_kelas, nama_kelas FROM tb_kelas')->fetchAll(PDO::FETCH_ASSOC);
+        $id_kelas_nomor_map = static function (array $row) use ($barung_kelas_allowed): bool {
+            $nom_k = barung_nomor_mi_dari_tb_kelas_row((int)($row['id_kelas'] ?? 0), (string)($row['nama_kelas'] ?? ''));
+
+            return $nom_k !== null && in_array($nom_k, $barung_kelas_allowed, true);
+        };
+
+        $master_ids = [];
+        foreach ($kelas_all as $kr) {
+            if ($id_kelas_nomor_map([
+                'id_kelas' => (int)($kr['id_kelas'] ?? 0),
+                'nama_kelas' => (string)($kr['nama_kelas'] ?? ''),
+            ])) {
+                $master_ids[] = (int)($kr['id_kelas']);
+            }
+        }
+        $pairs_siswa = $pdo->query('
+            SELECT DISTINCT s.id_kelas AS id_kelas, k.nama_kelas AS nama_kelas
+            FROM tb_siswa s
+            LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
+            WHERE s.id_kelas IS NOT NULL AND s.id_kelas > 0
+        ')->fetchAll(PDO::FETCH_ASSOC);
+        $aktif_ids = [];
+        foreach ($pairs_siswa as $pr) {
+            if ($id_kelas_nomor_map([
+                'id_kelas' => (int)($pr['id_kelas'] ?? 0),
+                'nama_kelas' => (string)($pr['nama_kelas'] ?? ''),
+            ])) {
+                $aktif_ids[] = (int)$pr['id_kelas'];
+            }
+        }
+        $id_kelas_allow = array_values(array_unique(array_filter(array_merge($master_ids, $aktif_ids), static function ($x) {
+            return $x > 0;
+        })));
+        $barung_avail_kelas_tidak_terpetakan = $id_kelas_allow === [];
+
+        /** Kolom penghubung (opsional; query lama gagal diam-diam bila ALTER belum jalan). */
+        $pdd_has_id_siswa = false;
+        try {
+            $pdd_has_id_siswa = (bool)$pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE 'id_siswa'")->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $ignoreCol) {
+            $pdd_has_id_siswa = false;
+        }
+
+        $caseSudahTd = $pdd_has_id_siswa ? <<<'SQL_TD_WITH_ID'
+CASE
+    WHEN EXISTS (
+        SELECT 1 FROM tb_peserta_didik_barung p
+        WHERE p.id_tingkat_barung = ?
+          AND IFNULL(p.status, 'aktif') = 'aktif'
+          AND (
+            (p.id_siswa IS NOT NULL AND p.id_siswa = s.id_siswa)
+            OR (p.id_siswa IS NULL AND TRIM(IFNULL(p.nta, '')) <> ''
+                AND NULLIF(TRIM(s.nisn), '') IS NOT NULL
+                AND CONVERT(TRIM(p.nta) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                    = CONVERT(TRIM(s.nisn) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
+          )
+    ) THEN 1
+    ELSE 0
+END AS sudah_terdaftar
+SQL_TD_WITH_ID
+            : <<<'SQL_TD_NO_ID'
+CASE
+    WHEN EXISTS (
+        SELECT 1 FROM tb_peserta_didik_barung p
+        WHERE p.id_tingkat_barung = ?
+          AND IFNULL(p.status, 'aktif') = 'aktif'
+          AND TRIM(IFNULL(p.nta, '')) <> ''
+          AND NULLIF(TRIM(s.nisn), '') IS NOT NULL
+          AND CONVERT(TRIM(p.nta) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+              = CONVERT(TRIM(s.nisn) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+    ) THEN 1
+    ELSE 0
+END AS sudah_terdaftar
+SQL_TD_NO_ID;
+
+        if (!empty($id_kelas_allow)) {
+            $placeholders = implode(',', array_fill(0, count($id_kelas_allow), '?'));
+            $sql_avail =
+                'SELECT s.id_siswa, s.nisn, s.nama_siswa,' .
+                " COALESCE(NULLIF(TRIM(k.nama_kelas), ''), CONCAT('#id ', CAST(s.id_kelas AS CHAR))) AS nama_kelas," .
+                trim($caseSudahTd) .
+                ' FROM tb_siswa s' .
+                ' LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas' .
+                ' WHERE s.id_kelas IN (' . $placeholders . ')' .
+                ' ORDER BY nama_kelas ASC, s.nama_siswa ASC';
+            $params_avail = array_merge([$selected_tingkat_id], $id_kelas_allow);
+            $st_avail = $pdo->prepare($sql_avail);
+            $st_avail->execute($params_avail);
+            $available_siswa_barung = $st_avail->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Exception $e) {
+        $available_siswa_barung = [];
+        $barung_avail_sql_error = $e->getMessage();
+    }
+}
+
+/** Kelompok siswa untuk modal (tab per nama kelas jika >1 kelas) */
+$available_siswa_by_kelas = [];
+$available_siswa_selectable_count = 0;
+foreach ($available_siswa_barung as $rowSb) {
+    if ((int)($rowSb['sudah_terdaftar'] ?? 0) !== 1) {
+        $available_siswa_selectable_count++;
+    }
+    $nk = (string)($rowSb['nama_kelas'] ?? '-');
+    if (!isset($available_siswa_by_kelas[$nk])) {
+        $available_siswa_by_kelas[$nk] = [];
+    }
+    $available_siswa_by_kelas[$nk][] = $rowSb;
+}
+ksort($available_siswa_by_kelas, SORT_NATURAL | SORT_FLAG_CASE);
+$barung_modal_tabs_kelas = count($available_siswa_by_kelas) > 1;
+
+$barung_kelas_hint = '';
+switch ($barung_tingkat_slug) {
+    case 'pra_mula':
+        $barung_kelas_hint = 'Kelas 1';
+        break;
+    case 'mula':
+        $barung_kelas_hint = 'Kelas 2–4';
+        break;
+    case 'bantu':
+        $barung_kelas_hint = 'Kelas 5–6';
+        break;
+    case 'tata':
+        $barung_kelas_hint = 'Kelas 4–6';
+        break;
+    default:
+        $barung_kelas_hint = '';
+}
+$barung_bisa_modal_tambah = $selected_tingkat_id > 0 && $barung_tingkat_slug !== null && $barung_kelas_allowed !== [];
 
 // Page-specific JS
 $js_page = [];
@@ -544,27 +1021,27 @@ $(document).ready(function() {
         $('#editModal').modal('show');
     });
 
-    // Delete confirmation
+    // Keluarkan confirmation
     $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
         var id = $(this).data('id');
         var nama = $(this).data('nama') || '-';
         var tingkat = $(this).data('tingkat') || '';
         Swal.fire({
-            title: 'Konfirmasi Hapus',
-            text: 'Apakah Anda yakin ingin menghapus "' + nama + '"?',
+            title: 'Konfirmasi Keluarkan',
+            text: 'Apakah Anda yakin ingin mengeluarkan "' + nama + '" dari daftar?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Hapus!',
+            confirmButtonText: 'Ya, Keluarkan',
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
                 var form = $('<form method="POST" action="">' +
                     '<input type="hidden" name="id_peserta_didik_barung" value="' + id + '">' +
                     '<input type="hidden" name="id_tingkat_barung" value="' + tingkat + '">' +
-                    '<input type="hidden" name="delete_peserta_didik" value="1">' +
+                    '<input type="hidden" name="keluarkan_peserta_didik" value="1">' +
                     '</form>');
                 $('body').append(form);
                 form.submit();
@@ -575,9 +1052,11 @@ $(document).ready(function() {
     function updateDeleteSelectedUI() {
         var checkedCount = $('.row-check:checked').length;
         if (checkedCount > 0) {
-            $('#btn-delete-selected').removeClass('d-none').text('Hapus Terpilih (' + checkedCount + ')');
+            $('#btn-delete-selected').removeClass('d-none').text('Keluarkan Terpilih (' + checkedCount + ')');
+            $('#btn-edit-selected').removeClass('d-none').text('Edit Terpilih (' + checkedCount + ')');
         } else {
-            $('#btn-delete-selected').addClass('d-none').text('Hapus Terpilih');
+            $('#btn-delete-selected').addClass('d-none').text('Keluarkan Terpilih');
+            $('#btn-edit-selected').addClass('d-none').text('Edit Terpilih');
         }
     }
 
@@ -604,26 +1083,92 @@ $(document).ready(function() {
         updateDeleteSelectedUI();
     });
 
-    // Multiple delete button
+    // Edit banyak (isi tabel dari baris tercentang)
+    $('#btn-edit-selected').on('click', function (e) {
+        e.preventDefault();
+        var tingkat = $('#id_tingkat_barung_hidden').val() || '';
+        var $tbody = $('#bulkEditTableBody');
+        $tbody.empty();
+
+        var rows = [];
+        $('.row-check:checked').each(function () {
+            var $cb = $(this);
+            rows.push({
+                id: $cb.val(),
+                nama: ($cb.attr('data-nama') !== undefined) ? $cb.attr('data-nama') : ($cb.data('nama') || ''),
+                nta: ($cb.attr('data-nta') !== undefined) ? $cb.attr('data-nta') : ($cb.data('nta') || ''),
+                tempat: ($cb.attr('data-tempat') !== undefined) ? $cb.attr('data-tempat') : ($cb.data('tempat') || ''),
+                tanggal: ($cb.attr('data-tanggal') !== undefined) ? $cb.attr('data-tanggal') : ($cb.data('tanggal') || '')
+            });
+        });
+
+        if (!rows.length) return;
+
+        $('#bulk_edit_id_tingkat').val(tingkat);
+
+        rows.forEach(function (r, idx) {
+            var $tr = $('<tr>');
+            $tr.append($('<td class="text-center text-muted align-middle">').text(idx + 1));
+            $tr.append($('<td>').append(
+                $('<input>', { type: 'hidden', name: 'bulk_id[]', value: r.id }),
+                $('<input>', {
+                    type: 'text',
+                    name: 'bulk_nama[]',
+                    class: 'form-control form-control-sm',
+                    required: true,
+                    value: r.nama
+                })
+            ));
+            $tr.append($('<td>').append(
+                $('<input>', {
+                    type: 'text',
+                    name: 'bulk_nta[]',
+                    class: 'form-control form-control-sm',
+                    value: r.nta
+                })
+            ));
+            $tr.append($('<td>').append(
+                $('<input>', {
+                    type: 'text',
+                    name: 'bulk_tempat[]',
+                    class: 'form-control form-control-sm',
+                    value: r.tempat
+                })
+            ));
+            $tr.append($('<td>').append(
+                $('<input>', {
+                    type: 'date',
+                    name: 'bulk_tanggal[]',
+                    class: 'form-control form-control-sm',
+                    value: r.tanggal || ''
+                })
+            ));
+            $tbody.append($tr);
+        });
+
+        $('#editBulkModal').modal('show');
+    });
+
+    // Multiple keluarkan button
     $('#btn-delete-selected').on('click', function(e) {
         e.preventDefault();
         var ids = $('.row-check:checked').map(function() { return $(this).val(); }).get();
         if (!ids || ids.length === 0) return;
 
         Swal.fire({
-            title: 'Konfirmasi Hapus',
-            text: 'Hapus ' + ids.length + ' peserta didik terpilih?',
+            title: 'Konfirmasi Keluarkan',
+            text: 'Keluarkan ' + ids.length + ' peserta didik terpilih dari daftar?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Ya, Hapus!',
+            confirmButtonText: 'Ya, Keluarkan',
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
                 var form = $('<form method="POST" action="">' +
                     '<input type="hidden" name="id_tingkat_barung" value="' + $('#id_tingkat_barung_hidden').val() + '">' +
-                    '<input type="hidden" name="delete_peserta_didik_multiple" value="1">' +
+                    '<input type="hidden" name="keluarkan_peserta_didik_multiple" value="1">' +
                     '</form>');
                 ids.forEach(function(id) {
                     form.append('<input type="hidden" name="selected_ids[]" value="' + id + '">');
@@ -635,6 +1180,42 @@ $(document).ready(function() {
     });
 
     updateDeleteSelectedUI();
+
+    $('#checkAllBarungSiswa').on('change', function () {
+        $('.check-siswa-barung').prop('checked', $(this).is(':checked'));
+        $('.check-all-barung-pane').prop('checked', $(this).is(':checked'));
+    });
+
+    $(document).on('change', '.check-all-barung-pane', function () {
+        var on = $(this).is(':checked');
+        $(this).closest('.tab-pane').find('.check-siswa-barung').prop('checked', on);
+        syncGlobalCheckBarungModal();
+    });
+
+    $(document).on('change', '#modalTambahAnggotaBarung .check-siswa-barung', function () {
+        var $pane = $(this).closest('.tab-pane');
+        if (!$pane.length) {
+            syncGlobalCheckBarungModal();
+            return;
+        }
+        var $checks = $pane.find('.check-siswa-barung');
+        var $allOn = $pane.find('.check-all-barung-pane');
+        var ok = $checks.length && $checks.length === $checks.filter(':checked').length;
+        $allOn.prop('checked', ok);
+        syncGlobalCheckBarungModal();
+    });
+
+    function syncGlobalCheckBarungModal() {
+        var $all = $('.check-siswa-barung');
+        if (!$all.length) {
+            $('#checkAllBarungSiswa').prop('checked', false);
+            return;
+        }
+        $('#checkAllBarungSiswa').prop(
+            'checked',
+            $all.length === $all.filter(':checked').length
+        );
+    }
 
     // AJAX Import with progress bar (upload progress + processing state)
     $('#importForm').on('submit', function(e) {
@@ -716,7 +1297,7 @@ function exportToExcel() {
         
         var headerAOA = [
             [schoolName.toUpperCase()],
-            ["DATA PESERTA DIDIK BARUNG"],
+            ["DATA ANGGOTA PRAMUKA"],
             ["TINGKAT: " + tingkatName.toUpperCase()],
             ["TAHUN AJARAN: " + academicYear],
             []
@@ -724,7 +1305,7 @@ function exportToExcel() {
         var finalWS = XLSX.utils.aoa_to_sheet(headerAOA);
         XLSX.utils.sheet_add_dom(finalWS, newTable, { origin: -1 });
         
-        XLSX.utils.book_append_sheet(wb, finalWS, "Data Barung");
+        XLSX.utils.book_append_sheet(wb, finalWS, "Anggota Pramuka");
         XLSX.writeFile(wb, 'data_peserta_didik_barung_' + tingkatName.replace(/\s+/g, '_') + '_' + academicYear.replace(/\//g, '-') + '.xlsx');
     } else {
         var html = newTable.outerHTML;
@@ -777,7 +1358,7 @@ function exportToPDF() {
     }
     printWindow.document.write('<div class="header-text">');
     printWindow.document.write('<h2>' + schoolName.toUpperCase() + '</h2>');
-    printWindow.document.write('<h3>DATA PESERTA DIDIK BARUNG</h3>');
+    printWindow.document.write('<h3>DATA ANGGOTA PRAMUKA</h3>');
     printWindow.document.write('<h3>TINGKAT: ' + tingkatName.toUpperCase() + '</h3>');
     printWindow.document.write('<h3>TAHUN AJARAN: ' + academicYear + '</h3>');
     printWindow.document.write('</div>');
@@ -822,18 +1403,18 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Data Barung</h1>
+            <h1>Data Anggota Pramuka</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
                 <div class="breadcrumb-item">Ekstrakurikuler</div>
-                <div class="breadcrumb-item">Barung</div>
+                <div class="breadcrumb-item">Pramuka</div>
             </div>
         </div>
 
         <div class="section-body">
             <div class="card">
                 <div class="card-header">
-                    <h4>Data Peserta Didik Barung (<?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : 'Semua') ?>)</h4>
+                    <h4>Data Anggota Pramuka (<?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : 'Semua') ?>)</h4>
                     <div class="card-header-action">
                         <button type="button" class="btn btn-success" onclick="exportToExcel()" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-file-excel"></i> Excel
@@ -841,14 +1422,17 @@ include '../templates/sidebar.php';
                         <button type="button" class="btn btn-warning ml-1" onclick="exportToPDF()" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-file-pdf"></i> PDF
                         </button>
-                        <button class="btn btn-primary ml-1" data-toggle="modal" data-target="#addModal" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                        <button class="btn btn-primary ml-1" data-toggle="modal" data-target="#modalTambahAnggotaBarung" type="button" <?php echo $barung_bisa_modal_tambah ? '' : 'disabled'; ?> title="<?= $barung_bisa_modal_tambah ? '' : 'Pilih tab Pra Mula / Mula / Bantu / Tata untuk menambah dari data siswa' ?>">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
                         <button class="btn btn-info ml-1" data-toggle="modal" data-target="#importModal" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-file-import"></i> Import
                         </button>
+                        <button class="btn btn-warning ml-1 d-none" id="btn-edit-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
+                            <i class="fas fa-edit"></i> Edit Terpilih
+                        </button>
                         <button class="btn btn-danger ml-1 d-none" id="btn-delete-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
-                            <i class="fas fa-trash"></i> Hapus Terpilih
+                            <i class="fas fa-sign-out-alt"></i> Keluarkan Terpilih
                         </button>
                     </div>
                 </div>
@@ -910,7 +1494,11 @@ include '../templates/sidebar.php';
                                     <?php foreach ($peserta_rows as $idx => $row): ?>
                                         <tr>
                                             <td class="text-center">
-                                                <input type="checkbox" class="row-check" value="<?= (int)($row['id_peserta_didik_barung'] ?? 0) ?>">
+                                                <input type="checkbox" class="row-check" value="<?= (int)($row['id_peserta_didik_barung'] ?? 0) ?>"
+                                                    data-nama="<?= htmlspecialchars($row['nama_peserta_didik'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                    data-nta="<?= htmlspecialchars($row['nta'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                    data-tempat="<?= htmlspecialchars($row['tempat_lahir'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                    data-tanggal="<?= htmlspecialchars(!empty($row['tanggal_lahir']) ? substr((string)$row['tanggal_lahir'], 0, 10) : '', ENT_QUOTES, 'UTF-8') ?>">
                                             </td>
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
                                             <td><?= htmlspecialchars($row['nama_peserta_didik'] ?? '') ?></td>
@@ -933,7 +1521,7 @@ include '../templates/sidebar.php';
                                                     data-tingkat="<?= (int)$row['id_tingkat_barung'] ?>"
                                                     data-nama="<?= htmlspecialchars($row['nama_peserta_didik'] ?? '', ENT_QUOTES) ?>"
                                                     type="button">
-                                                    <i class="fas fa-trash"></i>
+                                                    <i class="fas fa-sign-out-alt"></i>
                                                 </button>
                                             </td>
                                         </tr>
@@ -948,40 +1536,162 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
-<!-- Add Modal -->
-<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<!-- Add Modal: tambah dari data siswa (filter kelas sesuai tab tingkat) -->
+<div class="modal fade" id="modalTambahAnggotaBarung" tabindex="-1" role="dialog" aria-labelledby="modalTambahAnggotaBarungLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addModalLabel">Tambah Peserta Didik <?= $selected_tingkat_name !== '' ? '(' . htmlspecialchars($selected_tingkat_name) . ')' : '' ?></h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
             <form method="POST" action="">
-                <input type="hidden" name="add_peserta_didik" value="1">
+                <input type="hidden" name="add_peserta_kolektif" value="1">
                 <input type="hidden" name="id_tingkat_barung" value="<?= (int)$selected_tingkat_id ?>">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTambahAnggotaBarungLabel">
+                        Tambah Anggota — <?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : '—') ?>
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label>Nama Peserta Didik</label>
-                        <input type="text" class="form-control" name="nama_peserta_didik" required autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label>NTA</label>
-                        <input type="text" class="form-control" name="nta" required autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label>Tempat Lahir</label>
-                        <input type="text" class="form-control" name="tempat_lahir" autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label>Tanggal Lahir</label>
-                        <input type="date" class="form-control" name="tanggal_lahir">
-                    </div>
+                    <?php if (!$barung_bisa_modal_tambah): ?>
+                        <div class="alert alert-warning mb-0">
+                            Pemilihan siswa dari data kelas otomatis hanya untuk tingkat <strong>Pra Mula</strong>, <strong>Mula</strong>, <strong>Bantu</strong>, atau <strong>Tata</strong>. Gunakan tombol Import untuk tingkat lain.
+                        </div>
+                    <?php else: ?>
+                        <?php if (!empty($barung_avail_sql_error)): ?>
+                            <div class="alert alert-danger mb-3 small">
+                                <strong>Gagal memuat daftar siswa:</strong>
+                                <?= htmlspecialchars($barung_avail_sql_error, ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                        <?php endif; ?>
+                        <p class="text-muted mb-3">
+                            Menampilkan siswa dari <strong><?= htmlspecialchars($barung_kelas_hint !== '' ? $barung_kelas_hint : 'kelas sesuai aturan tingkat') ?></strong>
+                            untuk tingkat ini. Yang sudah terdaftar ditandai dan tidak bisa dipilih ulang. Kolom <strong>NTA</strong> bisa dikosongkan dulu dan diisi kemudian lewat tombol Edit.
+                        </p>
+                        <?php if (!empty($available_siswa_barung)): ?>
+                            <div class="form-group mb-2">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="checkAllBarungSiswa">
+                                    <label class="custom-control-label" for="checkAllBarungSiswa"><?= !empty($barung_modal_tabs_kelas) ? 'Pilih semua (semua kelas)' : 'Pilih semua' ?></label>
+                                </div>
+                            </div>
+                            <?php if (!empty($barung_modal_tabs_kelas)): ?>
+                                <ul class="nav nav-tabs flex-wrap barung-modal-tabs-kelas" role="tablist">
+                                    <?php
+                                    $ti = 0;
+                                    foreach ($available_siswa_by_kelas as $nama_kelas_tab => $rows_tab):
+                                        $cnt_tab = count($rows_tab);
+                                        ?>
+                                        <li class="nav-item">
+                                            <a class="nav-link <?= $ti === 0 ? 'active' : '' ?>" id="barung-tab-kelas-<?= $ti ?>" data-toggle="tab" href="#barung-pane-kelas-<?= $ti ?>" role="tab">
+                                                <?= htmlspecialchars($nama_kelas_tab) ?>
+                                                <span class="badge badge-secondary ml-1"><?= (int)$cnt_tab ?></span>
+                                            </a>
+                                        </li>
+                                        <?php
+                                        $ti++;
+                                    endforeach;
+                                    ?>
+                                </ul>
+                                <div class="tab-content border border-top-0 rounded-bottom bg-white p-3" style="max-height: 380px; overflow-y: auto;">
+                                    <?php
+                                    $ti = 0;
+                                    foreach ($available_siswa_by_kelas as $nama_kelas_tab => $rows_tab):
+                                        ?>
+                                        <div class="tab-pane fade <?= $ti === 0 ? 'show active' : '' ?>" id="barung-pane-kelas-<?= $ti ?>" role="tabpanel">
+                                            <div class="custom-control custom-checkbox mb-2">
+                                                <input type="checkbox" class="custom-control-input check-all-barung-pane" id="check-pane-barung-<?= $ti ?>">
+                                                <label class="custom-control-label" for="check-pane-barung-<?= $ti ?>">Pilih semua di kelas ini</label>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered mb-0">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th style="width: 40px;">#</th>
+                                                            <th>NISN</th>
+                                                            <th>Nama Siswa</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php foreach ($rows_tab as $s): ?>
+                                                            <?php $sudah_terdaftar = (int)($s['sudah_terdaftar'] ?? 0) === 1; ?>
+                                                            <tr>
+                                                                <td class="text-center">
+                                                                    <?php if ($sudah_terdaftar): ?>
+                                                                        <input type="checkbox" disabled>
+                                                                    <?php else: ?>
+                                                                        <input type="checkbox" class="check-siswa-barung" name="selected_siswa[]" value="<?= (int)$s['id_siswa'] ?>">
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                                <td><?= htmlspecialchars($s['nisn'] ?? '-') ?></td>
+                                                                <td>
+                                                                    <?= htmlspecialchars($s['nama_siswa'] ?? '') ?>
+                                                                    <?php if ($sudah_terdaftar): ?>
+                                                                        <span class="badge badge-secondary ml-1">sudah terdaftar</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <?php
+                                        $ti++;
+                                    endforeach;
+                                    ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th style="width: 40px;">#</th>
+                                                <th>Kelas</th>
+                                                <th>NISN</th>
+                                                <th>Nama Siswa</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($available_siswa_barung as $s): ?>
+                                                <?php $sudah_terdaftar = (int)($s['sudah_terdaftar'] ?? 0) === 1; ?>
+                                                <tr>
+                                                    <td class="text-center">
+                                                        <?php if ($sudah_terdaftar): ?>
+                                                            <input type="checkbox" disabled>
+                                                        <?php else: ?>
+                                                            <input type="checkbox" class="check-siswa-barung" name="selected_siswa[]" value="<?= (int)$s['id_siswa'] ?>">
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td><?= htmlspecialchars($s['nama_kelas'] ?? '-') ?></td>
+                                                    <td><?= htmlspecialchars($s['nisn'] ?? '-') ?></td>
+                                                    <td>
+                                                        <?= htmlspecialchars($s['nama_siswa'] ?? '') ?>
+                                                        <?php if ($sudah_terdaftar): ?>
+                                                            <span class="badge badge-secondary ml-1">sudah terdaftar</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <div class="alert alert-info mb-0">
+                                <?php if (!empty($barung_avail_kelas_tidak_terpetakan)): ?>
+                                    <strong>Belum ada kelas yang dikenali sebagai bagian tingkat ini.</strong> Nama kelas di master harus bisa dipetakan ke kelas 1–6 (biasanya «I», «II», … «VI», atau angka «1», «2», … atau <code>id_kelas</code> bernilai 1–6 untuk kelas 1–6). Perbarui nama kelas di menu Kelas atau pastikan siswa sudah ada di kelas yang sesuai.
+                                <?php else: ?>
+                                    Tidak ada siswa baru yang dapat ditambahkan pada rentang kelas ini (semua siswa kelas tersebut sudah terdaftar di tingkat ini, atau tidak ada siswa pada kelas-kelas itu di Data Siswa).
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <button type="submit" class="btn btn-primary" <?= ($barung_bisa_modal_tambah && !empty($available_siswa_barung) && $available_siswa_selectable_count > 0) ? '' : 'disabled' ?>>
+                        <i class="fas fa-save"></i> Tambahkan
+                    </button>
                 </div>
             </form>
         </div>
@@ -1019,7 +1729,7 @@ include '../templates/sidebar.php';
                     </div>
                     <div class="form-group">
                         <label>NTA</label>
-                        <input type="text" class="form-control" name="nta" id="edit_nta" required autocomplete="off">
+                        <input type="text" class="form-control" name="nta" id="edit_nta" autocomplete="off" placeholder="Opsional">
                     </div>
                     <div class="form-group">
                         <label>Tempat Lahir</label>
@@ -1033,6 +1743,47 @@ include '../templates/sidebar.php';
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit banyak: tabel dalam modal -->
+<div class="modal fade" id="editBulkModal" tabindex="-1" role="dialog" aria-labelledby="editBulkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <form method="POST" action="" id="bulkEditForm">
+                <input type="hidden" name="update_peserta_bulk" value="1">
+                <input type="hidden" name="id_tingkat_barung" id="bulk_edit_id_tingkat" value="<?= (int)$selected_tingkat_id ?>">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editBulkModalLabel">Edit beberapa peserta didik</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body py-2">
+                    <p class="text-muted small mb-2">Ubah data pada tabel di bawah, lalu simpan. Baris tanpa nama akan dilewati; NTA boleh kosong.</p>
+                    <div class="table-responsive" style="max-height: min(65vh, 520px); overflow-y: auto;">
+                        <table class="table table-sm table-bordered mb-0 align-middle">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 48px;">No</th>
+                                    <th>Nama Peserta Didik</th>
+                                    <th style="min-width: 120px;">NTA</th>
+                                    <th>Tempat Lahir</th>
+                                    <th style="min-width: 150px;">Tanggal Lahir</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulkEditTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Simpan semua
+                    </button>
                 </div>
             </form>
         </div>

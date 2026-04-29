@@ -388,9 +388,10 @@ function h($v) {
     .page:last-child { page-break-after: auto; }
     .bg {
       position: absolute; inset: 0;
-      width: 210mm; height: 330mm;
-      top: 1mm; left: 0;
-      object-fit: contain;
+      width: 220mm; height: 330mm;
+      top: 1mm; left: 50%;
+      transform: translateX(-50%);
+      object-fit: fill;
       object-position: center top;
       z-index: 0;
       pointer-events: none;
@@ -400,16 +401,16 @@ function h($v) {
       position: relative;
       z-index: 1;
       box-sizing: border-box;
-      width: 156mm;          /* tighter safe text area inside frame */
+      width: 150mm;          /* keep text clear from frame lines */
       min-height: 278mm;
       margin: 24mm auto 0;
       padding: 0;
     }
     .center { text-align: center; margin-top: 22mm; }
-    .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 34mm auto 10mm; display:block; }
-    .h1 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin: 0; }
-    .h2 { font-weight: 700; letter-spacing: 0.5px; font-size: 14pt; margin: 2mm 0 0; }
-    .script { font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive; font-size: 32pt; margin: 6mm 0 0; }
+    .logo { width: 22mm; height: 22mm; object-fit: contain; margin: 40mm auto 10mm; display:block; }
+    .h1 { font-family: "Benguiat Bk BT", "Book Antiqua", "Times New Roman", serif; font-weight: 700; letter-spacing: 0.5px; font-size: 20pt; margin: 0; }
+    .h2 { font-family: "Benguiat Bk BT", "Book Antiqua", "Times New Roman", serif; font-weight: 700; letter-spacing: 0.5px; font-size: 20pt; margin: 2mm 0 0; }
+    .script { font-family: "Edwardian Script TC", "Monotype Corsiva", "Brush Script MT", cursive; font-size: 40pt; margin: 6mm 0 0; }
     .nomor { font-size: 12pt; margin: 1mm 0 0; }
     .body { margin-top: 6mm; font-size: 12pt; line-height: 1.6; }
     .label-table { width: 96%; margin: 5mm auto 4mm; font-size: 12pt; }
@@ -418,13 +419,13 @@ function h($v) {
     .colon { width: 4mm; text-align: center; }
     .value { font-weight: 700; }
     .para { margin: 3mm 0; text-align: justify; padding: 0; }
-    .sign { margin-top: 16mm; font-size: 12pt; }
+    .sign { margin-top: 10mm; font-size: 12pt; }
     .sign-table { width: 100%; }
     .sign-table td { vertical-align: top; }
     .sign-right { width: 44%; padding-right: 2mm; }
     .name { font-weight: 800; text-decoration: underline; margin-bottom: 1mm; }
     .nta { margin-top: 1mm; }
-    .ketua-block { margin-top: 28mm; }
+    .ketua-block { margin-top: 14mm; }
   </style>
 </head>
 <body>
@@ -501,7 +502,7 @@ function h($v) {
                   <div>Dikeluarkan di : <?= h($tempat_surat) ?></div>
                   <div>Pada Tanggal : <?= h($formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '')) ?></div>
                   <div class="center ketua-block">Ketua Gugus Depan</div>
-                  <div style="height: 8mm;"></div>
+                  <div style="height: 3mm;"></div>
                   <div class="center name"><?= h($ketua_gudep) ?></div>
                   <?php if ($nta_ketua_gudep !== ''): ?>
                     <div class="center nta">NTA : <?= h($nta_ketua_gudep) ?></div>

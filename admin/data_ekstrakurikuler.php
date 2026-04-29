@@ -56,7 +56,8 @@ try {
                 id_ekstrakurikuler INT AUTO_INCREMENT PRIMARY KEY,
                 nama_ekstrakurikuler VARCHAR(100) NOT NULL,
                 hari VARCHAR(30) NOT NULL,
-                waktu TIME NOT NULL
+                waktu TIME NOT NULL,
+                waktu_selesai TIME NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     } else {
@@ -66,6 +67,7 @@ try {
             'nama_ekstrakurikuler' => "VARCHAR(100) NOT NULL",
             'hari' => "VARCHAR(30) NOT NULL",
             'waktu' => "TIME NOT NULL",
+            'waktu_selesai' => "TIME NULL",
         ];
 
         foreach ($required_cols as $col => $typeDef) {
@@ -90,6 +92,31 @@ function normalizeWaktuForInput($waktu) {
     return substr((string)$waktu, 0, 5);
 }
 
+/** Format TIME ke tampilan 07.10 (titik seperti contoh pengguna). */
+function formatJamTitik($waktu_raw) {
+    if (empty($waktu_raw)) {
+        return '';
+    }
+    $t = strtotime((string)$waktu_raw);
+    if ($t === false) {
+        return '';
+    }
+    return date('H.i', $t);
+}
+
+/** Kolom Waktu untuk tampilan: 07.10 - 08.55; jika selesai kosong sama dengan mulai, tampilkan satu jam saja */
+function formatWaktuEkstraRange($waktu_mulai, $waktu_selesai) {
+    $a = formatJamTitik($waktu_mulai);
+    if ($a === '') {
+        return '-';
+    }
+    $b = formatJamTitik($waktu_selesai);
+    if ($b === '' || $b === $a) {
+        return $a;
+    }
+    return $a . ' - ' . $b;
+}
+
 function validateHari($hari) {
     $hari = trim((string)$hari);
     return $hari;
@@ -101,20 +128,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nama_ekstrakurikuler = sanitizeInput($_POST['nama_ekstrakurikuler'] ?? '');
         $hari = sanitizeInput(validateHari($_POST['hari'] ?? ''));
         $waktu = sanitizeInput($_POST['waktu'] ?? '');
+        $waktu_selesai = sanitizeInput($_POST['waktu_selesai'] ?? '');
 
-        if ($nama_ekstrakurikuler === '' || $hari === '' || $waktu === '') {
-            $message = ['type' => 'warning', 'text' => 'Harap lengkapi semua data ekstrakurikuler.'];
+        if ($nama_ekstrakurikuler === '' || $hari === '' || $waktu === '' || $waktu_selesai === '') {
+            $message = ['type' => 'warning', 'text' => 'Harap lengkapi semua data ekstrakurikuler, termasuk waktu mulai dan selesai.'];
+        } elseif (strtotime($waktu_selesai) <= strtotime($waktu)) {
+            $message = ['type' => 'warning', 'text' => 'Waktu selesai harus setelah waktu mulai.'];
         } else {
             try {
                 $stmt = $pdo->prepare("
-                    INSERT INTO {$table_name} (nama_ekstrakurikuler, hari, waktu)
-                    VALUES (?, ?, ?)
+                    INSERT INTO {$table_name} (nama_ekstrakurikuler, hari, waktu, waktu_selesai)
+                    VALUES (?, ?, ?, ?)
                 ");
-                $ok = $stmt->execute([$nama_ekstrakurikuler, $hari, $waktu]);
+                $ok = $stmt->execute([$nama_ekstrakurikuler, $hari, $waktu, $waktu_selesai]);
 
                 if ($ok) {
                     $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                    logActivity($pdo, $username, 'Tambah Ekstrakurikuler', "Menambahkan ekstrakurikuler: {$nama_ekstrakurikuler} ({$hari}, {$waktu})");
+                    logActivity($pdo, $username, 'Tambah Ekstrakurikuler', "Menambahkan ekstrakurikuler: {$nama_ekstrakurikuler} ({$hari}, {$waktu}-{$waktu_selesai})");
                     $message = ['type' => 'success', 'text' => 'Data ekstrakurikuler berhasil ditambahkan!'];
                 } else {
                     $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data ekstrakurikuler.'];
@@ -131,21 +161,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nama_ekstrakurikuler = sanitizeInput($_POST['nama_ekstrakurikuler'] ?? '');
         $hari = sanitizeInput(validateHari($_POST['hari'] ?? ''));
         $waktu = sanitizeInput($_POST['waktu'] ?? '');
+        $waktu_selesai = sanitizeInput($_POST['waktu_selesai'] ?? '');
 
-        if ($id_ekstrakurikuler <= 0 || $nama_ekstrakurikuler === '' || $hari === '' || $waktu === '') {
-            $message = ['type' => 'warning', 'text' => 'Harap lengkapi semua data ekstrakurikuler.'];
+        if ($id_ekstrakurikuler <= 0 || $nama_ekstrakurikuler === '' || $hari === '' || $waktu === '' || $waktu_selesai === '') {
+            $message = ['type' => 'warning', 'text' => 'Harap lengkapi semua data ekstrakurikuler, termasuk waktu mulai dan selesai.'];
+        } elseif (strtotime($waktu_selesai) <= strtotime($waktu)) {
+            $message = ['type' => 'warning', 'text' => 'Waktu selesai harus setelah waktu mulai.'];
         } else {
             try {
                 $stmt = $pdo->prepare("
                     UPDATE {$table_name}
-                    SET nama_ekstrakurikuler = ?, hari = ?, waktu = ?
+                    SET nama_ekstrakurikuler = ?, hari = ?, waktu = ?, waktu_selesai = ?
                     WHERE id_ekstrakurikuler = ?
                 ");
-                $ok = $stmt->execute([$nama_ekstrakurikuler, $hari, $waktu, $id_ekstrakurikuler]);
+                $ok = $stmt->execute([$nama_ekstrakurikuler, $hari, $waktu, $waktu_selesai, $id_ekstrakurikuler]);
 
                 if ($ok) {
                     $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                    logActivity($pdo, $username, 'Update Ekstrakurikuler', "Update ID {$id_ekstrakurikuler}: {$nama_ekstrakurikuler} ({$hari}, {$waktu})");
+                    logActivity($pdo, $username, 'Update Ekstrakurikuler', "Update ID {$id_ekstrakurikuler}: {$nama_ekstrakurikuler} ({$hari}, {$waktu}-{$waktu_selesai})");
                     $message = ['type' => 'success', 'text' => 'Data ekstrakurikuler berhasil diperbarui!'];
                 } else {
                     $message = ['type' => 'danger', 'text' => 'Gagal memperbarui data ekstrakurikuler.'];
@@ -190,7 +223,7 @@ $ekstrakurikuler = [];
 $fetch_error = null;
 try {
     $stmt = $pdo->query("
-        SELECT id_ekstrakurikuler, nama_ekstrakurikuler, hari, waktu
+        SELECT id_ekstrakurikuler, nama_ekstrakurikuler, hari, waktu, waktu_selesai
         FROM {$table_name}
         ORDER BY nama_ekstrakurikuler ASC, hari ASC
     ");
@@ -259,14 +292,17 @@ $(document).ready(function() {
         var id = $(this).data('id');
         var nama = $(this).data('nama') || '';
         var hari = $(this).data('hari') || '';
-        var waktu = $(this).data('waktu') || '';
+        var mulai = $(this).data('mulai') || '';
+        var selesai = $(this).data('selesai') || '';
 
-        if (waktu && waktu.length > 5) waktu = waktu.substring(0, 5);
+        if (mulai && mulai.length > 5) mulai = mulai.substring(0, 5);
+        if (selesai && selesai.length > 5) selesai = selesai.substring(0, 5);
 
         $('#edit_id_ekstrakurikuler').val(id);
         $('#edit_nama_ekstrakurikuler').val(nama);
         $('#edit_hari').val(hari);
-        $('#edit_waktu').val(waktu);
+        $('#edit_waktu').val(mulai);
+        $('#edit_waktu_selesai').val(selesai);
         $('#editModal').modal('show');
     });
 
@@ -475,19 +511,21 @@ include '../templates/sidebar.php';
                                 <?php if (!empty($ekstrakurikuler)): ?>
                                     <?php foreach ($ekstrakurikuler as $idx => $row): ?>
                                         <?php
-                                            $waktu_input = normalizeWaktuForInput($row['waktu'] ?? '');
+                                            $waktu_mulai = normalizeWaktuForInput($row['waktu'] ?? '');
+                                            $waktu_selesai_in = normalizeWaktuForInput($row['waktu_selesai'] ?? '');
                                         ?>
                                         <tr>
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
                                             <td><?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['hari'] ?? '') ?></td>
-                                            <td><?= $waktu_input !== '' ? htmlspecialchars($waktu_input) : '-' ?></td>
+                                            <td><?= htmlspecialchars(formatWaktuEkstraRange($row['waktu'] ?? '', $row['waktu_selesai'] ?? '')) ?></td>
                                             <td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)($row['id_ekstrakurikuler'] ?? 0) ?>"
                                                     data-nama="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
                                                     data-hari="<?= htmlspecialchars($row['hari'] ?? '', ENT_QUOTES) ?>"
-                                                    data-waktu="<?= htmlspecialchars($row['waktu'] ?? '', ENT_QUOTES) ?>"
+                                                    data-mulai="<?= htmlspecialchars($waktu_mulai, ENT_QUOTES) ?>"
+                                                    data-selesai="<?= htmlspecialchars($waktu_selesai_in, ENT_QUOTES) ?>"
                                                     type="button">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -536,8 +574,12 @@ include '../templates/sidebar.php';
                         <input type="text" class="form-control" name="hari" placeholder="Contoh: Senin" required>
                     </div>
                     <div class="form-group">
-                        <label>Waktu</label>
+                        <label>Waktu mulai</label>
                         <input type="time" class="form-control" name="waktu" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Waktu selesai</label>
+                        <input type="time" class="form-control" name="waktu_selesai" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -572,8 +614,12 @@ include '../templates/sidebar.php';
                         <input type="text" class="form-control" name="hari" id="edit_hari" required>
                     </div>
                     <div class="form-group">
-                        <label>Waktu</label>
+                        <label>Waktu mulai</label>
                         <input type="time" class="form-control" name="waktu" id="edit_waktu" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Waktu selesai</label>
+                        <input type="time" class="form-control" name="waktu_selesai" id="edit_waktu_selesai" required>
                     </div>
                 </div>
                 <div class="modal-footer">

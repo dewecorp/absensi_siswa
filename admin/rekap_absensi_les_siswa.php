@@ -40,6 +40,7 @@ $school_profile = getSchoolProfile($pdo);
 
 $daily_results = [];
 $all_results = [];
+$absent_summary = [];
 
 // Process search based on filter type
 if ($filter_type == 'daily') {
@@ -52,6 +53,19 @@ if ($filter_type == 'daily') {
     ");
     $stmt->execute([$selected_date, $id_kelas_fixed]);
     $daily_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Ringkasan ketidakhadiran les (Sakit/Izin/Alpa) seperti rekap absensi harian
+    $summary_stmt = $pdo->prepare("
+        SELECT s.nama_siswa, s.nisn, al.status AS keterangan
+        FROM tb_absensi_les al
+        JOIN tb_siswa s ON s.id_siswa = al.id_siswa
+        WHERE al.tanggal = ?
+          AND s.id_kelas = ?
+          AND al.status IN ('Sakit', 'Izin', 'Alpa')
+        ORDER BY s.nama_siswa ASC
+    ");
+    $summary_stmt->execute([$selected_date, $id_kelas_fixed]);
+    $absent_summary = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
 } elseif ($filter_type == 'all') {
     // Get all students
     $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
@@ -141,7 +155,15 @@ include '../templates/sidebar.php';
                                 <h4 style="margin-top: 15px; text-decoration: underline;">REKAP ABSENSI LES SISWA KELAS <?= $nama_kelas_fixed ?></h4>
                             </div>
 
-                            <form method="POST" class="row">
+                            <?php
+                                $excel_export_url = '../config/export_rekap_les_excel?filter_type=' . urlencode($filter_type)
+                                    . ($filter_type == 'daily' ? '&date=' . urlencode($selected_date) : '')
+                                    . '&session_type=' . urlencode($session_type);
+                                $pdf_export_url = '../config/export_rekap_les_pdf?filter_type=' . urlencode($filter_type)
+                                    . ($filter_type == 'daily' ? '&date=' . urlencode($selected_date) : '')
+                                    . '&session_type=' . urlencode($session_type);
+                            ?>
+                            <form method="POST" class="row align-items-end">
                                 <div class="form-group col-md-3">
                                     <label>Jenis Rekap</label>
                                     <select name="filter_type" class="form-control" id="filterType" onchange="this.form.submit()">
@@ -154,13 +176,89 @@ include '../templates/sidebar.php';
                                     <label>Pilih Tanggal</label>
                                     <input type="date" name="attendance_date" class="form-control" value="<?= $selected_date ?>" onchange="this.form.submit()">
                                 </div>
+                                <div class="form-group col-md-6 text-md-right text-left mb-3">
+                                    <div class="btn-group">
+                                        <a href="<?= htmlspecialchars($excel_export_url) ?>" target="_blank" class="btn btn-success">
+                                            <i class="fas fa-file-excel"></i> Excel
+                                        </a>
+                                        <a href="<?= htmlspecialchars($pdf_export_url) ?>" target="_blank" class="btn btn-danger">
+                                            <i class="fas fa-file-pdf"></i> PDF
+                                        </a>
+                                    </div>
+                                </div>
                             </form>
 
                             <?php if ($filter_type == 'daily' && !empty($daily_results)): ?>
                                 <div class="mt-4">
-                                    <div class="btn-group mb-3 float-right">
-                                        <a href="../config/export_rekap_les_excel?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a href="../config/export_rekap_les_pdf?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
+                                    <?php
+                                        $counts = ['Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+                                        foreach ($absent_summary as $abs) {
+                                            if (isset($counts[$abs['keterangan']])) {
+                                                $counts[$abs['keterangan']]++;
+                                            }
+                                        }
+                                    ?>
+                                    <div class="mb-3 p-3 border rounded bg-light">
+                                        <h6 class="mb-3">Ringkasan Ketidakhadiran Les (<?= htmlspecialchars(formatDateIndonesia($selected_date)) ?>)</h6>
+                                        <div class="row">
+                                            <div class="col-md-4 mb-2">
+                                                <div class="card mb-0 bg-warning text-dark">
+                                                    <div class="card-body py-2 text-center">
+                                                        <small class="d-block font-weight-bold">Sakit</small>
+                                                        <strong style="font-size:20px;"><?= (int)$counts['Sakit'] ?></strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <div class="card mb-0 bg-info text-white">
+                                                    <div class="card-body py-2 text-center">
+                                                        <small class="d-block font-weight-bold">Izin</small>
+                                                        <strong style="font-size:20px;"><?= (int)$counts['Izin'] ?></strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <div class="card mb-0 bg-danger text-white">
+                                                    <div class="card-body py-2 text-center">
+                                                        <small class="d-block font-weight-bold">Alpa</small>
+                                                        <strong style="font-size:20px;"><?= (int)$counts['Alpa'] ?></strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php if (!empty($absent_summary)): ?>
+                                            <div class="table-responsive mt-2">
+                                                <table class="table table-sm table-bordered mb-0">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th style="width:50px;">No</th>
+                                                            <th>Nama Siswa</th>
+                                                            <th>NISN</th>
+                                                            <th style="width:120px;">Keterangan</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php foreach ($absent_summary as $idx_abs => $abs): ?>
+                                                            <?php
+                                                                $badge_class = $abs['keterangan'] === 'Sakit'
+                                                                    ? 'badge-warning'
+                                                                    : ($abs['keterangan'] === 'Izin' ? 'badge-info' : 'badge-danger');
+                                                            ?>
+                                                            <tr>
+                                                                <td><?= (int)($idx_abs + 1) ?></td>
+                                                                <td><?= htmlspecialchars($abs['nama_siswa']) ?></td>
+                                                                <td><?= htmlspecialchars($abs['nisn']) ?></td>
+                                                                <td><span class="badge <?= $badge_class ?>"><?= htmlspecialchars($abs['keterangan']) ?></span></td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="alert alert-success mb-0 mt-2 py-2">
+                                                Tidak ada ketidakhadiran les (Sakit/Izin/Alpa) pada tanggal ini.
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="table-responsive">
                                         <table class="table table-striped table-md" id="table-daily">
@@ -207,10 +305,6 @@ include '../templates/sidebar.php';
                                 </div>
                             <?php elseif ($filter_type == 'all' && !empty($all_results)): ?>
                                 <div class="mt-4">
-                                    <div class="btn-group mb-3 float-right">
-                                        <a href="../config/export_rekap_les_excel?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a href="../config/export_rekap_les_pdf?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
-                                    </div>
                                     <div class="table-responsive">
                                         <table class="table table-bordered table-sm" id="table-all">
                                             <thead>

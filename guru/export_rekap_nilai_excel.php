@@ -31,16 +31,8 @@ $class_info = $stmt->fetch(PDO::FETCH_ASSOC);
 // Use Wali Kelas name for signature
 $nama_guru = $class_info['wali_kelas'];
 
-// Get All Subjects
-$subjects = [];
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
-    WHERE nama_mapel NOT LIKE '%Asmaul Husna%'
-    AND nama_mapel NOT LIKE '%Upacara%'
-    AND nama_mapel NOT LIKE '%Istirahat%'
-    AND nama_mapel NOT LIKE '%Kepramukaan%'
-    AND nama_mapel NOT LIKE '%Ekstrakurikuler%'
-    ORDER BY nama_mapel ASC");
-$subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get filtered academic subjects only
+$subjects = getFilteredSubjects($pdo);
 
 // Get Active Semester
 $school_profile = getSchoolProfile($pdo);

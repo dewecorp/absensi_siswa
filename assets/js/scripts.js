@@ -53,15 +53,28 @@ $(function() {
   sidebar_sticky();
 
   var sidebar_nicescroll;
+  var update_sidebar_nicescroll_timer = null;
   var update_sidebar_nicescroll = function() {
-    let a = setInterval(function() {
-      if(sidebar_nicescroll != null)
-        sidebar_nicescroll.resize();
-    }, 10);
+    if (update_sidebar_nicescroll_timer != null) {
+      clearInterval(update_sidebar_nicescroll_timer);
+      update_sidebar_nicescroll_timer = null;
+    }
+    update_sidebar_nicescroll_timer = setInterval(function() {
+      // Selalu ambil instance terbaru dari DOM — hindari stale ref / error setelah .remove()
+      try {
+        var $ms = $('.main-sidebar');
+        if (!$ms.length) return;
+        var live = $ms.getNiceScroll();
+        if (live && live.length) live.resize();
+      } catch (e) { /* noop */ }
+    }, 24);
 
     setTimeout(function() {
-      clearInterval(a);
-    }, 600);
+      if (update_sidebar_nicescroll_timer != null) {
+        clearInterval(update_sidebar_nicescroll_timer);
+        update_sidebar_nicescroll_timer = null;
+      }
+    }, 480);
   }
 
   var sidebar_dropdown = function() {
@@ -284,7 +297,15 @@ $(function() {
     }
   }
   toggleLayout();
-  $(window).resize(toggleLayout);
+  var toggleLayout_resize_timer = null;
+  $(window).on('resize', function () {
+    if (toggleLayout_resize_timer !== null)
+      clearTimeout(toggleLayout_resize_timer);
+    toggleLayout_resize_timer = setTimeout(function () {
+      toggleLayout_resize_timer = null;
+      toggleLayout();
+    }, 350);
+  });
 
   $("[data-toggle='search']").click(function() {
     var body = $("body");

@@ -24,16 +24,8 @@ $class_info = $stmt->fetch(PDO::FETCH_ASSOC);
 // Use Wali Kelas name for signature
 $nama_guru = $class_info['wali_kelas'];
 
-// Get All Subjects
-$subjects = [];
-$stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran 
-    WHERE nama_mapel NOT LIKE '%Asmaul Husna%'
-    AND nama_mapel NOT LIKE '%Upacara%'
-    AND nama_mapel NOT LIKE '%Istirahat%'
-    AND nama_mapel NOT LIKE '%Kepramukaan%'
-    AND nama_mapel NOT LIKE '%Ekstrakurikuler%'
-    ORDER BY nama_mapel ASC");
-$subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get filtered academic subjects only
+$subjects = getFilteredSubjects($pdo);
 
 // Get Active Semester
 $school_profile = getSchoolProfile($pdo);
@@ -233,9 +225,10 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
         </tbody>
     </table>
     
-    <div class="no-break" style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 50px; padding-right: 50px;">
-        <div style="text-align: center; width: 250px;">
-            <p><?= htmlspecialchars($school_city) ?>, <?= htmlspecialchars($report_date) ?><br>Wali Kelas,</p>
+    <div class="no-break" style="margin-top: 10px; width: 100%; padding: 0 35px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="text-align: center; width: 260px;">
+            <p style="font-size: 12px; margin: 0 0 6px 0;">Wali Kelas,</p>
             <?php
             if ($nama_guru) {
                 $qrContent = 'Validasi Tanda Tangan Digital: ' . $nama_guru . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
@@ -246,11 +239,12 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
                 echo '<br><br><br><br><br>';
             }
             ?>
-            <p><b><?= htmlspecialchars($nama_guru ?? '.........................') ?></b></p>
+            <p style="font-size: 13px; margin: 6px 0 0 0;"><b><?= htmlspecialchars($nama_guru ?? '.........................') ?></b></p>
         </div>
 
-        <div style="text-align: center; width: 250px;">
-            <p><?= htmlspecialchars($school_city) ?>, <?= htmlspecialchars($report_date) ?><br>Kepala Madrasah,</p>
+        <div style="text-align: center; width: 260px;">
+            <p style="font-size: 12px; margin: 0 0 2px 0; white-space: normal; word-break: break-word;"><?= htmlspecialchars($school_city) ?>, <?= htmlspecialchars($report_date) ?></p>
+            <p style="font-size: 12px; margin: 0 0 6px 0;">Kepala Madrasah,</p>
             <?php
             if ($madrasah_head_signature) {
                 $qrContentHead = 'Validasi Tanda Tangan Digital: ' . $madrasah_head_name . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
@@ -261,7 +255,8 @@ $title = "REKAP NILAI " . strtoupper($selected_jenis);
                 echo '<br><br><br><br><br>';
             }
             ?>
-            <p><b><?= htmlspecialchars($madrasah_head_name) ?></b></p>
+            <p style="font-size: 13px; margin: 6px 0 0 0;"><b><?= htmlspecialchars($madrasah_head_name) ?></b></p>
+        </div>
         </div>
     </div>
 
