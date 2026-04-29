@@ -6,7 +6,7 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
@@ -152,6 +152,9 @@ function barung_resolve_tingkat_slug(?string $nama_tingkat): ?string
         if ($t === 'tata') {
             return 'tata';
         }
+        if ($t === 'garuda') {
+            return 'garuda';
+        }
     }
     return null;
 }
@@ -168,6 +171,8 @@ function barung_kelas_nomor_for_slug(?string $slug): array
             return [5, 6];
         case 'tata':
             return [4, 5, 6];
+        case 'garuda':
+            return [3, 4, 5, 6];
         default:
             return [];
     }
@@ -250,6 +255,7 @@ try {
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 2
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 3
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 4
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 5
                     ELSE 99
                 END,
                 nama_tingkat ASC
@@ -507,7 +513,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id_tingkat <= 0) {
             $message = ['type' => 'warning', 'text' => 'Tingkat tidak valid.'];
         } elseif ($slug_thr === null || $allowed_nums === []) {
-            $message = ['type' => 'warning', 'text' => 'Pemetaan kelas otomatis hanya untuk tingkat Pra Mula, Mula, Bantu, atau Tata.'];
+            $message = ['type' => 'warning', 'text' => 'Pemetaan kelas otomatis hanya untuk tingkat Pra Mula, Mula, Bantu, Tata, atau Garuda.'];
         } elseif (empty($picked)) {
             $message = ['type' => 'warning', 'text' => 'Pilih minimal satu siswa.'];
         } else {
@@ -810,11 +816,26 @@ $table_error = null;
 if ($selected_tingkat_id > 0) {
     try {
         $stmt = $pdo->prepare("
-            SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, id_tingkat_barung
-            FROM tb_peserta_didik_barung
-            WHERE id_tingkat_barung = ?
-              AND IFNULL(status, 'aktif') = 'aktif'
-            ORDER BY nama_peserta_didik ASC
+            SELECT
+                p.id_peserta_didik_barung,
+                p.nama_peserta_didik,
+                p.nta,
+                COALESCE(NULLIF(TRIM(p.tempat_lahir), ''), NULLIF(TRIM(s.tempat_lahir), '')) AS tempat_lahir,
+                COALESCE(p.tanggal_lahir, s.tanggal_lahir) AS tanggal_lahir,
+                p.id_tingkat_barung
+            FROM tb_peserta_didik_barung p
+            LEFT JOIN tb_siswa s ON (
+                s.id_siswa = p.id_siswa
+                OR (
+                    p.id_siswa IS NULL
+                    AND TRIM(IFNULL(p.nta, '')) <> ''
+                    AND CONVERT(TRIM(IFNULL(s.nisn, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                        = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                )
+            )
+            WHERE p.id_tingkat_barung = ?
+              AND IFNULL(p.status, 'aktif') = 'aktif'
+            ORDER BY p.nama_peserta_didik ASC
         ");
         $stmt->execute([$selected_tingkat_id]);
         $peserta_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -957,6 +978,9 @@ switch ($barung_tingkat_slug) {
         break;
     case 'tata':
         $barung_kelas_hint = 'Kelas 4–6';
+        break;
+    case 'garuda':
+        $barung_kelas_hint = 'Kelas 3–6';
         break;
     default:
         $barung_kelas_hint = '';
@@ -1554,7 +1578,7 @@ include '../templates/sidebar.php';
                 <div class="modal-body">
                     <?php if (!$barung_bisa_modal_tambah): ?>
                         <div class="alert alert-warning mb-0">
-                            Pemilihan siswa dari data kelas otomatis hanya untuk tingkat <strong>Pra Mula</strong>, <strong>Mula</strong>, <strong>Bantu</strong>, atau <strong>Tata</strong>. Gunakan tombol Import untuk tingkat lain.
+                            Pemilihan siswa dari data kelas otomatis hanya untuk tingkat <strong>Pra Mula</strong>, <strong>Mula</strong>, <strong>Bantu</strong>, <strong>Tata</strong>, atau <strong>Garuda</strong>. Gunakan tombol Import untuk tingkat lain.
                         </div>
                     <?php else: ?>
                         <?php if (!empty($barung_avail_sql_error)): ?>

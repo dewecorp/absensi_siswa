@@ -8,7 +8,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Only admin can access this page
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 

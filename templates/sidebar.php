@@ -339,6 +339,19 @@ switch ($user_level) {
             ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
         ];
 
+        $ekstrakurikuler_submenu_tu = [
+            ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=tata_usaha', 'active' => $current_page === 'data_ekstrakurikuler.php'],
+            ['title' => 'Data Pembina Ekstra', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=tata_usaha', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
+            ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=tata_usaha', 'active' => $current_page === 'data_pembina_pramuka.php'],
+            ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php?session_type=tata_usaha', 'active' => $current_page === 'data_tingkat_barung.php'],
+            ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=tata_usaha', 'active' => $current_page === 'data_barung.php'],
+            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=tata_usaha', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
+            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=tata_usaha', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ['title' => 'Kenaikan Tingkat', 'url' => '../admin/kenaikan_tingkat.php?session_type=tata_usaha', 'active' => $current_page === 'kenaikan_tingkat.php'],
+            ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php?session_type=tata_usaha', 'active' => $current_page === 'surat_keterangan.php'],
+            ['title' => 'Pengaturan Cetak Suket', 'url' => '../admin/pengaturan_cetak_suket.php?session_type=tata_usaha', 'active' => $current_page === 'pengaturan_cetak_suket.php']
+        ];
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -361,6 +374,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_tu,
                 'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Ekstrakurikuler',
+                'icon' => 'fas fa-users',
+                'submenu' => $ekstrakurikuler_submenu_tu,
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_tingkat_barung.php', 'data_barung.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'kenaikan_tingkat.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
             ],
             [
                 'title' => 'Jadwal',

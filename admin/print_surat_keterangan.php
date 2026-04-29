@@ -9,8 +9,26 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
+}
+
+// Ensure kolom penanda kenaikan ada (untuk validasi cetak)
+try {
+    $required_cols = [
+        'promoted_from_tingkat_id' => "INT NULL",
+        'promoted_at' => "DATETIME NULL",
+        'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
+    ];
+    foreach ($required_cols as $col => $typeDef) {
+        $colStmt = $pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE '" . addslashes($col) . "'");
+        $has_col = (bool)$colStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$has_col) {
+            $pdo->exec("ALTER TABLE tb_peserta_didik_barung ADD COLUMN {$col} {$typeDef}");
+        }
+    }
+} catch (Exception $e) {
+    // best effort
 }
 
 // Prevent browser cache so layout changes are always reflected
@@ -104,18 +122,54 @@ $participants = [];
 $tingkat_id = (int)($_GET['tingkat'] ?? 0);
 if ($mode === 'all' || $mode === 'data') {
     if ($tingkat_id > 0) {
-        $tingkat_stmt = $pdo->prepare("SELECT nama_tingkat FROM tb_tingkat_barung WHERE id_tingkat_barung = ? LIMIT 1");
+        $tingkat_stmt = $pdo->prepare("
+            SELECT id_tingkat_barung, nama_tingkat
+            FROM tb_tingkat_barung
+            WHERE id_tingkat_barung = ?
+            LIMIT 1
+        ");
         $tingkat_stmt->execute([$tingkat_id]);
         $tingkat_row = $tingkat_stmt->fetch(PDO::FETCH_ASSOC);
         $tingkat_name = $tingkat_row['nama_tingkat'] ?? '';
+
+        $ordered_tingkat = $pdo->query("
+            SELECT id_tingkat_barung, nama_tingkat
+            FROM tb_tingkat_barung
+            WHERE LOWER(REPLACE(nama_tingkat, ' ', '')) NOT IN ('pramula', 'pra-mula')
+              AND LOWER(nama_tingkat) != 'pra mula'
+            ORDER BY
+                CASE
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 1
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 2
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 3
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 4
+                    ELSE 99
+                END,
+                nama_tingkat ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $prev_tingkat_id = 0;
+        $idx_selected = null;
+        foreach ($ordered_tingkat as $idx => $t) {
+            if ((int)($t['id_tingkat_barung'] ?? 0) === $tingkat_id) {
+                $idx_selected = $idx;
+                break;
+            }
+        }
+        if ($idx_selected !== null && $idx_selected > 0) {
+            $prev_tingkat_id = (int)($ordered_tingkat[$idx_selected - 1]['id_tingkat_barung'] ?? 0);
+        }
 
         $stmt = $pdo->prepare("
             SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
             FROM tb_peserta_didik_barung
             WHERE id_tingkat_barung = ?
+              AND IFNULL(status, 'aktif') = 'aktif'
+              AND promoted_at IS NOT NULL
+              AND promoted_from_tingkat_id = ?
             ORDER BY nama_peserta_didik ASC
         ");
-        $stmt->execute([$tingkat_id]);
+        $stmt->execute([$tingkat_id, $prev_tingkat_id]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } else {
@@ -127,6 +181,8 @@ if ($mode === 'all' || $mode === 'data') {
             p
             LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
             WHERE p.id_peserta_didik_barung = ?
+              AND IFNULL(p.status, 'aktif') = 'aktif'
+              AND p.promoted_at IS NOT NULL
             LIMIT 1
         ");
         $stmt->execute([$id]);

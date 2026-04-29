@@ -9,8 +9,26 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
+}
+
+// Ensure kolom penanda kenaikan ada (untuk filter data surat)
+try {
+    $required_cols = [
+        'promoted_from_tingkat_id' => "INT NULL",
+        'promoted_at' => "DATETIME NULL",
+        'status' => "ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif'",
+    ];
+    foreach ($required_cols as $col => $typeDef) {
+        $colStmt = $pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE '" . addslashes($col) . "'");
+        $has_col = (bool)$colStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$has_col) {
+            $pdo->exec("ALTER TABLE tb_peserta_didik_barung ADD COLUMN {$col} {$typeDef}");
+        }
+    }
+} catch (Exception $e) {
+    // best effort
 }
 
 $school_profile = getSchoolProfile($pdo);
@@ -54,6 +72,21 @@ foreach ($tingkat_list as $t) {
     }
 }
 
+// Cari tingkat sebelumnya agar hanya yang benar-benar hasil kenaikan yang ditampilkan
+$prev_tingkat_id = 0;
+if ($selected_tingkat_id > 0) {
+    $idx_selected = null;
+    foreach ($tingkat_list as $idx => $t) {
+        if ((int)($t['id_tingkat_barung'] ?? 0) === $selected_tingkat_id) {
+            $idx_selected = $idx;
+            break;
+        }
+    }
+    if ($idx_selected !== null && $idx_selected > 0) {
+        $prev_tingkat_id = (int)($tingkat_list[$idx_selected - 1]['id_tingkat_barung'] ?? 0);
+    }
+}
+
 // Fetch peserta didik for selected tingkat
 $participants = [];
 if ($selected_tingkat_id > 0) {
@@ -62,9 +95,12 @@ if ($selected_tingkat_id > 0) {
             SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
             FROM tb_peserta_didik_barung
             WHERE id_tingkat_barung = ?
+              AND IFNULL(status, 'aktif') = 'aktif'
+              AND promoted_at IS NOT NULL
+              AND promoted_from_tingkat_id = ?
             ORDER BY nama_peserta_didik ASC
         ");
-        $stmt->execute([$selected_tingkat_id]);
+        $stmt->execute([$selected_tingkat_id, $prev_tingkat_id]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // ignore

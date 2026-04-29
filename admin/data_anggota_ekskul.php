@@ -6,7 +6,7 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
@@ -393,7 +393,7 @@ include '../templates/sidebar.php';
                     <h4>Daftar Anggota Kelas <?= htmlspecialchars($selected_class_name) ?></h4>
                     <div class="card-header-action">
                         <button class="btn btn-success" data-toggle="modal" data-target="#modalTambahKolektif">
-                            <i class="fas fa-plus"></i> Tambah Anggota Kolektif
+                            <i class="fas fa-plus"></i> Tambah Anggota
                         </button>
                         <a href="?kelas=<?= (int)$selected_class_id ?>&export=excel" class="btn btn-info">
                             <i class="fas fa-file-excel"></i> Ekspor Excel

@@ -6,7 +6,7 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
@@ -46,9 +46,23 @@ try {
                 nta VARCHAR(50) NOT NULL,
                 tempat_lahir VARCHAR(120) NULL,
                 tanggal_lahir DATE NULL,
+                promoted_from_tingkat_id INT NULL,
+                promoted_at DATETIME NULL,
                 INDEX idx_tingkat (id_tingkat_barung)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+    } else {
+        $required_cols = [
+            'promoted_from_tingkat_id' => "INT NULL",
+            'promoted_at' => "DATETIME NULL",
+        ];
+        foreach ($required_cols as $col => $typeDef) {
+            $colStmt = $pdo->query("SHOW COLUMNS FROM tb_peserta_didik_barung LIKE '" . addslashes($col) . "'");
+            $has_col = (bool)$colStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$has_col) {
+                $pdo->exec("ALTER TABLE tb_peserta_didik_barung ADD COLUMN {$col} {$typeDef}");
+            }
+        }
     }
 } catch (Exception $e) {
     $schema_error = $e->getMessage();
@@ -123,10 +137,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_members']) |
             $placeholders = str_repeat('?,', count($selected) - 1) . '?';
             $sql = "
                 UPDATE tb_peserta_didik_barung
-                SET id_tingkat_barung = ?
+                SET id_tingkat_barung = ?,
+                    promoted_from_tingkat_id = ?,
+                    promoted_at = ?
                 WHERE id_peserta_didik_barung IN ($placeholders) AND id_tingkat_barung = ?
             ";
-            $params = array_merge([$target_tingkat_id], $selected, [$source_tingkat_id]);
+            $promoted_from_id = $is_demotion ? null : $source_tingkat_id;
+            $promoted_at = $is_demotion ? null : date('Y-m-d H:i:s');
+            $params = array_merge([$target_tingkat_id, $promoted_from_id, $promoted_at], $selected, [$source_tingkat_id]);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
 
