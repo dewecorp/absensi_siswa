@@ -167,6 +167,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $members = [];
 $available_students = [];
+$total_members_count = 0;
+try {
+    $stmt_total_members = $pdo->query("
+        SELECT COUNT(*) 
+        FROM {$table_name}
+        WHERE status = 'aktif'
+    ");
+    $total_members_count = (int)$stmt_total_members->fetchColumn();
+} catch (Exception $e) {
+    $total_members_count = 0;
+}
 if ($selected_class_id > 0) {
     try {
         $stmt_members = $pdo->prepare("
@@ -402,7 +413,7 @@ include '../templates/sidebar.php';
                             <?php endforeach; ?>
                         </select>
                         <span class="badge badge-primary ml-2">
-                            Jumlah Anggota: <?= (int)count($members) ?>
+                            Jumlah Anggota: <?= $selected_class_id > 0 ? (int)count($members) : (int)$total_members_count ?>
                         </span>
                     </form>
                 </div>
