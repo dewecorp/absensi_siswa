@@ -7,8 +7,9 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Admin-only
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+$can_manage_pembina_ekstra = isAuthorized(['admin', 'tata_usaha']);
+$can_view_pembina_ekstra = $can_manage_pembina_ekstra || isAuthorized(['kepala_madrasah', 'wali', 'guru']);
+if (!$can_view_pembina_ekstra) {
     redirect('../login.php');
 }
 
@@ -101,6 +102,9 @@ function ensureId($value): int {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$can_manage_pembina_ekstra) {
+        $message = ['type' => 'warning', 'text' => 'Mode baca saja. CRUD tidak diizinkan untuk level Anda.'];
+    } else {
     // Add mapping
     if (isset($_POST['add_pembina_ekstrakurikuler'])) {
         $id_pembina = ensureId($_POST['id_pembina'] ?? 0);
@@ -220,6 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = ['type' => 'warning', 'text' => 'ID tidak valid.'];
         }
     }
+    }
 }
 
 // --- Fetch mapping list for table ---
@@ -284,7 +289,9 @@ $(document).ready(function() {
     $('#table-1').DataTable({
         'order': [[0, 'asc']],
         'columnDefs': [
+            <?php if ($can_manage_pembina_ekstra): ?>
             { 'sortable': false, 'targets': [3] } // Aksi
+            <?php endif; ?>
         ],
         'language': {
             'lengthMenu': 'Tampilkan _MENU_ entri',
@@ -368,9 +375,11 @@ function exportToExcel() {
     // Clone table to remove actions column
     var newTable = table.cloneNode(true);
     var rows = newTable.rows;
+    <?php if ($can_manage_pembina_ekstra): ?>
     for (var i = 0; i < rows.length; i++) {
         rows[i].deleteCell(-1); // Remove last column (Aksi)
     }
+    <?php endif; ?>
     
     if (typeof XLSX !== 'undefined') {
         var wb = XLSX.utils.book_new();
@@ -459,9 +468,11 @@ function exportToPDF() {
     // Clone and clean up table
     var cleanTable = table.cloneNode(true);
     var rows = cleanTable.rows;
+    <?php if ($can_manage_pembina_ekstra): ?>
     for (var i = 0; i < rows.length; i++) {
         rows[i].deleteCell(-1); // Remove action column
     }
+    <?php endif; ?>
     
     printWindow.document.write(cleanTable.outerHTML);
     
@@ -510,9 +521,11 @@ include '../templates/sidebar.php';
                         <button type="button" class="btn btn-warning" onclick="exportToPDF()">
                             <i class="fas fa-file-pdf"></i> PDF
                         </button>
+                        <?php if ($can_manage_pembina_ekstra): ?>
                         <button class="btn btn-primary" id="btn-add-mapping" type="button">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -543,7 +556,7 @@ include '../templates/sidebar.php';
                                     <th class="text-center" width="6%">No</th>
                                     <th>Nama Pembina</th>
                                     <th>Pembina Ekstrakurikuler</th>
-                                    <th width="15%">Aksi</th>
+                                    <?php if ($can_manage_pembina_ekstra): ?><th width="15%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -553,7 +566,7 @@ include '../templates/sidebar.php';
                                             <td class="text-center"><?= (int)($i + 1) ?></td>
                                             <td><?= htmlspecialchars($row['nama_pembina'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '') ?></td>
-                                            <td>
+                                            <?php if ($can_manage_pembina_ekstra): ?><td>
                                                 <?php
                                                 // We need id_pembina for edit; fetch it with a small query by mapping id.
                                                 $id_map = (int)($row['id_pembina_ekstrakurikuler'] ?? 0);
@@ -586,9 +599,11 @@ include '../templates/sidebar.php';
                                                     type="button">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            </td>
+                                            </td><?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr><td colspan="<?= $can_manage_pembina_ekstra ? '4' : '3' ?>" class="text-center text-muted">Tidak ada data.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -599,6 +614,7 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
+<?php if ($can_manage_pembina_ekstra): ?>
 <!-- Add Modal -->
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -639,6 +655,7 @@ include '../templates/sidebar.php';
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">

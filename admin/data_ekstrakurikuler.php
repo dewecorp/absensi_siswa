@@ -7,8 +7,10 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Only admin can access this page
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+// Admin/TU full akses; level lain baca saja
+$can_manage_ekstrakurikuler = isAuthorized(['admin', 'tata_usaha']);
+$can_view_ekstrakurikuler = $can_manage_ekstrakurikuler || isAuthorized(['kepala_madrasah', 'wali', 'guru']);
+if (!$can_view_ekstrakurikuler) {
     redirect('../login.php');
 }
 
@@ -123,6 +125,9 @@ function validateHari($hari) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$can_manage_ekstrakurikuler) {
+        $message = ['type' => 'warning', 'text' => 'Mode baca saja. CRUD tidak diizinkan untuk level Anda.'];
+    } else {
     // Add
     if (isset($_POST['add_ekstrakurikuler'])) {
         $nama_ekstrakurikuler = sanitizeInput($_POST['nama_ekstrakurikuler'] ?? '');
@@ -215,6 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = ['type' => 'danger', 'text' => 'Error DB: ' . $e->getMessage()];
             }
         }
+    }
     }
 }
 
@@ -475,9 +481,11 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Data Ekstrakurikuler</h4>
                     <div class="card-header-action">
+                        <?php if ($can_manage_ekstrakurikuler): ?>
                         <button class="btn btn-primary" data-toggle="modal" data-target="#addModal">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
+                        <?php endif; ?>
                         <a href="#" class="btn btn-success ml-1 export-btn" data-type="excel">
                             <i class="fas fa-file-excel"></i> Export Excel
                         </a>
@@ -504,7 +512,7 @@ include '../templates/sidebar.php';
                                     <th>Nama Ekstrakurikuler</th>
                                     <th>Hari</th>
                                     <th>Waktu</th>
-                                    <th width="15%">Aksi</th>
+                                    <?php if ($can_manage_ekstrakurikuler): ?><th width="15%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -519,7 +527,7 @@ include '../templates/sidebar.php';
                                             <td><?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['hari'] ?? '') ?></td>
                                             <td><?= htmlspecialchars(formatWaktuEkstraRange($row['waktu'] ?? '', $row['waktu_selesai'] ?? '')) ?></td>
-                                            <td>
+                                            <?php if ($can_manage_ekstrakurikuler): ?><td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)($row['id_ekstrakurikuler'] ?? 0) ?>"
                                                     data-nama="<?= htmlspecialchars($row['nama_ekstrakurikuler'] ?? '', ENT_QUOTES) ?>"
@@ -535,12 +543,12 @@ include '../templates/sidebar.php';
                                                     type="button">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            </td>
+                                            </td><?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted">Tidak ada data.</td>
+                                        <td colspan="<?= $can_manage_ekstrakurikuler ? '5' : '4' ?>" class="text-center text-muted">Tidak ada data.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -552,6 +560,7 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
+<?php if ($can_manage_ekstrakurikuler): ?>
 <!-- Add Modal -->
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -630,6 +639,7 @@ include '../templates/sidebar.php';
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <?php include '../templates/footer.php'; ?>
 

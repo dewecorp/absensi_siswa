@@ -7,11 +7,121 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
+if (!function_exists('normalize_person_name_for_match')) {
+    function normalize_person_name_for_match($name) {
+        $v = strtolower(trim((string)$name));
+        $v = preg_replace('/[^a-z0-9]+/u', '', $v);
+        return (string)$v;
+    }
+}
+if (!function_exists('is_current_guru_pembina_pramuka')) {
+    function is_current_guru_pembina_pramuka(PDO $pdo): bool
+    {
+        $idGuru = 0;
+        $candidateNames = [];
+
+        $sessionNames = [
+            (string)($_SESSION['nama'] ?? ''),
+            (string)($_SESSION['nama_guru'] ?? ''),
+            (string)($_SESSION['username'] ?? ''),
+        ];
+        foreach ($sessionNames as $nm) {
+            $nm = trim($nm);
+            if ($nm !== '') {
+                $candidateNames[] = $nm;
+            }
+        }
+
+        if (isset($_SESSION['user_id'])) {
+            $idGuru = (int)$_SESSION['user_id'];
+            if (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_pengguna') {
+                try {
+                    $st = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ? LIMIT 1");
+                    $st->execute([$idGuru]);
+                    $idGuru = (int)($st->fetchColumn() ?: 0);
+                } catch (Exception $e) {
+                    $idGuru = 0;
+                }
+            }
+        }
+
+        if ($idGuru > 0) {
+            try {
+                $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ? LIMIT 1");
+                $stG->execute([$idGuru]);
+                $nmGuru = trim((string)($stG->fetchColumn() ?: ''));
+                if ($nmGuru !== '') {
+                    $candidateNames[] = $nmGuru;
+                }
+            } catch (Exception $e) {
+            }
+        }
+
+        $normalizedCandidates = [];
+        foreach ($candidateNames as $raw) {
+            $n = normalize_person_name_for_match($raw);
+            if ($n !== '') {
+                $normalizedCandidates[] = $n;
+            }
+            $parts = preg_split('/\s+/', trim((string)$raw));
+            if (is_array($parts) && count($parts) >= 2) {
+                $firstTwo = normalize_person_name_for_match($parts[0] . ' ' . $parts[1]);
+                if ($firstTwo !== '') {
+                    $normalizedCandidates[] = $firstTwo;
+                }
+            }
+        }
+        $normalizedCandidates = array_values(array_unique($normalizedCandidates));
+
+        try {
+            if ($idGuru > 0) {
+                $stId = $pdo->prepare("SELECT COUNT(*) FROM tb_pembina_pramuka WHERE id_guru = ?");
+                $stId->execute([$idGuru]);
+                if ((int)$stId->fetchColumn() > 0) {
+                    return true;
+                }
+            }
+
+            if ($normalizedCandidates === []) {
+                return false;
+            }
+
+            $rows = $pdo->query("SELECT nama_pembina FROM tb_pembina_pramuka")->fetchAll(PDO::FETCH_COLUMN, 0);
+            foreach ($rows as $nmPbRaw) {
+                $nmPb = normalize_person_name_for_match((string)$nmPbRaw);
+                if ($nmPb === '') {
+                    continue;
+                }
+                foreach ($normalizedCandidates as $cand) {
+                    if (
+                        $cand === $nmPb ||
+                        strpos($nmPb, $cand) !== false ||
+                        strpos($cand, $nmPb) !== false
+                    ) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+
+        return false;
+    }
+}
+
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+$can_manage_sku = isAuthorized(['admin', 'tata_usaha']);
+$can_view_sku = $can_manage_sku;
+$is_pembina_pramuka_login = false;
+if (!$can_view_sku && (isAuthorized(['guru']) || isAuthorized(['wali']))) {
+    $is_pembina_pramuka_login = is_current_guru_pembina_pramuka($pdo);
+    $can_view_sku = $is_pembina_pramuka_login;
+}
+if (!$can_view_sku) {
     redirect('../login.php');
 }
 
@@ -270,6 +380,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
         }
 
         if ($action === 'add_butir') {
+            if (!$can_manage_sku) {
+                echo json_encode(['ok' => false, 'msg' => 'Akses ditolak.']);
+                exit;
+            }
             $teks = trim((string)($_POST['teks_butir'] ?? ''));
             if ($teks === '') {
                 echo json_encode(['ok' => false, 'msg' => 'Teks butir tidak boleh kosong.']);
@@ -290,6 +404,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
         }
 
         if ($action === 'edit_butir') {
+            if (!$can_manage_sku) {
+                echo json_encode(['ok' => false, 'msg' => 'Akses ditolak.']);
+                exit;
+            }
             $id_b = (int)($_POST['id_butir'] ?? 0);
             $teks = trim((string)($_POST['teks_butir'] ?? ''));
             if ($id_b <= 0 || $teks === '') {
@@ -313,6 +431,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
         }
 
         if ($action === 'delete_butir') {
+            if (!$can_manage_sku) {
+                echo json_encode(['ok' => false, 'msg' => 'Akses ditolak.']);
+                exit;
+            }
             $id_b = (int)($_POST['id_butir'] ?? 0);
             if ($id_b <= 0) {
                 echo json_encode(['ok' => false, 'msg' => 'ID tidak valid.']);
@@ -334,6 +456,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_sku_butir'])) {
+    if (!$can_manage_sku) {
+        header('Location: syarat_kecakapan_umum.php?tingkat=' . (int)($_POST['id_tingkat_barung'] ?? 0));
+        exit;
+    }
     $is_ajax_import = isset($_POST['ajax']) && (string)$_POST['ajax'] === '1';
     $id_tingkat = (int)($_POST['id_tingkat_barung'] ?? 0);
     $import_ok = false;
@@ -977,10 +1103,12 @@ require_once '../templates/sidebar.php';
                         <?= $selected_tingkat_name !== '' ? '<span class="badge badge-light border text-dark ml-2">' . htmlspecialchars($selected_tingkat_name) . '</span>' : '' ?>
                     </h4>
                     <div class="d-flex flex-wrap gap-2">
+                        <?php if ($can_manage_sku): ?>
                         <button type="button" class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#modalSkuAdd"
                             <?= $selected_tingkat_id <= 0 ? 'disabled' : '' ?>><i class="fas fa-plus"></i> Tambah kolom</button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#modalSkuImport"
                             <?= $selected_tingkat_id <= 0 ? 'disabled' : '' ?>><i class="fas fa-file-import"></i> Import SKU</button>
+                        <?php endif; ?>
                         <a class="btn btn-outline-success btn-sm <?= $selected_tingkat_id <= 0 ? 'disabled text-muted' : '' ?>"
                             href="<?= $selected_tingkat_id > 0 ? 'syarat_kecakapan_umum.php?tingkat=' . (int)$selected_tingkat_id . '&export=xlsx' : '#' ?>">
                             <i class="fas fa-file-excel"></i> Ekspor Excel</a>
@@ -1041,12 +1169,14 @@ require_once '../templates/sidebar.php';
                                                 <th class="sku-th-vertical text-center sku-col py-2" title="<?= htmlspecialchars($bb['teks_butir']) ?>">
                                                     <span class="sku-vtext"><?= nl2br(htmlspecialchars($bb['teks_butir'])) ?></span>
                                                     <div class="mt-1 d-flex justify-content-center align-items-center sku-col-actions" style="gap:4px;">
+                                                        <?php if ($can_manage_sku): ?>
                                                         <button type="button" class="btn btn-xxs btn-outline-primary btn-edit-butir px-1"
                                                                 data-butir="<?= (int)$bb['id_butir'] ?>"
                                                                 data-sku-teks="<?= htmlspecialchars((string)$bb['teks_butir'], ENT_QUOTES, 'UTF-8') ?>"
                                                                 title="Ubah kolom"><i class="fas fa-edit"></i></button>
                                                         <button type="button" class="btn btn-xxs btn-outline-danger btn-del-butir px-1"
                                                                 data-butir="<?= (int)$bb['id_butir'] ?>" title="Hapus kolom"><i class="fas fa-times"></i></button>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </th>
                                             <?php endforeach; ?>
@@ -1109,6 +1239,7 @@ require_once '../templates/sidebar.php';
     </section>
 </div>
 
+<?php if ($can_manage_sku): ?>
 <div class="modal fade" id="modalSkuAdd" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1173,6 +1304,7 @@ require_once '../templates/sidebar.php';
         </form>
     </div>
 </div>
+<?php endif; ?>
 
 <style>
 .sku-table-wrap {

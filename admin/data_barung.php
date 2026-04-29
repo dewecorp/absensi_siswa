@@ -6,7 +6,9 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+$can_manage_barung = isAuthorized(['admin', 'tata_usaha']);
+$can_view_barung = $can_manage_barung || isAuthorized(['kepala_madrasah', 'wali', 'guru']);
+if (!$can_view_barung) {
     redirect('../login.php');
 }
 
@@ -342,7 +344,7 @@ if (isset($_GET['download_template'])) {
 // --- CRUD handling ---
 $message = null;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
     // Import peserta didik from Excel/CSV
     if (isset($_POST['import_peserta_didik'])) {
         $is_ajax = isset($_POST['ajax']) && (string)$_POST['ajax'] === '1';
@@ -1446,6 +1448,7 @@ include '../templates/sidebar.php';
                         <button type="button" class="btn btn-warning ml-1" onclick="exportToPDF()" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-file-pdf"></i> PDF
                         </button>
+                        <?php if ($can_manage_barung): ?>
                         <button class="btn btn-primary ml-1" data-toggle="modal" data-target="#modalTambahAnggotaBarung" type="button" <?php echo $barung_bisa_modal_tambah ? '' : 'disabled'; ?> title="<?= $barung_bisa_modal_tambah ? '' : 'Pilih tab Pra Mula / Mula / Bantu / Tata untuk menambah dari data siswa' ?>">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
@@ -1458,6 +1461,7 @@ include '../templates/sidebar.php';
                         <button class="btn btn-danger ml-1 d-none" id="btn-delete-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-sign-out-alt"></i> Keluarkan Terpilih
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -1504,32 +1508,32 @@ include '../templates/sidebar.php';
                         <table class="table table-striped" id="table-1">
                             <thead>
                                 <tr>
-                                    <th class="text-center" width="36px"><input type="checkbox" id="checkAllRows"></th>
+                                    <?php if ($can_manage_barung): ?><th class="text-center" width="36px"><input type="checkbox" id="checkAllRows"></th><?php endif; ?>
                                     <th class="text-center" width="6%">No</th>
                                     <th>Nama Peserta Didik</th>
                                     <th width="14%">NTA</th>
                                     <th>Tempat Lahir</th>
                                     <th width="14%">Tanggal Lahir</th>
-                                    <th width="15%">Aksi</th>
+                                    <?php if ($can_manage_barung): ?><th width="15%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (!empty($peserta_rows)): ?>
                                     <?php foreach ($peserta_rows as $idx => $row): ?>
                                         <tr>
-                                            <td class="text-center">
+                                            <?php if ($can_manage_barung): ?><td class="text-center">
                                                 <input type="checkbox" class="row-check" value="<?= (int)($row['id_peserta_didik_barung'] ?? 0) ?>"
                                                     data-nama="<?= htmlspecialchars($row['nama_peserta_didik'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
                                                     data-nta="<?= htmlspecialchars($row['nta'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
                                                     data-tempat="<?= htmlspecialchars($row['tempat_lahir'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
                                                     data-tanggal="<?= htmlspecialchars(!empty($row['tanggal_lahir']) ? substr((string)$row['tanggal_lahir'], 0, 10) : '', ENT_QUOTES, 'UTF-8') ?>">
-                                            </td>
+                                            </td><?php endif; ?>
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
                                             <td><?= htmlspecialchars($row['nama_peserta_didik'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['nta'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['tempat_lahir'] ?? '') ?></td>
                                             <td><?= !empty($row['tanggal_lahir']) ? htmlspecialchars($row['tanggal_lahir']) : '' ?></td>
-                                            <td>
+                                            <?php if ($can_manage_barung): ?><td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)$row['id_peserta_didik_barung'] ?>"
                                                     data-tingkat="<?= (int)$row['id_tingkat_barung'] ?>"
@@ -1547,7 +1551,7 @@ include '../templates/sidebar.php';
                                                     type="button">
                                                     <i class="fas fa-sign-out-alt"></i>
                                                 </button>
-                                            </td>
+                                            </td><?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -1560,6 +1564,7 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
+<?php if ($can_manage_barung): ?>
 <!-- Add Modal: tambah dari data siswa (filter kelas sesuai tab tingkat) -->
 <div class="modal fade" id="modalTambahAnggotaBarung" tabindex="-1" role="dialog" aria-labelledby="modalTambahAnggotaBarungLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
@@ -1721,6 +1726,7 @@ include '../templates/sidebar.php';
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">

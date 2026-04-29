@@ -6,7 +6,9 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+$can_manage_pembina_pramuka = isAuthorized(['admin', 'tata_usaha']);
+$can_view_pembina_pramuka = $can_manage_pembina_pramuka || isAuthorized(['kepala_madrasah', 'wali', 'guru']);
+if (!$can_view_pembina_pramuka) {
     redirect('../login.php');
 }
 
@@ -84,6 +86,9 @@ $jabatan_options = [
 $message = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$can_manage_pembina_pramuka) {
+        $message = ['type' => 'warning', 'text' => 'Mode baca saja. CRUD tidak diizinkan untuk level Anda.'];
+    } else {
     // Add
     if (isset($_POST['add_pembina_pramuka'])) {
         $id_guru = (int)($_POST['id_guru'] ?? 0);
@@ -187,6 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = ['type' => 'danger', 'text' => 'Error DB: ' . $e->getMessage()];
             }
         }
+    }
     }
 }
 
@@ -323,9 +329,11 @@ function exportToExcel() {
     // Clone table to remove actions column
     var newTable = table.cloneNode(true);
     var rows = newTable.rows;
+    <?php if ($can_manage_pembina_pramuka): ?>
     for (var i = 0; i < rows.length; i++) {
         rows[i].deleteCell(-1); // Remove last column (Aksi)
     }
+    <?php endif; ?>
     
     if (typeof XLSX !== 'undefined') {
         var wb = XLSX.utils.book_new();
@@ -399,9 +407,11 @@ function exportToPDF() {
     // Clone and clean up table
     var cleanTable = table.cloneNode(true);
     var rows = cleanTable.rows;
+    <?php if ($can_manage_pembina_pramuka): ?>
     for (var i = 0; i < rows.length; i++) {
         rows[i].deleteCell(-1); // Remove action column
     }
+    <?php endif; ?>
     
     printWindow.document.write(cleanTable.outerHTML);
     
@@ -450,9 +460,11 @@ include '../templates/sidebar.php';
                         <button type="button" class="btn btn-warning" onclick="exportToPDF()">
                             <i class="fas fa-file-pdf"></i> PDF
                         </button>
+                        <?php if ($can_manage_pembina_pramuka): ?>
                         <button class="btn btn-primary" data-toggle="modal" data-target="#addModal" type="button">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -479,7 +491,7 @@ include '../templates/sidebar.php';
                                     <th class="text-center" width="6%">No</th>
                                     <th>Nama Pembina</th>
                                     <th>Jabatan</th>
-                                    <th width="15%">Aksi</th>
+                                    <?php if ($can_manage_pembina_pramuka): ?><th width="15%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -494,7 +506,7 @@ include '../templates/sidebar.php';
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
                                             <td><?= htmlspecialchars($nama_tampil) ?></td>
                                             <td><?= htmlspecialchars($row['jabatan'] ?? '') ?></td>
-                                            <td>
+                                            <?php if ($can_manage_pembina_pramuka): ?><td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)($row['id_pembina_pramuka'] ?? 0) ?>"
                                                     data-id-guru="<?= (int)($row['id_guru'] ?? 0) ?>"
@@ -509,9 +521,11 @@ include '../templates/sidebar.php';
                                                     type="button">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            </td>
+                                            </td><?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr><td colspan="<?= $can_manage_pembina_pramuka ? '4' : '3' ?>" class="text-center text-muted">Tidak ada data.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -522,6 +536,7 @@ include '../templates/sidebar.php';
     </section>
 </div>
 
+<?php if ($can_manage_pembina_pramuka): ?>
 <!-- Add Modal -->
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -565,6 +580,7 @@ include '../templates/sidebar.php';
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">

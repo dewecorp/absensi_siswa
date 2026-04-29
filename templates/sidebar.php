@@ -9,6 +9,111 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $user_level = getUserLevel();
 $menu_items = [];
 
+if (!function_exists('normalize_person_name_for_match')) {
+    function normalize_person_name_for_match($name) {
+        $v = strtolower(trim((string)$name));
+        // Hapus semua selain huruf & angka agar tahan variasi: "Nur Huda, S.Pd.I." vs "Nur Huda SPdI"
+        $v = preg_replace('/[^a-z0-9]+/u', '', $v);
+        return (string)$v;
+    }
+}
+
+if (!function_exists('is_current_guru_pembina_pramuka')) {
+    function is_current_guru_pembina_pramuka(PDO $pdo): bool
+    {
+        $idGuru = 0;
+        $candidateNames = [];
+
+        $sessionNames = [
+            (string)($_SESSION['nama'] ?? ''),
+            (string)($_SESSION['nama_guru'] ?? ''),
+            (string)($_SESSION['username'] ?? ''),
+        ];
+        foreach ($sessionNames as $nm) {
+            $nm = trim($nm);
+            if ($nm !== '') {
+                $candidateNames[] = $nm;
+            }
+        }
+
+        if (isset($_SESSION['user_id'])) {
+            $idGuru = (int)$_SESSION['user_id'];
+            if (isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_pengguna') {
+                try {
+                    $st = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ? LIMIT 1");
+                    $st->execute([$idGuru]);
+                    $idGuru = (int)($st->fetchColumn() ?: 0);
+                } catch (Exception $e) {
+                    $idGuru = 0;
+                }
+            }
+        }
+
+        if ($idGuru > 0) {
+            try {
+                $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ? LIMIT 1");
+                $stG->execute([$idGuru]);
+                $nmGuru = trim((string)($stG->fetchColumn() ?: ''));
+                if ($nmGuru !== '') {
+                    $candidateNames[] = $nmGuru;
+                }
+            } catch (Exception $e) {
+            }
+        }
+
+        $normalizedCandidates = [];
+        foreach ($candidateNames as $raw) {
+            $n = normalize_person_name_for_match($raw);
+            if ($n !== '') {
+                $normalizedCandidates[] = $n;
+            }
+            $parts = preg_split('/\s+/', trim((string)$raw));
+            if (is_array($parts) && count($parts) >= 2) {
+                $firstTwo = normalize_person_name_for_match($parts[0] . ' ' . $parts[1]);
+                if ($firstTwo !== '') {
+                    $normalizedCandidates[] = $firstTwo;
+                }
+            }
+        }
+        $normalizedCandidates = array_values(array_unique($normalizedCandidates));
+
+        try {
+            if ($idGuru > 0) {
+                $stId = $pdo->prepare("SELECT COUNT(*) FROM tb_pembina_pramuka WHERE id_guru = ?");
+                $stId->execute([$idGuru]);
+                if ((int)$stId->fetchColumn() > 0) {
+                    return true;
+                }
+            }
+
+            if ($normalizedCandidates === []) {
+                return false;
+            }
+
+            $rows = $pdo->query("SELECT nama_pembina FROM tb_pembina_pramuka")->fetchAll(PDO::FETCH_COLUMN, 0);
+            foreach ($rows as $nmPbRaw) {
+                $nmPb = normalize_person_name_for_match((string)$nmPbRaw);
+                if ($nmPb === '') {
+                    continue;
+                }
+                foreach ($normalizedCandidates as $cand) {
+                    if (
+                        $cand === $nmPb ||
+                        strpos($nmPb, $cand) !== false ||
+                        strpos($cand, $nmPb) !== false
+                    ) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+
+        return false;
+    }
+}
+
 // Helper function to sort menu items alphabetically, keeping Dashboard first and Logout last
 if (!function_exists('sort_all_menu_items')) {
     function sort_all_menu_items(&$items) {
@@ -236,6 +341,14 @@ switch ($user_level) {
             ['title' => 'Rekap Sholat Berjamaah', 'url' => '../kepala/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
             ['title' => 'Rekap Sholat Dhuha', 'url' => '../kepala/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
         ];
+        $ekstrakurikuler_submenu_kepala = [
+            ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_ekstrakurikuler.php'],
+            ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_pembina_pramuka.php'],
+            ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
+            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
+            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_barung.php'],
+        ];
 
         $menu_items = [
             [
@@ -253,6 +366,12 @@ switch ($user_level) {
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=kepala_madrasah', 'active' => $current_page === 'siswa_baru.php']
                 ],
                 'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
+            ],
+            [
+                'title' => 'Ekstrakurikuler',
+                'icon' => 'fas fa-users',
+                'submenu' => $ekstrakurikuler_submenu_kepala,
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php'])
             ],
             [
                 'title' => 'Rekap Absensi',
@@ -464,6 +583,8 @@ switch ($user_level) {
 
     case 'guru':
         $is_grade_6_guru = false;
+        $is_guru_pembina_pramuka = is_current_guru_pembina_pramuka($pdo);
+        $id_guru_login = 0;
         if (isset($_SESSION['user_id'])) {
             $id_guru_check = $_SESSION['user_id'];
             if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
@@ -471,11 +592,12 @@ switch ($user_level) {
                 $stmt_uid->execute([$_SESSION['user_id']]);
                 $id_guru_check = $stmt_uid->fetchColumn();
             }
+            $id_guru_login = (int)$id_guru_check;
             
             if ($id_guru_check) {
                 $stmt_g = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
                 $stmt_g->execute([$id_guru_check]);
-                $mengajar_json = $stmt_g->fetchColumn();
+                $mengajar_json = (string)$stmt_g->fetchColumn();
                 $mengajar_arr = json_decode($mengajar_json, true) ?? [];
                 
                 if (!empty($mengajar_arr)) {
@@ -498,6 +620,19 @@ switch ($user_level) {
                     }
                 }
             }
+        }
+        // is_guru_pembina_pramuka sudah ditentukan lewat helper yang robust.
+
+        $ekstrakurikuler_submenu_guru = [
+            ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=guru', 'active' => $current_page === 'data_ekstrakurikuler.php'],
+            ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=guru', 'active' => $current_page === 'data_pembina_pramuka.php'],
+            ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=guru', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
+            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=guru', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
+            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=guru', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=guru', 'active' => $current_page === 'data_barung.php'],
+        ];
+        if ($is_guru_pembina_pramuka) {
+            $ekstrakurikuler_submenu_guru[] = ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=guru', 'active' => $current_page === 'syarat_kecakapan_umum.php'];
         }
 
         $nilai_submenu_guru = [
@@ -557,6 +692,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_guru,
                 'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php', 'absensi_les_siswa.php', 'rekap_absensi_les_siswa.php', 'rekap_absensi_les_guru.php'])
+            ],
+            [
+                'title' => 'Ekstrakurikuler',
+                'icon' => 'fas fa-users',
+                'submenu' => $ekstrakurikuler_submenu_guru,
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -639,6 +780,7 @@ switch ($user_level) {
         
     case 'wali':
         $is_grade_6 = false;
+        $is_wali_pembina_pramuka = is_current_guru_pembina_pramuka($pdo);
         
         // Cek jika Wali Kelas 6
         if (isset($_SESSION['nama_guru'])) {
@@ -734,6 +876,17 @@ switch ($user_level) {
         $data_utama_urls_wali = array_map(function($item) {
             return basename($item['url']);
         }, $data_utama_submenu_wali);
+        $ekstrakurikuler_submenu_wali = [
+            ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=wali', 'active' => $current_page === 'data_ekstrakurikuler.php'],
+            ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=wali', 'active' => $current_page === 'data_pembina_pramuka.php'],
+            ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=wali', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
+            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=wali', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
+            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=wali', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=wali', 'active' => $current_page === 'data_barung.php'],
+        ];
+        if ($is_wali_pembina_pramuka) {
+            $ekstrakurikuler_submenu_wali[] = ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=wali', 'active' => $current_page === 'syarat_kecakapan_umum.php'];
+        }
 
         $menu_items = [
             [
@@ -753,6 +906,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_wali,
                 'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Ekstrakurikuler',
+                'icon' => 'fas fa-users',
+                'submenu' => $ekstrakurikuler_submenu_wali,
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
             ],
             [
                 'title' => 'Jadwal',

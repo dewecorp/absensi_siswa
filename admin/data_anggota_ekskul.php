@@ -6,7 +6,9 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isAuthorized(['admin', 'tata_usaha'])) {
+$can_manage_anggota_ekskul = isAuthorized(['admin', 'tata_usaha']);
+$can_view_anggota_ekskul = $can_manage_anggota_ekskul || isAuthorized(['kepala_madrasah', 'wali', 'guru']);
+if (!$can_view_anggota_ekskul) {
     redirect('../login.php');
 }
 
@@ -75,6 +77,9 @@ foreach ($classes as $c) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$can_manage_anggota_ekskul) {
+        $message = ['type' => 'warning', 'text' => 'Mode baca saja. CRUD tidak diizinkan untuk level Anda.'];
+    } else {
     $action = (string)($_POST['action'] ?? '');
 
     if ($action === 'add_collective') {
@@ -142,6 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengeluarkan anggota: ' . $e->getMessage()];
             }
         }
+    }
     }
 }
 
@@ -392,9 +398,11 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Daftar Anggota Kelas <?= htmlspecialchars($selected_class_name) ?></h4>
                     <div class="card-header-action">
+                        <?php if ($can_manage_anggota_ekskul): ?>
                         <button class="btn btn-success" data-toggle="modal" data-target="#modalTambahKolektif">
                             <i class="fas fa-plus"></i> Tambah Anggota
                         </button>
+                        <?php endif; ?>
                         <a href="?kelas=<?= (int)$selected_class_id ?>&export=excel" class="btn btn-info">
                             <i class="fas fa-file-excel"></i> Ekspor Excel
                         </a>
@@ -411,7 +419,7 @@ include '../templates/sidebar.php';
                                     <th>No</th>
                                     <th>NISN</th>
                                     <th>Nama Siswa</th>
-                                    <th>Aksi</th>
+                                    <?php if ($can_manage_anggota_ekskul): ?><th>Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -421,7 +429,7 @@ include '../templates/sidebar.php';
                                             <td><?= $i + 1 ?></td>
                                             <td><?= htmlspecialchars($m['nisn'] ?? '-') ?></td>
                                             <td><?= htmlspecialchars($m['nama_siswa']) ?></td>
-                                            <td>
+                                            <?php if ($can_manage_anggota_ekskul): ?><td>
                                                 <form method="POST" class="d-inline form-keluarkan-angota">
                                                     <input type="hidden" name="id_kelas" value="<?= (int)$selected_class_id ?>">
                                                     <input type="hidden" name="action" value="keluarkan">
@@ -430,7 +438,7 @@ include '../templates/sidebar.php';
                                                         <i class="fas fa-user-minus"></i> Keluarkan
                                                     </button>
                                                 </form>
-                                            </td>
+                                            </td><?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -443,6 +451,7 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
+            <?php if ($can_manage_anggota_ekskul): ?>
             <div class="modal fade" id="modalTambahKolektif" tabindex="-1" role="dialog" aria-hidden="true">
                 <div class="modal-dialog modal-lg" role="document">
                     <div class="modal-content">
@@ -500,6 +509,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
