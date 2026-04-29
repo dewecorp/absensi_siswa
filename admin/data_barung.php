@@ -1292,13 +1292,14 @@ $(document).ready(function() {
     updateDeleteSelectedUI();
 
     $('#checkAllBarungSiswa').on('change', function () {
-        $('.check-siswa-barung').prop('checked', $(this).is(':checked'));
-        $('.check-all-barung-pane').prop('checked', $(this).is(':checked'));
+        var on = $(this).is(':checked');
+        $('#modalTambahAnggotaBarung .check-siswa-barung:visible').prop('checked', on);
+        $('.check-all-barung-pane').prop('checked', on);
     });
 
     $(document).on('change', '.check-all-barung-pane', function () {
         var on = $(this).is(':checked');
-        $(this).closest('.tab-pane').find('.check-siswa-barung').prop('checked', on);
+        $(this).closest('.tab-pane').find('.check-siswa-barung:visible').prop('checked', on);
         syncGlobalCheckBarungModal();
     });
 
@@ -1316,7 +1317,7 @@ $(document).ready(function() {
     });
 
     function syncGlobalCheckBarungModal() {
-        var $all = $('.check-siswa-barung');
+        var $all = $('#modalTambahAnggotaBarung .check-siswa-barung:visible');
         if (!$all.length) {
             $('#checkAllBarungSiswa').prop('checked', false);
             return;
@@ -1326,6 +1327,28 @@ $(document).ready(function() {
             $all.length === $all.filter(':checked').length
         );
     }
+
+    function applySelectableOnlyFilter() {
+        var onlySelectable = $('#filterSelectableOnlyBarung').is(':checked');
+        var $rows = $('#modalTambahAnggotaBarung tr.row-siswa-barung');
+        if (onlySelectable) {
+            $rows.each(function() {
+                var blocked = $(this).data('blocked') === 1 || $(this).data('blocked') === '1';
+                $(this).toggleClass('d-none', blocked);
+                if (blocked) {
+                    $(this).find('.check-siswa-barung').prop('checked', false);
+                }
+            });
+        } else {
+            $rows.removeClass('d-none');
+        }
+        syncGlobalCheckBarungModal();
+    }
+
+    $('#filterSelectableOnlyBarung').on('change', applySelectableOnlyFilter);
+    $('#modalTambahAnggotaBarung').on('shown.bs.modal', function() {
+        applySelectableOnlyFilter();
+    });
 
     // AJAX Import with progress bar (upload progress + processing state)
     $('#importForm').on('submit', function(e) {
@@ -1687,6 +1710,12 @@ include '../templates/sidebar.php';
                                     <label class="custom-control-label" for="checkAllBarungSiswa"><?= !empty($barung_modal_tabs_kelas) ? 'Pilih semua (semua kelas)' : 'Pilih semua' ?></label>
                                 </div>
                             </div>
+                            <div class="form-group mb-2">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="filterSelectableOnlyBarung">
+                                    <label class="custom-control-label" for="filterSelectableOnlyBarung">Tampilkan hanya siswa yang bisa dipilih</label>
+                                </div>
+                            </div>
                             <?php if (!empty($barung_modal_tabs_kelas)): ?>
                                 <ul class="nav nav-tabs flex-wrap barung-modal-tabs-kelas" role="tablist">
                                     <?php
@@ -1732,7 +1761,7 @@ include '../templates/sidebar.php';
                                                             $label_tingkat_lain = trim((string)($s['tingkat_aktif_lain'] ?? ''));
                                                             $is_disabled_pick = $sudah_terdaftar || $terdaftar_lain;
                                                             ?>
-                                                            <tr>
+                                                            <tr class="row-siswa-barung" data-blocked="<?= $is_disabled_pick ? '1' : '0' ?>">
                                                                 <td class="text-center">
                                                                     <?php if ($is_disabled_pick): ?>
                                                                         <input type="checkbox" disabled>
@@ -1779,7 +1808,7 @@ include '../templates/sidebar.php';
                                                 $label_tingkat_lain = trim((string)($s['tingkat_aktif_lain'] ?? ''));
                                                 $is_disabled_pick = $sudah_terdaftar || $terdaftar_lain;
                                                 ?>
-                                                <tr>
+                                                <tr class="row-siswa-barung" data-blocked="<?= $is_disabled_pick ? '1' : '0' ?>">
                                                     <td class="text-center">
                                                         <?php if ($is_disabled_pick): ?>
                                                             <input type="checkbox" disabled>
