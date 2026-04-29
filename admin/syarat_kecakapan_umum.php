@@ -253,6 +253,21 @@ if (isset($_GET['download_template_sku'])) {
     exit;
 }
 
+/** Nama di DB kadang berisi literal entitas HTML (mis. &#039;); dipakai sebelum htmlspecialchars / ekspor. */
+function sku_plain_person_name(string $name): string
+{
+    $t = trim($name);
+    if ($t === '') {
+        return '';
+    }
+    return html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
+
+function sku_html_person_name(string $name): string
+{
+    return htmlspecialchars(sku_plain_person_name($name), ENT_QUOTES, 'UTF-8');
+}
+
 /**
  * Hitung label status satu peserta untuk satu tingkat.
  *
@@ -360,6 +375,22 @@ function sku_recompute_tingkat(PDO $pdo, int $id_tingkat): void
     $st->execute([$id_tingkat]);
     foreach ($st->fetchAll(PDO::FETCH_COLUMN, 0) as $pid) {
         sku_recompute_single($pdo, (int)$pid, $id_tingkat);
+    }
+}
+
+/** Urutkan nomor butir menjadi 1..n sesuai urutan sekarang (setelah hapus kolom dll.). */
+function sku_renumber_butir_urutan(PDO $pdo, int $id_tingkat): void
+{
+    if ($id_tingkat <= 0) {
+        return;
+    }
+    $st = $pdo->prepare('SELECT id_butir FROM tb_sku_kecakapan_butir WHERE id_tingkat_barung = ? ORDER BY urutan ASC, id_butir ASC');
+    $st->execute([$id_tingkat]);
+    $ids = $st->fetchAll(PDO::FETCH_COLUMN, 0);
+    $upd = $pdo->prepare('UPDATE tb_sku_kecakapan_butir SET urutan = ? WHERE id_butir = ? AND id_tingkat_barung = ?');
+    $n = 1;
+    foreach ($ids as $idButir) {
+        $upd->execute([$n++, (int)$idButir, $id_tingkat]);
     }
 }
 
@@ -553,6 +584,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
             $pdo->prepare('DELETE FROM tb_sku_kecakapan_nilai WHERE id_butir = ?')->execute([$id_b]);
             $pdo->prepare('DELETE FROM tb_sku_kecakapan_butir WHERE id_butir = ? AND id_tingkat_barung = ?')
                 ->execute([$id_b, $id_tingkat]);
+            sku_renumber_butir_urutan($pdo, $id_tingkat);
             sku_recompute_tingkat($pdo, $id_tingkat);
             echo json_encode(['ok' => true]);
             exit;
@@ -715,6 +747,7 @@ $checks_map = [];
 $tanggal_map = [];
 if ($selected_tingkat_id > 0) {
     try {
+        sku_renumber_butir_urutan($pdo, $selected_tingkat_id);
         $b = $pdo->prepare('
             SELECT id_butir, teks_butir, urutan FROM tb_sku_kecakapan_butir
             WHERE id_tingkat_barung = ? ORDER BY urutan ASC, id_butir ASC
@@ -827,7 +860,7 @@ if (isset($_GET['export'])) {
                 foreach ($peserta_rows as $p) {
                     $pid = (int)$p['id_peserta_didik_barung'];
                     $sheet->setCellValueByColumnAndRow(1, $row, $nom++);
-                    $sheet->setCellValueByColumnAndRow(2, $row, (string)$p['nama_peserta_didik']);
+                    $sheet->setCellValueByColumnAndRow(2, $row, sku_plain_person_name((string)$p['nama_peserta_didik']));
                     $cc = 3;
                     foreach ($sku_butir_rows as $bb) {
                         $bid = (int)$bb['id_butir'];
@@ -1007,7 +1040,7 @@ if (isset($_GET['export'])) {
                     ?>
                     <tr>
                         <td><?= $nomPrint++ ?></td>
-                        <td class="nama"><?= htmlspecialchars((string)$p['nama_peserta_didik'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td class="nama"><?= sku_html_person_name((string)$p['nama_peserta_didik']) ?></td>
                         <?php foreach ($sku_butir_rows as $bb): ?>
                             <?php
                                 $bid = (int)$bb['id_butir'];
@@ -1189,6 +1222,30 @@ $(function(){
     });
   });
 
+  var $filterNama = $('#skuFilterNama');
+  if ($filterNama.length) {
+    function skuApplyNamaFilter() {
+      var q = ($filterNama.val() || '').trim().toLowerCase();
+      var $rows = $('#skuMainTable tbody tr.sku-data-row');
+      var seq = 1;
+      $rows.each(function() {
+        var $tr = $(this);
+        var nama = String($tr.attr('data-nama-normal') || '');
+        var show = !q || nama.indexOf(q) !== -1;
+        $tr.toggle(show);
+        if (show) {
+          var $no = $tr.find('td.sku-row-no');
+          if (q) {
+            $no.text(seq++);
+          } else {
+            $no.text($tr.attr('data-urut-asli') || '');
+          }
+        }
+      });
+    }
+    $filterNama.on('input', skuApplyNamaFilter);
+  }
+
   $('.btn-del-butir').on('click', function(e){
     e.stopPropagation();
     var bid = parseInt($(this).data('butir'), 10);
@@ -1331,18 +1388,26 @@ require_once '../templates/sidebar.php';
                         <?php endif; ?>
 
                         <?php if ($selected_tingkat_id > 0): ?>
-                            <p class="text-muted small mb-2">
-                                Daftar mengikuti <strong>Data Anggota Pramuka</strong> tingkat aktif —
-                                kolom butir SKU bisa ditambahkan manual, diubah, atau dihapus, serta diimpor dari Excel (template .xlsx: satu baris, tiap kolom satu teks butir).
-                                <strong>Lulus</strong> = seluruh butir terselesaikan untuk tingkat tersebut; otomatis muncul di <strong>Surat Keterangan</strong>.
-                            </p>
-
-                            <div class="table-responsive rounded border sku-table-wrap mb-3" style="max-height:74vh;">
-                                <table class="table table-sm table-bordered mb-0 align-middle sku-main-table">
+                            <?php if (!empty($peserta_rows)): ?>
+                                <div class="form-row align-items-center mb-3">
+                                    <div class="col-auto">
+                                        <label for="skuFilterNama" class="sr-only">Cari nama peserta didik</label>
+                                        <div class="input-group input-group-sm sku-name-filter">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                            </div>
+                                            <input type="search" id="skuFilterNama" class="form-control"
+                                                   placeholder="Cari nama peserta didik…" autocomplete="off">
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                            <div class="table-responsive rounded border sku-table-wrap sku-table-wrap--tall mb-3">
+                                <table class="table table-sm table-bordered mb-0 align-middle sku-main-table" id="skuMainTable">
                                     <thead class="thead-light sku-thead-stick">
                                         <tr>
                                             <th rowspan="3" class="sticky-sku sku-th-no text-center py-3">NO</th>
-                                            <th rowspan="3" class="sticky-sku sku-th-nama">NAMA PESERTA DIDIK</th>
+                                            <th rowspan="3" class="sticky-sku sku-th-nama text-left py-3">NAMA PESERTA DIDIK</th>
                                             <th colspan="<?= max(1, count($sku_butir_rows)) ?>" class="text-center py-1 border sku-meta-title-cell">
                                                 <small class="text-uppercase font-weight-bold">Syarat kecakapan umum — per butir SKU</small>
                                             </th>
@@ -1391,10 +1456,13 @@ require_once '../templates/sidebar.php';
                                                 <?php
                                                     $pid = (int)$p['id_peserta_didik_barung'];
                                                     $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
+                                                    $namaNorm = mb_strtolower(sku_plain_person_name((string)$p['nama_peserta_didik']));
+                                                    $nomBaris = $nom;
                                                 ?>
-                                                <tr>
-                                                    <td class="text-center sticky-sku sku-th-no"><?= $nom++ ?></td>
-                                                    <td class="sticky-sku sku-th-nama font-weight-bold"><?= htmlspecialchars((string)$p['nama_peserta_didik']) ?></td>
+                                                <tr class="sku-data-row" data-nama-normal="<?= htmlspecialchars($namaNorm, ENT_QUOTES, 'UTF-8') ?>"
+                                                    data-urut-asli="<?= (int)$nomBaris ?>">
+                                                    <td class="text-center sticky-sku sku-th-no sku-row-no"><?= $nom++ ?></td>
+                                                    <td class="sticky-sku sku-th-nama font-weight-bold text-left sku-td-nama"><?= sku_html_person_name((string)$p['nama_peserta_didik']) ?></td>
                                                     <?php foreach ($sku_butir_rows as $bb): ?>
                                                         <?php
                                                             $bid = (int)$bb['id_butir'];
@@ -1507,6 +1575,33 @@ require_once '../templates/sidebar.php';
     box-shadow:inset -6px 0 8px -6px rgba(0,0,0,.12);
     position: relative;
 }
+/* Panel scroll: ~4 baris siswa terlihat (penilaian; scroll untuk siswa lain). Tanpa floor vh besar. */
+.sku-table-wrap--tall {
+    --sku-thead-floor: 310px;
+    --sku-rows-visible: 4;
+    --sku-row-est: 84px;
+    min-height: calc(var(--sku-thead-floor) + var(--sku-rows-visible) * var(--sku-row-est));
+    max-height: min(92vh, calc(100vh - 48px));
+}
+@supports (height: 100dvh) {
+    .sku-table-wrap--tall {
+        max-height: min(92vh, calc(100dvh - 48px));
+    }
+}
+.sku-name-filter {
+    min-width: 240px;
+    max-width: 360px;
+}
+@media (max-width: 575.98px) {
+    /* Layar sempit: ~3 siswa terlihat */
+    .sku-table-wrap--tall {
+        --sku-thead-floor: 220px;
+        --sku-row-est: 80px;
+        --sku-rows-visible: 3;
+        min-height: calc(var(--sku-thead-floor) + var(--sku-rows-visible) * var(--sku-row-est));
+        max-height: min(90vh, calc(100vh - 120px));
+    }
+}
 .sku-main-table { min-width: 640px; border-collapse: separate; border-spacing: 0; }
 
 /* Header tiga baris ikut menempel saat scroll vertikal dalam panel */
@@ -1528,6 +1623,20 @@ require_once '../templates/sidebar.php';
 .sticky-sku { position:sticky; left:0; z-index:8; background:#fbfbfc!important; min-width:40px;}
 .sku-th-nama { position:sticky; left:48px; z-index:9; background:#fdfdfd!important; min-width:240px; box-shadow: 3px 0 6px -4px rgba(0,0,0,.28);}
 .sticky-sku-r { position:sticky; right:0; z-index:8; background:#eef6ff!important;}
+
+/* NO & Status: tengah; Nama siswa: rata kiri (baca daftar nama) */
+.sku-main-table th.sku-th-no,
+.sku-main-table td.sku-th-no,
+.sku-main-table th.sku-th-status,
+.sku-main-table td.sku-status-cell {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+.sku-main-table th.sku-th-nama,
+.sku-main-table td.sku-td-nama {
+    text-align: left !important;
+    vertical-align: middle !important;
+}
 
 .sku-main-table thead.sku-thead-stick th.sticky-sku,
 .sku-main-table thead.sku-thead-stick th.sku-th-nama,
@@ -1551,20 +1660,37 @@ require_once '../templates/sidebar.php';
 }
 .sku-col { min-width:38px;}
 .btn-xxs { font-size:.72rem;line-height:1;padding:2px;}
-tbody .sku-th-nama {
+tbody td.sku-td-nama {
     white-space: nowrap;
 }
 @media (max-width: 991.98px) {
-    /* Mobile: matikan sticky agar tabel mudah digeser & dicentang */
-    .sku-main-table thead.sku-thead-stick {
-        position: static !important;
+    /*
+     * Mobile: blok thead sticky vertikal lagi di dalam .sku-table-wrap (scroll area).
+     * Sticky horizontal (left/right) dimatikan — di thead supaya rowspan aman,
+     * di tbody supaya geser & centang nyaman.
+     */
+    .sku-table-wrap {
+        -webkit-overflow-scrolling: touch;
     }
-    .sticky-sku,
-    .sku-th-nama,
-    .sticky-sku-r,
+    .sku-main-table thead.sku-thead-stick {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
     .sku-main-table thead.sku-thead-stick th.sticky-sku,
     .sku-main-table thead.sku-thead-stick th.sku-th-nama,
     .sku-main-table thead.sku-thead-stick th.sticky-sku-r {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        z-index: auto !important;
+        box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+    }
+    .sku-main-table tbody .sticky-sku,
+    .sku-main-table tbody td.sku-th-nama,
+    .sku-main-table tbody .sticky-sku-r {
         position: static !important;
         left: auto !important;
         right: auto !important;
