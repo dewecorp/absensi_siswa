@@ -35,6 +35,57 @@ if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
 
 $message = null;
 
+// Handle profile update
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
+    $nama_guru = trim((string)($_POST['nama_guru'] ?? ''));
+    $jenis_kelamin = trim((string)($_POST['jenis_kelamin'] ?? ''));
+    $tempat_lahir = trim((string)($_POST['tempat_lahir'] ?? ''));
+    $tanggal_lahir = trim((string)($_POST['tanggal_lahir'] ?? ''));
+
+    if ($nama_guru === '') {
+        $message = ['type' => 'warning', 'text' => 'Nama guru wajib diisi.'];
+    } elseif (!in_array($jenis_kelamin, ['Laki-laki', 'Perempuan'], true)) {
+        $message = ['type' => 'warning', 'text' => 'Jenis kelamin tidak valid.'];
+    } elseif ($tanggal_lahir !== '') {
+        $parts = explode('-', $tanggal_lahir);
+        if (count($parts) !== 3 || !checkdate((int)$parts[1], (int)$parts[2], (int)$parts[0])) {
+            $message = ['type' => 'warning', 'text' => 'Tanggal lahir tidak valid.'];
+        }
+    }
+
+    if ($message === null) {
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE tb_guru
+                SET nama_guru = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?
+                WHERE id_guru = ?
+            ");
+            $ok = $stmt->execute([
+                $nama_guru,
+                $jenis_kelamin,
+                ($tempat_lahir !== '' ? $tempat_lahir : null),
+                ($tanggal_lahir !== '' ? $tanggal_lahir : null),
+                $teacher['id_guru'],
+            ]);
+
+            if ($ok) {
+                $_SESSION['nama_guru'] = $nama_guru;
+                $_SESSION['nama'] = $nama_guru;
+                $message = ['type' => 'success', 'text' => 'Profil berhasil diperbarui.'];
+                $username = isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system';
+                logActivity($pdo, $username, 'Ubah Profil', 'Wali memperbarui profil sendiri');
+                $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+                $stmt->execute([$teacher['id_guru']]);
+                $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+            } else {
+                $message = ['type' => 'danger', 'text' => 'Gagal memperbarui profil.'];
+            }
+        } catch (Exception $e) {
+            $message = ['type' => 'danger', 'text' => 'Terjadi kesalahan saat menyimpan profil.'];
+        }
+    }
+}
+
 // Handle password change
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ubah_password'])) {
     $current_password = $_POST['current_password'] ?? '';
@@ -100,7 +151,7 @@ include '../templates/user_header.php';
                             <form method="POST" action="">
                                 <div class="form-group">
                                     <label>Nama Guru</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" readonly>
+                                    <input type="text" class="form-control" name="nama_guru" value="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" required>
                                 </div>
                                 <div class="form-group">
                                     <label>NUPTK</label>
@@ -108,14 +159,24 @@ include '../templates/user_header.php';
                                 </div>
                                 <div class="form-group">
                                     <label>Jenis Kelamin</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['jenis_kelamin']); ?>" readonly>
+                                    <select class="form-control" name="jenis_kelamin" required>
+                                        <option value="Laki-laki" <?php echo (($teacher['jenis_kelamin'] ?? '') === 'Laki-laki') ? 'selected' : ''; ?>>Laki-laki</option>
+                                        <option value="Perempuan" <?php echo (($teacher['jenis_kelamin'] ?? '') === 'Perempuan') ? 'selected' : ''; ?>>Perempuan</option>
+                                    </select>
                                 </div>
-                                <?php if (!empty($teacher['tempat_lahir']) || !empty($teacher['tanggal_lahir'])): ?>
                                 <div class="form-group">
-                                    <label>Tempat, Tanggal Lahir</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['tempat_lahir']); ?><?php echo !empty($teacher['tempat_lahir']) && !empty($teacher['tanggal_lahir']) ? ', ' : ''; ?><?php echo $teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : ''; ?>" readonly>
+                                    <label>Tempat Lahir</label>
+                                    <input type="text" class="form-control" name="tempat_lahir" value="<?php echo htmlspecialchars((string)($teacher['tempat_lahir'] ?? '')); ?>" placeholder="Contoh: Jepara">
                                 </div>
-                                <?php endif; ?>
+                                <div class="form-group">
+                                    <label>Tanggal Lahir</label>
+                                    <input type="date" class="form-control" name="tanggal_lahir" value="<?php echo !empty($teacher['tanggal_lahir']) ? htmlspecialchars(date('Y-m-d', strtotime($teacher['tanggal_lahir']))) : ''; ?>">
+                                </div>
+                                <div class="form-group text-right">
+                                    <button type="submit" name="update_profile" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Simpan Profil
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
