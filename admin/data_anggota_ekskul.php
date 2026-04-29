@@ -15,6 +15,8 @@ if (!$can_view_anggota_ekskul) {
 $ekskul_type = isset($ekskul_type) ? (string)$ekskul_type : 'pencak_silat';
 $ekskul_title = isset($ekskul_title) ? (string)$ekskul_title : 'Data Anggota';
 $table_name = $ekskul_type === 'rebana' ? 'tb_anggota_rebana' : 'tb_anggota_pencak_silat';
+$other_table_name = $ekskul_type === 'rebana' ? 'tb_anggota_pencak_silat' : 'tb_anggota_rebana';
+$other_ekskul_label = $ekskul_type === 'rebana' ? 'Pencak Silat' : 'Rebana';
 $slug = $ekskul_type === 'rebana' ? 'rebana' : 'pencak_silat';
 
 $page_title = $ekskul_title;
@@ -49,7 +51,12 @@ try {
 if ($message === null && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['ok'])) {
     $ok = (string)($_GET['ok'] ?? '');
     if ($ok === 'added') {
-        $message = ['type' => 'success', 'text' => 'Anggota berhasil ditambahkan.'];
+        $blocked = (int)($_GET['blocked'] ?? 0);
+        if ($blocked > 0) {
+            $message = ['type' => 'warning', 'text' => "Sebagian data ditambahkan. {$blocked} siswa tidak ditambahkan karena masih aktif di {$other_ekskul_label}."];
+        } else {
+            $message = ['type' => 'success', 'text' => 'Anggota berhasil ditambahkan.'];
+        }
     } elseif ($ok === 'removed') {
         $message = ['type' => 'success', 'text' => 'Anggota berhasil dikeluarkan dari daftar.'];
     }
@@ -97,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->beginTransaction();
 
                 $check_stmt = $pdo->prepare("SELECT id_kelas FROM tb_siswa WHERE id_siswa = ? LIMIT 1");
+                $check_other_active_stmt = $pdo->prepare("SELECT COUNT(*) FROM {$other_table_name} WHERE id_siswa = ? AND status = 'aktif'");
                 $upsert_stmt = $pdo->prepare("
                     INSERT INTO {$table_name} (id_siswa, status, tanggal_masuk, tanggal_keluar)
                     VALUES (?, 'aktif', NOW(), NULL)
@@ -107,10 +115,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ");
 
                 $added = 0;
+                $blocked_conflict = 0;
                 foreach ($ids as $id_siswa) {
                     $check_stmt->execute([$id_siswa]);
                     $kls = (int)$check_stmt->fetchColumn();
                     if ($kls !== $selected_class_id) {
+                        continue;
+                    }
+                    $check_other_active_stmt->execute([$id_siswa]);
+                    if ((int)$check_other_active_stmt->fetchColumn() > 0) {
+                        $blocked_conflict++;
                         continue;
                     }
                     $upsert_stmt->execute([$id_siswa]);
@@ -119,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $pdo->commit();
 
-                header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?kelas=' . $selected_class_id . '&ok=added');
+                header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?kelas=' . $selected_class_id . '&ok=added&blocked=' . $blocked_conflict);
                 exit;
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) {
@@ -169,7 +183,8 @@ if ($selected_class_id > 0) {
             SELECT s.id_siswa, s.nisn, s.nama_siswa
             FROM tb_siswa s
             LEFT JOIN {$table_name} a ON a.id_siswa = s.id_siswa AND a.status = 'aktif'
-            WHERE s.id_kelas = ? AND a.id IS NULL
+            LEFT JOIN {$other_table_name} ao ON ao.id_siswa = s.id_siswa AND ao.status = 'aktif'
+            WHERE s.id_kelas = ? AND a.id IS NULL AND ao.id IS NULL
             ORDER BY s.nama_siswa ASC
         ");
         $stmt_available->execute([$selected_class_id]);
@@ -496,7 +511,7 @@ include '../templates/sidebar.php';
                                         </table>
                                     </div>
                                 <?php else: ?>
-                                    <div class="alert alert-info mb-0">Semua siswa di kelas ini sudah menjadi anggota aktif.</div>
+                                    <div class="alert alert-info mb-0">Semua siswa di kelas ini sudah menjadi anggota aktif ekstrakurikuler lain. Keluarkan dari ekstrakurikuler lain jika ingin menambahkan.</div>
                                 <?php endif; ?>
                             </div>
                             <div class="modal-footer">
