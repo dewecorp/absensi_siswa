@@ -19,6 +19,8 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 }
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 try {
@@ -50,9 +52,11 @@ try {
             'Kelas ID'
         ];
         
+        // Kolom NISN sebagai teks agar tidak dijadikan angka Excel (hilang nol depan → dobel di impor).
+        $sheet->getStyle('B:B')->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
         // Add sample data
         $sheet->setCellValue('A2', 'Budi Santoso');
-        $sheet->setCellValue('B2', '1234567890');
+        $sheet->getCell('B2')->setValueExplicit('1234567890', DataType::TYPE_STRING);
         $sheet->setCellValue('C2', 'L');
         $sheet->setCellValue('D2', 'Jakarta');
         $sheet->setCellValue('E2', '2010-01-01');

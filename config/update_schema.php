@@ -29,6 +29,28 @@ try {
         echo "Added column 'jenis_mapel' to tb_mata_pelajaran.\n";
     }
 
+    // 3. UNIQUE pada tb_siswa.nisn (mencegah duplikat di luar jalur impor)
+    $ukSiswaNisn = $pdo->query("SHOW INDEX FROM tb_siswa WHERE Key_name = 'uk_tb_siswa_nisn'")->fetchAll();
+    if (count($ukSiswaNisn) === 0) {
+        $dupTrim = $pdo->query(
+            'SELECT 1 FROM tb_siswa WHERE LENGTH(TRIM(nisn)) > 0 GROUP BY TRIM(nisn) HAVING COUNT(*) > 1 LIMIT 1'
+        )->fetch();
+        $dupNum = null;
+        if (!$dupTrim) {
+            $dupNum = $pdo->query(
+                'SELECT 1 FROM tb_siswa WHERE LENGTH(TRIM(nisn)) > 0 AND TRIM(nisn) REGEXP \'^[0-9]+$\'' .
+                ' GROUP BY CAST(TRIM(nisn) AS UNSIGNED) HAVING COUNT(*) > 1 LIMIT 1'
+            )->fetch();
+        }
+        if ($dupTrim || $dupNum) {
+            echo "Lewati UNIQUE nisn: masih ada baris siswa berganda. " .
+                 "Gabung dengan: php config/deduplicate_siswa_nisn.php --apply\n";
+        } else {
+            $pdo->exec('ALTER TABLE tb_siswa ADD UNIQUE KEY uk_tb_siswa_nisn (nisn)');
+            echo "Added UNIQUE uk_tb_siswa_nisn on tb_siswa.\n";
+        }
+    }
+
     echo "Database migration completed successfully.\n";
 
 } catch (PDOException $e) {

@@ -17,6 +17,59 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 }
 
 /**
+ * Nilai sel Excel untuk NISN sering bertipe float atau kehilangan nol di depan; samakan bentuknya agar bisa dipasangkan dengan baris yang sudah ada.
+ */
+function normalizeNisnFromImportCell($raw) {
+    if ($raw === null || $raw === '') {
+        return '';
+    }
+    if (is_int($raw) || is_float($raw)) {
+        $x = (float) $raw;
+        if ($x < 0 || floor($x) !== $x) {
+            return '';
+        }
+        if ($x <= PHP_INT_MAX) {
+            return (string)(int) $x;
+        }
+        return ltrim(sprintf('%.0f', $x), '+');
+    }
+    $s = trim((string) $raw);
+    $s = preg_replace('/[\x00-\x1F\x7F\s]+/', '', $s);
+    return $s === '' ? '' : $s;
+}
+
+/** @return int|null id_siswa baris pertama yang cocok */
+function findStudentIdForImportDuplicate(PDO $pdo, string $nisnNormalized) {
+    if ($nisnNormalized === '') {
+        return null;
+    }
+    $exact = $pdo->prepare(
+        'SELECT id_siswa FROM tb_siswa WHERE TRIM(nisn) = ? ORDER BY id_siswa ASC LIMIT 1'
+    );
+    $exact->execute([$nisnNormalized]);
+    $found = $exact->fetch();
+    if ($found) {
+        return (int) $found['id_siswa'];
+    }
+    // Excel angka menggugurkan nol di depan; bandingkan nilai numerik jika sepenuhnya digit
+    if (ctype_digit($nisnNormalized)) {
+        $num = $pdo->prepare(
+            'SELECT id_siswa FROM tb_siswa
+             WHERE TRIM(nisn) REGEXP \'^[0-9]+$\'
+               AND CAST(TRIM(nisn) AS UNSIGNED) = CAST(? AS UNSIGNED)
+             ORDER BY id_siswa ASC
+             LIMIT 1'
+        );
+        $num->execute([$nisnNormalized]);
+        $row = $num->fetch();
+        if ($row) {
+            return (int) $row['id_siswa'];
+        }
+    }
+    return null;
+}
+
+/**
  * Import teachers from Excel file
  */
 function importTeachersFromExcel($filePath) {
@@ -176,7 +229,7 @@ function importStudentsFromExcelFile($filePath) {
         foreach ($rows as $index => $row) {
             if (count($row) >= 7) { // 7 columns: nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas
                 $nama_siswa = trim($row[0]);
-                $nisn = trim($row[1]);
+                $nisn = normalizeNisnFromImportCell($row[1] ?? '');
                 $jenis_kelamin = trim($row[2]);
                 $tempat_lahir = trim($row[3]);
                 $tanggal_lahir = trim($row[4]);
@@ -195,16 +248,17 @@ function importStudentsFromExcelFile($filePath) {
                     continue;
                 }
                 
-                // Check if student with same NISN already exists
-                $checkStmt = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE nisn = ?");
-                $checkStmt->execute([$nisn]);
-                $existingStudent = $checkStmt->fetch();
+                $existingId = findStudentIdForImportDuplicate($pdo, $nisn);
                 
-                if ($existingStudent) {
-                    // Update existing student
+                if ($existingId !== null) {
+                    // Update existing student (satu baris, hindari sisip ganda walau pola nisn di DB beda dengan sel Excel)
                     try {
-                        $updateStmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, jenis_kelamin=?, tempat_lahir=?, tanggal_lahir=?, wali=?, id_kelas=? WHERE nisn=?");
-                        $updateStmt->execute([$nama_siswa, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas, $nisn]);
+                        $updateStmt = $pdo->prepare(
+                            'UPDATE tb_siswa SET nama_siswa=?, nisn=?, jenis_kelamin=?, tempat_lahir=?, tanggal_lahir=?, wali=?, id_kelas=? WHERE id_siswa=?'
+                        );
+                        $updateStmt->execute(
+                            [$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas, $existingId]
+                        );
                         $rowCount++;
                         $updatedCount++;
                     } catch (PDOException $e) {
@@ -347,7 +401,7 @@ function importStudentsFromCSV($filePath) {
     while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
         if (count($data) >= 4) { // Assuming 4 columns: nama_siswa, nisn, jenis_kelamin, id_kelas
             $nama_siswa = trim($data[0]);
-            $nisn = trim($data[1]);
+            $nisn = normalizeNisnFromImportCell($data[1]);
             $jenis_kelamin = trim($data[2]);
             $id_kelas = trim($data[3]);
             
@@ -363,16 +417,15 @@ function importStudentsFromCSV($filePath) {
                 continue;
             }
             
-            // Check if student with same NISN already exists
-            $checkStmt = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE nisn = ?");
-            $checkStmt->execute([$nisn]);
-            $existingStudent = $checkStmt->fetch();
+            $existingId = findStudentIdForImportDuplicate($pdo, $nisn);
             
-            if ($existingStudent) {
+            if ($existingId !== null) {
                 // Update existing student
                 try {
-                    $updateStmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, jenis_kelamin=?, id_kelas=? WHERE nisn=?");
-                    $updateStmt->execute([$nama_siswa, $jenis_kelamin ?: null, $id_kelas, $nisn]);
+                    $updateStmt = $pdo->prepare(
+                        'UPDATE tb_siswa SET nama_siswa=?, nisn=?, jenis_kelamin=?, id_kelas=? WHERE id_siswa=?'
+                    );
+                    $updateStmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $id_kelas, $existingId]);
                     $rowCount++;
                     $updatedCount++;
                 } catch (PDOException $e) {
@@ -390,7 +443,7 @@ function importStudentsFromCSV($filePath) {
             }
         } elseif (count($data) >= 2) { // Support for minimal columns
             $nama_siswa = trim($data[0]);
-            $nisn = trim($data[1]);
+            $nisn = normalizeNisnFromImportCell($data[1]);
             $id_kelas = trim($data[2] ?? '');
             
             // Validate required fields
@@ -399,16 +452,13 @@ function importStudentsFromCSV($filePath) {
                 continue;
             }
             
-            // Check if student with same NISN already exists
-            $checkStmt = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE nisn = ?");
-            $checkStmt->execute([$nisn]);
-            $existingStudent = $checkStmt->fetch();
+            $existingId = findStudentIdForImportDuplicate($pdo, $nisn);
             
-            if ($existingStudent) {
+            if ($existingId !== null) {
                 // Update existing student
                 try {
-                    $updateStmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, id_kelas=? WHERE nisn=?");
-                    $updateStmt->execute([$nama_siswa, $id_kelas ?: null, $nisn]);
+                    $updateStmt = $pdo->prepare('UPDATE tb_siswa SET nama_siswa=?, nisn=?, id_kelas=? WHERE id_siswa=?');
+                    $updateStmt->execute([$nama_siswa, $nisn, $id_kelas ?: null, $existingId]);
                     $rowCount++;
                     $updatedCount++;
                 } catch (PDOException $e) {
