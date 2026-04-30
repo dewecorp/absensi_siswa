@@ -158,6 +158,9 @@
     <!-- Notification JS -->
     <script>
     function readNotification(id, link, element) {
+        function formatNotifCount(n) {
+            return n > 99 ? '99+' : String(n);
+        }
         // Optimistic UI updates
         if (element) {
             var $el = $(element);
@@ -170,14 +173,18 @@
             // Update badge count
             var $badges = $('.dropdown-list-toggle .badge, .btn-lg .badge');
             $badges.each(function() {
-                var count = parseInt($(this).text());
-                if (!isNaN(count)) {
-                    if (count > 1) {
-                        $(this).text(count - 1);
-                    } else {
-                        $(this).remove();
-                        $('.dropdown-list-toggle').removeClass('beep');
-                    }
+                var $badge = $(this);
+                var countAttr = parseInt($badge.attr('data-count'), 10);
+                var countText = parseInt($badge.text(), 10);
+                var count = !isNaN(countAttr) ? countAttr : countText;
+                if (isNaN(count)) return;
+
+                if (count > 1) {
+                    var next = count - 1;
+                    $badge.attr('data-count', next).text(formatNotifCount(next));
+                } else {
+                    $badge.remove();
+                    $('.dropdown-list-toggle').removeClass('beep');
                 }
             });
         }

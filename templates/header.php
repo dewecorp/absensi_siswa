@@ -118,6 +118,27 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
             padding-left: 0;
             padding-right: 0;
         }
+        .notif-count-badge {
+            position: absolute;
+            top: -6px;
+            right: -8px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 999px;
+            border: 2px solid #fff;
+            background: #fc544b;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 14px;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            box-shadow: 0 1px 3px rgba(0,0,0,.25);
+        }
         @media (max-width: 991.98px) {
             .main-navbar, .navbar-bg {
                 display: none !important;
@@ -187,12 +208,13 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                         foreach($unread_notifs as $n) {
                             if(!$n['is_read']) $unread_count++;
                         }
+                        $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
                     ?>
                     <li class="dropdown dropdown-list-toggle d-none d-lg-block">
                         <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg message-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
                             <i class="far fa-bell"></i>
                             <?php if ($unread_count > 0): ?>
-                                <span class="badge badge-danger" style="position: absolute; top: 0; right: 0; padding: 3px 6px; font-size: 10px;"><?php echo $unread_count; ?></span>
+                                <span class="notif-count-badge" data-count="<?php echo (int)$unread_count; ?>"><?php echo htmlspecialchars($unread_count_label, ENT_QUOTES, 'UTF-8'); ?></span>
                             <?php endif; ?>
                         </a>
                         <div class="dropdown-menu dropdown-list dropdown-menu-right">
@@ -310,7 +332,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
             <a href="#" data-toggle="modal" data-target="#mobileNotificationModal" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
                 <i class="far fa-bell fa-lg"></i>
                 <?php if ($unread_count > 0): ?>
-                    <span class="badge badge-danger rounded-circle" style="position: absolute; top: 0; right: 0; border: 2px solid white;"><?php echo $unread_count; ?></span>
+                    <span class="notif-count-badge" data-count="<?php echo (int)$unread_count; ?>"><?php echo htmlspecialchars($unread_count_label, ENT_QUOTES, 'UTF-8'); ?></span>
                 <?php endif; ?>
             </a>
 
