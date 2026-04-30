@@ -919,6 +919,45 @@ var schoolName = '<?php echo $school_name; ?>';
 var schoolCity = '<?php echo $school_city; ?>';
 var reportDate = '<?php echo $report_date; ?>';
 
+function recoverDropdownUiState() {
+    if (!window.jQuery) return;
+    // Bersihkan state overlay/backdrop yang kadang tertinggal dan membuat dropdown terasa freeze.
+    $('body').removeClass('modal-open').css('padding-right', '');
+    $('.modal-backdrop').remove();
+    $('.dropdown.show').removeClass('show');
+    $('.dropdown-menu.show').removeClass('show');
+
+    // Re-init Select2 jika terpasang pada dropdown siswa.
+    if ($.fn.select2 && $('#studentSelect').length) {
+        try {
+            if ($('#studentSelect').hasClass('select2-hidden-accessible')) {
+                $('#studentSelect').select2('destroy');
+            }
+            $('#studentSelect').select2({
+                placeholder: 'Pilih Siswa...',
+                allowClear: true,
+                width: '100%'
+            });
+        } catch (e) {}
+    }
+
+    // Refresh Selectric untuk class/filter dropdown agar klik kembali responsif.
+    if ($.fn.selectric) {
+        try { $('#classSelect').selectric('refresh'); } catch (e) {}
+        try { $('#filterType').selectric('refresh'); } catch (e) {}
+        try { $('#studentSelect').selectric('refresh'); } catch (e) {}
+    }
+}
+
+function openPrintPreviewTab(url) {
+    var previewWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (previewWindow) {
+        try { previewWindow.opener = null; } catch (e) {}
+    }
+    // Jalankan cleanup setelah event klik export selesai diproses browser.
+    setTimeout(recoverDropdownUiState, 80);
+}
+
 function exportToExcel() {
     // Create a container for the full report
     var container = document.createElement('div');
@@ -973,27 +1012,27 @@ function exportToPDF() {
     var classId = $('#classSelect').val();
     var monthPicker = $('#monthPicker').val();
     var url = 'cetak_rekap_absensi.php?type=monthly&class_id=' + classId + '&month=' + monthPicker;
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportDailyToPDF() {
     var classId = $('#classSelect').val();
     var datePicker = $('#datePicker').val();
     var url = 'cetak_rekap_absensi.php?type=daily&class_id=' + classId + '&date=' + datePicker;
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportStudentToPDF() {
     var classId = $('#classSelect').val();
     var studentId = $('#studentSelect').val();
     var url = 'cetak_rekap_absensi.php?type=student&class_id=' + classId + '&student_id=' + studentId;
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportSemesterToPDF() {
     var classId = $('#classSelect').val();
     var url = 'cetak_rekap_absensi.php?type=semester&class_id=' + classId;
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function fallbackPrintPDF() {

@@ -81,12 +81,18 @@ if ($filter_type == 'daily') {
     $abs_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $abs_map = [];
     foreach ($abs_raw as $r) $abs_map[$r['id_siswa']][$r['day']] = $r['keterangan'];
+    $holidays = getHolidays($pdo, $year, $month);
 
     foreach ($students as $student) {
         $sid = $student['id_siswa'];
         $days = array_fill(1, 31, '');
         $sum = ['H' => 0, 'TH' => 0, 'B' => 0];
         for ($d = 1; $d <= 31; $d++) {
+            $current_date = $year . '-' . str_pad((string)$month, 2, '0', STR_PAD_LEFT) . '-' . str_pad((string)$d, 2, '0', STR_PAD_LEFT);
+            if (!empty($holidays[$current_date])) {
+                $days[$d] = 'L';
+                continue;
+            }
             $abs = $abs_map[$sid][$d] ?? null;
             $sho = $sholat_map[$sid][$d] ?? null;
             if (in_array($abs, ['Sakit', 'Izin', 'Alpa'])) $status = 'x';

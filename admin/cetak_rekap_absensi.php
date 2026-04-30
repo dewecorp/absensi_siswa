@@ -82,7 +82,7 @@ if ($filter_type == 'daily') {
     foreach ($students as $student) {
         $row = $student;
         $row['days'] = [];
-        $summary = ['H' => 0, 'S' => 0, 'I' => 0, 'A' => 0, 'B' => 0];
+        $summary = ['H' => 0, 'S' => 0, 'I' => 0, 'A' => 0];
         for ($i = 1; $i <= 31; $i++) {
             if ($i > $num_days) {
                 $row['days'][$i] = '-'; // Outside month range
@@ -105,9 +105,6 @@ if ($filter_type == 'daily') {
             } elseif ($status == 'Alpa') { 
                 $display = 'A'; 
                 $summary['A']++; 
-            } elseif ($status == 'Berhalangan') { 
-                $display = 'B'; 
-                $summary['B']++; 
             } elseif (isset($holidays[$date_str])) {
                 $display = 'L'; // Holiday
             }
@@ -247,11 +244,11 @@ if ($filter_type == 'daily') {
                     <th rowspan="2" class="col-no">No</th>
                     <th rowspan="2" class="col-nama">Nama Siswa</th>
                     <th colspan="31">Tanggal</th>
-                    <th colspan="5">Total</th>
+                    <th colspan="4">Total</th>
                 </tr>
                 <tr>
                     <?php for($i=1; $i<=31; $i++) echo "<th class='col-tgl'>$i</th>"; ?>
-                    <th class="col-stat">H</th><th class="col-stat">S</th><th class="col-stat">I</th><th class="col-stat">A</th><th class="col-stat">B</th>
+                    <th class="col-stat">H</th><th class="col-stat">S</th><th class="col-stat">I</th><th class="col-stat">A</th>
                 </tr>
             </thead>
             <tbody>
@@ -265,7 +262,7 @@ if ($filter_type == 'daily') {
                     ?>
                         <td style="<?= $style ?>"><?= $val ?></td>
                     <?php endfor; ?>
-                    <td><?= $row['summary']['H'] ?></td><td><?= $row['summary']['S'] ?></td><td><?= $row['summary']['I'] ?></td><td><?= $row['summary']['A'] ?></td><td><?= $row['summary']['B'] ?></td>
+                    <td><?= $row['summary']['H'] ?></td><td><?= $row['summary']['S'] ?></td><td><?= $row['summary']['I'] ?></td><td><?= $row['summary']['A'] ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

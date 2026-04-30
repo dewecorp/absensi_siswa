@@ -711,24 +711,40 @@ var schoolName = '<?php echo $school_name; ?>';
 var schoolCity = '<?php echo $school_city; ?>';
 var reportDate = '<?php echo $report_date; ?>';
 
+function openPrintPreviewTab(url) {
+    var previewWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (previewWindow) {
+        try { previewWindow.opener = null; } catch (e) {}
+    }
+    // Defensive cleanup: hindari overlay/backdrop tersisa yang bisa membuat dropdown terasa freeze
+    if (window.jQuery) {
+        setTimeout(function() {
+            $('body').removeClass('modal-open').css('padding-right', '');
+            $('.modal-backdrop').remove();
+            $('.dropdown.show').removeClass('show');
+            $('.dropdown-menu.show').removeClass('show');
+        }, 50);
+    }
+}
+
 function exportToPDF() {
     var url = 'cetak_rekap_sholat.php?type=berjamaah&filter=monthly&class_id=<?php echo $class_id; ?>&month=<?php echo $selected_month; ?>';
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportSemesterToPDF() {
     var url = 'cetak_rekap_sholat.php?type=berjamaah&filter=semester&class_id=<?php echo $class_id; ?>';
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportDailyToPDF() {
     var url = 'cetak_rekap_sholat.php?type=berjamaah&filter=daily&class_id=<?php echo $class_id; ?>&date=<?php echo $selected_date; ?>';
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportStudentToPDF() {
     var url = 'cetak_rekap_sholat.php?type=berjamaah&filter=student&class_id=<?php echo $class_id; ?>&student_id=<?php echo $selected_student; ?>';
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function replaceIconsWithText(tableClone) {
