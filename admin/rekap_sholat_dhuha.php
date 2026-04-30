@@ -792,7 +792,7 @@ function exportToExcel() {
     }
 }
 
-function exportToPDF() {
+function legacyExportToPDF() {
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Dhuha</title>');
     printWindow.document.write('<style>');
@@ -892,7 +892,7 @@ function exportSemesterToExcel() {
     }
 }
 
-function exportSemesterToPDF() {
+function legacyExportSemesterToPDF() {
     var printWindow = window.open('', '', 'height=860,width=1300');
     printWindow.document.write('<html><head><title>Rekap Sholat Dhuha Semester</title>');
     printWindow.document.write('<style>');
@@ -991,7 +991,7 @@ function exportDailyToExcel() {
     }
 }
 
-function exportDailyToPDF() {
+function legacyExportDailyToPDF() {
     var printWindow = window.open('', '', 'height=860,width=1300');
     printWindow.document.write('<html><head><title>Rekap Harian Sholat Dhuha</title>');
     printWindow.document.write('<style>');
@@ -1100,7 +1100,7 @@ function exportStudentToExcel() {
     }
 }
 
-function exportStudentToPDF() {
+function legacyExportStudentToPDF() {
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Rekap Sholat Dhuha Siswa</title>');
     printWindow.document.write('<style>');

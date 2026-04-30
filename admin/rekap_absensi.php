@@ -1029,7 +1029,7 @@ function exportStudentToPDF() {
     openPrintPreviewTab(url);
 }
 
-function exportSemesterToPDF() {
+function legacyExportSemesterToPDF() {
     var classId = $('#classSelect').val();
     var url = 'cetak_rekap_absensi.php?type=semester&class_id=' + classId;
     openPrintPreviewTab(url);
@@ -1172,7 +1172,7 @@ function exportSemesterToExcel() {
 function exportSemesterToPDF() {
     var classId = $('#classSelect').val();
     var url = 'cetak_rekap_absensi.php?type=semester&class_id=' + classId;
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 // Validate form submission - use event delegation on document level
