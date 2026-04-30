@@ -233,10 +233,10 @@ endif;
                                                                         echo 'badge-success';
                                                                         break;
                                                                     case 'Sakit':
-                                                                        echo 'badge-info';
+                                                                        echo 'badge-warning';
                                                                         break;
                                                                     case 'Izin':
-                                                                        echo 'badge-warning';
+                                                                        echo 'badge-info';
                                                                         break;
                                                                     case 'Alpa':
                                                                         echo 'badge-danger';
@@ -408,10 +408,10 @@ var reportDate = '$report_date';
                         badge.addClass('badge-success');
                         break;
                     case 'Sakit':
-                        badge.addClass('badge-info');
+                        badge.addClass('badge-warning');
                         break;
                     case 'Izin':
-                        badge.addClass('badge-warning');
+                        badge.addClass('badge-info');
                         break;
                     case 'Alpa':
                         badge.addClass('badge-danger');
