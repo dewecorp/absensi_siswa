@@ -21,13 +21,16 @@ $slug = $ekskul_type === 'rebana' ? 'rebana' : 'pencak_silat';
 
 $page_title = $ekskul_title;
 $message = null;
+$toast_message = null;
 
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css',
 ];
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js',
 ];
 
 try {
@@ -58,7 +61,7 @@ if ($message === null && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['ok
             $message = ['type' => 'success', 'text' => 'Anggota berhasil ditambahkan.'];
         }
     } elseif ($ok === 'removed') {
-        $message = ['type' => 'success', 'text' => 'Anggota berhasil dikeluarkan dari daftar.'];
+        $toast_message = 'Anggota berhasil dikeluarkan dari daftar.';
     }
 }
 
@@ -156,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?kelas=' . $kelas_redirect . '&ok=removed');
                     exit;
                 }
-                $message = ['type' => 'success', 'text' => 'Anggota berhasil dikeluarkan dari daftar.'];
+                $toast_message = 'Anggota berhasil dikeluarkan dari daftar.';
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengeluarkan anggota: ' . $e->getMessage()];
             }
@@ -542,6 +545,27 @@ include '../templates/sidebar.php';
 </div>
 
 <?php include '../templates/footer.php'; ?>
+<style>
+#toast-container > .toast:before {
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}
+
+#toast-container > .toast-success:before {
+  content: "\f00c";
+}
+</style>
+<?php if (!empty($toast_message)): ?>
+<script type="text/javascript">
+toastr.options = {
+  closeButton: true,
+  progressBar: true,
+  timeOut: 2200,
+  positionClass: 'toast-top-right'
+};
+toastr.success(<?= json_encode((string)$toast_message) ?>, 'Berhasil');
+</script>
+<?php endif; ?>
 <?php if (!empty($message)): ?>
 <script type="text/javascript">
 Swal.fire({
