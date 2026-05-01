@@ -729,6 +729,50 @@ function updateSholatAttendance($pdo, $id_siswa, $tanggal, $keterangan_absensi) 
     }
 }
 
+/**
+ * Jenjang pendidikan formal (kolom tb_guru.pendidikan).
+ *
+ * @return string[]
+ */
+function getGuruPendidikanChoices() {
+    return ['SLTA', 'D1', 'D2', 'D3', 'S1', 'S2', 'S3'];
+}
+
+/**
+ * @param mixed $raw
+ * @return string|null salah satu dari getGuruPendidikanChoices() atau null jika kosong/tidak valid
+ */
+function normalizeGuruPendidikan($raw) {
+    $v = is_string($raw) ? trim($raw) : '';
+    if ($v === '') {
+        return null;
+    }
+    return in_array($v, getGuruPendidikanChoices(), true) ? $v : null;
+}
+
+/**
+ * Tambah kolom pendidikan ke tb_guru jika belum ada (mis. impor Excel sebelum buka halaman admin).
+ *
+ * @return bool false jika gagal
+ */
+function ensureTbGuruPendidikanColumn($pdo) {
+    static $checked = false;
+    if ($checked) {
+        return true;
+    }
+    $checked = true;
+    try {
+        $row = $pdo->query("SHOW COLUMNS FROM tb_guru LIKE 'pendidikan'")->fetch();
+        if (!$row) {
+            $pdo->exec("ALTER TABLE tb_guru ADD COLUMN pendidikan VARCHAR(10) DEFAULT NULL AFTER jenis_kelamin");
+        }
+        return true;
+    } catch (PDOException $e) {
+        error_log('ensureTbGuruPendidikanColumn: ' . $e->getMessage());
+        return false;
+    }
+}
+
 // --- Helper Functions for Security ---
 
 // Function to sanitize user input

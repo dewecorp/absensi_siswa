@@ -33,8 +33,9 @@ $import_type = isset($_GET['type']) ? $_GET['type'] : '';
                             Format yang didukung: XLS, XLSX<br>
                             Ukuran maksimal file: 5MB<br>
                             <?php if($import_type == 'guru'): ?>
-                                Kolom yang dibutuhkan: Nama Guru, NUPTK, Tempat Lahir, Tanggal Lahir, Jenis Kelamin, Password<br>
-                                Catatan: Kolom Wali Kelas telah dihapus karena diatur di Data Kelas
+                                Kolom: Nama Guru, NUPTK, Tempat Lahir, Tanggal Lahir, Jenis Kelamin, Pendidikan (opsional: SLTA, D1, D2, D3, S1, S2, S3), Password.<br>
+                                File lama dengan 6 kolom (tanpa Pendidikan) tetap bisa diimpor; pendidikan dikosongkan.<br>
+                                Catatan: Wali kelas diatur di Data Kelas.
                             <?php elseif($import_type == 'siswa'): ?>
                                 Kolom yang dibutuhkan: Nama Siswa, NISN, Jenis Kelamin (L/P), Tempat Lahir, Tanggal Lahir (YYYY-MM-DD), Orang Tua/Wali, Kelas ID
                             <?php endif; ?>

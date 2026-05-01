@@ -123,6 +123,8 @@ function importStudentsFromExcel($filePath) {
 function importTeachersFromExcelFile($filePath) {
     global $pdo;
     
+    ensureTbGuruPendidikanColumn($pdo);
+
     try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
         $worksheet = $spreadsheet->getActiveSheet();
@@ -136,13 +138,20 @@ function importTeachersFromExcelFile($filePath) {
         $errors = [];
         
         foreach ($rows as $index => $row) {
-            if (count($row) >= 6) { // Assuming 6 columns: nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, password
-                $nama_guru = trim($row[0]);
-                $nuptk = trim($row[1]);
-                $tempat_lahir = trim($row[2]);
-                $tanggal_lahir = trim($row[3]);
-                $jenis_kelamin = trim($row[4]);
-                $password = trim($row[5]);
+            // Minimal 6 kolom (format lama). Format baru +1: Pendidikan sebelum Password.
+            if (count($row) >= 6) {
+                $nama_guru = trim((string)($row[0] ?? ''));
+                $nuptk = trim((string)($row[1] ?? ''));
+                $tempat_lahir = trim((string)($row[2] ?? ''));
+                $tanggal_lahir = trim((string)($row[3] ?? ''));
+                $jenis_kelamin = trim((string)($row[4] ?? ''));
+                if (count($row) >= 7) {
+                    $pendidikan = normalizeGuruPendidikan(trim((string)($row[5] ?? '')));
+                    $password = trim((string)($row[6] ?? ''));
+                } else {
+                    $pendidikan = null;
+                    $password = trim((string)($row[5] ?? ''));
+                }
                 // wali_kelas is now managed in data kelas, so set to NULL
                 $wali_kelas = NULL;
                 
@@ -170,8 +179,8 @@ function importTeachersFromExcelFile($filePath) {
                 if ($existingTeacher) {
                     // Update existing teacher (overwrite duplicate)
                     try {
-                        $updateStmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, wali_kelas=?, password=?, password_plain=? WHERE nuptk=?");
-                        $updateStmt->execute([$nama_guru, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $password_plain, $nuptk]);
+                        $updateStmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, wali_kelas=?, password=?, password_plain=? WHERE nuptk=?");
+                        $updateStmt->execute([$nama_guru, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $pendidikan, $wali_kelas, $hashed_password, $password_plain, $nuptk]);
                         $rowCount++; // Count as updated/saved
                         $duplicateCount++; // Track duplicate records that were overwritten
                     } catch (PDOException $e) {
@@ -180,8 +189,8 @@ function importTeachersFromExcelFile($filePath) {
                 } else {
                     // Insert new teacher
                     try {
-                        $insertStmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, wali_kelas, password, password_plain) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                        $insertStmt->execute([$nama_guru, $nuptk, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $password_plain]);
+                        $insertStmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, pendidikan, wali_kelas, password, password_plain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        $insertStmt->execute([$nama_guru, $nuptk, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $pendidikan, $wali_kelas, $hashed_password, $password_plain]);
                         $rowCount++;
                     } catch (PDOException $e) {
                         $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
@@ -297,6 +306,8 @@ function importStudentsFromExcelFile($filePath) {
 function importTeachersFromCSV($filePath) {
     global $pdo;
     
+    ensureTbGuruPendidikanColumn($pdo);
+
     $handle = fopen($filePath, "r");
     if (!$handle) {
         return [
@@ -313,13 +324,19 @@ function importTeachersFromCSV($filePath) {
     fgetcsv($handle);
     
     while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-        if (count($data) >= 6) { // Assuming 6 columns: nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, password
-            $nama_guru = trim($data[0]);
-            $nuptk = trim($data[1]);
-            $tempat_lahir = trim($data[2]);
-            $tanggal_lahir = trim($data[3]);
-            $jenis_kelamin = trim($data[4]);
-            $password = trim($data[5]);
+        if (count($data) >= 6) {
+            $nama_guru = trim((string)($data[0] ?? ''));
+            $nuptk = trim((string)($data[1] ?? ''));
+            $tempat_lahir = trim((string)($data[2] ?? ''));
+            $tanggal_lahir = trim((string)($data[3] ?? ''));
+            $jenis_kelamin = trim((string)($data[4] ?? ''));
+            if (count($data) >= 7) {
+                $pendidikan = normalizeGuruPendidikan(trim((string)($data[5] ?? '')));
+                $password = trim((string)($data[6] ?? ''));
+            } else {
+                $pendidikan = null;
+                $password = trim((string)($data[5] ?? ''));
+            }
             // wali_kelas is now managed in data kelas, so set to NULL
             $wali_kelas = NULL;
             
@@ -347,8 +364,8 @@ function importTeachersFromCSV($filePath) {
             if ($existingTeacher) {
                 // Update existing teacher (overwrite duplicate)
                 try {
-                    $updateStmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, wali_kelas=?, password=?, password_plain=? WHERE nuptk=?");
-                    $updateStmt->execute([$nama_guru, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $password_plain, $nuptk]);
+                    $updateStmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, wali_kelas=?, password=?, password_plain=? WHERE nuptk=?");
+                    $updateStmt->execute([$nama_guru, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $pendidikan, $wali_kelas, $hashed_password, $password_plain, $nuptk]);
                     $rowCount++; // Count as updated/saved
                     $duplicateCount++; // Track duplicate records that were overwritten
                 } catch (PDOException $e) {
@@ -357,8 +374,8 @@ function importTeachersFromCSV($filePath) {
             } else {
                 // Insert new teacher
                 try {
-                    $insertStmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, wali_kelas, password, password_plain) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                    $insertStmt->execute([$nama_guru, $nuptk, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $wali_kelas, $hashed_password, $password_plain]);
+                    $insertStmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, pendidikan, wali_kelas, password, password_plain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $insertStmt->execute([$nama_guru, $nuptk, $tempat_lahir_val, $tanggal_lahir_val, $jenis_kelamin, $pendidikan, $wali_kelas, $hashed_password, $password_plain]);
                     $rowCount++;
                 } catch (PDOException $e) {
                     $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();

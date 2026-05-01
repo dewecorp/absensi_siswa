@@ -76,6 +76,7 @@ try {
             'Tempat Lahir',
             'Tanggal Lahir (YYYY-MM-DD)',
             'Jenis Kelamin (L/P)',
+            'Pendidikan (SLTA/D1/D2/D3/S1/S2/S3)',
             'Password'
         ];
     } else {
