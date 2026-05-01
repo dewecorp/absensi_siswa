@@ -334,7 +334,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                         ?>
                         <a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
                             <?php echo $avatar_html; ?>
-                            <div class="d-none d-lg-inline-block">Hi, <?php echo htmlspecialchars($display_name); ?></div>
+                            <div class="d-none d-lg-inline-block"><?php echo htmlspecialchars($display_name); ?></div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a href="#" onclick="confirmLogout('../logout.php?level=<?php echo getUserLevel(); ?>'); return false;" class="dropdown-item has-icon text-danger">
