@@ -343,19 +343,12 @@ $(function() {
 
   $(".notification-toggle").dropdown();
   $(".notification-toggle").parent().on('shown.bs.dropdown', function() {
-    $(".dropdown-list-icons").niceScroll({
-      cursoropacitymin: .3,
-      cursoropacitymax: .8,
-      cursorwidth: 7
-    });
-  });
-
-  $(".message-toggle").dropdown();
-  $(".message-toggle").parent().on('shown.bs.dropdown', function() {
-    $(".dropdown-list-message").niceScroll({
-      cursoropacitymin: .3,
-      cursoropacitymax: .8,
-      cursorwidth: 7
+    $(this).find(".navbar-notifikasi-scroll").each(function() {
+      var $el = $(this);
+      try {
+        var ns = $el.getNiceScroll && $el.getNiceScroll();
+        if (ns && ns.length && typeof ns.remove === 'function') ns.remove();
+      } catch (ignore) {}
     });
   });
 

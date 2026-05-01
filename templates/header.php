@@ -61,7 +61,11 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
     <?php endif; ?>
 
     <!-- Template CSS -->
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <?php
+    $_style_path = __DIR__ . '/../assets/css/style.css';
+    $_style_v = is_readable($_style_path) ? (string) filemtime($_style_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/style.css?v=<?php echo htmlspecialchars($_style_v, ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="../assets/css/components.css">
     <!-- Modal Fix CSS -->
     <link rel="stylesheet" href="../assets/css/modal_fix.css">
@@ -117,6 +121,19 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
         #table-siswa_wrapper .col-md-6 {
             padding-left: 0;
             padding-right: 0;
+        }
+        /* Dropdown notifikasi: pastikan tidak ada fade/overlay (::after atau mask) di atas konten */
+        .navbar-notifikasi-scroll {
+            position: relative;
+            -webkit-mask-image: none !important;
+            mask-image: none !important;
+        }
+        .navbar-notifikasi-scroll::before,
+        .navbar-notifikasi-scroll::after {
+            content: none !important;
+            display: none !important;
+            background: none !important;
+            background-image: none !important;
         }
         .notif-count-badge {
             position: absolute;
@@ -211,7 +228,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                         $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
                     ?>
                     <li class="dropdown dropdown-list-toggle d-none d-lg-block">
-                        <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg message-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
+                        <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg notification-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
                             <i class="far fa-bell"></i>
                             <?php if ($unread_count > 0): ?>
                                 <span class="notif-count-badge" data-count="<?php echo (int)$unread_count; ?>"><?php echo htmlspecialchars($unread_count_label, ENT_QUOTES, 'UTF-8'); ?></span>
@@ -223,7 +240,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                                     <a href="#" id="mark-all-read">Tandai semua dibaca</a>
                                 </div>
                             </div>
-                            <div class="dropdown-list-content dropdown-list-icons" style="height: 300px; overflow-y: auto;">
+                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll" style="height: 300px; overflow-y: auto;">
                                 <?php if (count($unread_notifs) > 0): ?>
                                     <?php foreach ($unread_notifs as $notif): ?>
                                         <?php
