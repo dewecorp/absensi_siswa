@@ -16,6 +16,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../../config/database.php';
 
+// Pastikan kolom pendidikan ada (tanpa memuat functions.php agar hindari efek sesi pada API).
+try {
+    if (!$pdo->query("SHOW COLUMNS FROM tb_guru LIKE 'pendidikan'")->fetch(PDO::FETCH_ASSOC)) {
+        $pdo->exec('ALTER TABLE tb_guru ADD COLUMN pendidikan VARCHAR(10) DEFAULT NULL AFTER jenis_kelamin');
+    }
+} catch (PDOException $e) {
+    error_log('api/v1/teachers.php kolom pendidikan: ' . $e->getMessage());
+}
+
 // Gunakan API key yang sama dengan endpoint v1 lain.
 define('API_KEY', 'SIS_CENTRAL_HUB_SECRET_2026');
 
@@ -78,6 +87,7 @@ try {
             g.tempat_lahir,
             g.tanggal_lahir,
             g.jenis_kelamin,
+            g.pendidikan,
             g.wali_kelas,
             g.mengajar,
             g.foto,
@@ -87,7 +97,7 @@ try {
         {$updated_since_sql}
         GROUP BY
             g.id_guru, g.nama_guru, g.kode_guru, g.nuptk, g.tempat_lahir,
-            g.tanggal_lahir, g.jenis_kelamin, g.wali_kelas, g.mengajar, g.foto
+            g.tanggal_lahir, g.jenis_kelamin, g.pendidikan, g.wali_kelas, g.mengajar, g.foto
         ORDER BY g.nama_guru ASC
         {$limit_sql}
     ";
@@ -98,6 +108,9 @@ try {
 
     foreach ($teachers as &$teacher) {
         $teacher['kelas_wali'] = !empty($teacher['kelas_wali']) ? $teacher['kelas_wali'] : null;
+        if (!array_key_exists('pendidikan', $teacher) || $teacher['pendidikan'] === '' || $teacher['pendidikan'] === null) {
+            $teacher['pendidikan'] = null;
+        }
 
         $mengajar_decoded = null;
         if (!empty($teacher['mengajar'])) {

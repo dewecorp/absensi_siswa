@@ -77,6 +77,7 @@ Field respons `sync_mode` akan berisi `full` atau `incremental`.
       "tempat_lahir": "Jepara",
       "tanggal_lahir": "1986-11-12",
       "jenis_kelamin": "Laki-laki",
+      "pendidikan": "S1",
       "wali_kelas": null,
       "mengajar": "[\"5\"]",
       "foto": null,
@@ -96,6 +97,7 @@ Field respons `sync_mode` akan berisi `full` atau `incremental`.
 - `tempat_lahir`: tempat lahir
 - `tanggal_lahir`: tanggal lahir (`YYYY-mm-dd`)
 - `jenis_kelamin`: `Laki-laki` / `Perempuan`
+- `pendidikan`: jenjang formal (`SLTA`, `D1`, `D2`, `D3`, `S1`, `S2`, `S3`) atau `null` jika belum diisi
 - `wali_kelas`: nilai dari kolom `tb_guru.wali_kelas`
 - `mengajar`: JSON string asli dari database
 - `mengajar_list`: hasil decode `mengajar` menjadi array (atau `null`)
