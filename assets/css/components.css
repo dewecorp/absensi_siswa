@@ -2070,3 +2070,42 @@ tr:first-child > td > .fc-day-grid-event {
     margin-bottom: 50px;
   }
 }
+
+/* Dashboard: widget statistik 2 kolom di layar kecil — tampilan lebih ringkas */
+@media (max-width: 991.98px) {
+  .main-content .card.card-statistic-1 {
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .main-content .card.card-statistic-1 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .main-content .card.card-statistic-1 .card-icon {
+    float: none;
+    width: 48px;
+    height: 48px;
+    line-height: 48px !important;
+    margin: 10px auto 4px !important;
+  }
+  .main-content .card.card-statistic-1 .card-icon .ion,
+  .main-content .card.card-statistic-1 .card-icon .fas,
+  .main-content .card.card-statistic-1 .card-icon .far,
+  .main-content .card.card-statistic-1 .card-icon .fab,
+  .main-content .card.card-statistic-1 .card-icon .fal {
+    font-size: 18px !important;
+  }
+  .main-content .card.card-statistic-1 .card-header {
+    padding-top: 8px;
+  }
+  .main-content .card.card-statistic-1 .card-header h4 {
+    font-size: 11px;
+  }
+  .main-content .card.card-statistic-1 .card-body {
+    font-size: 16px;
+  }
+}

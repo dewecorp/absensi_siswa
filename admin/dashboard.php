@@ -672,7 +672,7 @@ include_once '../templates/sidebar.php';
                     </style>
                     
                     <div class="row">
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
                                     <i class="fas fa-users"></i>
@@ -691,7 +691,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-info">
                                     <i class="fas fa-chalkboard-teacher"></i>
@@ -710,7 +710,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-school"></i>
@@ -728,7 +728,7 @@ include_once '../templates/sidebar.php';
                     </div>
                     
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-3">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-user-check"></i>
@@ -743,7 +743,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-3">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-user-injured"></i>
@@ -758,7 +758,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-3">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-info">
                                     <i class="fas fa-user-clock"></i>
@@ -773,7 +773,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-3">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-user-slash"></i>
@@ -791,7 +791,7 @@ include_once '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-user-check"></i>
@@ -806,7 +806,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-user-injured"></i>
@@ -821,7 +821,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-info">
                                     <i class="fas fa-user-clock"></i>

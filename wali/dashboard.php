@@ -1067,7 +1067,7 @@ include_once '../templates/sidebar.php';
                     </script>
 
                     <div class="row">
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
                                     <i class="fas fa-chalkboard"></i>
@@ -1082,7 +1082,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-users"></i>
@@ -1101,7 +1101,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-check-circle"></i>
@@ -1119,7 +1119,7 @@ include_once '../templates/sidebar.php';
                     </div>
                     
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-3">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-warning">
                                     <i class="fas fa-heartbeat"></i>
@@ -1134,7 +1134,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-3">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-info">
                                     <i class="fas fa-file-alt"></i>
@@ -1149,7 +1149,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-3">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-danger">
                                     <i class="fas fa-times-circle"></i>
@@ -1164,7 +1164,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                        <div class="col-6 col-md-6 col-lg-3">
                             <div class="card card-statistic-1">
                                 <div class="card-icon" style="background-color: #9557f5; color: #fff;">
                                     <i class="fas fa-ban"></i>
