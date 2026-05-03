@@ -29,6 +29,11 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
 
 $school_profile = getSchoolProfile($pdo);
 
+$semester_export = trim((string) ($school_profile['semester'] ?? '-'));
+if ($semester_export !== '-' && !preg_match('/^semester\b/i', $semester_export)) {
+    $semester_export = 'Semester ' . $semester_export;
+}
+
 // Get Grade 6 Class IDs for filtering
 $stmt_grade6 = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE nama_kelas LIKE '%6%' OR nama_kelas LIKE '%VI%'");
 $grade6_classes = $stmt_grade6->fetchAll(PDO::FETCH_ASSOC);
@@ -103,10 +108,19 @@ if (!empty($grade6_teacher_ids)) {
         th { background-color: #f0f0f0; font-weight: bold; }
         .text-left { text-align: left; padding-left: 5px; }
         
-        .signature-wrapper { margin-top: 20px; width: 100%; page-break-inside: avoid; }
-        .signature-table { width: 100%; border: none !important; }
-        .signature-table td { border: none !important; vertical-align: top; text-align: center; padding: 0; }
-        .qr-code { width: 65px; height: 60px; margin: 2px auto; }
+        .signature-wrapper {
+            margin-top: 20px;
+            width: 100%;
+            page-break-inside: avoid;
+            text-align: right;
+        }
+        .signature-block {
+            display: inline-block;
+            text-align: center;
+            max-width: 260px;
+            vertical-align: top;
+        }
+        .qr-code { width: 65px; height: 60px; margin: 2px auto; display: block; }
         
         @media print {
             .no-print { display: none; }
@@ -125,7 +139,7 @@ if (!empty($grade6_teacher_ids)) {
         <h3><?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN') ?></h3>
         <h2><?= strtoupper($school_profile['nama_madrasah'] ?? 'MADRASAH') ?></h2>
         <p><?= $school_profile['alamat'] ?? '' ?></p>
-        <p>Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?> | Semester: <?= $school_profile['semester'] ?? '-' ?></p>
+        <p>Tahun Ajaran: <?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?> | <?= htmlspecialchars($semester_export) ?></p>
     </div>
 
     <div class="title">
@@ -188,20 +202,16 @@ if (!empty($grade6_teacher_ids)) {
     </table>
 
     <div class="signature-wrapper">
-        <table class="signature-table" style="width: 100%;">
-            <tr>
-                <td style="width: 100%;">
-                    <?= $school_profile['tempat_jadwal'] ?? 'Sukosono' ?>, <?= formatDateIndonesia(date('Y-m-d')) ?><br>
-                    Mengetahui,<br>
-                    Kepala Madrasah,<br>
-                    <div style="margin-top: 5px; margin-bottom: 5px;">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=<?= urlencode('Validasi Kepala Madrasah: ' . ($school_profile['kepala_madrasah'] ?? '-')) ?>" class="qr-code">
-                    </div>
-                    <strong><u><?= $school_profile['kepala_madrasah'] ?? '-' ?></u></strong><br>
-                    NIP. <?= $school_profile['nip_kepala'] ?? '-' ?>
-                </td>
-            </tr>
-        </table>
+        <div class="signature-block">
+            <?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Sukosono') ?>, <?= formatDateIndonesia(date('Y-m-d')) ?><br>
+            Mengetahui,<br>
+            Kepala Madrasah,<br>
+            <div style="margin-top: 5px; margin-bottom: 5px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=<?= urlencode('Validasi Kepala Madrasah: ' . ($school_profile['kepala_madrasah'] ?? '-')) ?>" alt="" class="qr-code">
+            </div>
+            <strong><u><?= htmlspecialchars($school_profile['kepala_madrasah'] ?? '-') ?></u></strong><br>
+            NIP. <?= htmlspecialchars((string) ($school_profile['nip_kepala'] ?? '-')) ?>
+        </div>
     </div>
     <script>
         window.onload = function() {
