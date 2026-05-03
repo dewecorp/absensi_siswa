@@ -36,6 +36,11 @@ $wali_kelas_fixed = $class_grade6 ? $class_grade6['wali_kelas'] : '-';
 
 $school_profile = getSchoolProfile($pdo);
 
+$semester_export = trim((string) ($school_profile['semester'] ?? '-'));
+if ($semester_export !== '-' && !preg_match('/^semester\b/i', $semester_export)) {
+    $semester_export = 'Semester ' . $semester_export;
+}
+
 // Get filter parameters
 $filter_type = $_GET['filter_type'] ?? 'all';
 $selected_date = $_GET['date'] ?? date('Y-m-d');
@@ -120,7 +125,7 @@ foreach ($records as $r) {
         <h3><?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN') ?></h3>
         <h2><?= strtoupper($school_profile['nama_madrasah'] ?? 'MADRASAH') ?></h2>
         <p><?= $school_profile['alamat'] ?? '' ?></p>
-        <p>Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?> | Semester: <?= $school_profile['semester'] ?? '-' ?></p>
+        <p>Tahun Ajaran: <?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?> | <?= htmlspecialchars($semester_export) ?></p>
     </div>
 
     <div class="title">
