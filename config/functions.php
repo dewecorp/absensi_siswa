@@ -82,7 +82,7 @@ if (session_status() == PHP_SESSION_NONE) {
 
     // --- SESSION CONFIGURATION ---
     // Store session files outside the project folder to avoid untracked session files in repo.
-    // (Requested: no need to copy/manage `sessions/` folder.)
+    // (Requested: no need to copy/manage sessions folder.)
     $tmp = sys_get_temp_dir();
     if (is_string($tmp) && $tmp !== '') {
         session_save_path($tmp);
@@ -200,8 +200,8 @@ function isAuthorized($allowed_levels = []) {
 }
 
 /**
- * Tahun mulai tahun ajaran berjalan (Indonesia: Juli–Juni).
- * Contoh: Agustus 2026 → 2026; Juni 2026 → 2025.
+ * Tahun mulai tahun ajaran berjalan (Indonesia: Juli-Juni).
+ * Contoh: Agustus 2026 -> 2026; Juni 2026 -> 2025.
  */
 function getTahunAjaranBerjalanStartYear(?int $timestamp = null): int {
     $ts = $timestamp ?? time();
@@ -223,7 +223,7 @@ function isTahunAjaranFormatValid(?string $ta): bool {
 }
 
 /**
- * Rentang tanggal (inclusive) untuk tahun ajaran: Juli y0 – Juni (y0+1).
+ * Rentang tanggal (inclusive) untuk tahun ajaran: Juli y0 - Juni (y0+1).
  *
  * @return array{mulai: string, sampai: string}|null
  */
@@ -450,7 +450,13 @@ function buildTahunAjaranProfilOptions(?string $profileTahunAjaran = null, array
     return $out;
 }
 
-function getFilteredSubjects($pdo) {
+/**
+ * Daftar mapel untuk modul selain jadwal (nilai, rekap nilai, jurnal, dll.).
+ * Default: hanya jenis_mapel Akademik atau NULL. Non-Akademik untuk jadwal saja (query terpisah di modul jadwal).
+ *
+ * @param bool $semuaJenis false = hanya akademik (nilai), true = semua jenis (tetap kecuali slot struktural di nama).
+ */
+function getFilteredSubjects($pdo, $semuaJenis = false) {
     static $has_jenis_mapel = null;
 
     if ($has_jenis_mapel === null) {
@@ -462,32 +468,34 @@ function getFilteredSubjects($pdo) {
         }
     }
 
-    $sql = "SELECT * FROM tb_mata_pelajaran";
-    $conditions = [
-        "nama_mapel NOT LIKE '%Asmaul Husna%'",
-        "nama_mapel NOT LIKE '%Upacara%'",
-        "nama_mapel NOT LIKE '%Istirahat%'",
-        "nama_mapel NOT LIKE '%Kepramukaan%'",
-        "nama_mapel NOT LIKE '%Ekstrakurikuler%'",
-        "nama_mapel NOT LIKE '%PJOK%'",
-        "nama_mapel NOT LIKE '%Ramadhanku%'"
-    ];
+    $sql = 'SELECT * FROM tb_mata_pelajaran';
+    $conditions = [];
+    foreach ([
+        '%Asmaul Husna%',
+        '%Upacara%',
+        '%Istirahat%',
+        '%Kepramukaan%',
+        '%Ekstrakurikuler%',
+        '%Ramadhanku%',
+    ] as $pattern) {
+        $conditions[] = 'nama_mapel NOT LIKE ' . $pdo->quote($pattern);
+    }
 
-    if ($has_jenis_mapel) {
-        $conditions[] = "(jenis_mapel IS NULL OR jenis_mapel = 'Akademik')";
+    if (!$semuaJenis && $has_jenis_mapel) {
+        $conditions[] = '(jenis_mapel IS NULL OR jenis_mapel = ' . $pdo->quote('Akademik') . ')';
     }
 
     if (!empty($conditions)) {
-        $sql .= " WHERE " . implode(" AND ", $conditions);
+        $sql .= ' WHERE ' . implode(' AND ', $conditions);
     }
 
-    $sql .= " ORDER BY CAST(kode_mapel AS UNSIGNED), kode_mapel ASC";
+    $sql .= ' ORDER BY CAST(kode_mapel AS UNSIGNED), kode_mapel ASC';
 
     try {
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY CAST(kode_mapel AS UNSIGNED), kode_mapel ASC");
+        $stmt = $pdo->query('SELECT * FROM tb_mata_pelajaran ORDER BY CAST(kode_mapel AS UNSIGNED), kode_mapel ASC');
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
@@ -686,7 +694,7 @@ if (!function_exists('sort_all_menu_items')) {
             } elseif (strcasecmp($normalized_title, 'Logout') === 0) {
                 $logout = $item;
             } else {
-                // Do not sort submenu A–Z. Only move "Scan Absensi" to the very top
+                // Do not sort submenu A-Z. Only move "Scan Absensi" to the very top
                 // while preserving the existing order of the other items.
                 if (isset($item['submenu']) && is_array($item['submenu']) && (strpos($normalized_title, 'Absensi') !== false)) {
                     $scan_index = null;
