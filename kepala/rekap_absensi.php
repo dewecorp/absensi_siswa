@@ -62,21 +62,28 @@ if (!empty($selected_month)) {
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
+$periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
 $school_city = $school_profile['tempat_jadwal'] ?? '';
 $reportDate = formatDateIndonesia(date('Y-m-d'));
 
 // Get Summary of Absent Students (Sakit, Izin, Alpa) for ALL classes on selected date (for daily view)
 $absent_summary = [];
 if ($filter_type == 'daily' && !empty($selected_date)) {
-    $summary_stmt = $pdo->prepare("
+    $sqlAbs = "
         SELECT s.nama_siswa, k.nama_kelas, a.keterangan 
         FROM tb_absensi a
         JOIN tb_siswa s ON a.id_siswa = s.id_siswa
         JOIN tb_kelas k ON s.id_kelas = k.id_kelas
-        WHERE a.tanggal = ? AND a.keterangan IN ('Sakit', 'Izin', 'Alpa')
-        ORDER BY k.nama_kelas ASC, s.nama_siswa ASC
-    ");
-    $summary_stmt->execute([$selected_date]);
+        WHERE a.tanggal = ? AND a.keterangan IN ('Sakit', 'Izin', 'Alpa')";
+    $bindAbs = [$selected_date];
+    if ($periode_ta) {
+        $sqlAbs .= " AND a.tanggal >= ? AND a.tanggal <= ?";
+        $bindAbs[] = $periode_ta['mulai'];
+        $bindAbs[] = $periode_ta['sampai'];
+    }
+    $sqlAbs .= " ORDER BY k.nama_kelas ASC, s.nama_siswa ASC";
+    $summary_stmt = $pdo->prepare($sqlAbs);
+    $summary_stmt->execute($bindAbs);
     $absent_summary = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -102,15 +109,21 @@ if ($class_id > 0) {
         $all_daily_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Get attendance data for the selected date
-        $stmt = $pdo->prepare("
+        $sqlD = "
             SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, a.tanggal, k.nama_kelas, a.jam_masuk, a.jam_keluar
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa  
             LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
-            WHERE s.id_kelas = ? AND a.tanggal = ?
-            ORDER BY s.nama_siswa ASC
-        ");
-        $stmt->execute([$class_id, $selected_date]);
+            WHERE s.id_kelas = ? AND a.tanggal = ?";
+        $bindD = [$class_id, $selected_date];
+        if ($periode_ta) {
+            $sqlD .= " AND a.tanggal >= ? AND a.tanggal <= ?";
+            $bindD[] = $periode_ta['mulai'];
+            $bindD[] = $periode_ta['sampai'];
+        }
+        $sqlD .= " ORDER BY s.nama_siswa ASC";
+        $stmt = $pdo->prepare($sqlD);
+        $stmt->execute($bindD);
         $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Organize attendance data by student ID
@@ -149,14 +162,20 @@ if ($class_id > 0) {
         $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Get attendance data for the month
-        $stmt = $pdo->prepare("
+        $sqlM = "
             SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, DAY(a.tanggal) as day
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa
-            WHERE s.id_kelas = ? AND YEAR(a.tanggal) = ? AND MONTH(a.tanggal) = ?
-            ORDER BY s.nama_siswa, a.tanggal
-        ");
-        $stmt->execute([$class_id, $year, $month]);
+            WHERE s.id_kelas = ? AND YEAR(a.tanggal) = ? AND MONTH(a.tanggal) = ?";
+        $bindM = [$class_id, $year, $month];
+        if ($periode_ta) {
+            $sqlM .= " AND a.tanggal >= ? AND a.tanggal <= ?";
+            $bindM[] = $periode_ta['mulai'];
+            $bindM[] = $periode_ta['sampai'];
+        }
+        $sqlM .= " ORDER BY s.nama_siswa, a.tanggal";
+        $stmt = $pdo->prepare($sqlM);
+        $stmt->execute($bindM);
         $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Organize attendance data by student ID
@@ -200,15 +219,21 @@ if ($class_id > 0) {
         $monthly_results = array_values($student_attendance);
     } elseif ($filter_type == 'student' && $selected_student > 0) {
         // Student filter - get attendance data for specific student
-        $stmt = $pdo->prepare("
+        $sqlSt = "
             SELECT s.nama_siswa, s.nisn, k.nama_kelas, a.keterangan, a.tanggal
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa
             LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
-            WHERE s.id_siswa = ?
-            ORDER BY a.tanggal DESC
-        ");
-        $stmt->execute([$selected_student]);
+            WHERE s.id_siswa = ?";
+        $bindSt = [$selected_student];
+        if ($periode_ta) {
+            $sqlSt .= " AND a.tanggal >= ? AND a.tanggal <= ?";
+            $bindSt[] = $periode_ta['mulai'];
+            $bindSt[] = $periode_ta['sampai'];
+        }
+        $sqlSt .= " ORDER BY a.tanggal DESC";
+        $stmt = $pdo->prepare($sqlSt);
+        $stmt->execute($bindSt);
         $student_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Calculate summary statistics
@@ -250,16 +275,22 @@ if ($class_id > 0) {
         $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Get attendance data for the semester
-        $stmt = $pdo->prepare("
+        $sqlSm = "
             SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, a.tanggal,
                    MONTH(a.tanggal) as month, DAY(a.tanggal) as day
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa
             WHERE s.id_kelas = ? AND YEAR(a.tanggal) = ? 
-                  AND MONTH(a.tanggal) BETWEEN ? AND ?
-            ORDER BY s.nama_siswa, a.tanggal
-        ");
-        $stmt->execute([$class_id, $query_year, $start_month, $end_month]);
+                  AND MONTH(a.tanggal) BETWEEN ? AND ?";
+        $bindSm = [$class_id, $query_year, $start_month, $end_month];
+        if ($periode_ta) {
+            $sqlSm .= " AND a.tanggal >= ? AND a.tanggal <= ?";
+            $bindSm[] = $periode_ta['mulai'];
+            $bindSm[] = $periode_ta['sampai'];
+        }
+        $sqlSm .= " ORDER BY s.nama_siswa, a.tanggal";
+        $stmt = $pdo->prepare($sqlSm);
+        $stmt->execute($bindSm);
         $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Debug: Log how many records found

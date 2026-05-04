@@ -199,6 +199,71 @@ function isAuthorized($allowed_levels = []) {
     return in_array($current_level, $normalized_allowed_levels, true);
 }
 
+/**
+ * Tahun mulai tahun ajaran berjalan (Indonesia: Juli–Juni).
+ * Contoh: Agustus 2026 → 2026; Juni 2026 → 2025.
+ */
+function getTahunAjaranBerjalanStartYear(?int $timestamp = null): int {
+    $ts = $timestamp ?? time();
+    $y = (int)date('Y', $ts);
+    $m = (int)date('n', $ts);
+    return ($m >= 7) ? $y : ($y - 1);
+}
+
+/** Format YYYY/(YYYY+1) benar (tanpa batasan tahun). */
+function isTahunAjaranFormatValid(?string $ta): bool {
+    if ($ta === null || $ta === '') {
+        return false;
+    }
+    $ta = trim($ta);
+    if (!preg_match('/^(\d{4})\/(\d{4})$/', $ta, $m)) {
+        return false;
+    }
+    return (int)$m[2] === (int)$m[1] + 1;
+}
+
+/**
+ * Rentang tanggal (inclusive) untuk tahun ajaran: Juli y0 – Juni (y0+1).
+ *
+ * @return array{mulai: string, sampai: string}|null
+ */
+function getRentangTanggalTahunAjaran(?string $tahunAjaran): ?array {
+    if (!isTahunAjaranFormatValid($tahunAjaran)) {
+        return null;
+    }
+    preg_match('/^(\d{4})\//', trim($tahunAjaran), $m);
+    $y0 = (int)$m[1];
+    return [
+        'mulai' => sprintf('%04d-07-01', $y0),
+        'sampai' => sprintf('%04d-06-30', $y0 + 1),
+    ];
+}
+
+/** Kumpulkan string TA dari kolom tanggal (absensi, jurnal) untuk dropdown / arsip. */
+function gatherTahunAjaranDariTabelDenganTanggal(PDO $pdo): array {
+    $sql = 'SELECT DISTINCT CONCAT(
+        IF(MONTH(tanggal) >= 7, YEAR(tanggal), YEAR(tanggal) - 1),
+        \'/\',
+        IF(MONTH(tanggal) >= 7, YEAR(tanggal) + 1, YEAR(tanggal))
+    ) AS ta FROM %s';
+    $tables = ['tb_absensi', 'tb_absensi_guru', 'tb_jurnal'];
+    $out = [];
+    foreach ($tables as $t) {
+        try {
+            $stmt = $pdo->query(sprintf($sql, $t));
+            if ($stmt) {
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    if (!empty($row['ta']) && isTahunAjaranFormatValid($row['ta'])) {
+                        $out[] = $row['ta'];
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    return array_values(array_unique($out));
+}
+
 // Function to get school profile
 function getSchoolProfile($pdo) {
     $defaults = [
@@ -261,14 +326,18 @@ function getSchoolProfile($pdo) {
             }
         }
 
-        if ($period) {
-            if (empty($result['tahun_ajaran']) && !empty($period['tahun_ajaran'])) $result['tahun_ajaran'] = $period['tahun_ajaran'];
-            if (empty($result['semester']) && !empty($period['semester'])) $result['semester'] = $period['semester'];
+        if ($period && isTahunAjaranFormatValid($period['tahun_ajaran'] ?? null)) {
+            if (empty($result['tahun_ajaran']) && !empty($period['tahun_ajaran'])) {
+                $result['tahun_ajaran'] = trim((string)$period['tahun_ajaran']);
+            }
+            if (empty($result['semester']) && !empty($period['semester'])) {
+                $result['semester'] = $period['semester'];
+            }
         }
 
         if (empty($result['tahun_ajaran'])) {
-            $y = (int)date('Y');
-            $result['tahun_ajaran'] = $y . '/' . ($y + 1);
+            $a = getTahunAjaranBerjalanStartYear();
+            $result['tahun_ajaran'] = $a . '/' . ($a + 1);
         }
 
         if (empty($result['semester'])) {
@@ -335,7 +404,8 @@ function getSchoolProfile($pdo) {
                 }
             }
 
-            if ($period && !empty($period['tahun_ajaran']) && !empty($period['semester'])) {
+            if ($period && !empty($period['tahun_ajaran']) && !empty($period['semester'])
+                && isTahunAjaranFormatValid($period['tahun_ajaran'])) {
                 $result['tahun_ajaran'] = trim((string)$period['tahun_ajaran']);
                 $result['semester'] = trim((string)$period['semester']);
             }
@@ -347,6 +417,37 @@ function getSchoolProfile($pdo) {
     }
 
     return $result;
+}
+
+/**
+ * Opsi tahun ajaran untuk dropdown profil: TA berjalan + 3 tahun ke depan,
+ * digabung TA dari profil/nilai/absensi/jurnal agar bisa kembali melihat arsip.
+ *
+ * @param array $additionalFromDb mis. tahun dari tb_nilai_* atau gatherTahunAjaranDariTabelDenganTanggal
+ */
+function buildTahunAjaranProfilOptions(?string $profileTahunAjaran = null, array $additionalFromDb = []): array {
+    $anchor = getTahunAjaranBerjalanStartYear();
+    $starts = [];
+    for ($i = $anchor; $i <= $anchor + 3; $i++) {
+        $starts[$i] = true;
+    }
+    $add = function (?string $ta) use (&$starts) {
+        if (!isTahunAjaranFormatValid($ta)) {
+            return;
+        }
+        preg_match('/^(\d{4})\//', trim($ta), $m);
+        $starts[(int)$m[1]] = true;
+    };
+    $add($profileTahunAjaran);
+    foreach ($additionalFromDb as $yt) {
+        $add(is_string($yt) ? $yt : null);
+    }
+    ksort($starts, SORT_NUMERIC);
+    $out = [];
+    foreach (array_keys($starts) as $start) {
+        $out[] = $start . '/' . ($start + 1);
+    }
+    return $out;
 }
 
 function getFilteredSubjects($pdo) {

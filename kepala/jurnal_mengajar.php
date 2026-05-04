@@ -114,6 +114,15 @@ if (isset($_GET['jenis']) && !empty($_GET['jenis'])) {
     $filter_title .= ($filter_title ? ' - ' : '') . $_GET['jenis'];
 }
 
+$school_profile = getSchoolProfile($pdo);
+$periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
+if ($periode_ta) {
+    $where_clauses[] = 'j.tanggal >= ?';
+    $where_clauses[] = 'j.tanggal <= ?';
+    $params[] = $periode_ta['mulai'];
+    $params[] = $periode_ta['sampai'];
+}
+
 if (!empty($params)) {
     $query = "SELECT j.*, g.nama_guru, k.nama_kelas 
               FROM tb_jurnal j 

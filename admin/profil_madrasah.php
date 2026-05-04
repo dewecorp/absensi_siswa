@@ -13,6 +13,29 @@ $page_title = 'Profil Madrasah';
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
 
+// Tahun ajaran yang pernah dipakai di data nilai (untuk hapus nilai + opsi dropdown)
+$years = [];
+$yearQueries = [
+    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_harian_header",
+    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_kokurikuler_header",
+    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_semester",
+];
+foreach ($yearQueries as $sql) {
+    try {
+        $stmt = $pdo->query($sql);
+        if ($stmt) {
+            $years = array_merge($years, $stmt->fetchAll(PDO::FETCH_COLUMN));
+        }
+    } catch (Exception $e) {
+    }
+}
+$years = array_values(array_unique($years));
+rsort($years, SORT_STRING);
+
+$tahun_ajaran_dari_absensi_jurnal = gatherTahunAjaranDariTabelDenganTanggal($pdo);
+$tahun_untuk_opsi_profil = array_values(array_unique(array_merge($years, $tahun_ajaran_dari_absensi_jurnal)));
+rsort($tahun_untuk_opsi_profil, SORT_STRING);
+
 // Handle form submission
     $message = '';
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -129,51 +152,23 @@ $school_profile = getSchoolProfile($pdo);
         elseif (isset($_POST['reset_annual_data'])) {
             $tahun_ajaran = isset($_POST['tahun_ajaran']) ? $_POST['tahun_ajaran'] : $school_profile['tahun_ajaran'];
             
-            // Handle reset data (Annual Reset)
+            // Reset massal absensi/jurnal dinonaktifkan: data dipertahankan per tahun ajaran (ubah TA di profil untuk kerja tahun baru).
             if (isset($_POST['reset_data']) && $_POST['reset_data'] == '1') {
-                try {
-                    // Delete all attendance data
-                    $pdo->exec("TRUNCATE TABLE tb_absensi");
-                    $pdo->exec("TRUNCATE TABLE tb_absensi_guru");
-                    
-                    // Log the action
+                $message = ['type' => 'info', 'text' => 'Data absensi tidak dihapus. Penyimpanan mengikuti Tahun Ajaran aktif di profil; arsip tahun lalu tetap ada di database.'];
                     if (function_exists('logActivity')) {
-                        logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Hapus Data Tahunan', 'Mereset data kehadiran untuk tahun ajaran baru ' . $tahun_ajaran);
+                        logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Info Reset TA', 'Mencoba reset absensi (dinonaktifkan; data dipertahankan) TA ' . $tahun_ajaran);
                     }
-                    $message = ['type' => 'success', 'text' => 'Data kehadiran berhasil direset!'];
-                } catch (Exception $e) {
-                    // If TRUNCATE fails (e.g. FK constraints), try DELETE
-                    $pdo->exec("DELETE FROM tb_absensi");
-                    $pdo->exec("DELETE FROM tb_absensi_guru");
-                    $message = ['type' => 'warning', 'text' => 'Data kehadiran direset menggunakan metode DELETE (bukan TRUNCATE).'];
-                }
             }
 
-            // Handle reset journal data
             if (isset($_POST['reset_jurnal']) && $_POST['reset_jurnal'] == '1') {
-                try {
-                    // Delete all journal data
-                    $pdo->exec("TRUNCATE TABLE tb_jurnal");
-                    
-                    // Log the action
-                    if (function_exists('logActivity')) {
-                        logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Hapus Data Jurnal', 'Mereset data jurnal mengajar untuk tahun ajaran baru ' . $tahun_ajaran);
-                    }
-                    // Append message if both are reset
-                    if (isset($message) && $message['type'] == 'success') {
-                         $message['text'] .= ' Data jurnal berhasil direset!';
-                    } else {
-                         $message = ['type' => 'success', 'text' => 'Data jurnal berhasil direset!'];
-                    }
-                } catch (Exception $e) {
-                    // If TRUNCATE fails (e.g. FK constraints), try DELETE
-                    $pdo->exec("DELETE FROM tb_jurnal");
-                    if (isset($message)) {
-                         $message['text'] .= ' (Jurnal: DELETE)';
-                    } else {
-                         $message = ['type' => 'warning', 'text' => 'Data jurnal direset menggunakan metode DELETE.'];
-                    }
+                if (isset($message) && !empty($message['text'])) {
+                    $message['text'] .= ' Jurnal juga tidak dihapus massal — filter mengikuti Tahun Ajaran di profil.';
+                } else {
+                    $message = ['type' => 'info', 'text' => 'Data jurnal tidak dihapus massal. Mengikuti Tahun Ajaran aktif di profil; arsip tetap tersimpan.'];
                 }
+                    if (function_exists('logActivity')) {
+                        logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Info Reset TA', 'Mencoba reset jurnal (dinonaktifkan; data dipertahankan) TA ' . $tahun_ajaran);
+                    }
             }
             
             if (!isset($_POST['reset_data']) && !isset($_POST['reset_jurnal'])) {
@@ -188,6 +183,10 @@ $school_profile = getSchoolProfile($pdo);
         $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
         $nip_kepala = sanitizeInput($_POST['nip_kepala']);
         $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
+        $tahun_ajaran_allowed = buildTahunAjaranProfilOptions($school_profile['tahun_ajaran'] ?? null, $tahun_untuk_opsi_profil);
+        if (!in_array($tahun_ajaran, $tahun_ajaran_allowed, true)) {
+            $message = ['type' => 'danger', 'text' => 'Tahun ajaran tidak valid. Pilih dari daftar yang tersedia.'];
+        }
         $semester = sanitizeInput($_POST['semester']);
         $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
         $tempat_jadwal = sanitizeInput($_POST['tempat_jadwal']);
@@ -280,24 +279,7 @@ $school_profile = getSchoolProfile($pdo);
     }
 }
 
-// Get distinct academic years for deletion form
-$years = [];
-$stmts = [
-    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_harian_header",
-    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_kokurikuler_header",
-    "SELECT DISTINCT tahun_ajaran FROM tb_nilai_semester"
-];
-foreach ($stmts as $sql) {
-    try {
-        $stmt = $pdo->query($sql);
-        if ($stmt) {
-            $res = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            $years = array_merge($years, $res);
-        }
-    } catch (Exception $e) {}
-}
-$years = array_unique($years);
-rsort($years); // Sort descending
+$tahun_ajaran_profil_options = buildTahunAjaranProfilOptions($school_profile['tahun_ajaran'] ?? null, $tahun_untuk_opsi_profil);
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
@@ -373,7 +355,17 @@ include '../templates/sidebar.php';
                                             <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Tahun Ajaran</label>
-                                                    <input type="text" class="form-control" name="tahun_ajaran" value="<?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? ''); ?>" placeholder="Contoh: 2026/2027" required>
+                                                    <select class="form-control" name="tahun_ajaran" required>
+                                                        <option value="">Pilih Tahun Ajaran</option>
+                                                        <?php
+                                                        $curTa = $school_profile['tahun_ajaran'] ?? '';
+                                                        foreach ($tahun_ajaran_profil_options as $optTa) {
+                                                            $sel = ($curTa === $optTa) ? ' selected' : '';
+                                                            echo '<option value="' . htmlspecialchars($optTa) . '"' . $sel . '>' . htmlspecialchars($optTa) . '</option>';
+                                                        }
+                                                        ?>
+                                                    </select>
+                                                    <small class="text-muted">Tahun ajaran aktif mengatur tampilan absensi, jurnal, dan nilai. Data tahun lalu tetap di database; pilih tahun ajaran lama di sini untuk melihat arsip. Reset massal absensi/jurnal tidak menghapus data.</small>
                                                 </div>
                                             </div>
                                             <div class="col-md-6">

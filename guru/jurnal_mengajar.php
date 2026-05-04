@@ -243,6 +243,9 @@ if (isset($_POST['delete_multiple_journal'])) {
     }
 }
 
+$school_profile = getSchoolProfile($pdo);
+$periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
+
 // Get entries
 $journal_entries = [];
 $class_info = [];
@@ -262,6 +265,12 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     if ($has_access) {
         $query = "SELECT * FROM tb_jurnal WHERE id_kelas = ? AND id_guru = ?";
         $params = [$id_kelas, $teacher['id_guru']];
+
+        if ($periode_ta) {
+            $query .= " AND tanggal >= ? AND tanggal <= ?";
+            $params[] = $periode_ta['mulai'];
+            $params[] = $periode_ta['sampai'];
+        }
 
         if (isset($_GET['jenis']) && !empty($_GET['jenis'])) {
             $query .= " AND jenis = ?";
