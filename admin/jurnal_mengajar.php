@@ -72,16 +72,6 @@ $journal_entries = [];
 $class_info = [];
 $filter_title = '';
 
-// Get unique jam_ke options
-$jam_ke_options = [];
-foreach ($jam_mengajar_rows as $row) {
-    if (!in_array($row['jam_ke'], ['A', 'B', 'C'])) {
-        $jam_ke_options[] = $row['jam_ke'];
-    }
-}
-$jam_ke_options = array_unique($jam_ke_options);
-sort($jam_ke_options, SORT_NUMERIC);
-
 $where_clauses = ["j.mapel NOT IN ('Istirahat I', 'Istirahat II', 'Upacara Bendera', 'Asmaul Husna')", "j.jam_ke NOT IN ('A', 'B', 'C')"];
 $params = [];
 
@@ -119,11 +109,54 @@ if (isset($_GET['jenis']) && !empty($_GET['jenis'])) {
 
 $school_profile = getSchoolProfile($pdo);
 $periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
+$bulan_indo = [
+    '01' => 'Januari',
+    '02' => 'Februari',
+    '03' => 'Maret',
+    '04' => 'April',
+    '05' => 'Mei',
+    '06' => 'Juni',
+    '07' => 'Juli',
+    '08' => 'Agustus',
+    '09' => 'September',
+    '10' => 'Oktober',
+    '11' => 'November',
+    '12' => 'Desember',
+];
 if ($periode_ta) {
     $where_clauses[] = 'j.tanggal >= ?';
     $where_clauses[] = 'j.tanggal <= ?';
     $params[] = $periode_ta['mulai'];
     $params[] = $periode_ta['sampai'];
+}
+
+if (isset($_GET['bulan']) && preg_match('/^\d{4}-\d{2}$/', $_GET['bulan'])) {
+    $where_clauses[] = "DATE_FORMAT(j.tanggal, '%Y-%m') = ?";
+    $params[] = $_GET['bulan'];
+    $parts = explode('-', $_GET['bulan']);
+    if (count($parts) === 2 && isset($bulan_indo[$parts[1]])) {
+        $filter_title .= ($filter_title ? ' - ' : '') . $bulan_indo[$parts[1]] . ' ' . $parts[0];
+    }
+}
+
+$available_months = [];
+$month_query = "SELECT DISTINCT DATE_FORMAT(tanggal, '%Y-%m') AS ym FROM tb_jurnal WHERE tanggal IS NOT NULL";
+$month_params = [];
+if ($periode_ta) {
+    $month_query .= " AND tanggal >= ? AND tanggal <= ?";
+    $month_params[] = $periode_ta['mulai'];
+    $month_params[] = $periode_ta['sampai'];
+}
+$month_query .= " ORDER BY ym DESC";
+$stmt_months = $pdo->prepare($month_query);
+$stmt_months->execute($month_params);
+foreach ($stmt_months->fetchAll(PDO::FETCH_COLUMN) as $ym) {
+    if (is_string($ym) && preg_match('/^\d{4}-\d{2}$/', $ym)) {
+        $parts = explode('-', $ym);
+        $available_months[$ym] = (count($parts) === 2 && isset($bulan_indo[$parts[1]]))
+            ? ($bulan_indo[$parts[1]] . ' ' . $parts[0])
+            : $ym;
+    }
 }
 
 if (!empty($params)) {
@@ -349,12 +382,12 @@ include '../templates/header.php';
                                 </div>
                                 <div class="col-md-3">
                                     <div class="form-group">
-                                        <label>Pilih Jam Ke</label>
-                                        <select class="form-control select2" name="jam_ke" onchange="this.form.submit()">
-                                            <option value="">-- Semua Jam --</option>
-                                            <?php foreach ($jam_ke_options as $jam): ?>
-                                                <option value="<?php echo $jam; ?>" <?php echo (isset($_GET['jam_ke']) && $_GET['jam_ke'] == $jam) ? 'selected' : ''; ?>>
-                                                    <?php echo $jam; ?>
+                                        <label>Pilih Bulan</label>
+                                        <select class="form-control select2" name="bulan" onchange="this.form.submit()">
+                                            <option value="">-- Semua Bulan --</option>
+                                            <?php foreach ($available_months as $bulan_value => $bulan_label): ?>
+                                                <option value="<?php echo $bulan_value; ?>" <?php echo (isset($_GET['bulan']) && $_GET['bulan'] === $bulan_value) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($bulan_label); ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
@@ -385,10 +418,10 @@ include '../templates/header.php';
                         <h4>Data Jurnal Mengajar <?php echo $filter_title ? '- ' . htmlspecialchars($filter_title) : ''; ?></h4>
                         <div class="card-header-action">
                             <div class="btn-group mr-2">
-                                <a href="../config/export_jurnal_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-danger">
+                                <a href="../config/export_jurnal_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&bulan=<?= $_GET['bulan'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-danger">
                                     <i class="fas fa-file-pdf"></i> Export PDF
                                 </a>
-                                <a href="../config/export_jurnal_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&jam_ke=<?= $_GET['jam_ke'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-success">
+                                <a href="../config/export_jurnal_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $_GET['kelas'] ?? '' ?>&guru=<?= $_GET['guru'] ?? '' ?>&bulan=<?= $_GET['bulan'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-success">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>

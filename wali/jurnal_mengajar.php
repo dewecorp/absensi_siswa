@@ -239,6 +239,20 @@ if (isset($_POST['delete_multiple_journal'])) {
 // Get entries
 $school_profile = getSchoolProfile($pdo);
 $periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
+$bulan_indo = [
+    '01' => 'Januari',
+    '02' => 'Februari',
+    '03' => 'Maret',
+    '04' => 'April',
+    '05' => 'Mei',
+    '06' => 'Juni',
+    '07' => 'Juli',
+    '08' => 'Agustus',
+    '09' => 'September',
+    '10' => 'Oktober',
+    '11' => 'November',
+    '12' => 'Desember',
+];
 
 $journal_entries = [];
 $class_info = [];
@@ -270,11 +284,44 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
             $params[] = $_GET['jenis'];
         }
 
+        if (isset($_GET['bulan']) && preg_match('/^\d{4}-\d{2}$/', $_GET['bulan'])) {
+            $query .= " AND DATE_FORMAT(tanggal, '%Y-%m') = ?";
+            $params[] = $_GET['bulan'];
+        }
+
         $query .= " ORDER BY tanggal DESC, jam_ke DESC";
         
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
         $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+$available_months = [];
+$month_query = "SELECT DISTINCT DATE_FORMAT(tanggal, '%Y-%m') AS ym FROM tb_jurnal WHERE id_guru = ?";
+$month_params = [$teacher['id_guru']];
+if ($periode_ta) {
+    $month_query .= " AND tanggal >= ? AND tanggal <= ?";
+    $month_params[] = $periode_ta['mulai'];
+    $month_params[] = $periode_ta['sampai'];
+}
+if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
+    $month_query .= " AND id_kelas = ?";
+    $month_params[] = (int)$_GET['kelas'];
+}
+if (isset($_GET['jenis']) && !empty($_GET['jenis'])) {
+    $month_query .= " AND jenis = ?";
+    $month_params[] = $_GET['jenis'];
+}
+$month_query .= " ORDER BY ym DESC";
+$month_stmt = $pdo->prepare($month_query);
+$month_stmt->execute($month_params);
+foreach ($month_stmt->fetchAll(PDO::FETCH_COLUMN) as $ym) {
+    if (is_string($ym) && preg_match('/^\d{4}-\d{2}$/', $ym)) {
+        $parts = explode('-', $ym);
+        $available_months[$ym] = (count($parts) === 2 && isset($bulan_indo[$parts[1]]))
+            ? ($bulan_indo[$parts[1]] . ' ' . $parts[0])
+            : $ym;
     }
 }
 
@@ -610,14 +657,29 @@ include '../templates/header.php';
                                 <?php endif; ?>
                             <?php endif; ?>
 
-                            <div class="form-group row mb-4">
-                                <label class="col-form-label text-md-right col-12 col-md-3 col-lg-3">Jenis Jadwal</label>
-                                <div class="col-sm-12 col-md-7">
-                                    <select class="form-control select2" name="jenis" onchange="this.form.submit()">
-                                        <option value="">-- Semua Jenis --</option>
-                                        <option value="Reguler" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Reguler') ? 'selected' : ''; ?>>Reguler</option>
-                                        <option value="Ramadhan" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Ramadhan') ? 'selected' : ''; ?>>Ramadhan</option>
-                                    </select>
+                            <div class="row">
+                                <div class="col-12 col-md-6 mb-4">
+                                    <div class="form-group mb-0">
+                                        <label>Jenis Jadwal</label>
+                                        <select class="form-control select2" name="jenis" onchange="this.form.submit()">
+                                            <option value="">-- Semua Jenis --</option>
+                                            <option value="Reguler" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Reguler') ? 'selected' : ''; ?>>Reguler</option>
+                                            <option value="Ramadhan" <?php echo (isset($_GET['jenis']) && $_GET['jenis'] == 'Ramadhan') ? 'selected' : ''; ?>>Ramadhan</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6 mb-4">
+                                    <div class="form-group mb-0">
+                                        <label>Bulan</label>
+                                        <select class="form-control select2" name="bulan" onchange="this.form.submit()">
+                                            <option value="">-- Semua Bulan --</option>
+                                            <?php foreach ($available_months as $bulan_value => $bulan_label): ?>
+                                                <option value="<?php echo $bulan_value; ?>" <?php echo (isset($_GET['bulan']) && $_GET['bulan'] === $bulan_value) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($bulan_label); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -634,10 +696,10 @@ include '../templates/header.php';
                         <h4>Data Jurnal - <?php echo isset($class_info['nama_kelas']) ? htmlspecialchars($class_info['nama_kelas']) : ''; ?></h4>
                         <div class="card-header-action">
                             <div class="btn-group mr-2">
-                                <a href="../config/export_jurnal_pdf?session_type=wali&kelas=<?= $_GET['kelas'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-danger">
+                                <a href="../config/export_jurnal_pdf?session_type=wali&kelas=<?= $_GET['kelas'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>&bulan=<?= $_GET['bulan'] ?? '' ?>" target="_blank" class="btn btn-danger">
                                     <i class="fas fa-file-pdf"></i> Export PDF
                                 </a>
-                                <a href="../config/export_jurnal_excel?session_type=wali&kelas=<?= $_GET['kelas'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>" target="_blank" class="btn btn-success">
+                                <a href="../config/export_jurnal_excel?session_type=wali&kelas=<?= $_GET['kelas'] ?? '' ?>&jenis=<?= $_GET['jenis'] ?? '' ?>&bulan=<?= $_GET['bulan'] ?? '' ?>" target="_blank" class="btn btn-success">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>

@@ -33,6 +33,21 @@ $kelas_id = isset($_GET['kelas']) ? (int)$_GET['kelas'] : null;
 $guru_id = isset($_GET['guru']) ? (int)$_GET['guru'] : null;
 $jam_ke = isset($_GET['jam_ke']) ? $_GET['jam_ke'] : null;
 $jenis = isset($_GET['jenis']) ? $_GET['jenis'] : null;
+$bulan = (isset($_GET['bulan']) && preg_match('/^\d{4}-\d{2}$/', $_GET['bulan'])) ? $_GET['bulan'] : null;
+$bulan_indo = [
+    '01' => 'Januari',
+    '02' => 'Februari',
+    '03' => 'Maret',
+    '04' => 'April',
+    '05' => 'Mei',
+    '06' => 'Juni',
+    '07' => 'Juli',
+    '08' => 'Agustus',
+    '09' => 'September',
+    '10' => 'Oktober',
+    '11' => 'November',
+    '12' => 'Desember',
+];
 
 // Build Query
 $where_clauses = ["j.mapel NOT IN ('Istirahat I', 'Istirahat II', 'Upacara Bendera', 'Asmaul Husna')", "j.jam_ke NOT IN ('A', 'B', 'C')"];
@@ -71,6 +86,14 @@ if ($jenis) {
     $filter_title .= ($filter_title ? ' - ' : '') . $jenis;
 }
 
+if ($bulan) {
+    $where_clauses[] = "DATE_FORMAT(j.tanggal, '%Y-%m') = ?";
+    $params[] = $bulan;
+    $parts = explode('-', $bulan);
+    $filter_title .= ($filter_title ? ' - ' : '') .
+        ((count($parts) === 2 && isset($bulan_indo[$parts[1]])) ? ($bulan_indo[$parts[1]] . ' ' . $parts[0]) : $bulan);
+}
+
 $query = "SELECT j.*, g.nama_guru, k.nama_kelas 
           FROM tb_jurnal j 
           LEFT JOIN tb_guru g ON j.id_guru = g.id_guru 
@@ -85,6 +108,16 @@ $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get School Profile
 $school_profile = getSchoolProfile($pdo);
 $kepala_madrasah = $school_profile['kepala_madrasah'] ?? '-';
+$semester_raw = trim((string)($school_profile['semester'] ?? ''));
+if ($semester_raw === '') {
+    $semester_display = '-';
+} else {
+    $semester_display = preg_replace('/^\s*semester\s*/i', '', $semester_raw);
+    $semester_display = trim((string)$semester_display);
+    if ($semester_display === '') {
+        $semester_display = '-';
+    }
+}
 
 // Digital Signature Logic
 $qr_content = 'Validasi Tanda Tangan Digital: ' . $kepala_madrasah . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
@@ -133,7 +166,7 @@ $page_title = "Laporan Jurnal Mengajar" . ($filter_title ? " - " . $filter_title
         <?php endif; ?>
         <h3><?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN') ?></h3>
         <h2><?= strtoupper($school_profile['nama_sekolah'] ?? $school_profile['nama_madrasah'] ?? 'NAMA SEKOLAH') ?></h2>
-        <p style="margin: 2px 0; font-size: 12px;">Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?> | Semester: <?= $school_profile['semester'] ?? '-' ?></p>
+        <p style="margin: 2px 0; font-size: 12px;">Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?> | Semester: <?= htmlspecialchars($semester_display) ?></p>
     </div>
 
     <h3 class="text-center">LAPORAN JURNAL MENGAJAR</h3>
