@@ -66,17 +66,25 @@ if (session_status() == PHP_SESSION_NONE) {
         $session_name = 'SIS_KEPALA';
     }
     
-    // Handle logout specific target
-    if (basename($_SERVER['SCRIPT_NAME']) == 'logout.php' && isset($_GET['level'])) {
-        $lvl = $_GET['level'];
-        switch($lvl) {
-            case 'admin': $session_name = 'SIS_ADMIN'; break;
-            case 'guru': $session_name = 'SIS_GURU'; break;
-            case 'siswa': $session_name = 'SIS_SISWA'; break;
-            case 'wali': $session_name = 'SIS_WALI'; break;
-            case 'tata_usaha': $session_name = 'SIS_TU'; break;
-            case 'kepala_madrasah': 
-            case 'kepala': $session_name = 'SIS_KEPALA'; break;
+    // logout.php di root — tanpa nama sesi yang benar $_SESSION kosong dan log jadi "Unknown session"
+    if (basename($_SERVER['SCRIPT_NAME']) == 'logout.php') {
+        if (isset($_GET['level'])) {
+            $lvl = $_GET['level'];
+            switch ($lvl) {
+                case 'admin': $session_name = 'SIS_ADMIN'; break;
+                case 'guru': $session_name = 'SIS_GURU'; break;
+                case 'siswa': $session_name = 'SIS_SISWA'; break;
+                case 'wali': $session_name = 'SIS_WALI'; break;
+                case 'tata_usaha': $session_name = 'SIS_TU'; break;
+                case 'kepala_madrasah':
+                case 'kepala': $session_name = 'SIS_KEPALA'; break;
+            }
+        } elseif (!empty($_COOKIE['LAST_ACTIVE_SESSION'])) {
+            $lac = $_COOKIE['LAST_ACTIVE_SESSION'];
+            $allowed = ['SIS_ADMIN', 'SIS_GURU', 'SIS_SISWA', 'SIS_WALI', 'SIS_TU', 'SIS_KEPALA', 'SIS_LOGIN'];
+            if (in_array($lac, $allowed, true)) {
+                $session_name = $lac;
+            }
         }
     }
 

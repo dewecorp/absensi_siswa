@@ -327,7 +327,7 @@ switch ($user_level) {
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
                 'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+                'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
             ]
         ];
         break;
@@ -440,7 +440,7 @@ switch ($user_level) {
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
                 'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+                'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
             ]
         ];
         break;
@@ -576,7 +576,7 @@ switch ($user_level) {
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
                 'active' => false,
-                'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+                'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
             ]
         ];
         break;
@@ -774,7 +774,7 @@ switch ($user_level) {
             'icon' => 'fas fa-sign-out-alt',
             'url' => '#',
             'active' => false,
-            'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+            'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
         ];
         break;
         
@@ -989,7 +989,7 @@ switch ($user_level) {
             'icon' => 'fas fa-sign-out-alt',
             'url' => '#',
             'active' => false,
-            'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+            'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
         ];
         break;
 
@@ -1082,7 +1082,7 @@ switch ($user_level) {
             'icon' => 'fas fa-sign-out-alt',
             'url' => '#',
             'active' => false,
-            'attributes' => 'onclick="confirmLogoutInline(); return false;"'
+            'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
         ];
         break;
 

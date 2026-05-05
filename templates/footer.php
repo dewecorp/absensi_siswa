@@ -103,7 +103,7 @@
                                 <a href="<?php echo $bottom_profile_url; ?>" class="list-group-item list-group-item-action d-flex align-items-center">
                                     <i class="fas fa-user-circle fa-lg mr-3 text-primary"></i> Profil Saya
                                 </a>
-                                <a href="#" onclick="confirmLogout(); return false;" class="list-group-item list-group-item-action d-flex align-items-center text-danger">
+                                <a href="#" onclick="confirmLogout('../logout.php?level=<?php echo htmlspecialchars(getUserLevel(), ENT_QUOTES, 'UTF-8'); ?>'); return false;" class="list-group-item list-group-item-action d-flex align-items-center text-danger">
                                     <i class="fas fa-sign-out-alt fa-lg mr-3"></i> Logout
                                 </a>
                             </div>
@@ -418,8 +418,8 @@
     }
     
     // Also provide confirmLogoutInline function for consistency
-    function confirmLogoutInline() {
-        confirmLogout();
+    function confirmLogoutInline(logoutUrl) {
+        confirmLogout(logoutUrl);
     }
     </script>
     
