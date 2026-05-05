@@ -21,6 +21,7 @@ if ($class_id <= 0) {
 
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
+$semester_export_label = formatSemesterLabelForExport($active_semester);
 $academic_year = $school_profile['tahun_ajaran'] ?? '-';
 $school_city = $school_profile['tempat_jadwal'] ?? 'Sukosono';
 $report_date = formatDateIndonesia(date('Y-m-d'));
@@ -202,15 +203,23 @@ if ($filter_type == 'daily') {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
         }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; font-size: 10px; color: #000; }
-        .header { text-align: center; margin-bottom: 10px; position: relative; padding-top: 0; }
-        .header img { position: absolute; left: 50px; top: 0; width: 50px; height: auto; }
-        .header h2 { margin: 0; font-size: 14px; text-transform: uppercase; }
-        .header h3 { margin: 2px 0; font-size: 12px; }
-        .header h4 { margin: 2px 0; font-size: 11px; text-decoration: underline; }
-        .header p { margin: 1px 0; font-size: 9px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; font-size: 10px; color: #000; box-sizing: border-box; }
+        .header-print-kop {
+            width: 100%; display: flex; align-items: flex-start; gap: 12px;
+            margin: 0 0 12px 0; box-sizing: border-box;
+        }
+        .header-print-kop img {
+            flex-shrink: 0; display: block; width: auto; max-width: 64px;
+            max-height: 64px; height: auto; margin: 2px 0 0 0; object-fit: contain;
+        }
+        .header-print-kop-text { flex: 1; min-width: 0; text-align: center; }
+        .header-print-kop-text h2 { margin: 0; font-size: 14px; text-transform: uppercase; }
+        .header-print-kop-text h3 { margin: 4px 0; font-size: 12px; }
+        .header-print-kop-text h4 { margin: 4px 0; font-size: 11px; text-decoration: underline; }
+        .header-print-kop-text p { margin: 4px 0 0; font-size: 10px; }
+
+        .print-rekap-wrap { page-break-after: avoid; }
+        table.print-rekap-main { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 0; table-layout: fixed; page-break-after: avoid; }
         th, td { border: 1px solid #000; padding: 2px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
         th { background-color: #f2f2f2; font-weight: bold; }
         .col-no { width: 25px; }
@@ -220,8 +229,10 @@ if ($filter_type == 'daily') {
         .text-left { text-align: left; padding-left: 5px; }
         .font-bold { font-weight: bold; }
         
-        .signature-wrapper { margin-top: 20px; display: flex; justify-content: space-between; page-break-inside: avoid; }
-        .signature-box { text-align: center; width: 35%; page-break-inside: avoid; }
+        .print-tail { clear: both; width: 100%; padding: 0 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid-page !important; page-break-before: avoid !important; }
+        .print-meta-tgl { margin: 0 0 10px auto; padding: 0; text-align: right !important; width: 100%; display: block; font-size: 11px; float: none !important; box-sizing: border-box; }
+        .signature-wrapper { margin-top: 0; display: flex; justify-content: space-between; gap: 24px; page-break-inside: avoid !important; break-inside: avoid-page !important; }
+        .signature-box { text-align: center; flex: 1; max-width: 48%; page-break-inside: avoid !important; }
         .signature-space { height: 85px; margin: 5px 0; position: relative; }
         .signature-space img { width: 75px; height: 75px; position: absolute; left: 50%; transform: translateX(-50%); top: 0; }
         
@@ -231,28 +242,31 @@ if ($filter_type == 'daily') {
 <body>
     <button class="btn-print no-print" onclick="window.print()">Cetak / Simpan PDF</button>
 
-    <div class="header">
+    <header class="header-print-kop">
         <?php if (!empty($school_profile['logo'])): ?>
-            <img src="../assets/img/<?= $school_profile['logo'] ?>" alt="Logo">
+            <img src="../assets/img/<?= htmlspecialchars($school_profile['logo'], ENT_QUOTES, 'UTF-8') ?>" alt="Logo">
         <?php endif; ?>
+        <div class="header-print-kop-text">
         <h2>Sistem Informasi Madrasah</h2>
         <h3><?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH') ?></h3>
-        <h4><?= strtoupper($title) ?> - 
+        <h4><?= strtoupper($title) ?> — 
             <?php 
                 if ($filter_type == 'daily') echo date('d-m-Y', strtotime($selected_date));
-                elseif ($filter_type == 'monthly') echo $month_name;
-                elseif ($filter_type == 'semester') echo $active_semester;
+                elseif ($filter_type == 'monthly') echo htmlspecialchars($month_name);
+                elseif ($filter_type == 'semester') echo htmlspecialchars((string)$academic_year);
                 elseif ($filter_type == 'student') echo htmlspecialchars($student_info['nama_siswa']);
             ?>
         </h4>
-        <p>Tahun Ajaran: <?= $academic_year ?> | Semester: <?= $active_semester ?></p>
+        <p>Tahun Ajaran: <?= htmlspecialchars((string)$academic_year) ?> · <?= htmlspecialchars((string)$semester_export_label) ?></p>
         <?php if ($filter_type == 'student'): ?>
             <p>NISN: <?= htmlspecialchars($student_info['nisn']) ?> | Kelas: <?= htmlspecialchars($class_info['nama_kelas']) ?></p>
         <?php endif; ?>
-    </div>
+        </div>
+    </header>
 
+    <div class="print-rekap-wrap">
     <?php if ($filter_type == 'daily'): ?>
-        <table>
+        <table class="print-rekap-main">
             <thead>
                 <tr>
                     <th class="col-no">No</th>
@@ -273,7 +287,7 @@ if ($filter_type == 'daily') {
             </tbody>
         </table>
     <?php elseif ($filter_type == 'monthly'): ?>
-        <table>
+        <table class="print-rekap-main">
             <thead>
                 <tr>
                     <th rowspan="2" class="col-no">No</th>
@@ -302,7 +316,7 @@ if ($filter_type == 'daily') {
             </tbody>
         </table>
     <?php elseif ($filter_type == 'semester'): ?>
-        <table>
+        <table class="print-rekap-main">
             <thead>
                 <tr>
                     <th rowspan="2" class="col-no">No</th>
@@ -332,13 +346,13 @@ if ($filter_type == 'daily') {
             </tbody>
         </table>
     <?php elseif ($filter_type == 'student'): ?>
-        <table style="width: 50%; margin: 5px 0; table-layout: auto;">
+        <table class="print-rekap-main" style="width: 50%; margin: 5px 0; table-layout: auto;">
             <tr><th colspan="2">Ringkasan Kehadiran</th></tr>
             <tr><td class="text-left">Total Hadir</td><td class="font-bold"><?= $sem_sum['H'] ?></td></tr>
             <tr><td class="text-left">Total Tidak Hadir</td><td class="font-bold"><?= $sem_sum['TH'] ?></td></tr>
             <tr><td class="text-left">Berhalangan</td><td class="font-bold"><?= $sem_sum['B'] ?></td></tr>
         </table>
-        <table>
+        <table class="print-rekap-main">
             <thead>
                 <tr>
                     <th class="col-no">No</th>
@@ -357,6 +371,9 @@ if ($filter_type == 'daily') {
             </tbody>
         </table>
     <?php endif; ?>
+    </div>
+
+    <footer class="print-tail">
 
     <div class="signature-wrapper">
         <div class="signature-box">
@@ -373,7 +390,8 @@ if ($filter_type == 'daily') {
         </div>
 
         <div class="signature-box">
-            <p><?= $school_city ?>, <?= $report_date ?><br>Kepala Madrasah,</p>
+            <p class="print-meta-tgl"><?= htmlspecialchars((string)$school_city) ?>, <?= htmlspecialchars((string)$report_date) ?></p>
+            <p>Kepala Madrasah,</p>
             <div class="signature-space">
                 <?php 
                 $kepala = $school_profile['kepala_madrasah'] ?? '-';
@@ -385,6 +403,7 @@ if ($filter_type == 'daily') {
             <p><strong><u><?= htmlspecialchars($kepala) ?></u></strong><br>NIP. <?= htmlspecialchars($school_profile['nip_kepala'] ?? '-') ?></p>
         </div>
     </div>
+    </footer>
 
     <script>
         window.onload = function() {

@@ -60,6 +60,11 @@ if (!empty($selected_month)) {
 }
 
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
+$export_semester_singkat = preg_replace('/^Semester\s+/iu', '', trim((string)$active_semester));
+if ($export_semester_singkat === '') {
+    $export_semester_singkat = trim((string)$active_semester);
+}
+$export_semester_label = formatSemesterLabelForExport($active_semester);
 
 // Get all classes
 $stmt = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC");
@@ -776,7 +781,7 @@ function exportToExcel() {
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
     headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah - <?php echo htmlspecialchars($js_month_name . " " . $js_month_year, ENT_QUOTES, "UTF-8"); ?></h4>';
-    headerDiv.innerHTML += '<p>Tahun Ajaran: <?php echo htmlspecialchars($school_profile["tahun_ajaran"] ?? "", ENT_QUOTES, "UTF-8"); ?> | Semester: <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?></p></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<p style="margin:5px 0">Tahun Ajaran: <?php echo htmlspecialchars($school_profile["tahun_ajaran"] ?? "", ENT_QUOTES, "UTF-8"); ?> · <?php echo htmlspecialchars($export_semester_label, ENT_QUOTES, "UTF-8"); ?></p></div><br style="clear: both;">';
     
     var table = document.getElementById('monthlyTable');
     if (!table) { alert('Tabel tidak ditemukan'); return; }
@@ -808,8 +813,8 @@ function exportSemesterToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>';
-    headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah</h4>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo htmlspecialchars($school_profile["tahun_ajaran"] ?? "-", ENT_QUOTES, "UTF-8"); ?> · <?php echo htmlspecialchars($export_semester_label, ENT_QUOTES, "UTF-8"); ?></p></div><br style="clear: both;">';
     
     var table = document.getElementById('semesterTable');
     if (!table) { alert('Tabel tidak ditemukan'); return; }
@@ -839,8 +844,8 @@ function exportDailyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>';
-    headerDiv.innerHTML += '<h4>Rekap Harian Sholat Berjamaah - <?php echo htmlspecialchars(date("d-m-Y", strtotime($selected_date)), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Harian Sholat Berjamaah — <?php echo htmlspecialchars(date("d-m-Y", strtotime($selected_date)), ENT_QUOTES, "UTF-8"); ?></h4>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo htmlspecialchars($school_profile["tahun_ajaran"] ?? "-", ENT_QUOTES, "UTF-8"); ?> · <?php echo htmlspecialchars($export_semester_label, ENT_QUOTES, "UTF-8"); ?></p></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
     if (!table) { alert('Tabel tidak ditemukan'); return; }
@@ -878,8 +883,8 @@ function exportStudentToExcel() {
     
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>';
-    headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah Siswa: ' + studentName + '</h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Berjamaah — ' + studentName + '</h4>';
+    headerDiv.innerHTML += '<p style="margin: 5px 0;">Tahun Ajaran: <?php echo htmlspecialchars($school_profile["tahun_ajaran"] ?? "-", ENT_QUOTES, "UTF-8"); ?> · <?php echo htmlspecialchars($export_semester_label, ENT_QUOTES, "UTF-8"); ?></p></div><br style="clear: both;">';
     
     var table = document.getElementById('studentTable');
     if (!table) { alert('Tabel tidak ditemukan'); return; }

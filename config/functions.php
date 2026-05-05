@@ -675,6 +675,18 @@ function formatDateIndonesia($date_string) {
     return "$day $month $year";
 }
 
+/** Label semester untuk cetak/ekspor: selalu kata "Semester …" lengkap (bukan singkatan). */
+function formatSemesterLabelForExport($semester) {
+    $s = trim((string)$semester);
+    if ($s === '') {
+        return '';
+    }
+    if (preg_match('/^semester\b/iu', $s)) {
+        return $s;
+    }
+    return 'Semester ' . $s;
+}
+
 /**
  * Helper function to sort menu items alphabetically, keeping Dashboard first and Logout last
  * and deduplicating by normalized title.

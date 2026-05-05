@@ -55,6 +55,11 @@ if (!empty($selected_month)) {
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
+$export_semester_singkat = preg_replace('/^Semester\s+/iu', '', trim((string)$active_semester));
+if ($export_semester_singkat === '') {
+    $export_semester_singkat = trim((string)$active_semester);
+}
+$export_semester_label = formatSemesterLabelForExport($active_semester);
 $school_city = addslashes($school_profile['tempat_jadwal'] ?? '');
 $report_date = formatDateIndonesia(date('Y-m-d'));
 $school_name = addslashes(htmlspecialchars($school_profile['nama_madrasah'] ?? 'Madrasah', ENT_QUOTES, 'UTF-8'));
@@ -701,6 +706,10 @@ var reportDate = '<?php echo $report_date; ?>';
 var schoolName = '<?php echo $school_name; ?>';
 var studentName = '<?php echo isset($student_results[0]) ? addslashes($student_results[0]['nama_siswa']) : ""; ?>';
 var selectedDate = '<?php echo htmlspecialchars($selected_date); ?>';
+var academicYear = '<?php echo addslashes($school_profile['tahun_ajaran'] ?? ''); ?>';
+var semesterLabel = <?php echo json_encode($export_semester_label, JSON_UNESCAPED_UNICODE); ?>;
+var jsMonthName = <?php echo json_encode($js_month_name); ?>;
+var jsMonthYear = <?php echo json_encode($js_month_year); ?>;
 
 function replaceIconsWithText(tableClone) {
     // Replace check icons with "v"
@@ -738,7 +747,8 @@ function exportMonthlyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha - <?php echo htmlspecialchars($js_month_name . " " . $js_month_year, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha — ' + jsMonthName + ' ' + jsMonthYear + '</h4>';
+    headerDiv.innerHTML += '<p style="margin:5px 0">Tahun Ajaran: ' + academicYear + ' · ' + semesterLabel + '</p></div><br style="clear: both;">';
     
     var table = document.getElementById('monthlyTable');
     if (!table) { alert('Tabel tidak ditemukan'); return; }
@@ -790,7 +800,8 @@ function exportMonthlyToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha - <?php echo htmlspecialchars($js_month_name . " " . $js_month_year, ENT_QUOTES, "UTF-8"); ?></h4></div>');
+    printWindow.document.write('<h4 style="margin: 4px 0 8px;">Rekap Sholat Dhuha — <?php echo htmlspecialchars($js_month_name . " " . $js_month_year, ENT_QUOTES, "UTF-8"); ?></h4>');
+    printWindow.document.write('<p style="margin: 0;">Tahun Ajaran: ' + academicYear + ' · ' + semesterLabel + '</p></div>');
     printWindow.document.write('</div>');
     
     var table = document.getElementById('monthlyTable');
@@ -806,7 +817,6 @@ function exportMonthlyToPDF() {
     
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Wali Kelas,</p>');
     if (classTeacherName) {
         var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - ' + schoolName;
@@ -819,7 +829,7 @@ function exportMonthlyToPDF() {
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p style="margin:0 0 10px;text-align:right;font-size:11px;width:100%;box-sizing:border-box">' + schoolCity + ', ' + reportDate + '</p>');
     printWindow.document.write('<p>Kepala Madrasah,</p>');
     if (madrasahHeadSignature) {
         var qrContentKepala = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
@@ -843,7 +853,8 @@ function exportSemesterToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha</h4>';
+    headerDiv.innerHTML += '<p style="margin:5px 0">Tahun Ajaran: ' + academicYear + ' · ' + semesterLabel + '</p></div><br style="clear: both;">';
     
     var table = document.getElementById('semesterTable');
     if (!table) { alert('Tabel tidak ditemukan'); return; }
@@ -893,7 +904,8 @@ function exportSemesterToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?></h4></div>');
+    printWindow.document.write('<h4 style="margin: 4px 0 8px;">Rekap Sholat Dhuha</h4>');
+    printWindow.document.write('<p style="margin: 0;">Tahun Ajaran: ' + academicYear + ' · ' + semesterLabel + '</p></div>');
     printWindow.document.write('</div>');
     
     var table = document.getElementById('semesterTable');
@@ -903,7 +915,7 @@ function exportSemesterToPDF() {
     
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p><br>Wali Kelas,</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
     if (classTeacherName) {
         var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
         var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
@@ -915,7 +927,8 @@ function exportSemesterToPDF() {
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    printWindow.document.write('<p style="margin:0 0 10px;text-align:right;font-size:11px;width:100%;box-sizing:border-box">' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
     if (madrasahHeadSignature) {
         var qrContentHead = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
         var qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentHead);
@@ -938,7 +951,8 @@ function exportDailyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<h4>Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Harian Sholat Dhuha — ' + selectedDate.split('-').reverse().join('-') + '</h4>';
+    headerDiv.innerHTML += '<p style="margin:5px 0">Tahun Ajaran: ' + academicYear + ' · ' + semesterLabel + '</p></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
     if (!table) { alert('Tabel tidak ditemukan'); return; }
@@ -990,7 +1004,8 @@ function exportDailyToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4 style="margin: 0;">Rekap Harian Sholat Dhuha - ' + selectedDate.split('-').reverse().join('-') + '</h4></div>');
+    printWindow.document.write('<h4 style="margin: 4px 0 8px;">Rekap Harian Sholat Dhuha — ' + selectedDate.split('-').reverse().join('-') + '</h4>');
+    printWindow.document.write('<p style="margin: 0;">Tahun Ajaran: ' + academicYear + ' · ' + semesterLabel + '</p></div>');
     printWindow.document.write('</div>');
     
     var table = document.getElementById('dailyTable');
@@ -1007,7 +1022,7 @@ function exportDailyToPDF() {
     
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p><br>Wali Kelas,</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
     if (classTeacherName) {
         var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
         var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
@@ -1019,7 +1034,8 @@ function exportDailyToPDF() {
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    printWindow.document.write('<p style="margin:0 0 10px;text-align:right;font-size:11px;width:100%;box-sizing:border-box">' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
     if (madrasahHeadSignature) {
         var qrContentHead = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
         var qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentHead);
@@ -1043,7 +1059,8 @@ function exportStudentToExcel() {
     
     headerDiv.innerHTML = '<img src="../assets/img/' + schoolLogo + '" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha Siswa: ' + studentName + '</h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Sholat Dhuha — ' + studentName + '</h4>';
+    headerDiv.innerHTML += '<p style="margin:5px 0">Tahun Ajaran: ' + academicYear + ' · ' + semesterLabel + '</p></div><br style="clear: both;">';
     
     var table = document.getElementById('studentTable');
     if (!table) { alert('Tabel tidak ditemukan'); return; }
@@ -1100,7 +1117,8 @@ function exportStudentToPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4 style="margin: 0;">Rekap Sholat Dhuha Siswa: ' + studentName + '</h4></div>');
+    printWindow.document.write('<h4 style="margin: 4px 0 8px;">Rekap Sholat Dhuha Siswa: ' + studentName + '</h4>');
+    printWindow.document.write('<p style="margin: 0;">Tahun Ajaran: ' + academicYear + ' · ' + semesterLabel + '</p></div>');
     printWindow.document.write('</div>');
     
     var table = document.getElementById('studentTable');
@@ -1117,11 +1135,11 @@ function exportStudentToPDF() {
     
     printWindow.document.write('<div class="signature-wrapper">');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p><br>Wali Kelas,</p>');
+    printWindow.document.write('<p>Wali Kelas,</p>');
     if (classTeacherName) {
-        var qrContentWali = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
-        var qrUrlWali = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali);
-        printWindow.document.write('<img src="' + qrUrlWali + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        var qrContentWali2 = 'Validasi Tanda Tangan Digital: ' + classTeacherName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
+        var qrUrlWali2 = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentWali2);
+        printWindow.document.write('<img src="' + qrUrlWali2 + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
         printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
     } else {
         printWindow.document.write('<br><br><br>');
@@ -1129,11 +1147,12 @@ function exportStudentToPDF() {
     printWindow.document.write('<p><strong>' + classTeacherName + '</strong></p>');
     printWindow.document.write('</div>');
     printWindow.document.write('<div class="signature-box">');
-    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '<br>Kepala Madrasah,</p>');
+    printWindow.document.write('<p style="margin:0 0 10px;text-align:right;font-size:11px;width:100%;box-sizing:border-box">' + schoolCity + ', ' + reportDate + '</p>');
+    printWindow.document.write('<p>Kepala Madrasah,</p>');
     if (madrasahHeadSignature) {
-        var qrContentHead = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
-        var qrUrlHead = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentHead);
-        printWindow.document.write('<img src="' + qrUrlHead + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
+        var qrContentHead2 = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - <?php echo addslashes($school_profile["nama_madrasah"] ?? "Madrasah"); ?>';
+        var qrUrlHead2 = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContentHead2);
+        printWindow.document.write('<img src="' + qrUrlHead2 + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
         printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
     } else {
         printWindow.document.write('<br><br><br>');
