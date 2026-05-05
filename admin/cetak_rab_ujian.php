@@ -81,7 +81,23 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
         .bg-gray { background-color: #f9f9f9; }
         .cat-header { background-color: #e0e0e0; font-weight: bold; }
         
-        .ttd-box { margin-top: 30px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+        .summary-box {
+            margin-top: 20px;
+            border: 1px solid #000;
+            padding: 15px;
+            width: 400px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .summary-box table { border: none; margin: 0; }
+        .summary-box td { border: none; padding: 2px; }
+
+        .post-table-section {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .ttd-box { margin-top: 30px; display: flex; justify-content: space-between; page-break-inside: avoid; break-inside: avoid; }
         .ttd-item { text-align: center; width: 30%; }
         .ttd-space { height: 70px; }
 
@@ -157,15 +173,16 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
         </tbody>
     </table>
 
-    <div style="margin-top: 20px; border: 1px solid #000; padding: 15px; width: 400px;">
-        <table style="border: none; margin: 0;">
+    <div class="post-table-section">
+    <div class="summary-box">
+        <table>
             <tr>
-                <td style="border: none; padding: 2px;">Jumlah Siswa Kelas 6</td>
-                <td style="border: none; padding: 2px;">: <?= $jumlah_siswa ?> Siswa</td>
+                <td>Jumlah Siswa Kelas 6</td>
+                <td>: <?= $jumlah_siswa ?> Siswa</td>
             </tr>
             <tr>
-                <td style="border: none; padding: 2px;"><strong>Biaya Per Siswa</strong></td>
-                <td style="border: none; padding: 2px;"><strong>: Rp <?= number_format($biaya_per_siswa, 0, ',', '.') ?></strong></td>
+                <td><strong>Biaya Per Siswa</strong></td>
+                <td><strong>: Rp <?= number_format($biaya_per_siswa, 0, ',', '.') ?></strong></td>
             </tr>
         </table>
     </div>
@@ -180,6 +197,7 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
             </div>
             <p class="bold" style="margin-bottom: 0;"><?= htmlspecialchars($kepala_madrasah) ?></p>
         </div>
+    </div>
     </div>
 
 </body>
