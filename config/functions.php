@@ -356,69 +356,8 @@ function getSchoolProfile($pdo) {
     if (!empty($result['tahun_ajaran'])) $result['tahun_ajaran'] = trim((string)$result['tahun_ajaran']);
     if (!empty($result['semester'])) $result['semester'] = trim((string)$result['semester']);
 
-    if (!empty($result['tahun_ajaran']) && !empty($result['semester'])) {
-        $has_data = false;
-
-        try {
-            $stmt = $pdo->prepare("SELECT 1 FROM tb_nilai_semester WHERE tahun_ajaran = ? AND semester = ? LIMIT 1");
-            $stmt->execute([$result['tahun_ajaran'], $result['semester']]);
-            if ($stmt->fetchColumn()) $has_data = true;
-        } catch (PDOException $e) {
-        }
-
-        if (!$has_data) {
-            try {
-                $stmt = $pdo->prepare("SELECT 1 FROM tb_nilai_harian_header WHERE tahun_ajaran = ? AND semester = ? LIMIT 1");
-                $stmt->execute([$result['tahun_ajaran'], $result['semester']]);
-                if ($stmt->fetchColumn()) $has_data = true;
-            } catch (PDOException $e) {
-            }
-        }
-
-        if (!$has_data) {
-            try {
-                $stmt = $pdo->prepare("SELECT 1 FROM tb_nilai_kokurikuler_header WHERE tahun_ajaran = ? AND semester = ? LIMIT 1");
-                $stmt->execute([$result['tahun_ajaran'], $result['semester']]);
-                if ($stmt->fetchColumn()) $has_data = true;
-            } catch (PDOException $e) {
-            }
-        }
-
-        if (!$has_data) {
-            $period = null;
-
-            try {
-                $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_semester ORDER BY id_nilai DESC LIMIT 1");
-                $period = $stmt->fetch(PDO::FETCH_ASSOC);
-            } catch (PDOException $e) {
-                $period = null;
-            }
-
-            if (!$period || empty($period['tahun_ajaran']) || empty($period['semester'])) {
-                try {
-                    $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_harian_header ORDER BY id_header DESC LIMIT 1");
-                    $period = $stmt->fetch(PDO::FETCH_ASSOC);
-                } catch (PDOException $e) {
-                    $period = null;
-                }
-            }
-
-            if (!$period || empty($period['tahun_ajaran']) || empty($period['semester'])) {
-                try {
-                    $stmt = $pdo->query("SELECT tahun_ajaran, semester FROM tb_nilai_kokurikuler_header ORDER BY id_header DESC LIMIT 1");
-                    $period = $stmt->fetch(PDO::FETCH_ASSOC);
-                } catch (PDOException $e) {
-                    $period = null;
-                }
-            }
-
-            if ($period && !empty($period['tahun_ajaran']) && !empty($period['semester'])
-                && isTahunAjaranFormatValid($period['tahun_ajaran'])) {
-                $result['tahun_ajaran'] = trim((string)$period['tahun_ajaran']);
-                $result['semester'] = trim((string)$period['semester']);
-            }
-        }
-    }
+    // Jangan override periode dari profil dengan periode data nilai terakhir.
+    // Admin harus bisa memilih TA/Semester aktif meskipun data nilainya belum ada.
 
     if (empty($result['nama_kepala']) && !empty($result['kepala_madrasah'])) {
         $result['nama_kepala'] = $result['kepala_madrasah'];
