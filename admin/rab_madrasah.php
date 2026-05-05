@@ -178,13 +178,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     } elseif (isset($_POST['toggle_status_pengeluaran'])) {
         $id = (int)($_POST['id_pengeluaran'] ?? 0);
-        $status = isset($_POST['status_terlaksana']) ? 1 : 0;
+        $status = (isset($_POST['status_terlaksana']) && $_POST['status_terlaksana'] === '1') ? 1 : 0;
         $stmt = $pdo->prepare("UPDATE tb_rencana_pengeluaran SET status_terlaksana=? WHERE id_pengeluaran=?");
         if ($stmt->execute([$status, $id])) {
-            $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Status realisasi anggaran berhasil diupdate!'];
             logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Status Rencana Pengeluaran', "Update status ID: $id menjadi " . ($status ? 'terlaksana' : 'belum'));
         } else {
             $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Gagal update status realisasi!'];
+        }
+    } elseif (isset($_POST['toggle_status_pengeluaran_all'])) {
+        $status = (isset($_POST['status_terlaksana']) && $_POST['status_terlaksana'] === '1') ? 1 : 0;
+        $stmt = $pdo->prepare("UPDATE tb_rencana_pengeluaran SET status_terlaksana=?");
+        if ($stmt->execute([$status])) {
+            logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Massal Status Rencana Pengeluaran', 'Set semua status menjadi ' . ($status ? 'terlaksana' : 'belum'));
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Gagal update massal status realisasi!'];
         }
     }
 
@@ -196,6 +203,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $sumber_anggaran = $pdo->query("SELECT * FROM tb_sumber_anggaran ORDER BY id_sumber ASC")->fetchAll(PDO::FETCH_ASSOC);
 $rencana_pengeluaran = $pdo->query("SELECT p.*, k.nama_kategori FROM tb_rencana_pengeluaran p LEFT JOIN tb_kategori_anggaran k ON p.id_kategori = k.id_kategori ORDER BY k.nama_kategori ASC, p.id_pengeluaran ASC")->fetchAll(PDO::FETCH_ASSOC);
 $kategori_anggaran = $pdo->query("SELECT * FROM tb_kategori_anggaran ORDER BY nama_kategori ASC")->fetchAll(PDO::FETCH_ASSOC);
+$all_status_terlaksana = !empty($rencana_pengeluaran) && count(array_filter($rencana_pengeluaran, function ($item) {
+    return !empty($item['status_terlaksana']);
+})) === count($rencana_pengeluaran);
 
 // Calculate Totals
 $total_sumber = array_sum(array_column($sumber_anggaran, 'total'));
@@ -387,7 +397,14 @@ include '../templates/sidebar.php';
                                             <th class="text-right">Satuan (Rp)</th>
                                             <th class="text-center">Jumlah</th>
                                             <th class="text-right">Total (Rp)</th>
-                                            <th class="text-center">Status</th>
+                                            <th class="text-center">
+                                                Status
+                                                <?php if ($is_admin): ?>
+                                                <div>
+                                                    <input type="checkbox" id="toggle-status-all-pengeluaran" title="Centang semua / reset semua" <?= $all_status_terlaksana ? 'checked' : '' ?>>
+                                                </div>
+                                                <?php endif; ?>
+                                            </th>
                                             <?php if ($is_admin): ?>
                                             <th width="15%" class="text-center">Aksi</th>
                                             <?php endif; ?>
@@ -405,13 +422,18 @@ include '../templates/sidebar.php';
                                             <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
                                             <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
                                             <td class="text-center">
+                                                <?php if ($is_admin): ?>
                                                 <input
                                                     type="checkbox"
                                                     class="toggle-status-pengeluaran"
                                                     data-id="<?= $row['id_pengeluaran'] ?>"
                                                     <?= !empty($row['status_terlaksana']) ? 'checked' : '' ?>
-                                                    <?= !$is_admin ? 'disabled' : '' ?>
                                                 >
+                                                <?php else: ?>
+                                                <span class="badge <?= !empty($row['status_terlaksana']) ? 'badge-success' : 'badge-secondary' ?>">
+                                                    <?= !empty($row['status_terlaksana']) ? 'Terlaksana' : 'Belum' ?>
+                                                </span>
+                                                <?php endif; ?>
                                             </td>
                                             <?php if ($is_admin): ?>
                                             <td class="text-center">
@@ -691,6 +713,11 @@ include '../templates/sidebar.php';
     <input type="hidden" name="toggle_status_pengeluaran" value="1">
 </form>
 
+<form id="toggleStatusPengeluaranAllForm" action="" method="POST" style="display: none;">
+    <input type="hidden" name="status_terlaksana" id="toggle_status_pengeluaran_all_value" value="0">
+    <input type="hidden" name="toggle_status_pengeluaran_all" value="1">
+</form>
+
 <?php include '../templates/footer.php'; ?>
 
 <script>
@@ -784,6 +811,17 @@ $(document).ready(function() {
     }
 
     restoreStatusScrollPosition();
+
+    function syncStatusMasterCheckbox() {
+        var $allItems = $('.toggle-status-pengeluaran');
+        if (!$allItems.length) {
+            return;
+        }
+        var checkedCount = $('.toggle-status-pengeluaran:checked').length;
+        $('#toggle-status-all-pengeluaran').prop('checked', checkedCount === $allItems.length);
+    }
+
+    syncStatusMasterCheckbox();
 
     // Init Rupiah Mask
     $('.uang').mask('000.000.000.000', {reverse: true});
@@ -929,6 +967,15 @@ $(document).ready(function() {
         $('#toggle_status_pengeluaran_id').val(id);
         $('#toggle_status_pengeluaran_value').val(isChecked ? '1' : '');
         $('#toggleStatusPengeluaranForm').submit();
+    });
+
+    $('#toggle-status-all-pengeluaran').on('change', function() {
+        if (!isAdmin) {
+            return;
+        }
+        var isChecked = $(this).is(':checked');
+        $('#toggle_status_pengeluaran_all_value').val(isChecked ? '1' : '');
+        $('#toggleStatusPengeluaranAllForm').submit();
     });
 
 });
