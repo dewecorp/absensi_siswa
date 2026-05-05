@@ -3405,6 +3405,11 @@ body.layout-3 .main-footer {
 .main-sidebar .sidebar-menu li.active ul.dropdown-menu {
   background-color: #f8fafb;
 }
+.main-sidebar .sidebar-menu > li.nav-item.dropdown.active > a {
+  color: #6777ef;
+  font-weight: 600;
+  background-color: transparent;
+}
 .main-sidebar .sidebar-menu li a.has-dropdown:after {
   content: "\f054";
   font-family: "Font Awesome 5 Free";
@@ -3442,6 +3447,10 @@ body.layout-3 .main-footer {
 .main-sidebar .sidebar-menu li ul.dropdown-menu li.active > a {
   color: #6777ef;
   font-weight: 600;
+}
+.main-sidebar .sidebar-menu li ul.dropdown-menu li a.active {
+  color: #6777ef;
+  font-weight: 700;
 }
 .main-sidebar .sidebar-menu li ul.dropdown-menu li a i {
   margin-top: 1px;

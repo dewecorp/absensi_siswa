@@ -18,6 +18,7 @@ $page_title = 'RAB Ekstrakurikuler';
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
 $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah');
+$tahun_ajaran = $school_profile['tahun_ajaran'] ?? date('Y');
 
 // --- DATABASE MIGRATION START ---
 try {
@@ -226,7 +227,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>RAB Ekstrakurikuler</h1>
+            <h1>RAB Ekstrakurikuler <small style="font-size: 62%; font-weight: 700; margin-left: 10px; vertical-align: middle; color: #5f6fb4; background: #eef1ff; border: 1px solid #d6dcff; border-radius: 999px; padding: 4px 10px;">Tahun Ajaran: <?= htmlspecialchars($tahun_ajaran) ?></small></h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="#">Dashboard</a></div>
                 <div class="breadcrumb-item"><a href="#">Keuangan</a></div>
@@ -701,9 +702,17 @@ $(document).ready(function() {
     var statusPageKey = 'rab_ekstra_status_scroll_page';
 
     // Init DataTables
-    var sumberTable = $('#table-sumber').DataTable({ ordering: false });
+    var sumberTable = $('#table-sumber').DataTable({
+        ordering: false,
+        paging: false,
+        lengthChange: false,
+        info: false
+    });
     var pengeluaranTable = $('#table-pengeluaran').DataTable({
         ordering: false,
+        paging: false,
+        lengthChange: false,
+        info: false,
         rowGroup: {
             dataSrc: 2, // Group by Kategori (index 2)
             startRender: function ( rows, group ) {
@@ -718,8 +727,9 @@ $(document).ready(function() {
                 var groupName = group ? group : 'Tanpa Kategori';
 
                 var row = $('<tr/>')
-                    .append( '<td colspan="7" style="background-color:#e2e3e5; font-weight:bold;">'+groupName+'</td>' )
+                    .append( '<td colspan="6" style="background-color:#e2e3e5; font-weight:bold;">'+groupName+'</td>' )
                     .append( '<td style="background-color:#e2e3e5; font-weight:bold; text-align:right;">'+totalStr+'</td>' );
+                row.append( '<td style="background-color:#e2e3e5;"></td>' );
                 
                 if (isAdmin) {
                     row.append( '<td style="background-color:#e2e3e5;"></td>' );
