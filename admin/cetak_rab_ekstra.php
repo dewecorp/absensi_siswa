@@ -70,6 +70,19 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
         .bold { font-weight: bold; }
         .bg-gray { background-color: #f9f9f9; }
         .cat-header { background-color: #e0e0e0; font-weight: bold; }
+        .table-pengeluaran { table-layout: fixed; }
+        .table-pengeluaran th:nth-child(2),
+        .table-pengeluaran td:nth-child(2) { width: 30%; }
+        .table-pengeluaran th:not(:nth-child(2)),
+        .table-pengeluaran td:not(:nth-child(2)) { white-space: nowrap; }
+        .uraian-cell { line-height: 1.4; white-space: normal !important; }
+        .uraian-item {
+            display: block;
+            padding-left: 14px;
+            text-indent: -10px;
+            overflow-wrap: break-word;
+            word-break: normal;
+        }
         
         .ttd-box { margin-top: 30px; display: flex; justify-content: space-between; page-break-inside: avoid; }
         .ttd-item { text-align: center; width: 30%; }
@@ -103,7 +116,7 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
     <div class="title">RAB EKSTRAKURIKULER</div>
 
     <h3>A. SUMBER ANGGARAN</h3>
-    <table>
+    <table class="table-pengeluaran">
         <thead>
             <tr>
                 <th width="5%">No</th>
@@ -145,6 +158,7 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
                 <th width="8%">Jml</th>
                 <th width="8%">X</th>
                 <th width="15%">Total</th>
+                <th width="10%">Status</th>
             </tr>
         </thead>
         <tbody>
@@ -158,17 +172,19 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
                     <td class="text-center"><?= $no++ ?></td>
                     <td colspan="5"><?= htmlspecialchars($kategori) ?></td>
                     <td class="text-right">Rp <?= number_format($cat_total, 0, ',', '.') ?></td>
+                    <td></td>
                 </tr>
 
                 <?php foreach ($items as $item): ?>
                 <tr>
                     <td></td>
-                    <td style="padding-left: 20px;">- <?= htmlspecialchars($item['uraian']) ?></td>
+                    <td class="uraian-cell"><span class="uraian-item">- <?= htmlspecialchars($item['uraian']) ?></span></td>
                     <td class="text-center"><?= number_format($item['volume'], 0, ',', '.') ?></td>
                     <td class="text-right">Rp <?= number_format($item['satuan'], 0, ',', '.') ?></td>
                     <td class="text-center"><?= number_format($item['jumlah'], 0, ',', '.') ?></td>
                     <td class="text-center"><?= number_format($item['perkalian'], 0, ',', '.') ?></td>
                     <td class="text-right">Rp <?= number_format($item['total'], 0, ',', '.') ?></td>
+                    <td class="text-center"><?= !empty($item['status_terlaksana']) ? '[x]' : '[ ]' ?></td>
                 </tr>
                 <?php endforeach; ?>
             <?php endforeach; ?>
@@ -176,6 +192,7 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
             <tr class="bold bg-gray">
                 <td colspan="6" class="text-right">TOTAL PENGELUARAN</td>
                 <td class="text-right">Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?></td>
+                <td></td>
             </tr>
         </tbody>
     </table>

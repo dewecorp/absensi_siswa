@@ -146,6 +146,7 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran); // Sanitize filename
                 <th width="15%">Satuan</th>
                 <th width="10%">Jml</th>
                 <th width="15%">Total</th>
+                <th width="10%">Status</th>
             </tr>
         </thead>
         <tbody>
@@ -163,13 +164,14 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran); // Sanitize filename
                     <td class="text-center"><?= $no++ ?></td>
                     <td colspan="4"><?= htmlspecialchars($kategori) ?></td>
                     <td class="text-right">Rp <?= number_format($cat_total, 0, ',', '.') ?></td>
+                    <td></td>
                 </tr>
 
                 <?php foreach ($sub_groups as $sub_kategori => $items): ?>
                     <?php if ($sub_kategori): ?>
                         <tr class="sub-cat-header">
                             <td></td>
-                            <td colspan="5">Sub: <?= htmlspecialchars($sub_kategori) ?></td>
+                            <td colspan="6">Sub: <?= htmlspecialchars($sub_kategori) ?></td>
                         </tr>
                     <?php endif; ?>
 
@@ -181,6 +183,7 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran); // Sanitize filename
                         <td class="text-right">Rp <?= number_format($item['satuan'], 0, ',', '.') ?></td>
                         <td class="text-center"><?= number_format($item['jumlah'], 0, ',', '.') ?></td>
                         <td class="text-right">Rp <?= number_format($item['total'], 0, ',', '.') ?></td>
+                        <td class="text-center"><?= !empty($item['status_terlaksana']) ? '[x]' : '[ ]' ?></td>
                     </tr>
                     <?php endforeach; ?>
                 <?php endforeach; ?>
@@ -189,6 +192,7 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran); // Sanitize filename
             <tr class="bold bg-gray">
                 <td colspan="5" class="text-right">TOTAL PENGELUARAN</td>
                 <td class="text-right">Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?></td>
+                <td></td>
             </tr>
         </tbody>
     </table>

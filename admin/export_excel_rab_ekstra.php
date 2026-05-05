@@ -53,26 +53,26 @@ header("Expires: 0");
 <body>
     <table>
         <tr>
-            <td colspan="7" class="header-title"><?= $foundation_name ?></td>
+            <td colspan="8" class="header-title"><?= $foundation_name ?></td>
         </tr>
         <tr>
-            <td colspan="7" class="header-title"><?= $school_name ?></td>
+            <td colspan="8" class="header-title"><?= $school_name ?></td>
         </tr>
         <tr>
-            <td colspan="7" class="header-text"><?= $school_address ?></td>
+            <td colspan="8" class="header-text"><?= $school_address ?></td>
         </tr>
         <tr>
-            <td colspan="7" class="header-text bold">TAHUN AJARAN <?= $tahun_ajaran ?></td>
+            <td colspan="8" class="header-text bold">TAHUN AJARAN <?= $tahun_ajaran ?></td>
         </tr>
-        <tr><td colspan="7" class="no-border"></td></tr>
+        <tr><td colspan="8" class="no-border"></td></tr>
         <tr>
-            <td colspan="7" class="header-title" style="text-decoration: underline;">RAB EKSTRAKURIKULER</td>
+            <td colspan="8" class="header-title" style="text-decoration: underline;">RAB EKSTRAKURIKULER</td>
         </tr>
-        <tr><td colspan="7" class="no-border"></td></tr>
+        <tr><td colspan="8" class="no-border"></td></tr>
 
         <!-- A. SUMBER ANGGARAN -->
         <tr>
-            <td colspan="7" class="bold no-border">A. SUMBER ANGGARAN</td>
+            <td colspan="8" class="bold no-border">A. SUMBER ANGGARAN</td>
         </tr>
         <tr>
             <th width="5%">No</th>
@@ -98,11 +98,11 @@ header("Expires: 0");
             <td colspan="5" class="text-right">TOTAL PEMASUKAN</td>
             <td class="text-right" colspan="2"><?= $total_sumber ?></td>
         </tr>
-        <tr><td colspan="7" class="no-border"></td></tr>
+        <tr><td colspan="8" class="no-border"></td></tr>
 
         <!-- B. RENCANA PENGELUARAN -->
         <tr>
-            <td colspan="7" class="bold no-border">B. RENCANA PENGELUARAN</td>
+            <td colspan="8" class="bold no-border">B. RENCANA PENGELUARAN</td>
         </tr>
         <tr>
             <th width="5%">No</th>
@@ -112,6 +112,7 @@ header("Expires: 0");
             <th width="8%">Jml</th>
             <th width="8%">X</th>
             <th width="15%">Total</th>
+            <th width="10%">Status</th>
         </tr>
         <?php 
         $no = 1;
@@ -121,7 +122,7 @@ header("Expires: 0");
             <!-- Kategori Header -->
             <tr class="bg-gray">
                 <td class="text-center bold"><?= $no++ ?></td>
-                <td colspan="5" class="bold"><?= htmlspecialchars($kategori) ?></td>
+                <td colspan="6" class="bold"><?= htmlspecialchars($kategori) ?></td>
                 <td class="text-right bold"><?= $cat_total ?></td>
             </tr>
 
@@ -134,18 +135,19 @@ header("Expires: 0");
                 <td class="text-center"><?= $item['jumlah'] ?></td>
                 <td class="text-center"><?= $item['perkalian'] ?></td>
                 <td class="text-right"><?= $item['total'] ?></td>
+                <td class="text-center"><?= !empty($item['status_terlaksana']) ? '[x]' : '[ ]' ?></td>
             </tr>
             <?php endforeach; ?>
         <?php endforeach; ?>
         
         <tr class="bold bg-gray">
-            <td colspan="6" class="text-right">TOTAL PENGELUARAN</td>
+            <td colspan="7" class="text-right">TOTAL PENGELUARAN</td>
             <td class="text-right"><?= $total_pengeluaran ?></td>
         </tr>
-        <tr><td colspan="7" class="no-border"></td></tr>
+        <tr><td colspan="8" class="no-border"></td></tr>
 
         <tr class="bold">
-            <td colspan="7" class="no-border" style="border: 1px solid #000; padding: 10px;">
+            <td colspan="8" class="no-border" style="border: 1px solid #000; padding: 10px;">
                 SISA ANGGARAN: <?= $sisa_anggaran ?>
             </td>
         </tr>

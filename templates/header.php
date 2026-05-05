@@ -64,9 +64,11 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
     <?php
     $_style_path = __DIR__ . '/../assets/css/style.css';
     $_style_v = is_readable($_style_path) ? (string) filemtime($_style_path) : '1';
+    $_components_path = __DIR__ . '/../assets/css/components.css';
+    $_components_v = is_readable($_components_path) ? (string) filemtime($_components_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/style.css?v=<?php echo htmlspecialchars($_style_v, ENT_QUOTES, 'UTF-8'); ?>">
-    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/components.css?v=<?php echo htmlspecialchars($_components_v, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Modal Fix CSS -->
     <link rel="stylesheet" href="../assets/css/modal_fix.css">
 

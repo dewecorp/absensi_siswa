@@ -51,6 +51,12 @@ try {
         $pdo->exec("ALTER TABLE tb_rencana_pengeluaran ADD COLUMN sub_kategori VARCHAR(255) NULL AFTER id_kategori");
     }
 
+    // Add status column for realization marker
+    $status_column = $pdo->query("SHOW COLUMNS FROM tb_rencana_pengeluaran LIKE 'status_terlaksana'")->fetchAll();
+    if (empty($status_column)) {
+        $pdo->exec("ALTER TABLE tb_rencana_pengeluaran ADD COLUMN status_terlaksana TINYINT(1) NOT NULL DEFAULT 0 AFTER total");
+    }
+
     // Migrate 'jumlah' column to 'total' and recreate 'jumlah' as INT for existing tables
     // Check if 'total' exists in tb_sumber_anggaran
     $cols_sumber = $pdo->query("SHOW COLUMNS FROM tb_sumber_anggaran LIKE 'total'")->fetchAll();
@@ -169,6 +175,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Gagal hapus data!'];
         }
+    } elseif (isset($_POST['toggle_status_pengeluaran'])) {
+        $id = (int)($_POST['id_pengeluaran'] ?? 0);
+        $status = isset($_POST['status_terlaksana']) ? 1 : 0;
+        $stmt = $pdo->prepare("UPDATE tb_rencana_pengeluaran SET status_terlaksana=? WHERE id_pengeluaran=?");
+        if ($stmt->execute([$status, $id])) {
+            $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Status realisasi anggaran berhasil diupdate!'];
+            logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Status Rencana Pengeluaran', "Update status ID: $id menjadi " . ($status ? 'terlaksana' : 'belum'));
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Gagal update status realisasi!'];
+        }
     }
 
     header("Location: $redirect_url");
@@ -189,7 +205,8 @@ $sisa_anggaran = $total_sumber - $total_pengeluaran;
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdn.datatables.net/select/1.3.3/css/select.bootstrap4.min.css',
-    'https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.bootstrap4.min.css'
+    'https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.bootstrap4.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css'
 ];
 
 // Define JS libraries
@@ -198,7 +215,8 @@ $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js',
     'https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js'
+    'https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js'
 ];
 
 // Include header
@@ -368,6 +386,7 @@ include '../templates/sidebar.php';
                                             <th class="text-right">Satuan (Rp)</th>
                                             <th class="text-center">Jumlah</th>
                                             <th class="text-right">Total (Rp)</th>
+                                            <th class="text-center">Status</th>
                                             <?php if ($is_admin): ?>
                                             <th width="15%" class="text-center">Aksi</th>
                                             <?php endif; ?>
@@ -384,6 +403,15 @@ include '../templates/sidebar.php';
                                             <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
                                             <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
                                             <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
+                                            <td class="text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    class="toggle-status-pengeluaran"
+                                                    data-id="<?= $row['id_pengeluaran'] ?>"
+                                                    <?= !empty($row['status_terlaksana']) ? 'checked' : '' ?>
+                                                    <?= !$is_admin ? 'disabled' : '' ?>
+                                                >
+                                            </td>
                                             <?php if ($is_admin): ?>
                                             <td class="text-center">
                                                 <button class="btn btn-warning btn-sm edit-pengeluaran-btn" 
@@ -656,11 +684,19 @@ include '../templates/sidebar.php';
     <input type="hidden" name="delete_pengeluaran" value="1">
 </form>
 
+<form id="toggleStatusPengeluaranForm" action="" method="POST" style="display: none;">
+    <input type="hidden" name="id_pengeluaran" id="toggle_status_pengeluaran_id">
+    <input type="hidden" name="status_terlaksana" id="toggle_status_pengeluaran_value" value="0">
+    <input type="hidden" name="toggle_status_pengeluaran" value="1">
+</form>
+
 <?php include '../templates/footer.php'; ?>
 
 <script>
 $(document).ready(function() {
     var isAdmin = <?= $is_admin ? 'true' : 'false' ?>;
+    var statusScrollKey = 'rab_madrasah_status_scroll_target';
+    var statusPageKey = 'rab_madrasah_status_scroll_page';
 
     // Init DataTables
     var tableOptions = {
@@ -698,7 +734,7 @@ $(document).ready(function() {
                 }
 
                 var row = $('<tr/>')
-                    .append( '<td colspan="5" style="background-color:'+backgroundColor+'; font-weight:'+fontWeight+'; padding-left:'+paddingLeft+';">'+label+'</td>' )
+                    .append( '<td colspan="6" style="background-color:'+backgroundColor+'; font-weight:'+fontWeight+'; padding-left:'+paddingLeft+';">'+label+'</td>' )
                     .append( '<td style="background-color:'+backgroundColor+'; font-weight:bold; text-align:right;">'+totalStr+'</td>' );
                 
                 if (isAdmin) {
@@ -713,8 +749,36 @@ $(document).ready(function() {
         ]
     });
 
-    $('#table-sumber').DataTable(tableOptions);
-    $('#table-pengeluaran').DataTable(pengeluaranOptions);
+    var sumberTable = $('#table-sumber').DataTable(tableOptions);
+    var pengeluaranTable = $('#table-pengeluaran').DataTable(pengeluaranOptions);
+
+    function restoreStatusScrollPosition() {
+        var targetId = sessionStorage.getItem(statusScrollKey);
+        if (!targetId) {
+            return;
+        }
+
+        var savedPage = parseInt(sessionStorage.getItem(statusPageKey), 10);
+        if (!isNaN(savedPage) && savedPage >= 0) {
+            pengeluaranTable.page(savedPage).draw('page');
+        }
+
+        setTimeout(function() {
+            var $target = $('.toggle-status-pengeluaran[data-id="' + targetId + '"]');
+            if ($target.length) {
+                var row = $target.closest('tr');
+                row.css('background-color', '#fff7d6');
+                row.get(0).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(function() {
+                    row.css('background-color', '');
+                }, 1500);
+            }
+            sessionStorage.removeItem(statusScrollKey);
+            sessionStorage.removeItem(statusPageKey);
+        }, 150);
+    }
+
+    restoreStatusScrollPosition();
 
     // Init Rupiah Mask
     $('.uang').mask('000.000.000.000', {reverse: true});
@@ -724,7 +788,17 @@ $(document).ready(function() {
     var msgType = '<?= $message['type'] == 'success' ? 'success' : 'error' ?>';
     var msgTitle = '<?= $message['type'] == 'success' ? 'Berhasil' : 'Gagal' ?>';
     var msgText = '<?= addslashes($message['text']) ?>';
-    if (typeof Swal !== 'undefined') {
+    var isRealisasiSuccess = (msgType === 'success' && msgText.toLowerCase().indexOf('status realisasi anggaran') !== -1);
+
+    if (isRealisasiSuccess && typeof toastr !== 'undefined') {
+        toastr.options = {
+            closeButton: true,
+            progressBar: false,
+            timeOut: 1800,
+            positionClass: 'toast-top-right'
+        };
+        toastr.success(msgText, msgTitle);
+    } else if (typeof Swal !== 'undefined') {
         Swal.fire({ icon: msgType, title: msgTitle, text: msgText, showConfirmButton: false, timer: 1500 });
     } else {
         alert(msgTitle + ': ' + msgText);
@@ -834,6 +908,22 @@ $(document).ready(function() {
                 $('#deletePengeluaranForm').submit();
             }
         });
+    });
+
+    $('#table-pengeluaran').on('change', '.toggle-status-pengeluaran', function() {
+        if (!isAdmin) {
+            return;
+        }
+
+        var id = $(this).data('id');
+        var isChecked = $(this).is(':checked');
+        var pageInfo = pengeluaranTable.page.info();
+
+        sessionStorage.setItem(statusScrollKey, String(id));
+        sessionStorage.setItem(statusPageKey, String(pageInfo.page));
+        $('#toggle_status_pengeluaran_id').val(id);
+        $('#toggle_status_pengeluaran_value').val(isChecked ? '1' : '');
+        $('#toggleStatusPengeluaranForm').submit();
     });
 
 });
