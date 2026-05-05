@@ -178,10 +178,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
         $notif_msg = "$nama_guru ($role_label) telah mengisi jurnal $mapel kelas $nama_kelas_log pada " . date('d-m-Y H:i');
         createNotification($pdo, $notif_msg, 'jurnal_mengajar.php?kelas=' . $id_kelas, 'jurnal_mengajar');
         
-        // Log activity
-        $log_desc = "$nama_guru menambahkan jurnal mengajar kelas " . ($class_info['nama_kelas'] ?? $id_kelas) . " ($mapel)";
+        $log_desc = "$nama_guru menambahkan jurnal mengajar kelas $nama_kelas_log ($mapel)";
         logActivity($pdo, $teacher['nama_guru'], 'Tambah Jurnal', $log_desc);
-        
+
         $message = ['type' => 'success', 'text' => 'Jurnal berhasil ditambahkan!'];
     }
     }
