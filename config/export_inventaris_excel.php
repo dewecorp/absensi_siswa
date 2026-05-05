@@ -46,6 +46,8 @@ $inventories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get School Profile
 $school_profile = getSchoolProfile($pdo);
 $nama_madrasah = $school_profile['nama_madrasah'] ?? 'Madrasah';
+$kepala_madrasah = $school_profile['kepala_madrasah'] ?? ($school_profile['nama_kepala'] ?? '-');
+$tempat_ttd = $school_profile['tempat_jadwal'] ?? ($school_profile['kabupaten'] ?? 'Tempat');
 
 // Calculate statistics
 $stats = [
@@ -186,5 +188,19 @@ header("Expires: 0");
             </tr>
         </table>
     </div>
+
+    <br><br>
+    <table style="width:100%; border:none;">
+        <tr>
+            <td style="width:55%; border:none;"></td>
+            <td style="width:45%; border:none; text-align:center;">
+                <?= htmlspecialchars($tempat_ttd) ?>, <?= formatDateIndonesia(date('Y-m-d')) ?><br>
+                Mengetahui,<br>
+                Kepala Madrasah<br><br><br>
+                <strong><u><?= htmlspecialchars($kepala_madrasah) ?></u></strong><br>
+                NIP. <?= htmlspecialchars($school_profile['nip_kepala'] ?? '-') ?>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

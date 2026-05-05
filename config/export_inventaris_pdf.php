@@ -46,6 +46,10 @@ $inventories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get School Profile
 $school_profile = getSchoolProfile($pdo);
 $kepala_madrasah = $school_profile['kepala_madrasah'] ?? '-';
+$tempat_ttd = $school_profile['tempat_jadwal'] ?? ($school_profile['kabupaten'] ?? 'Tempat');
+$tahun_ajaran = $school_profile['tahun_ajaran'] ?? date('Y');
+$filename_tahun = str_replace(['/', '\\', ' '], ['-', '-', ''], (string)$tahun_ajaran);
+$pdf_title = "Laporan_Inventaris_Sarpras_{$filename_tahun}";
 
 // Digital Signature QR Code
 $qr_kepala_content = 'Validasi Tanda Tangan Digital Kepala Madrasah: ' . $kepala_madrasah . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
@@ -93,7 +97,7 @@ $total_nilai = array_sum($category_totals);
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Laporan Inventaris Sarpras</title>
+    <title><?= htmlspecialchars($pdf_title) ?></title>
     <style>
         @page { size: A4; margin: 15mm; }
         @media print {
@@ -133,7 +137,7 @@ $total_nilai = array_sum($category_totals);
         <h3><?= strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN') ?></h3>
         <h2><?= strtoupper($school_profile['nama_sekolah'] ?? $school_profile['nama_madrasah'] ?? 'NAMA MADRASAH') ?></h2>
         <p><?= $school_profile['alamat'] ?? '' ?></p>
-        <p>Tahun Ajaran: <?= str_replace('Semester', '', $school_profile['tahun_ajaran'] ?? '-') ?> | Semester: <?= str_replace('Semester', '', $school_profile['semester'] ?? '-') ?></p>
+        <p>Tahun Ajaran: <?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?></p>
     </div>
 
     <div class="title">
@@ -205,7 +209,7 @@ $total_nilai = array_sum($category_totals);
 
     <div class="signature-container">
         <div class="footer-date">
-            <?= formatDateIndonesia(date('Y-m-d')) ?>
+            <?= htmlspecialchars($tempat_ttd) ?>, <?= formatDateIndonesia(date('Y-m-d')) ?>
         </div>
         <table class="signature-table">
             <tr>

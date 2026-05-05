@@ -573,6 +573,7 @@ $(document).ready(function() {
     // Initialize DataTable with row grouping
     var table = $('#table-inventaris').DataTable({
         "order": [[1, 'asc'], [0, 'asc']], // Sort by category, then by name
+        "paging": false,
         "pageLength": 25,
         "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Semua"]],
         "columnDefs": [
