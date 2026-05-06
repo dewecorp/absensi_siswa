@@ -72,6 +72,41 @@ $stmt = $pdo->prepare("
 $stmt->execute([$db_exam_type, $selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
 $enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Guru mapel untuk tanda tangan (prioritas: data program, lalu jadwal kelas–mapel)
+$guru_mapel_nama = '-';
+$id_guru_mapel = null;
+foreach ($enrichment_list as $row) {
+    if (!empty($row['id_guru'])) {
+        $id_guru_mapel = (int) $row['id_guru'];
+        break;
+    }
+}
+if ($id_guru_mapel) {
+    $stmt = $pdo->prepare('SELECT nama_guru FROM tb_guru WHERE id_guru = ?');
+    $stmt->execute([$id_guru_mapel]);
+    $gn = $stmt->fetchColumn();
+    if ($gn) {
+        $guru_mapel_nama = $gn;
+    }
+} else {
+    $stmt = $pdo->prepare('SELECT guru_id FROM tb_jadwal_pelajaran WHERE kelas_id = ? AND mapel_id = ? LIMIT 1');
+    $stmt->execute([$selected_class_id, $selected_mapel_id]);
+    $gid = $stmt->fetchColumn();
+    if ($gid) {
+        $stmt = $pdo->prepare('SELECT nama_guru FROM tb_guru WHERE id_guru = ?');
+        $stmt->execute([(int) $gid]);
+        $gn = $stmt->fetchColumn();
+        if ($gn) {
+            $guru_mapel_nama = $gn;
+        }
+    }
+}
+$qr_guru_content = 'Validasi Tanda Tangan Digital Guru Mata Pelajaran: ' . $guru_mapel_nama . ' - ' . $mapel . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah') . ' - Program Pengayaan';
+$qr_guru_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_guru_content);
+$qr_guru_img = '<img src="' . $qr_guru_url . '" alt="QR Signature Guru Mapel" style="width: 60px; height: 60px; margin: 5px auto; display: block;">';
+
+$tanggal_cetak_indo = formatDateIndonesia(date('Y-m-d'));
+
 // Logo - Check multiple possible locations
 $logo_file = $school_profile['logo'] ?? '';
 $logo_path = '';
@@ -172,12 +207,21 @@ if (!empty($logo_file)) {
         }
         .signature-section {
             margin-top: 30px;
-            text-align: right;
+            page-break-inside: avoid;
+        }
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 20px;
         }
         .signature-box {
-            display: inline-block;
             text-align: center;
             min-width: 200px;
+            flex: 1;
+        }
+        .signature-top-space {
+            height: 20px;
         }
         .signature-space {
             height: 10px;
@@ -274,17 +318,24 @@ if (!empty($logo_file)) {
         </tbody>
     </table>
 
-    <!-- Signature Section - Only Kepala Madrasah -->
+    <!-- Tanda tangan: Kepala Madrasah (kiri), Guru Mapel (kanan) -->
     <div class="signature-section">
-        <div class="signature-box">
-            <p><?= date('d F Y') ?></p>
-            <p>Kepala Madrasah</p>
-            <div class="signature-space"></div>
-            <?= $qr_kepala_img ?>
-            <p><strong><?= htmlspecialchars($kepala_madrasah) ?></strong></p>
-            <?php if (!empty($nip_kepala)): ?>
-            <p style="font-size: 9pt;">NIP. <?= htmlspecialchars($nip_kepala) ?></p>
-            <?php endif; ?>
+        <div class="signature-row">
+            <div class="signature-box">
+                <div class="signature-top-space"></div>
+                <p>Kepala Madrasah</p>
+                <div class="signature-space"></div>
+                <?= $qr_kepala_img ?>
+                <p><strong><?= htmlspecialchars($kepala_madrasah) ?></strong></p>
+                <p style="font-size: 9pt;">NIP. <?= !empty($nip_kepala) ? htmlspecialchars($nip_kepala) : '-' ?></p>
+            </div>
+            <div class="signature-box">
+                <p><?= htmlspecialchars($tanggal_cetak_indo) ?></p>
+                <p>Guru Mata Pelajaran</p>
+                <div class="signature-space"></div>
+                <?= $qr_guru_img ?>
+                <p><strong><?= htmlspecialchars($guru_mapel_nama) ?></strong></p>
+            </div>
         </div>
     </div>
 
