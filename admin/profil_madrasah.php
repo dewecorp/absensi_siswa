@@ -365,7 +365,6 @@ include '../templates/sidebar.php';
                                                         }
                                                         ?>
                                                     </select>
-                                                    <small class="text-muted">Tahun ajaran aktif mengatur tampilan absensi, jurnal, dan nilai. Data tahun lalu tetap di database; pilih tahun ajaran lama di sini untuk melihat arsip. Reset massal absensi/jurnal tidak menghapus data.</small>
                                                 </div>
                                             </div>
                                             <div class="col-md-6">

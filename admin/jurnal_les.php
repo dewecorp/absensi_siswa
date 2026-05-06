@@ -9,6 +9,8 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
 
 $user_level = getUserLevel();
 $can_manage = ($user_level === 'admin');
+$school_profile = getSchoolProfile($pdo);
+$periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
 
 // Handle Delete Action
 if ($can_manage && isset($_POST['delete_journal'])) {
@@ -57,6 +59,12 @@ $filter_title = '';
 // Build filter conditions - only guru filter
 $where_clauses = [];
 $params = [];
+
+if ($periode_ta) {
+    $where_clauses[] = "jl.tanggal >= ? AND jl.tanggal <= ?";
+    $params[] = $periode_ta['mulai'];
+    $params[] = $periode_ta['sampai'];
+}
 
 if (isset($_GET['guru']) && !empty($_GET['guru'])) {
     $where_clauses[] = "jl.id_guru = ?";

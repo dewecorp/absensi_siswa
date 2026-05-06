@@ -36,6 +36,14 @@ $guru_id = isset($_GET['guru']) ? (int)$_GET['guru'] : null;
 $where_clauses = [];
 $params = [];
 $filter_title = '';
+$school_profile = getSchoolProfile($pdo);
+$periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
+
+if ($periode_ta) {
+    $where_clauses[] = "jl.tanggal >= ? AND jl.tanggal <= ?";
+    $params[] = $periode_ta['mulai'];
+    $params[] = $periode_ta['sampai'];
+}
 
 if ($kelas_id) {
     $where_clauses[] = "jl.id_kelas = ?";
@@ -69,9 +77,6 @@ $query = "SELECT jl.*, g.nama_guru, k.nama_kelas
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get School Profile
-$school_profile = getSchoolProfile($pdo);
 
 $filename = "Jurnal_Les_" . date('Ymd_His') . ".xls";
 

@@ -124,6 +124,9 @@ if (!empty($classes)) {
     }
 }
 
+$school_profile = getSchoolProfile($pdo);
+$periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
+
 // Handle Form Submission (Add/Edit)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
     $id_jurnal = !empty($_POST['id_jurnal']) ? (int)$_POST['id_jurnal'] : null;
@@ -225,13 +228,21 @@ if (isset($_POST['delete_journal'])) {
 // Get journal entries for the auto-selected class
 $journal_entries = [];
 if ($selected_class) {
-    $stmt_journal = $pdo->prepare("SELECT jl.*, g.nama_guru, k.nama_kelas 
-                                    FROM tb_jurnal_les jl 
-                                    LEFT JOIN tb_guru g ON jl.id_guru = g.id_guru 
-                                    LEFT JOIN tb_kelas k ON jl.id_kelas = k.id_kelas 
-                                    WHERE jl.id_kelas = ? AND jl.id_guru = ?
-                                    ORDER BY jl.tanggal DESC, jl.waktu");
-    $stmt_journal->execute([$selected_class, $teacher['id_guru']]);
+    $query_journal = "SELECT jl.*, g.nama_guru, k.nama_kelas 
+                      FROM tb_jurnal_les jl 
+                      LEFT JOIN tb_guru g ON jl.id_guru = g.id_guru 
+                      LEFT JOIN tb_kelas k ON jl.id_kelas = k.id_kelas 
+                      WHERE jl.id_kelas = ? AND jl.id_guru = ?";
+    $params_journal = [$selected_class, $teacher['id_guru']];
+    if ($periode_ta) {
+        $query_journal .= " AND jl.tanggal >= ? AND jl.tanggal <= ?";
+        $params_journal[] = $periode_ta['mulai'];
+        $params_journal[] = $periode_ta['sampai'];
+    }
+    $query_journal .= " ORDER BY jl.tanggal DESC, jl.waktu";
+
+    $stmt_journal = $pdo->prepare($query_journal);
+    $stmt_journal->execute($params_journal);
     $journal_entries = $stmt_journal->fetchAll(PDO::FETCH_ASSOC);
 }
 
