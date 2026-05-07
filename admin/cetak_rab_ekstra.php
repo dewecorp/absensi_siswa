@@ -44,6 +44,16 @@ foreach ($rencana_pengeluaran as $row) {
 $total_sumber = array_sum(array_column($sumber_anggaran, 'total'));
 $total_pengeluaran = array_sum(array_column($rencana_pengeluaran, 'total'));
 $sisa_anggaran = $total_sumber - $total_pengeluaran;
+$total_anggaran_terpakai = array_sum(array_map(function ($item) {
+    return !empty($item['status_terlaksana']) ? (float)$item['total'] : 0;
+}, $rencana_pengeluaran));
+$total_anggaran_belum_terpakai = array_sum(array_map(function ($item) {
+    return empty($item['status_terlaksana']) ? (float)$item['total'] : 0;
+}, $rencana_pengeluaran));
+$jumlah_kegiatan_terlaksana = count(array_filter($rencana_pengeluaran, function ($item) {
+    return !empty($item['status_terlaksana']);
+}));
+$jumlah_kegiatan_belum_terlaksana = count($rencana_pengeluaran) - $jumlah_kegiatan_terlaksana;
 $filename_tahun = str_replace('/', '-', $tahun_ajaran);
 ?>
 <!DOCTYPE html>
@@ -87,10 +97,24 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
         .ttd-box { margin-top: 30px; display: flex; justify-content: space-between; page-break-inside: avoid; }
         .ttd-item { text-align: center; width: 30%; }
         .ttd-space { height: 70px; }
+        .summary-box {
+            margin-top: 20px;
+            border: 1px solid #000;
+            padding: 10px;
+            width: 440px;
+            line-height: 1.5;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            display: inline-block;
+        }
 
         @media print {
             .no-print { display: none; }
             @page { margin: 1cm; size: A4; }
+            .summary-box {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
         }
     </style>
 </head>
@@ -197,8 +221,12 @@ $filename_tahun = str_replace('/', '-', $tahun_ajaran);
         </tbody>
     </table>
 
-    <div style="margin-top: 20px; border: 1px solid #000; padding: 10px; width: 300px;">
-        <strong>SISA ANGGARAN:</strong> Rp <?= number_format($sisa_anggaran, 0, ',', '.') ?>
+    <div class="summary-box">
+        <div><strong>SISA ANGGARAN:</strong> Rp <?= number_format($sisa_anggaran, 0, ',', '.') ?></div>
+        <div><strong>ANGGARAN SUDAH DIGUNAKAN:</strong> Rp <?= number_format($total_anggaran_terpakai, 0, ',', '.') ?></div>
+        <div><strong>ANGGARAN BELUM DIGUNAKAN:</strong> Rp <?= number_format($total_anggaran_belum_terpakai, 0, ',', '.') ?></div>
+        <div><strong>KEGIATAN TERLAKSANA:</strong> <?= number_format($jumlah_kegiatan_terlaksana, 0, ',', '.') ?></div>
+        <div><strong>KEGIATAN BELUM TERLAKSANA:</strong> <?= number_format($jumlah_kegiatan_belum_terlaksana, 0, ',', '.') ?></div>
     </div>
 
     <div class="ttd-box">

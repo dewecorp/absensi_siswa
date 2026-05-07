@@ -211,6 +211,16 @@ $all_status_terlaksana = !empty($rencana_pengeluaran) && count(array_filter($ren
 $total_sumber = array_sum(array_column($sumber_anggaran, 'total'));
 $total_pengeluaran = array_sum(array_column($rencana_pengeluaran, 'total'));
 $sisa_anggaran = $total_sumber - $total_pengeluaran;
+$total_anggaran_terpakai = array_sum(array_map(function ($item) {
+    return !empty($item['status_terlaksana']) ? (float)$item['total'] : 0;
+}, $rencana_pengeluaran));
+$total_anggaran_belum_terpakai = array_sum(array_map(function ($item) {
+    return empty($item['status_terlaksana']) ? (float)$item['total'] : 0;
+}, $rencana_pengeluaran));
+$jumlah_kegiatan_terlaksana = count(array_filter($rencana_pengeluaran, function ($item) {
+    return !empty($item['status_terlaksana']);
+}));
+$jumlah_kegiatan_belum_terlaksana = count($rencana_pengeluaran) - $jumlah_kegiatan_terlaksana;
 
 // Define CSS libraries
 $css_libs = [
@@ -234,6 +244,13 @@ $js_libs = [
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<style>
+.rab-card-nominal .card-body {
+    font-size: 18px !important;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+</style>
 
 <div class="main-content">
     <section class="section">
@@ -260,7 +277,7 @@ include '../templates/sidebar.php';
                                 <h4>Total Sumber Anggaran</h4>
                             </div>
                             <div class="card-body">
-                                Rp <?= number_format($total_sumber, 0, ',', '.') ?>
+                                Rp&nbsp;<?= number_format($total_sumber, 0, ',', '.') ?>
                             </div>
                         </div>
                     </div>
@@ -275,7 +292,7 @@ include '../templates/sidebar.php';
                                 <h4>Total Rencana Pengeluaran</h4>
                             </div>
                             <div class="card-body">
-                                Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?>
+                                Rp&nbsp;<?= number_format($total_pengeluaran, 0, ',', '.') ?>
                             </div>
                         </div>
                     </div>
@@ -290,7 +307,69 @@ include '../templates/sidebar.php';
                                 <h4>Sisa Anggaran</h4>
                             </div>
                             <div class="card-body">
-                                Rp <?= number_format($sisa_anggaran, 0, ',', '.') ?>
+                                Rp&nbsp;<?= number_format($sisa_anggaran, 0, ',', '.') ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-md-6 col-sm-6 col-12 rab-card-nominal">
+                    <div class="card card-statistic-1">
+                        <div class="card-icon bg-primary">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </div>
+                        <div class="card-wrap">
+                            <div class="card-header">
+                                <h4>Anggaran Terpakai</h4>
+                            </div>
+                            <div class="card-body">
+                                Rp&nbsp;<?= number_format($total_anggaran_terpakai, 0, ',', '.') ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 col-sm-6 col-12 rab-card-nominal">
+                    <div class="card card-statistic-1">
+                        <div class="card-icon bg-secondary">
+                            <i class="fas fa-piggy-bank"></i>
+                        </div>
+                        <div class="card-wrap">
+                            <div class="card-header">
+                                <h4>Anggaran Belum Terpakai</h4>
+                            </div>
+                            <div class="card-body">
+                                Rp&nbsp;<?= number_format($total_anggaran_belum_terpakai, 0, ',', '.') ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                    <div class="card card-statistic-1">
+                        <div class="card-icon bg-success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="card-wrap">
+                            <div class="card-header">
+                                <h4>Kegiatan Terlaksana</h4>
+                            </div>
+                            <div class="card-body">
+                                <?= number_format($jumlah_kegiatan_terlaksana, 0, ',', '.') ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                    <div class="card card-statistic-1">
+                        <div class="card-icon bg-danger">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="card-wrap">
+                            <div class="card-header">
+                                <h4>Belum Terlaksana</h4>
+                            </div>
+                            <div class="card-body">
+                                <?= number_format($jumlah_kegiatan_belum_terlaksana, 0, ',', '.') ?>
                             </div>
                         </div>
                     </div>
