@@ -148,6 +148,46 @@ require_once '../templates/sidebar.php';
         margin: 0 auto;
         text-align: center;
     }
+    .kelulusan-until-reveal {
+        max-width: 26rem;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .kelulusan-until-reveal-title {
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: #5a6270;
+        margin-bottom: 0.65rem;
+    }
+    .kelulusan-until-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.45rem;
+    }
+    .kelulusan-until-unit {
+        background: rgba(103, 119, 239, 0.1);
+        border-radius: 0.5rem;
+        padding: 0.6rem 0.3rem;
+        text-align: center;
+        border: 1px solid rgba(103, 119, 239, 0.15);
+    }
+    .kelulusan-until-val {
+        display: block;
+        font-size: clamp(1.2rem, 4vw, 1.65rem);
+        font-weight: 800;
+        color: #4954c9;
+        line-height: 1.15;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+    }
+    .kelulusan-until-label {
+        display: block;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+        margin-top: 0.3rem;
+    }
     @media (max-width: 575px) {
         .surat-kelulusan-card .surat-du-item {
             grid-template-columns: 1fr;
@@ -260,6 +300,30 @@ require_once '../templates/sidebar.php';
                                     <i class="fas fa-clock mr-1"></i>
                                     Isi pengumuman dapat dilihat mulai <strong><?= htmlspecialchars($tanggal_jadwal_teks) ?></strong>.
                                 </p>
+                                <div class="kelulusan-until-reveal mt-4" role="timer" aria-live="polite" data-target-iso="<?= htmlspecialchars($jadwalDt->format(DateTimeInterface::ATOM), ENT_QUOTES, 'UTF-8') ?>">
+                                    <p class="kelulusan-until-reveal-title text-center mb-0">
+                                        <i class="fas fa-hourglass-half mr-1 text-primary"></i>
+                                        Hitung mundur menuju pengumuman
+                                    </p>
+                                    <div class="kelulusan-until-grid mt-2">
+                                        <div class="kelulusan-until-unit">
+                                            <span class="kelulusan-until-val js-kel-days">00</span>
+                                            <span class="kelulusan-until-label">Hari</span>
+                                        </div>
+                                        <div class="kelulusan-until-unit">
+                                            <span class="kelulusan-until-val js-kel-hours">00</span>
+                                            <span class="kelulusan-until-label">Jam</span>
+                                        </div>
+                                        <div class="kelulusan-until-unit">
+                                            <span class="kelulusan-until-val js-kel-minutes">00</span>
+                                            <span class="kelulusan-until-label">Menit</span>
+                                        </div>
+                                        <div class="kelulusan-until-unit">
+                                            <span class="kelulusan-until-val js-kel-seconds">00</span>
+                                            <span class="kelulusan-until-label">Detik</span>
+                                        </div>
+                                    </div>
+                                </div>
                             <?php else: ?>
                                 <hr class="surat-pembagi">
 
@@ -360,6 +424,67 @@ require_once '../templates/sidebar.php';
         window.setTimeout(tik, 1000);
     }
     window.setTimeout(tik, 400);
+})();
+
+(function() {
+    function pad2(n) {
+        return n < 10 ? '0' + n : String(n);
+    }
+    function tickOne(root) {
+        var iso = root.getAttribute('data-target-iso');
+        if (!iso) {
+            return;
+        }
+        var target = Date.parse(iso);
+        if (Number.isNaN(target)) {
+            return;
+        }
+        var now = Date.now();
+        var diff = Math.max(0, target - now);
+        var days = Math.floor(diff / 86400000);
+        var hours = Math.floor((diff % 86400000) / 3600000);
+        var minutes = Math.floor((diff % 3600000) / 60000);
+        var seconds = Math.floor((diff % 60000) / 1000);
+        var elD = root.querySelector('.js-kel-days');
+        var elH = root.querySelector('.js-kel-hours');
+        var elM = root.querySelector('.js-kel-minutes');
+        var elS = root.querySelector('.js-kel-seconds');
+        if (elD) {
+            elD.textContent = days > 99 ? String(days) : pad2(days);
+        }
+        if (elH) {
+            elH.textContent = pad2(hours);
+        }
+        if (elM) {
+            elM.textContent = pad2(minutes);
+        }
+        if (elS) {
+            elS.textContent = pad2(seconds);
+        }
+        if (diff <= 0) {
+            if (!root.hasAttribute('data-reloading')) {
+                root.setAttribute('data-reloading', '1');
+                window.setTimeout(function() {
+                    window.location.reload();
+                }, 800);
+            }
+        }
+    }
+    function run() {
+        var roots = document.querySelectorAll('.kelulusan-until-reveal[data-target-iso]');
+        if (!roots.length) {
+            return;
+        }
+        roots.forEach(tickOne);
+        window.setInterval(function() {
+            roots.forEach(tickOne);
+        }, 1000);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+    } else {
+        run();
+    }
 })();
 </script>
 
