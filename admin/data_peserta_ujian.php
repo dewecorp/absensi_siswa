@@ -984,11 +984,22 @@ require_once '../templates/sidebar.php';
 
                             <?php else: ?>
 
+                                <?php if (!$can_crud): ?>
+                                <div class="mb-3">
+                                    <a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print mr-1"></i> Cetak Semua Surat</a>
+                                </div>
+                                <?php endif; ?>
+
+                                <?php if ($can_crud): ?>
                             <form method="post" class="mb-3">
 
                                 <input type="hidden" name="simpan_kelulusan" value="1">
 
                                 <input type="hidden" name="tahun_ajaran" value="<?= htmlspecialchars($tahun_ajaran_filter, ENT_QUOTES, 'UTF-8') ?>">
+
+                                <?php else: ?>
+                            <div class="mb-3">
+                                <?php endif; ?>
 
                                 <div class="table-responsive">
 
@@ -1013,7 +1024,9 @@ require_once '../templates/sidebar.php';
                                                     <?php endif; ?>
                                                 </th>
 
+                                                <?php if ($can_crud): ?>
                                                 <th style="min-width:120px;">Keterangan</th>
+                                                <?php endif; ?>
                                                 <th style="min-width:120px;">Aksi</th>
 
                                             </tr>
@@ -1056,11 +1069,13 @@ foreach ($rows as $r):
                                                     <?php endif; ?>
                                                 </td>
 
+                                                <?php if ($can_crud): ?>
                                                 <td class="align-middle">
 
                                                     <span class="pu-ket-teks badge <?= $isL ? 'badge-success' : 'badge-danger' ?>"><?= $isL ? 'Lulus' : 'Tidak lulus' ?></span>
 
                                                 </td>
+                                                <?php endif; ?>
                                                 <td class="align-middle">
                                                     <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&id_siswa=<?= (int) $idS ?>">
                                                         <i class="fas fa-print mr-1"></i> Cetak
@@ -1081,7 +1096,11 @@ foreach ($rows as $r):
                                 <button type="submit" class="btn btn-success"><i class="fas fa-save mr-1"></i> Simpan status kelulusan</button>
                                 <?php endif; ?>
 
+                                <?php if ($can_crud): ?>
                             </form>
+                                <?php else: ?>
+                            </div>
+                                <?php endif; ?>
 
                             <?php endif; ?>
 
