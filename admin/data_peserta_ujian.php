@@ -466,19 +466,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_kelulusan'])) 
 
             );
 
-            foreach ($payload as $idKey => $data) {
+            /* Checkbox tidak ikut POST jika tidak dicentang — iterasi semua peserta TA agar uncheck / partial uncheck tersimpan. */
+            foreach (array_keys($ids_ok) as $idKey) {
 
                 $id_siswa = (int) $idKey;
 
-                if ($id_siswa <= 0 || !isset($ids_ok[$id_siswa])) {
+                if ($id_siswa <= 0) {
 
                     continue;
 
                 }
 
+                $data = $payload[$id_siswa] ?? $payload[(string) $id_siswa] ?? [];
+
                 if (!is_array($data)) {
 
-                    continue;
+                    $data = [];
 
                 }
 
@@ -943,7 +946,7 @@ require_once '../templates/sidebar.php';
 
                                         </div>
 
-                                        <button type="submit" class="btn btn-secondary"><i class="fas fa-save mr-1"></i> Simpan pengaturan surat</button>
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Simpan pengaturan surat</button>
                                         <a class="btn btn-outline-primary ml-2" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print mr-1"></i> Cetak Semua</a>
 
                                         <?php if ($tanggal_surat_kelulusan): ?>
@@ -1076,8 +1079,6 @@ foreach ($rows as $r):
 
                                 <?php if ($can_crud): ?>
                                 <button type="submit" class="btn btn-success"><i class="fas fa-save mr-1"></i> Simpan status kelulusan</button>
-
-                                <small class="text-muted d-block mt-2">Status Lulus tiap siswa serta teks «Lulus/Tidak lulus» ikut disimpan. Tampilan ke akun siswa diatur dengan satu tombol di bagian atas.</small>
                                 <?php endif; ?>
 
                             </form>
