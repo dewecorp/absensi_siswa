@@ -14,11 +14,33 @@ if (session_status() == PHP_SESSION_NONE) {
 
 
 
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha', 'wali'])) {
 
     redirect('../login.php');
 
 }
+
+$current_level = getUserLevel();
+$is_wali = $current_level === 'wali';
+$is_tata_usaha = $current_level === 'tata_usaha';
+$is_admin = $current_level === 'admin';
+$is_wali_kelas_6 = false;
+
+if ($is_wali && isset($_SESSION['nama_guru'])) {
+    $stmt_cls = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE wali_kelas = ? LIMIT 1");
+    $stmt_cls->execute([$_SESSION['nama_guru']]);
+    $kelas_wali = (string) ($stmt_cls->fetchColumn() ?: '');
+    $kelas_wali_upper = strtoupper($kelas_wali);
+    if (strpos($kelas_wali_upper, '6') !== false || strpos($kelas_wali_upper, 'VI') !== false) {
+        $is_wali_kelas_6 = true;
+    }
+}
+
+if ($is_wali && !$is_wali_kelas_6) {
+    redirect('../wali/dashboard.php');
+}
+
+$can_crud = $is_admin || $is_tata_usaha;
 
 
 
@@ -224,7 +246,9 @@ $message = null;
 
 
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_jadwal_kelulusan'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$can_crud) {
+    $message = ['type' => 'danger', 'text' => 'Akses dibatasi. Wali Kelas 6 hanya dapat melihat informasi Data Peserta Ujian.'];
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_jadwal_kelulusan'])) {
 
     $ta_post = trim((string) ($_POST['tahun_ajaran'] ?? ''));
 
@@ -800,6 +824,7 @@ require_once '../templates/sidebar.php';
 
                             <div class="card-header-action d-flex flex-wrap align-items-center justify-content-end">
 
+                                <?php if ($can_crud): ?>
                                 <form method="post" class="mb-2 mb-md-0 mr-2">
 
                                     <input type="hidden" name="simpan_toggle_tampil_akun_siswa" value="1">
@@ -815,12 +840,15 @@ require_once '../templates/sidebar.php';
                                     </button>
 
                                 </form>
+                                <?php endif; ?>
 
+                                <?php if ($can_crud): ?>
                                 <button type="button" class="btn btn-outline-secondary btn-sm mr-2 mb-2 mb-md-0" data-toggle="modal" data-target="#modalJadwalKelulusan">
 
                                     <i class="fas fa-clock mr-1"></i> Atur waktu pengumuman
 
                                 </button>
+                                <?php endif; ?>
 
                                 <form method="get" class="form-inline mb-0">
 
@@ -844,6 +872,7 @@ require_once '../templates/sidebar.php';
 
                         <div class="card-body">
 
+                            <?php if ($can_crud): ?>
                             <p class="text-muted small mb-3">
 
                                 <strong>Jadwal &amp; tayang (TA <?= htmlspecialchars($tahun_ajaran_filter) ?>):</strong>
@@ -869,12 +898,14 @@ require_once '../templates/sidebar.php';
                                 <?php endif; ?>
 
                             </p>
+                            <?php endif; ?>
 
+                            <?php if ($can_crud): ?>
                             <div class="card border mb-4 bg-light">
 
                                 <div class="card-body pb-4">
 
-                                    <h5 class="mb-3 text-dark"><i class="fas fa-file-signature mr-2"></i>Surat cetak kelulusan (TA <?= htmlspecialchars($tahun_ajaran_filter) ?>)</h5>
+                                    <h5 class="mb-3 text-dark"><i class="fas fa-file-signature mr-2"></i>Cetak Surat Kelulusan (TA <?= htmlspecialchars($tahun_ajaran_filter) ?>)</h5>
 
                                     <p class="text-muted small mb-3">Atur tanggal pada surat (<strong>bukan otomatis tanggal cetak</strong>) dan tempat kota surat untuk halaman cetak siswa.</p>
 
@@ -913,7 +944,7 @@ require_once '../templates/sidebar.php';
                                         </div>
 
                                         <button type="submit" class="btn btn-secondary"><i class="fas fa-save mr-1"></i> Simpan pengaturan surat</button>
-                                        <a class="btn btn-outline-primary ml-2" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print mr-1"></i> Cetak Semua</a>
+                                        <a class="btn btn-outline-primary ml-2" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print mr-1"></i> Cetak Semua</a>
 
                                         <?php if ($tanggal_surat_kelulusan): ?>
 
@@ -926,9 +957,11 @@ require_once '../templates/sidebar.php';
                                 </div>
 
                             </div>
+                            <?php endif; ?>
 
 
 
+                            <?php if ($can_crud): ?>
                             <form method="post" class="mb-3" id="form-generate-nomor-ujian">
 
                                 <input type="hidden" name="generate_nomor_semua" value="1">
@@ -938,6 +971,7 @@ require_once '../templates/sidebar.php';
                                 <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt mr-1"></i> Generate Nomor Ujian</button>
 
                             </form>
+                            <?php endif; ?>
 
 
 
@@ -971,7 +1005,9 @@ require_once '../templates/sidebar.php';
 
                                                 <th class="text-center align-middle" style="min-width:96px;">
                                                     <div class="small font-weight-bold mb-1">Status Lulus</div>
+                                                    <?php if ($can_crud): ?>
                                                     <input type="checkbox" id="pu-cb-master-lulus" class="pu-cb-master-lulus" title="Centang atau uncentang semua siswa" aria-label="Pilih semua status lulus">
+                                                    <?php endif; ?>
                                                 </th>
 
                                                 <th style="min-width:120px;">Keterangan</th>
@@ -1010,9 +1046,11 @@ foreach ($rows as $r):
                                                 <td class="align-middle"><?= htmlspecialchars($r['nama_siswa'] ?? '-') ?></td>
 
                                                 <td class="align-middle text-center">
-
+                                                    <?php if ($can_crud): ?>
                                                     <input type="checkbox" class="pu-cb-lulus" id="lu<?= $idS ?>" name="pu[<?= $idS ?>][lulus]" value="1" <?= $isL ? 'checked' : '' ?> aria-label="Status Lulus" title="Centang jika lulus">
-
+                                                    <?php else: ?>
+                                                    <span class="pu-ket-teks badge <?= $isL ? 'badge-success' : 'badge-danger' ?>"><?= $isL ? 'Lulus' : 'Tidak lulus' ?></span>
+                                                    <?php endif; ?>
                                                 </td>
 
                                                 <td class="align-middle">
@@ -1021,7 +1059,7 @@ foreach ($rows as $r):
 
                                                 </td>
                                                 <td class="align-middle">
-                                                    <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?ta=<?= urlencode($tahun_ajaran_filter) ?>&id_siswa=<?= (int) $idS ?>">
+                                                    <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?session_type=<?= urlencode($current_level) ?>&ta=<?= urlencode($tahun_ajaran_filter) ?>&id_siswa=<?= (int) $idS ?>">
                                                         <i class="fas fa-print mr-1"></i> Cetak
                                                     </a>
                                                 </td>
@@ -1036,9 +1074,11 @@ foreach ($rows as $r):
 
                                 </div>
 
+                                <?php if ($can_crud): ?>
                                 <button type="submit" class="btn btn-success"><i class="fas fa-save mr-1"></i> Simpan status kelulusan</button>
 
                                 <small class="text-muted d-block mt-2">Status Lulus tiap siswa serta teks «Lulus/Tidak lulus» ikut disimpan. Tampilan ke akun siswa diatur dengan satu tombol di bagian atas.</small>
+                                <?php endif; ?>
 
                             </form>
 
@@ -1060,6 +1100,7 @@ foreach ($rows as $r):
 
 
 
+<?php if ($can_crud): ?>
 <div class="modal fade" id="modalJadwalKelulusan" tabindex="-1" role="dialog" aria-labelledby="modalJadwalKelulusanLabel" aria-hidden="true">
 
     <div class="modal-dialog" role="document">
@@ -1131,6 +1172,7 @@ foreach ($rows as $r):
     </div>
 
 </div>
+<?php endif; ?>
 
 
 

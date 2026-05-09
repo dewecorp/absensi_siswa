@@ -485,9 +485,10 @@ switch ($user_level) {
                 'submenu' => [
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=tata_usaha', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'kalender_pendidikan.php'],
-                    ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'siswa_baru.php']
+                    ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'siswa_baru.php'],
+                    ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_peserta_ujian.php']
                 ],
-                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -872,6 +873,7 @@ switch ($user_level) {
         ];
         if ($is_grade_6) {
             $data_utama_submenu_wali[] = ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=wali', 'active' => $current_page === 'data_nilai_ujian.php'];
+            $data_utama_submenu_wali[] = ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php?session_type=wali', 'active' => $current_page === 'data_peserta_ujian.php'];
         }
 
         $data_utama_urls_wali = array_map(function($item) {

@@ -137,6 +137,17 @@ require_once '../templates/sidebar.php';
         line-height: 1.75;
         font-size: 0.98rem;
     }
+    .surat-kelulusan-card .info-waktu-kelulusan {
+        font-size: clamp(1.15rem, 2.8vw, 1.55rem);
+        line-height: 1.75;
+        font-weight: 700;
+        padding: 0.55rem 1rem;
+        background: rgba(103, 119, 239, 0.08);
+        border-radius: 0.5rem;
+        display: table;
+        margin: 0 auto;
+        text-align: center;
+    }
     @media (max-width: 575px) {
         .surat-kelulusan-card .surat-du-item {
             grid-template-columns: 1fr;
@@ -245,7 +256,7 @@ require_once '../templates/sidebar.php';
 
                             <?php if ($belum_waktunya): ?>
                                 <hr class="surat-pembagi">
-                                <p class="text-primary text-center mb-0">
+                                <p class="text-primary text-center mb-0 info-waktu-kelulusan">
                                     <i class="fas fa-clock mr-1"></i>
                                     Isi pengumuman dapat dilihat mulai <strong><?= htmlspecialchars($tanggal_jadwal_teks) ?></strong>.
                                 </p>
