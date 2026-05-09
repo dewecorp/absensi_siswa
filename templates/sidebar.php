@@ -216,6 +216,7 @@ switch ($user_level) {
                     ['title' => 'Data Guru', 'url' => '../admin/data_guru.php', 'active' => $current_page === 'data_guru.php'],
                     ['title' => 'Data Kelas', 'url' => '../admin/data_kelas.php', 'active' => $current_page === 'data_kelas.php'],
                     ['title' => 'Data Siswa', 'url' => '../admin/data_siswa.php', 'active' => $current_page === 'data_siswa.php'],
+                    ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php', 'active' => $current_page === 'data_peserta_ujian.php'],
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php', 'active' => $current_page === 'siswa_baru.php'],
                     ['title' => 'Data Alumni', 'url' => '../admin/data_alumni.php', 'active' => $current_page === 'data_alumni.php'],
                     ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php', 'active' => $current_page === 'data_nilai_ujian.php'],
@@ -224,7 +225,7 @@ switch ($user_level) {
                     ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php', 'active' => $current_page === 'kalender_pendidikan.php']
                 ],
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'data_peserta_ujian.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -1023,6 +1024,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-fire',
                 'url' => '../siswa/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Info Kelulusan',
+                'icon' => 'fas fa-graduation-cap',
+                'url' => '../siswa/info_kelulusan.php',
+                'active' => $current_page === 'info_kelulusan.php'
             ],
             [
                 'title' => 'Absensi',

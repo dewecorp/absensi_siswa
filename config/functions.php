@@ -230,6 +230,60 @@ function isTahunAjaranFormatValid(?string $ta): bool {
     return (int)$m[2] === (int)$m[1] + 1;
 }
 
+/** Dua digit akhir tahun kedua pada tahun ajaran "YYYY/YYYY+1" (contoh 2025/2026 → "26"). */
+function tahunAjaranSuffix2(?string $tahunAjaran): string {
+    $tahunAjaran = trim((string)$tahunAjaran);
+    if (preg_match('/\/(\d{4})$/', $tahunAjaran, $m)) {
+        return substr($m[1], -2);
+    }
+    return substr((string)((int) date('Y') % 100), -2);
+}
+
+/** Kode sekolah untuk nomor ujian: hanya angka, tepat 4 digit (hingga 9999). */
+function normalizeKodeNomorUjian4(?string $raw): string {
+    $d = preg_replace('/\D/', '', (string) $raw);
+    if ($d === '') {
+        return '';
+    }
+    $d = substr($d, -4);
+    return str_pad($d, 4, '0', STR_PAD_LEFT);
+}
+
+/** Kode wilayah kecamatan dalam nomor ujian (hardcode). */
+function nomorUjianKodeKecamatanTetap(): int {
+    return 11;
+}
+
+/** Kode wilayah kabupaten dalam nomor ujian (hardcode). */
+function nomorUjianKodeKabupatenTetap(): int {
+    return 20;
+}
+
+/** Tingkat dalam nomor ujian (hardcode). */
+function nomorUjianTingkatTetap(): int {
+    return 1;
+}
+
+/** Kode madrasah empat digit dalam nomor ujian (hardcode). */
+function nomorUjianKodeMadrasahTetap(): string {
+    return normalizeKodeNomorUjian4('0140');
+}
+
+/**
+ * Susun nomor ujian: YY-kecamatan-kabupaten-tingkat-kode madrasah-urut.
+ * Hanya dua digit tahun (dari TA) dan urutan yang bersifat dinamis per generate.
+ */
+function susunNomorUjianFormal(string $yy2, int $urut): string {
+    $kec = nomorUjianKodeKecamatanTetap();
+    $kab = nomorUjianKodeKabupatenTetap();
+    $tingkat = nomorUjianTingkatTetap();
+    $kode4 = nomorUjianKodeMadrasahTetap();
+    $yy2 = preg_replace('/\D/', '', $yy2);
+    $yy2 = str_pad(substr($yy2 !== '' ? $yy2 : '0', -2), 2, '0', STR_PAD_LEFT);
+    $urut = max(1, min(9999, $urut));
+    return sprintf('%s-%02d-%02d-%d-%s-%04d', $yy2, $kec, $kab, $tingkat, $kode4, $urut);
+}
+
 /**
  * Rentang tanggal (inclusive) untuk tahun ajaran: Juli y0 - Juni (y0+1).
  *
