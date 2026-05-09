@@ -279,6 +279,8 @@ function getSchoolProfile($pdo) {
         'nama_yayasan' => '',
         'nama_madrasah' => 'Madrasah',
         'alamat' => '',
+        'email_madrasah' => '',
+        'website_madrasah' => '',
         'kepala_madrasah' => '',
         'nama_kepala' => '',
         'nip_kepala' => '',

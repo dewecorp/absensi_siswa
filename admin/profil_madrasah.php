@@ -7,6 +7,26 @@ if (!isAuthorized(['admin'])) {
     redirect('../login.php');
 }
 
+// Pastikan kolom alamat / email / website ada (instalasi lama tanpa kolom ini)
+try {
+    $cols = $pdo->query('SHOW COLUMNS FROM tb_profil_madrasah')->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('alamat', $cols, true)) {
+        $pdo->exec('ALTER TABLE tb_profil_madrasah ADD COLUMN alamat VARCHAR(500) DEFAULT NULL AFTER nama_madrasah');
+    }
+    $cols = $pdo->query('SHOW COLUMNS FROM tb_profil_madrasah')->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('email_madrasah', $cols, true)) {
+        $after = in_array('alamat', $cols, true) ? 'alamat' : 'nama_madrasah';
+        $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN email_madrasah VARCHAR(255) DEFAULT NULL AFTER {$after}");
+    }
+    $cols = $pdo->query('SHOW COLUMNS FROM tb_profil_madrasah')->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('website_madrasah', $cols, true)) {
+        $after = in_array('email_madrasah', $cols, true) ? 'email_madrasah' : (in_array('alamat', $cols, true) ? 'alamat' : 'nama_madrasah');
+        $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN website_madrasah VARCHAR(512) DEFAULT NULL AFTER {$after}");
+    }
+} catch (Throwable $e) {
+    error_log('Profil madrasah: pastikan kolom extended — ' . $e->getMessage());
+}
+
 // Set page title
 $page_title = 'Profil Madrasah';
 
@@ -179,20 +199,36 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
         // Handle Update Profile
         elseif (isset($_POST['nama_yayasan'])) {
             $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
-        $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
-        $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
-        $nip_kepala = sanitizeInput($_POST['nip_kepala']);
-        $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
-        $tahun_ajaran_allowed = buildTahunAjaranProfilOptions($school_profile['tahun_ajaran'] ?? null, $tahun_untuk_opsi_profil);
-        if (!in_array($tahun_ajaran, $tahun_ajaran_allowed, true)) {
-            $message = ['type' => 'danger', 'text' => 'Tahun ajaran tidak valid. Pilih dari daftar yang tersedia.'];
-        }
-        $semester = sanitizeInput($_POST['semester']);
-        $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
-        $tempat_jadwal = sanitizeInput($_POST['tempat_jadwal']);
-        
-        // Handle logo upload
-    $logo = $school_profile['logo']; // Keep existing logo if no new file is uploaded
+            $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
+            $alamat = sanitizeInput($_POST['alamat'] ?? '');
+            $email_plain = trim(stripslashes($_POST['email_madrasah'] ?? ''));
+            if ($email_plain !== '' && !filter_var($email_plain, FILTER_VALIDATE_EMAIL)) {
+                $message = ['type' => 'danger', 'text' => 'Format email madrasah tidak valid.'];
+            }
+            $email_madrasah = sanitizeInput($_POST['email_madrasah'] ?? '');
+            $website_madrasah = '';
+            $website_plain = trim(stripslashes($_POST['website_madrasah'] ?? ''));
+            if (empty($message) && $website_plain !== '') {
+                $normalized = preg_match('#^https?://#i', $website_plain) ? $website_plain : 'https://' . $website_plain;
+                if (!filter_var($normalized, FILTER_VALIDATE_URL)) {
+                    $message = ['type' => 'danger', 'text' => 'Format website madrasah tidak valid (contoh: https://domain.com).'];
+                } else {
+                    $website_madrasah = mb_substr($normalized, 0, 512);
+                }
+            }
+            $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
+            $nip_kepala = sanitizeInput($_POST['nip_kepala']);
+            $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
+            $tahun_ajaran_allowed = buildTahunAjaranProfilOptions($school_profile['tahun_ajaran'] ?? null, $tahun_untuk_opsi_profil);
+            if (empty($message) && !in_array($tahun_ajaran, $tahun_ajaran_allowed, true)) {
+                $message = ['type' => 'danger', 'text' => 'Tahun ajaran tidak valid. Pilih dari daftar yang tersedia.'];
+            }
+            $semester = sanitizeInput($_POST['semester']);
+            $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
+            $tempat_jadwal = sanitizeInput($_POST['tempat_jadwal']);
+
+            // Handle logo upload
+            $logo = $school_profile['logo']; // Keep existing logo if no new file is uploaded
     if (isset($_FILES['logo']) && $_FILES['logo']['error'] == 0) {
         $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
         $file_extension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
@@ -266,9 +302,9 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
         }
     }
     
-    if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, kepala_madrasah=?, nip_kepala=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
-        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $kepala_madrasah, $nip_kepala, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $logo, $hero_image, $ttd_kepala])) {
+            if (empty($message)) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $logo, $hero_image, $ttd_kepala])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
@@ -319,10 +355,16 @@ include '../templates/sidebar.php';
                                 <div class="card-body">
                                     <form method="POST" action="" enctype="multipart/form-data">
                                         <div class="row">
-                                            <div class="col-12">
+                                            <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Nama Yayasan</label>
                                                     <input type="text" class="form-control" name="nama_yayasan" value="<?php echo htmlspecialchars($school_profile['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN ISLAM'); ?>" placeholder="Contoh: YAYASAN PENDIDIKAN ISLAM">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Nama Madrasah</label>
+                                                    <input type="text" class="form-control" name="nama_madrasah" value="<?php echo htmlspecialchars($school_profile['nama_madrasah']); ?>" required>
                                                 </div>
                                             </div>
                                         </div>
@@ -330,8 +372,23 @@ include '../templates/sidebar.php';
                                         <div class="row">
                                             <div class="col-12">
                                                 <div class="form-group">
-                                                    <label>Nama Madrasah</label>
-                                                    <input type="text" class="form-control" name="nama_madrasah" value="<?php echo htmlspecialchars($school_profile['nama_madrasah']); ?>" required>
+                                                    <label>Alamat Madrasah</label>
+                                                    <textarea class="form-control" name="alamat" rows="2" placeholder="Alamat lengkap madrasah"><?php echo htmlspecialchars($school_profile['alamat'] ?? ''); ?></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Email Madrasah</label>
+                                                    <input type="email" class="form-control" name="email_madrasah" value="<?php echo htmlspecialchars($school_profile['email_madrasah'] ?? ''); ?>" placeholder="Contoh: info@madrasah.sch.id" autocomplete="email">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Website Madrasah</label>
+                                                    <input type="text" class="form-control" name="website_madrasah" value="<?php echo htmlspecialchars($school_profile['website_madrasah'] ?? ''); ?>" placeholder="Contoh: https://madrasah.sch.id">
                                                 </div>
                                             </div>
                                         </div>
