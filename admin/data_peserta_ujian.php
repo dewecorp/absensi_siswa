@@ -100,6 +100,12 @@ try {
 
         siswa_lihat_kelulusan TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Satu pengaturan global: tampilkan info kelulusan di akun siswa',
 
+        tanggal_surat_kelulusan DATE DEFAULT NULL,
+
+        kota_surat VARCHAR(80) DEFAULT NULL,
+
+        qr_tanda_tangan_payload VARCHAR(768) DEFAULT NULL,
+
         updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
         PRIMARY KEY (tahun_ajaran)
@@ -119,6 +125,26 @@ try {
     $pdo->exec('ALTER TABLE tb_kelulusan_jadwal ADD COLUMN siswa_lihat_kelulusan TINYINT(1) NOT NULL DEFAULT 0 COMMENT \'Tampilan global untuk akun siswa\' AFTER waktu_mulai_tampil');
 
 } catch (PDOException $e) {
+
+}
+
+foreach ([
+
+    ['tanggal_surat_kelulusan', "DATE DEFAULT NULL COMMENT 'Tanggal surat keterangan (bukan tanggal cetak)' AFTER siswa_lihat_kelulusan"],
+
+    ['kota_surat', "VARCHAR(80) DEFAULT NULL COMMENT 'Tempat kota di tanggal surat' AFTER tanggal_surat_kelulusan"],
+
+    ['qr_tanda_tangan_payload', "VARCHAR(768) DEFAULT NULL COMMENT 'Isi QR tanda tangan kepala (kosong=otomatis)' AFTER kota_surat"],
+
+] as $colPair) {
+
+    try {
+
+        $pdo->exec("ALTER TABLE tb_kelulusan_jadwal ADD COLUMN `{$colPair[0]}` {$colPair[1]}");
+
+    } catch (PDOException $e) {
+
+    }
 
 }
 
@@ -305,6 +331,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_toggle_tampil_
         } catch (Throwable $e) {
 
             $message = ['type' => 'danger', 'text' => 'Gagal menyimpan pengaturan: ' . $e->getMessage()];
+
+        }
+
+    }
+
+}
+
+
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_surat_kelulusan'])) {
+
+    $ta_post = trim((string) ($_POST['tahun_ajaran'] ?? ''));
+
+    if (!isTahunAjaranFormatValid($ta_post) || !in_array($ta_post, $tahun_ajaran_options, true)) {
+
+        $message = ['type' => 'danger', 'text' => 'Tahun Ajaran Tidak Valid Untuk Pengaturan Surat.'];
+
+    } else {
+
+        $raw_tgl = trim((string) ($_POST['tanggal_surat_kelulusan'] ?? ''));
+
+        $tanggal_db = null;
+
+        if ($raw_tgl !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw_tgl)) {
+
+            $tanggal_db = $raw_tgl;
+
+        }
+
+        $kota = trim((string) ($_POST['kota_surat'] ?? ''));
+
+        $kota = $kota === '' ? null : mb_substr($kota, 0, 80);
+
+        try {
+
+            $pdo->prepare(
+
+                'INSERT INTO tb_kelulusan_jadwal (tahun_ajaran, tanggal_surat_kelulusan, kota_surat)
+
+                 VALUES (?,?,?)
+
+                 ON DUPLICATE KEY UPDATE tanggal_surat_kelulusan = VALUES(tanggal_surat_kelulusan), kota_surat = VALUES(kota_surat)'
+
+            )->execute([$ta_post, $tanggal_db, $kota]);
+
+            if (function_exists('logActivity')) {
+
+                logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Data Peserta Ujian', 'Surat kelulusan TA ' . $ta_post . ' tgl ' . ($tanggal_db ?? '-'));
+
+            }
+
+            redirect('data_peserta_ujian.php?ta=' . urlencode($ta_post) . '&ok=surat');
+
+        } catch (Throwable $e) {
+
+            $message = ['type' => 'danger', 'text' => 'Gagal menyimpan pengaturan surat: ' . $e->getMessage()];
 
         }
 
@@ -520,6 +602,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
     }
 
+    if (isset($_GET['ok']) && $_GET['ok'] === 'surat') {
+
+        $message = ['type' => 'success', 'text' => 'Pengaturan surat kelulusan (tanggal surat) disimpan.'];
+
+    }
+
 }
 
 
@@ -548,9 +636,13 @@ $jadwal_waktu = null;
 
 $tampil_global_siswa = false;
 
+$tanggal_surat_kelulusan = null;
+
+$kota_surat_kelulusan = '';
+
 try {
 
-    $stJ = $pdo->prepare('SELECT waktu_mulai_tampil, COALESCE(siswa_lihat_kelulusan, 0) AS siswa_lihat_kelulusan FROM tb_kelulusan_jadwal WHERE tahun_ajaran = ? LIMIT 1');
+    $stJ = $pdo->prepare('SELECT waktu_mulai_tampil, COALESCE(siswa_lihat_kelulusan, 0) AS siswa_lihat_kelulusan, tanggal_surat_kelulusan, kota_surat FROM tb_kelulusan_jadwal WHERE tahun_ajaran = ? LIMIT 1');
 
     $stJ->execute([$tahun_ajaran_filter]);
 
@@ -568,6 +660,16 @@ try {
 
         $tampil_global_siswa = ((int) ($rowJ['siswa_lihat_kelulusan'] ?? 0)) === 1;
 
+        $tanggal_surat_kelulusan = $rowJ['tanggal_surat_kelulusan'] ?? null;
+
+        if ($tanggal_surat_kelulusan === '') {
+
+            $tanggal_surat_kelulusan = null;
+
+        }
+
+        $kota_surat_kelulusan = trim((string) ($rowJ['kota_surat'] ?? ''));
+
     }
 
 } catch (PDOException $e) {
@@ -575,6 +677,22 @@ try {
     $jadwal_waktu = null;
 
     $tampil_global_siswa = false;
+
+}
+
+$tanggal_surat_form_value = '';
+
+if ($tanggal_surat_kelulusan) {
+
+    try {
+
+        $tanggal_surat_form_value = (new DateTime((string) $tanggal_surat_kelulusan))->format('Y-m-d');
+
+    } catch (Exception $e) {
+
+        $tanggal_surat_form_value = '';
+
+    }
 
 }
 
@@ -752,6 +870,63 @@ require_once '../templates/sidebar.php';
 
                             </p>
 
+                            <div class="card border mb-4 bg-light">
+
+                                <div class="card-body pb-4">
+
+                                    <h5 class="mb-3 text-dark"><i class="fas fa-file-signature mr-2"></i>Surat cetak kelulusan (TA <?= htmlspecialchars($tahun_ajaran_filter) ?>)</h5>
+
+                                    <p class="text-muted small mb-3">Atur tanggal pada surat (<strong>bukan otomatis tanggal cetak</strong>) dan tempat kota surat untuk halaman cetak siswa.</p>
+
+                                    <form method="post" class="">
+
+                                        <input type="hidden" name="simpan_surat_kelulusan" value="1">
+
+                                        <input type="hidden" name="tahun_ajaran" value="<?= htmlspecialchars($tahun_ajaran_filter, ENT_QUOTES, 'UTF-8') ?>">
+
+                                        <div class="row">
+
+                                            <div class="col-md-4">
+
+                                                <div class="form-group mb-3">
+
+                                                    <label for="tanggal_surat_kelulusan">Tanggal surat</label>
+
+                                                    <input type="date" class="form-control" id="tanggal_surat_kelulusan" name="tanggal_surat_kelulusan" value="<?= htmlspecialchars($tanggal_surat_form_value, ENT_QUOTES, 'UTF-8') ?>">
+
+                                                </div>
+
+                                            </div>
+
+                                            <div class="col-md-4">
+
+                                                <div class="form-group mb-3">
+
+                                                    <label for="kota_surat">Kota pada tanggal surat</label>
+
+                                                    <input type="text" class="form-control" id="kota_surat" name="kota_surat" value="<?= htmlspecialchars($kota_surat_kelulusan, ENT_QUOTES, 'UTF-8') ?>" placeholder="Contoh: Jepara" maxlength="80">
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                        <button type="submit" class="btn btn-secondary"><i class="fas fa-save mr-1"></i> Simpan pengaturan surat</button>
+                                        <a class="btn btn-outline-primary ml-2" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?ta=<?= urlencode($tahun_ajaran_filter) ?>&mode=all"><i class="fas fa-print mr-1"></i> Cetak Semua</a>
+
+                                        <?php if ($tanggal_surat_kelulusan): ?>
+
+                                            <span class="text-muted small ml-2 align-middle">Tersimpan : <?= htmlspecialchars(formatDateIndonesia((string) $tanggal_surat_kelulusan), ENT_QUOTES, 'UTF-8') ?></span>
+
+                                        <?php endif; ?>
+
+                                    </form>
+
+                                </div>
+
+                            </div>
+
 
 
                             <form method="post" class="mb-3" id="form-generate-nomor-ujian">
@@ -800,6 +975,7 @@ require_once '../templates/sidebar.php';
                                                 </th>
 
                                                 <th style="min-width:120px;">Keterangan</th>
+                                                <th style="min-width:120px;">Aksi</th>
 
                                             </tr>
 
@@ -843,6 +1019,11 @@ foreach ($rows as $r):
 
                                                     <span class="pu-ket-teks badge <?= $isL ? 'badge-success' : 'badge-danger' ?>"><?= $isL ? 'Lulus' : 'Tidak lulus' ?></span>
 
+                                                </td>
+                                                <td class="align-middle">
+                                                    <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer" href="cetak_surat_kelulusan.php?ta=<?= urlencode($tahun_ajaran_filter) ?>&id_siswa=<?= (int) $idS ?>">
+                                                        <i class="fas fa-print mr-1"></i> Cetak
+                                                    </a>
                                                 </td>
 
                                             </tr>

@@ -29,6 +29,9 @@ try {
         tahun_ajaran VARCHAR(30) NOT NULL,
         waktu_mulai_tampil DATETIME DEFAULT NULL,
         siswa_lihat_kelulusan TINYINT(1) NOT NULL DEFAULT 0,
+        tanggal_surat_kelulusan DATE DEFAULT NULL,
+        kota_surat VARCHAR(80) DEFAULT NULL,
+        qr_tanda_tangan_payload VARCHAR(768) DEFAULT NULL,
         updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (tahun_ajaran)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -38,6 +41,17 @@ try {
 try {
     $pdo->exec("ALTER TABLE tb_kelulusan_jadwal ADD COLUMN siswa_lihat_kelulusan TINYINT(1) NOT NULL DEFAULT 0 AFTER waktu_mulai_tampil");
 } catch (PDOException $e) {
+}
+
+foreach ([
+    ['tanggal_surat_kelulusan', "DATE DEFAULT NULL AFTER siswa_lihat_kelulusan"],
+    ['kota_surat', 'VARCHAR(80) DEFAULT NULL AFTER tanggal_surat_kelulusan'],
+    ['qr_tanda_tangan_payload', 'VARCHAR(768) DEFAULT NULL AFTER kota_surat'],
+] as $_kelCol) {
+    try {
+        $pdo->exec("ALTER TABLE tb_kelulusan_jadwal ADD COLUMN `{$_kelCol[0]}` {$_kelCol[1]}");
+    } catch (PDOException $_e) {
+    }
 }
 
 foreach ([
@@ -53,17 +67,33 @@ foreach ([
 
 $page_title = 'Info Kelulusan';
 
-$sql = "
+$school_profile = getSchoolProfile($pdo);
+$nama_madrasah_profil = trim((string) ($school_profile['nama_madrasah'] ?? 'Madrasah'));
+$taBerjalan = trim((string) ($school_profile['tahun_ajaran'] ?? ''));
+$filterTaBerjalan = isTahunAjaranFormatValid($taBerjalan);
+
+$sql = '
     SELECT pu.tahun_ajaran, pu.nomor_ujian, pu.is_lulus, pu.keterangan_kelulusan,
-           j.waktu_mulai_tampil
+           j.waktu_mulai_tampil, j.tanggal_surat_kelulusan
     FROM tb_peserta_ujian pu
     INNER JOIN tb_kelulusan_jadwal j ON j.tahun_ajaran = pu.tahun_ajaran AND j.siswa_lihat_kelulusan = 1
-    WHERE pu.id_siswa = ?
-    ORDER BY pu.tahun_ajaran DESC
-";
+    WHERE pu.id_siswa = ?';
+$paramsKel = [$id_siswa];
+if ($filterTaBerjalan) {
+    $sql .= ' AND pu.tahun_ajaran = ?';
+    $paramsKel[] = $taBerjalan;
+}
+$sql .= ' ORDER BY pu.tahun_ajaran DESC';
+
 $st = $pdo->prepare($sql);
-$st->execute([$id_siswa]);
+$st->execute($paramsKel);
 $daftar = $st->fetchAll(PDO::FETCH_ASSOC);
+
+$stS = $pdo->prepare('SELECT nama_siswa, nisn FROM tb_siswa WHERE id_siswa = ? LIMIT 1');
+$stS->execute([$id_siswa]);
+$siswaInfo = $stS->fetch(PDO::FETCH_ASSOC) ?: ['nama_siswa' => '', 'nisn' => ''];
+$nama_siswa_teks = trim((string) ($siswaInfo['nama_siswa'] ?? ''));
+$nisn_teks = trim((string) ($siswaInfo['nisn'] ?? ''));
 
 $now = new DateTimeImmutable('now');
 
@@ -71,7 +101,101 @@ require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
 ?>
 
+<style>
+    .surat-kelulusan-card .surat-intro {
+        text-align: justify;
+        line-height: 1.75;
+        font-size: 0.98rem;
+    }
+    .surat-kelulusan-card .surat-pembagi {
+        border: 0;
+        border-top: 2px dashed #dee2e6;
+        margin: 1rem 0;
+    }
+    .surat-kelulusan-card .surat-du-item {
+        display: grid;
+        grid-template-columns: 11rem 1fr;
+        gap: 0.35rem 1rem;
+        align-items: baseline;
+        padding: 0.35rem 0;
+        border-bottom: 1px dashed #dee2e6;
+    }
+    .surat-kelulusan-card .surat-du-item:last-child {
+        border-bottom: none;
+    }
+    .surat-kelulusan-card .surat-dinyatakan {
+        letter-spacing: 0.06em;
+    }
+    .surat-kelulusan-card .surat-status-gede {
+        font-size: clamp(1.35rem, 3.5vw, 2rem);
+        font-weight: 800;
+        line-height: 1.3;
+        margin-top: 0.5rem;
+    }
+    .surat-kelulusan-card .surat-penutup {
+        text-align: justify;
+        line-height: 1.75;
+        font-size: 0.98rem;
+    }
+    @media (max-width: 575px) {
+        .surat-kelulusan-card .surat-du-item {
+            grid-template-columns: 1fr;
+        }
+    }
+    .kelulusan-countdown-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10050;
+        background: linear-gradient(145deg, rgba(20, 30, 85, 0.92), rgba(44, 82, 130, 0.9));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        transition: opacity 0.45s ease, visibility 0.45s ease;
+    }
+    .kelulusan-countdown-overlay.kelulusan-countdown--done {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+    .kelulusan-countdown-num {
+        font-size: clamp(4.5rem, 18vw, 8rem);
+        font-weight: 800;
+        line-height: 1;
+        color: #fff;
+        text-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+        display: inline-block;
+    }
+    .kelulusan-countdown-num.kelulusan-countdown-num--pop {
+        animation: kelulusan-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes kelulusan-pop {
+        0% {
+            transform: scale(0.35);
+            opacity: 0;
+        }
+        60% {
+            transform: scale(1.08);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+    .kelulusan-section-body--pending {
+        opacity: 0;
+        transition: opacity 0.55s ease 0.08s;
+    }
+    .kelulusan-section-body.kelulusan-section-body--ready {
+        opacity: 1;
+    }
+</style>
+
 <div class="main-content">
+    <div id="kelulusan-countdown-overlay" class="kelulusan-countdown-overlay" aria-live="polite" aria-busy="true">
+        <span id="kelulusan-countdown-num" class="kelulusan-countdown-num">5</span>
+        <p class="text-white mb-0 mt-3 small" style="opacity: 0.85;">Membuka pengumuman kelulusan…</p>
+    </div>
     <section class="section">
         <div class="section-header">
             <h1><?= htmlspecialchars($page_title) ?></h1>
@@ -81,11 +205,14 @@ require_once '../templates/sidebar.php';
             </div>
         </div>
 
-        <div class="section-body">
+        <div class="section-body kelulusan-section-body kelulusan-section-body--pending">
             <?php if (empty($daftar)): ?>
                 <div class="card">
                     <div class="card-body">
-                        <p class="text-muted mb-0">Belum ada informasi kelulusan yang ditampilkan untuk akun Anda. Jika Anda peserta ujian, hubungi Tata Usaha atau admin apabila seharusnya sudah tayang.</p>
+                        <p class="text-muted mb-0">Belum ada informasi kelulusan yang ditampilkan untuk akun Anda. Jika Anda peserta ujian kelas VI, hubungi Tata Usaha atau admin apabila pengumuman seharusnya sudah tayang.</p>
+                        <?php if ($filterTaBerjalan): ?>
+                            <p class="text-muted small mb-0 mt-2">Halaman ini menampilkan pengumuman untuk <strong>Tahun Ajaran <?= htmlspecialchars($taBerjalan, ENT_QUOTES, 'UTF-8') ?></strong> (tahun ajaran berjalan menurut profil madrasah). Pastikan data peserta ujian, jadwal kelulusan, dan «tampil di akun siswa» di admin sudah memakai tahun ajaran yang sama.</p>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php else: ?>
@@ -105,38 +232,78 @@ require_once '../templates/sidebar.php';
                         }
                     }
                     ?>
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h4>Kelulusan — Tahun Ajaran <?= htmlspecialchars($ta) ?></h4>
-                        </div>
-                        <div class="card-body">
+                    <div class="card mb-4 shadow-sm surat-kelulusan-card">
+                        <div class="card-body py-4 px-md-5">
+                            <h4 class="text-center text-uppercase font-weight-bold mb-4">Keterangan Kelulusan</h4>
+                            <p class="surat-intro mb-0">
+                                Berdasarkan hasil Pra Asesmen Madrasah dan Asesmen Madrasah, serta hasil rapat dewan guru dan Kepala
+                                <strong><?= htmlspecialchars($nama_madrasah_profil, ENT_QUOTES, 'UTF-8') ?></strong>
+                                Tahun Ajaran <strong><?= htmlspecialchars($ta, ENT_QUOTES, 'UTF-8') ?></strong>
+                                di <strong><?= htmlspecialchars($nama_madrasah_profil, ENT_QUOTES, 'UTF-8') ?></strong>.
+                                Maka dengan ini Kepala <strong><?= htmlspecialchars($nama_madrasah_profil, ENT_QUOTES, 'UTF-8') ?></strong> menyatakan bahwa:
+                            </p>
+
                             <?php if ($belum_waktunya): ?>
-                                <p class="text-primary mb-0">
+                                <hr class="surat-pembagi">
+                                <p class="text-primary text-center mb-0">
                                     <i class="fas fa-clock mr-1"></i>
-                                    Pengumuman kelulusan untuk tahun ajaran ini akan ditampilkan pada <strong><?= htmlspecialchars($tanggal_jadwal_teks) ?></strong>.
+                                    Isi pengumuman dapat dilihat mulai <strong><?= htmlspecialchars($tanggal_jadwal_teks) ?></strong>.
                                 </p>
                             <?php else: ?>
-                                <p class="mb-2">
-                                    <strong>Status:</strong>
-                                    <?php if (!empty($row['is_lulus'])): ?>
-                                        <span class="badge badge-success">Lulus</span>
+                                <hr class="surat-pembagi">
+
+                                <div class="surat-du-item mb-0">
+                                    <span class="font-weight-bold">Nama</span>
+                                    <span><?= $nama_siswa_teks !== '' ? htmlspecialchars($nama_siswa_teks, ENT_QUOTES, 'UTF-8') : '—' ?></span>
+                                </div>
+                                <div class="surat-du-item mb-0">
+                                    <span class="font-weight-bold">NISN</span>
+                                    <span><?= $nisn_teks !== '' ? htmlspecialchars($nisn_teks, ENT_QUOTES, 'UTF-8') : '—' ?></span>
+                                </div>
+                                <div class="surat-du-item mb-3">
+                                    <span class="font-weight-bold">Nomor Peserta AM</span>
+                                    <span><?php
+                                    $nou = trim((string) ($row['nomor_ujian'] ?? ''));
+                                    echo $nou !== '' ? htmlspecialchars($nou, ENT_QUOTES, 'UTF-8') : '—';
+                                    ?></span>
+                                </div>
+
+                                <hr class="surat-pembagi">
+
+                                <div class="text-center py-2">
+                                    <div class="surat-dinyatakan text-dark font-weight-bold text-uppercase" style="font-size: 1.15rem;">
+                                        Dinyatakan
+                                    </div>
+                                    <?php
+                                    $badgeLulus = !empty($row['is_lulus']);
+                                    ?>
+                                    <div class="surat-status-gede mt-2">
+                                        <span class="badge <?= $badgeLulus ? 'badge-success' : 'badge-danger' ?> px-3 py-2" style="font-size: inherit;">
+                                            <?= $badgeLulus ? 'LULUS' : 'TIDAK LULUS' ?>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <hr class="surat-pembagi">
+
+                                <p class="surat-penutup mb-0">
+                                    <?php if ($badgeLulus): ?>
+                                        Sehingga yang bersangkutan berhak memperoleh ijazah <?= htmlspecialchars($nama_madrasah_profil, ENT_QUOTES, 'UTF-8') ?> Tahun Ajaran <strong><?= htmlspecialchars($ta, ENT_QUOTES, 'UTF-8') ?></strong>.
                                     <?php else: ?>
-                                        <span class="badge badge-danger">Tidak lulus</span>
+                                        Yang bersangkutan tidak berhak memperoleh ijazah <?= htmlspecialchars($nama_madrasah_profil, ENT_QUOTES, 'UTF-8') ?> Tahun Ajaran <strong><?= htmlspecialchars($ta, ENT_QUOTES, 'UTF-8') ?></strong> hingga persyaratan kelulusan terpenuhi sesuai ketentuan madrasah.
                                     <?php endif; ?>
                                 </p>
-                                <?php if (!empty($row['nomor_ujian'])): ?>
-                                    <p class="mb-2"><strong>Nomor ujian:</strong> <?= htmlspecialchars((string) $row['nomor_ujian']) ?></p>
-                                <?php endif; ?>
-                                <?php
-                                $ket = trim((string) ($row['keterangan_kelulusan'] ?? ''));
-                                if ($ket === '') {
-                                    $ket = !empty($row['is_lulus']) ? 'Lulus' : 'Tidak lulus';
-                                }
-                                $badgeLulus = !empty($row['is_lulus']);
-                                ?>
-                                <p class="mb-0"><strong>Keterangan:</strong>
-                                    <span class="badge <?= $badgeLulus ? 'badge-success' : 'badge-danger' ?>"><?= htmlspecialchars($ket, ENT_QUOTES, 'UTF-8') ?></span>
-                                </p>
+
+                                <?php $ada_tgl_surat = !empty(trim((string) ($row['tanggal_surat_kelulusan'] ?? ''))); ?>
+                                <div class="text-center mt-4 no-print">
+                                    <?php if ($ada_tgl_surat): ?>
+                                        <a href="cetak_surat_kelulusan.php" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm"><i class="fas fa-print mr-1"></i> Cetak Surat Kelulusan</a>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-secondary btn-sm" disabled title="Tanggal surat belum diatur admin"><i class="fas fa-print mr-1"></i> Cetak Surat Kelulusan</button>
+                                        <p class="text-muted small text-center mt-2 mb-0">Tanggal surat belum diatur admin pada menu <strong>Data Peserta Ujian</strong>.</p>
+                                    <?php endif; ?>
+                                </div>
+
                             <?php endif; ?>
                         </div>
                     </div>
@@ -145,6 +312,45 @@ require_once '../templates/sidebar.php';
         </div>
     </section>
 </div>
+
+<script>
+(function() {
+    var overlay = document.getElementById('kelulusan-countdown-overlay');
+    var numEl = document.getElementById('kelulusan-countdown-num');
+    var bodyEl = document.querySelector('.kelulusan-section-body');
+    if (!overlay || !numEl || !bodyEl) {
+        return;
+    }
+    var n = 5;
+    function playPop() {
+        numEl.classList.remove('kelulusan-countdown-num--pop');
+        void numEl.offsetWidth;
+        numEl.classList.add('kelulusan-countdown-num--pop');
+    }
+    function selesai() {
+        overlay.classList.add('kelulusan-countdown--done');
+        overlay.setAttribute('aria-busy', 'false');
+        bodyEl.classList.remove('kelulusan-section-body--pending');
+        bodyEl.classList.add('kelulusan-section-body--ready');
+        window.setTimeout(function() {
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        }, 500);
+    }
+    function tik() {
+        numEl.textContent = String(n);
+        playPop();
+        if (n <= 1) {
+            window.setTimeout(selesai, 900);
+            return;
+        }
+        n -= 1;
+        window.setTimeout(tik, 1000);
+    }
+    window.setTimeout(tik, 400);
+})();
+</script>
 
 <?php
 require_once '../templates/footer.php';
