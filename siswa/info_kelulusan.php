@@ -15,6 +15,15 @@ if ($id_siswa <= 0) {
     redirect('../login.php');
 }
 
+$stKelas = $pdo->prepare('SELECT k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ? LIMIT 1');
+$stKelas->execute([$id_siswa]);
+$nama_kelas_siswa = (string) ($stKelas->fetchColumn() ?: '');
+$nkUpper = strtoupper($nama_kelas_siswa);
+if (strpos($nkUpper, '6') === false && strpos($nkUpper, 'VI') === false) {
+    echo "<script>alert('Halaman ini hanya untuk siswa kelas 6'); window.location.href='dashboard.php';</script>";
+    exit;
+}
+
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS tb_kelulusan_jadwal (
         tahun_ajaran VARCHAR(30) NOT NULL,

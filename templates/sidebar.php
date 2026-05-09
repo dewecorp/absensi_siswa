@@ -1026,12 +1026,6 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Info Kelulusan',
-                'icon' => 'fas fa-graduation-cap',
-                'url' => '../siswa/info_kelulusan.php',
-                'active' => $current_page === 'info_kelulusan.php'
-            ],
-            [
                 'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => [
@@ -1065,6 +1059,12 @@ switch ($user_level) {
         ];
 
         if ($is_grade_6_siswa) {
+            array_splice($menu_items, 1, 0, [[
+                'title' => 'Info Kelulusan',
+                'icon' => 'fas fa-graduation-cap',
+                'url' => '../siswa/info_kelulusan.php',
+                'active' => $current_page === 'info_kelulusan.php'
+            ]]);
             // Add Jadwal Les into Jadwal submenu for Grade 6 Students
             foreach ($menu_items as &$m_item) {
                 if ($m_item['title'] === 'Jadwal') {

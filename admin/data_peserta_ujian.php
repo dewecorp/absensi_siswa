@@ -754,7 +754,7 @@ require_once '../templates/sidebar.php';
 
 
 
-                            <form method="post" class="mb-3" onsubmit="return confirm('Generate ulang nomor ujian untuk semua siswa kelas VI pada tahun ajaran yang dipilih? Nomor lama untuk tahun ini akan diganti.');">
+                            <form method="post" class="mb-3" id="form-generate-nomor-ujian">
 
                                 <input type="hidden" name="generate_nomor_semua" value="1">
 
@@ -1110,6 +1110,70 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     puSyncMasterCheckbox();
+
+});
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    var fg = document.getElementById('form-generate-nomor-ujian');
+
+    if (!fg) {
+
+        return;
+
+    }
+
+    var msg = 'Generate ulang nomor ujian untuk semua siswa kelas VI pada tahun ajaran yang dipilih? Nomor lama untuk tahun ini akan diganti.';
+
+    fg.addEventListener('submit', function(e) {
+
+        e.preventDefault();
+
+        if (typeof Swal === 'undefined') {
+
+            if (window.confirm(msg)) {
+
+                fg.submit();
+
+            }
+
+            return;
+
+        }
+
+        Swal.fire({
+
+            title: 'Konfirmasi generate',
+
+            text: msg,
+
+            icon: 'warning',
+
+            showCancelButton: true,
+
+            confirmButtonColor: '#6777ef',
+
+            cancelButtonColor: '#6c757d',
+
+            confirmButtonText: 'Ya, generate',
+
+            cancelButtonText: 'Batal',
+
+            reverseButtons: true
+
+        }).then(function(result) {
+
+            if (result.value || result.isConfirmed) {
+
+                fg.submit();
+
+            }
+
+        });
+
+    });
 
 });
 
