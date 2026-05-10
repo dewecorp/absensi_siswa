@@ -1,4 +1,29 @@
 <?php
+// Determine session name before including functions.php
+if (isset($_GET['session_type'])) {
+    $type = $_GET['session_type'];
+    $session_name = 'SIS_LOGIN';
+    if ($type == 'admin') $session_name = 'SIS_ADMIN';
+    elseif ($type == 'tata_usaha') $session_name = 'SIS_TU';
+    elseif ($type == 'kepala_madrasah' || $type == 'kepala') $session_name = 'SIS_KEPALA';
+    elseif ($type == 'guru') $session_name = 'SIS_GURU';
+    elseif ($type == 'wali') $session_name = 'SIS_WALI';
+    elseif ($type == 'siswa') $session_name = 'SIS_SISWA';
+
+    if (session_status() == PHP_SESSION_NONE) {
+        $save_path = sys_get_temp_dir();
+        if (is_string($save_path) && $save_path !== '') {
+            session_save_path($save_path);
+        }
+        session_name($session_name);
+        session_start();
+    }
+}
+
+// Hindari output PHP notice/warning agar tidak merusak file biner xlsx
+@ini_set('display_errors', '0');
+error_reporting(0);
+
 require_once '../config/database.php';
 require_once '../config/functions.php';
 require_once '../vendor/autoload.php';
@@ -8,6 +33,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 // Check auth
 if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
@@ -16,8 +42,8 @@ if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
 
 // Get parameters
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
-$selected_jenis = isset($_GET['jenis']) ? $_GET['jenis'] : null;
-$selected_tipe = isset($_GET['tipe']) ? $_GET['tipe'] : 'nilai_jadi';
+$selected_jenis    = isset($_GET['jenis']) ? $_GET['jenis'] : null;
+$selected_tipe     = isset($_GET['tipe'])  ? $_GET['tipe']  : 'nilai_jadi';
 
 if (!$selected_class_id || !$selected_jenis) {
     die('Parameter tidak lengkap');
@@ -28,19 +54,23 @@ $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
 $stmt->execute([$selected_class_id]);
 $class_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Use Wali Kelas name for signature
-$nama_guru = $class_info['wali_kelas'];
+if (!$class_info) {
+    die('Data kelas tidak ditemukan');
+}
+
+// Use Wali Kelas name for signature (null-safe)
+$nama_guru = $class_info['wali_kelas'] ?? '';
 
 // Get filtered academic subjects only
 $subjects = getFilteredSubjects($pdo);
 
 // Get Active Semester
 $school_profile = getSchoolProfile($pdo);
-$tahun_ajaran = $school_profile['tahun_ajaran'];
-$semester_aktif = $school_profile['semester'];
+$tahun_ajaran   = $school_profile['tahun_ajaran'] ?? '';
+$semester_aktif = $school_profile['semester'] ?? '';
 
 // Data Fetching
-$students = [];
+$students   = [];
 $rekap_data = [];
 
 // Get Students
@@ -52,13 +82,13 @@ $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 foreach ($students as $student) {
     $total_nilai = 0;
     $count_mapel = 0;
-    
+
     foreach ($subjects as $mapel) {
         $nilai = 0;
-        
+
         if ($selected_jenis == 'Harian') {
             $stmt = $pdo->prepare("
-                SELECT d.* 
+                SELECT d.*
                 FROM tb_nilai_harian_detail d
                 JOIN tb_nilai_harian_header h ON d.id_header = h.id_header
                 WHERE h.id_kelas = ? AND h.id_mapel = ?
@@ -67,9 +97,9 @@ foreach ($students as $student) {
             ");
             $stmt->execute([$selected_class_id, $mapel['id_mapel'], $tahun_ajaran, $semester_aktif, $student['id_siswa']]);
             $details = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             if (!empty($details)) {
-                $sum = 0;
+                $sum   = 0;
                 $count = 0;
                 foreach ($details as $d) {
                     $val = ($selected_tipe == 'nilai_asli') ? $d['nilai'] : $d['nilai_jadi'];
@@ -84,29 +114,29 @@ foreach ($students as $student) {
             }
         } else {
             $stmt = $pdo->prepare("
-                SELECT * FROM tb_nilai_semester 
-                WHERE id_kelas = ? AND id_mapel = ? 
+                SELECT * FROM tb_nilai_semester
+                WHERE id_kelas = ? AND id_mapel = ?
                 AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
                 AND id_siswa = ?
             ");
             $stmt->execute([$selected_class_id, $mapel['id_mapel'], $selected_jenis, $tahun_ajaran, $semester_aktif, $student['id_siswa']]);
             $grade = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if ($grade) {
-                $val = ($selected_tipe == 'nilai_asli') ? $grade['nilai_asli'] : $grade['nilai_jadi'];
+                $val   = ($selected_tipe == 'nilai_asli') ? $grade['nilai_asli'] : $grade['nilai_jadi'];
                 $nilai = $val > 0 ? (float)$val : 0;
             }
         }
 
         $rekap_data[$student['id_siswa']][$mapel['id_mapel']] = $nilai;
-        
+
         if ($nilai > 0) {
             $total_nilai += $nilai;
             $count_mapel++;
         }
     }
-    
-    $rekap_data[$student['id_siswa']]['total'] = $total_nilai;
+
+    $rekap_data[$student['id_siswa']]['total']  = $total_nilai;
     $rekap_data[$student['id_siswa']]['rerata'] = $count_mapel > 0 ? round($total_nilai / $count_mapel, 1) : 0;
 }
 
@@ -117,8 +147,8 @@ foreach ($students as $student) {
 }
 arsort($averages);
 
-$rank = 1;
-$prev_avg = -1;
+$rank      = 1;
+$prev_avg  = -1;
 $real_rank = 1;
 
 foreach ($averages as $id_siswa => $avg) {
@@ -138,13 +168,19 @@ $sheet = $spreadsheet->getActiveSheet();
 $title = "REKAP NILAI " . strtoupper($selected_jenis);
 $spreadsheet->getProperties()->setTitle($title);
 
+// Hitung kolom terakhir berdasarkan jumlah mapel:
+// A = NO, B = NAMA SISWA, C..(C+n-1) = mapel, lalu JUMLAH, RERATA, RANK
+$numSubjects   = count($subjects);
+$lastColIndex  = 2 + $numSubjects + 3; // 1-based: A=1, B=2, mapel..., +3 untuk Jumlah/Rerata/Rank
+$lastCol       = Coordinate::stringFromColumnIndex($lastColIndex);
+
 // Header Info
 $sheet->setCellValue('A1', strtoupper($school_profile['nama_yayasan'] ?? ''));
 $sheet->setCellValue('A2', strtoupper($school_profile['nama_madrasah'] ?? ''));
 $sheet->setCellValue('A3', $school_profile['alamat'] ?? '');
 
 $sheet->setCellValue('A5', $title);
-$sheet->setCellValue('A6', 'KELAS: ' . $class_info['nama_kelas']);
+$sheet->setCellValue('A6', 'KELAS: ' . ($class_info['nama_kelas'] ?? '-'));
 $sheet->setCellValue('A7', 'TIPE: ' . ($selected_tipe == 'nilai_asli' ? 'NILAI ASLI' : 'NILAI JADI'));
 $sheet->setCellValue('A8', 'TAHUN AJARAN ' . $tahun_ajaran . ' - Semester ' . $semester_aktif);
 
@@ -152,204 +188,128 @@ $sheet->setCellValue('A8', 'TAHUN AJARAN ' . $tahun_ajaran . ' - Semester ' . $s
 $sheet->getStyle('A1')->getFont()->setSize(12);
 $sheet->getStyle('A2')->getFont()->setSize(14)->setBold(true);
 $sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->getStyle('A5')->getFont()->setBold(true)->setSize(12);
+$sheet->getStyle('A5:A8')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-// Merge Header Cells
-$sheet->mergeCells('A1:H1');
-$sheet->mergeCells('A2:H2');
-$sheet->mergeCells('A3:H3');
+// Merge Header Cells across full table width
+$sheet->mergeCells('A1:' . $lastCol . '1');
+$sheet->mergeCells('A2:' . $lastCol . '2');
+$sheet->mergeCells('A3:' . $lastCol . '3');
+$sheet->mergeCells('A5:' . $lastCol . '5');
+$sheet->mergeCells('A6:' . $lastCol . '6');
+$sheet->mergeCells('A7:' . $lastCol . '7');
+$sheet->mergeCells('A8:' . $lastCol . '8');
 
-$sheet->mergeCells('A5:H5');
-$sheet->mergeCells('A6:H6');
-$sheet->mergeCells('A7:H7');
-$sheet->mergeCells('A8:H8');
+// Table Header (row 10)
+$headerRow = 10;
+$sheet->setCellValue('A' . $headerRow, 'NO');
+$sheet->setCellValue('B' . $headerRow, 'NAMA SISWA');
 
-// Table Header
-$row = 10;
-$sheet->setCellValue('A' . $row, 'NO');
-$sheet->setCellValue('B' . $row, 'NAMA SISWA');
-
-$col = 'C';
+$colIdx = 3; // C
 foreach ($subjects as $mapel) {
-    $sheet->setCellValue($col . $row, $mapel['nama_mapel']);
-    $col++;
+    $sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx) . $headerRow, $mapel['nama_mapel']);
+    $colIdx++;
 }
-$sheet->setCellValue($col . $row, 'JUMLAH');
-$col++;
-$sheet->setCellValue($col . $row, 'RERATA');
-$col++;
-$sheet->setCellValue($col . $row, 'RANK');
+$sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx) . $headerRow, 'JUMLAH'); $colIdx++;
+$sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx) . $headerRow, 'RERATA'); $colIdx++;
+$sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx) . $headerRow, 'RANK');
 
 // Style Header
-$lastCol = $col;
-// Decrement lastCol because loop increments it one past the end
-$lastColCheck = $col;
-// Logic: 'C' + N subjects + 3 columns. 
-// Actually, PHP handles string increment correctly (Z -> AA).
-// But to apply style range we need the last column letter.
-// The loop does $col++ at the end, so $col is currently one past the last column.
-// We need to calculate previous column letter.
-// Or just track it inside the loop.
-// Let's rely on simple string logic or just use Coordinate::stringFromColumnIndex if needed, but here simple logic:
-// Actually, let's just use the current $col for next items, but for styling we need the range A6:LastCol6.
-// Let's re-calculate last column or just keep track.
-
-// Better way:
-$colIndex = 3; // C
-foreach ($subjects as $mapel) {
-    $colIndex++;
-}
-$colIndex += 3; // Jumlah, Rerata, Rank
-// Wait, string increment is easier.
-$col = 'C';
-foreach ($subjects as $mapel) { $col++; }
-$col++; // After Jumlah
-$col++; // After Rerata
-$finalCol = $col; // After Rank... wait.
-// Let's trace carefully.
-// Start C. Loop subjects. Set value. Increment.
-// End loop. Set Jumlah. Increment. Set Rerata. Increment. Set Rank. Increment.
-// So $col is now the column AFTER Rank.
-// We need the column OF Rank.
-
-// Let's redo the variable naming to be safe.
-$col = 'C';
-foreach ($subjects as $mapel) {
-    $col++;
-}
-$col++; // for Jumlah
-$col++; // for Rerata
-// Rank is at current $col? No.
-// Let's just do it manually in the code execution flow.
-// A, B, C...
-// Last one used was Rank.
-// I will just use the code logic in the script:
-// $sheet->setCellValue($col . $row, 'RANK');
-// $lastCol = $col;
-// This works.
-
 $headerStyle = [
     'font' => ['bold' => true],
     'alignment' => [
         'horizontal' => Alignment::HORIZONTAL_CENTER,
-        'vertical' => Alignment::VERTICAL_CENTER,
-        'wrapText' => true
+        'vertical'   => Alignment::VERTICAL_CENTER,
+        'wrapText'   => true,
     ],
     'borders' => [
-        'allBorders' => ['borderStyle' => Border::BORDER_THIN]
+        'allBorders' => ['borderStyle' => Border::BORDER_THIN],
     ],
     'fill' => [
-        'fillType' => Fill::FILL_SOLID,
-        'startColor' => ['rgb' => 'E0E0E0']
-    ]
-];
-// We need to apply this AFTER we finish setting values, so $col will be pointing to 'RANK' column if we didn't increment it yet.
-// In my previous block:
-// $sheet->setCellValue($col . $row, 'RANK');
-// $lastCol = $col;
-// That assumes I didn't increment after Rank.
-
-// Let's fix the specific section in the file content I'm writing.
-
-// Style Header
-// Calculate last column properly
-// $col is currently at RANK column (because we incremented before setting it... wait)
-// Logic trace:
-// $col = 'C';
-// foreach: set 'C', inc to 'D'. set 'D', inc to 'E'...
-// end foreach. $col is at next empty column.
-// set JUMLAH at $col. inc.
-// set RERATA at $col. inc.
-// set RANK at $col.
-// So $col IS the column letter for RANK.
-$lastCol = $col;
-
-$headerStyle = [
-    'font' => ['bold' => true],
-    'alignment' => [
-        'horizontal' => Alignment::HORIZONTAL_CENTER,
-        'vertical' => Alignment::VERTICAL_CENTER,
-        'wrapText' => true
+        'fillType'   => Fill::FILL_SOLID,
+        'startColor' => ['rgb' => 'E0E0E0'],
     ],
-    'borders' => [
-        'allBorders' => ['borderStyle' => Border::BORDER_THIN]
-    ],
-    'fill' => [
-        'fillType' => Fill::FILL_SOLID,
-        'startColor' => ['rgb' => 'E0E0E0']
-    ]
 ];
-
-$sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray($headerStyle);
+$sheet->getStyle('A' . $headerRow . ':' . $lastCol . $headerRow)->applyFromArray($headerStyle);
+$sheet->getRowDimension($headerRow)->setRowHeight(35);
 
 // Set Column Widths
 $sheet->getColumnDimension('A')->setWidth(5);
 $sheet->getColumnDimension('B')->setWidth(30);
-// Auto width for others
-$c = 'C';
-while ($c != $lastCol) {
-    $sheet->getColumnDimension($c)->setWidth(15);
-    $c++;
+for ($i = 3; $i < $lastColIndex; $i++) {
+    $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(15);
 }
 $sheet->getColumnDimension($lastCol)->setWidth(8); // Rank column
 
 // Data Rows
-$row++;
+$row = $headerRow + 1;
+$no  = 1;
 foreach ($students as $student) {
     $data = $rekap_data[$student['id_siswa']] ?? [];
-    
+
     $sheet->setCellValue('A' . $row, $no++);
     $sheet->setCellValue('B' . $row, $student['nama_siswa']);
-    
-    $col = 'C';
+
+    $cIdx = 3;
     foreach ($subjects as $mapel) {
-        $val = $data[$mapel['id_mapel']] ?? 0;
-        // Display '-' if 0
+        $val        = $data[$mapel['id_mapel']] ?? 0;
         $displayVal = $val > 0 ? $val : '-';
-        $sheet->setCellValue($col . $row, $displayVal);
-        $col++;
+        $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, $displayVal);
+        $cIdx++;
     }
-    
-    $sheet->setCellValue($col . $row, $data['total']);
-    $col++;
-    $sheet->setCellValue($col . $row, $data['rerata']);
-    $col++;
-    $sheet->setCellValue($col . $row, $data['ranking']);
-    
+
+    $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, $data['total']  ?? 0); $cIdx++;
+    $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, $data['rerata'] ?? 0); $cIdx++;
+    $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, $data['ranking'] ?? '-');
+
     $row++;
 }
 
 // Border for Data
 $lastRow = $row - 1;
-$dataStyle = [
-    'borders' => [
-        'allBorders' => ['borderStyle' => Border::BORDER_THIN]
-    ],
-    'alignment' => [
-        'vertical' => Alignment::VERTICAL_CENTER
-    ]
-];
-$sheet->getStyle('A6:' . $lastCol . $lastRow)->applyFromArray($dataStyle);
+if ($lastRow >= $headerRow + 1) {
+    $dataStyle = [
+        'borders' => [
+            'allBorders' => ['borderStyle' => Border::BORDER_THIN],
+        ],
+        'alignment' => [
+            'vertical' => Alignment::VERTICAL_CENTER,
+        ],
+    ];
+    $sheet->getStyle('A' . ($headerRow + 1) . ':' . $lastCol . $lastRow)->applyFromArray($dataStyle);
 
-// Center alignment for scores
-$sheet->getStyle('C6:' . $lastCol . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-$sheet->getStyle('A6:A' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    // Center alignment for scores & no
+    $sheet->getStyle('C' . ($headerRow + 1) . ':' . $lastCol . $lastRow)
+          ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle('A' . ($headerRow + 1) . ':A' . $lastRow)
+          ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+}
 
-// Footer
+// Footer / Signature di kolom terakhir
 $row += 2;
-// Use last column for signature to be on the right
 $sheet->setCellValue($lastCol . $row, 'Jepara, ' . date('d F Y'));
 $row++;
 $sheet->setCellValue($lastCol . $row, 'Wali Kelas');
 $row += 4;
-$sheet->setCellValue($lastCol . $row, $nama_guru);
-// Center align the signature block
-$sheet->getStyle($lastCol . ($row-4) . ':' . $lastCol . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->setCellValue($lastCol . $row, $nama_guru !== '' ? $nama_guru : '.........................');
+$sheet->getStyle($lastCol . ($row - 6) . ':' . $lastCol . $row)
+      ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
+// Bersihkan setiap output buffer agar file biner tidak terkontaminasi
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
+
+// Sanitasi nama file
+$safeJenis = preg_replace('/[^A-Za-z0-9_\-]+/', '_', (string)$selected_jenis);
+$safeKelas = preg_replace('/[^A-Za-z0-9_\-]+/', '_', (string)($class_info['nama_kelas'] ?? 'Kelas'));
+$filename  = 'Rekap_Nilai_' . $safeJenis . '_' . $safeKelas . '.xlsx';
 
 // Output
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment;filename="Rekap_Nilai_' . $selected_jenis . '_' . $class_info['nama_kelas'] . '.xlsx"');
+header('Content-Disposition: attachment;filename="' . $filename . '"');
 header('Cache-Control: max-age=0');
+header('Pragma: public');
 
 $writer = new Xlsx($spreadsheet);
 $writer->save('php://output');
