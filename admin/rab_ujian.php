@@ -67,7 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         die('Unauthorized');
     }
     $redirect_url = $_SERVER['PHP_SELF'];
-    
+    $redirect_hash = '';
+
     // --- SETTING VISIBILITY ---
     if (isset($_POST['update_visibility'])) {
         $visibility = $_POST['biaya_ujian_visibility']; // open or closed
@@ -110,6 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("UPDATE tb_pengeluaran_ujian SET uraian=?, volume=?, satuan=?, jumlah=?, perkalian=?, kategori=? WHERE id_pengeluaran=?");
         if ($stmt->execute([$uraian, $volume, $satuan, $jumlah, $perkalian, $kategori, $id])) {
             $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Pengeluaran berhasil diupdate!'];
+            $redirect_hash = '#pengeluaran-' . (int)$id;
             logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Pengeluaran Ujian', "Update ID: $id");
         } else {
             $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Gagal update data!'];
@@ -125,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 
-    header("Location: $redirect_url");
+    header('Location: ' . $redirect_url . $redirect_hash);
     exit();
 }
 
@@ -295,7 +297,7 @@ include '../templates/sidebar.php';
                                     </thead>
                                     <tbody>
                                         <?php foreach ($rencana_pengeluaran as $i => $row): ?>
-                                        <tr>
+                                        <tr id="pengeluaran-<?= (int)$row['id_pengeluaran'] ?>">
                                             <td class="text-center"><?= $i + 1 ?></td>
                                             <td><?= htmlspecialchars($row['uraian']) ?></td>
                                             <td><?= htmlspecialchars($row['kategori'] ?? '-') ?></td>
@@ -501,7 +503,19 @@ $(document).ready(function() {
         },
         columnDefs: [
             { targets: [2], visible: false } // Hide Kategori column
-        ]
+        ],
+        initComplete: function () {
+            var h = window.location.hash;
+            if (!h || !/^#pengeluaran-\d+$/.test(h)) {
+                return;
+            }
+            setTimeout(function () {
+                var el = document.querySelector(h);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 50);
+        }
     });
 
     // Init Rupiah Mask
