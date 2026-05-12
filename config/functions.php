@@ -652,7 +652,7 @@ function resolveHariLiburMingguanKode(PDO $pdo): string {
 /**
  * Urutan 6 hari sekolah untuk tampilan/export jadwal (tanpa kolom hari libur mingguan).
  * Libur mingguan Jumat → minggu efektif Sabtu–Kamis (mulai Sabtu).
- * Libur mingguan Ahad/Minggu → Senin–Sabtu (mulai Senin).
+ * Libur mingguan Ahad → Senin–Sabtu (mulai Senin).
  *
  * @return list<string>
  */
@@ -718,7 +718,7 @@ function isKalenderLabelLiburMingguanJumat(string $label): bool {
 }
 
 /**
- * Apakah label libur dari kalender tampak seperti libur mingguan Ahad/Minggu.
+ * Apakah label libur dari kalender tampak seperti libur mingguan Ahad.
  */
 function isKalenderLabelLiburMingguanAhad(string $label): bool {
     $t = mb_strtolower(trim($label));
@@ -770,7 +770,7 @@ function isKalenderEntriLiburLuarPolaMingguan(string $label): bool {
 
 /**
  * Hapus dari peta libur tanggal yang bentrok: mis. kalender masih berisi pola "libur Jumat"
- * padahal profil memilih Ahad/Minggu (supaya tidak dobel dengan libur mingguan sistem).
+ * padahal profil memilih Ahad (supaya tidak dobel dengan libur mingguan sistem).
  *
  * @param array<string,string> $holidays
  */
@@ -798,8 +798,8 @@ function getProfilHariLiburMingguanMeta($pdo) {
         return [
             'n' => 7,
             'w' => 0,
-            'nama_holiday' => 'Hari Ahad/Minggu (Libur Mingguan)',
-            'nama_rekap' => 'Hari Libur (Ahad/Minggu)',
+            'nama_holiday' => 'Hari Ahad (Libur Mingguan)',
+            'nama_rekap' => 'Hari Libur (Ahad)',
             'kode' => 'minggu',
         ];
     }
@@ -1256,7 +1256,7 @@ function getHolidays($pdo, $year, $month = null) {
     $n_libur = (int)$weekly['n'];
     $label_libur = $weekly['nama_rekap'];
 
-    // Tambahkan hari libur mingguan (Jumat atau Ahad/Minggu) sesuai profil
+    // Tambahkan hari libur mingguan (Jumat atau Ahad) sesuai profil
     if ($month) {
         $num_days = cal_days_in_month(CAL_GREGORIAN, (int)$month, (int)$year);
         for ($d = 1; $d <= $num_days; $d++) {

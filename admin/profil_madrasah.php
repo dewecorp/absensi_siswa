@@ -457,7 +457,7 @@ include '../templates/sidebar.php';
                                                         }
                                                         ?>
                                                         <option value="jumat" <?php echo $hlm === 'jumat' ? 'selected' : ''; ?>>Jum'at</option>
-                                                        <option value="minggu" <?php echo $hlm === 'minggu' ? 'selected' : ''; ?>>Ahad / Minggu</option>
+                                                        <option value="minggu" <?php echo $hlm === 'minggu' ? 'selected' : ''; ?>>Ahad</option>
                                                     </select>
                                                     <small class="text-muted">Hari ini diperlakukan sebagai libur mingguan (selain libur di kalender pendidikan).</small>
                                                 </div>
