@@ -199,7 +199,7 @@ if ($class_id > 0) {
             }
         }
         
-        // Get holidays for selected month (kalender pendidikan + Jumat)
+        // Libur: kalender pendidikan (danger) + hari libur mingguan sesuai profil madrasah
         $holidays = getHolidays($pdo, $year, $month);
         
         // Convert to indexed array

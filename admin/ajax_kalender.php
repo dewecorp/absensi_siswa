@@ -36,9 +36,29 @@ switch ($action) {
             
             $events = [];
             $existing_dates = []; // Track dates that already have events
+            $wm = getProfilHariLiburMingguanMeta($pdo);
 
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                // Track occupied dates to avoid overlapping with Friday holiday events
+                if (($row['warna'] ?? '') === 'danger') {
+                    $namaKal = trim((string)($row['nama_kegiatan'] ?? ''));
+                    if ((int)$wm['n'] === 7) {
+                        if (isKalenderLabelLiburMingguanJumat($namaKal)) {
+                            continue;
+                        }
+                        if ($namaKal !== '' && !isKalenderEntriLiburLuarPolaMingguan($namaKal) && mb_strlen($namaKal) <= 24 && preg_match('/\blibur\b/i', $namaKal)) {
+                            continue;
+                        }
+                    }
+                    if ((int)$wm['n'] === 5) {
+                        if (isKalenderLabelLiburMingguanAhad($namaKal)) {
+                            continue;
+                        }
+                        if ($namaKal !== '' && !isKalenderEntriLiburLuarPolaMingguan($namaKal) && mb_strlen($namaKal) <= 24 && preg_match('/\blibur\b/i', $namaKal) && preg_match('/\b(ahad|minggu)\b/i', $namaKal)) {
+                            continue;
+                        }
+                    }
+                }
+                // Track occupied dates to avoid overlapping with weekly holiday events
                 $h_start = new DateTime($row['tgl_mulai']);
                 $h_end = new DateTime($row['tgl_selesai']);
                 $period = new DatePeriod($h_start, new DateInterval('P1D'), $h_end->modify('+1 day'));
@@ -76,8 +96,10 @@ switch ($action) {
                 ];
             }
 
-            // Add Fridays as events if not already occupied
+            // Add weekly rest day as events if not already occupied
             if ($tahun_filter) {
+                $n_libur = (int)$wm['n'];
+                $judul_libur = $wm['nama_rekap'];
                 $years = explode('/', $tahun_filter);
                 $year1 = (int)$years[0];
                 $year2 = (int)($years[1] ?? ($year1 + 1));
@@ -88,9 +110,9 @@ switch ($action) {
                 
                 foreach ($period as $date) {
                     $date_str = $date->format('Y-m-d');
-                    if ($date->format('N') == 5 && !isset($existing_dates[$date_str])) {
+                    if ((int)$date->format('N') === $n_libur && !isset($existing_dates[$date_str])) {
                         $events[] = [
-                            'title' => 'Hari Libur (Jumat)',
+                            'title' => $judul_libur,
                             'start' => $date_str,
                             'allDay' => true,
                             'backgroundColor' => '#fc544b', // danger/red
@@ -130,8 +152,11 @@ switch ($action) {
             $end = new DateTime($range['end']);
             $total_days = $start->diff($end)->days + 1;
 
+            $wm = getProfilHariLiburMingguanMeta($pdo);
+            $nProfil = (int)$wm['n'];
+
             // Count red days (libur) from database for this semester
-            $stmt = $pdo->prepare("SELECT tgl_mulai, tgl_selesai FROM tb_kalender_pendidikan 
+            $stmt = $pdo->prepare("SELECT tgl_mulai, tgl_selesai, nama_kegiatan FROM tb_kalender_pendidikan 
                                   WHERE warna = 'danger' AND tahun_ajaran = ? 
                                   AND ((tgl_mulai BETWEEN ? AND ?) OR (tgl_selesai BETWEEN ? AND ?))");
             $stmt->execute([$tahun_ajaran, $range['start'], $range['end'], $range['start'], $range['end']]);
@@ -144,14 +169,24 @@ switch ($action) {
                 
                 $period = new DatePeriod($h_start, new DateInterval('P1D'), $h_end->modify('+1 day'));
                 foreach ($period as $date) {
-                    $holiday_dates[$date->format('Y-m-d')] = true;
+                    $ds = $date->format('Y-m-d');
+                    $nDate = (int)$date->format('N');
+                    $namaK = (string)($h['nama_kegiatan'] ?? '');
+                    if ($nProfil === 7 && $nDate === 5 && !isKalenderEntriLiburLuarPolaMingguan($namaK)) {
+                        continue;
+                    }
+                    if ($nProfil === 5 && $nDate === 7 && !isKalenderEntriLiburLuarPolaMingguan($namaK)) {
+                        continue;
+                    }
+                    $holiday_dates[$ds] = true;
                 }
             }
             
-            // Also count Fridays as holidays if not already in holiday_dates
+            // Also count weekly rest day as holidays if not already in holiday_dates
+            $n_libur = $nProfil;
             $period_total = new DatePeriod($start, new DateInterval('P1D'), (new DateTime($range['end']))->modify('+1 day'));
             foreach ($period_total as $date) {
-                if ($date->format('N') == 5) { // 5 is Friday
+                if ((int)$date->format('N') === $n_libur) {
                     $holiday_dates[$date->format('Y-m-d')] = true;
                 }
             }

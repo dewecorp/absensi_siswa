@@ -11,11 +11,12 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali'])) {
 $school_profile = getSchoolProfile($pdo);
 
 // Get Schedule Data
+$fieldHari7 = getSqlFieldUrutanHari7($pdo);
 $stmt = $pdo->query("
     SELECT j.*, g.nama_guru 
     FROM tb_jadwal_imam j 
     JOIN tb_guru g ON j.id_guru = g.id_guru 
-    ORDER BY FIELD(j.hari, 'Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat')
+    ORDER BY FIELD(j.hari, $fieldHari7)
 ");
 $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -154,7 +155,7 @@ if (isset($_GET['msg'])) {
 $stmt = $pdo->query("SELECT id_guru, nama_guru FROM tb_guru WHERE jenis_kelamin = 'Laki-laki' ORDER BY nama_guru ASC");
 $male_teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$days = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+$days = getUrutanHariPilihanModal7Hari($pdo);
 
 // Add Select2 CSS and JS
 if (!isset($css_libs)) $css_libs = [];

@@ -418,7 +418,7 @@ $(document).ready(function() {
 });
 ";
 
-// Tampilkan peringatan jika hari ini adalah hari libur (kalender pendidikan)
+// Tampilkan peringatan jika hari ini libur (kalender pendidikan + hari libur mingguan di profil madrasah)
 $todayHoliday = isSchoolHoliday($pdo, date('Y-m-d'));
 if ($todayHoliday['is_holiday']) {
     $holiday_name = addslashes($todayHoliday['name']);

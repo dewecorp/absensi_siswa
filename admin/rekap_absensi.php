@@ -210,7 +210,7 @@ if ($class_id > 0) {
             $student_attendance[$student_id] = $student_data;
         }
         
-        // Get holidays for the month
+        // Hari libur: kalender pendidikan (danger) + hari libur mingguan (profil madrasah)
         $holidays = getHolidays($pdo, $year, $month);
         
         // Convert to indexed array

@@ -49,8 +49,8 @@ if ($logo_file && file_exists(__DIR__ . '/../assets/img/' . $logo_file)) {
     $logo_path = '../assets/img/logo.png';
 }
 
-// Prepare Data
-$days = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis'];
+// Urutan kolom hari mengikuti profil libur mingguan (Jumat vs Ahad)
+$days = getUrutanHariJadwalSekolah($pdo);
 
 // Get Classes
 if ($kelas_id) {

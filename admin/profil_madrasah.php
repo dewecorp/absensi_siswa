@@ -23,6 +23,11 @@ try {
         $after = in_array('email_madrasah', $cols, true) ? 'email_madrasah' : (in_array('alamat', $cols, true) ? 'alamat' : 'nama_madrasah');
         $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN website_madrasah VARCHAR(512) DEFAULT NULL AFTER {$after}");
     }
+    $cols = $pdo->query('SHOW COLUMNS FROM tb_profil_madrasah')->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('hari_libur_mingguan', $cols, true)) {
+        $after = in_array('tempat_jadwal', $cols, true) ? 'tempat_jadwal' : 'semester';
+        $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN hari_libur_mingguan VARCHAR(20) NOT NULL DEFAULT 'jumat' AFTER {$after}");
+    }
 } catch (Throwable $e) {
     error_log('Profil madrasah: pastikan kolom extended — ' . $e->getMessage());
 }
@@ -226,6 +231,10 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
             $semester = sanitizeInput($_POST['semester']);
             $tanggal_jadwal = sanitizeInput($_POST['tanggal_jadwal']);
             $tempat_jadwal = sanitizeInput($_POST['tempat_jadwal']);
+            $hari_libur_mingguan = strtolower(trim((string)($_POST['hari_libur_mingguan'] ?? 'jumat')));
+            if (!in_array($hari_libur_mingguan, ['jumat', 'minggu'], true)) {
+                $hari_libur_mingguan = 'jumat';
+            }
 
             // Handle logo upload
             $logo = $school_profile['logo']; // Keep existing logo if no new file is uploaded
@@ -303,8 +312,8 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
     }
     
             if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
-        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $logo, $hero_image, $ttd_kepala])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, hari_libur_mingguan=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $hari_libur_mingguan, $logo, $hero_image, $ttd_kepala])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
@@ -432,6 +441,25 @@ include '../templates/sidebar.php';
                                                         <option value="Semester 1" <?php echo (isset($school_profile['semester']) && $school_profile['semester'] == 'Semester 1') ? 'selected' : ''; ?>>Semester 1</option>
                                                         <option value="Semester 2" <?php echo (isset($school_profile['semester']) && $school_profile['semester'] == 'Semester 2') ? 'selected' : ''; ?>>Semester 2</option>
                                                     </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Hari libur mingguan (absensi &amp; kalender)</label>
+                                                    <select class="form-control" name="hari_libur_mingguan" id="hari_libur_mingguan">
+                                                        <?php
+                                                        $hlm = strtolower(trim((string)($school_profile['hari_libur_mingguan'] ?? 'jumat')));
+                                                        if (!in_array($hlm, ['jumat', 'minggu'], true)) {
+                                                            $hlm = 'jumat';
+                                                        }
+                                                        ?>
+                                                        <option value="jumat" <?php echo $hlm === 'jumat' ? 'selected' : ''; ?>>Jum'at</option>
+                                                        <option value="minggu" <?php echo $hlm === 'minggu' ? 'selected' : ''; ?>>Ahad / Minggu</option>
+                                                    </select>
+                                                    <small class="text-muted">Hari ini diperlakukan sebagai libur mingguan (selain libur di kalender pendidikan).</small>
                                                 </div>
                                             </div>
                                         </div>

@@ -21,11 +21,14 @@ if (!$student) {
 $id_kelas = $student['id_kelas'];
 $nama_kelas = $student['nama_kelas'];
 
-// Set page title
-$page_title = 'Jadwal Pelajaran';
-
-include '../templates/header.php';
-include '../templates/sidebar.php';
+// Urutan hari tampilan = urutan jadwal sekolah (sesuai profil libur mingguan)
+$display_days = getUrutanHariJadwalSekolah($pdo);
+$orderDayCases = [];
+$pri = 1;
+foreach ($display_days as $dn) {
+    $orderDayCases[] = 'WHEN j.hari = ' . $pdo->quote($dn) . ' THEN ' . ($pri++);
+}
+$orderByHariSql = 'CASE ' . implode(' ', $orderDayCases) . ' ELSE 99 END';
 
 // Fetch schedule data
 // We get all schedule for this class, ordered by day and time
@@ -43,16 +46,7 @@ $query = "
     LEFT JOIN tb_jam_mengajar jm ON (j.jam_ke = jm.jam_ke AND j.jenis = jm.jenis)
     WHERE j.kelas_id = ?
     ORDER BY 
-        CASE 
-            WHEN j.hari = 'Sabtu' THEN 1
-            WHEN j.hari = 'Ahad' THEN 2
-            WHEN j.hari = 'Senin' THEN 3
-            WHEN j.hari = 'Selasa' THEN 4
-            WHEN j.hari = 'Rabu' THEN 5
-            WHEN j.hari = 'Kamis' THEN 6
-            WHEN j.hari = 'Jumat' THEN 7
-            ELSE 8
-        END,
+        {$orderByHariSql},
         j.jenis,
         jm.waktu_mulai ASC,
         CAST(j.jam_ke AS UNSIGNED) ASC
@@ -78,13 +72,15 @@ foreach ($schedules as $schedule) {
     $grouped_schedules[$jenis][$hari][] = $schedule;
 }
 
-// Define the display days order
-$display_days = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis'];
-
 // Function to map DB day name to display name if needed (e.g. Minggu -> Ahad)
 function getDisplayDayName($day) {
     return $day;
 }
+
+$page_title = 'Jadwal Pelajaran';
+
+include '../templates/header.php';
+include '../templates/sidebar.php';
 
 ?>
 

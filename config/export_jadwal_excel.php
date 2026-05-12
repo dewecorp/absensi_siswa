@@ -36,8 +36,8 @@ $title_jenis = strtoupper($jenis);
 $school_profile = getSchoolProfile($pdo);
 $kepala_madrasah = $school_profile['kepala_madrasah'] ?? '-';
 
-// Prepare Data
-$days = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis'];
+// Urutan kolom hari mengikuti profil libur mingguan (Jumat vs Ahad)
+$days = getUrutanHariJadwalSekolah($pdo);
 
 // Get Classes
 if ($kelas_id) {

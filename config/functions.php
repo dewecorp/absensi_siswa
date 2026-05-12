@@ -344,7 +344,8 @@ function getSchoolProfile($pdo) {
         'tahun_ajaran' => null,
         'semester' => null,
         'tanggal_jadwal' => null,
-        'tempat_jadwal' => ''
+        'tempat_jadwal' => '',
+        'hari_libur_mingguan' => 'jumat'
     ];
 
     $profile = null;
@@ -418,6 +419,9 @@ function getSchoolProfile($pdo) {
     if (empty($result['nama_kepala']) && !empty($result['kepala_madrasah'])) {
         $result['nama_kepala'] = $result['kepala_madrasah'];
     }
+
+    $hlRaw = strtolower(trim((string)($result['hari_libur_mingguan'] ?? '')));
+    $result['hari_libur_mingguan'] = ($hlRaw === 'minggu' || $hlRaw === 'ahad') ? 'minggu' : 'jumat';
 
     return $result;
 }
@@ -616,13 +620,204 @@ function getCurrentDateIndonesia() {
     return "$day, $date $month $year";
 }
 
-// Function to format specific date in Indonesian format
+/**
+ * Kode hari libur mingguan dari DB (sumber utama; tidak bergantung pada merge getSchoolProfile).
+ *
+ * @return 'jumat'|'minggu'
+ */
+function resolveHariLiburMingguanKode(PDO $pdo): string {
+    try {
+        $stmt = $pdo->query('SELECT hari_libur_mingguan FROM tb_profil_madrasah ORDER BY id ASC LIMIT 1');
+        if (!$stmt) {
+            return 'jumat';
+        }
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row || !array_key_exists('hari_libur_mingguan', $row)) {
+            return 'jumat';
+        }
+        $raw = $row['hari_libur_mingguan'];
+        if ($raw === null || $raw === '') {
+            return 'jumat';
+        }
+        $v = strtolower(trim((string)$raw));
+        if ($v === 'minggu' || $v === 'ahad') {
+            return 'minggu';
+        }
+        return 'jumat';
+    } catch (Throwable $e) {
+        return 'jumat';
+    }
+}
+
+/**
+ * Urutan 6 hari sekolah untuk tampilan/export jadwal (tanpa kolom hari libur mingguan).
+ * Libur mingguan Jumat → minggu efektif Sabtu–Kamis (mulai Sabtu).
+ * Libur mingguan Ahad/Minggu → Senin–Sabtu (mulai Senin).
+ *
+ * @return list<string>
+ */
+function getUrutanHariJadwalSekolah(PDO $pdo): array {
+    if (resolveHariLiburMingguanKode($pdo) === 'minggu') {
+        return ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    }
+    return ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis'];
+}
+
+/**
+ * Urutan 7 hari untuk dropdown modal (jadwal imam dhuha, seragam guru/siswa).
+ * Hari libur mingguan di urutan terakhir: Jumat atau Ahad.
+ *
+ * @return list<string>
+ */
+function getUrutanHariPilihanModal7Hari(PDO $pdo): array {
+    if (resolveHariLiburMingguanKode($pdo) === 'minggu') {
+        return ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Ahad'];
+    }
+    return ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+}
+
+/**
+ * Argumen FIELD(hari, …) untuk ORDER BY — nilai sudah di-quote lewat PDO.
+ */
+function getSqlFieldUrutanHari7(PDO $pdo): string {
+    $parts = [];
+    foreach (getUrutanHariPilihanModal7Hari($pdo) as $d) {
+        $parts[] = $pdo->quote($d);
+    }
+    return implode(',', $parts);
+}
+
+/**
+ * Apakah label libur dari kalender tampak seperti libur mingguan Jumat (bukan hari besar nasional).
+ */
+function isKalenderLabelLiburMingguanJumat(string $label): bool {
+    $t = mb_strtolower(trim($label));
+    if ($t === '') {
+        return false;
+    }
+    if (preg_match('/idul|natal|tahun\s+baru|kemerdekaan|waisak|imlek|merdeka|nasional|cuti\s+bersama|nyepi|vesak|isra\s*\'?|mi\'?raj|rebo\s*wekasan|lebaran|hari\s+raya/i', $t)) {
+        return false;
+    }
+    $exact = [
+        'hari libur (jumat)',
+        "hari libur (jum'at)",
+        'hari jumat (libur mingguan)',
+        'libur jumat',
+        'libur mingguan jumat',
+    ];
+    if (in_array($t, $exact, true)) {
+        return true;
+    }
+    if (preg_match('/^hari\s+libur\s*\(?\s*jum/i', $t)) {
+        return true;
+    }
+    if (mb_strlen($t) <= 48 && preg_match('/\bjumat\b/i', $t) && preg_match('/\blibur\b/i', $t)) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Apakah label libur dari kalender tampak seperti libur mingguan Ahad/Minggu.
+ */
+function isKalenderLabelLiburMingguanAhad(string $label): bool {
+    $t = mb_strtolower(trim($label));
+    if ($t === '') {
+        return false;
+    }
+    if (preg_match('/idul|natal|tahun\s+baru|kemerdekaan|waisak|imlek|merdeka|nasional|cuti\s+bersama|nyepi|vesak|lebaran|hari\s+raya/i', $t)) {
+        return false;
+    }
+    $exact = [
+        'hari libur (ahad/minggu)',
+        'hari libur (minggu)',
+        'hari ahad/minggu (libur mingguan)',
+        'libur minggu',
+        'libur ahad',
+    ];
+    if (in_array($t, $exact, true)) {
+        return true;
+    }
+    if (mb_strlen($t) <= 52 && preg_match('/\b(ahad|minggu)\b/i', $t) && preg_match('/\blibur\b/i', $t)) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Libur dari kalender yang bukan sekadar pola mingguan (tetap ditampilkan walau bentrok hari dengan profil).
+ * Dipakai saat profil libur mingguan = Ahad: semua Jumat dari kalender dihapus KECUALI yang cocok pola ini.
+ */
+function isKalenderEntriLiburLuarPolaMingguan(string $label): bool {
+    $t = mb_strtolower(trim($label));
+    if ($t === '') {
+        return false;
+    }
+    if (preg_match(
+        '/idul\s*fitri|idul\s*adha|lebaran|hari\s+raya|natal|tahun\s+baru|(?:m)?aulid|isra\s*\'?\s*mi\'?raj|waisak|vesak|nyepi|imlek|toleransi|pancasila|kemerdekaan|merdeka|17\s+agustus|agustusan|cuti\s+bersama|hari\s+besar|hari\s+olah\s+raga|may\s+day|buruh|paskah|jumat\s+agung|good\s+friday|wafat\s+yesus|kenaikan|isa\s+almasih|ascension|kristus\s+raja|rebo\s*wekasan|sumpah\s+pemuda|hari\s+ibu|hari\s+guru|silaturahmi|tahun\s+baru\s+islam|tahun\s+baru\s+masehi|suro|tujuh\s+belas|harlah|hgn/i',
+        $t
+    )) {
+        return true;
+    }
+    if (preg_match(
+        '/\b(semester|pekan|ujian|usbn|ujian\s+nasional|assessment|wisuda|prakerin|mos|study\s*tour|study\s*band|pts|pat|susulan|evaluasi)\b/i',
+        $t
+    )) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Hapus dari peta libur tanggal yang bentrok: mis. kalender masih berisi pola "libur Jumat"
+ * padahal profil memilih Ahad/Minggu (supaya tidak dobel dengan libur mingguan sistem).
+ *
+ * @param array<string,string> $holidays
+ */
+function stripKalenderLiburMingguanYangBentrokDenganProfil(array &$holidays, int $profilNIso): void {
+    foreach (array_keys($holidays) as $d) {
+        $n = (int)date('N', strtotime($d));
+        $name = (string)$holidays[$d];
+        if ($profilNIso === 7 && $n === 5 && !isKalenderEntriLiburLuarPolaMingguan($name)) {
+            unset($holidays[$d]);
+        } elseif ($profilNIso === 5 && $n === 7 && !isKalenderEntriLiburLuarPolaMingguan($name)) {
+            unset($holidays[$d]);
+        }
+    }
+}
+
+/**
+ * Meta hari libur mingguan dari profil madrasah (dipakai absensi, rekap, kalender).
+ *
+ * @return array{n: int, w: int, nama_holiday: string, nama_rekap: string, kode: string}
+ *   n = weekday ISO-8601 (1=Senin … 5=Jumat, 7=Minggu); w = PHP date('w') (0=Minggu … 5=Jumat)
+ */
+function getProfilHariLiburMingguanMeta($pdo) {
+    $kode = resolveHariLiburMingguanKode($pdo);
+    if ($kode === 'minggu') {
+        return [
+            'n' => 7,
+            'w' => 0,
+            'nama_holiday' => 'Hari Ahad/Minggu (Libur Mingguan)',
+            'nama_rekap' => 'Hari Libur (Ahad/Minggu)',
+            'kode' => 'minggu',
+        ];
+    }
+    return [
+        'n' => 5,
+        'w' => 5,
+        'nama_holiday' => 'Hari Jumat (Libur Mingguan)',
+        'nama_rekap' => 'Hari Libur (Jum\'at)',
+        'kode' => 'jumat',
+    ];
+}
+
 // Function to check if a date is a holiday based on kalender pendidikan
 function isHoliday($pdo, $date) {
-    // 1. Check if Friday (Jumat) - Weekly Holiday
-    $dayOfWeek = date('w', strtotime($date));
-    if ($dayOfWeek == 5) {
-        return ['is_holiday' => true, 'name' => 'Hari Jumat (Libur Mingguan)'];
+    $weekly = getProfilHariLiburMingguanMeta($pdo);
+    $dayOfWeek = (int)date('w', strtotime($date));
+    if ($dayOfWeek === $weekly['w']) {
+        return ['is_holiday' => true, 'name' => $weekly['nama_holiday']];
     }
 
     // 2. Check in tb_kalender_pendidikan for events with warna = 'danger' (Libur)
@@ -638,7 +833,19 @@ function isHoliday($pdo, $date) {
         $holiday = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($holiday) {
-            return ['is_holiday' => true, 'name' => $holiday['nama_kegiatan']];
+            $nama = (string)$holiday['nama_kegiatan'];
+            $nDate = (int)date('N', strtotime($date));
+            if ((int)$weekly['n'] === 7 && $nDate === 5) {
+                if (isKalenderEntriLiburLuarPolaMingguan($nama)) {
+                    return ['is_holiday' => true, 'name' => $nama];
+                }
+            } elseif ((int)$weekly['n'] === 5 && $nDate === 7) {
+                if (isKalenderEntriLiburLuarPolaMingguan($nama)) {
+                    return ['is_holiday' => true, 'name' => $nama];
+                }
+            } else {
+                return ['is_holiday' => true, 'name' => $nama];
+            }
         }
     } catch (PDOException $e) {
         // Fallback if table doesn't exist or other DB error
@@ -647,6 +854,7 @@ function isHoliday($pdo, $date) {
     return ['is_holiday' => false, 'name' => ''];
 }
 
+// Function to format specific date in Indonesian format
 function formatDateIndonesia($date_string) {
     if (empty($date_string)) return '-';
     $date = new DateTime($date_string);
@@ -1042,15 +1250,21 @@ function getHolidays($pdo, $year, $month = null) {
         // Table might not exist yet
     }
 
-    // Tambahkan hari Jumat sebagai hari libur
+    $weekly = getProfilHariLiburMingguanMeta($pdo);
+    stripKalenderLiburMingguanYangBentrokDenganProfil($holidays, (int)$weekly['n']);
+
+    $n_libur = (int)$weekly['n'];
+    $label_libur = $weekly['nama_rekap'];
+
+    // Tambahkan hari libur mingguan (Jumat atau Ahad/Minggu) sesuai profil
     if ($month) {
         $num_days = cal_days_in_month(CAL_GREGORIAN, (int)$month, (int)$year);
         for ($d = 1; $d <= $num_days; $d++) {
             $date_str = sprintf('%04d-%02d-%02d', $year, $month, $d);
-            $day_of_week = date('N', strtotime($date_str));
-            if ($day_of_week == 5) { // 5 adalah Jumat (ISO-8601)
+            $day_of_week = (int)date('N', strtotime($date_str));
+            if ($day_of_week === $n_libur) {
                 if (!isset($holidays[$date_str])) {
-                    $holidays[$date_str] = 'Hari Libur (Jumat)';
+                    $holidays[$date_str] = $label_libur;
                 }
             }
         }
@@ -1060,10 +1274,10 @@ function getHolidays($pdo, $year, $month = null) {
             $num_days = cal_days_in_month(CAL_GREGORIAN, $m, (int)$year);
             for ($d = 1; $d <= $num_days; $d++) {
                 $date_str = sprintf('%04d-%02d-%02d', $year, $m, $d);
-                $day_of_week = date('N', strtotime($date_str));
-                if ($day_of_week == 5) {
+                $day_of_week = (int)date('N', strtotime($date_str));
+                if ($day_of_week === $n_libur) {
                     if (!isset($holidays[$date_str])) {
-                        $holidays[$date_str] = 'Hari Libur (Jumat)';
+                        $holidays[$date_str] = $label_libur;
                     }
                 }
             }

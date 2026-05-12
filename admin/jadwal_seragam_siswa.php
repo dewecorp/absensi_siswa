@@ -23,10 +23,11 @@ try {
 $school_profile = getSchoolProfile($pdo);
 
 // Get Schedule Data
+$fieldHari7 = getSqlFieldUrutanHari7($pdo);
 $stmt = $pdo->query("
     SELECT * 
     FROM tb_jadwal_seragam_siswa 
-    ORDER BY FIELD(hari, 'Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat')
+    ORDER BY FIELD(hari, $fieldHari7)
 ");
 $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -160,7 +161,7 @@ if (isset($_GET['msg'])) {
     $message = ['type' => 'success', 'text' => $_GET['msg']];
 }
 
-$days = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+$days = getUrutanHariPilihanModal7Hari($pdo);
 
 include '../templates/header.php';
 include '../templates/sidebar.php';

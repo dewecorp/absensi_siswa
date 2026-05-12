@@ -232,8 +232,8 @@ $main_schedule_rows = array_filter($jam_mengajar, function($jam) use ($used_jam_
 });
 
 
-// Define days
-$days = ['Sabtu', 'Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis'];
+// Define days (urutan mengikuti profil hari libur mingguan)
+$days = getUrutanHariJadwalSekolah($pdo);
 
 require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
