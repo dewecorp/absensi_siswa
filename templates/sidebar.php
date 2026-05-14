@@ -4,6 +4,8 @@
 
 // Determine active menu based on current page
 $current_page = basename($_SERVER['PHP_SELF']);
+$nilai_ujian_praktik_menu_active = ($current_page === 'nilai_ujian.php' && isset($_GET['nilai_mode']) && $_GET['nilai_mode'] === 'praktik');
+$nilai_ujian_biasa_menu_active = ($current_page === 'nilai_ujian.php' && !$nilai_ujian_praktik_menu_active);
 
 // Define menu items based on user level
 $user_level = getUserLevel();
@@ -291,7 +293,8 @@ switch ($user_level) {
                     ['title' => 'Nilai Akhir Tahun', 'url' => '../admin/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
                     ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
                     ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
-                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $nilai_ujian_biasa_menu_active],
+                    ['title' => 'Nilai Ujian Praktik', 'url' => '../admin/nilai_ujian.php?nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active],
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
                 'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
@@ -422,7 +425,8 @@ switch ($user_level) {
                     ['title' => 'Nilai Akhir Tahun', 'url' => '../admin/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
                     ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
                     ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
-                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $nilai_ujian_biasa_menu_active],
+                    ['title' => 'Nilai Ujian Praktik', 'url' => '../admin/nilai_ujian.php?session_type=kepala_madrasah&nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active],
                     ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
@@ -534,7 +538,8 @@ switch ($user_level) {
                     ['title' => 'Nilai Akhir Tahun', 'url' => '../admin/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
                     ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
                     ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
-                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'],
+                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $nilai_ujian_biasa_menu_active],
+                    ['title' => 'Nilai Ujian Praktik', 'url' => '../admin/nilai_ujian.php?session_type=tata_usaha&nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active],
                     ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
@@ -647,7 +652,8 @@ switch ($user_level) {
 
         if ($is_grade_6_guru) {
             $nilai_submenu_guru[] = ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'];
-            $nilai_submenu_guru[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'];
+            $nilai_submenu_guru[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php', 'active' => $nilai_ujian_biasa_menu_active];
+            $nilai_submenu_guru[] = ['title' => 'Nilai Ujian Praktik', 'url' => '../guru/nilai_ujian.php?nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active];
         }
         
         // Menu Rekap Nilai untuk semua guru
@@ -841,7 +847,8 @@ switch ($user_level) {
         
         if ($is_grade_6) {
              $nilai_submenu[] = ['title' => 'Nilai Pra Ujian', 'url' => '../guru/nilai_pra_ujian.php?session_type=wali', 'active' => $current_page === 'nilai_pra_ujian.php'];
-             $nilai_submenu[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php?session_type=wali', 'active' => $current_page === 'nilai_ujian.php'];
+             $nilai_submenu[] = ['title' => 'Nilai Ujian', 'url' => '../guru/nilai_ujian.php?session_type=wali', 'active' => $nilai_ujian_biasa_menu_active];
+             $nilai_submenu[] = ['title' => 'Nilai Ujian Praktik', 'url' => '../guru/nilai_ujian.php?session_type=wali&nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active];
         }
 
         // Menu Rekap Nilai untuk wali kelas
@@ -1017,7 +1024,8 @@ switch ($user_level) {
 
         if ($is_grade_6_siswa) {
             $nilai_submenu_siswa[] = ['title' => 'Nilai Pra Ujian', 'url' => '../siswa/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'];
-            $nilai_submenu_siswa[] = ['title' => 'Nilai Ujian', 'url' => '../siswa/nilai_ujian.php', 'active' => $current_page === 'nilai_ujian.php'];
+            $nilai_submenu_siswa[] = ['title' => 'Nilai Ujian', 'url' => '../siswa/nilai_ujian.php', 'active' => $nilai_ujian_biasa_menu_active];
+            $nilai_submenu_siswa[] = ['title' => 'Nilai Ujian Praktik', 'url' => '../siswa/nilai_ujian.php?nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active];
         }
 
         $menu_items = [

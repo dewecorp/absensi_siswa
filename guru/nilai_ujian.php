@@ -27,8 +27,10 @@ if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
     redirect('../login.php');
 }
 
-$page_title = 'Nilai Ujian';
-$jenis_semester = 'Ujian'; // Set this based on the file type
+ensure_nilai_semester_enum_ujian_praktik($pdo);
+$page_title = nilai_ujian_page_title();
+$jenis_semester = nilai_ujian_jenis_semester();
+$ujian_praktik_tanpa_remidi = nilai_ujian_is_praktik_mode();
 $user_role = $_SESSION['level'];
 $is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin']);
 $can_edit = !$is_admin_view;
@@ -194,7 +196,7 @@ require_once '../templates/sidebar.php';
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
                 <div class="breadcrumb-item"><a href="#">Nilai Siswa</a></div>
-                <div class="breadcrumb-item">Nilai Ujian</div>
+                <div class="breadcrumb-item"><?= htmlspecialchars($page_title) ?></div>
             </div>
         </div>
 
@@ -220,6 +222,9 @@ require_once '../templates/sidebar.php';
                         </div>
                         <!-- Hidden input for kelas -->
                         <input type="hidden" name="kelas" value="<?= $selected_class_id ?>">
+                        <?php if (nilai_ujian_is_praktik_mode()): ?>
+                        <input type="hidden" name="nilai_mode" value="praktik">
+                        <?php endif; ?>
                     </form>
 
                     <?php if ($selected_class && $selected_mapel): ?>
@@ -240,7 +245,9 @@ require_once '../templates/sidebar.php';
                                         <th class="text-center sticky-col sticky-col-1" width="5%">No</th>
                                         <th class="text-center sticky-col sticky-col-2">Nama Siswa</th>
                                         <th width="15%" class="text-center">Nilai Asli</th>
+                                        <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                         <th width="15%" class="text-center">Remidi</th>
+                                        <?php endif; ?>
                                         <th width="15%" class="text-center">Nilai Jadi</th>
                                         <th width="15%" class="text-center">Rerata</th>
                                         <?php if ($can_edit): ?>
@@ -262,18 +269,21 @@ require_once '../templates/sidebar.php';
                                         $id_siswa = $student['id_siswa'];
                                         $grade = $grades_data[$id_siswa] ?? null;
                                         $nilai_asli = $grade ? $grade['nilai_asli'] : 0;
-                                        $nilai_remidi = $grade ? $grade['nilai_remidi'] : 0;
+                                        $nilai_remidi = $ujian_praktik_tanpa_remidi ? 0 : ($grade ? $grade['nilai_remidi'] : 0);
                                         $nilai_jadi = $grade ? $grade['nilai_jadi'] : 0;
                                         
-                                        // Calculate Rerata logic: (Asli + Remidi) / 2 if Remidi > 0, else Asli
-                                        $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+                                        if ($ujian_praktik_tanpa_remidi) {
+                                            $rerata = $nilai_asli;
+                                        } else {
+                                            $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+                                        }
                                         
                                         // Update Min/Max Stats (Only consider non-zero values)
                                         if ($nilai_asli > 0) {
                                             if ($min_asli === null || $nilai_asli < $min_asli) $min_asli = $nilai_asli;
                                             if ($max_asli === null || $nilai_asli > $max_asli) $max_asli = $nilai_asli;
                                         }
-                                        if ($nilai_remidi > 0) {
+                                        if (!$ujian_praktik_tanpa_remidi && $nilai_remidi > 0) {
                                             if ($min_remidi === null || $nilai_remidi < $min_remidi) $min_remidi = $nilai_remidi;
                                             if ($max_remidi === null || $nilai_remidi > $max_remidi) $max_remidi = $nilai_remidi;
                                         }
@@ -294,11 +304,13 @@ require_once '../templates/sidebar.php';
                                                 <input type="number" class="form-control form-control-sm input-nilai-asli d-none" 
                                                        value="<?= (float)$nilai_asli ?>" min="0" max="100">
                                             </td>
+                                            <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                             <td class="text-center">
                                                 <span class="display-nilai-remidi"><?= $nilai_remidi > 0 ? (float)$nilai_remidi : '-' ?></span>
                                                 <input type="number" class="form-control form-control-sm input-nilai-remidi d-none" 
                                                        value="<?= (float)$nilai_remidi ?>" min="0" max="100">
                                             </td>
+                                            <?php endif; ?>
                                             <td class="text-center bg-light">
                                                 <span class="display-nilai-jadi font-weight-bold"><?= $nilai_jadi > 0 ? (float)$nilai_jadi : '-' ?></span>
                                             </td>
@@ -322,18 +334,22 @@ require_once '../templates/sidebar.php';
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right">Nilai Tertinggi</td>
                                         <td class="text-center text-success" id="max-asli"><?= $max_asli !== null ? (float)$max_asli : '-' ?></td>
+                                        <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                         <td class="text-center text-success" id="max-remidi"><?= $max_remidi !== null ? (float)$max_remidi : '-' ?></td>
+                                        <?php endif; ?>
                                         <td class="text-center text-success" id="max-jadi"><?= $max_jadi !== null ? (float)$max_jadi : '-' ?></td>
                                         <td class="text-center text-success" id="max-rerata"><?= $max_rerata !== null ? (float)number_format($max_rerata, 1) : '-' ?></td>
-                                        <td></td>
+                                        <?php if ($can_edit): ?><td></td><?php endif; ?>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right">Nilai Terendah</td>
                                         <td class="text-center text-danger" id="min-asli"><?= $min_asli !== null ? (float)$min_asli : '-' ?></td>
+                                        <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                         <td class="text-center text-danger" id="min-remidi"><?= $min_remidi !== null ? (float)$min_remidi : '-' ?></td>
+                                        <?php endif; ?>
                                         <td class="text-center text-danger" id="min-jadi"><?= $min_jadi !== null ? (float)$min_jadi : '-' ?></td>
                                         <td class="text-center text-danger" id="min-rerata"><?= $min_rerata !== null ? (float)number_format($min_rerata, 1) : '-' ?></td>
-                                        <td></td>
+                                        <?php if ($can_edit): ?><td></td><?php endif; ?>
                                     </tr>
                                 </tbody>
                             </table>
@@ -353,11 +369,17 @@ require_once '../templates/sidebar.php';
 
 <script>
 $(document).ready(function() {
+    var ujianPraktikTanpaRemidi = <?= $ujian_praktik_tanpa_remidi ? 'true' : 'false' ?>;
+
     // Edit Button Click
     $('.btn-edit').click(function() {
         var tr = $(this).closest('tr');
-        tr.find('.display-nilai-asli, .display-nilai-remidi').addClass('d-none');
-        tr.find('.input-nilai-asli, .input-nilai-remidi').removeClass('d-none');
+        tr.find('.display-nilai-asli').addClass('d-none');
+        tr.find('.input-nilai-asli').removeClass('d-none');
+        if (!ujianPraktikTanpaRemidi) {
+            tr.find('.display-nilai-remidi').addClass('d-none');
+            tr.find('.input-nilai-remidi').removeClass('d-none');
+        }
         tr.find('.btn-edit').addClass('d-none');
         tr.find('.btn-save').removeClass('d-none');
     });
@@ -367,27 +389,20 @@ $(document).ready(function() {
         var tr = $(this).closest('tr');
         var id_siswa = tr.data('id-siswa');
         var nilai_asli = tr.find('.input-nilai-asli').val();
-        var nilai_remidi = tr.find('.input-nilai-remidi').val();
-        
-        // Optimistic UI update
-        // Logic: Nilai Jadi = Max(Asli, Remidi)
-        // Logic: Rerata = (Asli + Remidi) / 2 if Remidi > 0 else Asli
+        var nilai_remidi = ujianPraktikTanpaRemidi ? '0' : tr.find('.input-nilai-remidi').val();
         
         var n_asli = parseFloat(nilai_asli) || 0;
-        var n_remidi = parseFloat(nilai_remidi) || 0;
+        var n_remidi = ujianPraktikTanpaRemidi ? 0 : (parseFloat(nilai_remidi) || 0);
         
         var kktp = <?= isset($kktp) ? (float)$kktp : 0 ?>;
         var n_temp_jadi = (n_remidi > n_asli) ? n_remidi : n_asli;
         
-        // Formula Angkat Nilai
         var n_jadi = n_temp_jadi;
         
         if (kktp > 0 && n_temp_jadi > 0) {
             if (n_temp_jadi < kktp) {
-                // Rule 1: Under KKTP -> Set to KKTP
                 n_jadi = kktp;
             } else {
-                // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
                 var maxVal = 99;
                 var range = maxVal - kktp;
                 var inputRange = 100 - kktp;
@@ -398,15 +413,11 @@ $(document).ready(function() {
                     n_jadi = kktp + (range * ratioBoosted);
                 }
             }
-            // Round to nearest integer and ensure max 99
             n_jadi = Math.round(n_jadi);
             if (n_jadi > 99) n_jadi = 99;
         }
         
-        // User said: "jka remidi kosong maka tetap ambil nilai asli untuk diangkat"
-        // If n_remidi is 0/empty, n_asli is taken (handled by logic above if n_asli >= 0)
-        
-        var n_rerata = (n_remidi > 0) ? (n_asli + n_remidi) / 2 : n_asli;
+        var n_rerata = ujianPraktikTanpaRemidi ? n_asli : ((n_remidi > 0) ? (n_asli + n_remidi) / 2 : n_asli);
 
         $.ajax({
             url: 'ajax_nilai_semester.php',
@@ -423,30 +434,31 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.status === 'success') {
-                    // Update displays with server response to ensure consistency
                     var data = response.data;
                     var server_asli = parseFloat(data.nilai_asli) || 0;
                     var server_remidi = parseFloat(data.nilai_remidi) || 0;
                     var server_jadi = parseFloat(data.nilai_jadi) || 0;
                     
-                    // Calculate Rerata based on server values
-                    var server_rerata = (server_remidi > 0) ? (server_asli + server_remidi) / 2 : server_asli;
+                    var server_rerata = ujianPraktikTanpaRemidi ? server_asli : ((server_remidi > 0) ? (server_asli + server_remidi) / 2 : server_asli);
 
                     tr.find('.display-nilai-asli').text(server_asli > 0 ? server_asli : '-');
-                    tr.find('.display-nilai-remidi').text(server_remidi > 0 ? server_remidi : '-');
+                    if (!ujianPraktikTanpaRemidi) {
+                        tr.find('.display-nilai-remidi').text(server_remidi > 0 ? server_remidi : '-');
+                    }
                     tr.find('.display-nilai-jadi').text(server_jadi > 0 ? server_jadi : '-');
                     tr.find('.display-rerata').text(server_rerata > 0 ? parseFloat(server_rerata.toFixed(1)) : '-');
                     
-                    // Toggle view
-                    tr.find('.display-nilai-asli, .display-nilai-remidi').removeClass('d-none');
-                    tr.find('.input-nilai-asli, .input-nilai-remidi').addClass('d-none');
+                    tr.find('.display-nilai-asli').removeClass('d-none');
+                    tr.find('.input-nilai-asli').addClass('d-none');
+                    if (!ujianPraktikTanpaRemidi) {
+                        tr.find('.display-nilai-remidi').removeClass('d-none');
+                        tr.find('.input-nilai-remidi').addClass('d-none');
+                    }
                     tr.find('.btn-edit').removeClass('d-none');
                     tr.find('.btn-save').addClass('d-none');
                     
-                    // Update Summary Stats immediately
                     updateSummaryStats();
 
-                    // Show toast
                     iziToast.success({
                         title: 'Sukses',
                         message: 'Nilai berhasil disimpan',
@@ -470,7 +482,6 @@ $(document).ready(function() {
         });
     });
 
-    // Function to update summary stats
     function updateSummaryStats() {
         var min_asli = null, max_asli = null;
         var min_remidi = null, max_remidi = null;
@@ -480,23 +491,21 @@ $(document).ready(function() {
         $('tbody tr[data-id-siswa]').each(function() {
             var tr = $(this);
             
-            // Helper to get value
             var getVal = function(selector) {
                 var txt = tr.find(selector).text().trim();
                 return txt === '-' ? 0 : parseFloat(txt);
             };
 
             var asli = getVal('.display-nilai-asli');
-            var remidi = getVal('.display-nilai-remidi');
+            var remidi = ujianPraktikTanpaRemidi ? 0 : getVal('.display-nilai-remidi');
             var jadi = getVal('.display-nilai-jadi');
             var rerata = getVal('.display-rerata');
 
-            // Logic: Only consider non-zero values for min/max
             if (asli > 0) {
                 if (min_asli === null || asli < min_asli) min_asli = asli;
                 if (max_asli === null || asli > max_asli) max_asli = asli;
             }
-            if (remidi > 0) {
+            if (!ujianPraktikTanpaRemidi && remidi > 0) {
                 if (min_remidi === null || remidi < min_remidi) min_remidi = remidi;
                 if (max_remidi === null || remidi > max_remidi) max_remidi = remidi;
             }
@@ -510,12 +519,13 @@ $(document).ready(function() {
             }
         });
 
-        // Update DOM
         $('#max-asli').text(max_asli !== null ? max_asli : '-');
         $('#min-asli').text(min_asli !== null ? min_asli : '-');
         
-        $('#max-remidi').text(max_remidi !== null ? max_remidi : '-');
-        $('#min-remidi').text(min_remidi !== null ? min_remidi : '-');
+        if (!ujianPraktikTanpaRemidi) {
+            $('#max-remidi').text(max_remidi !== null ? max_remidi : '-');
+            $('#min-remidi').text(min_remidi !== null ? min_remidi : '-');
+        }
         
         $('#max-jadi').text(max_jadi !== null ? max_jadi : '-');
         $('#min-jadi').text(min_jadi !== null ? min_jadi : '-');

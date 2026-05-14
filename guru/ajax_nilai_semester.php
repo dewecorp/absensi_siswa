@@ -2,6 +2,8 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
+ensure_nilai_semester_enum_ujian_praktik($pdo);
+
 if (!isAuthorized(['guru', 'wali'])) {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit;
@@ -12,9 +14,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $id_siswa = $_POST['id_siswa'];
         $id_kelas = $_POST['id_kelas'];
         $id_mapel = $_POST['id_mapel'];
-        $jenis_semester = $_POST['jenis_semester'];
+        $jenis_semester = isset($_POST['jenis_semester']) ? (string)$_POST['jenis_semester'] : '';
+        $jenis_semester = normalize_jenis_semester_param($jenis_semester);
+        if ($jenis_semester === null) {
+            echo json_encode(['status' => 'error', 'message' => 'Jenis nilai tidak valid']);
+            exit;
+        }
         $nilai_asli = isset($_POST['nilai_asli']) && $_POST['nilai_asli'] !== '' ? floatval($_POST['nilai_asli']) : 0;
         $nilai_remidi = isset($_POST['nilai_remidi']) && $_POST['nilai_remidi'] !== '' ? floatval($_POST['nilai_remidi']) : 0;
+        if ($jenis_semester === 'Ujian Praktik') {
+            $nilai_remidi = 0;
+        }
 
         // Get teacher info
         $id_guru = $_SESSION['user_id'];

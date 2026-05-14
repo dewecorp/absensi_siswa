@@ -1318,3 +1318,49 @@ function getActivityIcon($action) {
         return 'fas fa-info';
     }
 }
+
+/** Query ?nilai_mode=praktik membedakan nilai ujian teori vs ujian praktik (kolom jenis_semester). */
+function nilai_ujian_is_praktik_mode(): bool {
+    return isset($_GET['nilai_mode']) && $_GET['nilai_mode'] === 'praktik';
+}
+
+function nilai_ujian_jenis_semester(): string {
+    return nilai_ujian_is_praktik_mode() ? 'Ujian Praktik' : 'Ujian';
+}
+
+function nilai_ujian_page_title(): string {
+    return nilai_ujian_is_praktik_mode() ? 'Nilai Ujian Praktik' : 'Nilai Ujian';
+}
+
+function nilai_semester_allowed_jenis_values(): array {
+    return ['UTS', 'UAS', 'PAT', 'Pra Ujian', 'Ujian', 'Ujian Praktik'];
+}
+
+/** Validasi nilai jenis_semester dari permintaan eksternal (GET/POST). */
+function normalize_jenis_semester_param($jenis): ?string {
+    if (!is_string($jenis) || $jenis === '') {
+        return null;
+    }
+    return in_array($jenis, nilai_semester_allowed_jenis_values(), true) ? $jenis : null;
+}
+
+/**
+ * Pastikan ENUM tb_nilai_semester mendukung 'Ujian Praktik' (sekali per request, aman dipanggil berulang).
+ */
+function ensure_nilai_semester_enum_ujian_praktik(PDO $pdo): void {
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+    try {
+        $r = $pdo->query("SHOW COLUMNS FROM tb_nilai_semester LIKE 'jenis_semester'");
+        $row = $r ? $r->fetch(PDO::FETCH_ASSOC) : null;
+        $type = isset($row['Type']) ? (string)$row['Type'] : '';
+        if ($type !== '' && stripos($type, 'Ujian Praktik') === false) {
+            $pdo->exec("ALTER TABLE tb_nilai_semester MODIFY COLUMN jenis_semester ENUM('UTS','UAS','PAT','Pra Ujian','Ujian','Ujian Praktik') NOT NULL");
+        }
+    } catch (Throwable $e) {
+        // Tabel belum ada atau tidak ada hak ALTER — abaikan
+    }
+}

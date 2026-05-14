@@ -99,11 +99,14 @@ require_once '../templates/sidebar.php';
                             </table>
                         </div>
                         <div class="col-md-6 text-right">
-                             <form method="GET" action="" class="d-inline-block">
-                                <select name="tipe" class="form-control form-control-sm" onchange="this.form.submit()">
-                                    <option value="nilai_jadi" <?= $selected_tipe == 'nilai_jadi' ? 'selected' : '' ?>>Nilai Jadi (Raport)</option>
+                             <form method="GET" action="" class="d-inline-block text-right">
+                                <div class="form-group mb-0">
+                                    <label for="tipe-nilai-pra" class="d-block text-right mb-1">Tipe Nilai</label>
+                                    <select id="tipe-nilai-pra" name="tipe" class="form-control form-control-sm" onchange="this.form.submit()">
+                                    <option value="nilai_jadi" <?= $selected_tipe == 'nilai_jadi' ? 'selected' : '' ?>>Nilai Jadi</option>
                                     <option value="nilai_asli" <?= $selected_tipe == 'nilai_asli' ? 'selected' : '' ?>>Nilai Asli</option>
                                 </select>
+                                </div>
                             </form>
                         </div>
                     </div>

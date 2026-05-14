@@ -9,7 +9,7 @@ try {
         id_mapel INT NOT NULL,
         id_kelas INT NOT NULL,
         id_guru INT NOT NULL,
-        jenis_semester ENUM('UTS', 'UAS', 'PAT', 'Pra Ujian', 'Ujian') NOT NULL,
+        jenis_semester ENUM('UTS', 'UAS', 'PAT', 'Pra Ujian', 'Ujian', 'Ujian Praktik') NOT NULL,
         tahun_ajaran VARCHAR(20) NOT NULL,
         semester VARCHAR(20) NOT NULL,
         nilai_asli DECIMAL(5, 2) DEFAULT 0,
@@ -26,6 +26,18 @@ try {
 
     $pdo->exec($sql);
     echo "Table tb_nilai_semester created successfully.<br>";
+
+    try {
+        $r = $pdo->query("SHOW COLUMNS FROM tb_nilai_semester LIKE 'jenis_semester'");
+        $row = $r ? $r->fetch(PDO::FETCH_ASSOC) : null;
+        $type = isset($row['Type']) ? (string)$row['Type'] : '';
+        if ($type !== '' && stripos($type, 'Ujian Praktik') === false) {
+            $pdo->exec("ALTER TABLE tb_nilai_semester MODIFY COLUMN jenis_semester ENUM('UTS','UAS','PAT','Pra Ujian','Ujian','Ujian Praktik') NOT NULL");
+            echo "Kolom jenis_semester diperbarui: ditambahkan nilai 'Ujian Praktik'.<br>";
+        }
+    } catch (PDOException $e) {
+        echo "Catatan migrasi ENUM: " . htmlspecialchars($e->getMessage()) . "<br>";
+    }
 
 } catch (PDOException $e) {
     echo "Error: " . $e->getMessage();

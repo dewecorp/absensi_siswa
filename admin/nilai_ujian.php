@@ -6,8 +6,10 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
-$page_title = 'Nilai Ujian';
-$jenis_semester = 'Ujian';
+ensure_nilai_semester_enum_ujian_praktik($pdo);
+$page_title = nilai_ujian_page_title();
+$jenis_semester = nilai_ujian_jenis_semester();
+$ujian_praktik_tanpa_remidi = nilai_ujian_is_praktik_mode();
 $is_admin_view = true;
 $can_edit = false;
 
@@ -134,7 +136,7 @@ require_once '../templates/sidebar.php';
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
                 <div class="breadcrumb-item"><a href="#">Nilai Siswa</a></div>
-                <div class="breadcrumb-item">Nilai Ujian</div>
+                <div class="breadcrumb-item"><?= htmlspecialchars($page_title) ?></div>
             </div>
         </div>
 
@@ -160,6 +162,9 @@ require_once '../templates/sidebar.php';
                         </div>
                         <!-- Hidden input for kelas -->
                         <input type="hidden" name="kelas" value="<?= $selected_class_id ?>">
+                        <?php if (nilai_ujian_is_praktik_mode()): ?>
+                        <input type="hidden" name="nilai_mode" value="praktik">
+                        <?php endif; ?>
                     </form>
 
                     <?php if ($selected_class && $selected_mapel): ?>
@@ -180,7 +185,9 @@ require_once '../templates/sidebar.php';
                                         <th class="text-center sticky-col sticky-col-1" width="5%">No</th>
                                         <th class="text-center sticky-col sticky-col-2">Nama Siswa</th>
                                         <th width="15%" class="text-center">Nilai Asli</th>
+                                        <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                         <th width="15%" class="text-center">Remidi</th>
+                                        <?php endif; ?>
                                         <th width="15%" class="text-center">Nilai Jadi</th>
                                         <th width="15%" class="text-center">Rerata</th>
                                     </tr>
@@ -199,18 +206,21 @@ require_once '../templates/sidebar.php';
                                         $id_siswa = $student['id_siswa'];
                                         $grade = $grades_data[$id_siswa] ?? null;
                                         $nilai_asli = $grade ? $grade['nilai_asli'] : 0;
-                                        $nilai_remidi = $grade ? $grade['nilai_remidi'] : 0;
+                                        $nilai_remidi = $ujian_praktik_tanpa_remidi ? 0 : ($grade ? $grade['nilai_remidi'] : 0);
                                         $nilai_jadi = $grade ? $grade['nilai_jadi'] : 0;
                                         
-                                        // Calculate Rerata logic: (Asli + Remidi) / 2 if Remidi > 0, else Asli
-                                        $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+                                        if ($ujian_praktik_tanpa_remidi) {
+                                            $rerata = $nilai_asli;
+                                        } else {
+                                            $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+                                        }
                                         
                                         // Update Min/Max Stats (Only consider non-zero values)
                                         if ($nilai_asli > 0) {
                                             if ($min_asli === null || $nilai_asli < $min_asli) $min_asli = $nilai_asli;
                                             if ($max_asli === null || $nilai_asli > $max_asli) $max_asli = $nilai_asli;
                                         }
-                                        if ($nilai_remidi > 0) {
+                                        if (!$ujian_praktik_tanpa_remidi && $nilai_remidi > 0) {
                                             if ($min_remidi === null || $nilai_remidi < $min_remidi) $min_remidi = $nilai_remidi;
                                             if ($max_remidi === null || $nilai_remidi > $max_remidi) $max_remidi = $nilai_remidi;
                                         }
@@ -229,9 +239,11 @@ require_once '../templates/sidebar.php';
                                             <td class="text-center">
                                                 <span class="display-nilai-asli"><?= $nilai_asli > 0 ? (float)$nilai_asli : '-' ?></span>
                                             </td>
+                                            <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                             <td class="text-center">
                                                 <span class="display-nilai-remidi"><?= $nilai_remidi > 0 ? (float)$nilai_remidi : '-' ?></span>
                                             </td>
+                                            <?php endif; ?>
                                             <td class="text-center bg-light">
                                                 <span class="display-nilai-jadi font-weight-bold"><?= $nilai_jadi > 0 ? (float)$nilai_jadi : '-' ?></span>
                                             </td>
@@ -245,14 +257,18 @@ require_once '../templates/sidebar.php';
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right">Nilai Tertinggi</td>
                                         <td class="text-center text-success" id="max-asli"><?= $max_asli !== null ? (float)$max_asli : '-' ?></td>
+                                        <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                         <td class="text-center text-success" id="max-remidi"><?= $max_remidi !== null ? (float)$max_remidi : '-' ?></td>
+                                        <?php endif; ?>
                                         <td class="text-center text-success" id="max-jadi"><?= $max_jadi !== null ? (float)$max_jadi : '-' ?></td>
                                         <td class="text-center text-success" id="max-rerata"><?= $max_rerata !== null ? (float)number_format($max_rerata, 1) : '-' ?></td>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right">Nilai Terendah</td>
                                         <td class="text-center text-danger" id="min-asli"><?= $min_asli !== null ? (float)$min_asli : '-' ?></td>
+                                        <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                         <td class="text-center text-danger" id="min-remidi"><?= $min_remidi !== null ? (float)$min_remidi : '-' ?></td>
+                                        <?php endif; ?>
                                         <td class="text-center text-danger" id="min-jadi"><?= $min_jadi !== null ? (float)$min_jadi : '-' ?></td>
                                         <td class="text-center text-danger" id="min-rerata"><?= $min_rerata !== null ? (float)number_format($min_rerata, 1) : '-' ?></td>
                                     </tr>

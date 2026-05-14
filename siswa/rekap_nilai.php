@@ -184,7 +184,7 @@ require_once '../templates/sidebar.php';
                                 <div class="form-group">
                                     <label>Tipe Nilai</label>
                                     <select name="tipe" class="form-control" onchange="this.form.submit()">
-                                        <option value="nilai_jadi" <?= $selected_tipe == 'nilai_jadi' ? 'selected' : '' ?>>Nilai Jadi (Raport)</option>
+                                        <option value="nilai_jadi" <?= $selected_tipe == 'nilai_jadi' ? 'selected' : '' ?>>Nilai Jadi</option>
                                         <option value="nilai_asli" <?= $selected_tipe == 'nilai_asli' ? 'selected' : '' ?>>Nilai Asli</option>
                                     </select>
                                 </div>

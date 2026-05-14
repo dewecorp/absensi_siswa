@@ -37,7 +37,8 @@ if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
 // Get parameters
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
-$jenis_semester = isset($_GET['jenis']) ? $_GET['jenis'] : null;
+$jenis_semester = isset($_GET['jenis']) ? (string)$_GET['jenis'] : null;
+$jenis_semester = normalize_jenis_semester_param($jenis_semester);
 
 if (!$selected_class_id || !$selected_mapel_id || !$jenis_semester) {
     die('Parameter tidak lengkap');
@@ -132,11 +133,15 @@ $titles = [
     'UAS' => 'NILAI AKHIR SEMESTER',
     'PAT' => 'NILAI AKHIR TAHUN',
     'Ujian' => 'NILAI UJIAN',
+    'Ujian Praktik' => 'NILAI UJIAN PRAKTIK',
     'Pra Ujian' => 'NILAI PRA UJIAN'
 ];
 $title = isset($titles[$jenis_semester]) ? $titles[$jenis_semester] : 'NILAI SEMESTER (' . $jenis_semester . ')';
 
-// Create Spreadsheet
+$export_tanpa_remidi = ($jenis_semester === 'Ujian Praktik');
+$lastCol = $export_tanpa_remidi ? 'E' : 'F';
+$headerRow = 11;
+$dataStartRow = $headerRow + 1;
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
 
@@ -162,24 +167,29 @@ $sheet->getStyle('A2')->getFont()->setSize(14)->setBold(true);
 $sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
 // Merge Header Cells
-$sheet->mergeCells('A1:F1');
-$sheet->mergeCells('A2:F2');
-$sheet->mergeCells('A3:F3');
+$sheet->mergeCells('A1:' . $lastCol . '1');
+$sheet->mergeCells('A2:' . $lastCol . '2');
+$sheet->mergeCells('A3:' . $lastCol . '3');
 
-$sheet->mergeCells('A5:F5');
-$sheet->mergeCells('A6:F6');
-$sheet->mergeCells('A7:F7');
-$sheet->mergeCells('A8:F8');
-$sheet->mergeCells('A9:F9');
+$sheet->mergeCells('A5:' . $lastCol . '5');
+$sheet->mergeCells('A6:' . $lastCol . '6');
+$sheet->mergeCells('A7:' . $lastCol . '7');
+$sheet->mergeCells('A8:' . $lastCol . '8');
+$sheet->mergeCells('A9:' . $lastCol . '9');
 
 // Table Headers
-$row = 11;
+$row = $headerRow;
 $sheet->setCellValue('A' . $row, 'NO');
 $sheet->setCellValue('B' . $row, 'NAMA SISWA');
 $sheet->setCellValue('C' . $row, 'NILAI ASLI');
-$sheet->setCellValue('D' . $row, 'REMIDI');
-$sheet->setCellValue('E' . $row, 'NILAI JADI');
-$sheet->setCellValue('F' . $row, 'RERATA');
+if ($export_tanpa_remidi) {
+    $sheet->setCellValue('D' . $row, 'NILAI JADI');
+    $sheet->setCellValue('E' . $row, 'RERATA');
+} else {
+    $sheet->setCellValue('D' . $row, 'REMIDI');
+    $sheet->setCellValue('E' . $row, 'NILAI JADI');
+    $sheet->setCellValue('F' . $row, 'RERATA');
+}
 
 // Style for Headers
 $headerStyle = [
@@ -195,7 +205,7 @@ $headerStyle = [
     ]
 ];
 
-$sheet->getStyle('A' . $row . ':F' . $row)->applyFromArray($headerStyle);
+$sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray($headerStyle);
 
 // Data Rows
 $row++;
@@ -205,18 +215,26 @@ foreach ($students as $student) {
     $grade = isset($grades_data[$id_siswa]) ? $grades_data[$id_siswa] : null;
     
     $nilai_asli = $grade ? $grade['nilai_asli'] : 0;
-    $nilai_remidi = $grade ? $grade['nilai_remidi'] : 0;
+    $nilai_remidi = $export_tanpa_remidi ? 0 : ($grade ? $grade['nilai_remidi'] : 0);
     $nilai_jadi = $grade ? $grade['nilai_jadi'] : 0;
     
-    // Calculate Rerata logic: (Asli + Remidi) / 2 if Remidi > 0, else Asli
-    $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+    if ($export_tanpa_remidi) {
+        $rerata = $nilai_asli;
+    } else {
+        $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+    }
     
     $sheet->setCellValue('A' . $row, $no++);
     $sheet->setCellValue('B' . $row, $student['nama_siswa']);
     $sheet->setCellValue('C' . $row, $nilai_asli > 0 ? $nilai_asli : '-');
-    $sheet->setCellValue('D' . $row, $nilai_remidi > 0 ? $nilai_remidi : '-');
-    $sheet->setCellValue('E' . $row, $nilai_jadi > 0 ? $nilai_jadi : '-');
-    $sheet->setCellValue('F' . $row, $rerata > 0 ? round($rerata, 1) : '-');
+    if ($export_tanpa_remidi) {
+        $sheet->setCellValue('D' . $row, $nilai_jadi > 0 ? $nilai_jadi : '-');
+        $sheet->setCellValue('E' . $row, $rerata > 0 ? round($rerata, 1) : '-');
+    } else {
+        $sheet->setCellValue('D' . $row, $nilai_remidi > 0 ? $nilai_remidi : '-');
+        $sheet->setCellValue('E' . $row, $nilai_jadi > 0 ? $nilai_jadi : '-');
+        $sheet->setCellValue('F' . $row, $rerata > 0 ? round($rerata, 1) : '-');
+    }
     
     $row++;
 }
@@ -225,24 +243,24 @@ foreach ($students as $student) {
 $dataStyle = [
     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
 ];
-$sheet->getStyle('A' . 8 . ':F' . ($row - 1))->applyFromArray($dataStyle);
+$sheet->getStyle('A' . $dataStartRow . ':' . $lastCol . ($row - 1))->applyFromArray($dataStyle);
 
 // Alignment for numbers
-$sheet->getStyle('A' . 8 . ':A' . ($row - 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-$sheet->getStyle('C' . 8 . ':F' . ($row - 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->getStyle('A' . $dataStartRow . ':A' . ($row - 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->getStyle('C' . $dataStartRow . ':' . $lastCol . ($row - 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
 // Auto Size Columns
-foreach (range('A', 'F') as $col) {
+foreach (range('A', $lastCol) as $col) {
     $sheet->getColumnDimension($col)->setAutoSize(true);
 }
 
 // Signatures
 $row += 2;
-$sheet->setCellValue('E' . $row, 'Jepara, ' . date('d F Y'));
+$sheet->setCellValue($lastCol . $row, 'Jepara, ' . date('d F Y'));
 $row++;
-$sheet->setCellValue('E' . $row, 'Guru Mata Pelajaran');
+$sheet->setCellValue($lastCol . $row, 'Guru Mata Pelajaran');
 $row += 4;
-$sheet->setCellValue('E' . $row, getGuruName($pdo, $id_guru) ?: '.........................');
+$sheet->setCellValue($lastCol . $row, getGuruName($pdo, $id_guru) ?: '.........................');
 
 // Output
 $filename = str_replace(' ', '_', $title) . '_' . str_replace(' ', '_', $class_info['nama_kelas']) . '_' . str_replace(' ', '_', $mapel_info['nama_mapel']) . '_' . date('Y-m-d') . '.xlsx';

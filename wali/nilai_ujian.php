@@ -6,5 +6,9 @@ if (!isAuthorized(['wali'])) {
     redirect('../login.php');
 }
 
-// Redirect to guru version with session_type parameter
-redirect('../guru/nilai_ujian.php?session_type=wali');
+$params = ['session_type' => 'wali'];
+if (isset($_GET['nilai_mode']) && $_GET['nilai_mode'] === 'praktik') {
+    $params['nilai_mode'] = 'praktik';
+}
+
+redirect('../guru/nilai_ujian.php?' . http_build_query($params));

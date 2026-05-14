@@ -31,7 +31,8 @@ if (!isAuthorized(['guru', 'wali', 'kepala_madrasah', 'tata_usaha', 'admin'])) {
 // Get parameters
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
-$jenis_semester = isset($_GET['jenis']) ? $_GET['jenis'] : null;
+$jenis_semester = isset($_GET['jenis']) ? (string)$_GET['jenis'] : null;
+$jenis_semester = normalize_jenis_semester_param($jenis_semester);
 
 if (!$selected_class_id || !$selected_mapel_id || !$jenis_semester) {
     die('Parameter tidak lengkap');
@@ -131,9 +132,11 @@ $titles = [
     'UAS' => 'NILAI AKHIR SEMESTER',
     'PAT' => 'NILAI AKHIR TAHUN',
     'Ujian' => 'NILAI UJIAN',
+    'Ujian Praktik' => 'NILAI UJIAN PRAKTIK',
     'Pra Ujian' => 'NILAI PRA UJIAN'
 ];
 $title = isset($titles[$jenis_semester]) ? $titles[$jenis_semester] : 'NILAI SEMESTER (' . $jenis_semester . ')';
+$export_tanpa_remidi = ($jenis_semester === 'Ujian Praktik');
 
 ?>
 <!DOCTYPE html>
@@ -223,7 +226,9 @@ $title = isset($titles[$jenis_semester]) ? $titles[$jenis_semester] : 'NILAI SEM
                 <th width="5%">NO</th>
                 <th>NAMA SISWA</th>
                 <th width="15%">NILAI ASLI</th>
+                <?php if (!$export_tanpa_remidi): ?>
                 <th width="15%">REMIDI</th>
+                <?php endif; ?>
                 <th width="15%">NILAI JADI</th>
                 <th width="15%">RERATA</th>
             </tr>
@@ -236,17 +241,22 @@ $title = isset($titles[$jenis_semester]) ? $titles[$jenis_semester] : 'NILAI SEM
                 $grade = isset($grades_data[$id_siswa]) ? $grades_data[$id_siswa] : null;
                 
                 $nilai_asli = $grade ? $grade['nilai_asli'] : 0;
-                $nilai_remidi = $grade ? $grade['nilai_remidi'] : 0;
+                $nilai_remidi = $export_tanpa_remidi ? 0 : ($grade ? $grade['nilai_remidi'] : 0);
                 $nilai_jadi = $grade ? $grade['nilai_jadi'] : 0;
                 
-                // Calculate Rerata logic
-                $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+                if ($export_tanpa_remidi) {
+                    $rerata = $nilai_asli;
+                } else {
+                    $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
+                }
             ?>
             <tr>
                 <td><?= $no++ ?></td>
                 <td class="text-left"><?= htmlspecialchars($student['nama_siswa']) ?></td>
                 <td><?= $nilai_asli > 0 ? $nilai_asli : '-' ?></td>
+                <?php if (!$export_tanpa_remidi): ?>
                 <td><?= $nilai_remidi > 0 ? $nilai_remidi : '-' ?></td>
+                <?php endif; ?>
                 <td><?= $nilai_jadi > 0 ? $nilai_jadi : '-' ?></td>
                 <td><?= $rerata > 0 ? round($rerata, 1) : '-' ?></td>
             </tr>

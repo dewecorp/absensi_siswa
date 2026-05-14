@@ -450,6 +450,11 @@ include_once '../templates/sidebar.php';
                                     <i class="fas fa-graduation-cap mr-2"></i> Nilai Ujian
                                 </a>
                             </div>
+                            <div class="col-md-6 col-sm-6 col-12 mb-3">
+                                <a href="nilai_ujian.php?nilai_mode=praktik" class="btn btn-outline-info btn-lg btn-block py-3">
+                                    <i class="fas fa-flask mr-2"></i> Nilai Ujian Praktik
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
