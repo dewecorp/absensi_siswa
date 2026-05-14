@@ -139,7 +139,7 @@ $titles = [
 $title = isset($titles[$jenis_semester]) ? $titles[$jenis_semester] : 'NILAI SEMESTER (' . $jenis_semester . ')';
 
 $export_tanpa_remidi = ($jenis_semester === 'Ujian Praktik');
-$lastCol = $export_tanpa_remidi ? 'E' : 'F';
+$lastCol = $export_tanpa_remidi ? 'D' : 'E';
 $headerRow = 11;
 $dataStartRow = $headerRow + 1;
 $spreadsheet = new Spreadsheet();
@@ -184,11 +184,9 @@ $sheet->setCellValue('B' . $row, 'NAMA SISWA');
 $sheet->setCellValue('C' . $row, 'NILAI ASLI');
 if ($export_tanpa_remidi) {
     $sheet->setCellValue('D' . $row, 'NILAI JADI');
-    $sheet->setCellValue('E' . $row, 'RERATA');
 } else {
     $sheet->setCellValue('D' . $row, 'REMIDI');
     $sheet->setCellValue('E' . $row, 'NILAI JADI');
-    $sheet->setCellValue('F' . $row, 'RERATA');
 }
 
 // Style for Headers
@@ -218,22 +216,14 @@ foreach ($students as $student) {
     $nilai_remidi = $export_tanpa_remidi ? 0 : ($grade ? $grade['nilai_remidi'] : 0);
     $nilai_jadi = $grade ? $grade['nilai_jadi'] : 0;
     
-    if ($export_tanpa_remidi) {
-        $rerata = $nilai_asli;
-    } else {
-        $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
-    }
-    
     $sheet->setCellValue('A' . $row, $no++);
     $sheet->setCellValue('B' . $row, $student['nama_siswa']);
     $sheet->setCellValue('C' . $row, $nilai_asli > 0 ? $nilai_asli : '-');
     if ($export_tanpa_remidi) {
         $sheet->setCellValue('D' . $row, $nilai_jadi > 0 ? $nilai_jadi : '-');
-        $sheet->setCellValue('E' . $row, $rerata > 0 ? round($rerata, 1) : '-');
     } else {
         $sheet->setCellValue('D' . $row, $nilai_remidi > 0 ? $nilai_remidi : '-');
         $sheet->setCellValue('E' . $row, $nilai_jadi > 0 ? $nilai_jadi : '-');
-        $sheet->setCellValue('F' . $row, $rerata > 0 ? round($rerata, 1) : '-');
     }
     
     $row++;

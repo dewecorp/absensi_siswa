@@ -230,7 +230,6 @@ $export_tanpa_remidi = ($jenis_semester === 'Ujian Praktik');
                 <th width="15%">REMIDI</th>
                 <?php endif; ?>
                 <th width="15%">NILAI JADI</th>
-                <th width="15%">RERATA</th>
             </tr>
         </thead>
         <tbody>
@@ -243,12 +242,6 @@ $export_tanpa_remidi = ($jenis_semester === 'Ujian Praktik');
                 $nilai_asli = $grade ? $grade['nilai_asli'] : 0;
                 $nilai_remidi = $export_tanpa_remidi ? 0 : ($grade ? $grade['nilai_remidi'] : 0);
                 $nilai_jadi = $grade ? $grade['nilai_jadi'] : 0;
-                
-                if ($export_tanpa_remidi) {
-                    $rerata = $nilai_asli;
-                } else {
-                    $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
-                }
             ?>
             <tr>
                 <td><?= $no++ ?></td>
@@ -258,7 +251,6 @@ $export_tanpa_remidi = ($jenis_semester === 'Ujian Praktik');
                 <td><?= $nilai_remidi > 0 ? $nilai_remidi : '-' ?></td>
                 <?php endif; ?>
                 <td><?= $nilai_jadi > 0 ? $nilai_jadi : '-' ?></td>
-                <td><?= $rerata > 0 ? round($rerata, 1) : '-' ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

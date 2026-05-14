@@ -189,7 +189,6 @@ require_once '../templates/sidebar.php';
                                         <th width="15%" class="text-center">Remidi</th>
                                         <?php endif; ?>
                                         <th width="15%" class="text-center">Nilai Jadi</th>
-                                        <th width="15%" class="text-center">Rerata</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -200,7 +199,6 @@ require_once '../templates/sidebar.php';
                                     $min_asli = null; $max_asli = null;
                                     $min_remidi = null; $max_remidi = null;
                                     $min_jadi = null; $max_jadi = null;
-                                    $min_rerata = null; $max_rerata = null;
 
                                     foreach ($students as $student): 
                                         $id_siswa = $student['id_siswa'];
@@ -208,12 +206,6 @@ require_once '../templates/sidebar.php';
                                         $nilai_asli = $grade ? $grade['nilai_asli'] : 0;
                                         $nilai_remidi = $ujian_praktik_tanpa_remidi ? 0 : ($grade ? $grade['nilai_remidi'] : 0);
                                         $nilai_jadi = $grade ? $grade['nilai_jadi'] : 0;
-                                        
-                                        if ($ujian_praktik_tanpa_remidi) {
-                                            $rerata = $nilai_asli;
-                                        } else {
-                                            $rerata = ($nilai_remidi > 0) ? ($nilai_asli + $nilai_remidi) / 2 : $nilai_asli;
-                                        }
                                         
                                         // Update Min/Max Stats (Only consider non-zero values)
                                         if ($nilai_asli > 0) {
@@ -227,10 +219,6 @@ require_once '../templates/sidebar.php';
                                         if ($nilai_jadi > 0) {
                                             if ($min_jadi === null || $nilai_jadi < $min_jadi) $min_jadi = $nilai_jadi;
                                             if ($max_jadi === null || $nilai_jadi > $max_jadi) $max_jadi = $nilai_jadi;
-                                        }
-                                        if ($rerata > 0) {
-                                            if ($min_rerata === null || $rerata < $min_rerata) $min_rerata = $rerata;
-                                            if ($max_rerata === null || $rerata > $max_rerata) $max_rerata = $rerata;
                                         }
                                     ?>
                                         <tr>
@@ -247,9 +235,6 @@ require_once '../templates/sidebar.php';
                                             <td class="text-center bg-light">
                                                 <span class="display-nilai-jadi font-weight-bold"><?= $nilai_jadi > 0 ? (float)$nilai_jadi : '-' ?></span>
                                             </td>
-                                            <td class="text-center bg-light">
-                                                <span class="display-rerata"><?= $rerata > 0 ? (float)number_format($rerata, 1) : '-' ?></span>
-                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                     
@@ -261,7 +246,6 @@ require_once '../templates/sidebar.php';
                                         <td class="text-center text-success" id="max-remidi"><?= $max_remidi !== null ? (float)$max_remidi : '-' ?></td>
                                         <?php endif; ?>
                                         <td class="text-center text-success" id="max-jadi"><?= $max_jadi !== null ? (float)$max_jadi : '-' ?></td>
-                                        <td class="text-center text-success" id="max-rerata"><?= $max_rerata !== null ? (float)number_format($max_rerata, 1) : '-' ?></td>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right">Nilai Terendah</td>
@@ -270,7 +254,6 @@ require_once '../templates/sidebar.php';
                                         <td class="text-center text-danger" id="min-remidi"><?= $min_remidi !== null ? (float)$min_remidi : '-' ?></td>
                                         <?php endif; ?>
                                         <td class="text-center text-danger" id="min-jadi"><?= $min_jadi !== null ? (float)$min_jadi : '-' ?></td>
-                                        <td class="text-center text-danger" id="min-rerata"><?= $min_rerata !== null ? (float)number_format($min_rerata, 1) : '-' ?></td>
                                     </tr>
                                 </tbody>
                             </table>
