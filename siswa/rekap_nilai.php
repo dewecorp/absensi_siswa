@@ -6,8 +6,6 @@ if (!isAuthorized(['siswa'])) {
     redirect('../login.php');
 }
 
-$page_title = 'Rekap Nilai Saya';
-
 // Get student data
 $id_siswa = $_SESSION['user_id'];
 $stmt = $pdo->prepare("SELECT s.*, k.nama_kelas, k.id_kelas, k.wali_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ?");
@@ -19,11 +17,9 @@ if (!$student) {
     exit;
 }
 
-$id_kelas = $student['id_kelas'];
-$nama_kelas_siswa = $student['nama_kelas'];
+$page_title = 'Rekap Nilai ' . trim((string)($student['nama_siswa'] ?? ''));
 
-// Check if student is in grade 6
-$is_grade_6 = (strpos(strtolower($nama_kelas_siswa), '6') !== false || strpos(strtolower($nama_kelas_siswa), 'vi') !== false);
+$id_kelas = $student['id_kelas'];
 
 // Get Active Semester
 $school_profile = getSchoolProfile($pdo);
@@ -35,9 +31,13 @@ $school_name = $school_profile['nama_madrasah'] ?? 'Madrasah';
 $madrasah_head_name = $school_profile['kepala_madrasah'] ?? 'Kepala Madrasah';
 $madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
 
-// Parameters
-$selected_jenis = isset($_GET['jenis']) ? $_GET['jenis'] : 'Harian';
-$selected_tipe = isset($_GET['tipe']) ? $_GET['tipe'] : 'nilai_jadi'; // nilai_asli or nilai_jadi
+// Parameters — Harian/Kokurikuler: asli kolom nilai; PTS/PAS/PAT: MAX(asli, remidi); bukan nilai_jadi
+// Pra/Ujian madrasah tidak di sini (ada menu khusus kelas 6)
+$rekap_jenis_allowed = ['Harian', 'PTS', 'PAS', 'PAT', 'Kokurikuler'];
+$selected_jenis = isset($_GET['jenis']) ? (string)$_GET['jenis'] : 'Harian';
+if (!in_array($selected_jenis, $rekap_jenis_allowed, true)) {
+    $selected_jenis = 'Harian';
+}
 
 // Define JS libraries for this page
 $js_libs = [
@@ -56,56 +56,56 @@ foreach ($subjects as $mapel) {
     $nilai = 0;
     
     if ($selected_jenis == 'Harian') {
-        // Logic for Nilai Harian (Average of all PH columns)
+        // Rerata harian siswa = rerata kolom `nilai` (nilai asli PH), bukan `nilai_jadi`
         $stmt = $pdo->prepare("
-            SELECT d.* 
+            SELECT ROUND(AVG(CASE WHEN d.nilai IS NOT NULL AND d.nilai > 0 THEN d.nilai END)) AS rerata_asli
             FROM tb_nilai_harian_detail d
-            JOIN tb_nilai_harian_header h ON d.id_header = h.id_header
+            INNER JOIN tb_nilai_harian_header h ON d.id_header = h.id_header
             WHERE h.id_kelas = ? AND h.id_mapel = ?
-            AND h.tahun_ajaran = ? AND h.semester = ?
-            AND d.id_siswa = ?
+              AND h.tahun_ajaran = ? AND h.semester = ?
+              AND d.id_siswa = ?
         ");
         $stmt->execute([$id_kelas, $mapel['id_mapel'], $tahun_ajaran, $semester_aktif, $id_siswa]);
-        $details = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        if (!empty($details)) {
-            $sum = 0;
-            $count = 0;
-            foreach ($details as $d) {
-                $val = ($selected_tipe == 'nilai_asli') ? $d['nilai'] : $d['nilai_jadi'];
-                if ($val > 0) {
-                    $sum += $val;
-                    $count++;
-                }
-            }
-            if ($count > 0) {
-                $nilai = round($sum / $count);
-            }
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row && $row['rerata_asli'] !== null && (float)$row['rerata_asli'] > 0) {
+            $nilai = (float)$row['rerata_asli'];
+        }
+    } elseif ($selected_jenis === 'Kokurikuler') {
+        // Kokurikuler: rerata kolom `nilai` (asli), bukan `nilai_jadi`
+        $stmt = $pdo->prepare("
+            SELECT ROUND(AVG(CASE WHEN d.nilai IS NOT NULL AND d.nilai > 0 THEN d.nilai END)) AS rerata_asli
+            FROM tb_nilai_kokurikuler_detail d
+            INNER JOIN tb_nilai_kokurikuler_header h ON d.id_header = h.id_header
+            WHERE h.id_kelas = ? AND h.id_mapel = ?
+              AND h.tahun_ajaran = ? AND h.semester = ?
+              AND d.id_siswa = ?
+        ");
+        $stmt->execute([$id_kelas, $mapel['id_mapel'], $tahun_ajaran, $semester_aktif, $id_siswa]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row && $row['rerata_asli'] !== null && (float)$row['rerata_asli'] > 0) {
+            $nilai = (float)$row['rerata_asli'];
         }
     } else {
-        // Logic for Semester (PTS, PAS, PAT, etc)
-        // Map new exam type names to database values
+        // PTS, PAS, PAT — siswa: MAX(nilai_asli, nilai_remidi); bukan nilai_jadi
         $exam_type_map = [
             'PTS' => 'UTS',
             'PAS' => 'UAS',
             'PAT' => 'PAT',
-            'Pra Ujian Madrasah' => 'Pra Ujian',
-            'Ujian Madrasah' => 'Ujian'
         ];
         $db_jenis = $exam_type_map[$selected_jenis] ?? $selected_jenis;
-        
+
         $stmt = $pdo->prepare("
-            SELECT * FROM tb_nilai_semester 
-            WHERE id_kelas = ? AND id_mapel = ? 
-            AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
-            AND id_siswa = ?
+            SELECT nilai_asli, nilai_remidi
+            FROM tb_nilai_semester
+            WHERE id_kelas = ? AND id_mapel = ?
+              AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
+              AND id_siswa = ?
+            LIMIT 1
         ");
         $stmt->execute([$id_kelas, $mapel['id_mapel'], $db_jenis, $tahun_ajaran, $semester_aktif, $id_siswa]);
-        $grade = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($grade) {
-            $val = ($selected_tipe == 'nilai_asli') ? $grade['nilai_asli'] : $grade['nilai_jadi'];
-            $nilai = $val > 0 ? (float)$val : 0;
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $nilai = nilai_tampilan_siswa_semester($row['nilai_asli'] ?? null, $row['nilai_remidi'] ?? null, false);
         }
     }
 
@@ -145,7 +145,7 @@ require_once '../templates/sidebar.php';
                                 </tr>
                                 <tr>
                                     <th>Tahun Ajaran</th>
-                                    <td>: <?= htmlspecialchars($tahun_ajaran) ?> (Semester <?= htmlspecialchars($semester_aktif) ?>)</td>
+                                    <td>: <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars(formatSemesterLabelForExport($semester_aktif)) ?>)</td>
                                 </tr>
                             </table>
                         </div>
@@ -163,7 +163,7 @@ require_once '../templates/sidebar.php';
 
                     <form method="GET" action="" class="mb-4">
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-6 col-lg-5">
                                 <div class="form-group">
                                     <label>Jenis Penilaian</label>
                                     <select name="jenis" class="form-control" onchange="this.form.submit()">
@@ -172,20 +172,6 @@ require_once '../templates/sidebar.php';
                                         <option value="PAS" <?= $selected_jenis == 'PAS' ? 'selected' : '' ?>>Penilaian Akhir Semester (PAS)</option>
                                         <option value="PAT" <?= $selected_jenis == 'PAT' ? 'selected' : '' ?>>Penilaian Akhir Tahun (PAT)</option>
                                         <option value="Kokurikuler" <?= $selected_jenis == 'Kokurikuler' ? 'selected' : '' ?>>Nilai Kokurikuler</option>
-                                        
-                                        <?php if ($is_grade_6): ?>
-                                            <option value="Pra Ujian Madrasah" <?= $selected_jenis == 'Pra Ujian Madrasah' ? 'selected' : '' ?>>Nilai Pra Ujian Madrasah</option>
-                                            <option value="Ujian Madrasah" <?= $selected_jenis == 'Ujian Madrasah' ? 'selected' : '' ?>>Nilai Ujian Madrasah</option>
-                                        <?php endif; ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Tipe Nilai</label>
-                                    <select name="tipe" class="form-control" onchange="this.form.submit()">
-                                        <option value="nilai_jadi" <?= $selected_tipe == 'nilai_jadi' ? 'selected' : '' ?>>Nilai Jadi</option>
-                                        <option value="nilai_asli" <?= $selected_tipe == 'nilai_asli' ? 'selected' : '' ?>>Nilai Asli</option>
                                     </select>
                                 </div>
                             </div>

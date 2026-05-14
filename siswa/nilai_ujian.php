@@ -34,12 +34,8 @@ $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran = $school_profile['tahun_ajaran'];
 $semester_aktif = $school_profile['semester'];
 
-// Jenis nilai ujian / ujian praktik (kolom jenis_semester)
+// Jenis nilai ujian / ujian praktik — siswa: MAX(asli, remidi); ujian praktik: asli saja
 $selected_jenis = nilai_ujian_jenis_semester();
-$selected_tipe = isset($_GET['tipe']) ? $_GET['tipe'] : 'nilai_jadi';
-if ($selected_tipe !== 'nilai_asli' && $selected_tipe !== 'nilai_jadi') {
-    $selected_tipe = 'nilai_jadi';
-}
 
 // Get Subjects (Mapel)
 $subjects = getFilteredSubjects($pdo);
@@ -53,17 +49,21 @@ foreach ($subjects as $mapel) {
     $nilai = 0;
     
     $stmt = $pdo->prepare("
-        SELECT * FROM tb_nilai_semester 
-        WHERE id_kelas = ? AND id_mapel = ? 
-        AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
-        AND id_siswa = ?
+        SELECT nilai_asli, nilai_remidi
+        FROM tb_nilai_semester
+        WHERE id_kelas = ? AND id_mapel = ?
+          AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
+          AND id_siswa = ?
+        LIMIT 1
     ");
     $stmt->execute([$id_kelas, $mapel['id_mapel'], $selected_jenis, $tahun_ajaran, $semester_aktif, $id_siswa]);
-    $grade = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($grade) {
-        $val = ($selected_tipe == 'nilai_asli') ? $grade['nilai_asli'] : $grade['nilai_jadi'];
-        $nilai = $val > 0 ? (float)$val : 0;
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row) {
+        $nilai = nilai_tampilan_siswa_semester(
+            $row['nilai_asli'] ?? null,
+            $row['nilai_remidi'] ?? null,
+            nilai_ujian_is_praktik_mode()
+        );
     }
 
     $rekap_data[$mapel['id_mapel']] = $nilai;
@@ -94,7 +94,7 @@ require_once '../templates/sidebar.php';
             <div class="card">
                 <div class="card-body">
                     <div class="row mb-4">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <table class="table table-sm table-borderless">
                                 <tr>
                                     <th width="150">Nama Siswa</th>
@@ -105,20 +105,6 @@ require_once '../templates/sidebar.php';
                                     <td>: <?= htmlspecialchars($student['nama_kelas']) ?></td>
                                 </tr>
                             </table>
-                        </div>
-                        <div class="col-md-6 text-right">
-                             <form method="GET" action="" class="d-inline-block text-right">
-                                <?php if (nilai_ujian_is_praktik_mode()): ?>
-                                <input type="hidden" name="nilai_mode" value="praktik">
-                                <?php endif; ?>
-                                <div class="form-group mb-0">
-                                    <label for="tipe-nilai-ujian" class="d-block text-right mb-1">Tipe Nilai</label>
-                                    <select id="tipe-nilai-ujian" name="tipe" class="form-control form-control-sm" onchange="this.form.submit()">
-                                    <option value="nilai_jadi" <?= $selected_tipe == 'nilai_jadi' ? 'selected' : '' ?>>Nilai Jadi</option>
-                                    <option value="nilai_asli" <?= $selected_tipe == 'nilai_asli' ? 'selected' : '' ?>>Nilai Asli</option>
-                                </select>
-                                </div>
-                            </form>
                         </div>
                     </div>
 

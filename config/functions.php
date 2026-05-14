@@ -1332,6 +1332,20 @@ function nilai_ujian_page_title(): string {
     return nilai_ujian_is_praktik_mode() ? 'Nilai Ujian Praktik' : 'Nilai Ujian';
 }
 
+/**
+ * Nilai semester untuk tampilan siswa: MAX(nilai_asli, nilai_remidi) — ambil yang tertinggi;
+ * jika asli lebih tinggi dari remidi tetap asli. Ujian Praktik: hanya nilai_asli (remidi tidak dipakai).
+ */
+function nilai_tampilan_siswa_semester($nilai_asli, $nilai_remidi, bool $abaikan_remidi = false): float {
+    $a = (float)($nilai_asli ?? 0);
+    if ($abaikan_remidi) {
+        return $a > 0 ? $a : 0.0;
+    }
+    $r = (float)($nilai_remidi ?? 0);
+    $m = max($a, $r);
+    return $m > 0 ? $m : 0.0;
+}
+
 function nilai_semester_allowed_jenis_values(): array {
     return ['UTS', 'UAS', 'PAT', 'Pra Ujian', 'Ujian', 'Ujian Praktik'];
 }
