@@ -269,12 +269,10 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <tr>
                 <th width="4%">No</th>
                 <th width="9%">Tanggal</th>
-                <th width="18%">Nama Siswa</th>
+                <th width="20%">Nama Siswa</th>
                 <th width="7%">KKM</th>
                 <th width="9%">Nilai Asli</th>
-                <th width="16%">Indikator Tidak Dikuasai</th>
-                <th width="16%">Bentuk Remidial</th>
-                <th width="7%">No. Soal</th>
+                <th width="18%">Bentuk Remidial</th>
                 <th width="9%">Nilai Remidi</th>
                 <th width="10%">Keterangan</th>
             </tr>
@@ -282,7 +280,7 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <tbody>
             <?php if (empty($remedial_list)): ?>
                 <tr>
-                    <td colspan="11" class="text-center">Tidak ada data remedial</td>
+                    <td colspan="8" class="text-center">Tidak ada data remedial</td>
                 </tr>
             <?php else: 
                 $no = 1;
@@ -294,9 +292,7 @@ $remedial_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
                     <td class="text-center"><?= number_format($r['kkm'], 0) ?></td>
                     <td class="text-center"><?= number_format($r['nilai_ulangan'], 0) ?></td>
-                    <td><?= htmlspecialchars($r['indikator_tidak_dikuasai']) ?></td>
                     <td><?= htmlspecialchars($r['bentuk_remidial']) ?></td>
-                    <td class="text-center"><?= htmlspecialchars($r['nomor_soal']) ?></td>
                     <td class="text-center"><?= number_format($r['nilai_tes_remidi'], 0) ?></td>
                     <td class="text-center">
                         <span style="color: <?= $r['keterangan'] == 'Tuntas' ? 'green' : 'red' ?>; font-weight: bold;">

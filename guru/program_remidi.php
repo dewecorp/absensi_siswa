@@ -131,9 +131,9 @@ if (isset($_POST['action']) && ($_POST['action'] == 'save' || $_POST['action'] =
         $jenis = $_POST['jenis_ulangan'];
         $kkm = $_POST['kkm'];
         $nilai_ulangan = $_POST['nilai_ulangan'];
-        $indikator = $_POST['indikator'];
+        $indikator = '';
         $bentuk = $_POST['bentuk'];
-        $nomor_soal = $_POST['nomor_soal'];
+        $nomor_soal = '';
         $nilai_tes = $_POST['nilai_tes'];
         
         // Map new exam type names to database values
@@ -323,9 +323,7 @@ $(document).ready(function() {
         $('#select-siswa').html(`<option value="${data.id_siswa}" selected>${data.nama_siswa}</option>`).prop('disabled', true);
         $('#input-kkm').val(data.kkm);
         $('#input-nilai-asli').val(data.nilai_ulangan);
-        $('[name="indikator"]').val(data.indikator_tidak_dikuasai);
         $('[name="bentuk"]').val(data.bentuk_remidial);
-        $('[name="nomor_soal"]').val(data.nomor_soal);
         $('#input-nilai-remidi').val(data.nilai_tes_remidi);
         
         $('#modal-remedial').modal('show');
@@ -483,9 +481,7 @@ require_once '../templates/sidebar.php';
                                         <th>Nama Siswa</th>
                                         <th class="text-center" width="7%">KKM</th>
                                         <th class="text-center" width="8%">Nilai Asli</th>
-                                        <th width="15%">Indikator</th>
-                                        <th width="15%">Bentuk Remidial</th>
-                                        <th class="text-center" width="8%">No. Soal</th>
+                                        <th width="18%">Bentuk Remidial</th>
                                         <th class="text-center" width="8%">Nilai Remidi</th>
                                         <th class="text-center" width="8%">Keterangan</th>
                                         <th class="text-center" width="10%">Aksi</th>
@@ -493,7 +489,7 @@ require_once '../templates/sidebar.php';
                                 </thead>
                                 <tbody>
                                     <?php if (empty($remedial_list)): ?>
-                                        <tr><td colspan="11" class="text-center">Belum ada data remedial.</td></tr>
+                                        <tr><td colspan="9" class="text-center">Belum ada data remedial.</td></tr>
                                     <?php else: $no = 1; foreach ($remedial_list as $r): ?>
                                         <tr>
                                             <td class="text-center"><?= $no++ ?></td>
@@ -501,9 +497,7 @@ require_once '../templates/sidebar.php';
                                             <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
                                             <td class="text-center"><?= (float)$r['kkm'] ?></td>
                                             <td class="text-center"><?= (float)$r['nilai_ulangan'] ?></td>
-                                            <td><?= htmlspecialchars($r['indikator_tidak_dikuasai']) ?></td>
                                             <td><?= htmlspecialchars($r['bentuk_remidial']) ?></td>
-                                            <td class="text-center"><?= htmlspecialchars($r['nomor_soal']) ?></td>
                                             <td class="text-center"><?= (float)$r['nilai_tes_remidi'] ?></td>
                                             <td class="text-center">
                                                 <span class="badge badge-<?= $r['keterangan'] == 'Tuntas' ? 'success' : 'danger' ?>">
@@ -575,26 +569,12 @@ require_once '../templates/sidebar.php';
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Indikator yang tidak dikuasai</label>
-                                <input type="text" name="indikator" class="form-control" placeholder="Contoh: No. Indikator 1.2" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
                                 <label>Bentuk Remidial</label>
                                 <select name="bentuk" class="form-control" required>
                                     <option value="">Pilih Bentuk Remidial</option>
                                     <option value="Tes Ulang">Tes Ulang</option>
                                     <option value="Penugasan">Penugasan</option>
                                 </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Nomor Soal yang dikerjakan</label>
-                                <input type="text" name="nomor_soal" class="form-control" placeholder="Contoh: 1, 3, 5" required>
                             </div>
                         </div>
                         <div class="col-md-6">

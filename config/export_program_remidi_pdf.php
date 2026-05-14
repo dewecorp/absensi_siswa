@@ -285,17 +285,15 @@ if (!empty($logo_file)) {
                 <th width="15%">Guru</th>
                 <th width="7%">KKM</th>
                 <th width="8%">Nilai Asli</th>
-                <th width="13%">Indikator Tidak Dikuasai</th>
-                <th width="13%">Bentuk Remidial</th>
-                <th width="7%">No. Soal</th>
+                <th width="16%">Bentuk Remidial</th>
                 <th width="7%">Nilai Remidi</th>
-                <th width="8%">Keterangan</th>
+                <th width="9%">Keterangan</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($remedial_list)): ?>
                 <tr>
-                    <td colspan="11" class="text-center">Tidak ada data remedial</td>
+                    <td colspan="9" class="text-center">Tidak ada data remedial</td>
                 </tr>
             <?php else: 
                 $no = 1;
@@ -308,9 +306,7 @@ if (!empty($logo_file)) {
                     <td><?= htmlspecialchars($r['nama_guru'] ?? '-') ?></td>
                     <td class="text-center"><?= number_format($r['kkm'], 0) ?></td>
                     <td class="text-center"><?= number_format($r['nilai_ulangan'], 0) ?></td>
-                    <td><?= htmlspecialchars($r['indikator_tidak_dikuasai']) ?></td>
                     <td><?= htmlspecialchars($r['bentuk_remidial']) ?></td>
-                    <td class="text-center"><?= htmlspecialchars($r['nomor_soal']) ?></td>
                     <td class="text-center"><?= number_format($r['nilai_tes_remidi'], 0) ?></td>
                     <td class="text-center"><?= htmlspecialchars($r['keterangan']) ?></td>
                 </tr>

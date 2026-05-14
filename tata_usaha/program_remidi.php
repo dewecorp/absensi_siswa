@@ -124,16 +124,14 @@ require_once '../templates/sidebar.php';
                                         <th>Guru</th>
                                         <th class="text-center" width="7%">KKM</th>
                                         <th class="text-center" width="8%">Nilai Asli</th>
-                                        <th width="15%">Indikator</th>
-                                        <th width="15%">Bentuk Remidial</th>
-                                        <th class="text-center" width="8%">No. Soal</th>
+                                        <th width="18%">Bentuk Remidial</th>
                                         <th class="text-center" width="8%">Nilai Remidi</th>
                                         <th class="text-center" width="8%">Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($remedial_list)): ?>
-                                        <tr><td colspan="12" class="text-center">Belum ada data remedial.</td></tr>
+                                        <tr><td colspan="10" class="text-center">Belum ada data remedial.</td></tr>
                                     <?php else: $no = 1; foreach ($remedial_list as $r): ?>
                                         <tr>
                                             <td class="text-center"><?= $no++ ?></td>
@@ -143,9 +141,7 @@ require_once '../templates/sidebar.php';
                                             <td><?= htmlspecialchars($r['nama_guru'] ?? '-') ?></td>
                                             <td class="text-center"><?= (float)$r['kkm'] ?></td>
                                             <td class="text-center"><?= (float)$r['nilai_ulangan'] ?></td>
-                                            <td><?= htmlspecialchars($r['indikator_tidak_dikuasai']) ?></td>
                                             <td><?= htmlspecialchars($r['bentuk_remidial']) ?></td>
-                                            <td class="text-center"><?= htmlspecialchars($r['nomor_soal']) ?></td>
                                             <td class="text-center"><?= (float)$r['nilai_tes_remidi'] ?></td>
                                             <td class="text-center">
                                                 <span class="badge badge-<?= $r['keterangan'] == 'Tuntas' ? 'success' : 'danger' ?>">
