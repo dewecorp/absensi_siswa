@@ -98,7 +98,8 @@ if ($selected_class && $selected_jenis) {
         'PAS' => 'UAS',
         'PAT' => 'PAT',
         'Pra Ujian Madrasah' => 'Pra Ujian',
-        'Ujian Madrasah' => 'Ujian'
+        'Ujian Madrasah' => 'Ujian',
+        'Ujian Praktik' => 'Ujian Praktik'
     ];
     $db_jenis = $exam_type_map[$selected_jenis] ?? $selected_jenis;
     
@@ -108,6 +109,13 @@ if ($selected_class && $selected_jenis) {
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Fetch Grades
+    $kelas_sum = [];
+    $kelas_count = [];
+    foreach ($subjects as $mapel) {
+        $kelas_sum[$mapel['id_mapel']] = 0;
+        $kelas_count[$mapel['id_mapel']] = 0;
+    }
+
     foreach ($students as $student) {
         $total_nilai = 0;
         $count_mapel = 0;
@@ -162,6 +170,8 @@ if ($selected_class && $selected_jenis) {
             $rekap_data[$student['id_siswa']][$mapel['id_mapel']] = $nilai;
             
             if ($nilai > 0) {
+                $kelas_sum[$mapel['id_mapel']] += $nilai;
+                $kelas_count[$mapel['id_mapel']]++;
                 $total_nilai += $nilai;
                 $count_mapel++;
             }
@@ -189,6 +199,17 @@ if ($selected_class && $selected_jenis) {
         $rekap_data[$id_siswa]['ranking'] = $rank;
         $prev_avg = $avg;
         $real_rank++;
+    }
+
+    $kelas_avg = [];
+    foreach ($subjects as $mapel) {
+        $id_mapel = $mapel['id_mapel'];
+        if (($kelas_count[$id_mapel] ?? 0) > 0) {
+            $avg_mapel = round(($kelas_sum[$id_mapel] ?? 0) / $kelas_count[$id_mapel], 1);
+            $kelas_avg[$id_mapel] = $avg_mapel;
+        } else {
+            $kelas_avg[$id_mapel] = 0;
+        }
     }
 }
 
@@ -275,6 +296,7 @@ require_once '../templates/sidebar.php';
                                         <?php if ($is_grade_6): ?>
                                         <option value="Pra Ujian Madrasah" <?= $selected_jenis == 'Pra Ujian Madrasah' ? 'selected' : '' ?>>Nilai Pra Ujian Madrasah</option>
                                         <option value="Ujian Madrasah" <?= $selected_jenis == 'Ujian Madrasah' ? 'selected' : '' ?>>Nilai Ujian Madrasah</option>
+                                        <option value="Ujian Praktik" <?= $selected_jenis == 'Ujian Praktik' ? 'selected' : '' ?>>Nilai Ujian Praktik</option>
                                         <?php endif; ?>
                                     </select>
                                 </div>
@@ -354,6 +376,24 @@ require_once '../templates/sidebar.php';
                                             <td class="text-center font-weight-bold badge-secondary"><?= $data['ranking'] ?? '-' ?></td>
                                         </tr>
                                     <?php endforeach; ?>
+                                    <?php if (!empty($students)): ?>
+                                        <tr class="table-secondary font-weight-bold">
+                                            <td class="text-center sticky-col sticky-col-1"></td>
+                                            <td class="sticky-col sticky-col-2">Rerata Kelas</td>
+                                            <?php foreach ($subjects as $mapel): ?>
+                                                <td class="text-center">
+                                                    <?php
+                                                    $id_mapel = $mapel['id_mapel'];
+                                                    $val = $kelas_avg[$id_mapel] ?? 0;
+                                                    echo $val > 0 ? $val : '-';
+                                                    ?>
+                                                </td>
+                                            <?php endforeach; ?>
+                                            <td class="text-center">-</td>
+                                            <td class="text-center">-</td>
+                                            <td class="text-center">-</td>
+                                        </tr>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>

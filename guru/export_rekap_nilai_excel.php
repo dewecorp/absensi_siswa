@@ -73,12 +73,30 @@ $semester_aktif = $school_profile['semester'] ?? '';
 $students   = [];
 $rekap_data = [];
 
+// Map new exam type names to database values
+$exam_type_map = [
+    'PTS' => 'UTS',
+    'PAS' => 'UAS',
+    'PAT' => 'PAT',
+    'Pra Ujian Madrasah' => 'Pra Ujian',
+    'Ujian Madrasah' => 'Ujian',
+    'Ujian Praktik' => 'Ujian Praktik'
+];
+$db_jenis = $exam_type_map[$selected_jenis] ?? $selected_jenis;
+
 // Get Students
 $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
 $stmt->execute([$selected_class_id]);
 $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch Grades (Logic from rekap_nilai.php)
+$kelas_sum = [];
+$kelas_count = [];
+foreach ($subjects as $mapel) {
+    $kelas_sum[$mapel['id_mapel']] = 0;
+    $kelas_count[$mapel['id_mapel']] = 0;
+}
+
 foreach ($students as $student) {
     $total_nilai = 0;
     $count_mapel = 0;
@@ -119,7 +137,7 @@ foreach ($students as $student) {
                 AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
                 AND id_siswa = ?
             ");
-            $stmt->execute([$selected_class_id, $mapel['id_mapel'], $selected_jenis, $tahun_ajaran, $semester_aktif, $student['id_siswa']]);
+            $stmt->execute([$selected_class_id, $mapel['id_mapel'], $db_jenis, $tahun_ajaran, $semester_aktif, $student['id_siswa']]);
             $grade = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($grade) {
@@ -131,6 +149,8 @@ foreach ($students as $student) {
         $rekap_data[$student['id_siswa']][$mapel['id_mapel']] = $nilai;
 
         if ($nilai > 0) {
+            $kelas_sum[$mapel['id_mapel']] += $nilai;
+            $kelas_count[$mapel['id_mapel']]++;
             $total_nilai += $nilai;
             $count_mapel++;
         }
@@ -158,6 +178,17 @@ foreach ($averages as $id_siswa => $avg) {
     $rekap_data[$id_siswa]['ranking'] = $rank;
     $prev_avg = $avg;
     $real_rank++;
+}
+
+$kelas_avg = [];
+foreach ($subjects as $mapel) {
+    $id_mapel = $mapel['id_mapel'];
+    if (($kelas_count[$id_mapel] ?? 0) > 0) {
+        $avg_mapel = round(($kelas_sum[$id_mapel] ?? 0) / $kelas_count[$id_mapel], 1);
+        $kelas_avg[$id_mapel] = $avg_mapel;
+    } else {
+        $kelas_avg[$id_mapel] = 0;
+    }
 }
 
 // Create Spreadsheet
@@ -262,6 +293,29 @@ foreach ($students as $student) {
     $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, $data['rerata'] ?? 0); $cIdx++;
     $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, $data['ranking'] ?? '-');
 
+    $row++;
+}
+
+if (!empty($students)) {
+    $sheet->setCellValue('A' . $row, '');
+    $sheet->setCellValue('B' . $row, 'Rerata Kelas');
+
+    $cIdx = 3;
+    foreach ($subjects as $mapel) {
+        $id_mapel = $mapel['id_mapel'];
+        $val = $kelas_avg[$id_mapel] ?? 0;
+        $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, $val > 0 ? $val : '-');
+        $cIdx++;
+    }
+
+    $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, '-'); $cIdx++;
+    $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, '-'); $cIdx++;
+    $sheet->setCellValue(Coordinate::stringFromColumnIndex($cIdx) . $row, '-');
+
+    $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->getFont()->setBold(true);
+    $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->getFill()
+          ->setFillType(Fill::FILL_SOLID)
+          ->getStartColor()->setRGB('E9ECEF');
     $row++;
 }
 
