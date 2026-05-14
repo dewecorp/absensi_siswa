@@ -75,6 +75,16 @@ if (!empty($logo_file)) {
     }
 }
 
+// Map label filter (UI) ke nilai jenis_semester di tb_nilai_semester
+$exam_type_map = [
+    'PTS' => 'UTS',
+    'PAS' => 'UAS',
+    'PAT' => 'PAT',
+    'Pra Ujian Madrasah' => 'Pra Ujian',
+    'Ujian Madrasah' => 'Ujian'
+];
+$db_exam_type = $exam_type_map[$selected_exam_type] ?? $selected_exam_type;
+
 // Get enrichment data
 $stmt = $pdo->prepare("
     SELECT p.*, s.nama_siswa, n.nilai_asli
@@ -82,14 +92,14 @@ $stmt = $pdo->prepare("
     JOIN tb_siswa s ON p.id_siswa = s.id_siswa
     LEFT JOIN tb_nilai_semester n ON s.id_siswa = n.id_siswa 
         AND n.id_mapel = p.id_mapel 
-        AND n.jenis_semester = p.jenis_ulangan
+        AND n.jenis_semester = ?
         AND n.tahun_ajaran = p.tahun_ajaran
         AND n.semester = p.semester
     WHERE p.id_kelas = ? AND p.id_mapel = ? AND p.jenis_ulangan = ? 
     AND p.tahun_ajaran = ? AND p.semester = ?
     ORDER BY s.nama_siswa ASC
 ");
-$stmt->execute([$selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
+$stmt->execute([$db_exam_type, $selected_class_id, $selected_mapel_id, $selected_exam_type, $tahun_ajaran, $semester_aktif]);
 $enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Set headers for PDF (print dialog)
@@ -269,7 +279,7 @@ $enrichment_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <td class="text-center"><?= $no++ ?></td>
                     <td class="text-center"><?= date('d/m/Y', strtotime($p['tanggal'])) ?></td>
                     <td><?= htmlspecialchars($p['nama_siswa']) ?></td>
-                    <td class="text-center"><?= number_format($p['nilai_asli'], 0) ?></td>
+                    <td class="text-center"><?= number_format((float)($p['nilai_asli'] ?? 0), 0) ?></td>
                     <td><?= htmlspecialchars($p['bentuk_pengayaan']) ?></td>
                 </tr>
             <?php 
