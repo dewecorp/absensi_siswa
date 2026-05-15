@@ -34,9 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($nilai_remidi > 100) $nilai_remidi = 100;
         $min_target = null;
         $max_target = null;
-        if (isset($_POST['nilai_min_target']) || isset($_POST['nilai_max_target'])) {
-            $min_raw = $_POST['nilai_min_target'] ?? null;
-            $max_raw = $_POST['nilai_max_target'] ?? null;
+        $has_min_key = array_key_exists('nilai_min_target', $_POST);
+        $has_max_key = array_key_exists('nilai_max_target', $_POST);
+        $settings_touched = $has_min_key || $has_max_key;
+        if ($settings_touched) {
+            $min_raw = $has_min_key ? $_POST['nilai_min_target'] : null;
+            $max_raw = $has_max_key ? $_POST['nilai_max_target'] : null;
             if ($min_raw !== null && $min_raw !== '') {
                 if (!is_numeric($min_raw)) {
                     echo json_encode(['status' => 'error', 'message' => 'Nilai terendah tidak valid']);
@@ -77,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $kktp = $stmt->fetchColumn();
         $kktp = $kktp ? floatval($kktp) : 0;
 
-        if ($min_target === null && $max_target === null) {
+        if (!$settings_touched) {
             $setting = get_nilai_semester_setting_minmax($pdo, (int)$id_kelas, (int)$id_mapel, $jenis_semester, (string)$tahun_ajaran, (string)$semester_aktif);
             $min_target = $setting['nilai_min_target'];
             $max_target = $setting['nilai_max_target'];
@@ -171,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             return (float)$nilaiJadi;
         };
 
-        $temp_jadi = ($nilai_remidi > $nilai_asli) ? $nilai_remidi : $nilai_asli;
+        $temp_jadi = max($nilai_asli, $nilai_remidi);
         $inputMaxDefault = 100.0;
         $useUnderFloorBonus = ($max_target !== null && (float)$max_target < 99.0);
         $nilai_jadi = $compute_nilai_jadi((float)$temp_jadi, (float)$floor, (float)$maxVal, $inputMaxDefault, $useUnderFloorBonus);
@@ -213,7 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $stmt->execute([$id_siswa, $id_mapel, $id_kelas, $id_guru, $jenis_semester, $tahun_ajaran, $semester_aktif, $nilai_asli, $nilai_remidi, $nilai_jadi]);
             }
 
-            $recalc_all = ($min_target !== null || $max_target !== null);
+            $recalc_all = $settings_touched;
             if ($recalc_all) {
                 $stmt = $pdo->prepare("
                     SELECT id_nilai, id_siswa, nilai_asli, nilai_remidi
@@ -234,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if ($jenis_semester === 'Ujian Praktik') {
                         $rm = 0.0;
                     }
-                    $t = ($rm > $a) ? $rm : $a;
+                    $t = max($a, $rm);
                     if ($t > $observedMax) {
                         $observedMax = $t;
                     }
@@ -248,7 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if ($jenis_semester === 'Ujian Praktik') {
                         $rm = 0.0;
                     }
-                    $t = ($rm > $a) ? $rm : $a;
+                    $t = max($a, $rm);
                     $nj = $compute_nilai_jadi((float)$t, (float)$floor, (float)$maxVal, (float)$inputMax, $useUnderFloorBonus);
                     $stmtUpd->execute([$nj > 0 ? $nj : 0, $r['id_nilai']]);
                     if ((string)$r['id_siswa'] === (string)$id_siswa) {
@@ -301,9 +304,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $min_target = null;
         $max_target = null;
-        if (isset($_POST['nilai_min_target']) || isset($_POST['nilai_max_target'])) {
-            $min_raw = $_POST['nilai_min_target'] ?? null;
-            $max_raw = $_POST['nilai_max_target'] ?? null;
+        $has_min_key = array_key_exists('nilai_min_target', $_POST);
+        $has_max_key = array_key_exists('nilai_max_target', $_POST);
+        $settings_touched = $has_min_key || $has_max_key;
+        if ($settings_touched) {
+            $min_raw = $has_min_key ? $_POST['nilai_min_target'] : null;
+            $max_raw = $has_max_key ? $_POST['nilai_max_target'] : null;
             if ($min_raw !== null && $min_raw !== '') {
                 if (!is_numeric($min_raw)) {
                     echo json_encode(['status' => 'error', 'message' => 'Nilai terendah tidak valid']);
@@ -341,7 +347,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $kktp = $stmt->fetchColumn();
         $kktp = $kktp ? floatval($kktp) : 0;
 
-        if ($min_target === null && $max_target === null) {
+        if (!$settings_touched) {
             $setting = get_nilai_semester_setting_minmax($pdo, (int)$id_kelas, (int)$id_mapel, $jenis_semester, (string)$tahun_ajaran, (string)$semester_aktif);
             $min_target = $setting['nilai_min_target'];
             $max_target = $setting['nilai_max_target'];
@@ -456,7 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
             if ($nilai_remidi < 0) $nilai_remidi = 0.0;
             if ($nilai_remidi > 100) $nilai_remidi = 100.0;
-            $temp = ($nilai_remidi > $nilai_asli) ? $nilai_remidi : $nilai_asli;
+            $temp = max($nilai_asli, $nilai_remidi);
             if ($temp > $observedMax) {
                 $observedMax = $temp;
             }
