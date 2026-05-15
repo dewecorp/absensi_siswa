@@ -82,8 +82,22 @@ if ($selected_class_id) {
     $stmt = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
     $stmt->execute([$selected_class_id]);
     $kelas_name = $stmt->fetchColumn();
-    if ($kelas_name && (strpos(strtolower($kelas_name), '6') !== false || strpos(strtolower($kelas_name), 'vi') !== false)) {
+    if ($kelas_name && preg_match('/\b(6|vi)\b/i', (string)$kelas_name)) {
         $is_grade_6 = true;
+    }
+}
+
+if ($selected_jenis) {
+    $jenis_exam = ['Pra Ujian Madrasah', 'Ujian Madrasah', 'Ujian Praktik', 'Pra Ujian', 'Ujian'];
+    $is_exam_jenis = in_array($selected_jenis, $jenis_exam, true);
+    $can_view_exam_rekap = $is_admin_view || ($user_role === 'guru' || $user_role === 'wali');
+    if ($is_exam_jenis && (!$is_grade_6 || !$can_view_exam_rekap)) {
+        $q = [];
+        if (isset($_GET['session_type'])) $q['session_type'] = $_GET['session_type'];
+        if (isset($_GET['kelas'])) $q['kelas'] = $_GET['kelas'];
+        if (isset($_GET['tipe'])) $q['tipe'] = $_GET['tipe'];
+        header('Location: rekap_nilai.php' . (!empty($q) ? ('?' . http_build_query($q)) : ''));
+        exit;
     }
 }
 
@@ -293,7 +307,7 @@ require_once '../templates/sidebar.php';
                                         <option value="PTS" <?= $selected_jenis == 'PTS' ? 'selected' : '' ?>>Penilaian Tengah Semester (PTS)</option>
                                         <option value="PAS" <?= $selected_jenis == 'PAS' ? 'selected' : '' ?>>Penilaian Akhir Semester (PAS)</option>
                                         <option value="PAT" <?= $selected_jenis == 'PAT' ? 'selected' : '' ?>>Penilaian Akhir Tahun (PAT)</option>
-                                        <?php if ($is_grade_6): ?>
+                                        <?php if ($is_grade_6 && ($is_admin_view || $user_role === 'guru' || $user_role === 'wali')): ?>
                                         <option value="Pra Ujian Madrasah" <?= $selected_jenis == 'Pra Ujian Madrasah' ? 'selected' : '' ?>>Nilai Pra Ujian Madrasah</option>
                                         <option value="Ujian Madrasah" <?= $selected_jenis == 'Ujian Madrasah' ? 'selected' : '' ?>>Nilai Ujian Madrasah</option>
                                         <option value="Ujian Praktik" <?= $selected_jenis == 'Ujian Praktik' ? 'selected' : '' ?>>Nilai Ujian Praktik</option>

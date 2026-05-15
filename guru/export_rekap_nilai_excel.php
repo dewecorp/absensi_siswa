@@ -49,6 +49,9 @@ if (!$selected_class_id || !$selected_jenis) {
     die('Parameter tidak lengkap');
 }
 
+$user_role = $_SESSION['level'] ?? '';
+$is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin'], true);
+
 // Get Class Info
 $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas = ?");
 $stmt->execute([$selected_class_id]);
@@ -56,6 +59,39 @@ $class_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$class_info) {
     die('Data kelas tidak ditemukan');
+}
+
+$kelas_name = (string)($class_info['nama_kelas'] ?? '');
+$is_grade_6 = $kelas_name !== '' && preg_match('/\b(6|vi)\b/i', $kelas_name);
+
+$jenis_exam = ['Pra Ujian Madrasah', 'Ujian Madrasah', 'Ujian Praktik', 'Pra Ujian', 'Ujian'];
+if (in_array($selected_jenis, $jenis_exam, true) && !$is_grade_6) {
+    die('Unauthorized');
+}
+
+if (!$is_admin_view) {
+    $id_guru = $_SESSION['user_id'] ?? null;
+    if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+        $stmt = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $id_guru = $stmt->fetchColumn();
+    }
+
+    $stmt = $pdo->prepare("SELECT nama_guru, mengajar FROM tb_guru WHERE id_guru = ?");
+    $stmt->execute([$id_guru]);
+    $guru_data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $nama_guru = $guru_data['nama_guru'] ?? '';
+    $mengajar_json = $guru_data['mengajar'] ?? '[]';
+    $mengajar_ids = json_decode($mengajar_json, true) ?? [];
+
+    $stmt = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ?");
+    $stmt->execute([$nama_guru]);
+    $wali_class_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $all_class_ids = array_unique(array_merge(is_array($mengajar_ids) ? $mengajar_ids : [], is_array($wali_class_ids) ? $wali_class_ids : []));
+    if (empty($all_class_ids) || !in_array((string)$selected_class_id, array_map('strval', $all_class_ids), true)) {
+        die('Unauthorized');
+    }
 }
 
 // Use Wali Kelas name for signature (null-safe)
