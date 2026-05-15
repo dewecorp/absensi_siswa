@@ -365,11 +365,11 @@ require_once '../templates/sidebar.php';
                                         <div>
                                             <strong>Progres Nilai:</strong>
                                             <span class="badge badge-primary"><?= $selected_jenis ?></span>
-                                            <span class="text-muted">Terisi <?= (int)$progress_filled ?> dari <?= (int)$progress_total ?> mapel (<?= (float)$progress_percent ?>%) • Belum <?= (int)$progress_missing ?> mapel</span>
+                                            <span class="text-muted">Belum <?= (int)$progress_missing ?> mapel</span>
                                         </div>
                                     </div>
                                     <div class="progress mt-2" style="height: 22px; background-color: #ffffff;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= (float)$progress_percent ?>%; line-height: 22px; font-weight: 600;" aria-valuenow="<?= (float)$progress_percent ?>" aria-valuemin="0" aria-valuemax="100"><?= (float)$progress_percent ?>% (<?= (int)$progress_filled ?>/<?= (int)$progress_total ?>)</div>
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: <?= (float)$progress_percent ?>%; line-height: 22px; font-weight: 600; color: #000;" aria-valuenow="<?= (float)$progress_percent ?>" aria-valuemin="0" aria-valuemax="100"><?= (float)$progress_percent ?>% (<?= (int)$progress_filled ?>/<?= (int)$progress_total ?>)</div>
                                     </div>
                                 </div>
                             </div>
