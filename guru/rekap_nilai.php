@@ -284,6 +284,110 @@ if ($selected_class && $selected_jenis) {
     }
     $progress_missing = max(0, $progress_total - $progress_filled);
     $progress_percent = $progress_total > 0 ? round(($progress_filled / $progress_total) * 100, 1) : 0;
+
+    // Detailed progress: Total cells filled vs Total cells possible
+    $total_possible_cells = count($students) * count($subjects);
+    $total_filled_cells = 0;
+    foreach ($rekap_data as $student_id => $student_grades) {
+        if (!is_array($student_grades)) continue;
+        foreach ($subjects as $mapel) {
+            if (isset($student_grades[$mapel['id_mapel']]) && $student_grades[$mapel['id_mapel']] > 0) {
+                $total_filled_cells++;
+            }
+        }
+    }
+    $cell_progress_percent = $total_possible_cells > 0 ? round(($total_filled_cells / $total_possible_cells) * 100, 1) : 0;
+}
+
+// Calculate Summary Progress for all types (shown when no class is selected)
+$summary_progress = [];
+if (!$selected_class_id || !$selected_jenis) {
+    $accessible_class_ids = array_column($classes, 'id_kelas');
+    if (!empty($accessible_class_ids)) {
+        $placeholders = str_repeat('?,', count($accessible_class_ids) - 1) . '?';
+        
+        // 1. Get total academic subjects
+        $stmt = $pdo->query("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE jenis_mapel = 'Akademik'");
+        $total_academic_subjects = (int)$stmt->fetchColumn();
+        
+        // Count for Ujian (excluding Tajwid & BTA)
+        $stmt = $pdo->query("
+            SELECT COUNT(*) FROM tb_mata_pelajaran 
+            WHERE jenis_mapel = 'Akademik' 
+            AND LOWER(TRIM(nama_mapel)) NOT IN ('tajwid', 'bta')
+        ");
+        $total_ujian_subjects = (int)$stmt->fetchColumn();
+
+        $total_possible_mapel_kelas = $total_academic_subjects * count($accessible_class_ids);
+        $total_possible_ujian_kelas = $total_ujian_subjects * count($accessible_class_ids);
+
+        // 2. Get filled counts for Semester types
+        $stmt = $pdo->prepare("
+            SELECT jenis_semester, COUNT(DISTINCT id_mapel, id_kelas) as filled 
+            FROM tb_nilai_semester 
+            WHERE id_kelas IN ($placeholders) AND tahun_ajaran = ? AND semester = ?
+            AND (COALESCE(nilai_asli, 0) > 0 OR COALESCE(nilai_remidi, 0) > 0 OR COALESCE(nilai_jadi, 0) > 0)
+            GROUP BY jenis_semester
+        ");
+        $params = array_merge($accessible_class_ids, [$tahun_ajaran, $semester_aktif]);
+        $stmt->execute($params);
+        $semester_filled = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        // 3. Get filled counts for Harian
+        $stmt = $pdo->prepare("
+            SELECT COUNT(DISTINCT id_mapel, id_kelas) 
+            FROM tb_nilai_harian_header 
+            WHERE id_kelas IN ($placeholders) AND tahun_ajaran = ? AND semester = ?
+        ");
+        $stmt->execute($params);
+        $harian_filled = (int)$stmt->fetchColumn();
+
+        // 4. Get filled counts for Kokurikuler
+        $stmt = $pdo->prepare("
+            SELECT COUNT(DISTINCT id_mapel, id_kelas) 
+            FROM tb_nilai_kokurikuler_header 
+            WHERE id_kelas IN ($placeholders) AND tahun_ajaran = ? AND semester = ?
+        ");
+        $stmt->execute($params);
+        $kokurikuler_filled = (int)$stmt->fetchColumn();
+
+        // Map to display types
+        $display_types = [
+            'Harian' => ['label' => 'Nilai Harian', 'filled' => $harian_filled, 'total' => $total_possible_mapel_kelas, 'color' => 'bg-info'],
+            'PTS' => ['label' => 'UTS/PTS', 'filled' => $semester_filled['UTS'] ?? 0, 'total' => $total_possible_mapel_kelas, 'color' => 'bg-primary'],
+            ($semester_aktif == 1 ? 'PAS' : 'PAT') => [
+                'label' => ($semester_aktif == 1 ? 'UAS/PAS' : 'UKK/PAT'), 
+                'filled' => ($semester_aktif == 1 ? ($semester_filled['UAS'] ?? 0) : ($semester_filled['PAT'] ?? 0)), 
+                'total' => $total_possible_mapel_kelas, 
+                'color' => 'bg-success'
+            ],
+            'Kokurikuler' => ['label' => 'Kokurikuler', 'filled' => $kokurikuler_filled, 'total' => $total_possible_mapel_kelas, 'color' => 'bg-warning'],
+        ];
+
+        // Add Grade 6 specific types if any accessible class is Grade 6
+        $grade_6_class_ids = [];
+        foreach ($classes as $cls) {
+            if (preg_match('/\b(6|vi)\b/i', (string)$cls['nama_kelas'])) {
+                $grade_6_class_ids[] = $cls['id_kelas'];
+            }
+        }
+
+        if (!empty($grade_6_class_ids)) {
+            $total_possible_ujian_6 = $total_ujian_subjects * count($grade_6_class_ids);
+            
+            $display_types['Pra Ujian'] = ['label' => 'Pra Ujian', 'filled' => $semester_filled['Pra Ujian'] ?? 0, 'total' => $total_possible_ujian_6, 'color' => 'bg-secondary'];
+            $display_types['Ujian'] = ['label' => 'Ujian Madrasah', 'filled' => $semester_filled['Ujian'] ?? 0, 'total' => $total_possible_ujian_6, 'color' => 'bg-dark'];
+            
+            // Ujian Praktik is special - total is the same as filled for summary, as it only shows what's filled
+            $filled_praktik = $semester_filled['Ujian Praktik'] ?? 0;
+            $display_types['Ujian Praktik'] = ['label' => 'Ujian Praktik', 'filled' => $filled_praktik, 'total' => $filled_praktik, 'color' => 'bg-danger'];
+        }
+
+        foreach ($display_types as $key => $data) {
+            $percent = $data['total'] > 0 ? round(($data['filled'] / $data['total']) * 100, 1) : ($data['filled'] > 0 ? 100 : 0);
+            $summary_progress[$key] = array_merge($data, ['percent' => $percent]);
+        }
+    }
 }
 
 require_once '../templates/header.php';
@@ -388,21 +492,35 @@ require_once '../templates/sidebar.php';
 
                     <?php if ($selected_class && $selected_jenis): ?>
                         <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="alert alert-light border mb-0">
-                                    <div class="d-flex justify-content-between align-items-center" style="gap: 10px; flex-wrap: wrap;">
-                                        <div>
-                                            <strong>Progres Nilai:</strong>
-                                            <span class="badge badge-primary"><?= $selected_jenis ?></span>
-                                            <span class="text-muted">Belum <?= (int)$progress_missing ?> mapel</span>
+                            <div class="col-md-8">
+                                <div class="card border mb-0">
+                                    <div class="card-body p-3">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-6 border-right">
+                                                <div class="d-flex justify-content-between mb-1">
+                                                    <strong>Progres Mapel:</strong>
+                                                    <span class="text-muted small"><?= (int)$progress_filled ?>/<?= (int)$progress_total ?> Mapel Terisi</span>
+                                                </div>
+                                                <div class="progress" style="height: 12px;">
+                                                    <div class="progress-bar bg-info" role="progressbar" style="width: <?= (float)$progress_percent ?>%;" aria-valuenow="<?= (float)$progress_percent ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                                </div>
+                                                <div class="text-right small mt-1"><?= (float)$progress_percent ?>%</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="d-flex justify-content-between mb-1">
+                                                    <strong>Progres Nilai Siswa:</strong>
+                                                    <span class="text-muted small"><?= (int)$total_filled_cells ?>/<?= (int)$total_possible_cells ?> Nilai</span>
+                                                </div>
+                                                <div class="progress" style="height: 12px;">
+                                                    <div class="progress-bar bg-success" role="progressbar" style="width: <?= (float)$cell_progress_percent ?>%;" aria-valuenow="<?= (float)$cell_progress_percent ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                                </div>
+                                                <div class="text-right small mt-1"><?= (float)$cell_progress_percent ?>%</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="progress mt-2" style="height: 22px; background-color: #ffffff;">
-                                        <div class="progress-bar bg-primary" role="progressbar" style="width: <?= (float)$progress_percent ?>%; line-height: 22px; font-weight: 600; color: #000;" aria-valuenow="<?= (float)$progress_percent ?>" aria-valuemin="0" aria-valuemax="100"><?= (float)$progress_percent ?>% (<?= (int)$progress_filled ?>/<?= (int)$progress_total ?>)</div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6 text-right">
+                            <div class="col-md-4 text-right d-flex align-items-center justify-content-end">
                                 <?php if (count($subjects) > 0): ?>
                                     <div class="btn-group">
                                         <a href="export_rekap_nilai_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-success">
@@ -485,9 +603,40 @@ require_once '../templates/sidebar.php';
                         </div>
                         <?php endif; ?>
                     <?php else: ?>
-                        <div class="alert alert-info">
-                            Silakan pilih <strong>Kelas</strong> dan <strong>Jenis Penilaian</strong> untuk menampilkan rekap nilai.
+                        <div class="alert alert-info mb-4">
+                            Silakan pilih <strong>Kelas</strong> dan <strong>Jenis Penilaian</strong> untuk menampilkan rekap nilai secara detail.
                         </div>
+
+                        <?php if (!empty($summary_progress)): ?>
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <h6 class="text-muted text-uppercase small font-weight-bold">Ringkasan Progres Pengisian Nilai (Semua Kelas Anda)</h6>
+                                </div>
+                                <?php foreach ($summary_progress as $type => $stats): ?>
+                                    <div class="col-md-6 col-lg-4 mb-4">
+                                        <div class="card card-statistic-1 border shadow-none mb-0">
+                                            <div class="card-icon <?= $stats['color'] ?>">
+                                                <i class="fas fa-chart-line"></i>
+                                            </div>
+                                            <div class="card-wrap">
+                                                <div class="card-header pb-1">
+                                                    <h4><?= htmlspecialchars($stats['label']) ?></h4>
+                                                </div>
+                                                <div class="card-body pt-0">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="font-weight-bold" style="font-size: 16px;"><?= $stats['percent'] ?>%</span>
+                                                        <span class="text-muted small"><?= $stats['filled'] ?>/<?= $stats['total'] ?> Mapel</span>
+                                                    </div>
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar <?= $stats['color'] ?>" role="progressbar" style="width: <?= $stats['percent'] ?>%" aria-valuenow="<?= $stats['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>

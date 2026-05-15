@@ -119,6 +119,10 @@ foreach ($subjects as $mapel) {
 
 $rerata = $count_mapel > 0 ? round($total_nilai / $count_mapel, 1) : 0;
 
+$progress_total = count($subjects);
+$progress_filled = $count_mapel;
+$progress_percent = $progress_total > 0 ? round(($progress_filled / $progress_total) * 100, 1) : 0;
+
 require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
 ?>
@@ -162,9 +166,9 @@ require_once '../templates/sidebar.php';
                     </div>
 
                     <form method="GET" action="" class="mb-4">
-                        <div class="row">
+                        <div class="row align-items-end">
                             <div class="col-md-6 col-lg-5">
-                                <div class="form-group">
+                                <div class="form-group mb-0">
                                     <label>Jenis Penilaian</label>
                                     <select name="jenis" class="form-control" onchange="this.form.submit()">
                                         <option value="Harian" <?= $selected_jenis == 'Harian' ? 'selected' : '' ?>>Nilai Harian (Rerata)</option>
@@ -173,6 +177,20 @@ require_once '../templates/sidebar.php';
                                         <option value="PAT" <?= $selected_jenis == 'PAT' ? 'selected' : '' ?>>Penilaian Akhir Tahun (PAT)</option>
                                         <option value="Kokurikuler" <?= $selected_jenis == 'Kokurikuler' ? 'selected' : '' ?>>Nilai Kokurikuler</option>
                                     </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-7">
+                                <div class="card border mb-0">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <strong class="small">Progres Nilai Anda:</strong>
+                                            <span class="text-muted small"><?= (int)$progress_filled ?>/<?= (int)$progress_total ?> Mapel</span>
+                                        </div>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: <?= (float)$progress_percent ?>%;" aria-valuenow="<?= (float)$progress_percent ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <div class="text-right small mt-1" style="font-size: 10px;"><?= (float)$progress_percent ?>%</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
