@@ -30,10 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             echo json_encode(['status' => 'error', 'message' => 'Nilai asli harus 0 s.d 99']);
             exit;
         }
-        if ($nilai_remidi < 0 || $nilai_remidi > 99) {
-            echo json_encode(['status' => 'error', 'message' => 'Nilai remidi harus 0 s.d 99']);
-            exit;
-        }
+        if ($nilai_remidi < 0) $nilai_remidi = 0;
+        if ($nilai_remidi > 100) $nilai_remidi = 100;
         $min_target = null;
         $max_target = null;
         if (isset($_POST['nilai_min_target']) || isset($_POST['nilai_max_target'])) {
@@ -456,10 +454,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 echo json_encode(['status' => 'error', 'message' => 'Nilai asli harus 0 s.d 99']);
                 exit;
             }
-            if ($nilai_remidi < 0 || $nilai_remidi > 99) {
-                echo json_encode(['status' => 'error', 'message' => 'Nilai remidi harus 0 s.d 99']);
-                exit;
-            }
+            if ($nilai_remidi < 0) $nilai_remidi = 0.0;
+            if ($nilai_remidi > 100) $nilai_remidi = 100.0;
             $temp = ($nilai_remidi > $nilai_asli) ? $nilai_remidi : $nilai_asli;
             if ($temp > $observedMax) {
                 $observedMax = $temp;

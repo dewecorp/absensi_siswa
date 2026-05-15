@@ -316,7 +316,7 @@ require_once '../templates/sidebar.php';
                                             <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                             <td class="text-center">
                                                 <input type="number" class="form-control form-control-sm input-nilai-remidi text-center"
-                                                       value="<?= $nilai_remidi > 0 ? (float)$nilai_remidi : '' ?>" min="0" max="99" style="max-width: 90px;" disabled>
+                                                       value="<?= $nilai_remidi > 0 ? (float)$nilai_remidi : '' ?>" min="0" max="100" style="max-width: 90px;" disabled>
                                             </td>
                                             <?php endif; ?>
                                             <td class="text-center bg-light">
