@@ -231,12 +231,21 @@ require_once '../templates/sidebar.php';
                                     <tr>
                                         <th class="text-center sticky-col sticky-col-1" width="5%">No</th>
                                         <th class="text-center sticky-col sticky-col-2">Nama Siswa</th>
-                                        <th width="15%" class="text-center">Nilai Asli</th>
+                                        <th width="15%" class="text-center">
+                                            <div class="d-flex align-items-center justify-content-center" style="gap: 8px;">
+                                                <span>Nilai Asli</span>
+                                                <?php if ($can_edit): ?>
+                                                    <button class="btn btn-sm btn-warning" id="btn-edit-all" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-success d-none" id="btn-save-all" title="Simpan">
+                                                        <i class="fas fa-save"></i>
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </th>
                                         <th width="15%" class="text-center">Remidi</th>
                                         <th width="15%" class="text-center">Nilai Jadi</th>
-                                        <?php if ($can_edit): ?>
-                                        <th width="10%" class="text-center">Aksi</th>
-                                        <?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -273,28 +282,16 @@ require_once '../templates/sidebar.php';
                                             <td class="text-center sticky-col sticky-col-1"><?= $no++ ?></td>
                                             <td class="sticky-col sticky-col-2"><?= htmlspecialchars($student['nama_siswa']) ?></td>
                                             <td class="text-center">
-                                                <span class="display-nilai-asli"><?= $nilai_asli > 0 ? (float)$nilai_asli : '-' ?></span>
-                                                <input type="number" class="form-control form-control-sm input-nilai-asli d-none" 
-                                                       value="<?= (float)$nilai_asli ?>" min="0" max="99">
+                                                <input type="number" class="form-control form-control-sm input-nilai-asli text-center"
+                                                       value="<?= $nilai_asli > 0 ? (float)$nilai_asli : '' ?>" min="0" max="99" style="max-width: 90px;" disabled>
                                             </td>
                                             <td class="text-center">
-                                                <span class="display-nilai-remidi"><?= $nilai_remidi > 0 ? (float)$nilai_remidi : '-' ?></span>
-                                                <input type="number" class="form-control form-control-sm input-nilai-remidi d-none" 
-                                                       value="<?= (float)$nilai_remidi ?>" min="0" max="99">
+                                                <input type="number" class="form-control form-control-sm input-nilai-remidi text-center"
+                                                       value="<?= $nilai_remidi > 0 ? (float)$nilai_remidi : '' ?>" min="0" max="99" style="max-width: 90px;" disabled>
                                             </td>
                                             <td class="text-center bg-light">
                                                 <span class="display-nilai-jadi font-weight-bold"><?= $nilai_jadi > 0 ? (float)$nilai_jadi : '-' ?></span>
                                             </td>
-                                            <?php if ($can_edit): ?>
-                                            <td class="text-center">
-                                                <button class="btn btn-sm btn-warning btn-edit" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-success btn-save d-none" title="Simpan">
-                                                    <i class="fas fa-save"></i>
-                                                </button>
-                                            </td>
-                                            <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                     
@@ -304,18 +301,12 @@ require_once '../templates/sidebar.php';
                                         <td class="text-center text-success" id="max-asli"><?= $max_asli !== null ? (float)$max_asli : '-' ?></td>
                                         <td class="text-center text-success" id="max-remidi"><?= $max_remidi !== null ? (float)$max_remidi : '-' ?></td>
                                         <td class="text-center text-success" id="max-jadi"><?= $max_jadi !== null ? (float)$max_jadi : '-' ?></td>
-                                        <?php if ($can_edit): ?>
-                                        <td></td>
-                                        <?php endif; ?>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right">Nilai Terendah</td>
                                         <td class="text-center text-danger" id="min-asli"><?= $min_asli !== null ? (float)$min_asli : '-' ?></td>
                                         <td class="text-center text-danger" id="min-remidi"><?= $min_remidi !== null ? (float)$min_remidi : '-' ?></td>
                                         <td class="text-center text-danger" id="min-jadi"><?= $min_jadi !== null ? (float)$min_jadi : '-' ?></td>
-                                        <?php if ($can_edit): ?>
-                                        <td></td>
-                                        <?php endif; ?>
                                     </tr>
                                 </tbody>
                             </table>
@@ -335,118 +326,105 @@ require_once '../templates/sidebar.php';
 
 <script>
 $(document).ready(function() {
-    // Edit Button Click
-    $('.btn-edit').click(function() {
-        var tr = $(this).closest('tr');
-        tr.find('.display-nilai-asli, .display-nilai-remidi').addClass('d-none');
-        tr.find('.input-nilai-asli, .input-nilai-remidi').removeClass('d-none');
-        tr.find('.btn-edit').addClass('d-none');
-        tr.find('.btn-save').removeClass('d-none');
+    var canEdit = <?= $can_edit ? 'true' : 'false' ?>;
+    var inFlight = null;
+
+    function notifySuccess(message) {
+        if (window.iziToast) {
+            iziToast.success({ title: 'Sukses', message: message, position: 'topRight' });
+            return;
+        }
+        if (window.Swal && Swal.fire) {
+            Swal.fire({ icon: 'success', title: 'Sukses', text: message });
+            return;
+        }
+        alert(message);
+    }
+
+    function notifyError(message) {
+        if (window.iziToast) {
+            iziToast.error({ title: 'Error', message: message, position: 'topRight' });
+            return;
+        }
+        if (window.Swal && Swal.fire) {
+            Swal.fire({ icon: 'error', title: 'Error', text: message });
+            return;
+        }
+        alert(message);
+    }
+
+    function setEditingAll(editing) {
+        if (!canEdit) return;
+        $('.input-nilai-asli, .input-nilai-remidi').prop('disabled', !editing);
+        $('#btn-edit-all').toggleClass('d-none', editing);
+        $('#btn-save-all').toggleClass('d-none', !editing);
+    }
+
+    $('#btn-edit-all').on('click', function() {
+        setEditingAll(true);
+        $('.input-nilai-asli:enabled').first().focus().select();
     });
 
-    // Save Button Click
-    $('.btn-save').click(function() {
-        var tr = $(this).closest('tr');
-        var id_siswa = tr.data('id-siswa');
-        var nilai_asli = tr.find('.input-nilai-asli').val();
-        var nilai_remidi = tr.find('.input-nilai-remidi').val();
-        
-        // Optimistic UI update
-        // Logic: Nilai Jadi = Max(Asli, Remidi)
-        
-        var n_asli = parseFloat(nilai_asli) || 0;
-        var n_remidi = parseFloat(nilai_remidi) || 0;
-        
-        var kktp = <?= isset($kktp) ? (float)$kktp : 0 ?>;
-        var n_temp_jadi = (n_remidi > n_asli) ? n_remidi : n_asli;
-        
-        // Formula Angkat Nilai
-        var n_jadi = n_temp_jadi;
-        
-        if (kktp > 0 && n_temp_jadi > 0) {
-            if (n_temp_jadi < kktp) {
-                // Rule 1: Under KKTP -> Set to KKTP
-                n_jadi = kktp;
-            } else {
-                // Rule 2: Above KKTP -> Boost proportionally (Quadratic Ease-Out)
-                var maxVal = 99;
-                var range = maxVal - kktp;
-                var inputRange = 100 - kktp;
-                
-                if (range > 0) {
-                    var ratio = (n_temp_jadi - kktp) / inputRange;
-                    var ratioBoosted = 1 - Math.pow(1 - ratio, 2);
-                    n_jadi = kktp + (range * ratioBoosted);
-                }
-            }
-            // Round to nearest integer and ensure max 99
-            n_jadi = Math.round(n_jadi);
-            if (n_jadi > 99) n_jadi = 99;
+    $('#btn-save-all').on('click', function() {
+        if (!canEdit) return;
+        if (inFlight) {
+            try { inFlight.abort(); } catch (e) {}
         }
-        
-        // User said: "jka remidi kosong maka tetap ambil nilai asli untuk diangkat"
-        // If n_remidi is 0/empty, n_asli is taken (handled by logic above if n_asli >= 0)
 
-        $.ajax({
+        var btn = $(this);
+        btn.prop('disabled', true);
+
+        var grades = [];
+        $('tbody tr[data-id-siswa]').each(function() {
+            var tr = $(this);
+            grades.push({
+                id_siswa: tr.data('id-siswa'),
+                nilai_asli: tr.find('.input-nilai-asli').val(),
+                nilai_remidi: tr.find('.input-nilai-remidi').val()
+            });
+        });
+
+        inFlight = $.ajax({
             url: 'ajax_nilai_semester.php',
             method: 'POST',
             data: {
-                action: 'save_grade',
-                id_siswa: id_siswa,
+                action: 'save_grades',
                 id_kelas: '<?= $selected_class_id ?>',
                 id_mapel: '<?= $selected_mapel_id ?>',
                 jenis_semester: '<?= $jenis_semester ?>',
-                nilai_asli: nilai_asli,
-                nilai_remidi: nilai_remidi,
                 nilai_min_target: $('#nilai_min_target').val(),
-                nilai_max_target: $('#nilai_max_target').val()
+                nilai_max_target: $('#nilai_max_target').val(),
+                grades: JSON.stringify(grades)
             },
             dataType: 'json',
             success: function(response) {
                 if (response.status === 'success') {
-                    // Update displays with server response to ensure consistency
-                    var data = response.data;
-                    var server_asli = parseFloat(data.nilai_asli) || 0;
-                    var server_remidi = parseFloat(data.nilai_remidi) || 0;
-                    var server_jadi = parseFloat(data.nilai_jadi) || 0;
-
-                    tr.find('.display-nilai-asli').text(server_asli > 0 ? server_asli : '-');
-                    tr.find('.display-nilai-remidi').text(server_remidi > 0 ? server_remidi : '-');
-                    tr.find('.display-nilai-jadi').text(server_jadi > 0 ? server_jadi : '-');
-                    
-                    // Toggle view
-                    tr.find('.display-nilai-asli, .display-nilai-remidi').removeClass('d-none');
-                    tr.find('.input-nilai-asli, .input-nilai-remidi').addClass('d-none');
-                    tr.find('.btn-edit').removeClass('d-none');
-                    tr.find('.btn-save').addClass('d-none');
-                    
-                    // Update Summary Stats immediately
-                    updateSummaryStats();
-
-                    // Show toast
-                    iziToast.success({
-                        title: 'Sukses',
-                        message: 'Nilai berhasil disimpan',
-                        position: 'topRight'
-                    });
-
-                    if (data.recalc_all) {
-                        location.reload();
+                    var data = response.data || {};
+                    if (Array.isArray(data.grades)) {
+                        data.grades.forEach(function(g) {
+                            var tr = $('tbody tr[data-id-siswa="' + g.id_siswa + '"]');
+                            if (!tr.length) return;
+                            var asli = parseFloat(g.nilai_asli) || 0;
+                            var remidi = parseFloat(g.nilai_remidi) || 0;
+                            var jadi = parseFloat(g.nilai_jadi) || 0;
+                            tr.find('.input-nilai-asli').val(asli > 0 ? asli : '');
+                            tr.find('.input-nilai-remidi').val(remidi > 0 ? remidi : '');
+                            tr.find('.display-nilai-jadi').text(jadi > 0 ? jadi : '-');
+                        });
                     }
+                    updateSummaryStats();
+                    setEditingAll(false);
+                    notifySuccess('Nilai berhasil disimpan');
                 } else {
-                    iziToast.error({
-                        title: 'Error',
-                        message: response.message,
-                        position: 'topRight'
-                    });
+                    notifyError(response.message || 'Gagal menyimpan');
                 }
             },
             error: function() {
-                iziToast.error({
-                    title: 'Error',
-                    message: 'Terjadi kesalahan sistem',
-                    position: 'topRight'
-                });
+                if (!canEdit) return;
+                notifyError('Terjadi kesalahan sistem');
+            },
+            complete: function() {
+                btn.prop('disabled', false);
             }
         });
     });
@@ -459,16 +437,10 @@ $(document).ready(function() {
 
         $('tbody tr[data-id-siswa]').each(function() {
             var tr = $(this);
-            
-            // Helper to get value
-            var getVal = function(selector) {
-                var txt = tr.find(selector).text().trim();
-                return txt === '-' ? 0 : parseFloat(txt);
-            };
-
-            var asli = getVal('.display-nilai-asli');
-            var remidi = getVal('.display-nilai-remidi');
-            var jadi = getVal('.display-nilai-jadi');
+            var asli = parseFloat(tr.find('.input-nilai-asli').val()) || 0;
+            var remidi = parseFloat(tr.find('.input-nilai-remidi').val()) || 0;
+            var jadiTxt = tr.find('.display-nilai-jadi').text().trim();
+            var jadi = jadiTxt === '-' ? 0 : (parseFloat(jadiTxt) || 0);
 
             // Logic: Only consider non-zero values for min/max
             if (asli > 0) {
