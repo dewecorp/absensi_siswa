@@ -139,10 +139,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 return 0.0;
             }
             $nilaiJadi = $tempJadi;
+            $range = $maxValLocal - $floorVal;
+
             if ($floorVal > 0 && $tempJadi < $floorVal) {
-                $nilaiJadi = $floorVal;
+                if ($range > 0) {
+                    $proximity = $tempJadi / $floorVal;
+                    if ($proximity < 0) $proximity = 0;
+                    if ($proximity > 1) $proximity = 1;
+                    $bonusFactor = 0.15;
+                    $q = 2;
+                    $bonus = $range * $bonusFactor * pow($proximity, $q);
+                    $nilaiJadi = $floorVal + $bonus;
+                } else {
+                    $nilaiJadi = $floorVal;
+                }
             } else {
-                $range = $maxValLocal - $floorVal;
                 $inputRange = $inputMax - $floorVal;
                 if ($range > 0 && $inputRange > 0) {
                     $ratio = ($tempJadi - $floorVal) / $inputRange;

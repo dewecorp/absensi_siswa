@@ -74,10 +74,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $nilaiJadi = $n;
         if ($floor > 0) {
+            $range = $maxVal - $floor;
             if ($n < $floor) {
-                $nilaiJadi = $floor;
+                if ($range > 0) {
+                    $proximity = $n / $floor;
+                    if ($proximity < 0) $proximity = 0;
+                    if ($proximity > 1) $proximity = 1;
+                    $bonusFactor = 0.15;
+                    $q = 2;
+                    $bonus = $range * $bonusFactor * pow($proximity, $q);
+                    $nilaiJadi = $floor + $bonus;
+                } else {
+                    $nilaiJadi = $floor;
+                }
             } else {
-                $range = $maxVal - $floor;
                 $inputRange = $inputMax - $floor;
                 if ($range > 0 && $inputRange > 0) {
                     $ratio = ($n - $floor) / $inputRange;
