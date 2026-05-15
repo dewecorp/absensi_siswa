@@ -72,11 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $inputMax = 100;
         }
 
+        $useUnderFloorBonus = ($maxTarget !== null && (float)$maxTarget < 99.0);
         $nilaiJadi = $n;
         if ($floor > 0) {
             $range = $maxVal - $floor;
             if ($n < $floor) {
-                if ($range > 0) {
+                if ($useUnderFloorBonus && $range > 0) {
                     $proximity = $n / $floor;
                     if ($proximity < 0) $proximity = 0;
                     if ($proximity > 1) $proximity = 1;

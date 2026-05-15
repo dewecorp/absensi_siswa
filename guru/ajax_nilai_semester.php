@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $maxVal = 99;
         }
 
-        $compute_nilai_jadi = function(float $tempJadi, float $floorVal, float $maxValLocal, float $inputMax) {
+        $compute_nilai_jadi = function(float $tempJadi, float $floorVal, float $maxValLocal, float $inputMax, bool $useUnderFloorBonus) {
             if ($tempJadi <= 0) {
                 return 0.0;
             }
@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $range = $maxValLocal - $floorVal;
 
             if ($floorVal > 0 && $tempJadi < $floorVal) {
-                if ($range > 0) {
+                if ($useUnderFloorBonus && $range > 0) {
                     $proximity = $tempJadi / $floorVal;
                     if ($proximity < 0) $proximity = 0;
                     if ($proximity > 1) $proximity = 1;
@@ -175,7 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $temp_jadi = ($nilai_remidi > $nilai_asli) ? $nilai_remidi : $nilai_asli;
         $inputMaxDefault = 100.0;
-        $nilai_jadi = $compute_nilai_jadi((float)$temp_jadi, (float)$floor, (float)$maxVal, $inputMaxDefault);
+        $useUnderFloorBonus = ($max_target !== null && (float)$max_target < 99.0);
+        $nilai_jadi = $compute_nilai_jadi((float)$temp_jadi, (float)$floor, (float)$maxVal, $inputMaxDefault, $useUnderFloorBonus);
 
         try {
             $pdo->beginTransaction();
@@ -250,7 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $rm = 0.0;
                     }
                     $t = ($rm > $a) ? $rm : $a;
-                    $nj = $compute_nilai_jadi((float)$t, (float)$floor, (float)$maxVal, (float)$inputMax);
+                    $nj = $compute_nilai_jadi((float)$t, (float)$floor, (float)$maxVal, (float)$inputMax, $useUnderFloorBonus);
                     $stmtUpd->execute([$nj > 0 ? $nj : 0, $r['id_nilai']]);
                     if ((string)$r['id_siswa'] === (string)$id_siswa) {
                         $nilai_jadi = $nj;
