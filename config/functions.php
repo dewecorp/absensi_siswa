@@ -1378,3 +1378,93 @@ function ensure_nilai_semester_enum_ujian_praktik(PDO $pdo): void {
         // Tabel belum ada atau tidak ada hak ALTER — abaikan
     }
 }
+
+function ensure_nilai_harian_header_minmax(PDO $pdo): void {
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+    try {
+        $rMin = $pdo->query("SHOW COLUMNS FROM tb_nilai_harian_header LIKE 'nilai_min_target'");
+        $hasMin = $rMin ? (bool)$rMin->fetch(PDO::FETCH_ASSOC) : false;
+        if (!$hasMin) {
+            $pdo->exec("ALTER TABLE tb_nilai_harian_header ADD COLUMN nilai_min_target FLOAT NULL AFTER materi");
+        }
+        $rMax = $pdo->query("SHOW COLUMNS FROM tb_nilai_harian_header LIKE 'nilai_max_target'");
+        $hasMax = $rMax ? (bool)$rMax->fetch(PDO::FETCH_ASSOC) : false;
+        if (!$hasMax) {
+            $pdo->exec("ALTER TABLE tb_nilai_harian_header ADD COLUMN nilai_max_target FLOAT NULL AFTER nilai_min_target");
+        }
+    } catch (Throwable $e) {
+    }
+}
+
+function ensure_nilai_semester_setting_minmax(PDO $pdo): void {
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_nilai_semester_setting (
+                id_setting INT NOT NULL AUTO_INCREMENT,
+                id_kelas INT NOT NULL,
+                id_mapel INT NOT NULL,
+                jenis_semester VARCHAR(20) NOT NULL,
+                tahun_ajaran VARCHAR(20) NOT NULL,
+                semester VARCHAR(20) NOT NULL,
+                nilai_min_target FLOAT NULL,
+                nilai_max_target FLOAT NULL,
+                updated_by INT NULL,
+                updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id_setting),
+                UNIQUE KEY uniq_setting (id_kelas, id_mapel, jenis_semester, tahun_ajaran, semester),
+                KEY idx_kelas (id_kelas),
+                KEY idx_mapel (id_mapel)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    } catch (Throwable $e) {
+    }
+}
+
+function get_nilai_semester_setting_minmax(PDO $pdo, int $id_kelas, int $id_mapel, string $jenis_semester, string $tahun_ajaran, string $semester): array {
+    ensure_nilai_semester_setting_minmax($pdo);
+    try {
+        $stmt = $pdo->prepare("
+            SELECT nilai_min_target, nilai_max_target
+            FROM tb_nilai_semester_setting
+            WHERE id_kelas = ? AND id_mapel = ? AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$id_kelas, $id_mapel, $jenis_semester, $tahun_ajaran, $semester]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return ['nilai_min_target' => null, 'nilai_max_target' => null];
+        }
+        return [
+            'nilai_min_target' => isset($row['nilai_min_target']) ? ($row['nilai_min_target'] !== null ? (float)$row['nilai_min_target'] : null) : null,
+            'nilai_max_target' => isset($row['nilai_max_target']) ? ($row['nilai_max_target'] !== null ? (float)$row['nilai_max_target'] : null) : null,
+        ];
+    } catch (Throwable $e) {
+        return ['nilai_min_target' => null, 'nilai_max_target' => null];
+    }
+}
+
+function upsert_nilai_semester_setting_minmax(PDO $pdo, int $id_kelas, int $id_mapel, string $jenis_semester, string $tahun_ajaran, string $semester, ?float $min_target, ?float $max_target, ?int $updated_by): void {
+    ensure_nilai_semester_setting_minmax($pdo);
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO tb_nilai_semester_setting
+                (id_kelas, id_mapel, jenis_semester, tahun_ajaran, semester, nilai_min_target, nilai_max_target, updated_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                nilai_min_target = VALUES(nilai_min_target),
+                nilai_max_target = VALUES(nilai_max_target),
+                updated_by = VALUES(updated_by)
+        ");
+        $stmt->execute([$id_kelas, $id_mapel, $jenis_semester, $tahun_ajaran, $semester, $min_target, $max_target, $updated_by]);
+    } catch (Throwable $e) {
+    }
+}

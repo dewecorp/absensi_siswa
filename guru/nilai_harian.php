@@ -11,6 +11,8 @@ $user_role = $_SESSION['level'];
 $is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin']);
 $can_edit = !$is_admin_view;
 
+ensure_nilai_harian_header_minmax($pdo);
+
 // Get teacher data
 $id_guru = null;
 if (!$is_admin_view) {
@@ -189,15 +191,15 @@ require_once '../templates/sidebar.php';
     thead tr:nth-child(1) th {
         top: 0;
         z-index: 103;
-        height: 70px;
+        height: 105px;
     }
     thead tr:nth-child(2) th {
-        top: 70px;
+        top: 105px;
         z-index: 102;
         height: 40px;
     }
     thead tr:nth-child(3) th {
-        top: 110px;
+        top: 145px;
         z-index: 101;
         height: 35px;
     }
@@ -297,7 +299,7 @@ require_once '../templates/sidebar.php';
                                     <th class="sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
                                     <th class="sticky-col sticky-col-2" style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
                                     <?php foreach ($grade_headers as $header): ?>
-                                        <th class="text-center" colspan="2" style="min-width: 200px;">
+                                        <th class="text-center header-cell" data-header-id="<?= $header['id_header'] ?>" colspan="2" style="min-width: 220px;">
                                             <?php if ($can_edit): ?>
                                             <div class="mb-2">
                                                 <button class="btn btn-sm btn-icon btn-warning edit-col-btn" data-header-id="<?= $header['id_header'] ?>" title="Edit Nilai">
@@ -306,15 +308,26 @@ require_once '../templates/sidebar.php';
                                                 <button class="btn btn-sm btn-icon btn-success save-col-btn d-none" data-header-id="<?= $header['id_header'] ?>" title="Simpan Nilai">
                                                     <i class="fas fa-save"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-icon btn-info auto-calc-btn d-none" data-header-id="<?= $header['id_header'] ?>" title="Hitung Nilai Jadi (Otomatis)">
-                                                    <i class="fas fa-magic"></i>
-                                                </button>
                                                 <button class="btn btn-sm btn-icon btn-danger delete-col-btn" data-header-id="<?= $header['id_header'] ?>" data-name="<?= $header['nama_penilaian'] ?>" title="Hapus Kolom">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                             <?php endif; ?>
-                                            <?= htmlspecialchars($header['nama_penilaian']) ?>
+                                            <div>
+                                                <span class="nama-display"><?= htmlspecialchars($header['nama_penilaian']) ?></span>
+                                                <input type="text" class="form-control form-control-sm text-center nama-input d-none" value="<?= htmlspecialchars($header['nama_penilaian']) ?>" placeholder="Nama Penilaian">
+                                            </div>
+                                            <div class="small text-muted range-display">
+                                                Min: <?= isset($header['nilai_min_target']) && $header['nilai_min_target'] !== null ? htmlspecialchars($header['nilai_min_target']) : '-' ?>
+                                                |
+                                                Max: <?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '-' ?>
+                                            </div>
+                                            <div class="d-none range-inputs" style="margin-top: 6px;">
+                                                <div class="d-flex" style="gap: 6px;">
+                                                    <input type="number" class="form-control form-control-sm text-center range-min" placeholder="Min" min="0" max="99" value="<?= isset($header['nilai_min_target']) && $header['nilai_min_target'] !== null ? htmlspecialchars($header['nilai_min_target']) : '' ?>">
+                                                    <input type="number" class="form-control form-control-sm text-center range-max" placeholder="Max" min="0" max="99" value="<?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '' ?>">
+                                                </div>
+                                            </div>
                                         </th>
                                     <?php endforeach; ?>
                                     <th class="sticky-col-right" style="width: 100px; vertical-align: middle;" rowspan="3">Rerata</th>
@@ -381,7 +394,7 @@ require_once '../templates/sidebar.php';
                                                            data-header-id="<?= $header['id_header'] ?>"
                                                            value="<?= $val ?>" 
                                                            disabled
-                                                           min="0" max="100" placeholder="-">
+                                                           min="0" max="99" placeholder="-">
                                                 </td>
                                                 <td class="text-center p-1">
                                                     <input type="number" 
@@ -390,7 +403,7 @@ require_once '../templates/sidebar.php';
                                                            data-header-id="<?= $header['id_header'] ?>"
                                                            value="<?= $val_jadi ?>" 
                                                            disabled
-                                                           min="0" max="100" placeholder="-">
+                                                           min="0" max="99" placeholder="-">
                                                 </td>
                                             <?php endforeach; ?>
                                             <td class="text-center font-weight-bold student-avg sticky-col-right">
@@ -460,6 +473,16 @@ require_once '../templates/sidebar.php';
                     <div class="form-group">
                         <label>Materi</label>
                         <textarea class="form-control" name="materi" placeholder="Deskripsi materi/topik" rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label>Nilai Terendah</label>
+                            <input type="number" class="form-control" name="nilai_min_target" min="0" max="99" placeholder="Kosongkan = KKTP">
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Nilai Tertinggi</label>
+                            <input type="number" class="form-control" name="nilai_max_target" min="0" max="99" placeholder="Kosongkan = 99">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -554,74 +577,22 @@ $(document).ready(function() {
         // Toggle buttons
         $(this).addClass('d-none');
         $(this).siblings('.save-col-btn').removeClass('d-none');
-        $(this).siblings('.auto-calc-btn').removeClass('d-none');
         $(this).siblings('.delete-col-btn').prop('disabled', true);
         
         // Enable inputs
         $('.grade-col-' + id).prop('disabled', false);
-        $('.grade-col-jadi-' + id).prop('disabled', false);
+        $('.grade-col-jadi-' + id).prop('disabled', true);
 
         // Enable Materi Edit
         var materiCell = $('.materi-cell[data-header-id="' + id + '"]');
         materiCell.find('.materi-display').addClass('d-none');
         materiCell.find('.materi-input').removeClass('d-none');
-    });
 
-    $('.auto-calc-btn').click(function() {
-        var id = $(this).data('header-id');
-        var kktp = <?= json_encode($selected_mapel['kktp'] ?? 75) ?>; // Default 75 if not set
-        
-        Swal.fire({
-            title: 'Hitung Nilai Jadi Otomatis',
-            text: 'Rumus Baru: Nilai di bawah KKTP otomatis menjadi KKTP. Nilai di atas KKTP akan dinaikkan secara proporsional (kurva progresif) hingga maksimal 99.',
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Hitung!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('.grade-col-' + id).each(function() {
-                    var studentId = $(this).data('student-id');
-                    var nilaiAwal = parseFloat($(this).val());
-
-                    if (!isNaN(nilaiAwal) && nilaiAwal > 0) {
-                        var nilaiJadi = nilaiAwal;
-
-                        if (kktp > 0) {
-                            if (nilaiAwal < kktp) {
-                                nilaiJadi = kktp;
-                            } else {
-                                var diff = nilaiAwal - kktp;
-                                var bonus = 0;
-
-                                if (diff < 5) bonus = 5;
-                                else if (diff < 10) bonus = 4;
-                                else if (diff < 15) bonus = 3;
-                                else if (diff < 20) bonus = 2;
-                                else bonus = 1;
-
-                                nilaiJadi = nilaiAwal + bonus;
-                            }
-                        }
-
-                        nilaiJadi = Math.round(nilaiJadi);
-                        if (nilaiJadi > 99) nilaiJadi = 99;
-
-                        $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val(nilaiJadi);
-                    } else {
-                        $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val('');
-                    }
-                });
-                
-                Swal.fire({
-                    title: 'Selesai!',
-                    text: 'Nilai jadi telah dihitung ulang sesuai rumus baru.',
-                    icon: 'success',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            }
-        });
+        var headerCell = $('.header-cell[data-header-id="' + id + '"]');
+        headerCell.find('.nama-display').addClass('d-none');
+        headerCell.find('.nama-input').removeClass('d-none');
+        headerCell.find('.range-display').addClass('d-none');
+        headerCell.find('.range-inputs').removeClass('d-none');
     });
 
     // Save Column (Save Values)
@@ -630,74 +601,181 @@ $(document).ready(function() {
         var btn = $(this);
         var inputs = $('.grade-col-' + id);
         var grades = [];
+        var kktp = <?= json_encode(isset($selected_mapel['kktp']) ? (float)$selected_mapel['kktp'] : 0) ?>;
 
         // Get Materi Value
         var materiCell = $('.materi-cell[data-header-id="' + id + '"]');
         var materiVal = materiCell.find('.materi-input').val();
 
+        var headerCell = $('.header-cell[data-header-id="' + id + '"]');
+        var namaVal = headerCell.find('.nama-input').val();
+        var minTargetRaw = headerCell.find('.range-min').val();
+        var maxTargetRaw = headerCell.find('.range-max').val();
+        var minTarget = minTargetRaw !== '' ? parseFloat(minTargetRaw) : null;
+        var maxTarget = maxTargetRaw !== '' ? parseFloat(maxTargetRaw) : null;
+
+        if (typeof namaVal === 'string') {
+            namaVal = namaVal.trim();
+        }
+        if (!namaVal) {
+            Swal.fire('Gagal', 'Nama penilaian tidak boleh kosong', 'error');
+            return;
+        }
+        if (minTarget !== null) {
+            if (!isFinite(minTarget)) {
+                Swal.fire('Gagal', 'Nilai terendah tidak valid', 'error');
+                return;
+            }
+            if (minTarget > 99) {
+                Swal.fire('Gagal', 'Nilai terendah tidak boleh lebih dari 99', 'error');
+                return;
+            }
+            if (kktp > 0 && minTarget < kktp) {
+                Swal.fire('Gagal', 'Nilai terendah tidak boleh di bawah KKTP (' + kktp + ')', 'error');
+                return;
+            }
+        }
+        if (maxTarget !== null) {
+            if (!isFinite(maxTarget)) {
+                Swal.fire('Gagal', 'Nilai tertinggi tidak valid', 'error');
+                return;
+            }
+            if (maxTarget > 99) {
+                Swal.fire('Gagal', 'Nilai tertinggi tidak boleh lebih dari 99', 'error');
+                return;
+            }
+            if (kktp > 0 && maxTarget < kktp) {
+                Swal.fire('Gagal', 'Nilai tertinggi tidak boleh di bawah KKTP (' + kktp + ')', 'error');
+                return;
+            }
+        }
+        if (minTarget !== null && maxTarget !== null && minTarget > maxTarget) {
+            Swal.fire('Gagal', 'Nilai terendah tidak boleh lebih besar dari nilai tertinggi', 'error');
+            return;
+        }
+
+        var floorVal = (minTarget !== null) ? minTarget : (kktp > 0 ? kktp : 0);
+
         inputs.each(function() {
             var val = $(this).val();
             var studentId = $(this).data('student-id');
-            // Find corresponding 'nilai jadi' input
-            var valJadi = $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val();
-            
+            if (val !== '') {
+                var n = parseFloat(val);
+                if (!isFinite(n) || n < 0 || n > 99) {
+                    grades = null;
+                    return false;
+                }
+            }
             grades.push({
                 id_siswa: studentId,
-                nilai: val,
-                nilai_jadi: valJadi
+                nilai: val
             });
         });
+        if (grades === null) {
+            Swal.fire('Gagal', 'Pastikan semua nilai berada di rentang 0 s.d 99', 'error');
+            return;
+        }
+
+        var underCount = 0;
+        if (floorVal > 0) {
+            inputs.each(function() {
+                var v = parseFloat($(this).val());
+                if (isFinite(v) && v > 0 && v < floorVal) {
+                    underCount++;
+                }
+            });
+        }
 
         // Show loading state
-        btn.html('<i class="fas fa-spinner fa-spin"></i>');
+        var doSave = function() {
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
 
-        $.ajax({
-            url: 'ajax_nilai_harian.php',
-            type: 'POST',
-            data: {
-                action: 'save_grades',
-                id_header: id,
-                grades: grades,
-                materi: materiVal
-            },
-            success: function(response) {
-                var res = (typeof response === 'string') ? JSON.parse(response) : response;
+            $.ajax({
+                url: 'ajax_nilai_harian.php',
+                type: 'POST',
+                data: {
+                    action: 'save_grades',
+                    id_header: id,
+                    grades: grades,
+                    materi: materiVal,
+                    nama_penilaian: namaVal,
+                    nilai_min_target: minTargetRaw,
+                    nilai_max_target: maxTargetRaw
+                },
+                success: function(response) {
+                    var res = (typeof response === 'string') ? JSON.parse(response) : response;
 
-                if(res.success) {
-                    Swal.fire({
-                        title: 'Berhasil',
-                        text: 'Data nilai dan materi berhasil disimpan',
-                        icon: 'success',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
+                    if(res.success) {
+                        if (res.data && Array.isArray(res.data.grades)) {
+                            res.data.grades.forEach(function(g) {
+                                var selector = '.grade-col-jadi-' + id + '[data-student-id="' + g.id_siswa + '"]';
+                                if (g.nilai_jadi === null || typeof g.nilai_jadi === 'undefined') {
+                                    $(selector).val('');
+                                } else {
+                                    $(selector).val(g.nilai_jadi);
+                                }
+                            });
+                        }
+
+                        Swal.fire({
+                            title: 'Berhasil',
+                            text: 'Data nilai dan materi berhasil disimpan',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
                     
-                    // Toggle buttons back
-                    btn.addClass('d-none');
-                    btn.siblings('.edit-col-btn').removeClass('d-none');
-                    btn.siblings('.auto-calc-btn').addClass('d-none');
-                    btn.siblings('.delete-col-btn').prop('disabled', false);
-                    btn.html('<i class="fas fa-save"></i>');
+                        // Toggle buttons back
+                        btn.addClass('d-none');
+                        btn.siblings('.edit-col-btn').removeClass('d-none');
+                        btn.siblings('.delete-col-btn').prop('disabled', false);
+                        btn.html('<i class="fas fa-save"></i>');
                     
-                    // Disable inputs
-                    inputs.prop('disabled', true);
-                    $('.grade-col-jadi-' + id).prop('disabled', true);
+                        // Disable inputs
+                        inputs.prop('disabled', true);
+                        $('.grade-col-jadi-' + id).prop('disabled', true);
 
-                    // Update Materi Display and Toggle Back
-                    var displayVal = materiVal ? materiVal : '-';
-                    materiCell.find('.materi-display').text(displayVal).removeClass('d-none');
-                    materiCell.find('.materi-input').addClass('d-none');
+                        // Update Materi Display and Toggle Back
+                        var displayVal = materiVal ? materiVal : '-';
+                        materiCell.find('.materi-display').text(displayVal).removeClass('d-none');
+                        materiCell.find('.materi-input').addClass('d-none');
 
-                } else {
-                    Swal.fire('Gagal', res.message, 'error');
+                        headerCell.find('.nama-display').text(namaVal).removeClass('d-none');
+                        headerCell.find('.nama-input').addClass('d-none');
+                        var minText = (minTargetRaw !== '') ? minTargetRaw : '-';
+                        var maxText = (maxTargetRaw !== '') ? maxTargetRaw : '-';
+                        headerCell.find('.range-display').text('Min: ' + minText + ' | Max: ' + maxText).removeClass('d-none');
+                        headerCell.find('.range-inputs').addClass('d-none');
+                        btn.siblings('.delete-col-btn').attr('data-name', namaVal);
+
+                    } else {
+                        Swal.fire('Gagal', res.message, 'error');
+                        btn.html('<i class="fas fa-save"></i>');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'Terjadi kesalahan server', 'error');
                     btn.html('<i class="fas fa-save"></i>');
                 }
-            },
-            error: function() {
-                Swal.fire('Error', 'Terjadi kesalahan server', 'error');
-                btn.html('<i class="fas fa-save"></i>');
-            }
-        });
+            });
+        };
+
+        if (underCount > 0) {
+            Swal.fire({
+                title: 'Ada Nilai di Bawah KKTP',
+                text: underCount + ' nilai di bawah batas minimal (' + floorVal + '). Nilai jadi akan otomatis dikatrol minimal ' + floorVal + '. Lanjut simpan?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Lanjut',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    doSave();
+                }
+            });
+        } else {
+            doSave();
+        }
     });
 
     $(document).on('input', '.grade-input', function() {

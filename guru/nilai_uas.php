@@ -95,6 +95,8 @@ $semester_aktif = $school_profile['semester'];
 // Fetch students and grades
 $students = [];
 $grades_data = [];
+$nilai_min_target_setting = null;
+$nilai_max_target_setting = null;
 
 if ($selected_class && $selected_mapel) {
     // Get students
@@ -117,6 +119,10 @@ if ($selected_class && $selected_mapel) {
     foreach ($fetched_grades as $g) {
         $grades_data[$g['id_siswa']] = $g;
     }
+
+    $setting = get_nilai_semester_setting_minmax($pdo, (int)$selected_class_id, (int)$selected_mapel_id, (string)$jenis_semester, (string)$tahun_ajaran, (string)$semester_aktif);
+    $nilai_min_target_setting = $setting['nilai_min_target'];
+    $nilai_max_target_setting = $setting['nilai_max_target'];
 }
 
 require_once '../templates/header.php';
@@ -209,13 +215,20 @@ require_once '../templates/sidebar.php';
 
                     <?php if ($selected_class && $selected_mapel): ?>
                         <div class="mb-3 text-right">
-                            <div class="btn-group">
+                            <div class="d-flex justify-content-end align-items-center" style="gap: 10px; flex-wrap: wrap;">
+                                <div class="d-flex align-items-center" style="gap: 8px;">
+                                    <span class="badge badge-light">KKTP: <?= (float)$kktp ?></span>
+                                    <input type="number" class="form-control form-control-sm text-center" id="nilai_min_target" style="width: 90px;" min="0" max="99" placeholder="Min" value="<?= $nilai_min_target_setting !== null ? (float)$nilai_min_target_setting : '' ?>" <?= $can_edit ? '' : 'disabled' ?>>
+                                    <input type="number" class="form-control form-control-sm text-center" id="nilai_max_target" style="width: 90px;" min="0" max="99" placeholder="Max" value="<?= $nilai_max_target_setting !== null ? (float)$nilai_max_target_setting : '' ?>" <?= $can_edit ? '' : 'disabled' ?>>
+                                </div>
+                                <div class="btn-group">
                                 <a href="export_nilai_semester_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-success">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                                 <a href="export_nilai_semester_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-danger">
                                     <i class="fas fa-file-pdf"></i> Export PDF
                                 </a>
+                                </div>
                             </div>
                         </div>
                         <div class="table-responsive">
@@ -268,12 +281,12 @@ require_once '../templates/sidebar.php';
                                             <td class="text-center">
                                                 <span class="display-nilai-asli"><?= $nilai_asli > 0 ? (float)$nilai_asli : '-' ?></span>
                                                 <input type="number" class="form-control form-control-sm input-nilai-asli d-none" 
-                                                       value="<?= (float)$nilai_asli ?>" min="0" max="100">
+                                                       value="<?= (float)$nilai_asli ?>" min="0" max="99">
                                             </td>
                                             <td class="text-center">
                                                 <span class="display-nilai-remidi"><?= $nilai_remidi > 0 ? (float)$nilai_remidi : '-' ?></span>
                                                 <input type="number" class="form-control form-control-sm input-nilai-remidi d-none" 
-                                                       value="<?= (float)$nilai_remidi ?>" min="0" max="100">
+                                                       value="<?= (float)$nilai_remidi ?>" min="0" max="99">
                                             </td>
                                             <td class="text-center bg-light">
                                                 <span class="display-nilai-jadi font-weight-bold"><?= $nilai_jadi > 0 ? (float)$nilai_jadi : '-' ?></span>
@@ -387,7 +400,9 @@ $(document).ready(function() {
                 id_mapel: '<?= $selected_mapel_id ?>',
                 jenis_semester: '<?= $jenis_semester ?>',
                 nilai_asli: nilai_asli,
-                nilai_remidi: nilai_remidi
+                nilai_remidi: nilai_remidi,
+                nilai_min_target: $('#nilai_min_target').val(),
+                nilai_max_target: $('#nilai_max_target').val()
             },
             dataType: 'json',
             success: function(response) {
@@ -417,6 +432,10 @@ $(document).ready(function() {
                         message: 'Nilai berhasil disimpan',
                         position: 'topRight'
                     });
+
+                    if (data.recalc_all) {
+                        location.reload();
+                    }
                 } else {
                     iziToast.error({
                         title: 'Error',
