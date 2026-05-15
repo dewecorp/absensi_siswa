@@ -104,6 +104,10 @@ if ($selected_jenis) {
 // Data Fetching
 $students = [];
 $rekap_data = [];
+$progress_total = 0;
+$progress_filled = 0;
+$progress_missing = 0;
+$progress_percent = 0;
 
 if ($selected_class && $selected_jenis) {
     // Map new exam type names to database values
@@ -121,6 +125,11 @@ if ($selected_class && $selected_jenis) {
     $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
     $stmt->execute([$selected_class_id]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $progress_total = count($subjects);
+    $mapel_has_data = [];
+    foreach ($subjects as $mapel) {
+        $mapel_has_data[$mapel['id_mapel']] = false;
+    }
 
     // Fetch Grades
     $kelas_sum = [];
@@ -136,6 +145,7 @@ if ($selected_class && $selected_jenis) {
         
         foreach ($subjects as $mapel) {
             $nilai = 0;
+            $is_filled = false;
             
             if ($selected_jenis == 'Harian') {
                 // Logic for Nilai Harian (Average of all PH columns)
@@ -151,16 +161,22 @@ if ($selected_class && $selected_jenis) {
                 $details = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 if (!empty($details)) {
+                    $anyFilled = false;
                     $sum = 0;
                     $count = 0;
                     foreach ($details as $d) {
                         $val = ($selected_tipe == 'nilai_asli') ? $d['nilai'] : $d['nilai_jadi'];
+                        $anyVal = max((float)($d['nilai'] ?? 0), (float)($d['nilai_jadi'] ?? 0));
+                        if ($anyVal > 0) {
+                            $anyFilled = true;
+                        }
                         if ($val > 0) {
                             $sum += $val;
                             $count++;
                         }
                     }
                     if ($count > 0) {
+                        $is_filled = $anyFilled;
                         $nilai = round($sum / $count);
                     }
                 }
@@ -176,12 +192,19 @@ if ($selected_class && $selected_jenis) {
                 $grade = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if ($grade) {
+                    $a = (float)($grade['nilai_asli'] ?? 0);
+                    $r = (float)($grade['nilai_remidi'] ?? 0);
+                    $j = (float)($grade['nilai_jadi'] ?? 0);
+                    $is_filled = max($a, $r, $j) > 0;
                     $val = ($selected_tipe == 'nilai_asli') ? $grade['nilai_asli'] : $grade['nilai_jadi'];
                     $nilai = $val > 0 ? (float)$val : 0;
                 }
             }
 
             $rekap_data[$student['id_siswa']][$mapel['id_mapel']] = $nilai;
+            if ($is_filled) {
+                $mapel_has_data[$mapel['id_mapel']] = true;
+            }
             
             if ($nilai > 0) {
                 $kelas_sum[$mapel['id_mapel']] += $nilai;
@@ -225,6 +248,13 @@ if ($selected_class && $selected_jenis) {
             $kelas_avg[$id_mapel] = 0;
         }
     }
+
+    $progress_filled = 0;
+    foreach ($mapel_has_data as $has) {
+        if ($has) $progress_filled++;
+    }
+    $progress_missing = max(0, $progress_total - $progress_filled);
+    $progress_percent = $progress_total > 0 ? round(($progress_filled / $progress_total) * 100, 1) : 0;
 }
 
 require_once '../templates/header.php';
@@ -331,10 +361,16 @@ require_once '../templates/sidebar.php';
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <div class="alert alert-light border mb-0">
-                                    <strong>Info:</strong> Menampilkan 
-                                    <span class="badge badge-primary"><?= $selected_jenis ?></span> 
-                                    tipe 
-                                    <span class="badge badge-info"><?= $selected_tipe == 'nilai_asli' ? 'Nilai Asli' : 'Nilai Jadi' ?></span>
+                                    <div class="d-flex justify-content-between align-items-center" style="gap: 10px; flex-wrap: wrap;">
+                                        <div>
+                                            <strong>Progres Nilai:</strong>
+                                            <span class="badge badge-primary"><?= $selected_jenis ?></span>
+                                            <span class="text-muted">Terisi <?= (int)$progress_filled ?> dari <?= (int)$progress_total ?> mapel (<?= (float)$progress_percent ?>%) • Belum <?= (int)$progress_missing ?> mapel</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress mt-2" style="height: 22px; background-color: #ffffff;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= (float)$progress_percent ?>%; line-height: 22px; font-weight: 600;" aria-valuenow="<?= (float)$progress_percent ?>" aria-valuemin="0" aria-valuemax="100"><?= (float)$progress_percent ?>% (<?= (int)$progress_filled ?>/<?= (int)$progress_total ?>)</div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6 text-right">
