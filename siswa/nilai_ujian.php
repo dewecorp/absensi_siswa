@@ -40,6 +40,37 @@ $selected_jenis = nilai_ujian_jenis_semester();
 // Get Subjects (Mapel)
 $subjects = getFilteredSubjects($pdo);
 
+// Filter subjects for exam types
+if (in_array($selected_jenis, ['Pra Ujian', 'Ujian'], true)) {
+    $subjects = array_values(array_filter($subjects, function ($m) {
+        $nama = strtolower(trim((string)($m['nama_mapel'] ?? '')));
+        $nama = preg_replace('/\s+/', ' ', $nama);
+        return $nama !== 'tajwid' && $nama !== 'bta';
+    }));
+}
+
+// Filter subjects for Ujian Praktik - only show subjects with grades for this student
+if ($selected_jenis === 'Ujian Praktik') {
+    $stmt = $pdo->prepare("
+        SELECT id_mapel
+        FROM tb_nilai_semester
+        WHERE id_siswa = ?
+          AND jenis_semester = ?
+          AND tahun_ajaran = ?
+          AND semester = ?
+          AND (
+            COALESCE(nilai_asli, 0) > 0
+            OR COALESCE(nilai_remidi, 0) > 0
+            OR COALESCE(nilai_jadi, 0) > 0
+          )
+    ");
+    $stmt->execute([$id_siswa, $selected_jenis, $tahun_ajaran, $semester_aktif]);
+    $filled_mapel_ids = array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    $subjects = array_values(array_filter($subjects, function ($m) use ($filled_mapel_ids) {
+        return in_array((string)($m['id_mapel'] ?? ''), $filled_mapel_ids, true);
+    }));
+}
+
 // Fetch Grades
 $rekap_data = [];
 $total_nilai = 0;

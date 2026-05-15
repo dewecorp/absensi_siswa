@@ -57,6 +57,15 @@ if ($is_admin_view) {
     }
 }
 
+// Filter subjects for exam types
+if (in_array($jenis_semester, ['Pra Ujian', 'Ujian'], true)) {
+    $subjects = array_values(array_filter($subjects, function ($m) {
+        $nama = strtolower(trim((string)($m['nama_mapel'] ?? '')));
+        $nama = preg_replace('/\s+/', ' ', $nama);
+        return $nama !== 'tajwid' && $nama !== 'bta';
+    }));
+}
+
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
 $selected_class = null;

@@ -120,6 +120,35 @@ if ($selected_class && $selected_jenis) {
         'Ujian Praktik' => 'Ujian Praktik'
     ];
     $db_jenis = $exam_type_map[$selected_jenis] ?? $selected_jenis;
+
+    if (in_array($db_jenis, ['Pra Ujian', 'Ujian'], true)) {
+        $subjects = array_values(array_filter($subjects, function ($m) {
+            $nama = strtolower(trim((string)($m['nama_mapel'] ?? '')));
+            $nama = preg_replace('/\s+/', ' ', $nama);
+            return $nama !== 'tajwid' && $nama !== 'bta';
+        }));
+    }
+
+    if ($db_jenis === 'Ujian Praktik') {
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT id_mapel
+            FROM tb_nilai_semester
+            WHERE id_kelas = ?
+              AND jenis_semester = ?
+              AND tahun_ajaran = ?
+              AND semester = ?
+              AND (
+                COALESCE(nilai_asli, 0) > 0
+                OR COALESCE(nilai_remidi, 0) > 0
+                OR COALESCE(nilai_jadi, 0) > 0
+              )
+        ");
+        $stmt->execute([$selected_class_id, $db_jenis, $tahun_ajaran, $semester_aktif]);
+        $filled_mapel_ids = array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        $subjects = array_values(array_filter($subjects, function ($m) use ($filled_mapel_ids) {
+            return in_array((string)($m['id_mapel'] ?? ''), $filled_mapel_ids, true);
+        }));
+    }
     
     // Get Students
     $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
@@ -374,17 +403,24 @@ require_once '../templates/sidebar.php';
                                 </div>
                             </div>
                             <div class="col-md-6 text-right">
-                                <div class="btn-group">
-                                    <a href="export_rekap_nilai_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-success">
-                                        <i class="fas fa-file-excel"></i> Export Excel
-                                    </a>
-                                    <a href="export_rekap_nilai_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-danger">
-                                        <i class="fas fa-file-pdf"></i> Export PDF
-                                    </a>
-                                </div>
+                                <?php if (count($subjects) > 0): ?>
+                                    <div class="btn-group">
+                                        <a href="export_rekap_nilai_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-success">
+                                            <i class="fas fa-file-excel"></i> Export Excel
+                                        </a>
+                                        <a href="export_rekap_nilai_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="btn btn-danger">
+                                            <i class="fas fa-file-pdf"></i> Export PDF
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
-                        
+
+                        <?php if (count($subjects) === 0): ?>
+                            <div class="alert alert-warning mb-0">
+                                Belum ada mata pelajaran yang terisi untuk jenis penilaian ini.
+                            </div>
+                        <?php else: ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped table-sm" id="rekapTable">
                                 <thead>
@@ -447,6 +483,7 @@ require_once '../templates/sidebar.php';
                                 </tbody>
                             </table>
                         </div>
+                        <?php endif; ?>
                     <?php else: ?>
                         <div class="alert alert-info">
                             Silakan pilih <strong>Kelas</strong> dan <strong>Jenis Penilaian</strong> untuk menampilkan rekap nilai.
@@ -463,12 +500,14 @@ require_once '../templates/sidebar.php';
 <script>
 $(document).ready(function() {
     $('.select2').select2();
-    $('#rekapTable').DataTable({
-        "pageLength": 50,
-        "scrollX": true,
-        "fixedColumns": {
-            "leftColumns": 2
-        }
-    });
+    if ($('#rekapTable').length) {
+        $('#rekapTable').DataTable({
+            "pageLength": 50,
+            "scrollX": true,
+            "fixedColumns": {
+                "leftColumns": 2
+            }
+        });
+    }
 });
 </script>

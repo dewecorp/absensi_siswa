@@ -39,6 +39,15 @@ $selected_jenis = 'Pra Ujian';
 // Get Subjects (Mapel)
 $subjects = getFilteredSubjects($pdo);
 
+// Filter subjects for exam types
+if (in_array($selected_jenis, ['Pra Ujian', 'Ujian'], true)) {
+    $subjects = array_values(array_filter($subjects, function ($m) {
+        $nama = strtolower(trim((string)($m['nama_mapel'] ?? '')));
+        $nama = preg_replace('/\s+/', ' ', $nama);
+        return $nama !== 'tajwid' && $nama !== 'bta';
+    }));
+}
+
 // Fetch Grades
 $rekap_data = [];
 $total_nilai = 0;
