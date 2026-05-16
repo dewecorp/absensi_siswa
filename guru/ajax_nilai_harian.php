@@ -131,16 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     echo json_encode(['success' => false, 'message' => 'Nilai terendah tidak boleh di bawah KKTP (' . $kktp . ')']);
                     exit;
                 }
-                if ($min_target > 99) {
-                    echo json_encode(['success' => false, 'message' => 'Nilai terendah tidak boleh lebih dari 99']);
-                    exit;
-                }
             }
             if ($max_target !== null) {
-                if ($max_target > 99) {
-                    echo json_encode(['success' => false, 'message' => 'Nilai tertinggi tidak boleh lebih dari 99']);
-                    exit;
-                }
                 if ($kktp > 0 && $max_target < $kktp) {
                     echo json_encode(['success' => false, 'message' => 'Nilai tertinggi tidak boleh di bawah KKTP (' . $kktp . ')']);
                     exit;
@@ -205,16 +197,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     echo json_encode(['success' => false, 'message' => 'Nilai terendah tidak boleh di bawah KKTP (' . $kktp . ')']);
                     exit;
                 }
-                if ($min_target > 99) {
-                    echo json_encode(['success' => false, 'message' => 'Nilai terendah tidak boleh lebih dari 99']);
-                    exit;
-                }
             }
             if ($max_target !== null) {
-                if ($max_target > 99) {
-                    echo json_encode(['success' => false, 'message' => 'Nilai tertinggi tidak boleh lebih dari 99']);
-                    exit;
-                }
                 if ($kktp > 0 && $max_target < $kktp) {
                     echo json_encode(['success' => false, 'message' => 'Nilai tertinggi tidak boleh di bawah KKTP (' . $kktp . ')']);
                     exit;
@@ -268,9 +252,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($nilai !== null) {
                     if ($nilai < 0) {
                         throw new Exception('Nilai tidak boleh kurang dari 0');
-                    }
-                    if ($nilai > 99) {
-                        throw new Exception('Nilai tidak boleh lebih dari 99');
                     }
                 }
 

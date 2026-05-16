@@ -150,26 +150,10 @@ if (isset($_POST['action']) && ($_POST['action'] == 'save' || $_POST['action'] =
         $keterangan = ($nilai_tes >= $kkm) ? 'Tuntas' : 'Tidak Tuntas';
 
         // START: Update to tb_nilai_semester
-        // Logic from ajax_nilai_semester.php
-        $temp_jadi = ($nilai_tes > $nilai_ulangan) ? $nilai_tes : $nilai_ulangan;
-        $nilai_jadi = $temp_jadi;
+        $nilai_jadi = ($nilai_tes > $nilai_ulangan) ? $nilai_tes : $nilai_ulangan;
         
-        if ($kkm > 0 && $temp_jadi > 0) {
-            if ($temp_jadi < $kkm) {
-                $nilai_jadi = $kkm;
-            } else {
-                $maxVal = 99;
-                $range = $maxVal - $kkm;
-                $inputRange = 100 - $kkm;
-                if ($range > 0) {
-                    $ratio = ($temp_jadi - $kkm) / $inputRange;
-                    $ratioBoosted = 1 - pow(1 - $ratio, 2);
-                    $nilai_jadi = $kkm + ($range * $ratioBoosted);
-                }
-            }
-            $nilai_jadi = round($nilai_jadi);
-            if ($nilai_jadi > 99) $nilai_jadi = 99;
-        }
+        // Ensure Nilai Jadi follows the global rule (max 99)
+        if ($nilai_jadi > 99) $nilai_jadi = 99;
 
         // Check if grade record exists - use db_jenis for database query
         $stmt_check = $pdo->prepare("

@@ -166,60 +166,81 @@ require_once '../templates/sidebar.php';
     }
     .sticky-col-2 {
         left: 50px;
-        min-width: 200px;
-        max-width: 250px;
-    }
-    .sticky-col-right {
-        position: sticky !important;
-        right: 0;
-        background-color: #fff !important;
-        z-index: 10;
-        border-left: 1px solid #dee2e6;
+        min-width: 250px; /* Kembali lebar untuk desktop */
+        max-width: 400px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     /* Sticky Header */
     thead th {
         position: sticky !important;
         background-color: #ffffff !important;
-        z-index: 100; /* Tingkatkan z-index agar selalu di atas elemen body */
+        z-index: 100;
         box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
         vertical-align: middle;
-        padding: 8px !important;
+        padding: 8px !important; /* Kembali ke padding normal desktop */
     }
 
     /* Multi-row Header Sticky Offsets */
     thead tr:nth-child(1) th {
         top: 0;
         z-index: 103;
-        height: 105px;
+        height: 80px;
     }
     thead tr:nth-child(2) th {
-        top: 105px;
+        top: 80px;
         z-index: 102;
-        height: 40px;
     }
     thead tr:nth-child(3) th {
-        top: 145px;
+        top: 120px;
         z-index: 101;
-        height: 35px;
     }
     
     /* Sticky Header + Sticky Column Intersection */
     thead th.sticky-col {
         z-index: 110 !important;
     }
-    thead th.sticky-col-right {
-        z-index: 110 !important;
-    }
 
-    /* Pastikan input tidak memiliki z-index yang lebih tinggi */
+    /* Input styling */
     .grade-input, .grade-input-jadi {
         position: relative;
         z-index: 1;
+        min-width: 60px;
+    }
+    
+    /* Mobile specific adjustments */
+    @media (max-width: 768px) {
+        .sticky-col-1 {
+            width: 40px !important;
+            min-width: 40px !important;
+        }
+        .sticky-col-2 {
+            left: 40px !important;
+            min-width: 130px !important;
+            max-width: 130px !important;
+            font-size: 0.8em;
+        }
+        thead th {
+            padding: 4px 2px !important;
+        }
+        .header-cell {
+            min-width: 120px !important;
+        }
+        thead tr:nth-child(1) th { height: 60px !important; }
+        thead tr:nth-child(2) th { top: 60px !important; height: 35px !important; }
+        thead tr:nth-child(3) th { top: 95px !important; height: 30px !important; }
+        .grade-input, .grade-input-jadi {
+            min-width: 50px !important;
+            max-width: 60px !important;
+            padding: 4px 2px !important;
+            height: 30px !important;
+        }
     }
     
     /* Tambahkan background solid pada sticky columns */
-    .sticky-col, .sticky-col-right {
+    .sticky-col {
         background-color: #ffffff !important;
     }
 
@@ -323,14 +344,14 @@ require_once '../templates/sidebar.php';
                                                 Max: <?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '-' ?>
                                             </div>
                                             <div class="d-none range-inputs" style="margin-top: 6px;">
-                                                <div class="d-flex" style="gap: 6px;">
-                                                    <input type="number" class="form-control form-control-sm text-center range-min" placeholder="Min" min="0" max="99" value="<?= isset($header['nilai_min_target']) && $header['nilai_min_target'] !== null ? htmlspecialchars($header['nilai_min_target']) : '' ?>">
-                                                    <input type="number" class="form-control form-control-sm text-center range-max" placeholder="Max" min="0" max="99" value="<?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '' ?>">
-                                                </div>
-                                            </div>
+                                                        <div class="d-flex" style="gap: 6px;">
+                                                            <input type="number" class="form-control form-control-sm text-center range-min" placeholder="Min" value="<?= isset($header['nilai_min_target']) && $header['nilai_min_target'] !== null ? htmlspecialchars($header['nilai_min_target']) : '' ?>">
+                                                            <input type="number" class="form-control form-control-sm text-center range-max" placeholder="Max" min="0" max="99" value="<?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '' ?>">
+                                                        </div>
+                                                    </div>
                                         </th>
                                     <?php endforeach; ?>
-                                    <th class="sticky-col-right" style="width: 100px; vertical-align: middle;" rowspan="3">Rerata</th>
+                                    <th style="width: 100px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>
                                 </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
@@ -394,7 +415,7 @@ require_once '../templates/sidebar.php';
                                                            data-header-id="<?= $header['id_header'] ?>"
                                                            value="<?= $val ?>" 
                                                            disabled
-                                                           min="0" max="99" placeholder="-">
+                                                           placeholder="-">
                                                 </td>
                                                 <td class="text-center p-1">
                                                     <input type="number" 
@@ -403,18 +424,11 @@ require_once '../templates/sidebar.php';
                                                            data-header-id="<?= $header['id_header'] ?>"
                                                            value="<?= $val_jadi ?>" 
                                                            disabled
-                                                           min="0" max="99" placeholder="-">
+                                                           placeholder="-">
                                                 </td>
                                             <?php endforeach; ?>
-                                            <td class="text-center font-weight-bold student-avg sticky-col-right">
-                                                <?php
-                                                if ($count_score > 0) {
-                                                    $avg = round($total_score / $count_score, 1);
-                                                    echo fmod($avg, 1.0) == 0.0 ? (int)$avg : $avg;
-                                                } else {
-                                                    echo '-';
-                                                }
-                                                ?>
+                                            <td class="text-center font-weight-bold rerata-siswa" data-student-id="<?= $student['id_siswa'] ?>">
+                                                <?= $count_score > 0 ? round($total_score / $count_score, 1) : '-' ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -428,7 +442,7 @@ require_once '../templates/sidebar.php';
                                             </td>
                                             <td></td>
                                         <?php endforeach; ?>
-                                        <td class="sticky-col-right"></td>
+                                        <td class="text-center"></td>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right sticky-col sticky-col-1" style="left: 0;">Nilai Terendah</td>
@@ -438,7 +452,7 @@ require_once '../templates/sidebar.php';
                                             </td>
                                             <td></td>
                                         <?php endforeach; ?>
-                                        <td class="sticky-col-right"></td>
+                                        <td class="text-center"></td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -477,7 +491,7 @@ require_once '../templates/sidebar.php';
                     <div class="form-row">
                         <div class="form-group col-6">
                             <label>Nilai Terendah</label>
-                            <input type="number" class="form-control" name="nilai_min_target" min="0" max="99" placeholder="Kosongkan = KKTP">
+                            <input type="number" class="form-control" name="nilai_min_target" placeholder="Kosongkan = KKTP">
                         </div>
                         <div class="form-group col-6">
                             <label>Nilai Tertinggi</label>
@@ -626,10 +640,6 @@ $(document).ready(function() {
                 Swal.fire('Gagal', 'Nilai terendah tidak valid', 'error');
                 return;
             }
-            if (minTarget > 99) {
-                Swal.fire('Gagal', 'Nilai terendah tidak boleh lebih dari 99', 'error');
-                return;
-            }
             if (kktp > 0 && minTarget < kktp) {
                 Swal.fire('Gagal', 'Nilai terendah tidak boleh di bawah KKTP (' + kktp + ')', 'error');
                 return;
@@ -661,7 +671,7 @@ $(document).ready(function() {
             var studentId = $(this).data('student-id');
             if (val !== '') {
                 var n = parseFloat(val);
-                if (!isFinite(n) || n < 0 || n > 99) {
+                if (!isFinite(n) || n < 0 || n > 100) {
                     grades = null;
                     return false;
                 }
@@ -672,7 +682,7 @@ $(document).ready(function() {
             });
         });
         if (grades === null) {
-            Swal.fire('Gagal', 'Pastikan semua nilai berada di rentang 0 s.d 99', 'error');
+            Swal.fire('Gagal', 'Pastikan semua nilai valid (0 s.d 100)', 'error');
             return;
         }
 

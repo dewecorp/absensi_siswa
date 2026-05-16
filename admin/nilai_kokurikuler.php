@@ -121,13 +121,6 @@ require_once '../templates/sidebar.php';
         min-width: 200px;
         max-width: 250px;
     }
-    .sticky-col-right {
-        position: sticky !important;
-        right: 0;
-        background-color: #fff !important;
-        z-index: 10;
-        border-left: 1px solid #dee2e6;
-    }
     
     /* Sticky Header */
     thead th {
@@ -160,9 +153,6 @@ require_once '../templates/sidebar.php';
     thead th.sticky-col {
         z-index: 110 !important;
     }
-    thead th.sticky-col-right {
-        z-index: 110 !important;
-    }
 
     /* Pastikan input tidak memiliki z-index yang lebih tinggi */
     .grade-input, .grade-input-jadi {
@@ -171,7 +161,7 @@ require_once '../templates/sidebar.php';
     }
     
     /* Tambahkan background solid pada sticky columns */
-    .sticky-col, .sticky-col-right {
+    .sticky-col {
         background-color: #ffffff !important;
     }
 
@@ -249,9 +239,9 @@ require_once '../templates/sidebar.php';
                                         <th class="text-center" colspan="2" style="min-width: 200px;">
                                             <?= htmlspecialchars($header['nama_penilaian']) ?>
                                         </th>
-                                    <?php endforeach; ?>
-                                    <th class="sticky-col-right" style="width: 100px; vertical-align: middle;" rowspan="3">Rerata</th>
-                                </tr>
+                                                <?php endforeach; ?>
+                                                <th style="width: 100px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>
+                                            </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
                                         <th class="text-center font-weight-normal activity-cell" data-header-id="<?= $header['id_header'] ?>" colspan="2" style="font-size: 0.85em; font-style: italic;">
@@ -320,7 +310,7 @@ require_once '../templates/sidebar.php';
                                                     <?= $val_jadi !== '' ? $val_jadi : '-' ?>
                                                 </td>
                                             <?php endforeach; ?>
-                                            <td class="text-center font-weight-bold student-avg sticky-col-right">
+                                            <td class="text-center font-weight-bold student-avg">
                                                 <?= $count_score > 0 ? round($total_score / $count_score, 1) : '-' ?>
                                             </td>
                                         </tr>
@@ -335,17 +325,17 @@ require_once '../templates/sidebar.php';
                                             </td>
                                             <td></td>
                                         <?php endforeach; ?>
-                                        <td class="sticky-col-right"></td>
+                                        <td class="text-center"></td>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right sticky-col sticky-col-1" style="left: 0;">Nilai Terendah</td>
                                         <?php foreach ($grade_headers as $header): ?>
-                                            <td class="text-center text-danger col-min-<?= $header['id_header'] ?>">
+                                            <td class="text-center text-danger">
                                                 <?= isset($col_min[$header['id_header']]) ? $col_min[$header['id_header']] : '-' ?>
                                             </td>
                                             <td></td>
                                         <?php endforeach; ?>
-                                        <td class="sticky-col-right"></td>
+                                        <td class="text-center"></td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>

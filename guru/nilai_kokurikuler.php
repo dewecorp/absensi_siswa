@@ -149,6 +149,11 @@ require_once '../templates/sidebar.php';
         max-height: 80vh;
         overflow: auto;
     }
+    table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        width: 100% !important;
+    }
     .sticky-col {
         position: sticky !important;
         background-color: #fff !important;
@@ -162,15 +167,11 @@ require_once '../templates/sidebar.php';
     }
     .sticky-col-2 {
         left: 50px;
-        min-width: 200px;
-        max-width: 250px;
-    }
-    .sticky-col-right {
-        position: sticky !important;
-        right: 0;
-        background-color: #fff !important;
-        z-index: 10;
-        border-left: 1px solid #dee2e6;
+        min-width: 250px; /* Kembali lebar untuk desktop */
+        max-width: 400px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     /* Sticky Header */
@@ -187,24 +188,19 @@ require_once '../templates/sidebar.php';
     thead tr:nth-child(1) th {
         top: 0;
         z-index: 103;
-        height: 70px;
+        height: 80px;
     }
     thead tr:nth-child(2) th {
-        top: 70px;
+        top: 80px;
         z-index: 102;
-        height: 60px;
     }
     thead tr:nth-child(3) th {
-        top: 130px;
+        top: 120px;
         z-index: 101;
-        height: 35px;
     }
     
     /* Sticky Header + Sticky Column Intersection */
     thead th.sticky-col {
-        z-index: 110 !important;
-    }
-    thead th.sticky-col-right {
         z-index: 110 !important;
     }
 
@@ -212,10 +208,42 @@ require_once '../templates/sidebar.php';
     .grade-input, .grade-input-jadi {
         position: relative;
         z-index: 1;
+        min-width: 60px;
+    }
+    
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        .sticky-col-1 { 
+            width: 40px !important; 
+            min-width: 40px !important; 
+            left: 0 !important;
+        }
+        .sticky-col-2 {
+            left: 40px !important;
+            min-width: 130px !important;
+            max-width: 130px !important;
+            font-size: 0.8em;
+        }
+        thead th, tbody td {
+            font-size: 0.8em !important;
+            padding: 4px 2px !important;
+        }
+        .header-cell {
+            min-width: 120px !important;
+        }
+        thead tr:nth-child(1) th { height: 60px !important; }
+        thead tr:nth-child(2) th { top: 60px !important; height: 35px !important; }
+        thead tr:nth-child(3) th { top: 95px !important; height: 30px !important; }
+        .grade-input, .grade-input-jadi {
+            min-width: 50px !important;
+            max-width: 60px !important;
+            padding: 4px 2px !important;
+            height: 30px !important;
+        }
     }
     
     /* Tambahkan background solid pada sticky columns */
-    .sticky-col, .sticky-col-right {
+    .sticky-col {
         background-color: #ffffff !important;
     }
 
@@ -292,10 +320,10 @@ require_once '../templates/sidebar.php';
                         <table class="table table-bordered table-striped table-sm" id="gradesTable">
                             <thead>
                                 <tr>
-                                    <th class="sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
-                                    <th class="sticky-col sticky-col-2" style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
-                                    <?php foreach ($grade_headers as $header): ?>
-                                        <th class="text-center" colspan="2" style="min-width: 200px;">
+                                        <th class="text-center sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
+                                        <th class="text-center sticky-col sticky-col-2" style="width: 250px; vertical-align: middle;" rowspan="3">Nama Siswa</th>
+                                        <?php foreach ($grade_headers as $header): ?>
+                                            <th class="text-center header-cell" colspan="2" style="min-width: 220px; vertical-align: middle;">
                                             <?php if ($can_edit): ?>
                                             <div class="mb-2">
                                                 <button class="btn btn-sm btn-icon btn-warning edit-col-btn" data-header-id="<?= $header['id_header'] ?>" title="Edit Nilai">
@@ -315,7 +343,7 @@ require_once '../templates/sidebar.php';
                                             <?= htmlspecialchars($header['nama_penilaian']) ?>
                                         </th>
                                     <?php endforeach; ?>
-                                    <th class="sticky-col-right" style="width: 100px; vertical-align: middle;" rowspan="3">Rerata</th>
+                                    <th style="width: 100px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>
                                 </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
@@ -387,7 +415,7 @@ require_once '../templates/sidebar.php';
                                                            data-header-id="<?= $header['id_header'] ?>"
                                                            value="<?= $val ?>" 
                                                            disabled
-                                                           min="0" max="100" placeholder="-">
+                                                           placeholder="-">
                                                 </td>
                                                 <td class="text-center p-1">
                                                     <input type="number" 
@@ -396,10 +424,10 @@ require_once '../templates/sidebar.php';
                                                            data-header-id="<?= $header['id_header'] ?>"
                                                            value="<?= $val_jadi ?>" 
                                                            disabled
-                                                           min="0" max="100" placeholder="-">
+                                                           placeholder="-">
                                                 </td>
                                             <?php endforeach; ?>
-                                            <td class="text-center font-weight-bold student-avg sticky-col-right">
+                                            <td class="text-center font-weight-bold student-avg">
                                                 <?= $count_score > 0 ? round($total_score / $count_score, 1) : '-' ?>
                                             </td>
                                         </tr>
@@ -414,7 +442,7 @@ require_once '../templates/sidebar.php';
                                             </td>
                                             <td></td>
                                         <?php endforeach; ?>
-                                        <td class="sticky-col-right"></td>
+                                        <td class="text-center"></td>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="2" class="text-right sticky-col sticky-col-1" style="left: 0;">Nilai Terendah</td>
@@ -424,7 +452,7 @@ require_once '../templates/sidebar.php';
                                             </td>
                                             <td></td>
                                         <?php endforeach; ?>
-                                        <td class="sticky-col-right"></td>
+                                        <td class="text-center"></td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>

@@ -162,8 +162,11 @@ require_once '../templates/sidebar.php';
     }
     .sticky-col-2 {
         left: 50px;
-        min-width: 200px;
-        max-width: 250px;
+        min-width: 250px;
+        max-width: 400px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     /* Sticky Header */
@@ -173,11 +176,55 @@ require_once '../templates/sidebar.php';
         background-color: #f8f9fa !important;
         z-index: 15;
         box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        padding: 8px !important;
     }
     
     /* Sticky Header + Sticky Column Intersection */
     thead th.sticky-col {
         z-index: 25 !important;
+    }
+
+    /* Input styling */
+    .grade-input {
+        position: relative;
+        z-index: 1;
+        min-width: 60px;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        .sticky-col-1 { 
+            width: 40px !important; 
+            min-width: 40px !important; 
+        }
+        .sticky-col-2 {
+            left: 40px !important;
+            min-width: 130px !important;
+            max-width: 130px !important;
+            font-size: 0.8em;
+        }
+        thead th, tbody td {
+            font-size: 0.8em !important;
+            padding: 4px 2px !important;
+        }
+        .grade-input {
+            min-width: 50px !important;
+            max-width: 60px !important;
+            padding: 4px 2px !important;
+            height: 30px !important;
+            font-size: 0.9em !important;
+        }
+    }
+    
+    /* Solid background for sticky columns */
+    .sticky-col {
+        background-color: #ffffff !important;
+    }
+
+    table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        width: 100%;
     }
 </style>
 
@@ -221,8 +268,8 @@ require_once '../templates/sidebar.php';
                             <div class="d-flex justify-content-end align-items-center" style="gap: 10px; flex-wrap: wrap;">
                                 <div class="d-flex align-items-center" style="gap: 8px;">
                                     <span class="badge badge-light">KKTP: <?= (float)$kktp ?></span>
-                                    <input type="number" class="form-control form-control-sm text-center" id="nilai_min_target" style="width: 90px;" min="0" max="99" placeholder="Min" value="<?= $nilai_min_target_setting !== null ? (float)$nilai_min_target_setting : '' ?>" <?= $can_edit ? '' : 'disabled' ?>>
-                                    <input type="number" class="form-control form-control-sm text-center" id="nilai_max_target" style="width: 90px;" min="0" max="99" placeholder="Max" value="<?= $nilai_max_target_setting !== null ? (float)$nilai_max_target_setting : '' ?>" <?= $can_edit ? '' : 'disabled' ?>>
+                                    <input type="number" class="form-control form-control-sm text-center" id="nilai_min_target" style="width: 90px;" placeholder="Min" value="<?= $nilai_min_target_setting !== null ? (float)$nilai_min_target_setting : '' ?>" <?= $can_edit ? '' : 'disabled' ?>>
+                                    <input type="number" class="form-control form-control-sm text-center" id="nilai_max_target" style="width: 90px;" placeholder="Max" value="<?= $nilai_max_target_setting !== null ? (float)$nilai_max_target_setting : '' ?>" <?= $can_edit ? '' : 'disabled' ?>>
                                 </div>
                                 <div class="btn-group">
                                 <a href="export_nilai_semester_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($jenis_semester) ?>" target="_blank" class="btn btn-success">
@@ -238,11 +285,11 @@ require_once '../templates/sidebar.php';
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
-                                        <th class="text-center sticky-col sticky-col-1" width="5%">No</th>
-                                        <th class="text-center sticky-col sticky-col-2">Nama Siswa</th>
-                                        <th width="15%" class="text-center">
-                                            <div class="d-flex align-items-center justify-content-center" style="gap: 8px;">
-                                                <span>Nilai Asli</span>
+                                        <th class="text-center sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;">No</th>
+                                        <th class="text-center sticky-col sticky-col-2" style="width: 250px; vertical-align: middle;">Nama Siswa</th>
+                                        <th style="width: 120px; vertical-align: middle;" class="text-center">
+                                            <div class="d-flex align-items-center justify-content-center" style="gap: 4px;">
+                                                <span>Asli</span>
                                                 <?php if ($can_edit): ?>
                                                     <button class="btn btn-sm btn-warning" id="btn-edit-all" title="Edit">
                                                         <i class="fas fa-edit"></i>
@@ -253,8 +300,8 @@ require_once '../templates/sidebar.php';
                                                 <?php endif; ?>
                                             </div>
                                         </th>
-                                        <th width="15%" class="text-center">Remidi</th>
-                                        <th width="15%" class="text-center">Nilai Jadi</th>
+                                        <th style="width: 100px; vertical-align: middle;" class="text-center">Remidi</th>
+                                        <th style="width: 100px; vertical-align: middle;" class="text-center">Jadi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -292,11 +339,11 @@ require_once '../templates/sidebar.php';
                                             <td class="sticky-col sticky-col-2"><?= htmlspecialchars($student['nama_siswa']) ?></td>
                                             <td class="text-center">
                                                 <input type="number" class="form-control form-control-sm input-nilai-asli text-center"
-                                                       value="<?= $nilai_asli > 0 ? (float)$nilai_asli : '' ?>" min="0" max="99" style="max-width: 90px;" disabled>
+                                                       value="<?= $nilai_asli > 0 ? (float)$nilai_asli : '' ?>" style="max-width: 90px;" disabled>
                                             </td>
                                             <td class="text-center">
                                                 <input type="number" class="form-control form-control-sm input-nilai-remidi text-center"
-                                                       value="<?= $nilai_remidi > 0 ? (float)$nilai_remidi : '' ?>" min="0" max="100" style="max-width: 90px;" disabled>
+                                                       value="<?= $nilai_remidi > 0 ? (float)$nilai_remidi : '' ?>" style="max-width: 90px;" disabled>
                                             </td>
                                             <td class="text-center bg-light">
                                                 <span class="display-nilai-jadi font-weight-bold"><?= $nilai_jadi > 0 ? (float)$nilai_jadi : '-' ?></span>

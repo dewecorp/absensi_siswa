@@ -26,12 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($jenis_semester === 'Ujian Praktik') {
             $nilai_remidi = 0;
         }
-        if ($nilai_asli < 0 || $nilai_asli > 99) {
-            echo json_encode(['status' => 'error', 'message' => 'Nilai asli harus 0 s.d 99']);
+        if ($nilai_asli < 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Nilai asli tidak boleh kurang dari 0']);
             exit;
         }
         if ($nilai_remidi < 0) $nilai_remidi = 0;
-        if ($nilai_remidi > 100) $nilai_remidi = 100;
         $min_target = null;
         $max_target = null;
         $has_min_key = array_key_exists('nilai_min_target', $_POST);
@@ -90,16 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     echo json_encode(['status' => 'error', 'message' => 'Nilai terendah tidak boleh di bawah KKTP (' . $kktp . ')']);
                     exit;
                 }
-                if ($min_target > 99) {
-                    echo json_encode(['status' => 'error', 'message' => 'Nilai terendah tidak boleh lebih dari 99']);
-                    exit;
-                }
             }
             if ($max_target !== null) {
-                if ($max_target > 99) {
-                    echo json_encode(['status' => 'error', 'message' => 'Nilai tertinggi tidak boleh lebih dari 99']);
-                    exit;
-                }
                 if ($kktp > 0 && $max_target < $kktp) {
                     echo json_encode(['status' => 'error', 'message' => 'Nilai tertinggi tidak boleh di bawah KKTP (' . $kktp . ')']);
                     exit;
@@ -357,16 +348,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     echo json_encode(['status' => 'error', 'message' => 'Nilai terendah tidak boleh di bawah KKTP (' . $kktp . ')']);
                     exit;
                 }
-                if ($min_target > 99) {
-                    echo json_encode(['status' => 'error', 'message' => 'Nilai terendah tidak boleh lebih dari 99']);
-                    exit;
-                }
             }
             if ($max_target !== null) {
-                if ($max_target > 99) {
-                    echo json_encode(['status' => 'error', 'message' => 'Nilai tertinggi tidak boleh lebih dari 99']);
-                    exit;
-                }
                 if ($kktp > 0 && $max_target < $kktp) {
                     echo json_encode(['status' => 'error', 'message' => 'Nilai tertinggi tidak boleh di bawah KKTP (' . $kktp . ')']);
                     exit;
@@ -456,12 +439,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($jenis_semester === 'Ujian Praktik') {
                 $nilai_remidi = 0.0;
             }
-            if ($nilai_asli < 0 || $nilai_asli > 99) {
-                echo json_encode(['status' => 'error', 'message' => 'Nilai asli harus 0 s.d 99']);
+            if ($nilai_asli < 0) {
+                echo json_encode(['status' => 'error', 'message' => 'Nilai asli tidak boleh kurang dari 0']);
                 exit;
             }
             if ($nilai_remidi < 0) $nilai_remidi = 0.0;
-            if ($nilai_remidi > 100) $nilai_remidi = 100.0;
             $temp = max($nilai_asli, $nilai_remidi);
             if ($temp > $observedMax) {
                 $observedMax = $temp;
