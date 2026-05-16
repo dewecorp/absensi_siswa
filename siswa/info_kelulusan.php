@@ -259,11 +259,9 @@ require_once '../templates/sidebar.php';
         <div class="section-body kelulusan-section-body kelulusan-section-body--pending">
             <?php if (empty($daftar)): ?>
                 <div class="card">
-                    <div class="card-body">
-                        <p class="text-muted mb-0">Belum ada informasi kelulusan yang ditampilkan untuk akun Anda. Jika Anda peserta ujian kelas VI, hubungi Tata Usaha atau admin apabila pengumuman seharusnya sudah tayang.</p>
-                        <?php if ($filterTaBerjalan): ?>
-                            <p class="text-muted small mb-0 mt-2">Halaman ini menampilkan pengumuman untuk <strong>Tahun Ajaran <?= htmlspecialchars($taBerjalan, ENT_QUOTES, 'UTF-8') ?></strong> (tahun ajaran berjalan menurut profil madrasah). Pastikan data peserta ujian, jadwal kelulusan, dan «tampil di akun siswa» di admin sudah memakai tahun ajaran yang sama.</p>
-                        <?php endif; ?>
+                    <div class="card-body py-5 text-center">
+                        <i class="fas fa-info-circle fa-4x mb-4 text-info" style="opacity: 0.5;"></i>
+                        <h4 class="font-weight-bold text-dark mb-0">Belum ada informasi kelulusan yang ditampilkan untuk Anda.</h4>
                     </div>
                 </div>
             <?php else: ?>
