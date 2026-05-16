@@ -11,6 +11,8 @@ $user_role = $_SESSION['level'];
 $is_admin_view = in_array($user_role, ['kepala_madrasah', 'tata_usaha', 'admin']);
 $can_edit = !$is_admin_view;
 
+ensure_nilai_kokurikuler_header_minmax($pdo);
+
 // Get teacher data
 $id_guru = null;
 if (!$is_admin_view) {
@@ -193,9 +195,10 @@ require_once '../templates/sidebar.php';
     thead tr:nth-child(2) th {
         top: 80px;
         z-index: 102;
+        height: 80px;
     }
     thead tr:nth-child(3) th {
-        top: 120px;
+        top: 160px;
         z-index: 101;
     }
     
@@ -232,8 +235,8 @@ require_once '../templates/sidebar.php';
             min-width: 120px !important;
         }
         thead tr:nth-child(1) th { height: 60px !important; }
-        thead tr:nth-child(2) th { top: 60px !important; height: 35px !important; }
-        thead tr:nth-child(3) th { top: 95px !important; height: 30px !important; }
+        thead tr:nth-child(2) th { top: 60px !important; height: 65px !important; }
+        thead tr:nth-child(3) th { top: 125px !important; height: 30px !important; }
         .grade-input, .grade-input-jadi {
             min-width: 50px !important;
             max-width: 60px !important;
@@ -321,9 +324,9 @@ require_once '../templates/sidebar.php';
                             <thead>
                                 <tr>
                                         <th class="text-center sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
-                                        <th class="text-center sticky-col sticky-col-2" style="width: 250px; vertical-align: middle;" rowspan="3">Nama Siswa</th>
+                                        <th class="sticky-col sticky-col-2" style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
                                         <?php foreach ($grade_headers as $header): ?>
-                                            <th class="text-center header-cell" colspan="2" style="min-width: 220px; vertical-align: middle;">
+                                            <th class="text-center header-cell" data-header-id="<?= $header['id_header'] ?>" colspan="2" style="min-width: 220px;">
                                             <?php if ($can_edit): ?>
                                             <div class="mb-2">
                                                 <button class="btn btn-sm btn-icon btn-warning edit-col-btn" data-header-id="<?= $header['id_header'] ?>" title="Edit Nilai">
@@ -332,15 +335,26 @@ require_once '../templates/sidebar.php';
                                                 <button class="btn btn-sm btn-icon btn-success save-col-btn d-none" data-header-id="<?= $header['id_header'] ?>" title="Simpan Nilai">
                                                     <i class="fas fa-save"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-icon btn-info auto-calc-btn d-none" data-header-id="<?= $header['id_header'] ?>" title="Hitung Nilai Jadi (Otomatis)">
-                                                    <i class="fas fa-magic"></i>
-                                                </button>
                                                 <button class="btn btn-sm btn-icon btn-danger delete-col-btn" data-header-id="<?= $header['id_header'] ?>" data-name="<?= $header['nama_penilaian'] ?>" title="Hapus Kolom">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                             <?php endif; ?>
-                                            <?= htmlspecialchars($header['nama_penilaian']) ?>
+                                            <div>
+                                                <span class="nama-display"><?= htmlspecialchars($header['nama_penilaian']) ?></span>
+                                                <input type="text" class="form-control form-control-sm text-center nama-input d-none" value="<?= htmlspecialchars($header['nama_penilaian']) ?>" placeholder="Nama Penilaian">
+                                            </div>
+                                            <div class="small text-muted range-display">
+                                                Min: <?= isset($header['nilai_min_target']) && $header['nilai_min_target'] !== null ? htmlspecialchars($header['nilai_min_target']) : '-' ?>
+                                                |
+                                                Max: <?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '-' ?>
+                                            </div>
+                                            <div class="d-none range-inputs" style="margin-top: 6px;">
+                                                <div class="d-flex" style="gap: 6px;">
+                                                    <input type="number" class="form-control form-control-sm text-center range-min" placeholder="Min" value="<?= isset($header['nilai_min_target']) && $header['nilai_min_target'] !== null ? htmlspecialchars($header['nilai_min_target']) : '' ?>">
+                                                    <input type="number" class="form-control form-control-sm text-center range-max" placeholder="Max" min="0" max="99" value="<?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '' ?>">
+                                                </div>
+                                            </div>
                                         </th>
                                     <?php endforeach; ?>
                                     <th style="width: 100px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>
@@ -361,8 +375,8 @@ require_once '../templates/sidebar.php';
                                 </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
-                                        <th class="text-center" style="font-size: 0.85em;">Nilai</th>
-                                        <th class="text-center" style="font-size: 0.85em;">Jadi</th>
+                                        <th class="text-center sticky-header-col" style="font-size: 0.85em;">Nilai</th>
+                                        <th class="text-center sticky-header-col" style="font-size: 0.85em;">Jadi</th>
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
@@ -493,6 +507,16 @@ require_once '../templates/sidebar.php';
                         <label>Waktu Kegiatan</label>
                         <input type="date" class="form-control" name="tgl_kegiatan" required>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label>Nilai Terendah</label>
+                            <input type="number" class="form-control" name="nilai_min_target" placeholder="Kosongkan = KKTP">
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Nilai Tertinggi</label>
+                            <input type="number" class="form-control" name="nilai_max_target" min="0" max="99" placeholder="Kosongkan = 99">
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -533,7 +557,7 @@ $(document).ready(function() {
                 if (response.success) {
                     location.reload();
                 } else {
-                    iziToast.error({title: 'Error', message: response.message, position: 'topRight'});
+                    Swal.fire('Gagal', response.message, 'error');
                 }
             }
         });
@@ -544,108 +568,69 @@ $(document).ready(function() {
         var id = $(this).data('header-id');
         var name = $(this).data('name');
         
-        if (confirm('Yakin ingin menghapus kolom penilaian ' + name + '? Semua nilai siswa di kolom ini akan terhapus.')) {
-            $.ajax({
-                url: 'ajax_nilai_kokurikuler.php',
-                method: 'POST',
-                data: { action: 'delete_column', id_header: id },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        iziToast.error({title: 'Error', message: response.message, position: 'topRight'});
+        Swal.fire({
+            title: 'Hapus Kolom?',
+            text: 'Yakin ingin menghapus kolom nilai "' + name + '"? Semua data nilai di kolom ini akan terhapus.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: 'ajax_nilai_kokurikuler.php',
+                    method: 'POST',
+                    data: { action: 'delete_column', id_header: id },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Gagal', response.message, 'error');
+                        }
                     }
-                }
-            });
-        }
+                });
+            }
+        });
     });
 
     // Edit Mode Toggle
     $('.edit-col-btn').click(function() {
         var id = $(this).data('header-id');
-        var cell = $('.activity-cell[data-header-id="' + id + '"]');
         
         // Show/Hide buttons
         $(this).addClass('d-none');
         $('.save-col-btn[data-header-id="' + id + '"]').removeClass('d-none');
-        $('.auto-calc-btn[data-header-id="' + id + '"]').removeClass('d-none');
+        $('.delete-col-btn[data-header-id="' + id + '"]').prop('disabled', true);
         
         // Enable inputs
         $('.grade-col-' + id).prop('disabled', false);
-        $('.grade-col-jadi-' + id).prop('disabled', false);
+        $('.grade-col-jadi-' + id).prop('disabled', true);
         
+        // Toggle Header displays vs inputs
+        var headerCell = $('.header-cell[data-header-id="' + id + '"]');
+        headerCell.find('.nama-display').addClass('d-none');
+        headerCell.find('.nama-input').removeClass('d-none');
+        headerCell.find('.range-display').addClass('d-none');
+        headerCell.find('.range-inputs').removeClass('d-none');
+
         // Toggle Activity/Date display vs input
-        cell.find('.activity-display').addClass('d-none');
-        cell.find('.activity-input').removeClass('d-none');
-        
-        cell.find('.date-display').addClass('d-none');
-        cell.find('.date-input').removeClass('d-none');
-    });
-
-    $('.auto-calc-btn').click(function() {
-        var id = $(this).data('header-id');
-        var kktp = <?= json_encode($selected_mapel['kktp'] ?? 75) ?>; // Default 75
-        
-        Swal.fire({
-            title: 'Hitung Nilai Jadi Otomatis',
-            text: 'Nilai di bawah KKTP (' + kktp + ') akan diset menjadi KKTP. Nilai di atas KKTP akan disesuaikan secara proporsional.',
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Hitung!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('.grade-col-' + id).each(function() {
-                    var studentId = $(this).data('student-id');
-                    var nilaiAwal = parseFloat($(this).val());
-
-                    if (!isNaN(nilaiAwal) && nilaiAwal > 0) {
-                        var nilaiJadi = nilaiAwal;
-
-                        if (kktp > 0) {
-                            if (nilaiAwal < kktp) {
-                                nilaiJadi = kktp;
-                            } else {
-                                var diff = nilaiAwal - kktp;
-                                var bonus = 0;
-
-                                if (diff < 5) bonus = 5;
-                                else if (diff < 10) bonus = 4;
-                                else if (diff < 15) bonus = 3;
-                                else if (diff < 20) bonus = 2;
-                                else bonus = 1;
-
-                                nilaiJadi = nilaiAwal + bonus;
-                            }
-                        }
-
-                        nilaiJadi = Math.round(nilaiJadi);
-                        if (nilaiJadi > 99) nilaiJadi = 99;
-
-                        $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val(nilaiJadi);
-                    } else {
-                        $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val('');
-                    }
-                });
-                iziToast.success({message: 'Nilai jadi berhasil dihitung ulang', position: 'topRight'});
-            }
-        });
+        var activityCell = $('.activity-cell[data-header-id="' + id + '"]');
+        activityCell.find('.activity-display').addClass('d-none');
+        activityCell.find('.activity-input').removeClass('d-none');
+        activityCell.find('.date-display').addClass('d-none');
+        activityCell.find('.date-input').removeClass('d-none');
     });
 
     // Real-time updates
     $(document).on('input', '.grade-input', function() {
         var studentId = $(this).data('student-id');
-        var val = $(this).val();
-        
-        // Auto-fill Nilai Jadi if empty or 0
-        var jadiInput = $('.grade-col-jadi-' + $(this).data('header-id') + '[data-student-id="' + studentId + '"]');
-        if (val !== '' && (jadiInput.val() === '' || jadiInput.val() == 0)) {
-            jadiInput.val(val);
-        }
+        var headerId = $(this).data('header-id');
         
         updateRowAverage(studentId);
-        updateColumnStats($(this).data('header-id'));
+        updateColumnStats(headerId);
     });
 
     function updateRowAverage(studentId) {
@@ -661,6 +646,9 @@ $(document).ready(function() {
         });
         
         var avg = count > 0 ? (total / count).toFixed(1) : '-';
+        if (avg !== '-' && avg.endsWith('.0')) {
+            avg = parseInt(avg, 10).toString();
+        }
         
         var row = $('input.grade-input[data-student-id="' + studentId + '"]').first().closest('tr');
         row.find('.student-avg').text(avg);
@@ -691,64 +679,161 @@ $(document).ready(function() {
     $('.save-col-btn').click(function() {
         var id = $(this).data('header-id');
         var btn = $(this);
-        var cell = $('.activity-cell[data-header-id="' + id + '"]');
-        
+        var kktp = <?= json_encode(isset($selected_mapel['kktp']) ? (float)$selected_mapel['kktp'] : 0) ?>;
+
+        var headerCell = $('.header-cell[data-header-id="' + id + '"]');
+        var namaVal = headerCell.find('.nama-input').val();
+        var minTargetRaw = headerCell.find('.range-min').val();
+        var maxTargetRaw = headerCell.find('.range-max').val();
+        var minTarget = minTargetRaw !== '' ? parseFloat(minTargetRaw) : null;
+        var maxTarget = maxTargetRaw !== '' ? parseFloat(maxTargetRaw) : null;
+
+        var activityCell = $('.activity-cell[data-header-id="' + id + '"]');
+        var jenis_kegiatan = activityCell.find('.activity-input').val();
+        var tgl_kegiatan = activityCell.find('.date-input').val();
+
+        if (typeof namaVal === 'string') {
+            namaVal = namaVal.trim();
+        }
+        if (!namaVal) {
+            Swal.fire('Gagal', 'Nama penilaian tidak boleh kosong', 'error');
+            return;
+        }
+
+        if (minTarget !== null) {
+            if (kktp > 0 && minTarget < kktp) {
+                Swal.fire('Gagal', 'Nilai terendah tidak boleh di bawah KKTP (' + kktp + ')', 'error');
+                return;
+            }
+        }
+        if (maxTarget !== null) {
+            if (maxTarget > 99) {
+                Swal.fire('Gagal', 'Nilai tertinggi tidak boleh lebih dari 99', 'error');
+                return;
+            }
+        }
+        if (minTarget !== null && maxTarget !== null && minTarget > maxTarget) {
+            Swal.fire('Gagal', 'Nilai terendah tidak boleh lebih besar dari nilai tertinggi', 'error');
+            return;
+        }
+
+        var floorVal = (minTarget !== null) ? minTarget : (kktp > 0 ? kktp : 0);
+        var inputs = $('.grade-col-' + id);
         var grades = [];
-        $('.grade-col-' + id).each(function() {
-            var studentId = $(this).data('student-id');
+        var underCount = 0;
+
+        inputs.each(function() {
             var val = $(this).val();
-            var valJadi = $('.grade-col-jadi-' + id + '[data-student-id="' + studentId + '"]').val();
-            
+            var studentId = $(this).data('student-id');
+            if (val !== '') {
+                var n = parseFloat(val);
+                if (!isFinite(n) || n < 0 || n > 100) {
+                    grades = null;
+                    return false;
+                }
+                if (floorVal > 0 && n > 0 && n < floorVal) {
+                    underCount++;
+                }
+            }
             grades.push({
                 id_siswa: studentId,
-                nilai: val,
-                nilai_jadi: valJadi
+                nilai: val
             });
         });
 
-        var jenis_kegiatan = cell.find('.activity-input').val();
-        var tgl_kegiatan = cell.find('.date-input').val();
+        if (grades === null) {
+            Swal.fire('Gagal', 'Pastikan semua nilai valid (0 s.d 100)', 'error');
+            return;
+        }
 
-        $.ajax({
-            url: 'ajax_nilai_kokurikuler.php',
-            method: 'POST',
-            data: {
-                action: 'save_grades',
-                id_header: id,
-                grades: grades,
-                jenis_kegiatan: jenis_kegiatan,
-                tgl_kegiatan: tgl_kegiatan
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Update displays
-                    cell.find('.activity-display').text(jenis_kegiatan).removeClass('d-none');
-                    cell.find('.activity-input').addClass('d-none');
-                    
-                    cell.find('.date-display').text(tgl_kegiatan).removeClass('d-none');
-                    cell.find('.date-input').addClass('d-none');
-                    
-                    // Toggle buttons
-                    btn.addClass('d-none');
-                    $('.edit-col-btn[data-header-id="' + id + '"]').removeClass('d-none');
-                    $('.auto-calc-btn[data-header-id="' + id + '"]').addClass('d-none');
-                    
-                    // Disable inputs
-                    $('.grade-col-' + id).prop('disabled', true);
-                    $('.grade-col-jadi-' + id).prop('disabled', true);
-                    
-                    iziToast.success({title: 'Sukses', message: 'Data berhasil disimpan', position: 'topRight'});
-                    
-                    // Update stats (optional, requires reload or complex JS. Reload is easiest for stats update)
-                    // But we can do simple avg update here if we want.
-                    // For now, let's just leave it or reload? Reload is safer for consistent stats.
-                    // location.reload(); // Uncomment if full refresh needed
-                } else {
-                    iziToast.error({title: 'Error', message: response.message, position: 'topRight'});
+        var doSave = function() {
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
+
+            $.ajax({
+                url: 'ajax_nilai_kokurikuler.php',
+                method: 'POST',
+                data: {
+                    action: 'save_grades',
+                    id_header: id,
+                    grades: grades,
+                    nama_penilaian: namaVal,
+                    jenis_kegiatan: jenis_kegiatan,
+                    tgl_kegiatan: tgl_kegiatan,
+                    nilai_min_target: minTargetRaw,
+                    nilai_max_target: maxTargetRaw
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        if (response.data && Array.isArray(response.data.grades)) {
+                            response.data.grades.forEach(function(g) {
+                                var selector = '.grade-col-jadi-' + id + '[data-student-id="' + g.id_siswa + '"]';
+                                if (g.nilai_jadi === null || typeof g.nilai_jadi === 'undefined') {
+                                    $(selector).val('');
+                                } else {
+                                    $(selector).val(g.nilai_jadi);
+                                }
+                            });
+                        }
+
+                        // Update displays
+                        headerCell.find('.nama-display').text(namaVal).removeClass('d-none');
+                        headerCell.find('.nama-input').addClass('d-none');
+                        var minText = (minTargetRaw !== '') ? minTargetRaw : '-';
+                        var maxText = (maxTargetRaw !== '') ? maxTargetRaw : '-';
+                        headerCell.find('.range-display').text('Min: ' + minText + ' | Max: ' + maxText).removeClass('d-none');
+                        headerCell.find('.range-inputs').addClass('d-none');
+
+                        activityCell.find('.activity-display').text(jenis_kegiatan ? jenis_kegiatan : '-').removeClass('d-none');
+                        activityCell.find('.activity-input').addClass('d-none');
+                        activityCell.find('.date-display').text(tgl_kegiatan ? tgl_kegiatan : '-').removeClass('d-none');
+                        activityCell.find('.date-input').addClass('d-none');
+                        
+                        // Toggle buttons back
+                        btn.addClass('d-none');
+                        $('.edit-col-btn[data-header-id="' + id + '"]').removeClass('d-none');
+                        $('.delete-col-btn[data-header-id="' + id + '"]').prop('disabled', false);
+                        btn.html('<i class="fas fa-save"></i>');
+                        
+                        // Disable inputs
+                        $('.grade-col-' + id).prop('disabled', true);
+                        $('.grade-col-jadi-' + id).prop('disabled', true);
+                        
+                        Swal.fire({
+                            title: 'Berhasil',
+                            text: 'Data nilai dan kegiatan berhasil disimpan',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire('Gagal', response.message, 'error');
+                        btn.html('<i class="fas fa-save"></i>');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'Terjadi kesalahan server', 'error');
+                    btn.html('<i class="fas fa-save"></i>');
                 }
-            }
-        });
+            });
+        };
+
+        if (underCount > 0) {
+            Swal.fire({
+                title: 'Ada Nilai di Bawah Batas',
+                text: underCount + ' nilai di bawah batas minimal (' + floorVal + '). Nilai jadi akan otomatis dikatrol minimal ' + floorVal + '. Lanjut simpan?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Lanjut',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    doSave();
+                }
+            });
+        } else {
+            doSave();
+        }
     });
 });
 </script>

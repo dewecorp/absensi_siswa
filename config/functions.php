@@ -1400,6 +1400,27 @@ function ensure_nilai_harian_header_minmax(PDO $pdo): void {
     }
 }
 
+function ensure_nilai_kokurikuler_header_minmax(PDO $pdo): void {
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+    try {
+        $rMin = $pdo->query("SHOW COLUMNS FROM tb_nilai_kokurikuler_header LIKE 'nilai_min_target'");
+        $hasMin = $rMin ? (bool)$rMin->fetch(PDO::FETCH_ASSOC) : false;
+        if (!$hasMin) {
+            $pdo->exec("ALTER TABLE tb_nilai_kokurikuler_header ADD COLUMN nilai_min_target FLOAT NULL AFTER tgl_kegiatan");
+        }
+        $rMax = $pdo->query("SHOW COLUMNS FROM tb_nilai_kokurikuler_header LIKE 'nilai_max_target'");
+        $hasMax = $rMax ? (bool)$rMax->fetch(PDO::FETCH_ASSOC) : false;
+        if (!$hasMax) {
+            $pdo->exec("ALTER TABLE tb_nilai_kokurikuler_header ADD COLUMN nilai_max_target FLOAT NULL AFTER nilai_min_target");
+        }
+    } catch (Throwable $e) {
+    }
+}
+
 function ensure_nilai_semester_setting_minmax(PDO $pdo): void {
     static $checked = false;
     if ($checked) {
