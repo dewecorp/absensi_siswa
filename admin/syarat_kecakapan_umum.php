@@ -8,7 +8,8 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 if (!function_exists('normalize_person_name_for_match')) {
-    function normalize_person_name_for_match($name) {
+    /** @param mixed $name */
+    function normalize_person_name_for_match($name): string {
         $v = strtolower(trim((string)$name));
         $v = preg_replace('/[^a-z0-9]+/u', '', $v);
         return (string)$v;
@@ -1621,7 +1622,7 @@ require_once '../templates/sidebar.php';
 
 /* Sticky horizontal: No, Nama, Status */
 .sticky-sku { position:sticky; left:0; z-index:8; background:#fbfbfc!important; min-width:40px;}
-.sku-th-nama { position:sticky; left:48px; z-index:9; background:#fdfdfd!important; min-width:240px; box-shadow: 3px 0 6px -4px rgba(0,0,0,.28);}
+.sku-th-nama { position:sticky; left:40px; z-index:9; background:#fdfdfd!important; min-width:140px; max-width:180px; box-shadow: 3px 0 6px -4px rgba(0,0,0,.28);}
 .sticky-sku-r { position:sticky; right:0; z-index:8; background:#eef6ff!important;}
 
 /* NO & Status: tengah; Nama siswa: rata kiri (baca daftar nama) */
@@ -1636,6 +1637,8 @@ require_once '../templates/sidebar.php';
 .sku-main-table td.sku-td-nama {
     text-align: left !important;
     vertical-align: middle !important;
+    font-size: 0.85rem;
+    padding-right: 8px !important;
 }
 
 .sku-main-table thead.sku-thead-stick th.sticky-sku,
@@ -1644,7 +1647,7 @@ require_once '../templates/sidebar.php';
     z-index: 25;
 }
 .sku-main-table thead.sku-thead-stick th.sticky-sku { background: #e9ecef !important; }
-.sku-main-table thead.sku-thead-stick th.sku-th-nama { background: #e9ecef !important; }
+.sku-main-table thead.sku-thead-stick th.sku-th-nama { background: #e9ecef !important; left: 40px !important; }
 .sku-main-table thead.sku-thead-stick th.sticky-sku-r { background: #e9ecef !important; }
 
 .sku-meta-title-cell { background:#eef2fb!important;}
@@ -1661,13 +1664,14 @@ require_once '../templates/sidebar.php';
 .sku-col { min-width:38px;}
 .btn-xxs { font-size:.72rem;line-height:1;padding:2px;}
 tbody td.sku-td-nama {
-    white-space: nowrap;
+    white-space: normal;
+    word-wrap: break-word;
+    min-width: 140px;
+    max-width: 180px;
 }
 @media (max-width: 991.98px) {
     /*
-     * Mobile: blok thead sticky vertikal lagi di dalam .sku-table-wrap (scroll area).
-     * Sticky horizontal (left/right) dimatikan — di thead supaya rowspan aman,
-     * di tbody supaya geser & centang nyaman.
+     * Mobile: Tetap gunakan sticky horizontal untuk No dan Nama agar mudah diidentifikasi saat scroll ke kanan.
      */
     .sku-table-wrap {
         -webkit-overflow-scrolling: touch;
@@ -1680,19 +1684,34 @@ tbody td.sku-td-nama {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
     .sku-main-table thead.sku-thead-stick th.sticky-sku,
-    .sku-main-table thead.sku-thead-stick th.sku-th-nama,
+    .sku-main-table thead.sku-thead-stick th.sku-th-nama {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 35 !important;
+    }
+    .sku-main-table thead.sku-thead-stick th.sku-th-nama {
+        left: 40px !important;
+    }
     .sku-main-table thead.sku-thead-stick th.sticky-sku-r {
         position: static !important;
-        left: auto !important;
         right: auto !important;
         z-index: auto !important;
-        box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
     }
     .sku-main-table tbody .sticky-sku,
-    .sku-main-table tbody td.sku-th-nama,
+    .sku-main-table tbody td.sku-td-nama {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 10 !important;
+        background: #fbfbfc !important;
+    }
+    .sku-main-table tbody td.sku-td-nama {
+        left: 40px !important;
+        font-size: 0.75rem !important;
+        min-width: 110px !important;
+        max-width: 130px !important;
+    }
     .sku-main-table tbody .sticky-sku-r {
         position: static !important;
-        left: auto !important;
         right: auto !important;
         z-index: auto !important;
         box-shadow: none !important;
