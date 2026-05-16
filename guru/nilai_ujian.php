@@ -326,7 +326,9 @@ require_once '../templates/sidebar.php';
                                                 <?php endif; ?>
                                             </div>
                                         </th>
+                                        <?php if (!$ujian_praktik_tanpa_remidi): ?>
                                         <th style="width: 100px; vertical-align: middle;" class="text-center">Remidi</th>
+                                        <?php endif; ?>
                                         <th style="width: 100px; vertical-align: middle;" class="text-center">Jadi</th>
                                     </tr>
                                 </thead>
