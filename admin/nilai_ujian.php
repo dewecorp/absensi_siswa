@@ -17,8 +17,29 @@ $can_edit = false;
 $stmt = $pdo->query("SELECT * FROM tb_kelas WHERE nama_kelas LIKE '%6%' OR nama_kelas LIKE '%VI%' ORDER BY nama_kelas ASC");
 $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get active semester info
+$school_profile = getSchoolProfile($pdo);
+$tahun_ajaran = $school_profile['tahun_ajaran'];
+$semester_aktif = $school_profile['semester'];
+
 // Fetch subjects
-$subjects = getFilteredSubjects($pdo);
+$subjects = [];
+if ($ujian_praktik_tanpa_remidi) {
+    // Hanya tampilkan mapel yang sudah ada datanya di tb_nilai_semester untuk Ujian Praktik
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT mp.* 
+        FROM tb_mata_pelajaran mp
+        JOIN tb_nilai_semester ns ON mp.id_mapel = ns.id_mapel
+        WHERE ns.jenis_semester = 'Ujian Praktik'
+        AND ns.tahun_ajaran = ?
+        AND ns.semester = ?
+        ORDER BY mp.nama_mapel ASC
+    ");
+    $stmt->execute([$tahun_ajaran, $semester_aktif]);
+    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $subjects = getFilteredSubjects($pdo);
+}
 
 // Filter subjects for exam types
 if (in_array($jenis_semester, ['Pra Ujian', 'Ujian'], true)) {
@@ -63,11 +84,6 @@ if ($selected_mapel_id) {
 
 // Get KKTP
 $kktp = isset($selected_mapel['kktp']) ? $selected_mapel['kktp'] : 0;
-
-// Get active semester info
-$school_profile = getSchoolProfile($pdo);
-$tahun_ajaran = $school_profile['tahun_ajaran'];
-$semester_aktif = $school_profile['semester'];
 
 // Fetch students and grades
 $students = [];
