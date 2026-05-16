@@ -36,6 +36,11 @@ $monthly_results = [];
 $student_results = [];
 $student_attendance_summary = [];
 
+// Initialize variables to avoid undefined variable warnings
+$year = date('Y');
+$month = date('m');
+$holidays = [];
+
 // Define month names and prepare month data for JavaScript
 $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 $js_month_name = '';
@@ -56,7 +61,8 @@ if (!empty($selected_month)) {
 // Get school profile for semester information
 $school_profile = getSchoolProfile($pdo);
 $active_semester = $school_profile['semester'] ?? 'Semester 1';
-$periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
+$academic_year = $school_profile['tahun_ajaran'] ?? (date('Y') . '/' . (date('Y') + 1));
+$periode_ta = getRentangTanggalTahunAjaran($academic_year);
 $school_city = $school_profile['tempat_jadwal'] ?? '';
 $reportDate = formatDateIndonesia(date('Y-m-d'));
 
@@ -233,7 +239,6 @@ if ($class_id > 0) {
         $student_attendance_summary = $summary;
     } elseif ($filter_type == 'semester') {
         // Semester filter - get attendance data for the active semester
-        $academic_year = $school_profile['tahun_ajaran'] ?? (date('Y') . '/' . (date('Y') + 1));
         
         // Parse academic year (e.g., "2025/2026")
         $years = explode('/', $academic_year);
@@ -601,7 +606,6 @@ include '../templates/user_header.php';
                                                                 <th rowspan="2">Nama Siswa</th>
                                                                 <?php 
                                                                 // Generate month headers based on active semester
-                                                                $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
                                                                 $start_month = ($active_semester == 'Semester 1') ? 7 : 1;
                                                                 $end_month = ($active_semester == 'Semester 1') ? 12 : 6;
                                                                 
@@ -683,14 +687,13 @@ include '../templates/user_header.php';
                                                 </div>
                                                 
                                                 <div class="table-responsive">
-                                                    <table class="table table-bordered table-md">
+                                                    <table class="table table-bordered table-md" id="monthlyTable">
                                                         <thead>
                                                             <tr>
                                                                 <th rowspan="2">No</th>
                                                                 <th rowspan="2">Nama Siswa</th>
                                                                 <th colspan="31" class="text-center">
                                                                     <?php 
-                                                                    $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
                                                                     $month_num = (int)substr($selected_month, 5, 2);
                                                                     echo $month_names[$month_num] . ' ' . substr($selected_month, 0, 4);
                                                                     ?>
@@ -934,6 +937,45 @@ var schoolCity = <?php echo json_encode($school_city); ?>;
 var reportDate = <?php echo json_encode($reportDate); ?>;
 var schoolName = <?php echo json_encode($school_profile['nama_madrasah'] ?? 'Madrasah'); ?>;
 
+function recoverDropdownUiState() {
+    if (!window.jQuery) return;
+    // Bersihkan state overlay/backdrop yang kadang tertinggal dan membuat dropdown terasa freeze.
+    $('body').removeClass('modal-open').css('padding-right', '');
+    $('.modal-backdrop').remove();
+    $('.dropdown.show').removeClass('show');
+    $('.dropdown-menu.show').removeClass('show');
+
+    // Re-init Select2 jika terpasang pada dropdown siswa.
+    if ($.fn.select2 && $('#studentSelect').length) {
+        try {
+            if ($('#studentSelect').hasClass('select2-hidden-accessible')) {
+                $('#studentSelect').select2('destroy');
+            }
+            $('#studentSelect').select2({
+                placeholder: 'Pilih Siswa...',
+                allowClear: true,
+                width: '100%'
+            });
+        } catch (e) {}
+    }
+
+    // Refresh Selectric untuk class/filter dropdown agar klik kembali responsif.
+    if ($.fn.selectric) {
+        try { $('#classSelect').selectric('refresh'); } catch (e) {}
+        try { $('#filterType').selectric('refresh'); } catch (e) {}
+        try { $('#studentSelect').selectric('refresh'); } catch (e) {}
+    }
+}
+
+function openPrintPreviewTab(url) {
+    var previewWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (previewWindow) {
+        try { previewWindow.opener = null; } catch (e) {}
+    }
+    // Jalankan cleanup setelah event klik export selesai diproses browser.
+    setTimeout(recoverDropdownUiState, 80);
+}
+
 function exportToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
@@ -942,7 +984,11 @@ function exportToExcel() {
     headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>';
     headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
-    var table = document.querySelector('.table-bordered');
+    var table = document.getElementById('monthlyTable');
+    if (!table) {
+        // Fallback to any table-bordered if monthlyTable not found
+        table = document.querySelector('.table-bordered');
+    }
     if (!table) {
         Swal.fire('Error', 'Tabel tidak ditemukan', 'error');
         return;
@@ -966,12 +1012,16 @@ function exportToExcel() {
         var ws = XLSX.utils.table_to_sheet(newTable);
         XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
         XLSX.writeFile(wb, 'rekap_absensi_bulanan_' + '<?php echo $js_month_name_file; ?>' + '_' + '<?php echo $js_month_year_safe; ?>' + '.xlsx');
+        
+        // Fix for UI freeze after download
+        setTimeout(recoverDropdownUiState, 500);
     } else {
         var a = document.createElement('a');
         var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
         a.href = data;
         a.download = 'rekap_absensi_bulanan_' + '<?php echo $js_month_name_file; ?>' + '_' + '<?php echo $js_month_year_safe; ?>' + '.xls';
         a.click();
+        setTimeout(recoverDropdownUiState, 500);
     }
 }
 
@@ -979,21 +1029,21 @@ function exportToPDF() {
     var classId = $('#classSelect').val();
     var monthPicker = $('#monthPicker').val();
     var url = '../admin/cetak_rekap_absensi.php?type=monthly&class_id=' + classId + '&month=' + monthPicker;
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportDailyToPDF() {
     var classId = $('#classSelect').val();
     var datePicker = $('#datePicker').val();
     var url = '../admin/cetak_rekap_absensi.php?type=daily&class_id=' + classId + '&date=' + datePicker;
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportStudentToPDF() {
     var classId = $('#classSelect').val();
     var studentId = $('#studentSelect').val();
     var url = '../admin/cetak_rekap_absensi.php?type=student&class_id=' + classId + '&student_id=' + studentId;
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function exportSemesterToPDF() {
@@ -1001,7 +1051,7 @@ function exportSemesterToPDF() {
     var academicYear = '<?php echo $academic_year; ?>';
     var activeSemester = '<?php echo $active_semester; ?>';
     var url = '../admin/cetak_rekap_absensi.php?type=semester&class_id=' + classId + '&academic_year=' + encodeURIComponent(academicYear) + '&active_semester=' + encodeURIComponent(activeSemester);
-    window.open(url, '_blank');
+    openPrintPreviewTab(url);
 }
 
 function fallbackPrintPDF() {
@@ -1039,12 +1089,16 @@ function exportSemesterToExcel() {
         var ws = XLSX.utils.table_to_sheet(newTable);
         XLSX.utils.book_append_sheet(wb, ws, "Rekap Semester");
         XLSX.writeFile(wb, 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xlsx');
+        
+        // Fix for UI freeze after download
+        setTimeout(recoverDropdownUiState, 500);
     } else {
         var a = document.createElement('a');
         var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
         a.href = data;
         a.download = 'rekap_absensi_' + '<?php echo htmlspecialchars(str_replace(" ", "_", strtolower($active_semester)), ENT_QUOTES, "UTF-8"); ?>' + '_' + '<?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?>' + '.xls';
         a.click();
+        setTimeout(recoverDropdownUiState, 500);
     }
 }
 
@@ -1079,12 +1133,16 @@ function exportDailyToExcel() {
         var ws = XLSX.utils.table_to_sheet(newTable);
         XLSX.utils.book_append_sheet(wb, ws, "Rekap Harian");
         XLSX.writeFile(wb, 'rekap_absensi_harian_' + '<?php echo $selected_date; ?>' + '.xlsx');
+        
+        // Fix for UI freeze after download
+        setTimeout(recoverDropdownUiState, 500);
     } else {
         var a = document.createElement('a');
         var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
         a.href = data;
         a.download = 'rekap_absensi_harian_' + '<?php echo $selected_date; ?>' + '.xls';
         a.click();
+        setTimeout(recoverDropdownUiState, 500);
     }
 }
 
@@ -1183,12 +1241,16 @@ function exportStudentToExcel() {
         var ws = XLSX.utils.table_to_sheet(newTable);
         XLSX.utils.book_append_sheet(wb, ws, "Rekap Siswa");
         XLSX.writeFile(wb, 'rekap_absensi_siswa_' + <?php echo json_encode(str_replace(' ', '_', $student_name_for_report ?: 'siswa')); ?> + '.xlsx');
+        
+        // Fix for UI freeze after download
+        setTimeout(recoverDropdownUiState, 500);
     } else {
         var a = document.createElement('a');
         var data = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
         a.href = data;
         a.download = 'rekap_absensi_siswa_' + <?php echo json_encode(str_replace(' ', '_', $student_name_for_report ?: 'siswa')); ?> + '.xls';
         a.click();
+        setTimeout(recoverDropdownUiState, 500);
     }
 }
 
