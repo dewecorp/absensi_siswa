@@ -99,6 +99,25 @@ body:not(.modal-open) {
   pointer-events: auto;
 }
 
+/* Remove SweetAlert button black border and focus shadow */
+.swal2-container .swal2-styled,
+.swal2-container .swal2-styled:focus,
+.swal2-container .swal2-styled:active,
+.swal-button,
+.swal-button:focus,
+.swal-button:active,
+.swal-button--confirm,
+.swal-button--cancel {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.swal2-styled.swal2-confirm:focus,
+.swal2-styled.swal2-cancel:focus {
+  box-shadow: none !important;
+}
+
 /* Prevent backdrop from blocking interactions */
 .modal-backdrop {
   pointer-events: none;

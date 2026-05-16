@@ -134,7 +134,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Function to switch session context (used in login.php)
-function startUserSession($level) {
+function startUserSession(string $level): void {
     if (session_status() == PHP_SESSION_ACTIVE) {
         session_write_close();
     }
@@ -160,18 +160,18 @@ function startUserSession($level) {
 }
 
 // Function to redirect user
-function redirect($page) {
+function redirect(string $page): void {
     header("Location: $page");
     exit();
 }
 
 // Function to check if user is logged in
-function isLoggedIn() {
+function isLoggedIn(): bool {
     return isset($_SESSION['user_id']);
 }
 
 // Function to get user level
-function getUserLevel() {
+function getUserLevel(): string {
     $level = isset($_SESSION['level']) ? $_SESSION['level'] : '';
     if ($level === 'kepala') {
         return 'kepala_madrasah';
@@ -183,7 +183,7 @@ function getUserLevel() {
 }
 
 // Function to check user authorization
-function isAuthorized($allowed_levels = []) {
+function isAuthorized(array $allowed_levels = []): bool {
     if (!isLoggedIn()) {
         return false;
     }
@@ -327,7 +327,7 @@ function gatherTahunAjaranDariTabelDenganTanggal(PDO $pdo): array {
 }
 
 // Function to get school profile
-function getSchoolProfile($pdo) {
+function getSchoolProfile(PDO $pdo): array {
     $defaults = [
         'id' => null,
         'nama_yayasan' => '',
@@ -463,7 +463,7 @@ function buildTahunAjaranProfilOptions(?string $profileTahunAjaran = null, array
  *
  * @param bool $semuaJenis false = hanya akademik (nilai), true = semua jenis (tetap kecuali slot struktural di nama).
  */
-function getFilteredSubjects($pdo, $semuaJenis = false) {
+function getFilteredSubjects(PDO $pdo, bool $semuaJenis = false): array {
     static $has_jenis_mapel = null;
 
     if ($has_jenis_mapel === null) {
@@ -507,7 +507,7 @@ function getFilteredSubjects($pdo, $semuaJenis = false) {
     }
 }
 
-function getLoggedInTeacherId($pdo) {
+function getLoggedInTeacherId(PDO $pdo): ?int {
     $user_id = $_SESSION['user_id'] ?? null;
     if (!$user_id) return null;
 
@@ -525,7 +525,7 @@ function getLoggedInTeacherId($pdo) {
     return (int)$user_id;
 }
 
-function getTeacherAccessibleClasses($pdo, $id_guru, $only_grade_6 = false) {
+function getTeacherAccessibleClasses(PDO $pdo, ?int $id_guru, bool $only_grade_6 = false): array {
     if (!$id_guru) return [];
 
     $stmt = $pdo->prepare("SELECT nama_guru, mengajar FROM tb_guru WHERE id_guru = ?");
@@ -580,13 +580,13 @@ function getTeacherAccessibleClasses($pdo, $id_guru, $only_grade_6 = false) {
 }
 
 // Function to format date
-function formatDate($date) {
-    $date = new DateTime($date);
-    return $date->format('d M Y');
+function formatDate(string $date): string {
+    $dateObj = new DateTime($date);
+    return $dateObj->format('d M Y');
 }
 
 // Function to get current date in Indonesian format
-function getCurrentDateIndonesia() {
+function getCurrentDateIndonesia(): string {
     $hari = array(
         'Sunday' => 'Minggu',
         'Monday' => 'Senin',
@@ -792,7 +792,7 @@ function stripKalenderLiburMingguanYangBentrokDenganProfil(array &$holidays, int
  * @return array{n: int, w: int, nama_holiday: string, nama_rekap: string, kode: string}
  *   n = weekday ISO-8601 (1=Senin … 5=Jumat, 7=Minggu); w = PHP date('w') (0=Minggu … 5=Jumat)
  */
-function getProfilHariLiburMingguanMeta($pdo) {
+function getProfilHariLiburMingguanMeta(PDO $pdo): array {
     $kode = resolveHariLiburMingguanKode($pdo);
     if ($kode === 'minggu') {
         return [
@@ -813,7 +813,7 @@ function getProfilHariLiburMingguanMeta($pdo) {
 }
 
 // Function to check if a date is a holiday based on kalender pendidikan
-function isHoliday($pdo, $date) {
+function isHoliday(PDO $pdo, string $date): array {
     $weekly = getProfilHariLiburMingguanMeta($pdo);
     $dayOfWeek = (int)date('w', strtotime($date));
     if ($dayOfWeek === $weekly['w']) {
@@ -855,7 +855,7 @@ function isHoliday($pdo, $date) {
 }
 
 // Function to format specific date in Indonesian format
-function formatDateIndonesia($date_string) {
+function formatDateIndonesia(?string $date_string): string {
     if (empty($date_string)) return '-';
     $date = new DateTime($date_string);
     $bulan = array(
@@ -879,7 +879,7 @@ function formatDateIndonesia($date_string) {
 }
 
 /** Label semester untuk cetak/ekspor: selalu kata "Semester …" lengkap (bukan singkatan). */
-function formatSemesterLabelForExport($semester) {
+function formatSemesterLabelForExport(?string $semester): string {
     $s = trim((string)$semester);
     if ($s === '') {
         return '';
@@ -895,7 +895,7 @@ function formatSemesterLabelForExport($semester) {
  * and deduplicating by normalized title.
  */
 if (!function_exists('sort_all_menu_items')) {
-    function sort_all_menu_items(&$items) {
+    function sort_all_menu_items(array &$items): void {
         if (empty($items)) return;
         
         $dashboard = null;
@@ -949,21 +949,21 @@ if (!function_exists('sort_all_menu_items')) {
 }
 
 // Function to log activity
-function logActivity($pdo, $username, $action, $description = '') {
+function logActivity(PDO $pdo, string $username, string $action, string $description = ''): bool {
     $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
     $stmt = $pdo->prepare("INSERT INTO tb_activity_log (username, action, description, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
     return $stmt->execute([$username, $action, $description, $ip_address]);
 }
 
 // Function to create notification
-function createNotification($pdo, $message, $link, $type = 'info') {
+function createNotification(PDO $pdo, string $message, string $link, string $type = 'info'): bool {
     // Ignoring $type as column doesn't exist in current schema
     $stmt = $pdo->prepare("INSERT INTO tb_notifikasi (message, link, created_at) VALUES (?, ?, NOW())");
     return $stmt->execute([$message, $link]);
 }
 
 // Function to get system notifications (auto delete > 24 hours)
-function getNotifications($pdo) {
+function getNotifications(PDO $pdo): array {
     // Delete notifications older than 24 hours
     $cleanup_stmt = $pdo->prepare("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
     $cleanup_stmt->execute();
@@ -975,28 +975,28 @@ function getNotifications($pdo) {
 }
 
 // Function to get unread notifications (Deprecated, alias to getNotifications)
-function getUnreadNotifications($pdo) {
+function getUnreadNotifications(PDO $pdo): array {
     return getNotifications($pdo);
 }
 
 // Function to mark notification as read
-function markNotificationAsRead($pdo, $id) {
+function markNotificationAsRead(PDO $pdo, int $id): bool {
     $stmt = $pdo->prepare("UPDATE tb_notifikasi SET is_read = 1 WHERE id = ?");
     return $stmt->execute([$id]);
 }
 
 // Function to calculate time ago
-function timeAgo($timestamp) {
+function timeAgo(string $timestamp): string {
     $time_ago = strtotime($timestamp);
     $current_time = time();
     $time_difference = $current_time - $time_ago;
     $seconds = $time_difference;
-    $minutes      = round($seconds / 60 );
-    $hours           = round($seconds / 3600);
-    $days          = round($seconds / 86400);
-    $weeks          = round($seconds / 604800);
-    $months          = round($seconds / 2629440);
-    $years          = round($seconds / 31553280);
+    $minutes      = (int)round($seconds / 60 );
+    $hours           = (int)round($seconds / 3600);
+    $days          = (int)round($seconds / 86400);
+    $weeks          = (int)round($seconds / 604800);
+    $months          = (int)round($seconds / 2629440);
+    $years          = (int)round($seconds / 31553280);
 
     if($seconds <= 60) {
         return "Baru saja";
@@ -1016,7 +1016,7 @@ function timeAgo($timestamp) {
 }
 
 // Function to automatically update sholat attendance based on daily attendance
-function updateSholatAttendance($pdo, $id_siswa, $tanggal, $keterangan_absensi) {
+function updateSholatAttendance(PDO $pdo, int $id_siswa, string $tanggal, string $keterangan_absensi): void {
     $status_sholat = '';
     
     // Determine status
@@ -1066,7 +1066,7 @@ function updateSholatAttendance($pdo, $id_siswa, $tanggal, $keterangan_absensi) 
  *
  * @return string[]
  */
-function getGuruPendidikanChoices() {
+function getGuruPendidikanChoices(): array {
     return ['SLTA', 'D1', 'D2', 'D3', 'S1', 'S2', 'S3'];
 }
 
@@ -1074,7 +1074,7 @@ function getGuruPendidikanChoices() {
  * @param mixed $raw
  * @return string|null salah satu dari getGuruPendidikanChoices() atau null jika kosong/tidak valid
  */
-function normalizeGuruPendidikan($raw) {
+function normalizeGuruPendidikan($raw): ?string {
     $v = is_string($raw) ? trim($raw) : '';
     if ($v === '') {
         return null;
@@ -1087,7 +1087,7 @@ function normalizeGuruPendidikan($raw) {
  *
  * @return bool false jika gagal
  */
-function ensureTbGuruPendidikanColumn($pdo) {
+function ensureTbGuruPendidikanColumn(PDO $pdo): bool {
     static $checked = false;
     if ($checked) {
         return true;
@@ -1108,7 +1108,7 @@ function ensureTbGuruPendidikanColumn($pdo) {
 // --- Helper Functions for Security ---
 
 // Function to sanitize user input
-function sanitizeInput($input) {
+function sanitizeInput(string $input): string {
     $input = trim($input);
     $input = stripslashes($input);
     $input = htmlspecialchars($input);
@@ -1116,17 +1116,18 @@ function sanitizeInput($input) {
 }
 
 // Function to hash password
-function hashPassword($password) {
+function hashPassword(string $password): string {
     return password_hash($password, PASSWORD_DEFAULT);
 }
 
 // Function to verify password
-function verifyPassword($password, $hash) {
+function verifyPassword(string $password, string $hash): bool {
     return password_verify($password, $hash);
 }
 
 // Function to get teacher avatar
-function getTeacherAvatarImage($teacher, $size = 30) {
+/** @param mixed $teacher */
+function getTeacherAvatarImage($teacher, int $size = 30): string {
     $img_dir = '../uploads/';
     $base_path = dirname(__DIR__) . '/uploads/';
     
@@ -1151,7 +1152,8 @@ function getTeacherAvatarImage($teacher, $size = 30) {
 }
 
 // Function to get user avatar
-function getUserAvatarImage($user, $size = 30) {
+/** @param mixed $user */
+function getUserAvatarImage($user, int $size = 30): string {
     $img_dir = '../assets/img/';
     $base_path = dirname(__DIR__) . '/assets/img/';
     
@@ -1177,28 +1179,29 @@ function getUserAvatarImage($user, $size = 30) {
 }
 
 // Function to get all classes
-function getAllKelas($pdo) {
+function getAllKelas(PDO $pdo): array {
     $stmt = $pdo->prepare("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Function to get students by class
-function getStudentsByClass($pdo, $kelas_id) {
+function getStudentsByClass(PDO $pdo, int $kelas_id): array {
     $stmt = $pdo->prepare("SELECT s.*, k.nama_kelas FROM tb_siswa s JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
     $stmt->execute([$kelas_id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Function to get guru name by id
-function getGuruName($pdo, $id) {
+function getGuruName(PDO $pdo, int $id): ?string {
     $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
     $stmt->execute([$id]);
-    return $stmt->fetchColumn();
+    $res = $stmt->fetchColumn();
+    return $res !== false ? (string)$res : null;
 }
 
 // Function to get activity color based on action
-function getActivityColor($action) {
+function getActivityColor(string $action): string {
     $action = strtolower($action);
     if (strpos($action, 'tambah') !== false || strpos($action, 'add') !== false || strpos($action, 'create') !== false || strpos($action, 'insert') !== false) {
         return 'bg-success';
@@ -1216,7 +1219,7 @@ function getActivityColor($action) {
 }
 
 // Function to get holidays from kalender pendidikan
-function getHolidays($pdo, $year, $month = null) {
+function getHolidays(PDO $pdo, int $year, ?int $month = null): array {
     $holidays = [];
     $query = "SELECT tgl_mulai, tgl_selesai, nama_kegiatan, warna FROM tb_kalender_pendidikan WHERE warna = 'danger'";
     $params = [];
@@ -1288,7 +1291,7 @@ function getHolidays($pdo, $year, $month = null) {
 }
 
 // Check if a specific date is a holiday based on Kalender Pendidikan
-function isSchoolHoliday($pdo, $date) {
+function isSchoolHoliday(PDO $pdo, string $date): array {
     try {
         $year = (int)date('Y', strtotime($date));
         $month = (int)date('m', strtotime($date));
@@ -1302,7 +1305,7 @@ function isSchoolHoliday($pdo, $date) {
     }
 }
 // Function to get activity icon based on action
-function getActivityIcon($action) {
+function getActivityIcon(string $action): string {
     $action = strtolower($action);
     if (strpos($action, 'tambah') !== false || strpos($action, 'add') !== false || strpos($action, 'create') !== false || strpos($action, 'insert') !== false) {
         return 'fas fa-plus';
@@ -1336,7 +1339,7 @@ function nilai_ujian_page_title(): string {
  * Nilai semester untuk tampilan siswa: MAX(nilai_asli, nilai_remidi) — ambil yang tertinggi;
  * jika asli lebih tinggi dari remidi tetap asli. Ujian Praktik: hanya nilai_asli (remidi tidak dipakai).
  */
-function nilai_tampilan_siswa_semester($nilai_asli, $nilai_remidi, bool $abaikan_remidi = false): float {
+function nilai_tampilan_siswa_semester(?float $nilai_asli, ?float $nilai_remidi, bool $abaikan_remidi = false): float {
     $a = (float)($nilai_asli ?? 0);
     if ($abaikan_remidi) {
         return $a > 0 ? $a : 0.0;
@@ -1351,7 +1354,7 @@ function nilai_semester_allowed_jenis_values(): array {
 }
 
 /** Validasi nilai jenis_semester dari permintaan eksternal (GET/POST). */
-function normalize_jenis_semester_param($jenis): ?string {
+function normalize_jenis_semester_param(?string $jenis): ?string {
     if (!is_string($jenis) || $jenis === '') {
         return null;
     }

@@ -30,6 +30,18 @@ if (!isLoggedIn()) {
 
 // Get current page title
 $page_title = isset($page_title) ? $page_title : 'Dashboard';
+
+// Pre-fetch notifications if user is admin or kepala
+$unread_notifs = [];
+$unread_count = 0;
+$unread_count_label = '0';
+if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
+    $unread_notifs = getUnreadNotifications($pdo);
+    foreach($unread_notifs as $n) {
+        if(!$n['is_read']) $unread_count++;
+    }
+    $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
+}
 ?>
 
 <!DOCTYPE html>
@@ -70,7 +82,11 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
     <link rel="stylesheet" href="../assets/css/style.css?v=<?php echo htmlspecialchars($_style_v, ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="../assets/css/components.css?v=<?php echo htmlspecialchars($_components_v, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Modal Fix CSS -->
-    <link rel="stylesheet" href="../assets/css/modal_fix.css">
+    <?php
+    $_modal_fix_path = __DIR__ . '/../assets/css/modal_fix.css';
+    $_modal_fix_v = is_readable($_modal_fix_path) ? (string) filemtime($_modal_fix_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/modal_fix.css?v=<?php echo htmlspecialchars($_modal_fix_v, ENT_QUOTES, 'UTF-8'); ?>">
 
     <!-- Custom Mobile Layout CSS -->
     <style>
@@ -221,14 +237,6 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
                 <ul class="navbar-nav navbar-right">
                     
                     <?php if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah'): ?>
-                    <?php 
-                        $unread_notifs = getUnreadNotifications($pdo);
-                        $unread_count = 0;
-                        foreach($unread_notifs as $n) {
-                            if(!$n['is_read']) $unread_count++;
-                        }
-                        $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
-                    ?>
                     <li class="dropdown dropdown-list-toggle d-none d-lg-block">
                         <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg notification-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
                             <i class="far fa-bell"></i>

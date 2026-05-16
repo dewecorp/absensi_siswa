@@ -53,7 +53,11 @@ if (!isLoggedIn()) {
     <link rel="stylesheet" href="../assets/css/style.css?v=<?php echo htmlspecialchars($_style_v, ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="../assets/css/components.css?v=<?php echo htmlspecialchars($_components_v, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Modal Fix CSS -->
-    <link rel="stylesheet" href="../assets/css/modal_fix.css">
+    <?php
+    $_modal_fix_path = __DIR__ . '/../assets/css/modal_fix.css';
+    $_modal_fix_v = is_readable($_modal_fix_path) ? (string) filemtime($_modal_fix_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/modal_fix.css?v=<?php echo htmlspecialchars($_modal_fix_v, ENT_QUOTES, 'UTF-8'); ?>">
     
     <!-- Additional CSS for this specific page -->
     <?php if (isset($css_page) && is_array($css_page)): ?>
