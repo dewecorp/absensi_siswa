@@ -143,3 +143,21 @@ body {
 body.modal-open {
   overflow-y: visible !important;
 }
+
+/* Fix for sidebar menu items getting cut off when wrapping */
+.main-sidebar .sidebar-menu li ul.dropdown-menu li a {
+  height: auto !important;
+  min-height: 35px;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  line-height: 1.4 !important;
+  display: flex !important;
+  align-items: center;
+  white-space: normal !important;
+}
+
+.main-sidebar .sidebar-menu li ul.dropdown-menu li a.active,
+.main-sidebar .sidebar-menu li ul.dropdown-menu li.active > a {
+  height: auto !important;
+  display: flex !important;
+}
