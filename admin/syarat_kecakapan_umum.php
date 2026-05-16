@@ -272,7 +272,7 @@ function sku_html_person_name(string $name): string
 /**
  * Hitung label status satu peserta untuk satu tingkat.
  *
- * @return array{label: string, ok: bool}
+ * @return array{label: string, ok: bool, done: int, total: int, percentage: float}
  */
 function sku_compute_status_cell(PDO $pdo, int $id_peserta, int $id_tingkat): array
 {
@@ -280,7 +280,7 @@ function sku_compute_status_cell(PDO $pdo, int $id_peserta, int $id_tingkat): ar
     $stTot->execute([$id_tingkat]);
     $total = (int)$stTot->fetchColumn();
     if ($total <= 0) {
-        return ['label' => '—', 'ok' => false];
+        return ['label' => '—', 'ok' => false, 'done' => 0, 'total' => 0, 'percentage' => 0];
     }
     $stDone = $pdo->prepare('
         SELECT COUNT(*)
@@ -291,9 +291,14 @@ function sku_compute_status_cell(PDO $pdo, int $id_peserta, int $id_tingkat): ar
     $stDone->execute([$id_tingkat, $id_peserta]);
     $done = (int)$stDone->fetchColumn();
 
+    $percentage = ($total > 0) ? round(($done / $total) * 100, 1) : 0;
+
     return [
         'label' => ($done >= $total) ? 'Lulus' : 'Tidak Lulus',
         'ok' => ($done >= $total),
+        'done' => $done,
+        'total' => $total,
+        'percentage' => $percentage,
     ];
 }
 
@@ -463,6 +468,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
                 'ok' => true,
                 'status_label' => $status['label'],
                 'status_ok' => $status['ok'],
+                'percentage' => $status['percentage'],
+                'done' => $status['done'],
+                'total' => $status['total'],
                 'tanggal_ujian' => $tgl,
                 'promoted' => $promoted,
                 'new_tingkat_id' => $new_tingkat_id,
@@ -513,6 +521,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
                 'ok' => true,
                 'status_label' => $status['label'],
                 'status_ok' => $status['ok'],
+                'percentage' => $status['percentage'],
+                'done' => $status['done'],
+                'total' => $status['total'],
                 'tanggal_ujian' => $tgl,
                 'checked' => $checkedNow,
                 'promoted' => $promoted,
@@ -853,8 +864,10 @@ if (isset($_GET['export'])) {
                 }
                 $nb = count($sku_butir_rows);
                 $statusCol = 3 + $nb;
+                $pctCol = 4 + $nb;
                 $sheet->setCellValueByColumnAndRow($statusCol, $hdrRow, 'Status');
-                $lastColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($statusCol);
+                $sheet->setCellValueByColumnAndRow($pctCol, $hdrRow, 'Persentase Ujian');
+                $lastColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($pctCol);
                 $sheet->getStyle('A' . $hdrRow . ':' . $lastColLetter . $hdrRow)->getFont()->setBold(true);
                 $row = $hdrRow + 1;
                 $nom = 1;
@@ -877,11 +890,12 @@ if (isset($_GET['export'])) {
                     }
                     $inf = sku_compute_status_cell($pdo, $pid, $selected_tingkat_id);
                     $sheet->setCellValueByColumnAndRow($statusCol, $row, $inf['label']);
+                    $sheet->setCellValueByColumnAndRow($pctCol, $row, $inf['percentage'] . '% (' . $inf['done'] . '/' . $inf['total'] . ')');
                     $row++;
                 }
                 $spreadsheet->getActiveSheet()->getColumnDimension('A')->setWidth(6);
                 $spreadsheet->getActiveSheet()->getColumnDimension('B')->setWidth(38);
-                for ($ci = 3; $ci <= $statusCol; ++$ci) {
+                for ($ci = 3; $ci <= $pctCol; ++$ci) {
                     $spreadsheet->getActiveSheet()->getColumnDimension(
                         \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($ci)
                     )->setWidth($ci < $statusCol ? 16 : 18);
@@ -1026,12 +1040,13 @@ if (isset($_GET['export'])) {
                     </th>
                 <?php endforeach; ?>
                 <th style="width:64px;">Status</th>
+                <th style="width:70px;">Persentase</th>
             </tr>
             </thead>
             <tbody>
             <?php if ($peserta_rows === []): ?>
                 <tr>
-                    <td colspan="<?= 3 + count($sku_butir_rows) ?>">Belum ada anggota aktif untuk tingkat ini.</td>
+                    <td colspan="<?= 4 + count($sku_butir_rows) ?>">Belum ada anggota aktif untuk tingkat ini.</td>
                 </tr>
             <?php else: ?>
                 <?php $nomPrint = 1; foreach ($peserta_rows as $p): ?>
@@ -1054,6 +1069,7 @@ if (isset($_GET['export'])) {
                             </td>
                         <?php endforeach; ?>
                         <td><?= htmlspecialchars($inf['label'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= $inf['percentage'] ?>%<br><small><?= $inf['done'] ?>/<?= $inf['total'] ?></small></td>
                     </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -1153,6 +1169,14 @@ $(function(){
       $('.sku-status-cell[data-peserta="' + $cb.data('peserta') + '"]')
         .toggleClass('text-success', !!resp.status_ok).toggleClass('text-danger', !resp.status_ok)
         .text(resp.status_label || '—');
+      
+      if (typeof resp.percentage !== 'undefined') {
+        var $pctCell = $('.sku-pct-cell[data-peserta="' + $cb.data('peserta') + '"]');
+        var $bar = $pctCell.find('.progress-bar');
+        $bar.css('width', resp.percentage + '%').attr('aria-valuenow', resp.percentage).text(resp.percentage + '%');
+        $bar.toggleClass('bg-success', resp.percentage >= 100).toggleClass('bg-primary', resp.percentage < 100);
+        $pctCell.find('small').text(resp.done + ' / ' + resp.total + ' butir');
+      }
     }).fail(function(){ Swal.fire('Error', 'Permintaan gagal', 'error'); $cb.prop('checked', !$cb.is(':checked')); });
   });
 
@@ -1180,6 +1204,14 @@ $(function(){
       $('.sku-status-cell[data-peserta="' + peserta + '"]')
         .toggleClass('text-success', !!resp.status_ok).toggleClass('text-danger', !resp.status_ok)
         .text(resp.status_label || '—');
+      
+      if (typeof resp.percentage !== 'undefined') {
+        var $pctCell = $('.sku-pct-cell[data-peserta="' + peserta + '"]');
+        var $bar = $pctCell.find('.progress-bar');
+        $bar.css('width', resp.percentage + '%').attr('aria-valuenow', resp.percentage).text(resp.percentage + '%');
+        $bar.toggleClass('bg-success', resp.percentage >= 100).toggleClass('bg-primary', resp.percentage < 100);
+        $pctCell.find('small').text(resp.done + ' / ' + resp.total + ' butir');
+      }
     }).fail(function(){
       Swal.fire('Error', 'Permintaan gagal', 'error');
     });
@@ -1412,7 +1444,8 @@ require_once '../templates/sidebar.php';
                                             <th colspan="<?= max(1, count($sku_butir_rows)) ?>" class="text-center py-1 border sku-meta-title-cell">
                                                 <small class="text-uppercase font-weight-bold">Syarat kecakapan umum — per butir SKU</small>
                                             </th>
-                                            <th rowspan="3" class="sticky-sku-r sku-th-status text-center bg-light">STATUS</th>
+                                            <th rowspan="3" class="sticky-sku-r-2 sku-th-status text-center bg-light">STATUS</th>
+                                            <th rowspan="3" class="sticky-sku-r sku-th-pct text-center bg-light">PERSENTASE UJIAN</th>
                                         </tr>
                                         <tr class="sku-th-num-row">
                                             <?php foreach ($sku_butir_rows as $bb): ?>
@@ -1484,9 +1517,22 @@ require_once '../templates/sidebar.php';
                                                     <?php if (empty($sku_butir_rows)): ?>
                                                         <td class="sku-col">&nbsp;</td>
                                                     <?php endif; ?>
-                                                    <td class="text-center sku-status-cell sticky-sku-r font-weight-bold <?= $inf['ok'] ? 'text-success' : 'text-danger' ?>"
+                                                    <td class="text-center sku-status-cell sticky-sku-r-2 font-weight-bold <?= $inf['ok'] ? 'text-success' : 'text-danger' ?>"
                                                         data-peserta="<?= $pid ?>">
                                                         <?= htmlspecialchars($inf['label']) ?>
+                                                    </td>
+                                                    <td class="text-center sku-pct-cell sticky-sku-r font-weight-bold" data-peserta="<?= $pid ?>">
+                                                        <div class="progress" style="height: 20px; min-width: 100px;">
+                                                            <div class="progress-bar <?= $inf['percentage'] >= 100 ? 'bg-success' : 'bg-primary' ?>" 
+                                                                 role="progressbar" 
+                                                                 style="width: <?= $inf['percentage'] ?>%;" 
+                                                                 aria-valuenow="<?= $inf['percentage'] ?>" 
+                                                                 aria-valuemin="0" 
+                                                                 aria-valuemax="100">
+                                                                <?= $inf['percentage'] ?>%
+                                                            </div>
+                                                        </div>
+                                                        <small class="text-muted"><?= $inf['done'] ?> / <?= $inf['total'] ?> butir</small>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -1623,13 +1669,16 @@ require_once '../templates/sidebar.php';
 /* Sticky horizontal: No, Nama, Status */
 .sticky-sku { position:sticky; left:0; z-index:8; background:#fbfbfc!important; min-width:40px;}
 .sku-th-nama { position:sticky; left:40px; z-index:9; background:#fdfdfd!important; min-width:140px; max-width:180px; box-shadow: 3px 0 6px -4px rgba(0,0,0,.28);}
-.sticky-sku-r { position:sticky; right:0; z-index:8; background:#eef6ff!important;}
+.sticky-sku-r { position:sticky; right:0; z-index:8; background:#f0f7ff!important; box-shadow: -3px 0 6px -4px rgba(0,0,0,.15);}
+.sticky-sku-r-2 { position:sticky; right:115px; z-index:8; background:#eef6ff!important; border-left: 1px solid #dee2e6 !important;}
 
 /* NO & Status: tengah; Nama siswa: rata kiri (baca daftar nama) */
 .sku-main-table th.sku-th-no,
 .sku-main-table td.sku-th-no,
 .sku-main-table th.sku-th-status,
-.sku-main-table td.sku-status-cell {
+.sku-main-table td.sku-status-cell,
+.sku-main-table th.sku-th-pct,
+.sku-main-table td.sku-pct-cell {
     text-align: center !important;
     vertical-align: middle !important;
 }
@@ -1643,12 +1692,14 @@ require_once '../templates/sidebar.php';
 
 .sku-main-table thead.sku-thead-stick th.sticky-sku,
 .sku-main-table thead.sku-thead-stick th.sku-th-nama,
-.sku-main-table thead.sku-thead-stick th.sticky-sku-r {
+.sku-main-table thead.sku-thead-stick th.sticky-sku-r,
+.sku-main-table thead.sku-thead-stick th.sticky-sku-r-2 {
     z-index: 25;
 }
 .sku-main-table thead.sku-thead-stick th.sticky-sku { background: #e9ecef !important; }
 .sku-main-table thead.sku-thead-stick th.sku-th-nama { background: #e9ecef !important; left: 40px !important; }
 .sku-main-table thead.sku-thead-stick th.sticky-sku-r { background: #e9ecef !important; }
+.sku-main-table thead.sku-thead-stick th.sticky-sku-r-2 { background: #e9ecef !important; }
 
 .sku-meta-title-cell { background:#eef2fb!important;}
 .sku-th-vertical { vertical-align:bottom!important; padding:12px 4px!important; max-height:260px!important;}
@@ -1692,10 +1743,12 @@ tbody td.sku-td-nama {
     .sku-main-table thead.sku-thead-stick th.sku-th-nama {
         left: 40px !important;
     }
-    .sku-main-table thead.sku-thead-stick th.sticky-sku-r {
+    .sku-main-table thead.sku-thead-stick th.sticky-sku-r,
+    .sku-main-table thead.sku-thead-stick th.sticky-sku-r-2 {
         position: static !important;
         right: auto !important;
         z-index: auto !important;
+        box-shadow: none !important;
     }
     .sku-main-table tbody .sticky-sku,
     .sku-main-table tbody td.sku-td-nama {
@@ -1707,14 +1760,17 @@ tbody td.sku-td-nama {
     .sku-main-table tbody td.sku-td-nama {
         left: 40px !important;
         font-size: 0.75rem !important;
-        min-width: 110px !important;
-        max-width: 130px !important;
+        min-width: 100px !important;
+        max-width: 120px !important;
+        box-shadow: 2px 0 5px -3px rgba(0,0,0,0.2) !important;
     }
-    .sku-main-table tbody .sticky-sku-r {
+    .sku-main-table tbody .sticky-sku-r,
+    .sku-main-table tbody .sticky-sku-r-2 {
         position: static !important;
         right: auto !important;
         z-index: auto !important;
         box-shadow: none !important;
+        background: transparent !important;
     }
 }
 </style>
