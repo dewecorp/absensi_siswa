@@ -1630,13 +1630,13 @@ include '../templates/sidebar.php';
                                         <tr>
                                             <?php if ($can_manage_barung): ?><td class="text-center">
                                                 <input type="checkbox" class="row-check" value="<?= (int)($row['id_peserta_didik_barung'] ?? 0) ?>"
-                                                    data-nama="<?= htmlspecialchars($row['nama_peserta_didik'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                    data-nama="<?= htmlspecialchars(htmlspecialchars_decode($row['nama_peserta_didik'] ?? '', ENT_QUOTES), ENT_QUOTES, 'UTF-8') ?>"
                                                     data-nta="<?= htmlspecialchars($row['nta'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
                                                     data-tempat="<?= htmlspecialchars($row['tempat_lahir'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
                                                     data-tanggal="<?= htmlspecialchars(!empty($row['tanggal_lahir']) ? substr((string)$row['tanggal_lahir'], 0, 10) : '', ENT_QUOTES, 'UTF-8') ?>">
                                             </td><?php endif; ?>
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
-                                            <td><?= htmlspecialchars($row['nama_peserta_didik'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars(htmlspecialchars_decode($row['nama_peserta_didik'] ?? '', ENT_QUOTES)) ?></td>
                                             <td><?= htmlspecialchars($row['nta'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['tempat_lahir'] ?? '') ?></td>
                                             <td><?= !empty($row['tanggal_lahir']) ? htmlspecialchars($row['tanggal_lahir']) : '' ?></td>
@@ -1644,7 +1644,7 @@ include '../templates/sidebar.php';
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)$row['id_peserta_didik_barung'] ?>"
                                                     data-tingkat="<?= (int)$row['id_tingkat_barung'] ?>"
-                                                    data-nama="<?= htmlspecialchars($row['nama_peserta_didik'] ?? '', ENT_QUOTES) ?>"
+                                                    data-nama="<?= htmlspecialchars(htmlspecialchars_decode($row['nama_peserta_didik'] ?? '', ENT_QUOTES), ENT_QUOTES) ?>"
                                                     data-nta="<?= htmlspecialchars($row['nta'] ?? '', ENT_QUOTES) ?>"
                                                     data-tempat="<?= htmlspecialchars($row['tempat_lahir'] ?? '', ENT_QUOTES) ?>"
                                                     data-tanggal="<?= htmlspecialchars($row['tanggal_lahir'] ?? '', ENT_QUOTES) ?>"

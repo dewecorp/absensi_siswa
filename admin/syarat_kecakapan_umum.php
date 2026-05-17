@@ -261,7 +261,11 @@ function sku_plain_person_name(string $name): string
     if ($t === '') {
         return '';
     }
-    return html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    // Fallback decode berulang untuk data ganda
+    while (strpos($t, '&') !== false && ($tmp = htmlspecialchars_decode($t, ENT_QUOTES)) !== $t) {
+        $t = $tmp;
+    }
+    return $t;
 }
 
 function sku_html_person_name(string $name): string

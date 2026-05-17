@@ -1111,8 +1111,65 @@ function ensureTbGuruPendidikanColumn(PDO $pdo): bool {
 function sanitizeInput(string $input): string {
     $input = trim($input);
     $input = stripslashes($input);
-    $input = htmlspecialchars($input);
     return $input;
+}
+
+/**
+ * Memperbaiki data yang ter-encode HTML entities di database secara otomatis (silent).
+ * Digunakan untuk menangani masalah tanda petik yang berubah jadi kode aneh.
+ */
+function silent_fix_entities(PDO $pdo): int {
+    $tables = [
+        'tb_siswa' => ['nama_siswa', 'tempat_lahir', 'wali'],
+        'tb_peserta_didik_barung' => ['nama_peserta_didik', 'tempat_lahir'],
+        'tb_guru' => ['nama_guru'],
+        'tb_pembina_pramuka' => ['nama_pembina'],
+        'tb_kelas' => ['nama_kelas'],
+        'tb_pengguna' => ['nama_lengkap'],
+        'tb_tingkat_barung' => ['nama_tingkat']
+    ];
+
+    $total_updated = 0;
+    foreach ($tables as $table => $columns) {
+        try {
+            $stmt = $pdo->query("SELECT * FROM $table");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $pk_query = $pdo->query("SHOW KEYS FROM $table WHERE Key_name = 'PRIMARY'");
+            $pk_row = $pk_query->fetch(PDO::FETCH_ASSOC);
+            $pk = $pk_row['Column_name'] ?? null;
+            if (!$pk) continue;
+
+            foreach ($rows as $row) {
+                $updates = [];
+                $params = [];
+                foreach ($columns as $col) {
+                    if (isset($row[$col])) {
+                        $original = (string)$row[$col];
+                        $decoded = $original;
+                        $limit = 5;
+                        while ($limit > 0 && strpos($decoded, '&') !== false && ($tmp = htmlspecialchars_decode($decoded, ENT_QUOTES)) !== $decoded) {
+                            $decoded = $tmp;
+                            $limit--;
+                        }
+                        if ($decoded !== $original) {
+                            $updates[] = "$col = ?";
+                            $params[] = $decoded;
+                        }
+                    }
+                }
+                if (!empty($updates)) {
+                    $params[] = $row[$pk];
+                    $update_sql = "UPDATE $table SET " . implode(', ', $updates) . " WHERE $pk = ?";
+                    $pdo->prepare($update_sql)->execute($params);
+                    $total_updated++;
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Silent fix error in $table: " . $e->getMessage());
+        }
+    }
+    return $total_updated;
 }
 
 // Function to hash password

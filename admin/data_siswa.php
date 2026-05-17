@@ -504,7 +504,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </td>
                                             <td><?php echo $index + 1; ?></td>
-                                            <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
+                                            <td><?php echo htmlspecialchars(htmlspecialchars_decode($student['nama_siswa'], ENT_QUOTES)); ?></td>
                                             <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                             <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
                                             <td><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-') . ', ' . ($student['tanggal_lahir'] ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-'); ?></td>

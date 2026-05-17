@@ -177,6 +177,7 @@ if ($mode === 'all' || $mode === 'data') {
 } else {
     $id = (int)($_GET['id'] ?? 0);
     $requested_tingkat_id = (int)($_GET['tingkat'] ?? 0);
+    $prev_for_target = 0;
     if ($id > 0 && $requested_tingkat_id > 0) {
         $stmt = $pdo->prepare("
             SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta, p.tempat_lahir, p.tanggal_lahir,
@@ -457,8 +458,14 @@ foreach ($participants as $idx => $row) {
     }
 }
 
-function h($v) {
-    return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+/** @param mixed $v */
+function h($v): string {
+    $v = (string)($v ?? '');
+    // Fallback decode jika data masih ter-encode ganda
+    while (strpos($v, '&') !== false && ($tmp = htmlspecialchars_decode($v, ENT_QUOTES)) !== $v) {
+        $v = $tmp;
+    }
+    return htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
 }
 ?>
 <!doctype html>

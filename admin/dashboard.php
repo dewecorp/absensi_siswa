@@ -10,6 +10,9 @@ if (!isAuthorized(['admin'])) {
 // Set page title
 $page_title = 'Dashboard';
 
+// Jalankan perbaikan nama otomatis secara silent
+silent_fix_entities($pdo);
+
 // Get statistics
 $stmt = $pdo->query("SELECT COUNT(*) as total_siswa, 
                              SUM(CASE WHEN jenis_kelamin = 'L' THEN 1 ELSE 0 END) as total_laki,
@@ -612,6 +615,9 @@ include_once '../templates/sidebar.php';
                                         <span class="badge badge-success badge-pill">Semua Fitur</span>
                                     </div>
                                     <?php
+                                    if (!isset($menu_items)) {
+                                        $menu_items = [];
+                                    }
                                     $mobile_menu_groups = function_exists('get_mobile_menu_groups') ? get_mobile_menu_groups($menu_items) : ['single' => [], 'grouped' => []];
                                     $single_items = $mobile_menu_groups['single'];
                                     $grouped_items = $mobile_menu_groups['grouped'];
