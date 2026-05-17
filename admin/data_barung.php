@@ -168,7 +168,7 @@ function barung_kelas_nomor_for_slug(?string $slug): array
         case 'pra_mula':
             return [1, 2];
         case 'mula':
-            return [2, 3, 4];
+            return [2, 3, 4, 5, 6];
         case 'bantu':
             return [2, 3, 4, 5, 6];
         case 'tata':
@@ -1057,7 +1057,7 @@ switch ($barung_tingkat_slug) {
         $barung_kelas_hint = 'Kelas 1–2';
         break;
     case 'mula':
-        $barung_kelas_hint = 'Kelas 2–4';
+        $barung_kelas_hint = 'Kelas 2–6';
         break;
     case 'bantu':
         $barung_kelas_hint = 'Kelas 2–6';
