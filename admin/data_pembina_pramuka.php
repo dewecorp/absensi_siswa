@@ -18,10 +18,12 @@ $page_title = 'Data Pembina Pramuka';
 // DataTables
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
 ];
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
 
@@ -75,6 +77,27 @@ try {
             ");
         } catch (Exception $e) { /* ignore */ }
     }
+
+    // Junction table for multiple levels
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS tb_pembina_tingkat (
+            id_pembina_pramuka INT NOT NULL,
+            id_tingkat_barung INT NOT NULL,
+            PRIMARY KEY (id_pembina_pramuka, id_tingkat_barung),
+            FOREIGN KEY (id_pembina_pramuka) REFERENCES tb_pembina_pramuka(id_pembina_pramuka) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+
+    // Migrate existing single level to junction table if junction table is empty
+    $countJunction = $pdo->query("SELECT COUNT(*) FROM tb_pembina_tingkat")->fetchColumn();
+    if ((int)$countJunction === 0) {
+        $pdo->exec("
+            INSERT INTO tb_pembina_tingkat (id_pembina_pramuka, id_tingkat_barung)
+            SELECT id_pembina_pramuka, id_tingkat_barung 
+            FROM tb_pembina_pramuka 
+            WHERE id_tingkat_barung IS NOT NULL AND id_tingkat_barung > 0
+        ");
+    }
 } catch (Exception $e) {
     $schema_error = $e->getMessage();
 }
@@ -114,9 +137,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_pembina_pramuka'])) {
         $id_guru = (int)($_POST['id_guru'] ?? 0);
         $jabatan = sanitizeInput($_POST['jabatan'] ?? '');
-        $id_tingkat_barung = (int)($_POST['id_tingkat_barung'] ?? 0);
+        $id_tingkat_ids = $_POST['id_tingkat_barung'] ?? [];
+        if (!is_array($id_tingkat_ids)) {
+            $id_tingkat_ids = $id_tingkat_ids ? [(int)$id_tingkat_ids] : [];
+        }
 
-        if ($id_guru <= 0 || $jabatan === '' || $id_tingkat_barung <= 0) {
+        if ($id_guru <= 0 || $jabatan === '' || empty($id_tingkat_ids)) {
             $message = ['type' => 'warning', 'text' => 'Harap pilih guru pembina, jabatan, dan pembina tingkat.'];
         } elseif (!isset($jabatan_options[$jabatan])) {
             $message = ['type' => 'warning', 'text' => 'Pilihan jabatan tidak valid.'];
@@ -133,18 +159,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ((int)$dup->fetchColumn() > 0) {
                         $message = ['type' => 'warning', 'text' => 'Guru tersebut sudah terdaftar sebagai pembina Pramuka.'];
                     } else {
+                        $pdo->beginTransaction();
                         $stmt = $pdo->prepare("INSERT INTO {$table_name} (id_guru, nama_pembina, jabatan, id_tingkat_barung) VALUES (?, ?, ?, ?)");
-                        $ok = $stmt->execute([$id_guru, $nama_guru, $jabatan, $id_tingkat_barung]);
+                        $first_tingkat = (int)($id_tingkat_ids[0] ?? 0);
+                        $ok = $stmt->execute([$id_guru, $nama_guru, $jabatan, $first_tingkat]);
                         if ($ok) {
+                            $id_new_pembina = $pdo->lastInsertId();
+                            $insTingkat = $pdo->prepare("INSERT INTO tb_pembina_tingkat (id_pembina_pramuka, id_tingkat_barung) VALUES (?, ?)");
+                            foreach ($id_tingkat_ids as $tid) {
+                                $insTingkat->execute([$id_new_pembina, (int)$tid]);
+                            }
+                            $pdo->commit();
                             $username = $_SESSION['username'] ?? 'system';
-                            logActivity($pdo, $username, 'Tambah Pembina Pramuka', "{$nama_guru} - {$jabatan} (tingkat ID {$id_tingkat_barung})");
+                            logActivity($pdo, $username, 'Tambah Pembina Pramuka', "{$nama_guru} - {$jabatan} (" . count($id_tingkat_ids) . " tingkat)");
                             $message = ['type' => 'success', 'text' => 'Data pembina pramuka berhasil ditambahkan!'];
                         } else {
+                            $pdo->rollBack();
                             $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data pembina pramuka.'];
                         }
                     }
                 }
             } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 $message = ['type' => 'danger', 'text' => 'Error DB: ' . $e->getMessage()];
             }
         }
@@ -155,9 +191,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id_pembina_pramuka'] ?? 0);
         $id_guru = (int)($_POST['id_guru'] ?? 0);
         $jabatan = sanitizeInput($_POST['jabatan'] ?? '');
-        $id_tingkat_barung = (int)($_POST['id_tingkat_barung'] ?? 0);
+        $id_tingkat_ids = $_POST['id_tingkat_barung'] ?? [];
+        if (!is_array($id_tingkat_ids)) {
+            $id_tingkat_ids = $id_tingkat_ids ? [(int)$id_tingkat_ids] : [];
+        }
 
-        if ($id <= 0 || $id_guru <= 0 || $jabatan === '' || $id_tingkat_barung <= 0) {
+        if ($id <= 0 || $id_guru <= 0 || $jabatan === '' || empty($id_tingkat_ids)) {
             $message = ['type' => 'warning', 'text' => 'Harap pilih guru pembina, jabatan, dan pembina tingkat.'];
         } elseif (!isset($jabatan_options[$jabatan])) {
             $message = ['type' => 'warning', 'text' => 'Pilihan jabatan tidak valid.'];
@@ -174,18 +213,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ((int)$dup->fetchColumn() > 0) {
                         $message = ['type' => 'warning', 'text' => 'Guru tersebut sudah terdaftar sebagai pembina Pramuka lain.'];
                     } else {
+                        $pdo->beginTransaction();
                         $stmt = $pdo->prepare("UPDATE {$table_name} SET id_guru = ?, nama_pembina = ?, jabatan = ?, id_tingkat_barung = ? WHERE id_pembina_pramuka = ?");
-                        $ok = $stmt->execute([$id_guru, $nama_guru, $jabatan, $id_tingkat_barung, $id]);
+                        $first_tingkat = (int)($id_tingkat_ids[0] ?? 0);
+                        $ok = $stmt->execute([$id_guru, $nama_guru, $jabatan, $first_tingkat, $id]);
                         if ($ok) {
+                            // Sync junction table
+                            $pdo->prepare("DELETE FROM tb_pembina_tingkat WHERE id_pembina_pramuka = ?")->execute([$id]);
+                            $insTingkat = $pdo->prepare("INSERT INTO tb_pembina_tingkat (id_pembina_pramuka, id_tingkat_barung) VALUES (?, ?)");
+                            foreach ($id_tingkat_ids as $tid) {
+                                $insTingkat->execute([$id, (int)$tid]);
+                            }
+                            $pdo->commit();
                             $username = $_SESSION['username'] ?? 'system';
-                            logActivity($pdo, $username, 'Update Pembina Pramuka', "ID {$id}: {$nama_guru} - {$jabatan} (tingkat ID {$id_tingkat_barung})");
+                            logActivity($pdo, $username, 'Update Pembina Pramuka', "ID {$id}: {$nama_guru} - {$jabatan} (" . count($id_tingkat_ids) . " tingkat)");
                             $message = ['type' => 'success', 'text' => 'Data pembina pramuka berhasil diperbarui!'];
                         } else {
+                            $pdo->rollBack();
                             $message = ['type' => 'danger', 'text' => 'Gagal memperbarui data.'];
                         }
                     }
                 }
             } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 $message = ['type' => 'danger', 'text' => 'Error DB: ' . $e->getMessage()];
             }
         }
@@ -239,10 +289,14 @@ $rows = [];
 $fetch_error = null;
 try {
     $stmt = $pdo->query("
-        SELECT p.id_pembina_pramuka, p.id_guru, p.nama_pembina, p.jabatan, p.id_tingkat_barung, g.nama_guru, t.nama_tingkat
+        SELECT p.id_pembina_pramuka, p.id_guru, p.nama_pembina, p.jabatan, 
+               GROUP_CONCAT(t.nama_tingkat SEPARATOR ', ') as nama_tingkat,
+               GROUP_CONCAT(t.id_tingkat_barung) as id_tingkat_ids
         FROM {$table_name} p
         LEFT JOIN tb_guru g ON g.id_guru = p.id_guru
-        LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
+        LEFT JOIN tb_pembina_tingkat pt ON pt.id_pembina_pramuka = p.id_pembina_pramuka
+        LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = pt.id_tingkat_barung
+        GROUP BY p.id_pembina_pramuka
         ORDER BY COALESCE(g.nama_guru, p.nama_pembina) ASC
     ");
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -308,6 +362,12 @@ $(document).ready(function() {
         });
     }).draw();
 
+    // Initialize Select2
+    $('.select2-multiple').select2({
+        placeholder: '-- Pilih Tingkat Pramuka --',
+        allowClear: true
+    });
+
     // Fill edit modal
     $(document).on('click', '.edit-btn', function() {
         $('#edit_id_pembina_pramuka').val($(this).data('id'));
@@ -316,7 +376,11 @@ $(document).ready(function() {
             $('#edit_id_guru').val(String(idGuru));
         }
         $('#edit_jabatan').val($(this).data('jabatan') || '');
-        $('#edit_id_tingkat_barung').val(String($(this).data('id-tingkat') || ''));
+        
+        var idTingkatRaw = String($(this).data('id-tingkat') || '');
+        var idTingkatArr = idTingkatRaw ? idTingkatRaw.split(',') : [];
+        $('#edit_id_tingkat_barung').val(idTingkatArr).trigger('change');
+        
         $('#editModal').modal('show');
     });
 
@@ -543,7 +607,7 @@ include '../templates/sidebar.php';
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)($row['id_pembina_pramuka'] ?? 0) ?>"
                                                     data-id-guru="<?= (int)($row['id_guru'] ?? 0) ?>"
-                                                    data-id-tingkat="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
+                                                    data-id-tingkat="<?= htmlspecialchars($row['id_tingkat_ids'] ?? '') ?>"
                                                     data-nama="<?= htmlspecialchars($nama_tampil, ENT_QUOTES) ?>"
                                                     data-jabatan="<?= htmlspecialchars($row['jabatan'] ?? '', ENT_QUOTES) ?>"
                                                     type="button">
@@ -606,9 +670,8 @@ include '../templates/sidebar.php';
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Pembina Tingkat</label>
-                        <select name="id_tingkat_barung" class="form-control" required>
-                            <option value="">-- Pilih Tingkat Pramuka --</option>
+                        <label>Pembina Tingkat (Bisa pilih lebih dari satu)</label>
+                        <select name="id_tingkat_barung[]" class="form-control select2-multiple" multiple="multiple" required style="width: 100%;">
                             <?php foreach ($tingkat_options as $t): ?>
                                 <option value="<?= (int)($t['id_tingkat_barung'] ?? 0) ?>"><?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?></option>
                             <?php endforeach; ?>
@@ -658,9 +721,8 @@ include '../templates/sidebar.php';
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Pembina Tingkat</label>
-                        <select name="id_tingkat_barung" id="edit_id_tingkat_barung" class="form-control" required>
-                            <option value="">-- Pilih Tingkat Pramuka --</option>
+                        <label>Pembina Tingkat (Bisa pilih lebih dari satu)</label>
+                        <select name="id_tingkat_barung[]" id="edit_id_tingkat_barung" class="form-control select2-multiple" multiple="multiple" required style="width: 100%;">
                             <?php foreach ($tingkat_options as $t): ?>
                                 <option value="<?= (int)($t['id_tingkat_barung'] ?? 0) ?>"><?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?></option>
                             <?php endforeach; ?>

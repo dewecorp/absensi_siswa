@@ -137,7 +137,7 @@ if (session_status() == PHP_SESSION_NONE) {
 $can_manage_sku = isAuthorized(['admin', 'tata_usaha']);
 $can_view_sku = $can_manage_sku;
 $is_pembina_pramuka_login = false;
-$assigned_tingkat_id = 0;
+$assigned_tingkat_ids = []; // Array of assigned levels
 $sku_assignment_missing = false;
 if (!$can_view_sku && (isAuthorized(['guru']) || isAuthorized(['wali']))) {
     $is_pembina_pramuka_login = is_current_guru_pembina_pramuka($pdo);
@@ -146,14 +146,21 @@ if (!$can_view_sku && (isAuthorized(['guru']) || isAuthorized(['wali']))) {
         $idGuruLogin = resolve_current_id_guru_for_sku($pdo);
         if ($idGuruLogin > 0) {
             try {
-                $stAssign = $pdo->prepare("SELECT id_tingkat_barung FROM tb_pembina_pramuka WHERE id_guru = ? LIMIT 1");
+                // Fetch all assigned levels from junction table
+                $stAssign = $pdo->prepare("
+                    SELECT pt.id_tingkat_barung 
+                    FROM tb_pembina_tingkat pt
+                    JOIN tb_pembina_pramuka p ON p.id_pembina_pramuka = pt.id_pembina_pramuka
+                    WHERE p.id_guru = ?
+                ");
                 $stAssign->execute([$idGuruLogin]);
-                $assigned_tingkat_id = (int)($stAssign->fetchColumn() ?: 0);
+                $assigned_tingkat_ids = $stAssign->fetchAll(PDO::FETCH_COLUMN);
+                $assigned_tingkat_ids = array_map('intval', $assigned_tingkat_ids);
             } catch (Exception $e) {
-                $assigned_tingkat_id = 0;
+                $assigned_tingkat_ids = [];
             }
         }
-        if ($assigned_tingkat_id <= 0) {
+        if (empty($assigned_tingkat_ids)) {
             $sku_assignment_missing = true;
         }
     }
@@ -161,7 +168,7 @@ if (!$can_view_sku && (isAuthorized(['guru']) || isAuthorized(['wali']))) {
 if (!$can_view_sku) {
     redirect('../login.php');
 }
-$can_interact_sku = $can_manage_sku || (!$sku_assignment_missing && $assigned_tingkat_id > 0);
+$can_interact_sku = $can_manage_sku || (!$sku_assignment_missing && !empty($assigned_tingkat_ids));
 
 $page_title = 'Syarat Kecakapan Umum';
 
@@ -191,6 +198,14 @@ $ensureSkuSchema = static function () use ($pdo): void {
             id_butir INT NOT NULL,
             PRIMARY KEY (id_peserta_didik_barung, id_butir),
             INDEX idx_sku_nilai_butir (id_butir)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS tb_pembina_tingkat (
+            id_pembina_pramuka INT NOT NULL,
+            id_tingkat_barung INT NOT NULL,
+            PRIMARY KEY (id_pembina_pramuka, id_tingkat_barung)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
     $colNilaiDate = $pdo->query("SHOW COLUMNS FROM tb_sku_kecakapan_nilai LIKE 'tanggal_ujian'");
@@ -416,7 +431,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sku_ajax']) && $_POST
             echo json_encode(['ok' => false, 'msg' => 'Tingkat ampuan pembina belum diatur.']);
             exit;
         }
-        if (!$can_manage_sku && $assigned_tingkat_id > 0 && $id_tingkat !== $assigned_tingkat_id) {
+        if (!$can_manage_sku && !empty($assigned_tingkat_ids) && !in_array($id_tingkat, $assigned_tingkat_ids)) {
             echo json_encode(['ok' => false, 'msg' => 'Anda hanya boleh mengisi SKU pada tingkat yang diampu.']);
             exit;
         }
@@ -733,8 +748,10 @@ try {
 }
 
 $selected_tingkat_id = (int)($_GET['tingkat'] ?? 0);
-if (!$can_manage_sku && $assigned_tingkat_id > 0) {
-    $selected_tingkat_id = $assigned_tingkat_id;
+if (!$can_manage_sku && !empty($assigned_tingkat_ids)) {
+    if ($selected_tingkat_id <= 0 || !in_array($selected_tingkat_id, $assigned_tingkat_ids)) {
+        $selected_tingkat_id = $assigned_tingkat_ids[0];
+    }
 }
 if ($selected_tingkat_id <= 0 && !empty($tingkat_list)) {
     $selected_tingkat_id = (int)($tingkat_list[0]['id_tingkat_barung'] ?? 0);
@@ -747,12 +764,11 @@ foreach ($tingkat_list as $t) {
         break;
     }
 }
-$assigned_tingkat_name = '';
-if ($assigned_tingkat_id > 0) {
+$assigned_tingkat_names = [];
+if (!empty($assigned_tingkat_ids)) {
     foreach ($tingkat_list as $t) {
-        if ((int)($t['id_tingkat_barung'] ?? 0) === $assigned_tingkat_id) {
-            $assigned_tingkat_name = (string)($t['nama_tingkat'] ?? '');
-            break;
+        if (in_array((int)($t['id_tingkat_barung'] ?? 0), $assigned_tingkat_ids)) {
+            $assigned_tingkat_names[] = (string)($t['nama_tingkat'] ?? '');
         }
     }
 }
@@ -1370,9 +1386,6 @@ require_once '../templates/sidebar.php';
                     <h4 class="mb-0">
                         SKU Pramuka
                         <?= $selected_tingkat_name !== '' ? '<span class="badge badge-light border text-dark ml-2">' . htmlspecialchars($selected_tingkat_name) . '</span>' : '' ?>
-                        <?php if (!$can_manage_sku && $assigned_tingkat_name !== ''): ?>
-                            <span class="badge badge-info ml-2">Tingkat ampuan Anda: <?= htmlspecialchars($assigned_tingkat_name) ?></span>
-                        <?php endif; ?>
                     </h4>
                     <div class="d-flex flex-wrap gap-2">
                         <?php if ($can_manage_sku): ?>
@@ -1396,31 +1409,24 @@ require_once '../templates/sidebar.php';
                     <?php if (empty($tingkat_list)): ?>
                         <div class="alert alert-warning mb-0">Belum ada data tingkat Pramuka. Tambahkan di menu <strong>Data Tingkat Barung</strong>.</div>
                     <?php else: ?>
+                        <?php if ($can_manage_sku || count($assigned_tingkat_ids) > 1): ?>
                         <div class="d-flex flex-wrap mb-4" style="gap:8px;">
                             <?php foreach ($tingkat_list as $t): ?>
                                 <?php
                                     $tid = (int)($t['id_tingkat_barung'] ?? 0);
                                     $active = ($tid === $selected_tingkat_id);
-                                    $is_locked_other = (!$can_manage_sku && $assigned_tingkat_id > 0 && $tid !== $assigned_tingkat_id);
+                                    if (!$can_manage_sku && !in_array($tid, $assigned_tingkat_ids)) continue;
                                 ?>
-                                <?php if ($is_locked_other): ?>
-                                    <span class="btn btn-sm btn-outline-secondary disabled" title="Hanya tingkat yang Anda ampu yang dapat diakses">
-                                        <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
-                                    </span>
-                                <?php else: ?>
-                                    <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>">
-                                        <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
-                                    </a>
-                                <?php endif; ?>
+                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>">
+                                    <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
+                                </a>
                             <?php endforeach; ?>
                         </div>
+                        <?php endif; ?>
+
                         <?php if ($sku_assignment_missing): ?>
                             <div class="alert alert-warning py-2">
                                 Tingkat ampuan pembina belum diatur. Silakan set kolom <strong>Pembina Tingkat</strong> pada menu <strong>Data Pembina Pramuka</strong>.
-                            </div>
-                        <?php elseif (!$can_manage_sku && $assigned_tingkat_id > 0): ?>
-                            <div class="alert alert-info py-2">
-                                Anda hanya dapat mengisi SKU pada tingkat yang diampu.
                             </div>
                         <?php endif; ?>
 
