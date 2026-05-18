@@ -648,9 +648,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
                                     </div>
                                     <form method="POST" action="" id="attendanceFormReg">
-                                        <div class="form-group mb-4">
+                                        <div class="form-group mb-4 text-center">
                                             <label class="d-block font-weight-bold">Status Kehadiran (<?php echo date('d-m-Y'); ?>)</label>
-                                            <div class="selectgroup selectgroup-pills">
+                                            <div class="selectgroup selectgroup-pills justify-content-center">
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
                                                     <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
@@ -732,9 +732,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
                                     </div>
                                     <form method="POST" action="" id="attendanceFormLes">
-                                        <div class="form-group mb-4">
+                                        <div class="form-group mb-4 text-center">
                                             <label class="d-block font-weight-bold">Status Kehadiran Les (<?php echo date('d-m-Y'); ?>)</label>
-                                            <div class="selectgroup selectgroup-pills">
+                                            <div class="selectgroup selectgroup-pills justify-content-center">
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status_les" value="hadir" class="selectgroup-input" <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
                                                     <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
