@@ -1,162 +1,64 @@
 <?php
+// Start output buffering to prevent header errors
+ob_start();
+
 // Set default timezone to Asia/Jakarta
 date_default_timezone_set('Asia/Jakarta');
 
 if (session_status() == PHP_SESSION_NONE) {
-    // Determine session name based on directory or explicit request
-    $script_path = $_SERVER['PHP_SELF'];
-    $session_name = 'SIS_LOGIN'; // Default for root/login
-
-    // Check for explicit session type request
-    if (isset($_REQUEST['session_type'])) {
-        $type = $_REQUEST['session_type'];
-        if ($type == 'admin') $session_name = 'SIS_ADMIN';
-        elseif ($type == 'guru') $session_name = 'SIS_GURU';
-        elseif ($type == 'siswa') $session_name = 'SIS_SISWA';
-        elseif ($type == 'wali') $session_name = 'SIS_WALI';
-        elseif ($type == 'tata_usaha') $session_name = 'SIS_TU';
-        elseif ($type == 'kepala_madrasah' || $type == 'kepala') $session_name = 'SIS_KEPALA';
-    } 
-    // Check directory context
-    elseif (strpos($script_path, '/admin/') !== false) {
-        $session_name = 'SIS_ADMIN';
-        
-        // Check LAST_ACTIVE_SESSION
-        if (isset($_COOKIE['LAST_ACTIVE_SESSION']) && in_array($_COOKIE['LAST_ACTIVE_SESSION'], ['SIS_TU', 'SIS_KEPALA', 'SIS_WALI', 'SIS_GURU'])) {
-             $session_name = $_COOKIE['LAST_ACTIVE_SESSION'];
-        }
-        // Fallback for TU and Kepala accessing Admin files
-        elseif (!isset($_COOKIE['SIS_ADMIN'])) {
-            if (isset($_COOKIE['SIS_TU'])) {
-                $session_name = 'SIS_TU';
-            } elseif (isset($_COOKIE['SIS_KEPALA'])) {
-                $session_name = 'SIS_KEPALA';
-            } elseif (isset($_COOKIE['SIS_WALI'])) {
-                $session_name = 'SIS_WALI';
-            } elseif (isset($_COOKIE['SIS_GURU'])) {
-                $session_name = 'SIS_GURU';
-            }
-        }
-    } elseif (strpos($script_path, '/guru/') !== false) {
-        $session_name = 'SIS_GURU';
-        
-        // Check LAST_ACTIVE_SESSION
-        if (isset($_COOKIE['LAST_ACTIVE_SESSION']) && in_array($_COOKIE['LAST_ACTIVE_SESSION'], ['SIS_WALI', 'SIS_ADMIN', 'SIS_TU', 'SIS_KEPALA'])) {
-             $session_name = $_COOKIE['LAST_ACTIVE_SESSION'];
-        }
-        // Fallback for others accessing Guru files
-        elseif (!isset($_COOKIE['SIS_GURU'])) {
-            if (isset($_COOKIE['SIS_WALI'])) {
-                $session_name = 'SIS_WALI';
-            } elseif (isset($_COOKIE['SIS_ADMIN'])) {
-                $session_name = 'SIS_ADMIN';
-            } elseif (isset($_COOKIE['SIS_TU'])) {
-                $session_name = 'SIS_TU';
-            } elseif (isset($_COOKIE['SIS_KEPALA'])) {
-                $session_name = 'SIS_KEPALA';
-            }
-        }
-    } elseif (strpos($script_path, '/siswa/') !== false) {
-        $session_name = 'SIS_SISWA';
-    } elseif (strpos($script_path, '/wali/') !== false) {
-        $session_name = 'SIS_WALI';
-    } elseif (strpos($script_path, '/tata_usaha/') !== false) {
-        $session_name = 'SIS_TU';
-    } elseif (strpos($script_path, '/kepala/') !== false) {
-        $session_name = 'SIS_KEPALA';
-    }
-    
-    // logout.php di root — tanpa nama sesi yang benar $_SESSION kosong dan log jadi "Unknown session"
-    if (basename($_SERVER['SCRIPT_NAME']) == 'logout.php') {
-        if (isset($_GET['level'])) {
-            $lvl = $_GET['level'];
-            switch ($lvl) {
-                case 'admin': $session_name = 'SIS_ADMIN'; break;
-                case 'guru': $session_name = 'SIS_GURU'; break;
-                case 'siswa': $session_name = 'SIS_SISWA'; break;
-                case 'wali': $session_name = 'SIS_WALI'; break;
-                case 'tata_usaha': $session_name = 'SIS_TU'; break;
-                case 'kepala_madrasah':
-                case 'kepala': $session_name = 'SIS_KEPALA'; break;
-            }
-        } elseif (!empty($_COOKIE['LAST_ACTIVE_SESSION'])) {
-            $lac = $_COOKIE['LAST_ACTIVE_SESSION'];
-            $allowed = ['SIS_ADMIN', 'SIS_GURU', 'SIS_SISWA', 'SIS_WALI', 'SIS_TU', 'SIS_KEPALA', 'SIS_LOGIN'];
-            if (in_array($lac, $allowed, true)) {
-                $session_name = $lac;
-            }
-        }
-    }
-
     // --- SESSION CONFIGURATION ---
-    // Store session files outside the project folder to avoid untracked session files in repo.
-    // (Requested: no need to copy/manage sessions folder.)
-    $tmp = sys_get_temp_dir();
-    if (is_string($tmp) && $tmp !== '') {
-        session_save_path($tmp);
-    }
-
-    // Set session lifetime to 24 hours (86400 seconds)
-    // This ensures the server keeps the session file for at least 24h
     ini_set('session.gc_maxlifetime', 86400);
     
-    // Set cookie lifetime to 0 (expires on browser close) OR match maxlifetime
-    // Using 0 is standard for "session" cookies, but if user wants persistence against random closures:
-    // session_set_cookie_params(86400, '/'); 
-    // User asked for "idle" behavior, so standard session cookie is best, 
-    // but with LONG server-side lifetime.
-    // However, to be safe and avoid "30 min" issues, let's explicitly set parameters.
+    // Better HTTPS detection
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+                || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                || ($_SERVER['SERVER_PORT'] == 443);
+
+    // Single session name for better stability
+    $session_name = 'SIS_APP_SESSION';
+    
+    // Check for local session directory
+    $session_dir = dirname(__DIR__) . '/sessions';
+    if (is_dir($session_dir) && is_writable($session_dir)) {
+        @session_save_path($session_dir);
+    }
+    
+    // Fallback to default session name if SIS_APP_SESSION causes issues on some hosting
+    // But keep it consistent across the app
+    session_name($session_name);
+
+    // Set cookie parameters BEFORE session_start
     session_set_cookie_params([
-        'lifetime' => 86400, // 24 hours cookie
+        'lifetime' => 0, // Session cookie (expires on browser close)
         'path' => '/',
         'domain' => '',
-        'secure' => isset($_SERVER['HTTPS']), // Only secure if HTTPS
+        'secure' => $is_https,
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
 
-    session_name($session_name);
-    session_start();
-
-    // Jika sesi yang dipilih tidak punya user, coba fallback ke LAST_ACTIVE_SESSION
-    if (!isset($_SESSION['user_id']) && isset($_COOKIE['LAST_ACTIVE_SESSION']) && $_COOKIE['LAST_ACTIVE_SESSION'] !== $session_name) {
-        session_write_close();
-        $fallback_session = $_COOKIE['LAST_ACTIVE_SESSION'];
-        session_name($fallback_session);
+    if (!session_start()) {
+        // If session_start fails with custom name, try default
+        session_name('PHPSESSID');
         session_start();
-        $session_name = $fallback_session;
-    }
-    
-    // Update sticky session jika sudah login
-    if (isset($_SESSION['user_id'])) {
-        setcookie('LAST_ACTIVE_SESSION', $session_name, time() + 86400 * 30, '/');
     }
 }
 
-// Function to switch session context (used in login.php)
+// Function to switch session context (simplified)
 function startUserSession(string $level): void {
-    if (session_status() == PHP_SESSION_ACTIVE) {
-        session_write_close();
+    if (session_status() == PHP_SESSION_NONE) {
+        $session_name = 'SIS_APP_SESSION';
+        $session_dir = dirname(__DIR__) . '/sessions';
+        if (is_dir($session_dir) && is_writable($session_dir)) {
+            @session_save_path($session_dir);
+        }
+        session_name($session_name);
+        if (!session_start()) {
+            session_name('PHPSESSID');
+            session_start();
+        }
     }
-    
-    $session_name = 'SIS_LOGIN';
-    switch ($level) {
-        case 'admin': $session_name = 'SIS_ADMIN'; break;
-        case 'guru': $session_name = 'SIS_GURU'; break;
-        case 'siswa': $session_name = 'SIS_SISWA'; break;
-        case 'wali': $session_name = 'SIS_WALI'; break;
-        case 'tata_usaha': $session_name = 'SIS_TU'; break;
-        case 'kepala_madrasah': 
-        case 'kepala': $session_name = 'SIS_KEPALA'; break;
-    }
-    
-    session_name($session_name);
-    session_set_cookie_params(0, '/');
-    session_start();
     session_regenerate_id(true);
-    
-    // Update sticky session
-    setcookie('LAST_ACTIVE_SESSION', $session_name, time() + 86400 * 30, '/');
 }
 
 // Function to redirect user
@@ -202,6 +104,17 @@ function isAuthorized(array $allowed_levels = []): bool {
         } else {
             $normalized_allowed_levels[] = $level;
         }
+    }
+
+    // Special case: Wali is also a Guru
+    if ($current_level === 'wali' && in_array('guru', $normalized_allowed_levels)) {
+        return true;
+    }
+
+    // Check if user is a teacher (Guru) who also happens to be a Wali Kelas
+    // This handles teachers who log in but the system detects them as 'wali'
+    if (in_array('guru', $normalized_allowed_levels) && isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_guru') {
+        return true;
     }
 
     return in_array($current_level, $normalized_allowed_levels, true);

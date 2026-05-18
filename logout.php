@@ -5,25 +5,19 @@ require_once 'config/functions.php';
 // Get current user info before destroying session
 $current_user = $_SESSION['username'] ?? 'Unknown';
 $user_level = $_SESSION['level'] ?? 'Unknown';
-// Jika level tidak ada di $_SESSION (data lama/varian sesi), turunkan dari nama cookie sesi aktif
-if ($user_level === 'Unknown') {
-    $sn = session_name();
-    $session_to_level = [
-        'SIS_ADMIN' => 'admin',
-        'SIS_GURU' => 'guru',
-        'SIS_WALI' => 'wali',
-        'SIS_SISWA' => 'siswa',
-        'SIS_TU' => 'tata_usaha',
-        'SIS_KEPALA' => 'kepala_madrasah',
-        'SIS_LOGIN' => 'login',
-    ];
-    if (isset($session_to_level[$sn])) {
-        $user_level = $session_to_level[$sn];
-    }
-}
 
 // Unset all session variables
 $_SESSION = array();
+
+// If it's desired to kill the session, also delete the session cookie.
+// Note: This will destroy the session, and not just the session data!
+if (ini_get("session.use_cookies")) {
+    $params = session_get_cookie_params();
+    setcookie(session_name(), '', time() - 42000,
+        $params["path"], $params["domain"],
+        $params["secure"], $params["httponly"]
+    );
+}
 
 // Destroy the session
 session_destroy();

@@ -89,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['username'] = $user_data['nuptk'];
             $_SESSION['level'] = $level;
             $_SESSION['nama_guru'] = $user_data['nama_guru'];
+            $_SESSION['login_source'] = 'tb_guru';
             $_SESSION['login_success_msg'] = "Selamat datang, " . $user_data['nama_guru'] . "!";
             
             $redirect_url = ($level === 'wali') ? 'wali/dashboard.php' : 'guru/dashboard.php';
@@ -101,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['level'] = 'siswa';
             $_SESSION['nama_siswa'] = $user_data['nama_siswa'];
             $_SESSION['id_kelas'] = $user_data['id_kelas'];
+            $_SESSION['login_source'] = 'tb_siswa';
             $_SESSION['login_success_msg'] = "Selamat datang, " . $user_data['nama_siswa'] . "!";
 
             $redirect_url = 'siswa/dashboard.php';
