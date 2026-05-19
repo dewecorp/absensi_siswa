@@ -12,41 +12,39 @@ $school_profile = getSchoolProfile($pdo);
 
 // Get teacher information
 $teacher = null;
-if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_guru') {
+$user_id = $_SESSION['user_id'] ?? 0;
+$login_source = $_SESSION['login_source'] ?? '';
+
+if ($login_source == 'tb_guru') {
     // Direct login via NUPTK
     $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$user_id]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
-} elseif (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+} elseif ($login_source == 'tb_pengguna') {
     // Login via tb_pengguna
     $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$user_id]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 } else {
-    // Fallback for sessions without login_source (legacy/existing sessions)
-    // Try direct first
+    // Fallback
     $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$user_id]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // If not found, try join
-    if (!$teacher) {
-        $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-        $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
-    }
 }
 
-// Ensure nama_guru is set in session for consistent navbar display
-if ($teacher && (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru']))) {
+// Normalisasi teacher data untuk PHP 8
+$teacher = $teacher ?: [];
+
+// Ensure nama_guru is set in session
+if (!empty($teacher['nama_guru']) && empty($_SESSION['nama_guru'])) {
     $_SESSION['nama_guru'] = $teacher['nama_guru'];
 }
 
-// Get classes that this teacher teaches (from mengajar field)
+// Get classes that this teacher teaches
 $teacher_class_ids = [];
-$teacher_classes = []; // Store full class data
+$teacher_classes = [];
 if (!empty($teacher['mengajar'])) {
-    $mengajar_decoded = json_decode($teacher['mengajar'], true);
+    $mengajar_decoded = json_decode((string)$teacher['mengajar'], true);
     if (is_array($mengajar_decoded) && !empty($mengajar_decoded)) {
         // Get all classes first
         $all_classes_stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");

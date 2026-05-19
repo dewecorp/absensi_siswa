@@ -70,18 +70,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if ($authenticated) {
+        // Normalisasi data untuk menghindari error null di PHP 8
+        $user_data = $user_data ?? [];
+        
         if ($user_type === 'pengguna') {
-            $level = strtolower(trim($user_data['level']));
+            $level = strtolower(trim((string)($user_data['level'] ?? '')));
             
             // Normalize level aliases
             if ($level === 'kepala') $level = 'kepala_madrasah';
             if ($level === 'tu') $level = 'tata_usaha';
             
-            $_SESSION['user_id'] = $user_data['id_pengguna'];
-            $_SESSION['username'] = $user_data['username'];
+            $_SESSION['user_id'] = $user_data['id_pengguna'] ?? 0;
+            $_SESSION['username'] = $user_data['username'] ?? '';
             $_SESSION['level'] = $level;
             $_SESSION['login_source'] = 'tb_pengguna';
-            $display_name = !empty($user_data['nama']) ? $user_data['nama'] : $user_data['username'];
+            $display_name = !empty($user_data['nama']) ? $user_data['nama'] : ($user_data['username'] ?? 'User');
             $_SESSION['login_success_msg'] = "Selamat datang, " . $display_name . "!";
 
             $redirect_url = '';
@@ -94,39 +97,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 default: $redirect_url = 'index.php'; break;
             }
             $show_swal = true;
-            logActivity($pdo, $user_data['username'], 'Login', 'User logged in successfully');
+            logActivity($pdo, (string)($_SESSION['username']), 'Login', 'User logged in successfully');
         } elseif ($user_type === 'guru') {
             $level = 'guru';
-            $wali_check = $pdo->prepare("SELECT COUNT(*) FROM tb_kelas WHERE wali_kelas = ?");
-            $wali_check->execute([$user_data['nama_guru']]);
+            $nama_guru = (string)($user_data['nama_guru'] ?? '');
+            
+            $wali_check = $pdo->prepare("SELECT COUNT(*) FROM tb_kelas WHERE TRIM(wali_kelas) = ?");
+            $wali_check->execute([$nama_guru]);
             if ($wali_check->fetchColumn() > 0) $level = 'wali';
             
-            $_SESSION['user_id'] = $user_data['id_guru'];
-            $_SESSION['username'] = $user_data['nuptk'];
+            $_SESSION['user_id'] = $user_data['id_guru'] ?? 0;
+            $_SESSION['username'] = $user_data['nuptk'] ?? '';
             $_SESSION['level'] = $level;
-            $_SESSION['nama_guru'] = $user_data['nama_guru'];
+            $_SESSION['nama_guru'] = $nama_guru;
             $_SESSION['login_source'] = 'tb_guru';
-            $_SESSION['login_success_msg'] = "Selamat datang, " . $user_data['nama_guru'] . "!";
+            $_SESSION['login_success_msg'] = "Selamat datang, " . $nama_guru . "!";
             
             $redirect_url = ($level === 'wali') ? 'wali/dashboard.php' : 'guru/dashboard.php';
             $show_swal = true;
-            logActivity($pdo, $user_data['nuptk'], 'Login', 'Teacher logged in successfully using NUPTK');
+            logActivity($pdo, (string)($_SESSION['username']), 'Login', 'Teacher logged in successfully');
         } elseif ($user_type === 'siswa') {
-            $_SESSION['user_id'] = $user_data['id_siswa'];
-            $_SESSION['username'] = $user_data['nisn'];
+            $_SESSION['user_id'] = $user_data['id_siswa'] ?? 0;
+            $_SESSION['username'] = $user_data['nisn'] ?? '';
             $_SESSION['level'] = 'siswa';
-            $_SESSION['nama_siswa'] = $user_data['nama_siswa'];
-            $_SESSION['id_kelas'] = $user_data['id_kelas'];
+            $_SESSION['nama_siswa'] = $user_data['nama_siswa'] ?? '';
+            $_SESSION['id_kelas'] = $user_data['id_kelas'] ?? 0;
             $_SESSION['login_source'] = 'tb_siswa';
-            $_SESSION['login_success_msg'] = "Selamat datang, " . $user_data['nama_siswa'] . "!";
+            $_SESSION['login_success_msg'] = "Selamat datang, " . ($_SESSION['nama_siswa']) . "!";
 
             $redirect_url = 'siswa/dashboard.php';
             $show_swal = true;
-            logActivity($pdo, $user_data['nisn'], 'Login', 'Student logged in successfully using NISN');
+            logActivity($pdo, (string)($_SESSION['username']), 'Login', 'Student logged in successfully');
         }
         
-        // Pastikan sesi tersimpan sebelum redireksi
-        session_write_close();
+        // Pastikan sesi tersimpan permanen sebelum redireksi
+        @session_write_close();
     } else {
         $error = "Username/NUPTK/NISN atau password salah!";
     }

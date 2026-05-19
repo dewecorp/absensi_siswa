@@ -6,41 +6,54 @@ ob_start();
 date_default_timezone_set('Asia/Jakarta');
 
 if (session_status() == PHP_SESSION_NONE) {
-    // --- SESSION CONFIGURATION ---
-    // Gunakan pengaturan default server untuk stabilitas maksimal di hosting
+    // --- SESSION CONFIGURATION PHP 8+ ---
     
-    // HTTPS detection
-    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
-                || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-                || ($_SERVER['SERVER_PORT'] == 443);
+    // Tentukan folder sesi lokal untuk menghindari limitasi server
+    $session_dir = dirname(__DIR__) . '/sessions';
+    if (!is_dir($session_dir)) {
+        @mkdir($session_dir, 0755, true);
+    }
 
-    // Set cookie parameters sebelum session_start
-    session_set_cookie_params([
-        'lifetime' => 0, 
-        'path' => '/',
-        'domain' => '',
-        'secure' => $is_https,
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
+    // Gunakan folder lokal jika writable
+    if (is_writable($session_dir)) {
+        @session_save_path($session_dir);
+        
+        // Bersihkan file sesi yang lebih dari 24 jam (86400 detik)
+        // Probabilitas 5% untuk menghindari beban server di setiap request
+        if (rand(1, 100) <= 5) {
+            $files = glob($session_dir . '/sess_*');
+            $now = time();
+            foreach ($files as $file) {
+                if (is_file($file) && ($now - filemtime($file) >= 86400)) {
+                    @unlink($file);
+                }
+            }
+        }
+    }
 
     @session_start();
 }
 
-// Function to switch session context (simplified)
+// Function to switch session context
 function startUserSession(string $level): void {
     if (session_status() == PHP_SESSION_NONE) {
+        $session_dir = dirname(__DIR__) . '/sessions';
+        if (is_dir($session_dir) && is_writable($session_dir)) {
+            @session_save_path($session_dir);
+        }
         @session_start();
     }
-    
-    // Jangan lakukan session_regenerate_id di sini jika sering gagal di hosting
-    // Cukup pastikan sesi aktif
 }
 
 // Function to redirect user
 function redirect(string $page): void {
-    header("Location: $page");
-    exit();
+    if (!headers_sent()) {
+        header("Location: $page");
+        exit();
+    } else {
+        echo "<script>window.location.href='$page';</script>";
+        exit();
+    }
 }
 
 // Function to check if user is logged in
