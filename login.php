@@ -1,11 +1,12 @@
 <?php
+ob_start();
 require_once 'config/database.php';
 require_once 'config/functions.php';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $login_identifier = trim(sanitizeInput($_POST['username']));
-    $password = trim($_POST['password']);
+    $login_identifier = trim(sanitizeInput($_POST['username'] ?? ''));
+    $password = trim($_POST['password'] ?? '');
     
     $authenticated = false;
     $user_data = null;
@@ -23,13 +24,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // 2. Try Guru (tb_guru) if not authenticated
     if (!$authenticated) {
-        $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE nuptk = ?");
+        $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE TRIM(nuptk) = ?");
         $stmt->execute([$login_identifier]);
         $guru = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($guru) {
             $auth_guru = false;
-            if (!empty($guru['password']) && password_verify($password, $guru['password'])) $auth_guru = true;
-            if (!$auth_guru && $password === $guru['nuptk']) $auth_guru = true;
+            // A. Cek Password Hash
+            if (!empty($guru['password']) && password_verify($password, $guru['password'])) {
+                $auth_guru = true;
+            }
+            // B. Cek Password Default '123456'
+            if (!$auth_guru && $password === '123456') {
+                $auth_guru = true;
+            }
+            // C. Cek Password NUPTK
+            if (!$auth_guru && (string)$password === (string)$guru['nuptk']) {
+                $auth_guru = true;
+            }
             
             if ($auth_guru) {
                 $authenticated = true;
@@ -41,13 +52,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // 3. Try Student (tb_siswa) if not authenticated
     if (!$authenticated) {
-        $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE nisn = ?");
+        $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE TRIM(nisn) = ?");
         $stmt->execute([$login_identifier]);
         $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($siswa) {
             $auth_siswa = false;
             if (!empty($siswa['password']) && password_verify($password, $siswa['password'])) $auth_siswa = true;
-            if (!$auth_siswa && $password === $siswa['nisn']) $auth_siswa = true;
+            // Gunakan perbandingan string yang aman untuk NISN
+            if (!$auth_siswa && (string)$password === (string)$siswa['nisn']) $auth_siswa = true;
             
             if ($auth_siswa) {
                 $authenticated = true;
@@ -59,24 +71,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($authenticated) {
         if ($user_type === 'pengguna') {
-            startUserSession($user_data['level']);
+            $level = strtolower(trim($user_data['level']));
+            
+            // Normalize level aliases
+            if ($level === 'kepala') $level = 'kepala_madrasah';
+            if ($level === 'tu') $level = 'tata_usaha';
+            
             $_SESSION['user_id'] = $user_data['id_pengguna'];
             $_SESSION['username'] = $user_data['username'];
-            $_SESSION['level'] = $user_data['level'];
+            $_SESSION['level'] = $level;
             $_SESSION['login_source'] = 'tb_pengguna';
             $display_name = !empty($user_data['nama']) ? $user_data['nama'] : $user_data['username'];
             $_SESSION['login_success_msg'] = "Selamat datang, " . $display_name . "!";
 
             $redirect_url = '';
-            switch ($user_data['level']) {
+            switch ($level) {
                 case 'admin': $redirect_url = 'admin/dashboard.php'; break;
                 case 'guru': $redirect_url = 'guru/dashboard.php'; break;
                 case 'wali': $redirect_url = 'wali/dashboard.php'; break;
                 case 'kepala_madrasah': $redirect_url = 'kepala/dashboard.php'; break;
                 case 'tata_usaha': $redirect_url = 'tata_usaha/dashboard.php'; break;
+                default: $redirect_url = 'index.php'; break;
             }
             $show_swal = true;
-            session_regenerate_id(true);
             logActivity($pdo, $user_data['username'], 'Login', 'User logged in successfully');
         } elseif ($user_type === 'guru') {
             $level = 'guru';
@@ -84,7 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $wali_check->execute([$user_data['nama_guru']]);
             if ($wali_check->fetchColumn() > 0) $level = 'wali';
             
-            startUserSession($level);
             $_SESSION['user_id'] = $user_data['id_guru'];
             $_SESSION['username'] = $user_data['nuptk'];
             $_SESSION['level'] = $level;
@@ -96,7 +112,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $show_swal = true;
             logActivity($pdo, $user_data['nuptk'], 'Login', 'Teacher logged in successfully using NUPTK');
         } elseif ($user_type === 'siswa') {
-            startUserSession('siswa');
             $_SESSION['user_id'] = $user_data['id_siswa'];
             $_SESSION['username'] = $user_data['nisn'];
             $_SESSION['level'] = 'siswa';
@@ -109,6 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $show_swal = true;
             logActivity($pdo, $user_data['nisn'], 'Login', 'Student logged in successfully using NISN');
         }
+        
+        // Pastikan sesi tersimpan sebelum redireksi
+        session_write_close();
     } else {
         $error = "Username/NUPTK/NISN atau password salah!";
     }

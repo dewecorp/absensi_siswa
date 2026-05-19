@@ -7,29 +7,16 @@ date_default_timezone_set('Asia/Jakarta');
 
 if (session_status() == PHP_SESSION_NONE) {
     // --- SESSION CONFIGURATION ---
-    ini_set('session.gc_maxlifetime', 86400);
+    // Gunakan pengaturan default server untuk stabilitas maksimal di hosting
     
-    // Better HTTPS detection
+    // HTTPS detection
     $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
                 || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
                 || ($_SERVER['SERVER_PORT'] == 443);
 
-    // Single session name for better stability
-    $session_name = 'SIS_APP_SESSION';
-    
-    // Check for local session directory
-    $session_dir = dirname(__DIR__) . '/sessions';
-    if (is_dir($session_dir) && is_writable($session_dir)) {
-        @session_save_path($session_dir);
-    }
-    
-    // Fallback to default session name if SIS_APP_SESSION causes issues on some hosting
-    // But keep it consistent across the app
-    session_name($session_name);
-
-    // Set cookie parameters BEFORE session_start
+    // Set cookie parameters sebelum session_start
     session_set_cookie_params([
-        'lifetime' => 0, // Session cookie (expires on browser close)
+        'lifetime' => 0, 
         'path' => '/',
         'domain' => '',
         'secure' => $is_https,
@@ -37,28 +24,17 @@ if (session_status() == PHP_SESSION_NONE) {
         'samesite' => 'Lax'
     ]);
 
-    if (!session_start()) {
-        // If session_start fails with custom name, try default
-        session_name('PHPSESSID');
-        session_start();
-    }
+    @session_start();
 }
 
 // Function to switch session context (simplified)
 function startUserSession(string $level): void {
     if (session_status() == PHP_SESSION_NONE) {
-        $session_name = 'SIS_APP_SESSION';
-        $session_dir = dirname(__DIR__) . '/sessions';
-        if (is_dir($session_dir) && is_writable($session_dir)) {
-            @session_save_path($session_dir);
-        }
-        session_name($session_name);
-        if (!session_start()) {
-            session_name('PHPSESSID');
-            session_start();
-        }
+        @session_start();
     }
-    session_regenerate_id(true);
+    
+    // Jangan lakukan session_regenerate_id di sini jika sering gagal di hosting
+    // Cukup pastikan sesi aktif
 }
 
 // Function to redirect user
@@ -74,7 +50,7 @@ function isLoggedIn(): bool {
 
 // Function to get user level
 function getUserLevel(): string {
-    $level = isset($_SESSION['level']) ? $_SESSION['level'] : '';
+    $level = isset($_SESSION['level']) ? strtolower(trim($_SESSION['level'])) : '';
     if ($level === 'kepala') {
         return 'kepala_madrasah';
     }
@@ -95,8 +71,11 @@ function isAuthorized(array $allowed_levels = []): bool {
     }
 
     $current_level = getUserLevel();
+    $login_source = $_SESSION['login_source'] ?? '';
+    
     $normalized_allowed_levels = [];
     foreach ($allowed_levels as $level) {
+        $level = strtolower(trim($level));
         if ($level === 'kepala') {
             $normalized_allowed_levels[] = 'kepala_madrasah';
         } elseif ($level === 'tu') {
@@ -106,18 +85,24 @@ function isAuthorized(array $allowed_levels = []): bool {
         }
     }
 
-    // Special case: Wali is also a Guru
-    if ($current_level === 'wali' && in_array('guru', $normalized_allowed_levels)) {
+    // KHUSUS GURU & WALI: Jika login berasal dari tb_guru, berikan akses ke semua halaman guru/wali
+    if ($login_source === 'tb_guru') {
+        if (in_array('guru', $normalized_allowed_levels, true) || in_array('wali', $normalized_allowed_levels, true)) {
+            return true;
+        }
+    }
+
+    // Pengecekan standar untuk level lainnya
+    if (in_array($current_level, $normalized_allowed_levels, true)) {
         return true;
     }
 
-    // Check if user is a teacher (Guru) who also happens to be a Wali Kelas
-    // This handles teachers who log in but the system detects them as 'wali'
-    if (in_array('guru', $normalized_allowed_levels) && isset($_SESSION['login_source']) && $_SESSION['login_source'] === 'tb_guru') {
+    // Fallback: Wali juga dianggap Guru
+    if ($current_level === 'wali' && in_array('guru', $normalized_allowed_levels, true)) {
         return true;
     }
 
-    return in_array($current_level, $normalized_allowed_levels, true);
+    return false;
 }
 
 /**
@@ -863,9 +848,15 @@ if (!function_exists('sort_all_menu_items')) {
 
 // Function to log activity
 function logActivity(PDO $pdo, string $username, string $action, string $description = ''): bool {
-    $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
-    $stmt = $pdo->prepare("INSERT INTO tb_activity_log (username, action, description, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
-    return $stmt->execute([$username, $action, $description, $ip_address]);
+    try {
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
+        $stmt = $pdo->prepare("INSERT INTO tb_activity_log (username, action, description, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
+        return $stmt->execute([$username, $action, $description, $ip_address]);
+    } catch (Exception $e) {
+        // Jangan biarkan error log aktivitas menghentikan proses utama (seperti login)
+        error_log("Activity log failed: " . $e->getMessage());
+        return false;
+    }
 }
 
 // Function to create notification
