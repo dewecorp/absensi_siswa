@@ -211,25 +211,29 @@ require_once '../templates/sidebar.php';
     /* Mobile adjustments */
     @media (max-width: 768px) {
         .sticky-col-1 { 
-            width: 40px !important; 
-            min-width: 40px !important; 
+            width: 35px !important; 
+            min-width: 35px !important; 
         }
         .sticky-col-2 {
-            left: 40px !important;
-            min-width: 130px !important;
-            max-width: 130px !important;
-            font-size: 0.8em;
+            left: 35px !important;
+            min-width: 110px !important;
+            max-width: 110px !important;
+            font-size: 0.75em;
         }
         thead th, tbody td {
-            font-size: 0.8em !important;
+            font-size: 0.75em !important;
             padding: 4px 2px !important;
         }
         .grade-input {
-            min-width: 50px !important;
-            max-width: 60px !important;
-            padding: 4px 2px !important;
-            height: 30px !important;
-            font-size: 0.9em !important;
+            min-width: 45px !important;
+            max-width: 55px !important;
+            padding: 2px 1px !important;
+            height: 28px !important;
+            font-size: 0.85em !important;
+        }
+        .btn-sm {
+            padding: 0.2rem 0.4rem !important;
+            font-size: 0.7rem !important;
         }
     }
     
