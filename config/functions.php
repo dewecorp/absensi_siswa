@@ -872,145 +872,91 @@ function logActivity(PDO $pdo, string $username, string $action, string $descrip
     }
 }
 
-function fetchSibayarData(string $nisn, string $type = 'tagihan'): array {
-    // KREDENSIAL WEB SIBAYAR (HOSTING)
-    $host_remote = "103.147.154.55"; // IP Server Hosting Sibayar
-    $db_user_host = "kvzveyrg_sibayar"; 
-    $db_pass_host = "sultanfattah26"; 
-    $db_name_host = "kvzveyrg_sibayar";
+/**
+ * SIBAYAR SPP - INTEGRATION CLIENT FOR SIMAD
+ * Versi: 1.0.0
+ */
+class SibayarClient {
+    private $apiUrl;
+    private $apiKey;
 
-    // DETEKSI LOKASI RUNNING
-    $is_local = ($_SERVER['HTTP_HOST'] == 'localhost' || $_SERVER['HTTP_HOST'] == '127.0.0.1' || strpos($_SERVER['HTTP_HOST'], '.test') !== false);
-    
-    $result = ['status' => 'error', 'message' => '', 'data' => []];
-
-    try {
-        // JIKA DI LOCAL, COBA REMOTE KE HOSTING DULU
-        if ($is_local) {
-            try {
-                // Coba koneksi remote (timeout 3 detik agar tidak lambat)
-                $dsn_remote = "mysql:host=$host_remote;dbname=$db_name_host;charset=utf8mb4";
-                $spp_pdo = new PDO($dsn_remote, $db_user_host, $db_pass_host, [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_TIMEOUT => 3,
-                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
-                ]);
-            } catch (PDOException $e) {
-                // Jika remote gagal (biasanya karena firewall), fallback ke local database
-                $dsn_local = "mysql:host=localhost;dbname=spp;charset=utf8mb4";
-                $spp_pdo = new PDO($dsn_local, "root", "", [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-                ]);
-            }
-        } else {
-            // JIKA SUDAH DI HOSTING, GUNAKAN LOCALHOST HOSTING
-            $dsn_host = "mysql:host=localhost;dbname=$db_name_host;charset=utf8mb4";
-            $spp_pdo = new PDO($dsn_host, $db_user_host, $db_pass_host, [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
-            ]);
-        }
-
-        $spp_pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-
-        // Ambil data siswa dari Sibayar berdasarkan NISN
-        $stmt_siswa = $spp_pdo->prepare("SELECT s.*, k.nama_kelas FROM siswa s JOIN kelas k ON s.id_kelas = k.id_kelas WHERE s.nisn = ?");
-        $stmt_siswa->execute([$nisn]);
-        $d_siswa = $stmt_siswa->fetch();
-
-        if (!$d_siswa) {
-            $result['message'] = "Siswa dengan NISN $nisn tidak ditemukan di database Sibayar.";
-            return $result;
-        }
-
-        // Ambil semua jenis pembayaran yang aktif dan relevan untuk kelas siswa ini
-        $id_kelas_siswa = (string)$d_siswa['id_kelas'];
-        $q_jenis = $spp_pdo->query("SELECT * FROM jenis_bayar WHERE status = 'Aktif' ORDER BY tipe_bayar ASC")->fetchAll();
-        
-        $all_data = [];
-        foreach ($q_jenis as $jb) {
-            if (!empty($jb['tagihan_kelas'])) {
-                $allowed_classes = array_map('trim', explode(',', (string)$jb['tagihan_kelas']));
-                if (!in_array($id_kelas_siswa, $allowed_classes)) {
-                    continue;
-                }
-            }
-
-            $item = [
-                'id_jenis_bayar' => $jb['id_jenis_bayar'],
-                'nama_pembayaran' => $jb['nama_pembayaran'],
-                'tipe_bayar' => $jb['tipe_bayar'],
-                'nominal' => (int)$jb['nominal'],
-                'detail' => [],
-                'summary' => [
-                    'total_tagihan' => (int)$jb['nominal'],
-                    'total_dibayar' => 0,
-                    'sisa_tagihan' => 0,
-                    'status' => 'Belum Lunas'
-                ]
-            ];
-
-            if ($jb['tipe_bayar'] == 'Bulanan') {
-                $months = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
-                
-                $stmt_p = $spp_pdo->prepare("SELECT bulan_bayar, tgl_bayar, jumlah_bayar FROM pembayaran WHERE nisn = ? AND id_jenis_bayar = ?");
-                $stmt_p->execute([$nisn, $jb['id_jenis_bayar']]);
-                $payments = $stmt_p->fetchAll();
-                
-                $paid_months_info = [];
-                foreach ($payments as $p) {
-                    $m_list = array_map('trim', explode(',', (string)$p['bulan_bayar']));
-                    foreach ($m_list as $m) {
-                        if (empty($m)) continue;
-                        $paid_months_info[$m] = [
-                            'tgl' => $p['tgl_bayar'],
-                            'jml' => $jb['nominal'] 
-                        ];
-                    }
-                }
-                
-                $unpaid_count = 0;
-                foreach ($months as $m) {
-                    $is_paid = isset($paid_months_info[$m]);
-                    if (!$is_paid) $unpaid_count++;
-                    
-                    $item['detail'][] = [
-                        'bulan' => $m,
-                        'status' => $is_paid ? 'Lunas' : 'Belum Bayar',
-                        'tgl' => $is_paid ? $paid_months_info[$m]['tgl'] : '-',
-                        'jml' => $is_paid ? $paid_months_info[$m]['jml'] : 0
-                    ];
-                }
-                
-                $item['summary']['total_dibayar'] = (count($months) - $unpaid_count) * $jb['nominal'];
-                $item['summary']['sisa_tagihan'] = $unpaid_count * $jb['nominal'];
-                $item['summary']['status'] = ($unpaid_count == 0) ? 'Lunas' : 'Belum Lunas';
-                
-            } else {
-                $stmt_total = $spp_pdo->prepare("SELECT SUM(jumlah_bayar) as total FROM pembayaran WHERE nisn = ? AND id_jenis_bayar = ?");
-                $stmt_total->execute([$nisn, $jb['id_jenis_bayar']]);
-                $dibayar = (int)$stmt_total->fetchColumn() ?: 0;
-                
-                $item['summary']['total_dibayar'] = $dibayar;
-                $item['summary']['sisa_tagihan'] = max(0, $jb['nominal'] - $dibayar);
-                $item['summary']['status'] = ($item['summary']['sisa_tagihan'] <= 0) ? 'Lunas' : 'Belum Lunas';
-                
-                $stmt_hist = $spp_pdo->prepare("SELECT tgl_bayar, jumlah_bayar FROM pembayaran WHERE nisn = ? AND id_jenis_bayar = ? ORDER BY tgl_bayar ASC");
-                $stmt_hist->execute([$nisn, $jb['id_jenis_bayar']]);
-                $item['detail'] = $stmt_hist->fetchAll();
-            }
-            
-            $all_data[] = $item;
-        }
-
-        $result['status'] = 'success';
-        $result['data'] = $all_data;
-
-    } catch (PDOException $e) {
-        $result['message'] = "Gagal Sinkronisasi: " . $e->getMessage();
+    public function __construct($apiKey = 'SPP_SECRET_KEY_2026') {
+        $this->apiKey = $apiKey;
+        $this->apiUrl = "https://sibayar.misultanfattah.sch.id/api/simad.php";
     }
-    return $result;
+
+    private function request($action, $params = []) {
+        $queryParams = array_merge([
+            'api_key' => $this->apiKey,
+            'action' => $action
+        ], $params);
+
+        $url = $this->apiUrl . '?' . http_build_query($queryParams);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'X-API-KEY: ' . $this->apiKey,
+            'Accept: application/json'
+        ]);
+
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            return [
+                'status' => 'error',
+                'message' => 'Connection failed: ' . $error
+            ];
+        }
+
+        $result = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return [
+                'status' => 'error',
+                'message' => 'Invalid JSON response',
+                'raw_response' => $response
+            ];
+        }
+
+        return $result;
+    }
+
+    public function getStudentDetail($nisn) {
+        return $this->request('get_student_data', ['nisn' => $nisn]);
+    }
 }
+
+function fetchSibayarData(string $nisn, string $type = 'tagihan'): array {
+     $client = new SibayarClient();
+     $response = $client->getStudentDetail($nisn);
+ 
+     if ($response['status'] === 'success') {
+         // Map response based on request type
+         if ($type === 'tagihan') {
+             return [
+                 'status' => 'success',
+                 'data' => $response['billing'] ?? []
+             ];
+         } elseif ($type === 'laporan') {
+             // Return everything for detailed report page
+             return $response;
+         } else {
+             return [
+                 'status' => 'success',
+                 'data' => $response['payments'] ?? []
+             ];
+         }
+     }
+ 
+     return $response;
+ }
 
 // Function to create notification
 function createNotification(PDO $pdo, string $message, string $link, string $type = 'info'): bool {

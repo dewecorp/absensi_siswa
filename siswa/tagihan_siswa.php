@@ -34,13 +34,6 @@ include_once '../templates/sidebar.php';
     <section class="section">
         <div class="section-header">
             <h1>Tagihan Siswa</h1>
-            <div class="section-header-breadcrumb">
-                <?php if ($api_status === 'success'): ?>
-                    <div class="breadcrumb-item"><span class="badge badge-info"><i class="fas fa-sync-alt fa-spin"></i> Data Real-time dari Sibayar</span></div>
-                <?php else: ?>
-                    <div class="breadcrumb-item"><span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Gagal Terhubung ke Sibayar</span></div>
-                <?php endif; ?>
-            </div>
         </div>
 
         <div class="section-body">
@@ -94,7 +87,7 @@ include_once '../templates/sidebar.php';
                                     $no = 1;
                                     $grand_total_sisa = 0;
                                     foreach ($tagihan_data as $row): 
-                                        $sisa = $row['summary']['sisa_tagihan'] ?? 0;
+                                        $sisa = $row['sisa_tagihan'] ?? 0;
                                         // Only show in tagihan if sisa > 0
                                         if ($sisa <= 0) continue;
                                         
@@ -104,36 +97,36 @@ include_once '../templates/sidebar.php';
                                             <td class="text-center"><?= $no++ ?></td>
                                             <td><?= htmlspecialchars($row['nama_pembayaran'] ?? '-') ?></td>
                                             <td>
-                                                Rp <?= number_format($row['nominal'] ?? 0, 0, ',', '.') ?>
+                                                Rp <?= number_format($row['total_nominal'] ?? 0, 0, ',', '.') ?>
                                                 <div class="text-danger font-weight-bold">
-                                                    Jumlah Tagihan<br><?= htmlspecialchars($row['nama_pembayaran']) ?>: Rp <?= number_format($sisa, 0, ',', '.') ?>
+                                                    Sisa Tagihan: Rp <?= number_format($sisa, 0, ',', '.') ?>
                                                 </div>
                                             </td>
                                             <td>
                                                 <?php if (($row['tipe_bayar'] ?? '') === 'Bulanan'): ?>
                                                     <div class="row">
                                                         <?php 
-                                                        $half = ceil(count($row['detail']) / 2);
-                                                        $chunks = array_chunk($row['detail'], $half);
+                                                        $unpaid_months = $row['item_belum_bayar'] ?? [];
+                                                        $half = ceil(count($unpaid_months) / 2);
+                                                        $chunks = $unpaid_months ? array_chunk($unpaid_months, $half) : [];
                                                         ?>
-                                                        <?php foreach ($chunks as $chunk): ?>
-                                                            <div class="col-6">
-                                                                <ul class="list-unstyled mb-0">
-                                                                    <?php foreach ($chunk as $d): ?>
-                                                                        <li>
-                                                                            <?php if ($d['status'] === 'Lunas'): ?>
-                                                                                <span class="text-success"><i class="fas fa-check"></i> <?= $d['bulan'] ?></span>
-                                                                            <?php else: ?>
-                                                                                <span class="text-danger"><i class="fas fa-times"></i> <?= $d['bulan'] ?></span>
-                                                                            <?php endif; ?>
-                                                                        </li>
-                                                                    <?php endforeach; ?>
-                                                                </ul>
+                                                        <?php if (empty($unpaid_months)): ?>
+                                                            <div class="col-12 text-success">
+                                                                <i class="fas fa-check-circle"></i> Lunas
                                                             </div>
-                                                        <?php endforeach; ?>
-                                                    </div>
-                                                    <div class="text-danger font-weight-bold mt-2">
-                                                        Jumlah Tagihan <?= htmlspecialchars($row['nama_pembayaran']) ?>: Rp <?= number_format($sisa, 0, ',', '.') ?>
+                                                        <?php else: ?>
+                                                            <?php foreach ($chunks as $chunk): ?>
+                                                                <div class="col-6">
+                                                                    <ul class="list-unstyled mb-0">
+                                                                        <?php foreach ($chunk as $bulan): ?>
+                                                                            <li>
+                                                                                <span class="text-danger"><i class="fas fa-times"></i> <?= htmlspecialchars($bulan) ?></span>
+                                                                            </li>
+                                                                        <?php endforeach; ?>
+                                                                    </ul>
+                                                                </div>
+                                                            <?php endforeach; ?>
+                                                        <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
                                                     <div class="text-danger font-weight-bold">
@@ -143,7 +136,7 @@ include_once '../templates/sidebar.php';
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
-                                    <tr class="font-weight-bold">
+                                    <tr class="font-weight-bold bg-light">
                                         <td colspan="3" class="text-right">Total Tagihan Belum Dibayar</td>
                                         <td class="text-danger">Rp <?= number_format($grand_total_sisa, 0, ',', '.') ?></td>
                                     </tr>
