@@ -1061,6 +1061,16 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['rekap_nilai.php', 'nilai_pra_ujian.php', 'nilai_ujian.php'])
             ],
             [
+                'title' => 'Keuangan',
+                'icon' => 'fas fa-money-bill-wave',
+                'submenu' => array_filter([
+                    ['title' => 'Tagihan Siswa', 'url' => '../siswa/tagihan_siswa.php', 'active' => $current_page === 'tagihan_siswa.php'],
+                    ['title' => 'Laporan Pembayaran', 'url' => '../siswa/laporan_pembayaran.php', 'active' => $current_page === 'laporan_pembayaran.php'],
+                    $is_grade_6_siswa ? ['title' => 'Biaya Ujian', 'url' => '../siswa/biaya_ujian.php', 'active' => $current_page === 'biaya_ujian.php'] : null
+                ]),
+                'active' => in_array($current_page, ['tagihan_siswa.php', 'laporan_pembayaran.php', 'biaya_ujian.php'])
+            ],
+            [
                 'title' => 'Kalender Pendidikan',
                 'icon' => 'fas fa-calendar-alt',
                 'url' => '../admin/kalender_pendidikan.php?session_type=siswa',
@@ -1084,14 +1094,6 @@ switch ($user_level) {
                     $m_item['submenu'][] = ['title' => 'Rekap Absensi Les', 'url' => '../siswa/rekap_absensi_les.php', 'active' => $current_page === 'rekap_absensi_les.php'];
                 }
             }
-
-            // Add Biaya Ujian menu for Grade 6 Students
-            array_splice($menu_items, 5, 0, [[
-                'title' => 'Biaya Ujian',
-                'icon' => 'fas fa-money-bill-wave',
-                'url' => '../siswa/biaya_ujian.php',
-                'active' => $current_page === 'biaya_ujian.php'
-            ]]);
         }
 
         $menu_items[] = [

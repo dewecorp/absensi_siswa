@@ -8,10 +8,11 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check authorization
-if (!isAuthorized(['siswa'])) {
+if (!isAuthorized(['siswa', 'admin', 'guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
+$is_student = ($_SESSION['level'] ?? '') === 'siswa';
 $page_title = 'Biaya Ujian';
 
 // Get school profile
@@ -46,8 +47,9 @@ if ($visibility_setting === false) $visibility_setting = 'closed';
 // Fetch Data
 $rencana_pengeluaran = $pdo->query("SELECT * FROM tb_pengeluaran_ujian ORDER BY kategori ASC, id_pengeluaran ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-// If visibility is closed, mask the amounts
-if ($visibility_setting == 'closed') {
+// If visibility is closed AND user is a student, mask the amounts
+// But if user is Admin/Guru/Wali, show full data
+if ($visibility_setting == 'closed' && $is_student) {
     foreach ($rencana_pengeluaran as &$row) {
         $row['volume'] = 0;
         $row['satuan'] = 0;
@@ -77,7 +79,8 @@ try {
 $total_pengeluaran = 0;
 $biaya_per_siswa = 0;
 
-if ($visibility_setting == 'open') {
+// Show totals only if open OR if not a student
+if ($visibility_setting == 'open' || !$is_student) {
     $total_pengeluaran = array_sum(array_column($rencana_pengeluaran, 'total'));
     $biaya_per_siswa = $jumlah_siswa > 0 ? $total_pengeluaran / $jumlah_siswa : 0;
 }
