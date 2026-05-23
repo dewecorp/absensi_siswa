@@ -226,7 +226,23 @@ include_once '../templates/sidebar.php';
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4 text-center mb-3 mb-md-0">
-                                <img alt="image" src="../assets/img/avatar/avatar-1.png" class="rounded-circle profile-widget-picture shadow" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #6777ef;">
+                                <div class="position-relative d-inline-block">
+                                    <?php 
+                                    $foto_profil = !empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto']) 
+                                        ? '../assets/img/siswa/' . $student['foto'] 
+                                        : null;
+                                    ?>
+                                    <?php if ($foto_profil): ?>
+                                        <img alt="image" src="<?php echo $foto_profil; ?>" class="rounded-circle profile-widget-picture shadow" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #6777ef;">
+                                    <?php else: ?>
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow" style="width: 120px; height: 120px; font-weight: 700; font-size: 3rem; border: 4px solid #fff;">
+                                            <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <button type="button" class="btn btn-primary btn-sm position-absolute" style="bottom: 5px; right: 5px; border-radius: 50%; width: 35px; height: 35px; padding: 0;" data-toggle="modal" data-target="#modalUploadFoto">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
                                 <div class="mt-2">
                                     <span class="badge badge-<?php echo $student['jenis_kelamin'] == 'L' ? 'info' : 'danger'; ?> px-3 py-2">
                                         <i class="fas fa-<?php echo $student['jenis_kelamin'] == 'L' ? 'mars' : 'venus'; ?> mr-1"></i>
@@ -535,9 +551,111 @@ include_once '../templates/sidebar.php';
     </section>
 </div>
 
+<!-- Modal Upload Foto -->
+<div class="modal fade" id="modalUploadFoto" tabindex="-1" role="dialog" aria-labelledby="modalUploadFotoLabel" aria-hidden="true">
+    <div class="modal-dialog" role="dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalUploadFotoLabel">Ubah Foto Profil</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="formUploadFoto" enctype="multipart/form-data">
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <div id="containerPreview">
+                            <?php if ($foto_profil): ?>
+                                <img id="previewFoto" src="<?php echo $foto_profil; ?>" class="rounded-circle shadow" style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #6777ef;">
+                            <?php else: ?>
+                                <div id="previewAvatar" class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow mx-auto" style="width: 150px; height: 150px; font-weight: 700; font-size: 4rem; border: 4px solid #fff;">
+                                    <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                                </div>
+                                <img id="previewFoto" src="" class="rounded-circle shadow d-none" style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #6777ef;">
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="form-group text-left">
+                        <label>Pilih Foto Baru</label>
+                        <input type="file" name="foto" id="inputFoto" class="form-control" accept="image/*" required>
+                        <small class="text-muted">Format: JPG, JPEG, PNG. Maksimal 2MB.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="btnSimpanFoto">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php
 include '../templates/footer.php';
+?>
 
+<script>
+ // Preview foto sebelum upload
+ document.getElementById('inputFoto').addEventListener('change', function(e) {
+     const file = e.target.files[0];
+     if (file) {
+         const reader = new FileReader();
+         reader.onload = function(e) {
+             const previewImg = document.getElementById('previewFoto');
+             const previewAvatar = document.getElementById('previewAvatar');
+             
+             previewImg.src = e.target.result;
+             previewImg.classList.remove('d-none');
+             
+             if (previewAvatar) {
+                 previewAvatar.classList.add('d-none');
+             }
+         }
+         reader.readAsDataURL(file);
+     }
+ });
+
+// Handle upload foto via AJAX
+document.getElementById('formUploadFoto').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const btn = document.getElementById('btnSimpanFoto');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan...';
+    
+    fetch('upload_foto.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            Swal.fire({
+                title: 'Berhasil!',
+                text: data.message,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire('Gagal!', data.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Simpan Perubahan';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Error!', 'Terjadi kesalahan sistem.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'Simpan Perubahan';
+    });
+});
+</script>
+
+<?php
 if (isset($swal_message)): ?>
 <script>
     document.addEventListener('DOMContentLoaded', function() {

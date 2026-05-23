@@ -75,6 +75,35 @@ if ($_POST['update_siswa'] ?? false) {
         global $pdo;
         
         try {
+            // Handle Foto Upload
+            $foto_sql = "";
+            $params = [$nama_siswa, $nisn, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $wali, $new_id_kelas];
+            
+            if (!empty($_FILES['foto']['name'])) {
+                $file = $_FILES['foto'];
+                $allowed = ['jpg', 'jpeg', 'png'];
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                
+                if (in_array($ext, $allowed) && $file['size'] <= 2 * 1024 * 1024) {
+                    $upload_dir = '../assets/img/siswa/';
+                    if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+                    
+                    $new_filename = 'siswa_' . $id_siswa . '_' . time() . '.' . $ext;
+                    if (move_uploaded_file($file['tmp_name'], $upload_dir . $new_filename)) {
+                        // Get old photo to delete
+                        $stmt_old = $pdo->prepare("SELECT foto FROM tb_siswa WHERE id_siswa = ?");
+                        $stmt_old->execute([$id_siswa]);
+                        $old_foto = $stmt_old->fetchColumn();
+                        if ($old_foto && file_exists($upload_dir . $old_foto)) @unlink($upload_dir . $old_foto);
+                        
+                        $foto_sql = ", foto = ?";
+                        $params[] = $new_filename;
+                    }
+                }
+            }
+            
+            $params[] = $id_siswa;
+
             // Start transaction
             $pdo->beginTransaction();
             
@@ -91,8 +120,8 @@ if ($_POST['update_siswa'] ?? false) {
             $current_kelas_name = $current_student['current_kelas_name'] ?? 'Tidak ada kelas';
             
             // Update student data
-            $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, wali = ?, id_kelas = ? WHERE id_siswa = ?");
-            $result = $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $wali, $new_id_kelas, $id_siswa]);
+            $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, wali = ?, id_kelas = ? $foto_sql WHERE id_siswa = ?");
+            $result = $stmt->execute($params);
             
             if ($result) {
                 // Get new class name for logging
@@ -486,6 +515,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </th>
                                             <th>No</th>
+                                            <th>Foto</th>
                                             <th>Nama Siswa</th>
                                             <th>NISN</th>
                                             <th>Jenis Kelamin</th>
@@ -504,6 +534,15 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </td>
                                             <td><?php echo $index + 1; ?></td>
+                                            <td>
+                                                <?php if (!empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto'])): ?>
+                                                    <img alt="image" src="../assets/img/siswa/<?php echo $student['foto']; ?>" class="rounded-circle shadow-sm" width="35" height="35" style="object-fit: cover;">
+                                                <?php else: ?>
+                                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px; font-weight: bold; font-size: 12px;">
+                                                        <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
                                             <td><?php echo htmlspecialchars(htmlspecialchars_decode($student['nama_siswa'], ENT_QUOTES)); ?></td>
                                             <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                             <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
@@ -526,10 +565,32 @@ include '../templates/sidebar.php';
                                                             <span aria-hidden="true">&times;</span>
                                                         </button>
                                                     </div>
-                                                    <form method="POST" action="">
+                                                    <form method="POST" action="" enctype="multipart/form-data">
                                                         <div class="modal-body">
                                                             <input type="hidden" name="id_siswa" value="<?php echo $student['id_siswa']; ?>">
                                                             <input type="hidden" name="update_siswa" value="1">
+                                                            <div class="row">
+                                                                <div class="form-group col-12 text-center">
+                                                                    <div class="position-relative d-inline-block">
+                                                                        <?php 
+                                                                        $foto_path = !empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto']) 
+                                                                            ? '../assets/img/siswa/' . $student['foto'] 
+                                                                            : null;
+                                                                        ?>
+                                                                        <?php if ($foto_path): ?>
+                                                                            <img src="<?php echo $foto_path; ?>" class="rounded-circle shadow-sm mb-2" width="100" height="100" style="object-fit: cover; border: 3px solid #6777ef;">
+                                                                        <?php else: ?>
+                                                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm mb-2 mx-auto" style="width: 100px; height: 100px; font-weight: bold; font-size: 2.5rem; border: 3px solid #fff;">
+                                                                                <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                    <div class="custom-file mt-2">
+                                                                        <input type="file" class="custom-file-input" name="foto" id="foto<?php echo $student['id_siswa']; ?>" accept="image/*">
+                                                                        <label class="custom-file-label" for="foto<?php echo $student['id_siswa']; ?>">Ubah Foto</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                             <div class="row">
                                                                 <div class="form-group col-6">
                                                                     <label>Nama Siswa</label>
