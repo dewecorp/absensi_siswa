@@ -217,9 +217,13 @@ require_once '../templates/sidebar.php';
 
 <div class="main-content">
     <section class="section">
-        <div class="promotion-header mb-4">
-            <h5><i class="fas fa-arrow-up"></i> Kenaikan Kelas</h5>
-            <p>Menu ini digunakan untuk menaikkan siswa dari tingkatan sebelumnya.</p>
+        <div class="section-header">
+            <h1>Kenaikan Kelas</h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
+                <div class="breadcrumb-item"><a href="#">Master Data</a></div>
+                <div class="breadcrumb-item">Kenaikan Kelas</div>
+            </div>
         </div>
 
         <div class="row">

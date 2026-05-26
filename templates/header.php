@@ -193,11 +193,20 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
         <div class="main-wrapper">
             <!-- Mobile Header -->
             <div class="mobile-header d-lg-none">
-                <div class="d-flex align-items-center">
-                    <img src="../assets/img/logo_1768301957.png" alt="logo" class="mr-3" style="height: 45px;">
+                <div class="d-flex align-items-center w-100">
+                    <?php 
+                    $current_page = basename($_SERVER['PHP_SELF']);
+                    $is_dashboard = ($current_page === 'dashboard.php' || $current_page === 'simple_dashboard.php');
+                    if (!$is_dashboard): 
+                    ?>
+                        <a href="javascript:history.back()" class="mr-3 text-dark d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background: #f8f9fa; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-decoration: none;">
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
+                    <?php endif; ?>
+                    <img src="../assets/img/logo_1768301957.png" alt="logo" class="mr-2" style="height: 40px;">
                     <div style="line-height: 1.2;">
-                        <h6 class="mb-0 text-success font-weight-bold" style="font-size: 1.1rem;">Sistem Informasi Madrasah</h6>
-                        <small class="text-dark font-weight-bold" style="font-size: 0.85rem;"><?php echo isset($school_profile['nama_sekolah']) ? $school_profile['nama_sekolah'] : 'MI Sultan Fattah Sukosono'; ?></small>
+                        <h6 class="mb-0 text-success font-weight-bold" style="font-size: 1rem;">Sistem Informasi Madrasah</h6>
+                        <small class="text-dark font-weight-bold" style="font-size: 0.8rem;"><?php echo isset($school_profile['nama_sekolah']) ? $school_profile['nama_sekolah'] : 'MI Sultan Fattah Sukosono'; ?></small>
                     </div>
                 </div>
             </div>
