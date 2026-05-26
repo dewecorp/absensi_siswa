@@ -764,15 +764,9 @@ require_once '../templates/sidebar.php';
             <h1><?= htmlspecialchars($page_title) ?></h1>
 
             <div class="section-header-breadcrumb">
-
                 <div class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></div>
-
                 <div class="breadcrumb-item"><a href="#">Master Data</a></div>
-
                 <div class="breadcrumb-item"><?= htmlspecialchars($page_title) ?></div>
-
-                <div class="breadcrumb-item">Tahun Ajaran <?= htmlspecialchars($tahun_ajaran_filter) ?></div>
-
             </div>
 
         </div>
