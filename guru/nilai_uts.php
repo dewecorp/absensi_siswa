@@ -235,6 +235,7 @@ require_once '../templates/sidebar.php';
                     <!-- Filter Form -->
                     <form method="GET" action="" class="mb-4">
                         <div class="row">
+                            <?php if (count($classes) > 1): ?>
                             <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Kelas</label>
@@ -248,6 +249,9 @@ require_once '../templates/sidebar.php';
                                     </select>
                                 </div>
                             </div>
+                            <?php else: ?>
+                                <input type="hidden" name="kelas" value="<?= $selected_class_id ?>">
+                            <?php endif; ?>
                             <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Mata Pelajaran</label>

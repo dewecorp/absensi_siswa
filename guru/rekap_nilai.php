@@ -54,6 +54,12 @@ if ($is_admin_view) {
 
 // Parameters
 $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : null;
+
+// Auto-select class if teacher only has one class
+if (!$is_admin_view && count($classes) === 1 && !$selected_class_id) {
+    $selected_class_id = $classes[0]['id_kelas'];
+}
+
 $selected_jenis = isset($_GET['jenis']) ? $_GET['jenis'] : null;
 $selected_tipe = isset($_GET['tipe']) ? $_GET['tipe'] : 'nilai_jadi'; // nilai_asli or nilai_jadi
 
@@ -448,6 +454,7 @@ require_once '../templates/sidebar.php';
                 <div class="card-body">
                     <form method="GET" action="" class="mb-4">
                         <div class="row">
+                            <?php if (count($classes) > 1): ?>
                             <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Kelas</label>
@@ -461,6 +468,9 @@ require_once '../templates/sidebar.php';
                                     </select>
                                 </div>
                             </div>
+                            <?php else: ?>
+                                <input type="hidden" name="kelas" value="<?= $classes[0]['id_kelas'] ?? '' ?>">
+                            <?php endif; ?>
                             <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Jenis Penilaian</label>

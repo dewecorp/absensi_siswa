@@ -272,9 +272,10 @@ require_once '../templates/sidebar.php';
             <div class="card">
                 <div class="card-body">
                     <div class="row mb-4">
+                        <?php if (count($classes) > 1): ?>
                         <div class="col-md-4">
-                            <label>Pilih Kelas</label>
-                            <select class="form-control select2" id="filter_kelas" <?= count($classes) == 1 ? 'disabled' : '' ?>>
+                            <label>Kelas</label>
+                            <select class="form-control select2" id="filter_kelas">
                                 <option value="">-- Pilih Kelas --</option>
                                 <?php foreach ($classes as $kelas): ?>
                                     <option value="<?= $kelas['id_kelas'] ?>" <?= $selected_class_id == $kelas['id_kelas'] ? 'selected' : '' ?>>
@@ -283,6 +284,9 @@ require_once '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        <?php else: ?>
+                            <input type="hidden" id="filter_kelas" value="<?= $classes[0]['id_kelas'] ?? '' ?>">
+                        <?php endif; ?>
                         <div class="col-md-4">
                             <label>Pilih Mata Pelajaran</label>
                             <select class="form-control select2" id="filter_mapel">

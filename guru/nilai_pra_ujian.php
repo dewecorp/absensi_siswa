@@ -249,6 +249,23 @@ require_once '../templates/sidebar.php';
                     <!-- Filter Form -->
                     <form method="GET" action="" class="mb-4">
                         <div class="row">
+                            <?php if (count($classes) > 1): ?>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Kelas</label>
+                                    <select name="kelas" class="form-control" onchange="this.form.submit()">
+                                        <option value="">Pilih Kelas</option>
+                                        <?php foreach ($classes as $cls): ?>
+                                            <option value="<?= $cls['id_kelas'] ?>" <?= $selected_class_id == $cls['id_kelas'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($cls['nama_kelas']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <?php else: ?>
+                                <input type="hidden" name="kelas" value="<?= $selected_class_id ?>">
+                            <?php endif; ?>
                             <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Mata Pelajaran</label>
@@ -263,8 +280,6 @@ require_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                        <!-- Hidden input for kelas -->
-                        <input type="hidden" name="kelas" value="<?= $selected_class_id ?>">
                     </form>
 
                     <?php if ($selected_class && $selected_mapel): ?>
