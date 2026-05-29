@@ -269,48 +269,67 @@ if (!$selected_class_id || !$selected_jenis) {
         $total_possible_mapel_kelas = $total_academic_subjects * count($accessible_class_ids);
         $total_possible_ujian_kelas = $total_ujian_subjects * count($accessible_class_ids);
 
-        // 2. Get filled counts for Semester types
+        // 2. Get filled counts for Semester types (Fetch for all semesters in current TA)
         $stmt = $pdo->prepare("
-            SELECT jenis_semester, COUNT(DISTINCT id_mapel, id_kelas) as filled 
+            SELECT jenis_semester, semester, COUNT(DISTINCT id_mapel, id_kelas) as filled 
             FROM tb_nilai_semester 
-            WHERE id_kelas IN ($placeholders) AND tahun_ajaran = ? AND semester = ?
+            WHERE id_kelas IN ($placeholders) AND tahun_ajaran = ?
             AND (COALESCE(nilai_asli, 0) > 0 OR COALESCE(nilai_remidi, 0) > 0 OR COALESCE(nilai_jadi, 0) > 0)
-            GROUP BY jenis_semester
+            GROUP BY jenis_semester, semester
         ");
-        $params = array_merge($accessible_class_ids, [$tahun_ajaran, $semester_aktif]);
-        $stmt->execute($params);
-        $semester_filled = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        $params_ta = array_merge($accessible_class_ids, [$tahun_ajaran]);
+        $stmt->execute($params_ta);
+        $semester_data_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $semester_filled = [];
+        foreach ($semester_data_raw as $row) {
+            $semester_filled[$row['jenis_semester']][$row['semester']] = $row['filled'];
+        }
 
-        // 3. Get filled counts for Harian
+        // 3. Get filled counts for Harian (Current Semester)
         $stmt = $pdo->prepare("
             SELECT COUNT(DISTINCT id_mapel, id_kelas) 
             FROM tb_nilai_harian_header 
             WHERE id_kelas IN ($placeholders) AND tahun_ajaran = ? AND semester = ?
         ");
-        $stmt->execute($params);
+        $params_cur = array_merge($accessible_class_ids, [$tahun_ajaran, $semester_aktif]);
+        $stmt->execute($params_cur);
         $harian_filled = (int)$stmt->fetchColumn();
 
-        // 4. Get filled counts for Kokurikuler
+        // 4. Get filled counts for Kokurikuler (Current Semester)
         $stmt = $pdo->prepare("
             SELECT COUNT(DISTINCT id_mapel, id_kelas) 
             FROM tb_nilai_kokurikuler_header 
             WHERE id_kelas IN ($placeholders) AND tahun_ajaran = ? AND semester = ?
         ");
-        $stmt->execute($params);
+        $stmt->execute($params_cur);
         $kokurikuler_filled = (int)$stmt->fetchColumn();
 
         // Map to display types
         $display_types = [
             'Harian' => ['label' => 'Nilai Harian', 'filled' => $harian_filled, 'total' => $total_possible_mapel_kelas, 'color' => 'bg-info'],
-            'PTS' => ['label' => 'UTS/PTS', 'filled' => $semester_filled['UTS'] ?? 0, 'total' => $total_possible_mapel_kelas, 'color' => 'bg-primary'],
-            ($semester_aktif == 1 ? 'PAS' : 'PAT') => [
-                'label' => ($semester_aktif == 1 ? 'UAS/PAS' : 'UKK/PAT'), 
-                'filled' => ($semester_aktif == 1 ? ($semester_filled['UAS'] ?? 0) : ($semester_filled['PAT'] ?? 0)), 
+            'PTS' => ['label' => 'UTS/PTS', 'filled' => $semester_filled['UTS'][$semester_aktif] ?? 0, 'total' => $total_possible_mapel_kelas, 'color' => 'bg-primary'],
+        ];
+
+        // Always show PAS if it has data or if we are in Semester 2 (to see progress of previous semester)
+        $display_types['PAS'] = [
+            'label' => 'UAS/PAS', 
+            'filled' => $semester_filled['UAS']['Semester 1'] ?? 0, 
+            'total' => $total_possible_mapel_kelas, 
+            'color' => 'bg-success'
+        ];
+
+        // Show PAT only if we are in Semester 2
+        if ($semester_aktif == 'Semester 2' || !empty($semester_filled['PAT']['Semester 2'])) {
+            $display_types['PAT'] = [
+                'label' => 'UKK/PAT', 
+                'filled' => $semester_filled['PAT']['Semester 2'] ?? 0, 
                 'total' => $total_possible_mapel_kelas, 
                 'color' => 'bg-success'
-            ],
-            'Kokurikuler' => ['label' => 'Kokurikuler', 'filled' => $kokurikuler_filled, 'total' => $total_possible_mapel_kelas, 'color' => 'bg-warning'],
-        ];
+            ];
+        }
+
+        $display_types['Kokurikuler'] = ['label' => 'Kokurikuler', 'filled' => $kokurikuler_filled, 'total' => $total_possible_mapel_kelas, 'color' => 'bg-warning'];
 
         // Add Grade 6 specific types if any accessible class is Grade 6
         $grade_6_class_ids = [];
@@ -323,11 +342,11 @@ if (!$selected_class_id || !$selected_jenis) {
         if (!empty($grade_6_class_ids)) {
             $total_possible_ujian_6 = $total_ujian_subjects * count($grade_6_class_ids);
             
-            $display_types['Pra Ujian'] = ['label' => 'Pra Ujian', 'filled' => $semester_filled['Pra Ujian'] ?? 0, 'total' => $total_possible_ujian_6, 'color' => 'bg-secondary'];
-            $display_types['Ujian'] = ['label' => 'Ujian Madrasah', 'filled' => $semester_filled['Ujian'] ?? 0, 'total' => $total_possible_ujian_6, 'color' => 'bg-dark'];
+            $display_types['Pra Ujian'] = ['label' => 'Pra Ujian', 'filled' => $semester_filled['Pra Ujian'][$semester_aktif] ?? 0, 'total' => $total_possible_ujian_6, 'color' => 'bg-secondary'];
+            $display_types['Ujian'] = ['label' => 'Ujian Madrasah', 'filled' => $semester_filled['Ujian'][$semester_aktif] ?? 0, 'total' => $total_possible_ujian_6, 'color' => 'bg-dark'];
             
             // Ujian Praktik is special - total is the same as filled for summary, as it only shows what's filled
-            $filled_praktik = $semester_filled['Ujian Praktik'] ?? 0;
+            $filled_praktik = $semester_filled['Ujian Praktik'][$semester_aktif] ?? 0;
             $display_types['Ujian Praktik'] = ['label' => 'Ujian Praktik', 'filled' => $filled_praktik, 'total' => $filled_praktik, 'color' => 'bg-danger'];
         }
 
