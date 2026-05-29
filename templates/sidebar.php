@@ -490,9 +490,10 @@ switch ($user_level) {
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=tata_usaha', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'kalender_pendidikan.php'],
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'siswa_baru.php'],
-                    ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_peserta_ujian.php']
+                    ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_peserta_ujian.php'],
+                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_nilai_ujian.php']
                 ],
-                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php'])
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php', 'data_nilai_ujian.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -540,10 +541,9 @@ switch ($user_level) {
                     ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
                     ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $nilai_ujian_biasa_menu_active],
                     ['title' => 'Nilai Ujian Praktik', 'url' => '../admin/nilai_ujian.php?session_type=tata_usaha&nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active],
-                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
                 ],
-                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'data_nilai_ujian.php', 'rekap_nilai.php'])
+                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
             ],
             [
                 'title' => 'Remidial',
