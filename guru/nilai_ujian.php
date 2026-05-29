@@ -64,11 +64,13 @@ if ($is_admin_view) {
         FROM tb_mata_pelajaran mp
         JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
         WHERE jp.guru_id = ?
+        AND mp.jenis_mapel = 'Akademik'
         AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
         AND mp.nama_mapel NOT LIKE '%Upacara%'
         AND mp.nama_mapel NOT LIKE '%Istirahat%'
         AND mp.nama_mapel NOT LIKE '%Kepramukaan%'
         AND mp.nama_mapel NOT LIKE '%Ekstrakurikuler%'
+        AND mp.nama_mapel NOT LIKE '%Ramadhanku%'
         ORDER BY mp.nama_mapel ASC
     ");
     $stmt->execute([$id_guru]);
