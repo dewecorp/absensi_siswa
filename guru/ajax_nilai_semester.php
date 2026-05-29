@@ -126,49 +126,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $maxVal = 99;
         }
 
-        $compute_nilai_jadi = function(float $tempJadi, float $floorVal, float $maxValLocal, float $inputMax, bool $useUnderFloorBonus) {
+        $compute_nilai_jadi = function(float $tempJadi, float $floorVal, float $maxValLocal, float $inputMin, float $inputMax) {
             if ($tempJadi <= 0) {
                 return 0.0;
             }
-            $nilaiJadi = $tempJadi;
-            $range = $maxValLocal - $floorVal;
 
-            if ($floorVal > 0 && $tempJadi < $floorVal) {
-                if ($useUnderFloorBonus && $range > 0) {
-                    $proximity = $tempJadi / $floorVal;
-                    if ($proximity < 0) $proximity = 0;
-                    if ($proximity > 1) $proximity = 1;
-                    $bonusFactor = 0.15;
-                    $q = 2;
-                    $bonus = $range * $bonusFactor * pow($proximity, $q);
-                    $nilaiJadi = $floorVal + $bonus;
-                } else {
-                    $nilaiJadi = $floorVal;
-                }
+            $maxDesired = $maxValLocal;
+            $minDesired = $floorVal;
+            $maxOriginal = $inputMax;
+            $minOriginal = $inputMin;
+
+            if ($maxOriginal > $minOriginal) {
+                // Formula: Nilai = P * Original + Q
+                // P = (maxDesired - minDesired) / (maxOriginal - minOriginal)
+                // Q = maxDesired - P * maxOriginal
+                $P = ($maxDesired - $minDesired) / ($maxOriginal - $minOriginal);
+                $Q = $maxDesired - ($P * $maxOriginal);
+                $nilaiJadi = ($P * $tempJadi) + $Q;
             } else {
-                $inputRange = $inputMax - $floorVal;
-                if ($range > 0 && $inputRange > 0) {
-                    $ratio = ($tempJadi - $floorVal) / $inputRange;
-                    if ($ratio < 0) $ratio = 0;
-                    if ($ratio > 1) $ratio = 1;
-                    $ratioBoosted = 1 - pow(1 - $ratio, 2);
-                    $curve = $floorVal + ($range * $ratioBoosted);
-                    $curve = round($curve);
-                    $nilaiJadi = $curve < $tempJadi ? $tempJadi : $curve;
-                }
+                // Jika semua nilai asli sama, petakan ke maxDesired jika di atas atau sama dengan floor
+                $nilaiJadi = ($tempJadi >= $minDesired) ? $maxDesired : $minDesired;
             }
+
+            // Clamp results
             if ($nilaiJadi > $maxValLocal) {
                 $nilaiJadi = $maxValLocal;
             }
+            if ($nilaiJadi < $floorVal && $tempJadi >= $floorVal) {
+                $nilaiJadi = $floorVal;
+            }
+
             $nilaiJadi = round($nilaiJadi);
             if ($nilaiJadi > 99) $nilaiJadi = 99;
             return (float)$nilaiJadi;
         };
 
-        $temp_jadi = max($nilai_asli, $nilai_remidi);
-        $inputMaxDefault = 100.0;
-        $useUnderFloorBonus = ($max_target !== null && (float)$max_target < 99.0);
-        $nilai_jadi = $compute_nilai_jadi((float)$temp_jadi, (float)$floor, (float)$maxVal, $inputMaxDefault, $useUnderFloorBonus);
+        // Fetch observed min/max for the class/subject/semester to ensure fair curving
+        $stmtObserved = $pdo->prepare("
+            SELECT nilai_asli, nilai_remidi 
+            FROM tb_nilai_semester 
+            WHERE id_mapel = ? AND id_kelas = ? AND jenis_semester = ? AND tahun_ajaran = ? AND semester = ?
+        ");
+        $stmtObserved->execute([$id_mapel, $id_kelas, $jenis_semester, $tahun_ajaran, $semester_aktif]);
+        $all_grades = $stmtObserved->fetchAll(PDO::FETCH_ASSOC);
+        
+        $observedMax = 0.0;
+        $observedMin = 100.0;
+        $hasScores = false;
+
+        // Combine current input with existing grades for accurate min/max
+        $temp_jadi_current = max($nilai_asli, $nilai_remidi);
+        $temp_scores = [$temp_jadi_current];
+        foreach ($all_grades as $ag) {
+            $ts = max((float)$ag['nilai_asli'], (float)$ag['nilai_remidi']);
+            if ($ts > 0) $temp_scores[] = $ts;
+        }
+
+        foreach ($temp_scores as $ts) {
+            if ($ts > 0) {
+                if ($ts > $observedMax) $observedMax = $ts;
+                if ($ts < $observedMin) $observedMin = $ts;
+                $hasScores = true;
+            }
+        }
+
+        $inputMin = $hasScores ? $observedMin : 0.0;
+        $inputMax = $hasScores ? ($observedMax > 0 ? $observedMax : 100.0) : 100.0;
+        
+        // Use default if only one score or all same to avoid zero range if not recalc_all
+        if ($inputMax <= $inputMin) {
+            $inputMin = 0.0;
+            $inputMax = 100.0;
+        }
+
+        $nilai_jadi = $compute_nilai_jadi((float)$temp_jadi_current, (float)$floor, (float)$maxVal, (float)$inputMin, (float)$inputMax);
 
         try {
             $pdo->beginTransaction();
@@ -222,6 +253,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 $observedMax = 0.0;
+                $observedMin = 100.0;
+                $hasScores = false;
+
                 foreach ($rows as $r) {
                     $a = (float)($r['nilai_asli'] ?? 0);
                     $rm = (float)($r['nilai_remidi'] ?? 0);
@@ -229,11 +263,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $rm = 0.0;
                     }
                     $t = max($a, $rm);
-                    if ($t > $observedMax) {
-                        $observedMax = $t;
+                    if ($t > 0) {
+                        if ($t > $observedMax) $observedMax = $t;
+                        if ($t < $observedMin) $observedMin = $t;
+                        $hasScores = true;
                     }
                 }
-                $inputMax = ($max_target !== null) ? ($observedMax > 0 ? $observedMax : 100.0) : 100.0;
+                
+                $inputMinRecalc = $hasScores ? $observedMin : 0.0;
+                $inputMaxRecalc = ($max_target !== null) ? ($observedMax > 0 ? $observedMax : 100.0) : 100.0;
+                
+                if ($inputMaxRecalc <= $inputMinRecalc) {
+                    $inputMinRecalc = 0.0;
+                    $inputMaxRecalc = 100.0;
+                }
 
                 $stmtUpd = $pdo->prepare("UPDATE tb_nilai_semester SET nilai_jadi = ? WHERE id_nilai = ?");
                 foreach ($rows as $r) {
@@ -243,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $rm = 0.0;
                     }
                     $t = max($a, $rm);
-                    $nj = $compute_nilai_jadi((float)$t, (float)$floor, (float)$maxVal, (float)$inputMax, $useUnderFloorBonus);
+                    $nj = $compute_nilai_jadi((float)$t, (float)$floor, (float)$maxVal, (float)$inputMinRecalc, (float)$inputMaxRecalc);
                     $stmtUpd->execute([$nj > 0 ? $nj : 0, $r['id_nilai']]);
                     if ((string)$r['id_siswa'] === (string)$id_siswa) {
                         $nilai_jadi = $nj;
@@ -385,41 +428,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $maxVal = 99;
         }
 
-        $useUnderFloorBonus = ($max_target !== null && (float)$max_target < 99.0);
-        $compute_nilai_jadi = function(float $tempJadi, float $floorVal, float $maxValLocal, float $inputMax, bool $useUnderFloorBonusLocal) {
+        $compute_nilai_jadi = function(float $tempJadi, float $floorVal, float $maxValLocal, float $inputMin, float $inputMax) {
             if ($tempJadi <= 0) {
                 return 0.0;
             }
-            $nilaiJadi = $tempJadi;
-            $range = $maxValLocal - $floorVal;
 
-            if ($floorVal > 0 && $tempJadi < $floorVal) {
-                if ($useUnderFloorBonusLocal && $range > 0) {
-                    $proximity = $tempJadi / $floorVal;
-                    if ($proximity < 0) $proximity = 0;
-                    if ($proximity > 1) $proximity = 1;
-                    $bonusFactor = 0.15;
-                    $q = 2;
-                    $bonus = $range * $bonusFactor * pow($proximity, $q);
-                    $nilaiJadi = $floorVal + $bonus;
-                } else {
-                    $nilaiJadi = $floorVal;
-                }
+            $maxDesired = $maxValLocal;
+            $minDesired = $floorVal;
+            $maxOriginal = $inputMax;
+            $minOriginal = $inputMin;
+
+            if ($maxOriginal > $minOriginal) {
+                // Formula: Nilai = P * Original + Q
+                // P = (maxDesired - minDesired) / (maxOriginal - minOriginal)
+                // Q = maxDesired - P * maxOriginal
+                $P = ($maxDesired - $minDesired) / ($maxOriginal - $minOriginal);
+                $Q = $maxDesired - ($P * $maxOriginal);
+                $nilaiJadi = ($P * $tempJadi) + $Q;
             } else {
-                $inputRange = $inputMax - $floorVal;
-                if ($range > 0 && $inputRange > 0) {
-                    $ratio = ($tempJadi - $floorVal) / $inputRange;
-                    if ($ratio < 0) $ratio = 0;
-                    if ($ratio > 1) $ratio = 1;
-                    $ratioBoosted = 1 - pow(1 - $ratio, 2);
-                    $curve = $floorVal + ($range * $ratioBoosted);
-                    $curve = round($curve);
-                    $nilaiJadi = $curve < $tempJadi ? $tempJadi : $curve;
-                }
+                // Jika semua nilai asli sama, petakan ke maxDesired jika di atas atau sama dengan floor
+                $nilaiJadi = ($tempJadi >= $minDesired) ? $maxDesired : $minDesired;
             }
+
+            // Clamp results
             if ($nilaiJadi > $maxValLocal) {
                 $nilaiJadi = $maxValLocal;
             }
+            if ($nilaiJadi < $floorVal && $tempJadi >= $floorVal) {
+                $nilaiJadi = $floorVal;
+            }
+
             $nilaiJadi = round($nilaiJadi);
             if ($nilaiJadi > 99) $nilaiJadi = 99;
             return (float)$nilaiJadi;
@@ -428,6 +466,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $normalizedGrades = [];
         $studentIds = [];
         $observedMax = 0.0;
+        $observedMin = 100.0;
+        $hasScores = false;
+
         foreach ($grades as $g) {
             if (!isset($g['id_siswa'])) {
                 echo json_encode(['status' => 'error', 'message' => 'Data siswa tidak lengkap']);
@@ -445,9 +486,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
             if ($nilai_remidi < 0) $nilai_remidi = 0.0;
             $temp = max($nilai_asli, $nilai_remidi);
-            if ($temp > $observedMax) {
-                $observedMax = $temp;
+            
+            if ($temp > 0) {
+                if ($temp > $observedMax) $observedMax = $temp;
+                if ($temp < $observedMin) $observedMin = $temp;
+                $hasScores = true;
             }
+
             $normalizedGrades[] = [
                 'id_siswa' => $id_siswa,
                 'nilai_asli' => $nilai_asli,
@@ -457,9 +502,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $studentIds[] = (int)$id_siswa;
         }
 
-        $inputMax = 100.0;
-        if ($max_target !== null) {
-            $inputMax = $observedMax > 0 ? $observedMax : 100.0;
+        $inputMin = $hasScores ? $observedMin : 0.0;
+        $inputMax = $hasScores ? ($observedMax > 0 ? $observedMax : 100.0) : 100.0;
+
+        // Use default if only one score or all same to avoid zero range
+        if ($inputMax <= $inputMin) {
+            $inputMin = 0.0;
+            $inputMax = 100.0;
         }
 
         $existingMap = [];
@@ -504,14 +553,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $resultGrades = [];
             foreach ($normalizedGrades as $g) {
                 $id_siswa = $g['id_siswa'];
-                $nilai_asli = $g['nilai_asli'];
-                $nilai_remidi = $g['nilai_remidi'];
-                $temp = $g['temp'];
+            $nilai_asli = $g['nilai_asli'];
+            $nilai_remidi = $g['nilai_remidi'];
+            $temp = $g['temp'];
 
-                $nilai_jadi = $compute_nilai_jadi((float)$temp, (float)$floor, (float)$maxVal, (float)$inputMax, $useUnderFloorBonus);
-                if ($nilai_jadi < 0) {
-                    $nilai_jadi = 0;
-                }
+                $nilai_jadi = $compute_nilai_jadi((float)$temp, (float)$floor, (float)$maxVal, (float)$inputMin, (float)$inputMax);
+            if ($nilai_jadi < 0) {
+                $nilai_jadi = 0;
+            }
 
                 $existingId = $existingMap[(string)$id_siswa] ?? null;
                 if ($existingId) {

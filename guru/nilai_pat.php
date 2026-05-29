@@ -420,6 +420,42 @@ $(document).ready(function() {
 
     $('#btn-save-all').on('click', function() {
         if (!canEdit) return;
+
+        // Validation for Min/Max Target
+        var minTarget = $('#nilai_min_target').val();
+        var maxTarget = $('#nilai_max_target').val();
+
+        if (!minTarget || !maxTarget) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validasi Gagal',
+                text: 'Silakan masukkan nilai Minimal (Min) dan Maksimal (Max) yang diinginkan terlebih dahulu.',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
+        var kktp = <?= json_encode((float)$kktp) ?>;
+        if (parseFloat(minTarget) < kktp) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Nilai Tidak Valid',
+                text: 'Nilai Minimal (Min) tidak boleh di bawah KKTP/KKM (' + kktp + ').',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
+        if (parseFloat(maxTarget) > 99) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Nilai Tidak Valid',
+                text: 'Nilai Maksimal (Max) tidak boleh lebih dari 99.',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
         if (inFlight) {
             try { inFlight.abort(); } catch (e) {}
         }

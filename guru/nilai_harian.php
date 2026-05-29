@@ -542,6 +542,42 @@ $(document).ready(function() {
     // Add Column
     $('#addColumnForm').submit(function(e) {
         e.preventDefault();
+
+        // Validation for Min/Max Target
+        var minTarget = $(this).find('input[name="nilai_min_target"]').val();
+        var maxTarget = $(this).find('input[name="nilai_max_target"]').val();
+
+        if (!minTarget || !maxTarget) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validasi Gagal',
+                text: 'Silakan masukkan nilai Terendah (Min) dan Tertinggi (Max) yang diinginkan terlebih dahulu.',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
+        var kktp = <?= json_encode(isset($selected_mapel['kktp']) ? (float)$selected_mapel['kktp'] : 0) ?>;
+        if (parseFloat(minTarget) < kktp) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Nilai Tidak Valid',
+                text: 'Nilai Minimal (Min) tidak boleh di bawah KKTP/KKM (' + kktp + ').',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
+        if (parseFloat(maxTarget) > 99) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Nilai Tidak Valid',
+                text: 'Nilai Maksimal (Max) tidak boleh lebih dari 99.',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
         $.ajax({
             url: 'ajax_nilai_harian.php',
             type: 'POST',
@@ -631,6 +667,38 @@ $(document).ready(function() {
         var namaVal = headerCell.find('.nama-input').val();
         var minTargetRaw = headerCell.find('.range-min').val();
         var maxTargetRaw = headerCell.find('.range-max').val();
+
+        if (!minTargetRaw || !maxTargetRaw) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validasi Gagal',
+                text: 'Silakan masukkan nilai Terendah (Min) dan Tertinggi (Max) yang diinginkan terlebih dahulu.',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
+        var kktp = <?= json_encode(isset($selected_mapel['kktp']) ? (float)$selected_mapel['kktp'] : 0) ?>;
+        if (parseFloat(minTargetRaw) < kktp) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Nilai Tidak Valid',
+                text: 'Nilai Minimal (Min) tidak boleh di bawah KKTP/KKM (' + kktp + ').',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
+        if (parseFloat(maxTargetRaw) > 99) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Nilai Tidak Valid',
+                text: 'Nilai Maksimal (Max) tidak boleh lebih dari 99.',
+                confirmButtonColor: '#6777ef'
+            });
+            return;
+        }
+
         var minTarget = minTargetRaw !== '' ? parseFloat(minTargetRaw) : null;
         var maxTarget = maxTargetRaw !== '' ? parseFloat(maxTargetRaw) : null;
 

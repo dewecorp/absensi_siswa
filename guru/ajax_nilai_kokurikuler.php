@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         return (float)$v;
     };
 
-    $compute_nilai_jadi = function($nilai, float $kktp, ?float $minTarget, ?float $maxTarget, float $inputMax) {
+    $compute_nilai_jadi = function($nilai, float $kktp, ?float $minTarget, ?float $maxTarget, float $inputMin, float $inputMax) {
         if ($nilai === null) {
             return null;
         }
@@ -68,51 +68,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($maxVal > 99) {
             $maxVal = 99;
         }
-        if ($inputMax <= 0) {
-            $inputMax = 100;
+
+        $maxDesired = $maxVal;
+        $minDesired = $floor;
+        $maxOriginal = $inputMax;
+        $minOriginal = $inputMin;
+
+        if ($maxOriginal > $minOriginal) {
+            // Formula: Nilai = P * Original + Q
+            // P = (maxDesired - minDesired) / (maxOriginal - minOriginal)
+            // Q = maxDesired - P * maxOriginal
+            $P = ($maxDesired - $minDesired) / ($maxOriginal - $minOriginal);
+            $Q = $maxDesired - ($P * $maxOriginal);
+            $nilaiJadi = ($P * $n) + $Q;
+        } else {
+            $nilaiJadi = ($n >= $minDesired) ? $maxDesired : $minDesired;
         }
 
-        $useUnderFloorBonus = ($maxTarget !== null && (float)$maxTarget < 99.0);
-        $nilaiJadi = $n;
-        if ($floor > 0) {
-            $range = $maxVal - $floor;
-            if ($n < $floor) {
-                if ($useUnderFloorBonus && $range > 0) {
-                    $proximity = $n / $floor;
-                    if ($proximity < 0) $proximity = 0;
-                    if ($proximity > 1) $proximity = 1;
-                    $bonusFactor = 0.15;
-                    $q = 2;
-                    $bonus = $range * $bonusFactor * pow($proximity, $q);
-                    $nilaiJadi = $floor + $bonus;
-                } else {
-                    $nilaiJadi = $floor;
-                }
-            } else {
-                $inputRange = $inputMax - $floor;
-                if ($range > 0 && $inputRange > 0) {
-                    $ratio = ($n - $floor) / $inputRange;
-                    if ($ratio < 0) $ratio = 0;
-                    if ($ratio > 1) $ratio = 1;
-                    $ratioBoosted = 1 - pow(1 - $ratio, 2);
-                    $nilaiCurve = $floor + ($range * $ratioBoosted);
-                    $nilaiCurve = round($nilaiCurve);
-                    $nilaiJadi = $nilaiCurve < $n ? $n : $nilaiCurve;
-                } else {
-                    $nilaiJadi = $floor;
-                }
-            }
-            if ($nilaiJadi > $maxVal) {
-                $nilaiJadi = $maxVal;
-            }
-            $nilaiJadi = round($nilaiJadi);
-            if ($nilaiJadi > 99) $nilaiJadi = 99;
-        } else {
-            $nilaiJadi = round($nilaiJadi);
-            if ($nilaiJadi > 99) {
-                $nilaiJadi = 99;
-            }
+        // Clamp
+        if ($nilaiJadi > $maxVal) {
+            $nilaiJadi = $maxVal;
         }
+        if ($nilaiJadi < $floor && $n >= $floor) {
+            $nilaiJadi = $floor;
+        }
+
+        $nilaiJadi = round($nilaiJadi);
+        if ($nilaiJadi > 99) $nilaiJadi = 99;
+        
         return $nilaiJadi;
     };
 
@@ -230,20 +213,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             $updatedGrades = [];
             $observedMax = 0.0;
-            if ($max_target !== null) {
-                foreach ($grades as $g) {
-                    if (isset($g['nilai']) && $g['nilai'] !== '') {
-                        $v = $normalize_float_or_null($g['nilai']);
-                        if ($v !== null && $v > $observedMax) {
-                            $observedMax = $v;
-                        }
+            $observedMin = 100.0;
+            $hasScores = false;
+
+            foreach ($grades as $g) {
+                if (isset($g['nilai']) && $g['nilai'] !== '') {
+                    $v = $normalize_float_or_null($g['nilai']);
+                    if ($v !== null && $v > 0) {
+                        if ($v > $observedMax) $observedMax = $v;
+                        if ($v < $observedMin) $observedMin = $v;
+                        $hasScores = true;
                     }
                 }
-                if ($observedMax <= 0) {
-                    $observedMax = 100.0;
-                }
             }
-            $inputMax = $max_target !== null ? $observedMax : 100.0;
+
+            $inputMin = $hasScores ? $observedMin : 0.0;
+            $inputMax = $hasScores ? ($observedMax > 0 ? $observedMax : 100.0) : 100.0;
+
+            if ($inputMax <= $inputMin) {
+                $inputMin = 0.0;
+                $inputMax = 100.0;
+            }
             
             foreach ($grades as $g) {
                 $nilai = isset($g['nilai']) && $g['nilai'] !== '' ? $normalize_float_or_null($g['nilai']) : null;
@@ -253,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                 }
 
-                $nilai_jadi = $compute_nilai_jadi($nilai, $kktp, $min_target, $max_target, $inputMax);
+                $nilai_jadi = $compute_nilai_jadi($nilai, $kktp, $min_target, $max_target, $inputMin, $inputMax);
                 $stmt->execute([$id_header, $g['id_siswa'], $nilai, $nilai_jadi]);
                 $updatedGrades[] = [
                     'id_siswa' => $g['id_siswa'],
