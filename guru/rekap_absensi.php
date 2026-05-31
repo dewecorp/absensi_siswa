@@ -414,6 +414,7 @@ include '../templates/user_header.php';
                         </div>
                         <div class="card-body">
                                         <form method="POST" class="row" id="attendanceFilterForm">
+                                <?php if (count($classes) > 1): ?>
                                 <div class="form-group col-md-3">
                                     <label>Pilih Kelas</label>
                                     <select name="class_id" class="form-control selectric" id="classSelect" required onchange="this.form.submit()">
@@ -425,6 +426,9 @@ include '../templates/user_header.php';
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                                <?php else: ?>
+                                    <input type="hidden" name="class_id" value="<?php echo $classes[0]['id_kelas'] ?? ''; ?>">
+                                <?php endif; ?>
                                 
                                             <div class="form-group col-md-3">
                                                 <label>Jenis Filter</label>

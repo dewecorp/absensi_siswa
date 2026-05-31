@@ -443,21 +443,9 @@ include '../templates/user_header.php';
                                     </div>
                                     <div class="card-body">
                                         <form method="POST" class="row" id="attendanceFilterForm">
-                                            <div class="form-group col-md-3">
-                                                <label>Kelas Wali</label>
-                                                <select name="class_id" class="form-control selectric" id="classSelect" required disabled>
-                                                    <?php if ($wali_kelas): ?>
-                                                        <option value="<?php echo $wali_kelas['id_kelas']; ?>" selected>
-                                                            <?php echo htmlspecialchars($wali_kelas['nama_kelas']); ?>
-                                                        </option>
-                                                    <?php else: ?>
-                                                        <option value="">Tidak ada kelas yang diajar</option>
-                                                    <?php endif; ?>
-                                                </select>
-                                                <?php if ($wali_kelas): ?>
-                                                    <input type="hidden" name="class_id" value="<?php echo $wali_kelas['id_kelas']; ?>">
-                                                <?php endif; ?>
-                                            </div>
+                                            <?php if ($wali_kelas): ?>
+                                                <input type="hidden" name="class_id" value="<?php echo $wali_kelas['id_kelas']; ?>">
+                                            <?php endif; ?>
                                             
                                             <div class="form-group col-md-3">
                                                 <label>Jenis Filter</label>
