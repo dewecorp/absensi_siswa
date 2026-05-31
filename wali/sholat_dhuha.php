@@ -152,16 +152,10 @@ include '../templates/header.php';
                     <div class="card-body">
                         <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" id="filterForm">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Tanggal</label>
                                         <input type="date" class="form-control" name="tanggal" id="tanggalInput" value="<?php echo $tanggal; ?>" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                     <div class="form-group">
-                                        <label>Kelas</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($nama_kelas); ?>" readonly>
                                     </div>
                                 </div>
                             </div>

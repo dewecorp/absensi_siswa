@@ -114,6 +114,9 @@ $progress_total = 0;
 $progress_filled = 0;
 $progress_missing = 0;
 $progress_percent = 0;
+$total_filled_cells = 0;
+$total_possible_cells = 0;
+$cell_progress_percent = 0;
 
 if ($selected_class && $selected_jenis) {
     // Map new exam type names to database values

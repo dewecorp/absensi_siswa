@@ -165,6 +165,7 @@ include '../templates/header.php';
                     <div class="card-body">
                         <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" id="filterForm">
                             <div class="row">
+                                <?php if (count($classes) > 1): ?>
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Kelas</label>
@@ -178,6 +179,9 @@ include '../templates/header.php';
                                         </select>
                                     </div>
                                 </div>
+                                <?php else: ?>
+                                    <input type="hidden" name="kelas" id="kelasSelect" value="<?php echo $classes[0]['id_kelas'] ?? ''; ?>">
+                                <?php endif; ?>
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Tanggal</label>

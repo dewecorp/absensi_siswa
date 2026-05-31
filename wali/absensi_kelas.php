@@ -183,12 +183,6 @@ endif;
                                         <div class="row">
                                             <div class="col-md-4">
                                                 <div class="form-group">
-                                                    <label>Kelas</label>
-                                                    <input type="text" class="form-control" value="<?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : 'Tidak ada kelas yang diajar'; ?>" readonly />
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="form-group">
                                                     <label>Tanggal</label>
                                                     <input type="date" class="form-control" name="tanggal" id="tanggalInput" value="<?php echo $tanggal; ?>" required>
                                                 </div>
