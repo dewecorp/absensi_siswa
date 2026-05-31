@@ -280,22 +280,17 @@ $(document).ready(function() {
 
     // Initialize DataTable
     var table = $('#table-1').DataTable({
+        \"paging\": false,
         \"columnDefs\": [
             { \"sortable\": false, \"targets\": [4] }
         ],
         \"language\": {
             \"lengthMenu\": \"Tampilkan _MENU_ entri\",
             \"zeroRecords\": \"Tidak ada data yang ditemukan\",
-            \"info\": \"Menampilkan _START_ sampai _END_ dari _TOTAL_ entri\",
+            \"info\": \"Menampilkan _TOTAL_ guru\",
             \"infoEmpty\": \"Menampilkan 0 sampai 0 dari 0 entri\",
             \"infoFiltered\": \"(disaring dari _MAX_ total entri)\",
             \"search\": \"Cari:\",
-            \"paginate\": {
-                \"first\": \"Pertama\",
-                \"last\": \"Terakhir\",
-                \"next\": \"Selanjutnya\",
-                \"previous\": \"Sebelumnya\"
-            }
         },
         \"drawCallback\": function() {
             // Set initial state based on existing data on every draw (pagination/search)
