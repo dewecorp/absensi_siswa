@@ -1,6 +1,34 @@
 <?php
-// Start output buffering to prevent header errors
-ob_start();
+// Start output buffering with Indonesian date translation
+ob_start(function($buffer) {
+    $months_full = [
+        'January' => 'Januari', 'February' => 'Februari', 'March' => 'Maret', 'May' => 'Mei',
+        'June' => 'Juni', 'July' => 'Juli', 'August' => 'Agustus', 'October' => 'Oktober',
+        'December' => 'Desember'
+    ];
+    $months_short = [
+        'Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr', 'May' => 'Mei',
+        'Jun' => 'Jun', 'Jul' => 'Jul', 'Aug' => 'Agu', 'Sep' => 'Sep', 'Oct' => 'Okt',
+        'Nov' => 'Nov', 'Dec' => 'Des'
+    ];
+    $days_full = [
+        'Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu',
+        'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'
+    ];
+    
+    // Replace full month and day names
+    $buffer = str_replace(array_keys($months_full), array_values($months_full), $buffer);
+    $buffer = str_replace(array_keys($days_full), array_values($days_full), $buffer);
+    
+    // Replace short month names with word boundaries to avoid corruption
+    foreach ($months_short as $en => $id) {
+        if ($en !== $id) {
+            $buffer = preg_replace('/\b' . $en . '\b/', $id, $buffer);
+        }
+    }
+    
+    return $buffer;
+});
 
 // Set default timezone to Asia/Jakarta
 date_default_timezone_set('Asia/Jakarta');
@@ -492,8 +520,18 @@ function getTeacherAccessibleClasses(PDO $pdo, ?int $id_guru, bool $only_grade_6
 
 // Function to format date
 function formatDate(string $date): string {
+    if (empty($date)) return '-';
     $dateObj = new DateTime($date);
-    return $dateObj->format('d M Y');
+    $bulan = array(
+        'Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr', 'May' => 'Mei',
+        'Jun' => 'Jun', 'Jul' => 'Jul', 'Aug' => 'Agu', 'Sep' => 'Sep', 'Oct' => 'Okt',
+        'Nov' => 'Nov', 'Des' => 'Des'
+    );
+    $day = $dateObj->format('d');
+    $month_en = $dateObj->format('M');
+    $month = $bulan[$month_en] ?? $month_en;
+    $year = $dateObj->format('Y');
+    return "$day $month $year";
 }
 
 // Function to get current date in Indonesian format
@@ -877,15 +915,15 @@ function logActivity(PDO $pdo, string $username, string $action, string $descrip
  * Versi: 1.0.0
  */
 class SibayarClient {
-    private $apiUrl;
-    private $apiKey;
+    private string $apiUrl;
+    private string $apiKey;
 
-    public function __construct($apiKey = 'SPP_SECRET_KEY_2026') {
+    public function __construct(string $apiKey = 'SPP_SECRET_KEY_2026') {
         $this->apiKey = $apiKey;
         $this->apiUrl = "https://sibayar.misultanfattah.sch.id/api/simad.php";
     }
 
-    private function request($action, $params = []) {
+    private function request(string $action, array $params = []): array {
         $queryParams = array_merge([
             'api_key' => $this->apiKey,
             'action' => $action
@@ -916,19 +954,19 @@ class SibayarClient {
             ];
         }
 
-        $result = json_decode($response, true);
+        $result = json_decode((string)$response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return [
                 'status' => 'error',
                 'message' => 'Invalid JSON response',
-                'raw_response' => $response
+                'raw_response' => (string)$response
             ];
         }
 
         return $result;
     }
 
-    public function getStudentDetail($nisn) {
+    public function getStudentDetail(string $nisn): array {
         return $this->request('get_student_data', ['nisn' => $nisn]);
     }
 }

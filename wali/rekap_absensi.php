@@ -1014,28 +1014,28 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    var classId = $('#classSelect').val();
+    var classId = $('input[name=\"class_id\"]').val() || $('#classSelect').val();
     var monthPicker = $('#monthPicker').val();
     var url = '../admin/cetak_rekap_absensi.php?type=monthly&class_id=' + classId + '&month=' + monthPicker;
     openPrintPreviewTab(url);
 }
 
 function exportDailyToPDF() {
-    var classId = $('#classSelect').val();
+    var classId = $('input[name=\"class_id\"]').val() || $('#classSelect').val();
     var datePicker = $('#datePicker').val();
     var url = '../admin/cetak_rekap_absensi.php?type=daily&class_id=' + classId + '&date=' + datePicker;
     openPrintPreviewTab(url);
 }
 
 function exportStudentToPDF() {
-    var classId = $('#classSelect').val();
+    var classId = $('input[name=\"class_id\"]').val() || $('#classSelect').val();
     var studentId = $('#studentSelect').val();
     var url = '../admin/cetak_rekap_absensi.php?type=student&class_id=' + classId + '&student_id=' + studentId;
     openPrintPreviewTab(url);
 }
 
 function exportSemesterToPDF() {
-    var classId = '<?php echo $class_id; ?>';
+    var classId = $('input[name=\"class_id\"]').val() || $('#classSelect').val();
     var academicYear = '<?php echo $academic_year; ?>';
     var activeSemester = '<?php echo $active_semester; ?>';
     var url = '../admin/cetak_rekap_absensi.php?type=semester&class_id=' + classId + '&academic_year=' + encodeURIComponent(academicYear) + '&active_semester=' + encodeURIComponent(activeSemester);

@@ -714,18 +714,22 @@ function exportSemesterToPDF() {
             <div class="card">
                 <div class="card-header"><h4>Filter Rekap Sholat</h4></div>
                 <div class="card-body">
-                    <form method="POST" class="row">
-                        <div class="form-group col-md-3">
-                            <label>Kelas</label>
-                            <select name="class_id" class="form-control selectric" onchange="this.form.submit()">
-                                <option value="">Pilih Kelas...</option>
-                                <?php foreach ($classes as $class): ?>
-                                    <option value="<?php echo $class['id_kelas']; ?>" <?php echo ($class_id == $class['id_kelas']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($class['nama_kelas']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+                        <form method="POST" class="row">
+                            <?php if (count($classes) > 1): ?>
+                            <div class="form-group col-md-3">
+                                <label>Kelas</label>
+                                <select name="class_id" class="form-control selectric" onchange="this.form.submit()">
+                                    <option value="">Pilih Kelas...</option>
+                                    <?php foreach ($classes as $class): ?>
+                                        <option value="<?php echo $class['id_kelas']; ?>" <?php echo ($class_id == $class['id_kelas']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($class['nama_kelas']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php else: ?>
+                                <input type="hidden" name="class_id" value="<?php echo $classes[0]['id_kelas'] ?? ''; ?>">
+                            <?php endif; ?>
                         
                         <div class="form-group col-md-3">
                             <label>Jenis Filter</label>
