@@ -291,7 +291,7 @@ function sku_html_person_name(string $name): string
 /**
  * Hitung label status satu peserta untuk satu tingkat.
  *
- * @return array{label: string, ok: bool, done: int, total: int, percentage: float}
+ * @return array{label: string, ok: bool, percentage: float, done: int, total: int}
  */
 function sku_compute_status_cell(PDO $pdo, int $id_peserta, int $id_tingkat): array
 {
@@ -299,7 +299,7 @@ function sku_compute_status_cell(PDO $pdo, int $id_peserta, int $id_tingkat): ar
     $stTot->execute([$id_tingkat]);
     $total = (int)$stTot->fetchColumn();
     if ($total <= 0) {
-        return ['label' => '—', 'ok' => false, 'done' => 0, 'total' => 0, 'percentage' => 0];
+        return ['label' => '—', 'ok' => false, 'percentage' => 0, 'done' => 0, 'total' => 0];
     }
     $stDone = $pdo->prepare('
         SELECT COUNT(*)
@@ -1445,17 +1445,17 @@ require_once '../templates/sidebar.php';
                                     </div>
                                 </div>
                             <?php endif; ?>
-                            <div class="table-responsive rounded border sku-table-wrap sku-table-wrap--tall mb-3">
+                            <div class="sku-table-wrap mb-3">
                                 <table class="table table-sm table-bordered mb-0 align-middle sku-main-table" id="skuMainTable">
-                                    <thead class="thead-light sku-thead-stick">
+                                    <thead class="sku-thead-stick">
                                         <tr>
-                                            <th rowspan="3" class="sticky-sku sku-th-no text-center py-3">NO</th>
-                                            <th rowspan="3" class="sticky-sku sku-th-nama text-left py-3">NAMA PESERTA DIDIK</th>
+                                            <th rowspan="3" class="sticky-sku-cell sku-th-no text-center py-3">NO</th>
+                                            <th rowspan="3" class="sticky-sku-cell sku-th-nama text-left py-3">NAMA PESERTA DIDIK</th>
                                             <th colspan="<?= max(1, count($sku_butir_rows)) ?>" class="text-center py-1 border sku-meta-title-cell">
                                                 <small class="text-uppercase font-weight-bold">Syarat kecakapan umum — per butir SKU</small>
                                             </th>
-                                            <th rowspan="3" class="sticky-sku-r-2 sku-th-status text-center bg-light">STATUS</th>
-                                            <th rowspan="3" class="sticky-sku-r sku-th-pct text-center bg-light">PERSENTASE UJIAN</th>
+                                            <th rowspan="3" class="sticky-sku-cell-r-2 sku-th-status text-center bg-light">STATUS</th>
+                                            <th rowspan="3" class="sticky-sku-cell-r sku-th-pct text-center bg-light">PERSENTASE UJIAN</th>
                                         </tr>
                                         <tr class="sku-th-num-row">
                                             <?php foreach ($sku_butir_rows as $bb): ?>
@@ -1491,7 +1491,7 @@ require_once '../templates/sidebar.php';
                                     <tbody>
                                         <?php if (empty($peserta_rows)): ?>
                                             <tr>
-                                                <td colspan="<?= 3 + max(1, count($sku_butir_rows)) ?>" class="text-center text-muted py-5">
+                                                <td colspan="<?= 4 + max(1, count($sku_butir_rows)) ?>" class="text-center text-muted py-5">
                                                     Tidak ada anggota aktif untuk tingkat ini. Tambahkan di <strong>Data Anggota Pramuka</strong>.
                                                 </td>
                                             </tr>
@@ -1505,8 +1505,8 @@ require_once '../templates/sidebar.php';
                                                 ?>
                                                 <tr class="sku-data-row" data-nama-normal="<?= htmlspecialchars($namaNorm, ENT_QUOTES, 'UTF-8') ?>"
                                                     data-urut-asli="<?= (int)$nomBaris ?>">
-                                                    <td class="text-center sticky-sku sku-th-no sku-row-no"><?= $nom++ ?></td>
-                                                    <td class="sticky-sku sku-th-nama font-weight-bold text-left sku-td-nama"><?= sku_html_person_name((string)$p['nama_peserta_didik']) ?></td>
+                                                    <td class="text-center sticky-sku-cell sku-th-no sku-row-no"><?= $nom++ ?></td>
+                                                    <td class="sticky-sku-cell sku-th-nama font-weight-bold text-left sku-td-nama"><?= sku_html_person_name((string)$p['nama_peserta_didik']) ?></td>
                                                     <?php foreach ($sku_butir_rows as $bb): ?>
                                                         <?php
                                                             $bid = (int)$bb['id_butir'];
@@ -1527,11 +1527,11 @@ require_once '../templates/sidebar.php';
                                                     <?php if (empty($sku_butir_rows)): ?>
                                                         <td class="sku-col">&nbsp;</td>
                                                     <?php endif; ?>
-                                                    <td class="text-center sku-status-cell sticky-sku-r-2 font-weight-bold <?= $inf['ok'] ? 'text-success' : 'text-danger' ?>"
+                                                    <td class="text-center sku-status-cell sticky-sku-cell-r-2 font-weight-bold <?= $inf['ok'] ? 'text-success' : 'text-danger' ?>"
                                                         data-peserta="<?= $pid ?>">
                                                         <?= htmlspecialchars($inf['label']) ?>
                                                     </td>
-                                                    <td class="text-center sku-pct-cell sticky-sku-r font-weight-bold" data-peserta="<?= $pid ?>">
+                                                    <td class="text-center sku-pct-cell sticky-sku-cell-r font-weight-bold" data-peserta="<?= $pid ?>">
                                                         <div class="progress" style="height: 20px; min-width: 100px;">
                                                             <div class="progress-bar <?= $inf['percentage'] >= 100 ? 'bg-success' : 'bg-primary' ?>" 
                                                                  role="progressbar" 
@@ -1626,162 +1626,174 @@ require_once '../templates/sidebar.php';
 <?php endif; ?>
 
 <style>
+/* Reset and Base Styles for SKU Table */
 .sku-table-wrap {
-    overflow:auto;
-    -webkit-overflow-scrolling: touch;
-    box-shadow:inset -6px 0 8px -6px rgba(0,0,0,.12);
+    overflow: auto !important;
     position: relative;
+    -webkit-overflow-scrolling: touch;
+    max-height: 650px; /* Diperpendek agar area scroll lebih ringkas */
 }
-/* Panel scroll: ~4 baris siswa terlihat (penilaian; scroll untuk siswa lain). Tanpa floor vh besar. */
-.sku-table-wrap--tall {
-    --sku-thead-floor: 310px;
-    --sku-rows-visible: 4;
-    --sku-row-est: 84px;
-    min-height: calc(var(--sku-thead-floor) + var(--sku-rows-visible) * var(--sku-row-est));
-    max-height: min(92vh, calc(100vh - 48px));
-}
-@supports (height: 100dvh) {
-    .sku-table-wrap--tall {
-        max-height: min(92vh, calc(100dvh - 48px));
-    }
-}
-.sku-name-filter {
-    min-width: 240px;
-    max-width: 360px;
-}
-@media (max-width: 575.98px) {
-    /* Layar sempit: ~3 siswa terlihat */
-    .sku-table-wrap--tall {
-        --sku-thead-floor: 220px;
-        --sku-row-est: 80px;
-        --sku-rows-visible: 3;
-        min-height: calc(var(--sku-thead-floor) + var(--sku-rows-visible) * var(--sku-row-est));
-        max-height: min(90vh, calc(100vh - 120px));
-    }
-}
-.sku-main-table { min-width: 640px; border-collapse: separate; border-spacing: 0; }
 
-/* Header tiga baris ikut menempel saat scroll vertikal dalam panel */
-.sku-main-table thead.sku-thead-stick {
-    position: -webkit-sticky;
-    position: sticky;
+.sku-main-table {
+    min-width: 100%;
+    border-collapse: separate !important; /* Gunakan separate agar sticky border bekerja dengan baik */
+    border-spacing: 0;
+    table-layout: auto;
+}
+
+/* Vertical Sticky Header - Desktop & Mobile */
+.sku-thead-stick th {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    background-color: #f8f9fa !important;
+    z-index: 100 !important;
     top: 0;
-    z-index: 21;
-}
-.sku-main-table thead.sku-thead-stick th {
-    background-color: #e9ecef;
-    box-shadow: inset 0 -1px 0 rgba(0,0,0,.08);
+    border-bottom: 2px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
 }
 
-/* Baris judul gabungan & sel tengah butir: sedikit di atas kolom data saat tumpang-tindih */
-.sku-main-table thead.sku-thead-stick th.sku-meta-title-cell { background: #eef2fb !important; z-index: 22; }
+/* Specific Top Offsets for Multi-row Header */
+/* Baris 1: NO, NAMA, Syarat..., STATUS, PCT */
+.sku-thead-stick tr:nth-child(1) th {
+    top: 0;
+    z-index: 110 !important;
+}
+/* Baris 2: Nomor (1, 2, 3...) */
+.sku-thead-stick tr:nth-child(2) th {
+    top: 38px; /* Estimasi tinggi baris 1 */
+    z-index: 105 !important;
+}
+/* Baris 3: Teks Vertikal */
+.sku-thead-stick tr:nth-child(3) th {
+    top: 66px; /* Estimasi tinggi baris 1 + 2 */
+    z-index: 104 !important;
+}
 
-/* Sticky horizontal: No, Nama, Status */
-.sticky-sku { position:sticky; left:0; z-index:8; background:#fbfbfc!important; min-width:40px;}
-.sku-th-nama { position:sticky; left:40px; z-index:9; background:#fdfdfd!important; min-width:140px; max-width:180px; box-shadow: 3px 0 6px -4px rgba(0,0,0,.28);}
-.sticky-sku-r { position:sticky; right:0; z-index:8; background:#f0f7ff!important; box-shadow: -3px 0 6px -4px rgba(0,0,0,.15);}
-.sticky-sku-r-2 { position:sticky; right:115px; z-index:8; background:#eef6ff!important; border-left: 1px solid #dee2e6 !important;}
+/* Horizontal Sticky - Left (No & Nama) */
+.sticky-sku-cell {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 90 !important;
+    background-color: #fff !important;
+    border-right: 1px solid #dee2e6 !important;
+}
 
-/* NO & Status: tengah; Nama siswa: rata kiri (baca daftar nama) */
-.sku-main-table th.sku-th-no,
-.sku-main-table td.sku-th-no,
-.sku-main-table th.sku-th-status,
-.sku-main-table td.sku-status-cell,
-.sku-main-table th.sku-th-pct,
-.sku-main-table td.sku-pct-cell {
-    text-align: center !important;
+/* No Column */
+.sku-th-no, .sku-row-no {
+    left: 0 !important;
+    min-width: 45px;
+    width: 45px;
+}
+
+/* Nama Column */
+.sku-th-nama, .sku-td-nama {
+    left: 45px !important; /* Sesuaikan dengan lebar kolom NO */
+    min-width: 180px;
+    width: 180px;
+    box-shadow: 4px 0 5px -3px rgba(0,0,0,0.1); /* Shadow untuk pemisah */
+}
+
+/* Intersection: Top-Left Corner (Header NO & NAMA) */
+.sku-thead-stick th.sticky-sku-cell {
+    z-index: 150 !important; /* Paling tinggi agar tidak tertutup */
+}
+
+/* Horizontal Sticky - Right (Status & Pct) - Desktop Only (> 992px) */
+@media (min-width: 992px) {
+    .sticky-sku-cell-r {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 90 !important;
+        background-color: #f8f9fa !important;
+        border-left: 2px solid #dee2e6 !important;
+        box-shadow: -4px 0 5px -3px rgba(0,0,0,0.1);
+    }
+    .sticky-sku-cell-r-2 {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        right: 115px !important;
+        z-index: 90 !important;
+        background-color: #f8f9fa !important;
+        border-left: 1px solid #dee2e6 !important;
+    }
+    .sku-thead-stick th.sticky-sku-cell-r,
+    .sku-thead-stick th.sticky-sku-cell-r-2 {
+        z-index: 150 !important;
+    }
+}
+
+/* Table Body Styles */
+.sku-main-table tbody td {
+    background-color: #fff;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
     vertical-align: middle !important;
 }
-.sku-main-table th.sku-th-nama,
-.sku-main-table td.sku-td-nama {
-    text-align: left !important;
-    vertical-align: middle !important;
-    font-size: 0.85rem;
-    padding-right: 8px !important;
-}
 
-.sku-main-table thead.sku-thead-stick th.sticky-sku,
-.sku-main-table thead.sku-thead-stick th.sku-th-nama,
-.sku-main-table thead.sku-thead-stick th.sticky-sku-r,
-.sku-main-table thead.sku-thead-stick th.sticky-sku-r-2 {
-    z-index: 25;
-}
-.sku-main-table thead.sku-thead-stick th.sticky-sku { background: #e9ecef !important; }
-.sku-main-table thead.sku-thead-stick th.sku-th-nama { background: #e9ecef !important; left: 40px !important; }
-.sku-main-table thead.sku-thead-stick th.sticky-sku-r { background: #e9ecef !important; }
-.sku-main-table thead.sku-thead-stick th.sticky-sku-r-2 { background: #e9ecef !important; }
-
-.sku-meta-title-cell { background:#eef2fb!important;}
-.sku-th-vertical { vertical-align:bottom!important; padding:12px 4px!important; max-height:260px!important;}
 .sku-vtext {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
-    display:inline-block;
-    max-height:210px;
-    overflow:hidden;
-    font-size:.78rem;
-    line-height:1.22;
+    display: inline-block;
+    max-height: 150px;
+    min-height: 100px;
+    overflow: hidden;
+    font-size: .75rem;
+    line-height: 1.1;
+    padding: 10px 2px;
+    text-align: left;
 }
-.sku-col { min-width:38px;}
-.btn-xxs { font-size:.72rem;line-height:1;padding:2px;}
-tbody td.sku-td-nama {
-    white-space: normal;
-    word-wrap: break-word;
-    min-width: 140px;
-    max-width: 180px;
-}
+
+/* Mobile Specific Adjustments */
 @media (max-width: 991.98px) {
-    /*
-     * Mobile: Tetap gunakan sticky horizontal untuk No dan Nama agar mudah diidentifikasi saat scroll ke kanan.
-     */
     .sku-table-wrap {
-        -webkit-overflow-scrolling: touch;
+        margin: 0 -15px; /* Full width di mobile */
+        max-height: 450px;
     }
-    .sku-main-table thead.sku-thead-stick {
-        position: -webkit-sticky;
-        position: sticky;
-        top: 0;
-        z-index: 30;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    .sku-main-table {
+        min-width: 800px; /* Minimal width agar tidak terlalu sempit */
     }
-    .sku-main-table thead.sku-thead-stick th.sticky-sku,
-    .sku-main-table thead.sku-thead-stick th.sku-th-nama {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 35 !important;
+
+    /* Nama Column di Mobile sedikit lebih sempit */
+    .sku-th-nama, .sku-td-nama {
+        min-width: 140px;
+        width: 140px;
+        left: 45px !important;
     }
-    .sku-main-table thead.sku-thead-stick th.sku-th-nama {
-        left: 40px !important;
-    }
-    .sku-main-table thead.sku-thead-stick th.sticky-sku-r,
-    .sku-main-table thead.sku-thead-stick th.sticky-sku-r-2 {
+
+    /* Matikan sticky kanan di mobile agar fokus ke data */
+    .sticky-sku-cell-r, .sticky-sku-cell-r-2 {
         position: static !important;
-        right: auto !important;
-        z-index: auto !important;
         box-shadow: none !important;
+        border-left: 1px solid #dee2e6 !important;
     }
-    .sku-main-table tbody .sticky-sku,
-    .sku-main-table tbody td.sku-td-nama {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 10 !important;
-        background: #fbfbfc !important;
+
+    /* Adjust Vertical Text for Mobile */
+    .sku-vtext {
+        max-height: 120px;
+        font-size: 0.7rem;
     }
-    .sku-main-table tbody td.sku-td-nama {
-        left: 40px !important;
-        font-size: 0.75rem !important;
-        min-width: 100px !important;
-        max-width: 120px !important;
-        box-shadow: 2px 0 5px -3px rgba(0,0,0,0.2) !important;
-    }
-    .sku-main-table tbody .sticky-sku-r,
-    .sku-main-table tbody .sticky-sku-r-2 {
-        position: static !important;
-        right: auto !important;
-        z-index: auto !important;
-        box-shadow: none !important;
-        background: transparent !important;
-    }
+}
+
+/* Stisla Admin Layout Fix for Sticky */
+.main-content {
+    overflow: visible !important;
+}
+.section-body {
+    overflow: visible !important;
+}
+.card {
+    overflow: visible !important;
+}
+.card-body {
+    overflow: visible !important;
+}
+</style>
+
+:target {
+    scroll-margin-top: 150px;
 }
 </style>
 
