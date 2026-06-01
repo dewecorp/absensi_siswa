@@ -635,7 +635,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="<?php echo $col_class; ?> mb-4">
                             <div class="card card-primary">
                                 <div class="card-header">
-                                    <h4>Absensi Harian & Jurnal Mengajar</h4>
+                                    <h4>Absensi Harian Guru</h4>
                                 </div>
                                 <div class="card-body">
                                     <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
@@ -700,7 +700,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php else: ?>
                         <div class="<?php echo $col_class; ?> mb-4">
                             <div class="card card-warning">
-                                <div class="card-header"><h4>Absensi Harian & Jurnal Mengajar</h4></div>
+                                <div class="card-header"><h4>Absensi Harian Guru</h4></div>
                                 <div class="card-body d-flex align-items-center justify-content-center text-center">
                                     <div class="py-2">
                                         <div class="mb-3">
@@ -727,7 +727,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="col-12 col-md-6 mb-4">
                             <div class="card card-dark">
                                 <div class="card-header">
-                                    <h4>Absensi Les & Jurnal Les (Kelas 6)</h4>
+                                    <h4>Absensi Les Guru (Kelas 6)</h4>
                                 </div>
                                 <div class="card-body">
                                     <?php if ($has_les_schedule_guru): ?>
@@ -792,7 +792,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <div class="alert-body text-center py-3">
                                             <div class="alert-title font-weight-bold mb-1">Informasi</div>
                                             <p class="mb-3">Tidak ada jadwal les untuk hari ini (<?php echo date('d-m-Y'); ?>).</p>
-                                            <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block shadow-sm mt-auto"><i class="fas fa-book mr-2"></i> Lihat Jadwal & Jurnal Les</a>
+                                            <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block shadow-sm mt-auto"><i class="fas fa-book mr-2"></i> Lihat Jurnal Les</a>
                                         </div>
                                     </div>
                                     <?php endif; ?>
