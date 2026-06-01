@@ -1631,41 +1631,52 @@ require_once '../templates/sidebar.php';
     overflow: auto !important;
     position: relative;
     -webkit-overflow-scrolling: touch;
-    max-height: 650px; /* Diperpendek agar area scroll lebih ringkas */
+    max-height: 650px;
+    border: 1px solid #dee2e6; /* Border luar container */
 }
 
 .sku-main-table {
     min-width: 100%;
-    border-collapse: separate !important; /* Gunakan separate agar sticky border bekerja dengan baik */
+    border-collapse: separate !important;
     border-spacing: 0;
     table-layout: auto;
+    border: none;
 }
 
-/* Vertical Sticky Header - Desktop & Mobile */
+/* Base border style for all cells */
+.sku-main-table th,
+.sku-main-table td {
+    border-right: 1px solid #dee2e6 !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    padding: 10px 8px !important;
+    background-color: #fff;
+}
+
+/* Vertical Sticky Header */
 .sku-thead-stick th {
     position: -webkit-sticky !important;
     position: sticky !important;
     background-color: #f8f9fa !important;
     z-index: 100 !important;
     top: 0;
-    border-bottom: 2px solid #dee2e6 !important;
-    border-right: 1px solid #dee2e6 !important;
+    /* Gunakan box-shadow untuk border agar tidak ada celah saat scroll */
+    box-shadow: inset 0 -1px 0 #dee2e6, inset -1px 0 0 #dee2e6;
+    border: none !important;
 }
 
-/* Specific Top Offsets for Multi-row Header */
-/* Baris 1: NO, NAMA, Syarat..., STATUS, PCT */
+/* Row 1 Sticky Offsets */
 .sku-thead-stick tr:nth-child(1) th {
     top: 0;
     z-index: 110 !important;
 }
-/* Baris 2: Nomor (1, 2, 3...) */
+/* Row 2 Sticky Offsets (Nomor butir) */
 .sku-thead-stick tr:nth-child(2) th {
-    top: 38px; /* Estimasi tinggi baris 1 */
+    top: 41px; /* Disesuaikan agar rapat */
     z-index: 105 !important;
 }
-/* Baris 3: Teks Vertikal */
+/* Row 3 Sticky Offsets (Teks vertikal) */
 .sku-thead-stick tr:nth-child(3) th {
-    top: 66px; /* Estimasi tinggi baris 1 + 2 */
+    top: 73px; /* Disesuaikan agar rapat */
     z-index: 104 !important;
 }
 
@@ -1676,30 +1687,34 @@ require_once '../templates/sidebar.php';
     left: 0 !important;
     z-index: 90 !important;
     background-color: #fff !important;
-    border-right: 1px solid #dee2e6 !important;
+    box-shadow: inset -1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+    border: none !important;
+}
+
+/* Intersection: Top-Left Corner (Header NO & NAMA) */
+.sku-thead-stick th.sticky-sku-cell {
+    z-index: 150 !important;
+    background-color: #f8f9fa !important;
+    box-shadow: inset -1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6, inset 0 1px 0 #dee2e6;
 }
 
 /* No Column */
 .sku-th-no, .sku-row-no {
     left: 0 !important;
-    min-width: 45px;
-    width: 45px;
+    min-width: 50px;
+    width: 50px;
 }
 
 /* Nama Column */
 .sku-th-nama, .sku-td-nama {
-    left: 45px !important; /* Sesuaikan dengan lebar kolom NO */
-    min-width: 180px;
-    width: 180px;
-    box-shadow: 4px 0 5px -3px rgba(0,0,0,0.1); /* Shadow untuk pemisah */
+    left: 50px !important;
+    min-width: 200px;
+    width: 200px;
+    /* Beri border kanan lebih tebal sedikit sebagai visual separator tanpa box-shadow blur */
+    box-shadow: inset -2px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6;
 }
 
-/* Intersection: Top-Left Corner (Header NO & NAMA) */
-.sku-thead-stick th.sticky-sku-cell {
-    z-index: 150 !important; /* Paling tinggi agar tidak tertutup */
-}
-
-/* Horizontal Sticky - Right (Status & Pct) - Desktop Only (> 992px) */
+/* Horizontal Sticky - Right (Status & Pct) */
 @media (min-width: 992px) {
     .sticky-sku-cell-r {
         position: -webkit-sticky !important;
@@ -1707,87 +1722,62 @@ require_once '../templates/sidebar.php';
         right: 0 !important;
         z-index: 90 !important;
         background-color: #f8f9fa !important;
-        border-left: 2px solid #dee2e6 !important;
-        box-shadow: -4px 0 5px -3px rgba(0,0,0,0.1);
+        box-shadow: inset 1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+        border: none !important;
     }
     .sticky-sku-cell-r-2 {
         position: -webkit-sticky !important;
         position: sticky !important;
-        right: 115px !important;
+        right: 120px !important;
         z-index: 90 !important;
         background-color: #f8f9fa !important;
-        border-left: 1px solid #dee2e6 !important;
+        box-shadow: inset 1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+        border: none !important;
     }
     .sku-thead-stick th.sticky-sku-cell-r,
     .sku-thead-stick th.sticky-sku-cell-r-2 {
         z-index: 150 !important;
+        box-shadow: inset 1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6, inset 0 1px 0 #dee2e6;
     }
 }
 
-/* Table Body Styles */
-.sku-main-table tbody td {
-    background-color: #fff;
-    border-bottom: 1px solid #dee2e6 !important;
-    border-right: 1px solid #dee2e6 !important;
-    vertical-align: middle !important;
-}
-
+/* Teks Vertikal Header */
 .sku-vtext {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     display: inline-block;
     max-height: 150px;
-    min-height: 100px;
+    min-height: 120px;
     overflow: hidden;
-    font-size: .75rem;
+    font-size: .8rem;
     line-height: 1.1;
     padding: 10px 2px;
     text-align: left;
 }
 
-/* Mobile Specific Adjustments */
+/* Mobile Adjustments */
 @media (max-width: 991.98px) {
     .sku-table-wrap {
-        margin: 0 -15px; /* Full width di mobile */
-        max-height: 450px;
+        margin: 0 -15px;
+        max-height: 500px;
     }
-
     .sku-main-table {
-        min-width: 800px; /* Minimal width agar tidak terlalu sempit */
+        min-width: 850px;
     }
-
-    /* Nama Column di Mobile sedikit lebih sempit */
     .sku-th-nama, .sku-td-nama {
-        min-width: 140px;
-        width: 140px;
-        left: 45px !important;
+        min-width: 150px;
+        width: 150px;
     }
-
-    /* Matikan sticky kanan di mobile agar fokus ke data */
     .sticky-sku-cell-r, .sticky-sku-cell-r-2 {
         position: static !important;
         box-shadow: none !important;
-        border-left: 1px solid #dee2e6 !important;
-    }
-
-    /* Adjust Vertical Text for Mobile */
-    .sku-vtext {
-        max-height: 120px;
-        font-size: 0.7rem;
+        border-right: 1px solid #dee2e6 !important;
+        border-bottom: 1px solid #dee2e6 !important;
     }
 }
 
-/* Stisla Admin Layout Fix for Sticky */
-.main-content {
-    overflow: visible !important;
-}
-.section-body {
-    overflow: visible !important;
-}
-.card {
-    overflow: visible !important;
-}
-.card-body {
+/* Stisla Admin Fix */
+.main-content, .section, .section-body, .card, .card-body {
     overflow: visible !important;
 }
 </style>
