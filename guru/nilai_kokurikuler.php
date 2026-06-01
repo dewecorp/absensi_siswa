@@ -148,114 +148,77 @@ require_once '../templates/sidebar.php';
 ?>
 
 <style>
-    /* Sticky Columns and Header */
+    /* Reset Table Styling - No Sticky */
     .table-responsive {
-        max-height: 80vh;
-        overflow: auto;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
     }
+
     table {
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
         width: 100% !important;
+        border-collapse: collapse !important;
     }
-    .sticky-col {
-        position: sticky !important;
-        background-color: #fff !important;
-        z-index: 10;
-        border-right: 1px solid #dee2e6;
-    }
-    .sticky-col-1 {
-        left: 0;
-        width: 50px;
-        min-width: 50px;
-    }
-    .sticky-col-2 {
-        left: 50px;
-        min-width: 250px; /* Kembali lebar untuk desktop */
-        max-width: 400px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    /* Sticky Header */
+
     thead th {
-        position: sticky !important;
-        background-color: #ffffff !important;
-        z-index: 100;
-        box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+        background-color: #f8f9fa !important;
         vertical-align: middle;
         padding: 8px !important;
+        border: 1px solid #dee2e6 !important;
+        text-align: center;
     }
 
-    /* Multi-row Header Sticky Offsets */
-    thead tr:nth-child(1) th {
-        top: 0;
-        z-index: 103;
-        height: 80px;
-    }
-    thead tr:nth-child(2) th {
-        top: 80px;
-        z-index: 102;
-        height: 80px;
-    }
-    thead tr:nth-child(3) th {
-        top: 160px;
-        z-index: 101;
-    }
-    
-    /* Sticky Header + Sticky Column Intersection */
-    thead th.sticky-col {
-        z-index: 110 !important;
-    }
+    /* Desktop Column Widths */
+    .sticky-col-1 { width: 50px; min-width: 50px; }
+    .sticky-col-2 { width: 180px; min-width: 180px; }
 
-    /* Pastikan input tidak memiliki z-index yang lebih tinggi */
+    /* Input styling */
     .grade-input, .grade-input-jadi {
-        position: relative;
-        z-index: 1;
         min-width: 60px;
+        max-width: 80px;
+        display: inline-block !important;
+        margin: 0 auto;
     }
     
     /* Mobile adjustments */
     @media (max-width: 768px) {
-        .sticky-col-1 { 
-            width: 40px !important; 
-            min-width: 40px !important; 
-            left: 0 !important;
-        }
-        .sticky-col-2 {
-            left: 40px !important;
-            min-width: 130px !important;
-            max-width: 130px !important;
-            font-size: 0.8em;
-        }
         thead th, tbody td {
             font-size: 0.8em !important;
             padding: 4px 2px !important;
         }
-        .header-cell {
-            min-width: 120px !important;
-        }
-        thead tr:nth-child(1) th { height: 60px !important; }
-        thead tr:nth-child(2) th { top: 60px !important; height: 65px !important; }
-        thead tr:nth-child(3) th { top: 125px !important; height: 30px !important; }
         .grade-input, .grade-input-jadi {
-            min-width: 50px !important;
-            max-width: 60px !important;
-            padding: 4px 2px !important;
-            height: 30px !important;
+            min-width: 40px !important;
+            max-width: 50px !important;
+            height: 28px !important;
+            font-size: 0.9em !important;
         }
-    }
-    
-    /* Tambahkan background solid pada sticky columns */
-    .sticky-col {
-        background-color: #ffffff !important;
-    }
 
-    /* Ensure table body is not covered too much */
-    table {
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
+        /* Sticky Name Column for Mobile */
+        .sticky-col {
+            position: sticky !important;
+            background-color: #ffffff !important;
+            z-index: 10;
+            box-shadow: 1px 0 3px rgba(0,0,0,0.1);
+        }
+        .sticky-col-1 {
+            left: 0;
+            width: 30px !important;
+            min-width: 30px !important;
+        }
+        .sticky-col-2 {
+            left: 30px;
+            width: 65px !important;
+            min-width: 65px !important;
+            z-index: 11;
+            white-space: normal !important;
+            line-height: 1.1;
+            word-break: break-word;
+            padding: 4px !important;
+        }
+        thead th.sticky-col {
+            z-index: 20 !important;
+            background-color: #f8f9fa !important;
+            text-align: center !important;
+        }
     }
 </style>
 

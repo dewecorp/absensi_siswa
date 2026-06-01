@@ -90,165 +90,77 @@ require_once '../templates/sidebar.php';
 ?>
 
 <style>
-    /* Sticky Columns and Header */
+    /* Reset Table Styling - No Sticky */
     .table-responsive {
-        max-height: 80vh;
-        overflow: auto;
-    }
-    table {
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
-        table-layout: fixed !important;
-        width: 100% !important;
-    }
-    .sticky-col {
-        position: sticky !important;
-        background-color: #fff !important;
-        z-index: 10;
-        border-right: 1px solid #dee2e6;
-    }
-    .sticky-col-1 {
-        left: 0;
-        width: 50px;
-        min-width: 50px;
-    }
-    .sticky-col-2 {
-        left: 50px;
-        width: 150px;
-        min-width: 150px;
-        max-width: 150px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    /* Sticky Header */
-    thead th {
-        position: sticky !important;
-        background-color: #ffffff !important;
-        z-index: 100;
-        box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
-        vertical-align: middle;
-        padding: 4px !important;
-        font-size: 0.9em;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
     }
 
-    /* Multi-row Header Sticky Offsets */
-    thead tr:nth-child(1) th {
-        top: 0;
-        z-index: 103;
-    }
-    thead tr:nth-child(2) th {
-        top: 50px;
-        z-index: 102;
-    }
-    thead tr:nth-child(3) th {
-        top: 90px;
-        z-index: 101;
-    }
-    
-    /* Sticky Columns and Header */
-    .table-responsive {
-        max-height: 80vh;
-        overflow: auto;
-    }
     table {
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
         width: 100% !important;
+        border-collapse: collapse !important;
     }
-    .sticky-col {
-        position: sticky !important;
-        background-color: #fff !important;
-        z-index: 10;
-        border-right: 1px solid #dee2e6;
-    }
-    .sticky-col-1 {
-        left: 0;
-        width: 50px;
-        min-width: 50px;
-    }
-    .sticky-col-2 {
-        left: 50px;
-        min-width: 250px;
-        max-width: 400px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    /* Sticky Header */
+
     thead th {
-        position: sticky !important;
-        background-color: #ffffff !important;
-        z-index: 100;
-        box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+        background-color: #f8f9fa !important;
         vertical-align: middle;
         padding: 8px !important;
+        border: 1px solid #dee2e6 !important;
+        text-align: center;
     }
 
-    /* Multi-row Header Sticky Offsets */
-    thead tr:nth-child(1) th {
-        top: 0;
-        z-index: 103;
-        height: 80px;
-    }
-    thead tr:nth-child(2) th {
-        top: 80px;
-        z-index: 102;
-        height: 80px;
-    }
-    thead tr:nth-child(3) th {
-        top: 160px;
-        z-index: 101;
-    }
-    
-    /* Sticky Header + Sticky Column Intersection */
-    thead th.sticky-col {
-        z-index: 110 !important;
-    }
+    /* Desktop Column Widths */
+    .sticky-col-1 { width: 50px; min-width: 50px; }
+    .sticky-col-2 { width: 180px; min-width: 180px; }
 
-    /* Pastikan input tidak memiliki z-index yang lebih tinggi */
+    /* Input styling */
     .grade-input, .grade-input-jadi {
-        position: relative;
-        z-index: 1;
         min-width: 60px;
+        max-width: 80px;
+        display: inline-block !important;
+        margin: 0 auto;
     }
     
     /* Mobile adjustments */
     @media (max-width: 768px) {
-        .sticky-col-1 { 
-            width: 40px !important; 
-            min-width: 40px !important; 
-            left: 0 !important;
-        }
-        .sticky-col-2 {
-            left: 40px !important;
-            min-width: 130px !important;
-            max-width: 130px !important;
-            font-size: 0.8em;
-        }
         thead th, tbody td {
             font-size: 0.8em !important;
             padding: 4px 2px !important;
         }
-        .header-cell {
-            min-width: 120px !important;
-        }
-        thead tr:nth-child(1) th { height: 60px !important; }
-        thead tr:nth-child(2) th { top: 60px !important; height: 65px !important; }
-        thead tr:nth-child(3) th { top: 125px !important; height: 30px !important; }
         .grade-input, .grade-input-jadi {
-            min-width: 50px !important;
-            max-width: 60px !important;
-            padding: 4px 2px !important;
-            height: 30px !important;
+            min-width: 40px !important;
+            max-width: 50px !important;
+            height: 28px !important;
+            font-size: 0.9em !important;
         }
-    }
-    
-    /* Tambahkan background solid pada sticky columns */
-    .sticky-col {
-        background-color: #ffffff !important;
+
+        /* Sticky Name Column for Mobile */
+        .sticky-col {
+            position: sticky !important;
+            background-color: #ffffff !important;
+            z-index: 10;
+            box-shadow: 1px 0 3px rgba(0,0,0,0.1);
+        }
+        .sticky-col-1 {
+            left: 0;
+            width: 30px !important;
+            min-width: 30px !important;
+        }
+        .sticky-col-2 {
+            left: 30px;
+            width: 65px !important;
+            min-width: 65px !important;
+            z-index: 11;
+            white-space: normal !important;
+            line-height: 1.1;
+            word-break: break-word;
+            padding: 4px !important;
+        }
+        thead th.sticky-col {
+            z-index: 20 !important;
+            background-color: #f8f9fa !important;
+            text-align: center !important;
+        }
     }
 </style>
 
@@ -314,13 +226,13 @@ require_once '../templates/sidebar.php';
                             <thead>
                                 <tr>
                                     <th class="text-center sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
-                                    <th class="text-center sticky-col sticky-col-2" style="width: 150px; vertical-align: middle;" rowspan="3">Nama Siswa</th>
+                                    <th class="text-center sticky-col sticky-col-2" style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
                                     <?php foreach ($grade_headers as $header): ?>
                                         <th class="text-center" colspan="2" style="min-width: 150px; vertical-align: middle;">
                                             <?= htmlspecialchars($header['nama_penilaian']) ?>
                                         </th>
                                     <?php endforeach; ?>
-                                    <th style="width: 100px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>
+                                    <th style="width: 80px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>
                                 </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
@@ -354,6 +266,8 @@ require_once '../templates/sidebar.php';
                                             <?php 
                                             $total_score = 0;
                                             $count_score = 0;
+                                            $total_score_jadi = 0;
+                                            $count_score_jadi = 0;
                                             ?>
                                             <?php foreach ($grade_headers as $header): ?>
                                                 <?php 
@@ -362,15 +276,26 @@ require_once '../templates/sidebar.php';
                                                 $val_jadi = isset($data_nilai['nilai_jadi']) ? $data_nilai['nilai_jadi'] : '';
                                                 
                                                 if ($val !== '') {
-                                                    $total_score += (float)$val;
-                                                    $count_score++;
-                                                    
-                                                    // Track min/max
-                                                    if (!isset($col_min[$header['id_header']]) || $val < $col_min[$header['id_header']]) {
-                                                        $col_min[$header['id_header']] = $val;
+                                                    $val_float = (float)$val;
+                                                    if ($val_float > 0) {
+                                                        $total_score += $val_float;
+                                                        $count_score++;
+                                                        
+                                                        // Track min/max
+                                                        if (!isset($col_min[$header['id_header']]) || $val_float < $col_min[$header['id_header']]) {
+                                                            $col_min[$header['id_header']] = $val_float;
+                                                        }
+                                                        if (!isset($col_max[$header['id_header']]) || $val_float > $col_max[$header['id_header']]) {
+                                                            $col_max[$header['id_header']] = $val_float;
+                                                        }
                                                     }
-                                                    if (!isset($col_max[$header['id_header']]) || $val > $col_max[$header['id_header']]) {
-                                                        $col_max[$header['id_header']] = $val;
+                                                }
+
+                                                if ($val_jadi !== '') {
+                                                    $val_jadi_float = (float)$val_jadi;
+                                                    if ($val_jadi_float > 0) {
+                                                        $total_score_jadi += $val_jadi_float;
+                                                        $count_score_jadi++;
                                                     }
                                                 }
                                                 ?>
@@ -397,22 +322,48 @@ require_once '../templates/sidebar.php';
                                     
                                     <!-- Footer Stats -->
                                     <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right sticky-col sticky-col-1" style="left: 0;">Nilai Tertinggi</td>
+                                        <td colspan="2" class="text-right">Nilai Tertinggi</td>
                                         <?php foreach ($grade_headers as $header): ?>
                                             <td class="text-center text-success col-max-<?= $header['id_header'] ?>">
                                                 <?= isset($col_max[$header['id_header']]) ? $col_max[$header['id_header']] : '-' ?>
                                             </td>
-                                            <td></td>
+                                            <td class="text-center text-success col-max-jadi-<?= $header['id_header'] ?>">
+                                                <?php 
+                                                $max_jadi = -INF;
+                                                $found_jadi = false;
+                                                foreach ($students as $s) {
+                                                    $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? (float)$grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : 0;
+                                                    if ($val_j > 0) {
+                                                        if ($val_j > $max_jadi) $max_jadi = $val_j;
+                                                        $found_jadi = true;
+                                                    }
+                                                }
+                                                echo $found_jadi ? $max_jadi : '-';
+                                                ?>
+                                            </td>
                                         <?php endforeach; ?>
                                         <td class="text-center"></td>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right sticky-col sticky-col-1" style="left: 0;">Nilai Terendah</td>
+                                        <td colspan="2" class="text-right">Nilai Terendah</td>
                                         <?php foreach ($grade_headers as $header): ?>
-                                            <td class="text-center text-danger">
+                                            <td class="text-center text-danger col-min-<?= $header['id_header'] ?>">
                                                 <?= isset($col_min[$header['id_header']]) ? $col_min[$header['id_header']] : '-' ?>
                                             </td>
-                                            <td></td>
+                                            <td class="text-center text-danger col-min-jadi-<?= $header['id_header'] ?>">
+                                                <?php 
+                                                $min_jadi = INF;
+                                                $found_jadi = false;
+                                                foreach ($students as $s) {
+                                                    $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? (float)$grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : 0;
+                                                    if ($val_j > 0) {
+                                                        if ($val_j < $min_jadi) $min_jadi = $val_j;
+                                                        $found_jadi = true;
+                                                    }
+                                                }
+                                                echo $found_jadi ? $min_jadi : '-';
+                                                ?>
+                                            </td>
                                         <?php endforeach; ?>
                                         <td class="text-center"></td>
                                     </tr>

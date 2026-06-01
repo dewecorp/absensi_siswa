@@ -146,91 +146,89 @@ require_once '../templates/sidebar.php';
 ?>
 
 <style>
-    /* Sticky Columns and Header */
+    /* Reset Table Styling - No Internal Scroll */
     .table-responsive {
-        max-height: 80vh;
-        overflow: auto;
-    }
-    .sticky-col {
-        position: sticky !important;
-        background-color: #fff !important;
-        z-index: 10;
-        border-right: 1px solid #dee2e6;
-    }
-    .sticky-col-1 {
-        left: 0;
-        width: 50px;
-        min-width: 50px;
-    }
-    .sticky-col-2 {
-        left: 50px;
-        min-width: 250px;
-        max-width: 400px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    /* Sticky Header */
-    thead th {
-        position: sticky !important;
-        top: 0;
-        background-color: #f8f9fa !important;
-        z-index: 15;
-        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
-        padding: 8px !important;
-    }
-    
-    /* Sticky Header + Sticky Column Intersection */
-    thead th.sticky-col {
-        z-index: 25 !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        max-height: none !important;
     }
 
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    thead th {
+        background-color: #f8f9fa !important;
+        vertical-align: middle;
+        padding: 8px !important;
+        border: 1px solid #dee2e6 !important;
+        text-align: center;
+    }
+
+    /* Desktop Column Widths */
+    .sticky-col-1 { width: 50px; min-width: 50px; }
+    .sticky-col-2 { width: 180px; min-width: 180px; }
+    .header-asli { width: 120px; }
+
     /* Input styling */
-    .grade-input {
-        position: relative;
-        z-index: 1;
+    .grade-input, .input-nilai-asli, .input-nilai-remidi {
         min-width: 60px;
+        max-width: 80px;
+        display: inline-block !important;
+        margin: 0 auto;
     }
 
     /* Mobile adjustments */
     @media (max-width: 768px) {
-        .sticky-col-1 { 
-            width: 35px !important; 
-            min-width: 35px !important; 
-        }
-        .sticky-col-2 {
-            left: 35px !important;
-            min-width: 110px !important;
-            max-width: 110px !important;
-            font-size: 0.75em;
-        }
         thead th, tbody td {
             font-size: 0.75em !important;
             padding: 4px 2px !important;
         }
         .grade-input {
-            min-width: 45px !important;
-            max-width: 55px !important;
-            padding: 2px 1px !important;
+            min-width: 40px !important;
+            max-width: 50px !important;
             height: 28px !important;
-            font-size: 0.85em !important;
+            font-size: 0.9em !important;
         }
-        .btn-sm {
-            padding: 0.2rem 0.4rem !important;
-            font-size: 0.7rem !important;
-        }
-    }
-    
-    /* Solid background for sticky columns */
-    .sticky-col {
-        background-color: #ffffff !important;
-    }
 
-    table {
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
-        width: 100%;
+        /* Sticky Name Column for Mobile */
+        .sticky-col {
+            position: sticky !important;
+            background-color: #ffffff !important;
+            z-index: 10;
+            box-shadow: 1px 0 3px rgba(0,0,0,0.1);
+        }
+        .sticky-col-1 {
+            left: 0;
+            width: 30px !important;
+            min-width: 30px !important;
+        }
+        .sticky-col-2 {
+            left: 30px;
+            width: 65px !important;
+            min-width: 65px !important;
+            z-index: 11;
+            white-space: normal !important;
+            line-height: 1.1;
+            word-break: break-word;
+            padding: 4px !important;
+        }
+        .header-asli {
+            min-width: 50px !important;
+            width: 50px !important;
+            padding: 2px !important;
+        }
+        .input-nilai-asli, .input-nilai-remidi {
+            max-width: 40px !important;
+            padding: 2px !important;
+            height: 26px !important;
+        }
+        thead th.sticky-col {
+            z-index: 20 !important;
+            background-color: #f8f9fa !important;
+            text-align: center !important;
+        }
     }
 </style>
 
@@ -306,9 +304,9 @@ require_once '../templates/sidebar.php';
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
-                                        <th class="text-center sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;">No</th>
-                                        <th class="text-center sticky-col sticky-col-2" style="width: 250px; vertical-align: middle;">Nama Siswa</th>
-                                        <th style="width: 120px; vertical-align: middle;" class="text-center">
+                                        <th class="text-center sticky-col sticky-col-1" style="vertical-align: middle;">No</th>
+                                        <th class="text-center sticky-col sticky-col-2" style="vertical-align: middle;">Nama Siswa</th>
+                                        <th class="text-center header-asli" style="vertical-align: middle;">
                                             <div class="d-flex align-items-center justify-content-center" style="gap: 4px;">
                                                 <span>Asli</span>
                                                 <?php if ($can_edit): ?>

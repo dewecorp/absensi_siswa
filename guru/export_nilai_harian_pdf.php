@@ -242,12 +242,10 @@ if (!empty($grade_headers)) {
                     echo '<td>' . htmlspecialchars($nilai ?? '') . '</td>';
                     echo '<td>' . htmlspecialchars($nilai_jadi ?? '') . '</td>';
                     
-                    $valForAvg = $nilai;
-                    
-                    if ($valForAvg !== '' && $valForAvg !== null) {
-                        $valForAvgFloat = (float)$valForAvg;
-                        if ($valForAvgFloat > 0) {
-                            $total += $valForAvgFloat;
+                    if ($nilai !== '' && $nilai !== null) {
+                        $valFloat = (float)$nilai;
+                        if ($valFloat > 0) {
+                            $total += $valFloat;
                             $count++;
                         }
                     }

@@ -442,8 +442,8 @@ require_once '../templates/sidebar.php';
     }
     .sticky-col-2 {
         left: 50px;
-        min-width: 200px;
-        max-width: 250px;
+        min-width: 180px;
+        max-width: 180px;
     }
     
     /* Sticky Header */
@@ -458,6 +458,22 @@ require_once '../templates/sidebar.php';
     /* Sticky Header + Sticky Column Intersection (Top Left Corners) */
     thead th.sticky-col {
         z-index: 25 !important; /* Highest priority */
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        .sticky-col-1 {
+            width: 30px !important;
+            min-width: 30px !important;
+        }
+        .sticky-col-2 {
+            left: 30px !important;
+            width: 65px !important;
+            min-width: 65px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            font-size: 0.8em !important;
+        }
     }
 </style>
 
