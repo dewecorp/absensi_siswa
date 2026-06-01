@@ -254,4 +254,4 @@ if (!isLoggedIn()) {
                     </li>
                 </ul>
             </nav>
-            <?php include_once 'sidebar.php'; ?>
+            <?php include_once __DIR__ . '/sidebar.php'; ?>

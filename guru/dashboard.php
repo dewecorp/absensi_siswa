@@ -889,6 +889,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <span class="badge badge-success badge-pill">Semua Fitur</span>
                                     </div>
                                     <?php
+                                    global $menu_items;
                                     $mobile_menu_groups = function_exists('get_mobile_menu_groups') ? get_mobile_menu_groups($menu_items) : ['single' => [], 'grouped' => []];
                                     $single_items = $mobile_menu_groups['single'];
                                     $grouped_items = $mobile_menu_groups['grouped'];
@@ -909,7 +910,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             </div>
                                         <?php endif; ?>
                                         <?php foreach ($grouped_items as $group): ?>
-                                            <div class="mt-3">
+                                            <div class="mt-3" id="menu-<?php echo str_replace(' ', '-', $group['title']); ?>">
                                                 <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
                                                 <div class="row">
                                                     <?php foreach ($group['items'] as $subitem): ?>

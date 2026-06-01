@@ -9,10 +9,11 @@ $nilai_ujian_biasa_menu_active = ($current_page === 'nilai_ujian.php' && !$nilai
 
 // Define menu items based on user level
 $user_level = getUserLevel();
+global $menu_items;
 $menu_items = [];
 
 if (!function_exists('normalize_person_name_for_match')) {
-    function normalize_person_name_for_match($name) {
+    function normalize_person_name_for_match(?string $name): string {
         $v = strtolower(trim((string)$name));
         // Hapus semua selain huruf & angka agar tahan variasi: "Nur Huda, S.Pd.I." vs "Nur Huda SPdI"
         $v = preg_replace('/[^a-z0-9]+/u', '', $v);
@@ -21,7 +22,7 @@ if (!function_exists('normalize_person_name_for_match')) {
 }
 
 if (!function_exists('is_current_guru_pembina_pramuka')) {
-    function is_current_guru_pembina_pramuka(PDO $pdo): bool
+    function is_current_guru_pembina_pramuka(\PDO $pdo): bool
     {
         $idGuru = 0;
         $candidateNames = [];
@@ -118,7 +119,7 @@ if (!function_exists('is_current_guru_pembina_pramuka')) {
 
 // Helper function to sort menu items alphabetically, keeping Dashboard first and Logout last
 if (!function_exists('sort_all_menu_items')) {
-    function sort_all_menu_items(&$items) {
+    function sort_all_menu_items(?array &$items): void {
         if (empty($items)) return;
         
         $dashboard = null;
@@ -687,6 +688,24 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
+                'title' => 'Absensi',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => $absensi_submenu_guru,
+                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php', 'absensi_les_siswa.php', 'rekap_absensi_les_siswa.php', 'rekap_absensi_les_guru.php'])
+            ],
+            [
+                'title' => 'Nilai Siswa',
+                'icon' => 'fas fa-graduation-cap',
+                'submenu' => $nilai_submenu_guru,
+                'active' => in_array($current_page, $nilai_urls_guru)
+            ],
+            [
+                'title' => 'Ekstrakurikuler',
+                'icon' => 'fas fa-users',
+                'submenu' => $ekstrakurikuler_submenu_guru,
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
+            ],
+            [
                 'title' => 'Data Utama',
                 'icon' => 'fas fa-database',
                 'submenu' => [
@@ -694,18 +713,6 @@ switch ($user_level) {
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=guru', 'active' => $current_page === 'kalender_pendidikan.php']
                 ],
                 'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php'])
-            ],
-            [
-                'title' => 'Absensi',
-                'icon' => 'fas fa-calendar-check',
-                'submenu' => $absensi_submenu_guru,
-                'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php', 'absensi_les_siswa.php', 'rekap_absensi_les_siswa.php', 'rekap_absensi_les_guru.php'])
-            ],
-            [
-                'title' => 'Ekstrakurikuler',
-                'icon' => 'fas fa-users',
-                'submenu' => $ekstrakurikuler_submenu_guru,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -717,12 +724,6 @@ switch ($user_level) {
                     ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=guru', 'active' => $current_page === 'jadwal_seragam.php']
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php'])
-            ],
-            [
-                'title' => 'Nilai Siswa',
-                'icon' => 'fas fa-graduation-cap',
-                'submenu' => $nilai_submenu_guru,
-                'active' => in_array($current_page, $nilai_urls_guru)
             ],
             [
                 'title' => 'Remidial',
@@ -906,22 +907,28 @@ switch ($user_level) {
                 'active' => $current_page === 'dashboard.php'
             ],
             [
-                'title' => 'Data Utama',
-                'icon' => 'fas fa-database',
-                'submenu' => $data_utama_submenu_wali,
-                'active' => in_array($current_page, $data_utama_urls_wali)
-            ],
-            [
                 'title' => 'Absensi',
                 'icon' => 'fas fa-calendar-check',
                 'submenu' => $absensi_submenu_wali,
                 'active' => in_array($current_page, ['absensi_kelas.php', 'absensi_les_guru.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
             ],
             [
+                'title' => 'Nilai Siswa',
+                'icon' => 'fas fa-graduation-cap',
+                'submenu' => $nilai_submenu,
+                'active' => in_array($current_page, $nilai_urls)
+            ],
+            [
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_wali,
                 'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
+            ],
+            [
+                'title' => 'Data Utama',
+                'icon' => 'fas fa-database',
+                'submenu' => $data_utama_submenu_wali,
+                'active' => in_array($current_page, $data_utama_urls_wali)
             ],
             [
                 'title' => 'Jadwal',
@@ -933,12 +940,6 @@ switch ($user_level) {
                     ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=wali', 'active' => $current_page === 'jadwal_seragam.php']
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php'])
-            ],
-            [
-                'title' => 'Nilai Siswa',
-                'icon' => 'fas fa-graduation-cap',
-                'submenu' => $nilai_submenu,
-                'active' => in_array($current_page, $nilai_urls)
             ],
             [
                 'title' => 'Remidial',
@@ -959,7 +960,6 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
             ],
-            
         ];
 
         // Jurnal menu for all wali
@@ -1126,7 +1126,7 @@ foreach ($menu_items as &$item) {
 sort_all_menu_items($menu_items);
 
 if (!function_exists('get_mobile_menu_groups')) {
-    function get_mobile_menu_groups($menu_items)
+    function get_mobile_menu_groups(array $menu_items): array
     {
         $single = [];
         $grouped = [];
@@ -1154,15 +1154,17 @@ if (!function_exists('get_mobile_menu_groups')) {
 }
 
 if (!function_exists('get_bottom_nav_quick_links')) {
-    function get_bottom_nav_quick_links($menu_items, $limit = 3)
+    function get_bottom_nav_quick_links(array $menu_items, int $limit = 3): array
     {
         $links = [];
         foreach ($menu_items as $item) {
-            if ($item['title'] === 'Logout' || $item['title'] === 'Dashboard') {
+            if ($item['title'] === 'Logout' || $item['title'] === 'Dashboard' || $item['title'] === 'Profil') {
                 continue;
             }
-            $has_submenu = isset($item['submenu']) && is_array($item['submenu']) && count($item['submenu']) > 0;
-            $url = $has_submenu ? $item['submenu'][0]['url'] : $item['url'];
+            
+            // Link to dashboard section for mobile grid
+            $url = 'dashboard.php#menu-' . str_replace(' ', '-', $item['title']);
+            
             $links[] = [
                 'title' => $item['title'],
                 'icon' => isset($item['icon']) ? $item['icon'] : '',
