@@ -216,7 +216,6 @@ endif;
                                                     <tr>
                                                         <th>No</th>
                                                         <th>Nama Siswa</th>
-                                                        <th>NISN</th>
                                                         <th>Status Kehadiran</th>
                                                     </tr>
                                                 </thead>
@@ -248,7 +247,6 @@ endif;
                                                                 <?php echo $status; ?>
                                                             </span>
                                                         </td>
-                                                        <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                                         <td>
                                                             <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
                                                             <div class="btn-group btn-group-sm attendance-btn-group" role="group">
@@ -439,7 +437,7 @@ var reportDate = '$report_date';
                 var rows = newTable.querySelectorAll('tr');
                 for (var i = 1; i < rows.length; i++) { // Start from 1 to skip header
                     var row = rows[i];
-                    var selectCell = row.cells[3];
+                    var selectCell = row.cells[2];
                     var hiddenInput = selectCell.querySelector('input.student-status-input');
                     if (hiddenInput) {
                         selectCell.innerHTML = hiddenInput.value ? hiddenInput.value : 'Belum Absen';
@@ -492,7 +490,7 @@ var reportDate = '$report_date';
                 var rows = table.querySelectorAll('tr');
                 for (var i = 1; i < rows.length; i++) { // Start from 1 to skip header
                     var row = rows[i];
-                    var selectCell = row.cells[3];
+                    var selectCell = row.cells[2];
                     var hiddenInput = selectCell.querySelector('input.student-status-input');
                     if (hiddenInput) {
                         selectCell.innerHTML = hiddenInput.value ? hiddenInput.value : 'Belum Absen';
@@ -559,7 +557,7 @@ var reportDate = '$report_date';
                 // Initialize DataTable
                 $('#table-1').DataTable({
                     \"columnDefs\": [
-                        { \"orderable\": false, \"targets\": [3] }
+                        { \"orderable\": false, \"targets\": [2] }
                     ],
                     \"paging\": false,
                     \"dom\": 'lfrtip',

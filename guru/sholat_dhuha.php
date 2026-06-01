@@ -201,7 +201,6 @@ include '../templates/header.php';
                                         <tr>
                                             <th>No</th>
                                             <th>Nama Siswa</th>
-                                            <th>NISN</th>
                                             <th>Status Kehadiran</th>
                                         </tr>
                                     </thead>
@@ -235,7 +234,6 @@ include '../templates/header.php';
                                                     <small class="text-danger d-block">(Absensi: <?php echo $status_absensi; ?>)</small>
                                                 <?php endif; ?>
                                             </td>
-                                            <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                             <td>
                                                 <div class="btn-group btn-group-toggle" data-toggle="buttons">
                                                     <label class="btn btn-outline-success <?php echo $current_status === 'Hadir' ? 'active' : ''; ?>" 

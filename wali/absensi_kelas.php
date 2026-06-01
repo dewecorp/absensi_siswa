@@ -208,7 +208,6 @@ endif;
                                                     <tr>
                                                         <th>No</th>
                                                         <th>Nama Siswa</th>
-                                                        <th>NISN</th>
                                                         <th>Status Kehadiran</th>
                                                     </tr>
                                                 </thead>
@@ -240,7 +239,6 @@ endif;
                                                                 <?php echo $status; ?>
                                                             </span>
                                                         </td>
-                                                        <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                                         <td>
                                                             <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
                                                             <div class="btn-group btn-group-sm attendance-btn-group" role="group">
@@ -338,7 +336,7 @@ $js_page[] = "
     $(document).ready(function() {
         $('#table-1').DataTable({
             \"columnDefs\": [
-                { \"orderable\": false, \"targets\": [3] }
+                { \"orderable\": false, \"targets\": [2] }
             ],
             \"paging\": false,
             \"dom\": 'lfrtip',

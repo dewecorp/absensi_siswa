@@ -632,13 +632,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmt_check_reg->execute([$teacher['id_guru'], $today]);
                             $today_reg_attendance = $stmt_check_reg->fetch(PDO::FETCH_ASSOC);
                         ?>
-                        <div class="<?php echo $col_class; ?>">
+                        <div class="<?php echo $col_class; ?> mb-4">
                             <div class="card card-primary">
                                 <div class="card-header">
-                                    <h4>Absensi Harian Guru</h4>
+                                    <h4>Absensi Harian & Jurnal Mengajar</h4>
                                 </div>
                                 <div class="card-body">
-                                    <div class="alert alert-light alert-has-icon shadow-sm border">
+                                    <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
                                         <div class="alert-icon text-primary"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title font-weight-bold">Penting</div>
@@ -698,11 +698,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                         <?php else: ?>
-                        <div class="<?php echo $col_class; ?>">
+                        <div class="<?php echo $col_class; ?> mb-4">
                             <div class="card card-warning">
-                                <div class="card-header"><h4>Absensi Harian Guru</h4></div>
-                                <div class="card-body">
-                                    <div class="alert alert-warning shadow-sm">Hari Libur: <?php echo $holiday['name']; ?>. Absensi harian ditutup.</div>
+                                <div class="card-header"><h4>Absensi Harian & Jurnal Mengajar</h4></div>
+                                <div class="card-body d-flex align-items-center justify-content-center text-center">
+                                    <div class="py-2">
+                                        <div class="mb-3">
+                                            <i class="fas fa-calendar-check text-warning" style="font-size: 60px;"></i>
+                                        </div>
+                                        <h5 class="font-weight-bold mb-1">Hari Libur Sekolah</h5>
+                                        <p class="text-muted mb-2">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo $holiday['name']; ?></strong>.</p>
+                                        <div class="badge badge-warning px-3 py-1" style="font-size: 0.9rem; border-radius: 30px;">
+                                            <i class="fas fa-info-circle mr-2"></i> Absensi Harian Ditutup
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -715,14 +724,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmt_check_les->execute([$teacher['id_guru'], $today]);
                             $today_les_attendance = $stmt_check_les->fetch(PDO::FETCH_ASSOC);
                         ?>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 mb-4">
                             <div class="card card-dark">
                                 <div class="card-header">
-                                    <h4>Absensi Les Guru (Kelas 6)</h4>
+                                    <h4>Absensi Les & Jurnal Les (Kelas 6)</h4>
                                 </div>
                                 <div class="card-body">
                                     <?php if ($has_les_schedule_guru): ?>
-                                    <div class="alert alert-light alert-has-icon shadow-sm border">
+                                    <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
                                         <div class="alert-icon text-dark"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title font-weight-bold">Penting</div>
@@ -779,13 +788,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
                                     </form>
                                     <?php else: ?>
-                                    <div class="alert alert-info shadow-sm">
-                                        <div class="alert-body">
-                                            <div class="alert-title font-weight-bold">Informasi</div>
-                                            Tidak ada jadwal les untuk hari ini (<?php echo date('d-m-Y'); ?>).
+                                    <div class="alert alert-info shadow-sm d-flex flex-column justify-content-center mb-0">
+                                        <div class="alert-body text-center py-3">
+                                            <div class="alert-title font-weight-bold mb-1">Informasi</div>
+                                            <p class="mb-3">Tidak ada jadwal les untuk hari ini (<?php echo date('d-m-Y'); ?>).</p>
+                                            <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block shadow-sm mt-auto"><i class="fas fa-book mr-2"></i> Lihat Jadwal & Jurnal Les</a>
                                         </div>
                                     </div>
-                                    <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-book mr-2"></i> Lihat Jadwal & Jurnal Les</a>
                                     <?php endif; ?>
                                 </div>
                             </div>

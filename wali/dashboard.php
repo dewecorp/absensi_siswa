@@ -70,6 +70,7 @@ if ($wali_kelas) {
 
 // Get today's attendance statistics for the wali's class
 $today = date('Y-m-d');
+$holiday = isSchoolHoliday($pdo, $today);
 
 // Check if there is a tutoring schedule today (for Grade 6)
 $is_grade_6_wali = false;
@@ -650,14 +651,16 @@ include_once '../templates/sidebar.php';
                         // Box les selalu muncul untuk kelas 6, cek apakah ada jadwal hari ini
                         $show_les_box_wali = $is_grade_6_wali; // Selalu tampilkan untuk kelas 6
                         $col_class_wali = $show_les_box_wali ? 'col-12 col-md-6' : 'col-12';
+                        
+                        if (!$holiday['is_holiday']):
                         ?>
-                        <div class="<?php echo $col_class_wali; ?>">
+                        <div class="<?php echo $col_class_wali; ?> mb-4">
                             <div class="card card-primary">
                                 <div class="card-header">
                                     <h4>Absensi Harian & Jurnal Mengajar</h4>
                                 </div>
                                 <div class="card-body">
-                                    <div class="alert alert-light alert-has-icon shadow-sm border">
+                                    <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
                                         <div class="alert-icon text-primary"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title font-weight-bold">Penting</div>
@@ -677,7 +680,7 @@ include_once '../templates/sidebar.php';
 
                                     <form method="POST" action="" id="attendanceForm">
                                         <div class="form-group mb-4 text-center">
-                                            <label class="d-block font-weight-bold">Status Kehadiran Hari Ini (<?php echo date('d-m-Y'); ?>)</label>
+                                            <label class="d-block font-weight-bold">Status Kehadiran (<?php echo date('d-m-Y'); ?>)</label>
                                             <div class="selectgroup selectgroup-pills justify-content-center">
                                                 <label class="selectgroup-item">
                                                     <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
@@ -722,21 +725,40 @@ include_once '../templates/sidebar.php';
                                         </div>
                                         <?php endif; ?>
 
-                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi</button>
+                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Harian</button>
                                     </form>
                                 </div>
                             </div>
                         </div>
+                        <?php else: ?>
+                        <div class="<?php echo $col_class_wali; ?> mb-4">
+                            <div class="card card-warning">
+                                <div class="card-header"><h4>Absensi Harian & Jurnal Mengajar</h4></div>
+                                <div class="card-body d-flex align-items-center justify-content-center text-center">
+                                    <div class="py-2">
+                                        <div class="mb-3">
+                                            <i class="fas fa-calendar-check text-warning" style="font-size: 60px;"></i>
+                                        </div>
+                                        <h5 class="font-weight-bold mb-1">Hari Libur Sekolah</h5>
+                                        <p class="text-muted mb-2">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo $holiday['name']; ?></strong>.</p>
+                                        <div class="badge badge-warning px-3 py-1" style="font-size: 0.9rem; border-radius: 30px;">
+                                            <i class="fas fa-info-circle mr-2"></i> Absensi Harian Ditutup
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
 
                         <?php if ($show_les_box_wali): ?>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 mb-4">
                             <div class="card card-dark">
                                 <div class="card-header">
                                     <h4>Absensi Les & Jurnal Les (Kelas 6)</h4>
                                 </div>
                                 <div class="card-body">
                                     <?php if ($has_les_schedule): ?>
-                                    <div class="alert alert-light alert-has-icon shadow-sm border">
+                                    <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
                                         <div class="alert-icon text-dark"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title font-weight-bold">Penting</div>
@@ -793,13 +815,13 @@ include_once '../templates/sidebar.php';
                                         <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
                                     </form>
                                     <?php else: ?>
-                                    <div class="alert alert-info shadow-sm">
-                                        <div class="alert-body">
-                                            <div class="alert-title font-weight-bold">Informasi</div>
-                                            Tidak ada jadwal les untuk hari ini (<?php echo date('d-m-Y'); ?>).
+                                    <div class="alert alert-info shadow-sm d-flex flex-column justify-content-center mb-0">
+                                        <div class="alert-body text-center py-3">
+                                            <div class="alert-title font-weight-bold mb-1">Informasi</div>
+                                            <p class="mb-3">Tidak ada jadwal les untuk hari ini (<?php echo date('d-m-Y'); ?>).</p>
+                                            <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block shadow-sm mt-auto"><i class="fas fa-book mr-2"></i> Lihat Jadwal & Jurnal Les</a>
                                         </div>
                                     </div>
-                                    <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-book mr-2"></i> Lihat Jadwal & Jurnal Les</a>
                                     <?php endif; ?>
                                 </div>
                             </div>

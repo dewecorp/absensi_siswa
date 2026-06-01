@@ -28,12 +28,68 @@ $js_libs = [
 $filter_type = $_POST['filter_type'] ?? 'all';
 $selected_date = $_POST['attendance_date'] ?? date('Y-m-d');
 
-// Get Grade 6 Class ID
-$stmt_grade6 = $pdo->query("SELECT id_kelas, nama_kelas, wali_kelas FROM tb_kelas WHERE nama_kelas = 'VI' OR nama_kelas = '6' LIMIT 1");
-$class_grade6 = $stmt_grade6->fetch(PDO::FETCH_ASSOC);
-$id_kelas_fixed = $class_grade6 ? $class_grade6['id_kelas'] : 6;
-$nama_kelas_fixed = $class_grade6 ? $class_grade6['nama_kelas'] : 'VI';
-$wali_kelas_fixed = $class_grade6 ? $class_grade6['wali_kelas'] : '-';
+// Get all Grade 6 Classes
+$stmt_grade6_all = $pdo->query("SELECT id_kelas, nama_kelas, wali_kelas FROM tb_kelas WHERE nama_kelas LIKE '%VI%' OR nama_kelas LIKE '%6%' ORDER BY nama_kelas ASC");
+$all_grade6_classes = $stmt_grade6_all->fetchAll(PDO::FETCH_ASSOC);
+
+// Determine which classes to show
+$current_guru_id = null;
+if (in_array($user_level, ['guru', 'wali'])) {
+    if (isset($_SESSION['user_id'])) {
+        $id_check = $_SESSION['user_id'];
+        if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+            $stmt_uid = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+            $stmt_uid->execute([$id_check]);
+            $current_guru_id = $stmt_uid->fetchColumn();
+        } else {
+            $current_guru_id = $id_check;
+        }
+    }
+}
+
+$classes_to_show = [];
+if (in_array($user_level, ['admin', 'tata_usaha', 'kepala_madrasah'])) {
+    $classes_to_show = $all_grade6_classes;
+} elseif ($current_guru_id) {
+    // Get teacher's classes
+    $stmt_g = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
+    $stmt_g->execute([$current_guru_id]);
+    $mengajar_json = (string)$stmt_g->fetchColumn();
+    $mengajar_arr = json_decode($mengajar_json, true) ?? [];
+    
+    // Filter to Grade 6 only
+    foreach ($all_grade6_classes as $cls) {
+        if (in_array($cls['id_kelas'], $mengajar_arr) || in_array($cls['nama_kelas'], $mengajar_arr)) {
+            $classes_to_show[] = $cls;
+        }
+    }
+}
+
+// If no classes to show but it's grade 6 wali, try to find by wali_kelas name
+if (empty($classes_to_show) && $user_level === 'wali' && isset($_SESSION['nama_guru'])) {
+    $stmt_wali_check = $pdo->prepare("SELECT id_kelas, nama_kelas, wali_kelas FROM tb_kelas WHERE wali_kelas = ? AND (nama_kelas LIKE '%VI%' OR nama_kelas LIKE '%6%')");
+    $stmt_wali_check->execute([$_SESSION['nama_guru']]);
+    $classes_to_show = $stmt_wali_check->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($classes_to_show)) $classes_to_show = $all_grade6_classes;
+}
+
+// Default selection
+$id_kelas_selected = isset($_POST['kelas']) ? (int)$_POST['kelas'] : (isset($_GET['kelas']) ? (int)$_GET['kelas'] : (count($classes_to_show) > 0 ? $classes_to_show[0]['id_kelas'] : 0));
+if ($id_kelas_selected == 0 && count($all_grade6_classes) > 0) {
+    $id_kelas_selected = $all_grade6_classes[0]['id_kelas'];
+}
+
+// Get selected class info
+$nama_kelas_selected = '';
+$wali_kelas_selected = '-';
+foreach ($all_grade6_classes as $cls) {
+    if ($cls['id_kelas'] == $id_kelas_selected) {
+        $nama_kelas_selected = $cls['nama_kelas'];
+        $wali_kelas_selected = $cls['wali_kelas'];
+        break;
+    }
+}
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
@@ -41,22 +97,23 @@ $school_profile = getSchoolProfile($pdo);
 $daily_results = [];
 $all_results = [];
 $absent_summary = [];
+$scheduled_dates = [];
 
 // Process search based on filter type
 if ($filter_type == 'daily') {
     $stmt = $pdo->prepare("
-        SELECT s.id_siswa, s.nama_siswa, s.nisn, al.status, al.tanggal, al.waktu_input
+        SELECT s.id_siswa, s.nama_siswa, al.status, al.tanggal, al.waktu_input
         FROM tb_siswa s
         LEFT JOIN tb_absensi_les al ON s.id_siswa = al.id_siswa AND al.tanggal = ?
         WHERE s.id_kelas = ?
         ORDER BY s.nama_siswa ASC
     ");
-    $stmt->execute([$selected_date, $id_kelas_fixed]);
+    $stmt->execute([$selected_date, $id_kelas_selected]);
     $daily_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Ringkasan ketidakhadiran les (Sakit/Izin/Alpa) seperti rekap absensi harian
     $summary_stmt = $pdo->prepare("
-        SELECT s.nama_siswa, s.nisn, al.status AS keterangan
+        SELECT s.nama_siswa, al.status AS keterangan
         FROM tb_absensi_les al
         JOIN tb_siswa s ON s.id_siswa = al.id_siswa
         WHERE al.tanggal = ?
@@ -64,12 +121,12 @@ if ($filter_type == 'daily') {
           AND al.status IN ('Sakit', 'Izin', 'Alpa')
         ORDER BY s.nama_siswa ASC
     ");
-    $summary_stmt->execute([$selected_date, $id_kelas_fixed]);
+    $summary_stmt->execute([$selected_date, $id_kelas_selected]);
     $absent_summary = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
 } elseif ($filter_type == 'all') {
     // Get all students
-    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
-    $stmt->execute([$id_kelas_fixed]);
+    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+    $stmt->execute([$id_kelas_selected]);
     $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Get all scheduled dates
@@ -87,7 +144,7 @@ if ($filter_type == 'daily') {
         JOIN tb_siswa s ON al.id_siswa = s.id_siswa
         WHERE s.id_kelas = ?
     ");
-    $stmt->execute([$id_kelas_fixed]);
+    $stmt->execute([$id_kelas_selected]);
     $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $attendance_by_student = [];
@@ -110,7 +167,6 @@ if ($filter_type == 'daily') {
         $sid = $student['id_siswa'];
         $all_results[] = [
             'nama_siswa' => $student['nama_siswa'],
-            'nisn' => $student['nisn'],
             'dates' => $attendance_by_student[$sid]['dates'] ?? [],
             'summary' => $attendance_by_student[$sid]['summary'] ?? ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0]
         ];
@@ -152,16 +208,18 @@ include '../templates/sidebar.php';
                                 <p><?= $school_profile['alamat'] ?? '' ?></p>
                                 <p>Tahun Ajaran: <?= $school_profile['tahun_ajaran'] ?? '-' ?> | Semester: <?= $school_profile['semester'] ?? '-' ?></p>
                                 <hr style="border: 1px solid black; margin-top: 5px;">
-                                <h4 style="margin-top: 15px; text-decoration: underline;">REKAP ABSENSI LES SISWA KELAS <?= $nama_kelas_fixed ?></h4>
+                                <h4 style="margin-top: 15px; text-decoration: underline;">REKAP ABSENSI LES SISWA KELAS <?= $nama_kelas_selected ?></h4>
                             </div>
 
                             <?php
                                 $excel_export_url = '../config/export_rekap_les_excel?filter_type=' . urlencode($filter_type)
                                     . ($filter_type == 'daily' ? '&date=' . urlencode($selected_date) : '')
-                                    . '&session_type=' . urlencode($session_type);
+                                    . '&session_type=' . urlencode($session_type)
+                                    . '&kelas=' . $id_kelas_selected;
                                 $pdf_export_url = '../config/export_rekap_les_pdf?filter_type=' . urlencode($filter_type)
                                     . ($filter_type == 'daily' ? '&date=' . urlencode($selected_date) : '')
-                                    . '&session_type=' . urlencode($session_type);
+                                    . '&session_type=' . urlencode($session_type)
+                                    . '&kelas=' . $id_kelas_selected;
                             ?>
                             <form method="POST" class="row align-items-end">
                                 <div class="form-group col-md-3">
@@ -171,12 +229,27 @@ include '../templates/sidebar.php';
                                         <option value="daily" <?= $filter_type == 'daily' ? 'selected' : '' ?>>Harian</option>
                                     </select>
                                 </div>
+
+                                <?php if (count($classes_to_show) > 1): ?>
+                                <div class="form-group col-md-3">
+                                    <label>Kelas</label>
+                                    <select name="kelas" class="form-control" onchange="this.form.submit()">
+                                        <?php foreach ($classes_to_show as $cls): ?>
+                                        <option value="<?= $cls['id_kelas'] ?>" <?= $id_kelas_selected == $cls['id_kelas'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($cls['nama_kelas']) ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <?php else: ?>
+                                    <input type="hidden" name="kelas" value="<?= $id_kelas_selected ?>">
+                                <?php endif; ?>
                                 
                                 <div class="form-group col-md-3" id="dailyFilter" style="<?= $filter_type == 'daily' ? '' : 'display:none;' ?>">
                                     <label>Pilih Tanggal</label>
                                     <input type="date" name="attendance_date" class="form-control" value="<?= $selected_date ?>" onchange="this.form.submit()">
                                 </div>
-                                <div class="form-group col-md-6 text-md-right text-left mb-3">
+                                <div class="form-group col-md-<?= count($classes_to_show) > 1 ? '3' : '6' ?> text-md-right text-left mb-3">
                                     <div class="btn-group">
                                         <a href="<?= htmlspecialchars($excel_export_url) ?>" target="_blank" class="btn btn-success">
                                             <i class="fas fa-file-excel"></i> Excel
@@ -233,7 +306,6 @@ include '../templates/sidebar.php';
                                                         <tr>
                                                             <th style="width:50px;">No</th>
                                                             <th>Nama Siswa</th>
-                                                            <th>NISN</th>
                                                             <th style="width:120px;">Keterangan</th>
                                                         </tr>
                                                     </thead>
@@ -247,7 +319,6 @@ include '../templates/sidebar.php';
                                                             <tr>
                                                                 <td><?= (int)($idx_abs + 1) ?></td>
                                                                 <td><?= htmlspecialchars($abs['nama_siswa']) ?></td>
-                                                                <td><?= htmlspecialchars($abs['nisn']) ?></td>
                                                                 <td><span class="badge <?= $badge_class ?>"><?= htmlspecialchars($abs['keterangan']) ?></span></td>
                                                             </tr>
                                                         <?php endforeach; ?>
@@ -266,7 +337,6 @@ include '../templates/sidebar.php';
                                                 <tr>
                                                     <th>No</th>
                                                     <th>Nama Siswa</th>
-                                                    <th>NISN</th>
                                                     <th>Status</th>
                                                     <th>Waktu Input</th>
                                                 </tr>
@@ -276,7 +346,6 @@ include '../templates/sidebar.php';
                                                 <tr>
                                                     <td><?= $i+1 ?></td>
                                                     <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
-                                                    <td><?= htmlspecialchars($r['nisn']) ?></td>
                                                     <td>
                                                         <?php 
                                                         $status = $r['status'] ?? '';
@@ -365,15 +434,15 @@ include '../templates/sidebar.php';
                                     <!-- Print Signatures -->
                                     <div class="signature-wrapper" style="display:none;">
                                         <div class="signature-box">
-                                            <p><?= $school_profile['tempat_jadwal'] ?? 'Sukosono' ?>, <?= formatDateIndonesia(date('Y-m-d')) ?><br>Wali Kelas <?= $nama_kelas_fixed ?>,</p>
+                                            <p><?= $school_profile['tempat_jadwal'] ?? 'Sukosono' ?>, <?= formatDateIndonesia(date('Y-m-d')) ?><br>Wali Kelas <?= $nama_kelas_selected ?>,</p>
                                             <div style="height: 60px;">
                                                 <?php 
-                                                $qr_wali = 'Validasi Wali Kelas: ' . $wali_kelas_fixed . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
+                                                $qr_wali = 'Validasi Wali Kelas: ' . $wali_kelas_selected . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
                                                 $qr_wali_url = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . urlencode($qr_wali);
                                                 ?>
                                                 <img src="<?= $qr_wali_url ?>" style="width: 60px;">
                                             </div>
-                                            <p><strong><u><?= $wali_kelas_fixed ?></u></strong></p>
+                                            <p><strong><u><?= $wali_kelas_selected ?></u></strong></p>
                                         </div>
                                         <div class="signature-box">
                                             <p><br>Mengetahui,<br>Kepala Madrasah,</p>
@@ -432,7 +501,7 @@ function exportToExcel(type) {
     excelHtml += '<tr><td colspan="5" style="text-align:center; font-weight:bold; font-size:16pt;"><?= strtoupper($school_profile['nama_madrasah'] ?? 'MADRASAH') ?></td></tr>';
     excelHtml += '<tr><td colspan="5" style="text-align:center;"><?= $school_profile['alamat'] ?? '' ?></td></tr>';
     excelHtml += '<tr><td colspan="5"></td></tr>';
-    excelHtml += '<tr><td colspan="5" style="text-align:center; font-weight:bold; text-decoration:underline;">REKAP ABSENSI LES SISWA KELAS <?= $nama_kelas_fixed ?></td></tr>';
+    excelHtml += '<tr><td colspan="5" style="text-align:center; font-weight:bold; text-decoration:underline;">REKAP ABSENSI LES SISWA KELAS <?= $nama_kelas_selected ?></td></tr>';
     excelHtml += '<tr><td colspan="5"></td></tr>';
     excelHtml += '</table>';
 

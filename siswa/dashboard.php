@@ -31,6 +31,7 @@ $page_title = 'Dashboard Siswa';
 
 // Get today's attendance status
 $today = date('Y-m-d');
+$holiday = isSchoolHoliday($pdo, $today);
 $stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
 $stmt->execute([$id_siswa, $today]);
 $attendance = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -219,7 +220,7 @@ include_once '../templates/sidebar.php';
         <div class="row">
             <!-- Box Identitas Siswa -->
             <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
-                <div class="card card-primary h-100">
+                <div class="card card-primary">
                     <div class="card-header py-3">
                         <h4 class="mb-0"><i class="fas fa-user-graduate mr-2"></i>Identitas Siswa</h4>
                     </div>
@@ -284,7 +285,7 @@ include_once '../templates/sidebar.php';
 
             <!-- Box Absensi Manual -->
             <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
-                <div class="card card-warning h-100">
+                <div class="card card-warning">
                     <div class="card-header py-3">
                         <h4 class="mb-0">Absensi Hari Ini</h4>
                         <div class="card-header-action">
@@ -292,6 +293,7 @@ include_once '../templates/sidebar.php';
                         </div>
                     </div>
                     <div class="card-body">
+                        <?php if (!$holiday['is_holiday']): ?>
                         <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
                             <div class="alert-icon text-warning"><i class="far fa-bell"></i></div>
                             <div class="alert-body">
@@ -378,6 +380,20 @@ include_once '../templates/sidebar.php';
                             </div>
                             <?php endif; ?>
                         </div>
+                        <?php endif; ?>
+                        <?php else: ?>
+                            <div class="d-flex align-items-center justify-content-center text-center py-2">
+                                <div>
+                                    <div class="mb-3">
+                                        <i class="fas fa-umbrella-beach text-warning" style="font-size: 60px;"></i>
+                                    </div>
+                                    <h5 class="font-weight-bold mb-1">Hari Libur Sekolah</h5>
+                                    <p class="text-muted mb-2">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo $holiday['name']; ?></strong>.</p>
+                                    <div class="badge badge-warning px-3 py-1" style="font-size: 0.9rem; border-radius: 30px;">
+                                        <i class="fas fa-info-circle mr-2"></i> Absensi Harian Ditutup
+                                    </div>
+                                </div>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -507,6 +523,7 @@ include_once '../templates/sidebar.php';
                             <span class="badge badge-success badge-pill">Semua Fitur</span>
                         </div>
                         <?php
+                        global $menu_items;
                         $mobile_menu_groups = function_exists('get_mobile_menu_groups') ? get_mobile_menu_groups($menu_items) : ['single' => [], 'grouped' => []];
                         $single_items = $mobile_menu_groups['single'];
                         $grouped_items = $mobile_menu_groups['grouped'];

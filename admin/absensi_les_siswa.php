@@ -10,11 +10,68 @@ if (!isAuthorized(['admin', 'wali', 'guru', 'tata_usaha'])) {
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
 
-// Get Grade 6 Class ID
-$stmt_grade6 = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE nama_kelas = 'VI' OR nama_kelas = '6' LIMIT 1");
-$class_grade6 = $stmt_grade6->fetch(PDO::FETCH_ASSOC);
-$id_kelas_fixed = $class_grade6 ? $class_grade6['id_kelas'] : 6;
-$nama_kelas_fixed = $class_grade6 ? $class_grade6['nama_kelas'] : 'VI';
+// Get all Grade 6 Classes
+$stmt_grade6_all = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE nama_kelas LIKE '%VI%' OR nama_kelas LIKE '%6%' ORDER BY nama_kelas ASC");
+$all_grade6_classes = $stmt_grade6_all->fetchAll(PDO::FETCH_ASSOC);
+
+// Determine which classes to show
+$user_level = getUserLevel();
+$current_guru_id = null;
+if (in_array($user_level, ['guru', 'wali'])) {
+    if (isset($_SESSION['user_id'])) {
+        $id_check = $_SESSION['user_id'];
+        if (isset($_SESSION['login_source']) && $_SESSION['login_source'] == 'tb_pengguna') {
+            $stmt_uid = $pdo->prepare("SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ?");
+            $stmt_uid->execute([$id_check]);
+            $current_guru_id = $stmt_uid->fetchColumn();
+        } else {
+            $current_guru_id = $id_check;
+        }
+    }
+}
+
+$classes_to_show = [];
+if (in_array($user_level, ['admin', 'tata_usaha', 'kepala_madrasah'])) {
+    $classes_to_show = $all_grade6_classes;
+} elseif ($current_guru_id) {
+    // Get teacher's classes
+    $stmt_g = $pdo->prepare("SELECT mengajar FROM tb_guru WHERE id_guru = ?");
+    $stmt_g->execute([$current_guru_id]);
+    $mengajar_json = (string)$stmt_g->fetchColumn();
+    $mengajar_arr = json_decode($mengajar_json, true) ?? [];
+    
+    // Filter to Grade 6 only
+    foreach ($all_grade6_classes as $cls) {
+        if (in_array($cls['id_kelas'], $mengajar_arr) || in_array($cls['nama_kelas'], $mengajar_arr)) {
+            $classes_to_show[] = $cls;
+        }
+    }
+}
+
+// If no classes to show but it's grade 6 wali, try to find by wali_kelas name
+if (empty($classes_to_show) && $user_level === 'wali' && isset($_SESSION['nama_guru'])) {
+    $stmt_wali_check = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ? AND (nama_kelas LIKE '%VI%' OR nama_kelas LIKE '%6%')");
+    $stmt_wali_check->execute([$_SESSION['nama_guru']]);
+    $classes_to_show = $stmt_wali_check->fetchAll(PDO::FETCH_ASSOC);
+    
+    // If still empty, maybe they are just authorized to see all grade 6 (e.g. if they teach all grade 6)
+    if (empty($classes_to_show)) $classes_to_show = $all_grade6_classes;
+}
+
+// Default selection
+$id_kelas_selected = isset($_GET['kelas']) ? (int)$_GET['kelas'] : (count($classes_to_show) > 0 ? $classes_to_show[0]['id_kelas'] : 0);
+if ($id_kelas_selected == 0 && count($all_grade6_classes) > 0) {
+    $id_kelas_selected = $all_grade6_classes[0]['id_kelas'];
+}
+
+// Get selected class name
+$nama_kelas_selected = '';
+foreach ($all_grade6_classes as $cls) {
+    if ($cls['id_kelas'] == $id_kelas_selected) {
+        $nama_kelas_selected = $cls['nama_kelas'];
+        break;
+    }
+}
 
 // Check if there is a schedule for selected date
 $tanggal = isset($_GET['tanggal']) && !empty($_GET['tanggal']) ? $_GET['tanggal'] : date('Y-m-d');
@@ -27,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     if (!$has_schedule) {
         $message = ['type' => 'danger', 'text' => 'Tidak ada jadwal les untuk tanggal ini. Absensi tidak dapat disimpan.'];
     } else {
-        $id_kelas = $id_kelas_fixed;
+        $id_kelas = (int)$_POST['id_kelas'];
         $tanggal = $_POST['tanggal'];
         
         // Get current user's guru ID if applicable
@@ -53,25 +110,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             $stmt_check_teacher = $pdo->prepare("
                 SELECT COUNT(*) 
                 FROM tb_jadwal_les jl
-                INNER JOIN tb_jadwal_pelajaran jp ON jl.id_guru = jp.guru_id
                 WHERE jl.id_guru = ? 
                 AND jl.tanggal = ?
-                AND jp.kelas_id = ?
             ");
-            $stmt_check_teacher->execute([$current_guru_id, $tanggal, $id_kelas]);
+            $stmt_check_teacher->execute([$current_guru_id, $tanggal]);
             $has_teacher_schedule = $stmt_check_teacher->fetchColumn() > 0;
             
             if (!$has_teacher_schedule) {
                 $validation_error = true;
-                $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki jadwal les untuk kelas ini pada tanggal tersebut. Tidak dapat mengisi absensi.'];
+                $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki jadwal les pada tanggal tersebut. Tidak dapat mengisi absensi.'];
             }
         }
         
         if (!$validation_error) {
-            // Note: Tutoring attendance does NOT check school holidays
-            // It only depends on whether there is a tutoring schedule (tb_jadwal_les)
-            // This allows tutoring on holidays like Fridays if scheduled
-            
             $saved_count = 0;
             foreach ($_POST as $key => $value) {
                 if (strpos($key, 'keterangan_') === 0) {
@@ -109,20 +160,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             
             $message = ['type' => 'success', 'text' => "Data absensi les berhasil disimpan untuk $saved_count siswa!"];
             $username = $_SESSION['username'] ?? 'system';
-            logActivity($pdo, $username, 'Input Absensi Les', "Melakukan input absensi les siswa kelas $nama_kelas_fixed untuk $saved_count siswa");
+            
+            // Get class name for logging
+            $stmt_cn = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+            $stmt_cn->execute([$id_kelas]);
+            $log_class_name = $stmt_cn->fetchColumn() ?: 'Unknown';
+            
+            logActivity($pdo, $username, 'Input Absensi Les', "Melakukan input absensi les siswa kelas $log_class_name untuk $saved_count siswa");
 
             // Add notification for Admin/Kepala
             if (in_array($user_level, ['guru', 'wali'])) {
                 $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
                 $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
-                $msg = "$nama_guru ($role_label) telah mengisi absensi les siswa kelas $nama_kelas_fixed pada " . date('d-m-Y H:i');
+                $msg = "$nama_guru ($role_label) telah mengisi absensi les siswa kelas $log_class_name pada " . date('d-m-Y H:i');
                 createNotification($pdo, $msg, 'absensi_les_siswa.php');
             }
         }
     }
 }
 
-// Get students for fixed Grade 6 class
+// Get students for selected class
 $students = [];
 try {
     $stmt = $pdo->prepare("SELECT s.*, a.status as keterangan 
@@ -130,7 +187,7 @@ try {
                            LEFT JOIN tb_absensi_les a ON s.id_siswa = a.id_siswa AND a.tanggal = ? 
                            WHERE s.id_kelas = ? 
                            ORDER BY s.nama_siswa ASC");
-    $stmt->execute([$tanggal, $id_kelas_fixed]);
+    $stmt->execute([$tanggal, $id_kelas_selected]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $students = [];
@@ -168,12 +225,22 @@ include '../templates/sidebar.php';
                         <div class="card-body">
                             <form method="GET" action="" id="filterForm">
                                 <div class="row">
+                                    <?php if (count($classes_to_show) > 1): ?>
                                     <div class="col-md-4">
                                         <div class="form-group">
                                             <label>Kelas</label>
-                                            <input type="text" class="form-control" value="<?php echo $nama_kelas_fixed; ?>" readonly>
+                                            <select class="form-control" name="kelas" id="kelasSelect">
+                                                <?php foreach ($classes_to_show as $cls): ?>
+                                                <option value="<?php echo $cls['id_kelas']; ?>" <?php echo $id_kelas_selected == $cls['id_kelas'] ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($cls['nama_kelas']); ?>
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
                                         </div>
                                     </div>
+                                    <?php else: ?>
+                                        <input type="hidden" name="kelas" value="<?php echo $id_kelas_selected; ?>">
+                                    <?php endif; ?>
                                     <div class="col-md-4">
                                         <div class="form-group">
                                             <label>Tanggal</label>
@@ -185,7 +252,7 @@ include '../templates/sidebar.php';
 
                             <?php if (!empty($students)): ?>
                             <form method="POST" action="" id="attendanceForm">
-                                <input type="hidden" name="id_kelas" value="<?php echo $id_kelas_fixed; ?>">
+                                <input type="hidden" name="id_kelas" value="<?php echo $id_kelas_selected; ?>">
                                 <input type="hidden" name="tanggal" value="<?php echo $tanggal; ?>">
                                 <input type="hidden" name="save_attendance" value="1">
                                 
@@ -195,7 +262,6 @@ include '../templates/sidebar.php';
                                             <tr>
                                                 <th width="5%">No</th>
                                                 <th>Nama Siswa</th>
-                                                <th>NISN</th>
                                                 <th width="25%">Status Kehadiran</th>
                                             </tr>
                                         </thead>
@@ -218,7 +284,6 @@ include '../templates/sidebar.php';
                                                         <?php echo $status_badge; ?>
                                                     </span>
                                                 </td>
-                                                <td><?php echo htmlspecialchars($student['nisn']); ?></td>
                                                 <td>
                                                     <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
                                                     <div class="btn-group btn-group-sm attendance-btn-group <?php echo !$has_schedule ? 'disabled' : ''; ?>" role="group">
@@ -252,7 +317,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </form>
                             <?php elseif (empty($students)): ?>
-                                <div class="alert alert-info text-center">Data siswa tidak ditemukan untuk kelas <?php echo $nama_kelas_fixed; ?>.</div>
+                                <div class="alert alert-info text-center">Data siswa tidak ditemukan untuk kelas <?php echo $nama_kelas_selected; ?>.</div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -300,7 +365,7 @@ $(document).ready(function() {
         'pageLength': 50
     });
     
-    $('#tanggalInput').on('change', function() {
+    $('#tanggalInput, #kelasSelect').on('change', function() {
         $('#filterForm').submit();
     });
 

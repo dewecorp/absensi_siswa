@@ -6,12 +6,20 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
     die("Unauthorized access");
 }
 
-// Get Grade 6 Class ID
-$stmt_grade6 = $pdo->query("SELECT id_kelas, nama_kelas, wali_kelas FROM tb_kelas WHERE nama_kelas = 'VI' OR nama_kelas = '6' LIMIT 1");
-$class_grade6 = $stmt_grade6->fetch(PDO::FETCH_ASSOC);
-$id_kelas_fixed = $class_grade6 ? $class_grade6['id_kelas'] : 6;
-$nama_kelas_fixed = $class_grade6 ? $class_grade6['nama_kelas'] : 'VI';
-$wali_kelas_fixed = $class_grade6 ? $class_grade6['wali_kelas'] : '-';
+// Get Class ID from parameter or default to Grade 6
+$id_kelas_selected = isset($_GET['kelas']) ? (int)$_GET['kelas'] : 0;
+if ($id_kelas_selected > 0) {
+    $stmt_cls = $pdo->prepare("SELECT id_kelas, nama_kelas, wali_kelas FROM tb_kelas WHERE id_kelas = ?");
+    $stmt_cls->execute([$id_kelas_selected]);
+    $class_info = $stmt_cls->fetch(PDO::FETCH_ASSOC);
+} else {
+    $stmt_grade6 = $pdo->query("SELECT id_kelas, nama_kelas, wali_kelas FROM tb_kelas WHERE nama_kelas = 'VI' OR nama_kelas = '6' LIMIT 1");
+    $class_info = $stmt_grade6->fetch(PDO::FETCH_ASSOC);
+}
+
+$id_kelas_final = $class_info ? $class_info['id_kelas'] : 6;
+$nama_kelas_final = $class_info ? $class_info['nama_kelas'] : 'VI';
+$wali_kelas_final = $class_info ? $class_info['wali_kelas'] : '-';
 
 $school_profile = getSchoolProfile($pdo);
 
@@ -23,10 +31,10 @@ $absent_summary = [];
 // Get all scheduled dates based on filter
 if ($filter_type == 'daily') {
     $scheduled_dates = [$selected_date];
-    $report_title = "REKAP ABSENSI LES HARIAN SISWA KELAS " . $nama_kelas_fixed;
+    $report_title = "REKAP ABSENSI LES HARIAN SISWA KELAS " . $nama_kelas_final;
 
     $stmt_abs = $pdo->prepare("
-        SELECT s.nama_siswa, s.nisn, al.status AS keterangan
+        SELECT s.nama_siswa, al.status AS keterangan
         FROM tb_absensi_les al
         JOIN tb_siswa s ON s.id_siswa = al.id_siswa
         WHERE al.tanggal = ?
@@ -34,15 +42,30 @@ if ($filter_type == 'daily') {
           AND al.status IN ('Sakit', 'Izin', 'Alpa')
         ORDER BY s.nama_siswa ASC
     ");
-    $stmt_abs->execute([$selected_date, $id_kelas_fixed]);
+    $stmt_abs->execute([$selected_date, $id_kelas_final]);
     $absent_summary = $stmt_abs->fetchAll(PDO::FETCH_ASSOC);
 } else {
     $stmt_sched = $pdo->query("SELECT DISTINCT tanggal FROM tb_jadwal_les ORDER BY tanggal ASC");
     $scheduled_dates = $stmt_sched->fetchAll(PDO::FETCH_COLUMN);
-    $report_title = "REKAP ABSENSI LES SISWA KELAS " . $nama_kelas_fixed;
+    $report_title = "REKAP ABSENSI LES SISWA KELAS " . $nama_kelas_final;
 }
 
-$filename = "Rekap_Absensi_Les_Kelas_" . $nama_kelas_fixed . "_" . ($filter_type == 'daily' ? $selected_date : 'All') . ".xls";
+$filename = "Rekap_Absensi_Les_Kelas_" . $nama_kelas_final . "_" . ($filter_type == 'daily' ? $selected_date : 'All') . ".xls";
+
+// Get all students
+$stmt = $pdo->prepare("SELECT id_siswa, nama_siswa FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+$stmt->execute([$id_kelas_final]);
+$students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get attendance data
+$stmt = $pdo->prepare("SELECT id_siswa, status, tanggal FROM tb_absensi_les WHERE id_siswa IN (SELECT id_siswa FROM tb_siswa WHERE id_kelas = ?)");
+$stmt->execute([$id_kelas_final]);
+$records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$attendance = [];
+foreach ($records as $r) {
+    $attendance[$r['id_siswa']][$r['tanggal']] = $r['status'];
+}
 header("Content-Type: application/vnd.ms-excel");
 header("Content-Disposition: attachment; filename=\"$filename\"");
 header("Pragma: no-cache");
@@ -93,7 +116,6 @@ header("Expires: 0");
     <tr>
         <td class="font-bold text-center">No</td>
         <td class="font-bold">Nama Siswa</td>
-        <td class="font-bold text-center">NISN</td>
         <td class="font-bold text-center">Keterangan</td>
         <td colspan="<?= count($scheduled_dates) ?>"></td>
     </tr>
@@ -101,20 +123,18 @@ header("Expires: 0");
     <tr>
         <td class="text-center"><?= (int)($idx_abs + 1) ?></td>
         <td><?= htmlspecialchars($abs['nama_siswa']) ?></td>
-        <td class="text-center"><?= htmlspecialchars($abs['nisn']) ?></td>
         <td class="text-center"><?= htmlspecialchars($abs['keterangan']) ?></td>
         <td colspan="<?= count($scheduled_dates) ?>"></td>
     </tr>
     <?php endforeach; ?>
     <?php endif; ?>
     <?php endif; ?>
-    <tr><td colspan="<?= count($scheduled_dates) + ($filter_type == 'daily' ? 4 : 6) ?>"></td></tr>
+    <tr><td colspan="<?= count($scheduled_dates) + ($filter_type == 'daily' ? 3 : 6) ?>"></td></tr>
     <thead>
         <tr>
             <th rowspan="2" style="background-color: #f0f0f0;">No</th>
             <th rowspan="2" style="background-color: #f0f0f0;">Nama Siswa</th>
             <?php if ($filter_type == 'daily'): ?>
-                <th rowspan="2" style="background-color: #f0f0f0;">NISN</th>
                 <th rowspan="2" style="background-color: #f0f0f0;">Status Kehadiran</th>
             <?php else: ?>
                 <th colspan="<?= count($scheduled_dates) ?: 1 ?>" style="background-color: #f0f0f0;">Tanggal Pelaksanaan Les</th>
@@ -143,7 +163,6 @@ header("Expires: 0");
             <?php if ($filter_type == 'daily'): 
                 $st = $attendance[$s['id_siswa']][$selected_date] ?? 'Belum Absen';
             ?>
-                <td class="text-center"><?= htmlspecialchars($s['nisn']) ?></td>
                 <td class="text-center"><strong><?= $st ?></strong></td>
             <?php else: ?>
                 <?php foreach($scheduled_dates as $d): 
@@ -164,15 +183,15 @@ header("Expires: 0");
         </tr>
         <?php endforeach; ?>
     </tbody>
-    <tr><td colspan="<?= count($scheduled_dates) + ($filter_type == 'daily' ? 4 : 6) ?>"></td></tr>
+    <tr><td colspan="<?= count($scheduled_dates) + ($filter_type == 'daily' ? 3 : 6) ?>"></td></tr>
     <tr>
-        <td colspan="3" class="text-center">
+        <td colspan="2" class="text-center">
             <?= $school_profile['tempat_jadwal'] ?? 'Sukosono' ?>, <?= formatDateIndonesia(date('Y-m-d')) ?><br>
-            Wali Kelas <?= $nama_kelas_fixed ?>,<br><br><br><br>
-            <strong><u><?= $wali_kelas_fixed ?></u></strong>
+            Wali Kelas <?= $nama_kelas_final ?>,<br><br><br><br>
+            <strong><u><?= $wali_kelas_final ?></u></strong>
         </td>
-        <td colspan="<?= count($scheduled_dates) - ($filter_type == 'daily' ? 1 : 1) ?>"></td>
-        <td colspan="<?= $filter_type == 'daily' ? 2 : 4 ?>" class="text-center">
+        <td colspan="<?= count($scheduled_dates) - ($filter_type == 'daily' ? 0 : 1) ?>"></td>
+        <td colspan="<?= $filter_type == 'daily' ? 1 : 4 ?>" class="text-center">
             Mengetahui,<br>
             Kepala Madrasah,<br><br><br><br>
             <strong><u><?= $school_profile['kepala_madrasah'] ?? '-' ?></u></strong><br>

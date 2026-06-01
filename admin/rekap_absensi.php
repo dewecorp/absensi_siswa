@@ -36,6 +36,9 @@ $daily_results = [];
 $monthly_results = [];
 $student_results = [];
 $student_attendance_summary = [];
+$year = date('Y');
+$month = date('m');
+$holidays = [];
 
 // Define month names array (used in multiple places)
 $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -528,7 +531,7 @@ include '../templates/sidebar.php';
                                                         foreach ($class_students as $student):
                                                     ?>
                                                         <option value="<?php echo $student['id_siswa']; ?>" <?php echo ($selected_student == $student['id_siswa']) ? 'selected' : ''; ?>>
-                                                            <?php echo htmlspecialchars($student['nama_siswa'] . ' (' . $student['nisn'] . ')'); ?>
+                                                            <?php echo htmlspecialchars($student['nama_siswa']); ?>
                                                         </option>
                                                     <?php 
                                                         endforeach;
@@ -555,7 +558,6 @@ include '../templates/sidebar.php';
                                                             <tr>
                                                                 <th>No</th>
                                                                 <th>Nama Siswa</th>
-                                                                <th>NISN</th>
                                                                 <th>Kelas</th>
                                                                 <th>Status</th>
                                                                 <th>Waktu Masuk</th>
@@ -567,7 +569,6 @@ include '../templates/sidebar.php';
                                                                 <tr>
                                                                     <td><?php echo $no++; ?></td>
                                                                     <td><?php echo htmlspecialchars($record['nama_siswa']); ?></td>
-                                                                    <td><?php echo htmlspecialchars($record['nisn']); ?></td>
                                                                     <td><?php echo htmlspecialchars($record['nama_kelas']); ?></td>
                                                                     <td>
                                                                         <?php 

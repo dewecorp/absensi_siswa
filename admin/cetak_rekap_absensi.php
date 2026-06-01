@@ -13,6 +13,8 @@ $filter_type = $_GET['type'] ?? 'daily';
 $attendance_date = $_GET['date'] ?? '';
 $month_picker = $_GET['month'] ?? '';
 $student_id = isset($_GET['student_id']) ? (int)$_GET['student_id'] : 0;
+$m_start = 0;
+$m_end = 0;
 
 if ($class_id <= 0) {
     die('Error: Class ID is required');
@@ -42,7 +44,7 @@ $title = '';
 if ($filter_type == 'daily') {
     $title = 'Rekap Absensi Harian - Tanggal: ' . formatDateIndonesia($attendance_date);
     $stmt = $pdo->prepare("
-        SELECT s.nama_siswa, s.nisn, a.keterangan, a.jam_masuk
+        SELECT s.nama_siswa, a.keterangan, a.jam_masuk
         FROM tb_siswa s
         LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = ?
         WHERE s.id_kelas = ?
@@ -220,7 +222,6 @@ if ($filter_type == 'daily') {
                 <tr>
                     <th class="col-no">No</th>
                     <th class="col-nama">Nama Siswa</th>
-                    <th width="100">NISN</th>
                     <th width="80">Waktu</th>
                     <th>Status</th>
                 </tr>
@@ -230,7 +231,6 @@ if ($filter_type == 'daily') {
                 <tr>
                     <td><?= $no++ ?></td>
                     <td class="text-left"><?= htmlspecialchars($row['nama_siswa']) ?></td>
-                    <td><?= htmlspecialchars($row['nisn']) ?></td>
                     <td><?= $row['jam_masuk'] ? date('H:i', strtotime($row['jam_masuk'])) : '-' ?></td>
                     <td><?= htmlspecialchars($row['keterangan'] ?? 'Belum Absen') ?></td>
                 </tr>
