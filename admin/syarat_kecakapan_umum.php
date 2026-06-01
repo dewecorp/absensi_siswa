@@ -1449,8 +1449,8 @@ require_once '../templates/sidebar.php';
                                 <table class="table table-sm table-bordered mb-0 align-middle sku-main-table" id="skuMainTable">
                                     <thead class="sku-thead-stick">
                                         <tr>
-                                            <th rowspan="3" class="sticky-sku-cell sku-th-no text-center py-3">NO</th>
-                                            <th rowspan="3" class="sticky-sku-cell sku-th-nama text-left py-3">NAMA PESERTA DIDIK</th>
+                                            <th rowspan="3" class="sticky-sku-cell sku-th-no text-center">NO</th>
+                                            <th rowspan="3" class="sticky-sku-cell sku-th-nama text-center">NAMA PESERTA DIDIK</th>
                                             <th colspan="<?= max(1, count($sku_butir_rows)) ?>" class="text-center py-1 border sku-meta-title-cell">
                                                 <small class="text-uppercase font-weight-bold">Syarat kecakapan umum — per butir SKU</small>
                                             </th>
@@ -1662,6 +1662,8 @@ require_once '../templates/sidebar.php';
     /* Gunakan box-shadow untuk border agar tidak ada celah saat scroll */
     box-shadow: inset 0 -1px 0 #dee2e6, inset -1px 0 0 #dee2e6;
     border: none !important;
+    vertical-align: middle !important; /* Agar teks di tengah secara vertikal */
+    text-align: center; /* Default center untuk header */
 }
 
 /* Row 1 Sticky Offsets */
