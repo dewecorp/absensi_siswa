@@ -153,6 +153,11 @@ require_once '../templates/sidebar.php';
         max-height: 80vh;
         overflow: auto;
     }
+    table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        width: 100% !important;
+    }
     .sticky-col {
         position: sticky !important;
         background-color: #fff !important;
@@ -166,7 +171,7 @@ require_once '../templates/sidebar.php';
     }
     .sticky-col-2 {
         left: 50px;
-        min-width: 250px; /* Kembali lebar untuk desktop */
+        min-width: 250px;
         max-width: 400px;
         white-space: nowrap;
         overflow: hidden;
@@ -180,7 +185,7 @@ require_once '../templates/sidebar.php';
         z-index: 100;
         box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
         vertical-align: middle;
-        padding: 8px !important; /* Kembali ke padding normal desktop */
+        padding: 8px !important;
     }
 
     /* Multi-row Header Sticky Offsets */
@@ -192,9 +197,10 @@ require_once '../templates/sidebar.php';
     thead tr:nth-child(2) th {
         top: 80px;
         z-index: 102;
+        height: 80px;
     }
     thead tr:nth-child(3) th {
-        top: 120px;
+        top: 160px;
         z-index: 101;
     }
     
@@ -203,57 +209,47 @@ require_once '../templates/sidebar.php';
         z-index: 110 !important;
     }
 
-    /* Input styling */
+    /* Pastikan input tidak memiliki z-index yang lebih tinggi */
     .grade-input, .grade-input-jadi {
         position: relative;
         z-index: 1;
         min-width: 60px;
     }
     
-    /* Mobile specific adjustments */
+    /* Mobile adjustments */
     @media (max-width: 768px) {
-        .sticky-col-1 {
-            width: 35px !important;
-            min-width: 35px !important;
+        .sticky-col-1 { 
+            width: 40px !important; 
+            min-width: 40px !important; 
+            left: 0 !important;
         }
         .sticky-col-2 {
-            left: 35px !important;
-            min-width: 110px !important;
-            max-width: 110px !important;
-            font-size: 0.75em;
+            left: 40px !important; 
+            min-width: 130px !important;
+            max-width: 130px !important;
+            font-size: 0.8em;
         }
-        thead th {
+        thead th, tbody td {
+            font-size: 0.8em !important;
             padding: 4px 2px !important;
-            font-size: 0.75em !important;
         }
         .header-cell {
-            min-width: 110px !important;
+            min-width: 120px !important;
         }
-        thead tr:nth-child(1) th { height: 55px !important; }
-        thead tr:nth-child(2) th { top: 55px !important; height: 32px !important; }
-        thead tr:nth-child(3) th { top: 87px !important; height: 28px !important; }
+        thead tr:nth-child(1) th { height: 60px !important; }
+        thead tr:nth-child(2) th { top: 60px !important; height: 65px !important; }
+        thead tr:nth-child(3) th { top: 125px !important; height: 30px !important; }
         .grade-input, .grade-input-jadi {
-            min-width: 45px !important;
-            max-width: 55px !important;
-            padding: 2px 1px !important;
-            height: 28px !important;
-            font-size: 0.85em !important;
-        }
-        .btn-sm {
-            padding: 0.2rem 0.4rem !important;
-            font-size: 0.7rem !important;
+            min-width: 50px !important;
+            max-width: 60px !important;
+            padding: 4px 2px !important;
+            height: 30px !important;
         }
     }
     
     /* Tambahkan background solid pada sticky columns */
     .sticky-col {
         background-color: #ffffff !important;
-    }
-
-    /* Ensure table body is not covered too much */
-    table {
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
     }
 </style>
 
@@ -327,7 +323,7 @@ require_once '../templates/sidebar.php';
                         <table class="table table-bordered table-striped table-sm" id="gradesTable">
                             <thead>
                                 <tr>
-                                    <th class="sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
+                                    <th class="text-center sticky-col sticky-col-1" style="width: 50px; vertical-align: middle;" rowspan="3">No</th>
                                     <th class="sticky-col sticky-col-2" style="vertical-align: middle;" rowspan="3">Nama Siswa</th>
                                     <?php foreach ($grade_headers as $header): ?>
                                         <th class="text-center header-cell" data-header-id="<?= $header['id_header'] ?>" colspan="2" style="min-width: 220px;">
@@ -354,11 +350,11 @@ require_once '../templates/sidebar.php';
                                                 Max: <?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '-' ?>
                                             </div>
                                             <div class="d-none range-inputs" style="margin-top: 6px;">
-                                                        <div class="d-flex" style="gap: 6px;">
-                                                            <input type="number" class="form-control form-control-sm text-center range-min" placeholder="Min" value="<?= isset($header['nilai_min_target']) && $header['nilai_min_target'] !== null ? htmlspecialchars($header['nilai_min_target']) : '' ?>">
-                                                            <input type="number" class="form-control form-control-sm text-center range-max" placeholder="Max" min="0" max="99" value="<?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '' ?>">
-                                                        </div>
-                                                    </div>
+                                                <div class="d-flex" style="gap: 6px;">
+                                                    <input type="number" class="form-control form-control-sm text-center range-min" placeholder="Min" value="<?= isset($header['nilai_min_target']) && $header['nilai_min_target'] !== null ? htmlspecialchars($header['nilai_min_target']) : '' ?>">
+                                                    <input type="number" class="form-control form-control-sm text-center range-max" placeholder="Max" min="0" max="99" value="<?= isset($header['nilai_max_target']) && $header['nilai_max_target'] !== null ? htmlspecialchars($header['nilai_max_target']) : '' ?>">
+                                                </div>
+                                            </div>
                                         </th>
                                     <?php endforeach; ?>
                                     <th style="width: 100px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>

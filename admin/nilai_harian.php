@@ -147,6 +147,62 @@ require_once '../templates/sidebar.php';
         z-index: 101;
     }
     
+    /* Sticky Columns and Header */
+    .table-responsive {
+        max-height: 80vh;
+        overflow: auto;
+    }
+    table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        width: 100% !important;
+    }
+    .sticky-col {
+        position: sticky !important;
+        background-color: #fff !important;
+        z-index: 10;
+        border-right: 1px solid #dee2e6;
+    }
+    .sticky-col-1 {
+        left: 0;
+        width: 50px;
+        min-width: 50px;
+    }
+    .sticky-col-2 {
+        left: 50px;
+        min-width: 250px;
+        max-width: 400px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Sticky Header */
+    thead th {
+        position: sticky !important;
+        background-color: #ffffff !important;
+        z-index: 100;
+        box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+        vertical-align: middle;
+        padding: 8px !important;
+    }
+
+    /* Multi-row Header Sticky Offsets */
+    thead tr:nth-child(1) th {
+        top: 0;
+        z-index: 103;
+        height: 80px;
+    }
+    thead tr:nth-child(2) th {
+        top: 80px;
+        z-index: 102;
+        height: 80px;
+    }
+    thead tr:nth-child(3) th {
+        top: 160px;
+        z-index: 101;
+    }
+    
     /* Sticky Header + Sticky Column Intersection */
     thead th.sticky-col {
         z-index: 110 !important;
@@ -156,10 +212,7 @@ require_once '../templates/sidebar.php';
     .grade-input, .grade-input-jadi {
         position: relative;
         z-index: 1;
-        min-width: 50px;
-        max-width: 60px;
-        padding: 4px 2px !important;
-        height: 30px !important;
+        min-width: 60px;
     }
     
     /* Mobile adjustments */
@@ -167,10 +220,10 @@ require_once '../templates/sidebar.php';
         .sticky-col-1 { 
             width: 40px !important; 
             min-width: 40px !important; 
+            left: 0 !important;
         }
         .sticky-col-2 {
             left: 40px !important;
-            width: 130px !important;
             min-width: 130px !important;
             max-width: 130px !important;
             font-size: 0.8em;
@@ -179,9 +232,18 @@ require_once '../templates/sidebar.php';
             font-size: 0.8em !important;
             padding: 4px 2px !important;
         }
+        .header-cell {
+            min-width: 120px !important;
+        }
         thead tr:nth-child(1) th { height: 60px !important; }
-        thead tr:nth-child(2) th { top: 60px !important; height: 35px !important; }
-        thead tr:nth-child(3) th { top: 95px !important; height: 30px !important; }
+        thead tr:nth-child(2) th { top: 60px !important; height: 65px !important; }
+        thead tr:nth-child(3) th { top: 125px !important; height: 30px !important; }
+        .grade-input, .grade-input-jadi {
+            min-width: 50px !important;
+            max-width: 60px !important;
+            padding: 4px 2px !important;
+            height: 30px !important;
+        }
     }
     
     /* Tambahkan background solid pada sticky columns */
@@ -257,9 +319,9 @@ require_once '../templates/sidebar.php';
                                         <th class="text-center" colspan="2" style="min-width: 150px; vertical-align: middle;">
                                             <?= htmlspecialchars($header['nama_penilaian']) ?>
                                         </th>
-                                                <?php endforeach; ?>
-                                                <th style="width: 100px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>
-                                            </tr>
+                                    <?php endforeach; ?>
+                                    <th style="width: 100px; vertical-align: middle;" rowspan="3" class="text-center">Rerata</th>
+                                </tr>
                                 <tr>
                                     <?php foreach ($grade_headers as $header): ?>
                                         <th class="text-center font-weight-normal materi-cell" data-header-id="<?= $header['id_header'] ?>" colspan="2" style="font-size: 0.85em; font-style: italic;">
