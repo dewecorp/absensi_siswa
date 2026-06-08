@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         if ($all_success) {
             logActivity($pdo, $_SESSION['username'], 'Update Aplikasi', 'Update via Git berhasil');
-            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui via Git.']);
+            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui.']);
             exit;
         }
     }
@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $delete_recursive($temp_extract_path);
 
             logActivity($pdo, $_SESSION['username'], 'Update Aplikasi', 'Update via ZIP berhasil');
-            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui (via ZIP Download).']);
+            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui.']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Struktur ZIP tidak sesuai.']);
         }
