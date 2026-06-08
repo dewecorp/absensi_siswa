@@ -358,7 +358,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                         <div class="dropdown-menu dropdown-menu-right">
                             <?php if (getUserLevel() === 'admin'): ?>
                             <a href="#" id="btn-update-github" class="dropdown-item has-icon text-primary">
-                                <i class="fas fa-sync-alt"></i> Update Aplikasi
+                                <i class="fas fa-sync-alt"></i> Update Sistem
                             </a>
                             <div class="dropdown-divider"></div>
                             <?php endif; ?>
