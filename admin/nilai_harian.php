@@ -90,7 +90,40 @@ require_once '../templates/sidebar.php';
 ?>
 
 <style>
-    /* Reset Table Styling - No Sticky */
+    /* Sticky Column Styling */
+    .sticky-col {
+        position: sticky !important;
+        background-color: #ffffff !important;
+        z-index: 10;
+        box-shadow: 1px 0 3px rgba(0,0,0,0.1);
+    }
+    
+    .sticky-col-1 {
+        left: 0;
+        width: 50px;
+        min-width: 50px;
+    }
+    
+    .sticky-col-2 {
+        left: 50px; /* Width of col-1 */
+        width: 180px;
+        min-width: 180px;
+        z-index: 11;
+    }
+
+    .sticky-col-footer {
+        left: 0;
+        width: 230px; /* 50 + 180 */
+        min-width: 230px;
+        z-index: 11;
+    }
+
+    thead th.sticky-col {
+        z-index: 20 !important;
+        background-color: #f8f9fa !important;
+    }
+
+    /* Reset Table Styling */
     .table-responsive {
         overflow-x: auto !important;
         overflow-y: visible !important;
@@ -98,7 +131,8 @@ require_once '../templates/sidebar.php';
 
     table {
         width: 100% !important;
-        border-collapse: collapse !important;
+        border-collapse: separate !important; /* Required for sticky borders */
+        border-spacing: 0;
     }
 
     thead th {
@@ -107,11 +141,10 @@ require_once '../templates/sidebar.php';
         padding: 8px !important;
         border: 1px solid #dee2e6 !important;
         text-align: center;
+        position: sticky;
+        top: 0;
+        z-index: 15;
     }
-
-    /* Desktop Column Widths */
-    .sticky-col-1 { width: 50px; min-width: 50px; }
-    .sticky-col-2 { width: 180px; min-width: 180px; }
 
     /* Input styling */
     .grade-input, .grade-input-jadi {
@@ -134,32 +167,23 @@ require_once '../templates/sidebar.php';
             font-size: 0.9em !important;
         }
 
-        /* Sticky Name Column for Mobile */
-        .sticky-col {
-            position: sticky !important;
-            background-color: #ffffff !important;
-            z-index: 10;
-            box-shadow: 1px 0 3px rgba(0,0,0,0.1);
-        }
         .sticky-col-1 {
-            left: 0;
             width: 30px !important;
             min-width: 30px !important;
         }
         .sticky-col-2 {
-            left: 30px;
+            left: 30px; /* Width of mobile col-1 */
             width: 65px !important;
             min-width: 65px !important;
-            z-index: 11;
             white-space: normal !important;
             line-height: 1.1;
             word-break: break-word;
             padding: 4px !important;
         }
-        thead th.sticky-col {
-            z-index: 20 !important;
-            background-color: #f8f9fa !important;
-            text-align: center !important;
+
+        .sticky-col-footer {
+            width: 95px !important;
+            min-width: 95px !important;
         }
     }
 </style>
@@ -277,26 +301,22 @@ require_once '../templates/sidebar.php';
                                                 
                                                 if ($val !== '') {
                                                     $val_float = (float)$val;
-                                                    if ($val_float > 0) {
-                                                        $total_score += $val_float;
-                                                        $count_score++;
-                                                        
-                                                        // Track min/max
-                                                        if (!isset($col_min[$header['id_header']]) || $val_float < $col_min[$header['id_header']]) {
-                                                            $col_min[$header['id_header']] = $val_float;
-                                                        }
-                                                        if (!isset($col_max[$header['id_header']]) || $val_float > $col_max[$header['id_header']]) {
-                                                            $col_max[$header['id_header']] = $val_float;
-                                                        }
+                                                    $total_score += $val_float;
+                                                    $count_score++;
+                                                    
+                                                    // Track min/max
+                                                    if (!isset($col_min[$header['id_header']]) || $val_float < $col_min[$header['id_header']]) {
+                                                        $col_min[$header['id_header']] = $val_float;
+                                                    }
+                                                    if (!isset($col_max[$header['id_header']]) || $val_float > $col_max[$header['id_header']]) {
+                                                        $col_max[$header['id_header']] = $val_float;
                                                     }
                                                 }
 
                                                 if ($val_jadi !== '') {
                                                     $val_jadi_float = (float)$val_jadi;
-                                                    if ($val_jadi_float > 0) {
-                                                        $total_score_jadi += $val_jadi_float;
-                                                        $count_score_jadi++;
-                                                    }
+                                                    $total_score_jadi += $val_jadi_float;
+                                                    $count_score_jadi++;
                                                 }
                                                 ?>
                                                 <td class="text-center p-1">
@@ -322,7 +342,7 @@ require_once '../templates/sidebar.php';
                                     
                                     <!-- Footer Stats -->
                                     <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right">Nilai Tertinggi</td>
+                                        <td colspan="2" class="text-right sticky-col sticky-col-footer">Nilai Tertinggi</td>
                                         <?php foreach ($grade_headers as $header): ?>
                                             <td class="text-center text-success col-max-<?= $header['id_header'] ?>">
                                                 <?= isset($col_max[$header['id_header']]) ? $col_max[$header['id_header']] : '-' ?>
@@ -332,9 +352,10 @@ require_once '../templates/sidebar.php';
                                                 $max_jadi = -INF;
                                                 $found_jadi = false;
                                                 foreach ($students as $s) {
-                                                    $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? (float)$grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : 0;
-                                                    if ($val_j > 0) {
-                                                        if ($val_j > $max_jadi) $max_jadi = $val_j;
+                                                    $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? $grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : '';
+                                                    if ($val_j !== '') {
+                                                        $val_j_f = (float)$val_j;
+                                                        if ($val_j_f > $max_jadi) $max_jadi = $val_j_f;
                                                         $found_jadi = true;
                                                     }
                                                 }
@@ -345,7 +366,7 @@ require_once '../templates/sidebar.php';
                                         <td class="text-center"></td>
                                     </tr>
                                     <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right">Nilai Terendah</td>
+                                        <td colspan="2" class="text-right sticky-col sticky-col-footer">Nilai Terendah</td>
                                         <?php foreach ($grade_headers as $header): ?>
                                             <td class="text-center text-danger col-min-<?= $header['id_header'] ?>">
                                                 <?= isset($col_min[$header['id_header']]) ? $col_min[$header['id_header']] : '-' ?>
@@ -355,9 +376,10 @@ require_once '../templates/sidebar.php';
                                                 $min_jadi = INF;
                                                 $found_jadi = false;
                                                 foreach ($students as $s) {
-                                                    $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? (float)$grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : 0;
-                                                    if ($val_j > 0) {
-                                                        if ($val_j < $min_jadi) $min_jadi = $val_j;
+                                                    $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? $grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : '';
+                                                    if ($val_j !== '') {
+                                                        $val_j_f = (float)$val_j;
+                                                        if ($val_j_f < $min_jadi) $min_jadi = $val_j_f;
                                                         $found_jadi = true;
                                                     }
                                                 }

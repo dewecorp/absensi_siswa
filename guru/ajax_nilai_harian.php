@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             return null;
         }
         $n = (float)$nilai;
-        if ($n <= 0) {
+        if ($nilai === null || $nilai === '') {
             return null;
         }
 
@@ -221,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             foreach ($grades as $g) {
                 if (isset($g['nilai']) && $g['nilai'] !== '') {
                     $v = $normalize_float_or_null($g['nilai']);
-                    if ($v !== null && $v > 0) {
+                    if ($v !== null) {
                         if ($v > $observedMax) $observedMax = $v;
                         if ($v < $observedMin) $observedMin = $v;
                         $hasScores = true;
