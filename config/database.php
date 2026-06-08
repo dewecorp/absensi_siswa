@@ -1,9 +1,18 @@
 <?php
-// Database configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'db_absensi');
+// Database configuration with environment detection
+if ($_SERVER['HTTP_HOST'] == 'localhost' || $_SERVER['HTTP_HOST'] == '127.0.0.1') {
+    // Local environment
+    define('DB_HOST', 'localhost');
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+    define('DB_NAME', 'db_absensi');
+} else {
+    // Hosting environment
+    define('DB_HOST', 'localhost');
+    define('DB_USER', 'kvzveyrg_simad');
+    define('DB_PASS', 'sultanfattah26');
+    define('DB_NAME', 'kvzveyrg_simad');
+}
 
 date_default_timezone_set('Asia/Jakarta');
 
