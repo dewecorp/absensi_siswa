@@ -1,7 +1,8 @@
 <?php
 // Database configuration with environment detection
-if ($_SERVER['HTTP_HOST'] == 'localhost' || $_SERVER['HTTP_HOST'] == '127.0.0.1') {
-    // Local environment
+$host = $_SERVER['HTTP_HOST'] ?? '';
+if ($host == 'localhost' || $host == '127.0.0.1' || strpos($host, '.test') !== false || strpos($host, '.local') !== false) {
+    // Local environment (Laragon, XAMPP, etc.)
     define('DB_HOST', 'localhost');
     define('DB_USER', 'root');
     define('DB_PASS', '');

@@ -93,10 +93,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if (!is_dir($dst)) @mkdir($dst, 0755, true);
                 while (false !== ($file = readdir($dir))) {
                     if (($file != '.') && ($file != '..')) {
-                        if (is_dir($src . '/' . $file)) {
-                            $copy_recursive($src . '/' . $file, $dst . '/' . $file);
+                        $src_file = $src . '/' . $file;
+                        $dst_file = $dst . '/' . $file;
+                        
+                        // PROTECT DATABASE CONFIG: Jangan timpa file config/database.php
+                        if (strpos($dst_file, 'config/database.php') !== false) {
+                            continue;
+                        }
+
+                        if (is_dir($src_file)) {
+                            $copy_recursive($src_file, $dst_file);
                         } else {
-                            @copy($src . '/' . $file, $dst . '/' . $file);
+                            @copy($src_file, $dst_file);
                         }
                     }
                 }
