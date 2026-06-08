@@ -182,7 +182,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("UPDATE tb_pengeluaran_ekstra SET status_terlaksana=? WHERE id_pengeluaran=?");
         if ($stmt->execute([$status, $id])) {
             logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Status Pengeluaran Ekstra', "Update status ID: $id menjadi " . ($status ? 'terlaksana' : 'belum'));
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                echo json_encode(['success' => true]);
+                exit;
+            }
         } else {
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                echo json_encode(['success' => false, 'message' => 'Gagal update status realisasi!']);
+                exit;
+            }
             $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Gagal update status realisasi!'];
         }
     } elseif (isset($_POST['toggle_status_pengeluaran_all'])) {
@@ -190,7 +198,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("UPDATE tb_pengeluaran_ekstra SET status_terlaksana=?");
         if ($stmt->execute([$status])) {
             logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Massal Status Pengeluaran Ekstra', 'Set semua status menjadi ' . ($status ? 'terlaksana' : 'belum'));
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                echo json_encode(['success' => true]);
+                exit;
+            }
         } else {
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                echo json_encode(['success' => false, 'message' => 'Gagal update massal status realisasi!']);
+                exit;
+            }
             $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Gagal update massal status realisasi!'];
         }
     }
@@ -1014,13 +1030,34 @@ $(document).ready(function() {
 
         var id = $(this).data('id');
         var isChecked = $(this).is(':checked');
-        var pageInfo = pengeluaranTable.page.info();
+        var $checkbox = $(this);
 
-        sessionStorage.setItem(statusScrollKey, String(id));
-        sessionStorage.setItem(statusPageKey, String(pageInfo.page));
-        $('#toggle_status_pengeluaran_id').val(id);
-        $('#toggle_status_pengeluaran_value').val(isChecked ? '1' : '');
-        $('#toggleStatusPengeluaranForm').submit();
+        $.ajax({
+            url: window.location.href,
+            type: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            data: {
+                toggle_status_pengeluaran: 1,
+                id_pengeluaran: id,
+                status_terlaksana: isChecked ? '1' : '0'
+            },
+            success: function(response) {
+                var res = typeof response === 'string' ? JSON.parse(response) : response;
+                if (res.success) {
+                    toastr.success('Status realisasi berhasil diperbarui');
+                    syncStatusMasterCheckbox();
+                } else {
+                    toastr.error(res.message || 'Gagal memperbarui status');
+                    $checkbox.prop('checked', !isChecked);
+                }
+            },
+            error: function() {
+                toastr.error('Gagal memperbarui status');
+                $checkbox.prop('checked', !isChecked);
+            }
+        });
     });
 
     $('#toggle-status-all-pengeluaran').on('change', function() {
@@ -1028,8 +1065,46 @@ $(document).ready(function() {
             return;
         }
         var isChecked = $(this).is(':checked');
-        $('#toggle_status_pengeluaran_all_value').val(isChecked ? '1' : '');
-        $('#toggleStatusPengeluaranAllForm').submit();
+        var $checkbox = $(this);
+
+        Swal.fire({
+            title: isChecked ? 'Tandai Semua Terlaksana?' : 'Reset Semua Status?',
+            text: isChecked ? 'Semua rencana pengeluaran akan ditandai sebagai terlaksana.' : 'Semua rencana pengeluaran akan diatur ulang menjadi belum terlaksana.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Lanjutkan',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: window.location.href,
+                    type: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    data: {
+                        toggle_status_pengeluaran_all: 1,
+                        status_terlaksana: isChecked ? '1' : '0'
+                    },
+                    success: function(response) {
+                        var res = typeof response === 'string' ? JSON.parse(response) : response;
+                        if (res.success) {
+                            toastr.success('Semua status berhasil diperbarui');
+                            $('.toggle-status-pengeluaran').prop('checked', isChecked);
+                        } else {
+                            toastr.error(res.message || 'Gagal memperbarui status massal');
+                            $checkbox.prop('checked', !isChecked);
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Gagal memperbarui status massal');
+                        $checkbox.prop('checked', !isChecked);
+                    }
+                });
+            } else {
+                $checkbox.prop('checked', !isChecked);
+            }
+        });
     });
 });
 </script>
