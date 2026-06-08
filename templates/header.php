@@ -356,6 +356,12 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                             <div class="d-none d-lg-inline-block"><?php echo htmlspecialchars($display_name); ?></div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
+                            <?php if (getUserLevel() === 'admin'): ?>
+                            <a href="#" id="btn-update-github" class="dropdown-item has-icon text-primary">
+                                <i class="fas fa-sync-alt"></i> Update Aplikasi
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <?php endif; ?>
                             <a href="#" onclick="confirmLogout('../logout.php?level=<?php echo getUserLevel(); ?>'); return false;" class="dropdown-item has-icon text-danger">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
@@ -363,6 +369,70 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                     </li>
                 </ul>
             </nav>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const btnUpdate = document.getElementById('btn-update-github');
+                if (btnUpdate) {
+                    btnUpdate.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        
+                        Swal.fire({
+                            title: 'Update Aplikasi?',
+                            text: "Sistem akan mengambil perubahan terbaru dari GitHub. Pastikan koneksi internet stabil.",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Ya, Update!',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                Swal.fire({
+                                    title: 'Sedang Update...',
+                                    text: 'Mohon tunggu sebentar.',
+                                    allowOutsideClick: false,
+                                    didOpen: () => {
+                                        Swal.showLoading();
+                                    }
+                                });
+
+                                $.ajax({
+                                    url: 'update_github.php',
+                                    type: 'POST',
+                                    data: { action: 'update_from_github' },
+                                    dataType: 'json',
+                                    success: function(response) {
+                                        if (response.success) {
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Berhasil!',
+                                                text: response.message
+                                            }).then(() => {
+                                                window.location.reload();
+                                            });
+                                        } else {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Gagal Update',
+                                                text: response.message
+                                            });
+                                        }
+                                    },
+                                    error: function(xhr, status, error) {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error',
+                                            text: 'Terjadi kesalahan sistem saat menghubungi server.'
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+            </script>
             <?php if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah'): ?>
             <!-- Mobile Floating Notification Button -->
             <a href="#" data-toggle="modal" data-target="#mobileNotificationModal" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">

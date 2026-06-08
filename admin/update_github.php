@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     while (ob_get_level()) ob_end_clean();
     header('Content-Type: application/json');
     
-    // Set batas waktu lebih lama
+    // Set batas waktu lebih lama (5 menit)
     set_time_limit(300); 
 
     // Check if git is installed
@@ -54,12 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $temp_zip = $project_root . '/update_temp.zip';
     $temp_extract_path = $project_root . '/update_temp_folder';
 
-    // Download ZIP menggunakan cURL (lebih stabil daripada file_get_contents)
+    // Download ZIP menggunakan cURL
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $zip_url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Untuk menghindari masalah sertifikat SSL
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_USERAGENT, 'PHP-Update-Script');
     $zip_content = curl_exec($ch);
     $curl_error = curl_error($ch);
@@ -96,7 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         if (is_dir($src . '/' . $file)) {
                             $copy_recursive($src . '/' . $file, $dst . '/' . $file);
                         } else {
-                            // Gunakan @copy untuk menghindari error jika file sedang terkunci
                             @copy($src . '/' . $file, $dst . '/' . $file);
                         }
                     }
