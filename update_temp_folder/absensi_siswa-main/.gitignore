@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# PHP session files (if any)
+sessions/
+
+# Uploads (jika tidak ingin di-commit)
+uploads/*
+!uploads/.gitkeep
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Cache
+cache/
+*.cache
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Database (jika ada file database lokal)
+*.sqlite
+*.db
+
+# Compiled files
+*.class
+*.o
+*.so
+
+# Package files
+*.zip
+*.tar.gz
+*.rar
+
+# PHP specific
+composer.phar
+composer.lock
