@@ -182,8 +182,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("UPDATE tb_rencana_pengeluaran SET status_terlaksana=? WHERE id_pengeluaran=?");
         if ($stmt->execute([$status, $id])) {
             logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Status Rencana Pengeluaran', "Update status ID: $id menjadi " . ($status ? 'terlaksana' : 'belum'));
+            
             if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-                echo json_encode(['success' => true]);
+                // Recalculate totals for AJAX response
+                $rencana_pengeluaran = $pdo->query("SELECT total, status_terlaksana FROM tb_rencana_pengeluaran")->fetchAll(PDO::FETCH_ASSOC);
+                
+                $total_anggaran_terpakai = array_sum(array_map(function ($item) {
+                    return !empty($item['status_terlaksana']) ? (float)$item['total'] : 0;
+                }, $rencana_pengeluaran));
+                
+                $total_anggaran_belum_terpakai = array_sum(array_map(function ($item) {
+                    return empty($item['status_terlaksana']) ? (float)$item['total'] : 0;
+                }, $rencana_pengeluaran));
+                
+                $jumlah_kegiatan_terlaksana = count(array_filter($rencana_pengeluaran, function ($item) {
+                    return !empty($item['status_terlaksana']);
+                }));
+                
+                $jumlah_kegiatan_belum_terlaksana = count($rencana_pengeluaran) - $jumlah_kegiatan_terlaksana;
+
+                echo json_encode([
+                    'success' => true,
+                    'totals' => [
+                        'terpakai' => 'Rp ' . number_format($total_anggaran_terpakai, 0, ',', '.'),
+                        'belum_terpakai' => 'Rp ' . number_format($total_anggaran_belum_terpakai, 0, ',', '.'),
+                        'kegiatan_terlaksana' => number_format($jumlah_kegiatan_terlaksana, 0, ',', '.'),
+                        'kegiatan_belum_terlaksana' => number_format($jumlah_kegiatan_belum_terlaksana, 0, ',', '.')
+                    ]
+                ]);
                 exit;
             }
         } else {
@@ -198,8 +224,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $pdo->prepare("UPDATE tb_rencana_pengeluaran SET status_terlaksana=?");
         if ($stmt->execute([$status])) {
             logActivity($pdo, $_SESSION['username'] ?? 'system', 'Update Massal Status Rencana Pengeluaran', 'Set semua status menjadi ' . ($status ? 'terlaksana' : 'belum'));
+            
             if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-                echo json_encode(['success' => true]);
+                // Recalculate totals for AJAX response
+                $rencana_pengeluaran = $pdo->query("SELECT total, status_terlaksana FROM tb_rencana_pengeluaran")->fetchAll(PDO::FETCH_ASSOC);
+                
+                $total_anggaran_terpakai = array_sum(array_map(function ($item) {
+                    return !empty($item['status_terlaksana']) ? (float)$item['total'] : 0;
+                }, $rencana_pengeluaran));
+                
+                $total_anggaran_belum_terpakai = array_sum(array_map(function ($item) {
+                    return empty($item['status_terlaksana']) ? (float)$item['total'] : 0;
+                }, $rencana_pengeluaran));
+                
+                $jumlah_kegiatan_terlaksana = count(array_filter($rencana_pengeluaran, function ($item) {
+                    return !empty($item['status_terlaksana']);
+                }));
+                
+                $jumlah_kegiatan_belum_terlaksana = count($rencana_pengeluaran) - $jumlah_kegiatan_terlaksana;
+
+                echo json_encode([
+                    'success' => true,
+                    'totals' => [
+                        'terpakai' => 'Rp ' . number_format($total_anggaran_terpakai, 0, ',', '.'),
+                        'belum_terpakai' => 'Rp ' . number_format($total_anggaran_belum_terpakai, 0, ',', '.'),
+                        'kegiatan_terlaksana' => number_format($jumlah_kegiatan_terlaksana, 0, ',', '.'),
+                        'kegiatan_belum_terlaksana' => number_format($jumlah_kegiatan_belum_terlaksana, 0, ',', '.')
+                    ]
+                ]);
                 exit;
             }
         } else {
@@ -339,7 +391,7 @@ include '../templates/sidebar.php';
                             <div class="card-header">
                                 <h4>Anggaran Terpakai</h4>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body" id="total-anggaran-terpakai">
                                 Rp&nbsp;<?= number_format($total_anggaran_terpakai, 0, ',', '.') ?>
                             </div>
                         </div>
@@ -354,7 +406,7 @@ include '../templates/sidebar.php';
                             <div class="card-header">
                                 <h4>Anggaran Belum Terpakai</h4>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body" id="total-anggaran-belum-terpakai">
                                 Rp&nbsp;<?= number_format($total_anggaran_belum_terpakai, 0, ',', '.') ?>
                             </div>
                         </div>
@@ -369,7 +421,7 @@ include '../templates/sidebar.php';
                             <div class="card-header">
                                 <h4>Kegiatan Terlaksana</h4>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body" id="jumlah-kegiatan-terlaksana">
                                 <?= number_format($jumlah_kegiatan_terlaksana, 0, ',', '.') ?>
                             </div>
                         </div>
@@ -384,7 +436,7 @@ include '../templates/sidebar.php';
                             <div class="card-header">
                                 <h4>Belum Terlaksana</h4>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body" id="jumlah-kegiatan-belum-terlaksana">
                                 <?= number_format($jumlah_kegiatan_belum_terlaksana, 0, ',', '.') ?>
                             </div>
                         </div>
@@ -1073,6 +1125,14 @@ $(document).ready(function() {
                 if (res.success) {
                     toastr.success('Status realisasi berhasil diperbarui');
                     syncStatusMasterCheckbox();
+                    
+                    // Update summary cards in real-time
+                    if (res.totals) {
+                        $('#total-anggaran-terpakai').html(res.totals.terpakai.replace('Rp ', 'Rp&nbsp;'));
+                        $('#total-anggaran-belum-terpakai').html(res.totals.belum_terpakai.replace('Rp ', 'Rp&nbsp;'));
+                        $('#jumlah-kegiatan-terlaksana').text(res.totals.kegiatan_terlaksana);
+                        $('#jumlah-kegiatan-belum-terlaksana').text(res.totals.kegiatan_belum_terlaksana);
+                    }
                 } else {
                     toastr.error(res.message || 'Gagal memperbarui status');
                     $checkbox.prop('checked', !isChecked);
@@ -1116,6 +1176,14 @@ $(document).ready(function() {
                         if (res.success) {
                             toastr.success('Semua status berhasil diperbarui');
                             $('.toggle-status-pengeluaran').prop('checked', isChecked);
+                            
+                            // Update summary cards in real-time
+                            if (res.totals) {
+                                $('#total-anggaran-terpakai').html(res.totals.terpakai.replace('Rp ', 'Rp&nbsp;'));
+                                $('#total-anggaran-belum-terpakai').html(res.totals.belum_terpakai.replace('Rp ', 'Rp&nbsp;'));
+                                $('#jumlah-kegiatan-terlaksana').text(res.totals.kegiatan_terlaksana);
+                                $('#jumlah-kegiatan-belum-terlaksana').text(res.totals.kegiatan_belum_terlaksana);
+                            }
                         } else {
                             toastr.error(res.message || 'Gagal memperbarui status massal');
                             $checkbox.prop('checked', !isChecked);
