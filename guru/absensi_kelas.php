@@ -573,7 +573,7 @@ include '../templates/user_header.php';
                                             <td>
                                                 <?php echo htmlspecialchars($student['nama_siswa']); ?>
                                                 <span class="ml-2 badge <?php 
-                                                    $status = $student['keterangan'] ?? ''; 
+                                                    $status = $student['keterangan'] ?? 'Hadir'; 
                                                     switch($status) {
                                                         case 'Hadir':
                                                             echo 'badge-success';
@@ -591,11 +591,11 @@ include '../templates/user_header.php';
                                                             echo 'badge-secondary';
                                                     }
                                                 ?>" id="badge_<?php echo $student['id_siswa']; ?>">
-                                                    <?php echo $status ?: 'Belum Absen'; ?>
+                                                    <?php echo $status; ?>
                                                 </span>
                                             </td>
                                             <td>
-                                                <?php $status_now = $student['keterangan'] ?? ''; ?>
+                                                <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
                                                 <div class="btn-group btn-group-sm attendance-btn-group" role="group">
                                                     <button type="button" class="btn btn-success btn-absensi-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir"><i class="fas fa-check"></i> Hadir</button>
                                                     <button type="button" class="btn btn-warning btn-absensi-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit"><i class="fas fa-procedures"></i> Sakit</button>
