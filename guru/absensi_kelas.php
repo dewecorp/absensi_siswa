@@ -38,9 +38,10 @@ $classes = [];
 if (!empty($teacher['mengajar'])) {
     $mengajar_decoded = json_decode($teacher['mengajar'], true);
     
-    // Debug: Check what mengajar contains
-    error_log("Guru " . $teacher['nama_guru'] . " mengajar raw: " . $teacher['mengajar']);
-    error_log("Guru " . $teacher['nama_guru'] . " mengajar decoded: " . json_encode($mengajar_decoded));
+    // Fallback: If not a valid JSON array, but contains comma separated values
+    if ($mengajar_decoded === null && !empty($teacher['mengajar'])) {
+        $mengajar_decoded = array_map('trim', explode(',', $teacher['mengajar']));
+    }
     
     if (is_array($mengajar_decoded) && !empty($mengajar_decoded)) {
         // Get all classes first
@@ -60,8 +61,8 @@ if (!empty($teacher['mengajar'])) {
                     $match = true;
                 } elseif ((string)$kelas['id_kelas'] == (string)$kelas_id) {
                     $match = true;
-                } elseif ($kelas['nama_kelas'] == $kelas_id) {
-                    // Also check if mengajar contains class names instead of IDs
+                } elseif (strcasecmp($kelas['nama_kelas'], $kelas_id) === 0) {
+                    // Also check if mengajar contains class names instead of IDs (case-insensitive)
                     $match = true;
                 }
                 
@@ -84,8 +85,30 @@ if (!empty($teacher['mengajar'])) {
     }
 }
 
+// Fallback: If teacher is a wali kelas (homeroom teacher), add their class
+$stmt_wali = $pdo->prepare("SELECT * FROM tb_kelas WHERE wali_kelas = ?");
+$stmt_wali->execute([$teacher['nama_guru']]);
+$wali_class = $stmt_wali->fetch(PDO::FETCH_ASSOC);
+if ($wali_class) {
+    $exists = false;
+    foreach ($classes as $existing_class) {
+        if ($existing_class['id_kelas'] == $wali_class['id_kelas']) {
+            $exists = true;
+            break;
+        }
+    }
+    if (!$exists) {
+        $classes[] = $wali_class;
+    }
+}
+
 // Debug: Log classes found
 error_log("Guru " . $teacher['nama_guru'] . " classes found: " . count($classes));
+
+// If teacher only has one class, auto-select it if not already selected
+if (count($classes) === 1 && (!isset($_GET['kelas']) || empty($_GET['kelas']))) {
+    $_GET['kelas'] = $classes[0]['id_kelas'];
+}
 
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
@@ -488,7 +511,7 @@ include '../templates/user_header.php';
                                         <select class="form-control" name="kelas" id="kelasSelect" required>
                                             <option value="">Pilih Kelas</option>
                                             <?php if (empty($classes)): ?>
-                                            <option value="" disabled>Tidak ada kelas yang diajar</option>
+                                            <option value="" disabled>Anda belum terdaftar mengajar di kelas manapun. Silakan hubungi Admin.</option>
                                             <?php else: ?>
                                             <?php foreach ($classes as $class): ?>
                                             <option value="<?php echo $class['id_kelas']; ?>" <?php echo (isset($_GET['kelas']) && $_GET['kelas'] == $class['id_kelas']) ? 'selected' : ''; ?>>
@@ -503,7 +526,13 @@ include '../templates/user_header.php';
                                     </div>
                                 </div>
                                 <?php else: ?>
-                                    <input type="hidden" name="kelas" id="kelasSelect" value="<?php echo $classes[0]['id_kelas'] ?? ''; ?>">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Kelas</label>
+                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($classes[0]['nama_kelas'] ?? ''); ?>" readonly>
+                                        <input type="hidden" name="kelas" id="kelasSelect" value="<?php echo $classes[0]['id_kelas'] ?? ''; ?>">
+                                    </div>
+                                </div>
                                 <?php endif; ?>
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -544,7 +573,7 @@ include '../templates/user_header.php';
                                             <td>
                                                 <?php echo htmlspecialchars($student['nama_siswa']); ?>
                                                 <span class="ml-2 badge <?php 
-                                                    $status = $student['keterangan'] ?? 'Hadir'; // Set default to 'Hadir'
+                                                    $status = $student['keterangan'] ?? ''; 
                                                     switch($status) {
                                                         case 'Hadir':
                                                             echo 'badge-success';
@@ -562,11 +591,11 @@ include '../templates/user_header.php';
                                                             echo 'badge-secondary';
                                                     }
                                                 ?>" id="badge_<?php echo $student['id_siswa']; ?>">
-                                                    <?php echo $status; ?>
+                                                    <?php echo $status ?: 'Belum Absen'; ?>
                                                 </span>
                                             </td>
                                             <td>
-                                                <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
+                                                <?php $status_now = $student['keterangan'] ?? ''; ?>
                                                 <div class="btn-group btn-group-sm attendance-btn-group" role="group">
                                                     <button type="button" class="btn btn-success btn-absensi-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir"><i class="fas fa-check"></i> Hadir</button>
                                                     <button type="button" class="btn btn-warning btn-absensi-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit"><i class="fas fa-procedures"></i> Sakit</button>

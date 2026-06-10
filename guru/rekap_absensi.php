@@ -72,7 +72,14 @@ if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
 $classes = [];
 if (!empty($teacher['mengajar'])) {
     $mengajar_decoded = json_decode($teacher['mengajar'], true);
+    
+    // Fallback: If not a valid JSON array, but contains comma separated values
+    if ($mengajar_decoded === null && !empty($teacher['mengajar'])) {
+        $mengajar_decoded = array_map('trim', explode(',', $teacher['mengajar']));
+    }
+    
     if (is_array($mengajar_decoded) && !empty($mengajar_decoded)) {
+        // Get all classes first
         $all_classes_stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
         $all_classes = $all_classes_stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -84,7 +91,7 @@ if (!empty($teacher['mengajar'])) {
                     $match = true;
                 } elseif ((string)$kelas['id_kelas'] == (string)$kelas_id) {
                     $match = true;
-                } elseif ($kelas['nama_kelas'] == $kelas_id) {
+                } elseif (strcasecmp($kelas['nama_kelas'], $kelas_id) === 0) {
                     $match = true;
                 }
                 
@@ -106,8 +113,52 @@ if (!empty($teacher['mengajar'])) {
     }
 }
 
-// If class_id is not set but we have classes, default to first class? 
-// Or let user select. Better let user select, but if posted, use that.
+// Fallback: If teacher is a wali kelas (homeroom teacher), add their class
+$stmt_wali = $pdo->prepare("SELECT * FROM tb_kelas WHERE wali_kelas = ?");
+$stmt_wali->execute([$teacher['nama_guru']]);
+$wali_class = $stmt_wali->fetch(PDO::FETCH_ASSOC);
+if ($wali_class) {
+    $exists = false;
+    foreach ($classes as $existing_class) {
+        if ($existing_class['id_kelas'] == $wali_class['id_kelas']) {
+            $exists = true;
+            break;
+        }
+    }
+    if (!$exists) {
+        $classes[] = $wali_class;
+    }
+}
+
+// Handle form submission
+$class_id = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
+
+// Set default filter type and date
+$filter_type = isset($_POST['filter_type']) ? $_POST['filter_type'] : 'daily';
+$selected_date = isset($_POST['attendance_date']) ? $_POST['attendance_date'] : date('Y-m-d');
+$selected_month = isset($_POST['month_picker']) ? $_POST['month_picker'] : date('Y-m');
+$selected_student = isset($_POST['student_id']) ? (int)$_POST['student_id'] : 0;
+
+// Auto-select class if teacher only has one class and it's not a POST request
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $class_id === 0 && count($classes) === 1) {
+    $class_id = $classes[0]['id_kelas'];
+    // When auto-selecting class, we should also trigger the data fetch
+    $_POST['class_id'] = $class_id;
+    $_POST['filter_type'] = $filter_type;
+    $_POST['attendance_date'] = $selected_date;
+}
+
+// Ensure results variables are initialized even if no POST
+$daily_results = [];
+$monthly_results = [];
+$student_results = [];
+$semester_results = [];
+
+if ($class_id > 0) {
+    // If it's not a POST request, but we have a class_id (from auto-select), 
+    // we need to make sure the filtering logic below runs.
+}
+
 // If class_id provided but not in allowed classes, reset to 0 (security)
 if ($class_id > 0) {
     $allowed = false;
@@ -139,16 +190,13 @@ if ($class_id > 0) {
         // Daily filter (dibatasi tahun ajaran aktif di profil)
         $sqlDaily = "
             SELECT s.nama_siswa, s.nisn, k.nama_kelas, a.keterangan, a.tanggal, a.jam_masuk, a.jam_keluar
-            FROM tb_absensi a
-            LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa  
+            FROM tb_siswa s
+            LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = ?
             LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
-            WHERE s.id_kelas = ? AND a.tanggal = ?";
-        $bindDaily = [$class_id, $selected_date];
-        if ($periode_ta) {
-            $sqlDaily .= " AND a.tanggal >= ? AND a.tanggal <= ?";
-            $bindDaily[] = $periode_ta['mulai'];
-            $bindDaily[] = $periode_ta['sampai'];
-        }
+            WHERE s.id_kelas = ?";
+        $bindDaily = [$selected_date, $class_id];
+        // We don't filter a.tanggal in WHERE clause because it would break the LEFT JOIN for students who haven't absented yet.
+        // The date filtering is already handled in the ON clause: a.tanggal = ?
         $sqlDaily .= " ORDER BY s.nama_siswa ASC";
         $stmt = $pdo->prepare($sqlDaily);
         $stmt->execute($bindDaily);
@@ -166,15 +214,11 @@ if ($class_id > 0) {
         // Get attendance data for the month
         $sqlMon = "
             SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, DAY(a.tanggal) as day
-            FROM tb_absensi a
-            LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa
-            WHERE s.id_kelas = ? AND YEAR(a.tanggal) = ? AND MONTH(a.tanggal) = ?";
-        $bindMon = [$class_id, $year, $month];
-        if ($periode_ta) {
-            $sqlMon .= " AND a.tanggal >= ? AND a.tanggal <= ?";
-            $bindMon[] = $periode_ta['mulai'];
-            $bindMon[] = $periode_ta['sampai'];
-        }
+            FROM tb_siswa s
+            LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND YEAR(a.tanggal) = ? AND MONTH(a.tanggal) = ?
+            WHERE s.id_kelas = ?";
+        $bindMon = [$year, $month, $class_id];
+        // Remove academic year filter in WHERE for LEFT JOIN
         $sqlMon .= " ORDER BY s.nama_siswa, a.tanggal";
         $stmt = $pdo->prepare($sqlMon);
         $stmt->execute($bindMon);
@@ -182,20 +226,30 @@ if ($class_id > 0) {
         
         // Organize data by student
         $student_attendance = [];
+        
+        // First, ensure all students in the class are in the list
+        $stmt_students = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+        $stmt_students->execute([$class_id]);
+        $all_students_in_class = $stmt_students->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($all_students_in_class as $s) {
+            $student_attendance[$s['id_siswa']] = [
+                'nama_siswa' => $s['nama_siswa'],
+                'nisn' => $s['nisn'],
+                'days' => array_fill(1, 31, ''),
+                'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
+            ];
+        }
+        
         foreach ($attendance_records as $record) {
             $student_id = $record['id_siswa'];
-            if (!isset($student_attendance[$student_id])) {
-                $student_attendance[$student_id] = [
-                    'nama_siswa' => $record['nama_siswa'],
-                    'nisn' => $record['nisn'],
-                    'days' => array_fill(1, 31, ''), // Initialize all days as empty
-                    'summary' => ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0]
-                ];
-            }
-            $day = (int)$record['day'];
-            $student_attendance[$student_id]['days'][$day] = $record['keterangan'];
-            if (isset($student_attendance[$student_id]['summary'][$record['keterangan']])) {
-                $student_attendance[$student_id]['summary'][$record['keterangan']]++;
+            // If keterangan is null, it means no attendance record for this student on this day
+            if ($record['keterangan'] !== null) {
+                $day = (int)$record['day'];
+                $student_attendance[$student_id]['days'][$day] = $record['keterangan'];
+                if (isset($student_attendance[$student_id]['summary'][$record['keterangan']])) {
+                    $student_attendance[$student_id]['summary'][$record['keterangan']]++;
+                }
             }
         }
         
@@ -251,16 +305,11 @@ if ($class_id > 0) {
         $sqlSem = "
             SELECT s.id_siswa, s.nama_siswa, s.nisn, a.keterangan, a.tanggal,
                    MONTH(a.tanggal) as month, DAY(a.tanggal) as day
-            FROM tb_absensi a
-            LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa
-            WHERE s.id_kelas = ? AND YEAR(a.tanggal) = ? 
-                  AND MONTH(a.tanggal) BETWEEN ? AND ?";
-        $bindSem = [$class_id, $query_year, $start_month, $end_month];
-        if ($periode_ta) {
-            $sqlSem .= " AND a.tanggal >= ? AND a.tanggal <= ?";
-            $bindSem[] = $periode_ta['mulai'];
-            $bindSem[] = $periode_ta['sampai'];
-        }
+            FROM tb_siswa s
+            LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND YEAR(a.tanggal) = ? AND MONTH(a.tanggal) BETWEEN ? AND ?
+            WHERE s.id_kelas = ?";
+        $bindSem = [$query_year, $start_month, $end_month, $class_id];
+        // Remove academic year filter in WHERE for LEFT JOIN
         $sqlSem .= " ORDER BY s.nama_siswa, a.tanggal";
         $stmt = $pdo->prepare($sqlSem);
         $stmt->execute($bindSem);
@@ -316,6 +365,20 @@ if ($filter_type == 'daily' && !empty($selected_date) && $class_id > 0) {
     $summary_stmt = $pdo->prepare($sqlSum);
     $summary_stmt->execute($bindSum);
     $absent_summary = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Tambahan: Pastikan daily_results berisi semua siswa jika class_id terpilih (untuk tampilan tabel utama)
+if ($filter_type == 'daily' && $class_id > 0 && empty($daily_results)) {
+    $sqlDailyAll = "
+        SELECT s.nama_siswa, s.nisn, k.nama_kelas, a.keterangan, a.tanggal, a.jam_masuk, a.jam_keluar
+        FROM tb_siswa s
+        LEFT JOIN tb_absensi a ON s.id_siswa = a.id_siswa AND a.tanggal = ?
+        LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
+        WHERE s.id_kelas = ?
+        ORDER BY s.nama_siswa ASC";
+    $stmtDailyAll = $pdo->prepare($sqlDailyAll);
+    $stmtDailyAll->execute([$selected_date, $class_id]);
+    $daily_results = $stmtDailyAll->fetchAll(PDO::FETCH_ASSOC);
 }
 
 include '../templates/user_header.php';
@@ -426,8 +489,14 @@ include '../templates/user_header.php';
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                                <?php elseif (count($classes) === 1): ?>
+                                <div class="form-group col-md-3">
+                                    <label>Kelas</label>
+                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($classes[0]['nama_kelas']); ?>" readonly>
+                                    <input type="hidden" name="class_id" value="<?php echo $classes[0]['id_kelas']; ?>">
+                                </div>
                                 <?php else: ?>
-                                    <input type="hidden" name="class_id" value="<?php echo $classes[0]['id_kelas'] ?? ''; ?>">
+                                    <input type="hidden" name="class_id" value="">
                                 <?php endif; ?>
                                 
                                             <div class="form-group col-md-3">
@@ -836,8 +905,7 @@ include '../templates/user_header.php';
     </section>
 </div>
 
-<?php include '../templates/footer.php'; ?>
-
+<?php
 // Pass PHP variables to JS
 $school_city = $school_profile['tempat_jadwal'] ?? '';
 $report_date = formatDateIndonesia(date('Y-m-d'));
@@ -964,7 +1032,7 @@ function exportStudentToPDF() {
 }
 
 function exportSemesterToPDF() {
-    var classId = $('input[name=\"class_id\"]').val() || $('#classSelect').val();
+    var classId = $('input[name="class_id"]').val() || $('#classSelect').val();
     var url = '../admin/cetak_rekap_absensi.php?type=semester&class_id=' + classId;
     openPrintPreviewTab(url);
 }
@@ -1016,12 +1084,6 @@ function exportSemesterToExcel() {
         a.click();
         setTimeout(recoverDropdownUiState, 500);
     }
-}
-
-function exportSemesterToPDF() {
-    var classId = $('#classSelect').val();
-    var url = '../admin/cetak_rekap_absensi.php?type=semester&class_id=' + classId;
-    window.open(url, '_blank');
 }
 
 $(document).ready(function() {
@@ -1120,3 +1182,4 @@ $(document).ready(function() {
     });
 });
 </script>
+<?php include '../templates/footer.php'; ?>

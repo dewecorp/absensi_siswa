@@ -38,13 +38,73 @@ $classes = [];
 if (!empty($teacher['mengajar'])) {
     $mengajar_decoded = json_decode($teacher['mengajar'], true);
     
-    if (is_array($mengajar_decoded) && !empty($mengajar_decoded)) {
-        // Build placeholders for IN clause
-        $placeholders = implode(',', array_fill(0, count($mengajar_decoded), '?'));
-        $stmt = $pdo->prepare("SELECT * FROM tb_kelas WHERE id_kelas IN ($placeholders) ORDER BY nama_kelas ASC");
-        $stmt->execute($mengajar_decoded);
-        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Fallback: If not a valid JSON array, but contains comma separated values
+    if ($mengajar_decoded === null && !empty($teacher['mengajar'])) {
+        $mengajar_decoded = array_map('trim', explode(',', $teacher['mengajar']));
     }
+    
+    if (is_array($mengajar_decoded) && !empty($mengajar_decoded)) {
+        // Get all classes first
+        $all_classes_stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
+        $all_classes = $all_classes_stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Filter classes based on mengajar IDs or names
+        foreach ($mengajar_decoded as $kelas_id) {
+            $kelas_id_int = is_numeric($kelas_id) ? (int)$kelas_id : null;
+            
+            foreach ($all_classes as $kelas) {
+                $match = false;
+                
+                // Match by ID
+                if ($kelas_id_int !== null && $kelas['id_kelas'] == $kelas_id_int) {
+                    $match = true;
+                } elseif ((string)$kelas['id_kelas'] == (string)$kelas_id) {
+                    $match = true;
+                } elseif (strcasecmp($kelas['nama_kelas'], $kelas_id) === 0) {
+                    $match = true;
+                }
+                
+                if ($match) {
+                    $exists = false;
+                    foreach ($classes as $existing_class) {
+                        if ($existing_class['id_kelas'] == $kelas['id_kelas']) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+                    if (!$exists) {
+                        $classes[] = $kelas;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+}
+
+// Fallback: If teacher is a wali kelas (homeroom teacher), add their class
+$stmt_wali = $pdo->prepare("SELECT * FROM tb_kelas WHERE wali_kelas = ?");
+$stmt_wali->execute([$teacher['nama_guru']]);
+$wali_class = $stmt_wali->fetch(PDO::FETCH_ASSOC);
+if ($wali_class) {
+    $exists = false;
+    foreach ($classes as $existing_class) {
+        if ($existing_class['id_kelas'] == $wali_class['id_kelas']) {
+            $exists = true;
+            break;
+        }
+    }
+    if (!$exists) {
+        $classes[] = $wali_class;
+    }
+}
+
+// Debug: Log classes found
+error_log("Guru " . $teacher['nama_guru'] . " classes found: " . count($classes));
+
+// If teacher only has one class, auto-select it if not already selected
+if (count($classes) === 1 && (!isset($_GET['kelas']) || empty($_GET['kelas']))) {
+    $_GET['kelas'] = $classes[0]['id_kelas'];
 }
 
 // Handle form submission for attendance
@@ -177,8 +237,16 @@ include '../templates/header.php';
                                         </select>
                                     </div>
                                 </div>
+                                <?php elseif (count($classes) === 1): ?>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Kelas</label>
+                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($classes[0]['nama_kelas'] ?? ''); ?>" readonly>
+                                        <input type="hidden" name="kelas" id="kelasSelect" value="<?php echo $classes[0]['id_kelas'] ?? ''; ?>">
+                                    </div>
+                                </div>
                                 <?php else: ?>
-                                    <input type="hidden" name="kelas" id="kelasSelect" value="<?php echo $classes[0]['id_kelas'] ?? ''; ?>">
+                                    <input type="hidden" name="kelas" id="kelasSelect" value="">
                                 <?php endif; ?>
                                 <div class="col-md-4">
                                     <div class="form-group">
