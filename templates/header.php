@@ -174,7 +174,21 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             z-index: 2;
             box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
-        @media (max-width: 991.98px) {
+        .main-sidebar {
+            position: fixed !important;
+            display: block !important;
+        }
+        body.sidebar-gone .main-sidebar {
+            display: block !important;
+            left: 0 !important;
+        }
+        body.sidebar-gone .main-content {
+            padding-left: 280px !important;
+        }
+        body.sidebar-gone .navbar {
+            left: 250px !important;
+        }
+        @media (max-width: 767.98px) {
             .main-navbar, .navbar-bg {
                 display: none !important;
             }
@@ -192,7 +206,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
     <div id="app">
         <div class="main-wrapper">
             <!-- Mobile Header -->
-            <div class="mobile-header d-lg-none">
+            <div class="mobile-header d-md-none">
                 <div class="d-flex align-items-center w-100">
                     <?php 
                     $current_page = basename($_SERVER['PHP_SELF']);
