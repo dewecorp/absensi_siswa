@@ -42,7 +42,7 @@ $all_tingkat_list = [];
 $tingkat_list = [];
 try {
     $all_tingkat_list = $pdo->query("
-            SELECT id_tingkat_barung, nama_tingkat
+            SELECT id_tingkat_barung, nama_tingkat, golongan
             FROM tb_tingkat_barung
             ORDER BY
                 CASE
@@ -267,8 +267,14 @@ include '../templates/sidebar.php';
                         <div class="suket-tingkat-pills d-flex flex-wrap align-items-stretch" role="group" aria-label="Filter tingkat surat">
                             <?php foreach ($tingkat_list as $tingkat):
                                 $tid = (int)($tingkat['id_tingkat_barung'] ?? 0);
-                                $aktif = ($selected_tingkat_id === $tid); ?>
-                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm mb-2 mr-2 <?= $aktif ? 'btn-primary' : 'btn-outline-primary' ?>">
+                                $aktif = ($selected_tingkat_id === $tid);
+                                $golongan = $tingkat['golongan'] ?? 'Siaga';
+                                if ($golongan === 'Penggalang') {
+                                    $btn_class = $aktif ? 'btn-danger' : 'btn-outline-danger';
+                                } else {
+                                    $btn_class = $aktif ? 'btn-success' : 'btn-outline-success';
+                                } ?>
+                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm mb-2 mr-2 <?= $btn_class ?>">
                                     <?= htmlspecialchars($tingkat['nama_tingkat'] ?? '') ?>
                                 </a>
                             <?php endforeach; ?>

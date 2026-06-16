@@ -249,7 +249,7 @@ $tingkat_list = [];
 $fetch_error = null;
 try {
     $tingkat_list = $pdo->query("
-            SELECT id_tingkat_barung, nama_tingkat
+            SELECT id_tingkat_barung, nama_tingkat, golongan
             FROM tb_tingkat_barung
             ORDER BY
                 CASE
@@ -1590,9 +1590,15 @@ include '../templates/sidebar.php';
                                     <?php
                                         $tid = (int)($t['id_tingkat_barung'] ?? 0);
                                         $active = $tid === $selected_tingkat_id;
+                                        $golongan = $t['golongan'] ?? 'Siaga';
+                                        if ($golongan === 'Penggalang') {
+                                            $btn_class = $active ? 'btn-danger' : 'btn-outline-danger';
+                                        } else {
+                                            $btn_class = $active ? 'btn-success' : 'btn-outline-success';
+                                        }
                                     ?>
-                                    <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>">
-                                        <?= htmlspecialchars($t['nama_tingkat'] ?? '') ?>
+                                    <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $btn_class ?>">
+                                        <?= htmlspecialchars($t['nama_tingkat']) ?>
                                     </a>
                                 <?php endforeach; ?>
                             <?php else: ?>

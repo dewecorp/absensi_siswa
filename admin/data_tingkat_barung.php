@@ -32,13 +32,15 @@ try {
         $pdo->exec("
             CREATE TABLE {$table_name} (
                 id_tingkat_barung INT AUTO_INCREMENT PRIMARY KEY,
-                nama_tingkat VARCHAR(100) NOT NULL
+                nama_tingkat VARCHAR(100) NOT NULL,
+                golongan VARCHAR(50) NOT NULL DEFAULT 'Siaga'
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     } else {
         $required_cols = [
             'id_tingkat_barung' => "INT NOT NULL",
             'nama_tingkat' => "VARCHAR(100) NOT NULL",
+            'golongan' => "VARCHAR(50) NOT NULL DEFAULT 'Siaga'",
         ];
         foreach ($required_cols as $col => $typeDef) {
             $colStmt = $pdo->query("SHOW COLUMNS FROM {$table_name} LIKE '" . addslashes($col) . "'");
@@ -59,12 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Add
     if (isset($_POST['add_tingkat_barung'])) {
         $nama_tingkat = sanitizeInput($_POST['nama_tingkat'] ?? '');
+        $golongan = sanitizeInput($_POST['golongan'] ?? 'Siaga');
         if ($nama_tingkat === '') {
             $message = ['type' => 'warning', 'text' => 'Harap isi nama tingkat.'];
         } else {
             try {
-                $stmt = $pdo->prepare("INSERT INTO {$table_name} (nama_tingkat) VALUES (?)");
-                $ok = $stmt->execute([$nama_tingkat]);
+                $stmt = $pdo->prepare("INSERT INTO {$table_name} (nama_tingkat, golongan) VALUES (?, ?)");
+                $ok = $stmt->execute([$nama_tingkat, $golongan]);
                 if ($ok) {
                     $username = $_SESSION['username'] ?? 'system';
                     logActivity($pdo, $username, 'Tambah Tingkat Barung', $nama_tingkat);
@@ -82,12 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_tingkat_barung'])) {
         $id = (int)($_POST['id_tingkat_barung'] ?? 0);
         $nama_tingkat = sanitizeInput($_POST['nama_tingkat'] ?? '');
+        $golongan = sanitizeInput($_POST['golongan'] ?? 'Siaga');
         if ($id <= 0 || $nama_tingkat === '') {
             $message = ['type' => 'warning', 'text' => 'Harap isi nama tingkat.'];
         } else {
             try {
-                $stmt = $pdo->prepare("UPDATE {$table_name} SET nama_tingkat = ? WHERE id_tingkat_barung = ?");
-                $ok = $stmt->execute([$nama_tingkat, $id]);
+                $stmt = $pdo->prepare("UPDATE {$table_name} SET nama_tingkat = ?, golongan = ? WHERE id_tingkat_barung = ?");
+                $ok = $stmt->execute([$nama_tingkat, $golongan, $id]);
                 if ($ok) {
                     $username = $_SESSION['username'] ?? 'system';
                     logActivity($pdo, $username, 'Update Tingkat Barung', "ID {$id}: {$nama_tingkat}");
@@ -133,7 +137,7 @@ $rows = [];
 $fetch_error = null;
 try {
     $stmt = $pdo->query("
-        SELECT id_tingkat_barung, nama_tingkat
+        SELECT id_tingkat_barung, nama_tingkat, golongan
         FROM {$table_name}
         ORDER BY
             CASE
@@ -172,7 +176,7 @@ $(document).ready(function() {
     var table = $('#table-1').DataTable({
         'order': [[1, 'asc']],
         'columnDefs': [
-            { 'sortable': false, 'targets': [2] }
+            { 'sortable': false, 'targets': [3] }
         ],
         'language': {
             'lengthMenu': 'Tampilkan _MENU_ entri',
@@ -200,6 +204,7 @@ $(document).ready(function() {
     $(document).on('click', '.edit-btn', function() {
         $('#edit_id_tingkat_barung').val($(this).data('id'));
         $('#edit_nama_tingkat').val($(this).data('nama') || '');
+        $('#edit_golongan').val($(this).data('golongan') || 'Siaga');
         $('#editModal').modal('show');
     });
 
@@ -271,6 +276,7 @@ include '../templates/sidebar.php';
                                 <tr>
                                     <th class="text-center" width="8%">No</th>
                                     <th>Nama Tingkat</th>
+                                    <th>Golongan</th>
                                     <th width="15%">Aksi</th>
                                 </tr>
                             </thead>
@@ -280,10 +286,12 @@ include '../templates/sidebar.php';
                                         <tr>
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
                                             <td><?= htmlspecialchars($row['nama_tingkat'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($row['golongan'] ?? '') ?></td>
                                             <td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
                                                     data-nama="<?= htmlspecialchars($row['nama_tingkat'] ?? '', ENT_QUOTES) ?>"
+                                                    data-golongan="<?= htmlspecialchars($row['golongan'] ?? '', ENT_QUOTES) ?>"
                                                     type="button">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -323,6 +331,13 @@ include '../templates/sidebar.php';
                         <label>Nama Tingkat</label>
                         <input type="text" class="form-control" name="nama_tingkat" required autocomplete="off">
                     </div>
+                    <div class="form-group">
+                        <label>Golongan</label>
+                        <select class="form-control" name="golongan" id="add_golongan" required>
+                            <option value="Siaga">Siaga</option>
+                            <option value="Penggalang">Penggalang</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -351,6 +366,13 @@ include '../templates/sidebar.php';
                         <label>Nama Tingkat</label>
                         <input type="text" class="form-control" name="nama_tingkat" id="edit_nama_tingkat" required autocomplete="off">
                     </div>
+                    <div class="form-group">
+                        <label>Golongan</label>
+                        <select class="form-control" name="golongan" id="edit_golongan" required>
+                            <option value="Siaga">Siaga</option>
+                            <option value="Penggalang">Penggalang</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -362,4 +384,3 @@ include '../templates/sidebar.php';
 </div>
 
 <?php include '../templates/footer.php'; ?>
-

@@ -730,7 +730,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_sku_butir'])) 
 $tingkat_list = [];
 try {
     $tingkat_list = $pdo->query('
-        SELECT id_tingkat_barung, nama_tingkat
+        SELECT id_tingkat_barung, nama_tingkat, golongan
         FROM tb_tingkat_barung
         ORDER BY
             CASE
@@ -1416,8 +1416,14 @@ require_once '../templates/sidebar.php';
                                     $tid = (int)($t['id_tingkat_barung'] ?? 0);
                                     $active = ($tid === $selected_tingkat_id);
                                     if (!$can_manage_sku && !in_array($tid, $assigned_tingkat_ids)) continue;
+                                    $golongan = $t['golongan'] ?? 'Siaga';
+                                    if ($golongan === 'Penggalang') {
+                                        $btn_class = $active ? 'btn-danger' : 'btn-outline-danger';
+                                    } else {
+                                        $btn_class = $active ? 'btn-success' : 'btn-outline-success';
+                                    }
                                 ?>
-                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>">
+                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $btn_class ?>">
                                     <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
                                 </a>
                             <?php endforeach; ?>
