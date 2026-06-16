@@ -1584,29 +1584,38 @@ include '../templates/sidebar.php';
                     <?php endif; ?>
 
                     <div class="mb-3">
-                        <div class="d-flex flex-wrap" style="gap:8px;">
+                        <ul class="nav nav-pills flex-wrap" role="tablist">
                             <?php if (!empty($tingkat_list)): ?>
-                                <?php foreach ($tingkat_list as $t): ?>
+                                <?php foreach ($tingkat_list as $index => $t): ?>
                                     <?php
                                         $tid = (int)($t['id_tingkat_barung'] ?? 0);
                                         $active = $tid === $selected_tingkat_id;
                                         $golongan = $t['golongan'] ?? 'Siaga';
                                         if ($golongan === 'Penggalang') {
-                                            $btn_class = $active ? 'btn-danger' : 'btn-outline-danger';
+                                            $pill_class = $active ? 'nav-link active bg-danger border-danger' : 'nav-link border border-danger text-danger';
                                         } else {
-                                            $btn_class = $active ? 'btn-success' : 'btn-outline-success';
+                                            $pill_class = $active ? 'nav-link active bg-success border-success' : 'nav-link border border-success text-success';
                                         }
+                                        $is_first = $index === 0;
+                                        $is_last = $index === count($tingkat_list) - 1;
                                     ?>
-                                    <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $btn_class ?>">
-                                        <?= htmlspecialchars($t['nama_tingkat']) ?>
-                                    </a>
+                                    <li class="nav-item" style="margin: 0;">
+                                        <a href="?tingkat=<?= $tid ?>" 
+                                           class="nav-link py-1 px-3 <?= $pill_class ?>" 
+                                           role="tab" 
+                                           style="pointer-events: auto; transition: none; <?= !$is_first ? 'border-left: 0; margin-left: -1px;' : '' ?> <?= !$is_last ? 'border-right: 0;' : '' ?> border-radius: 0;<?= $is_first ? ' border-top-left-radius: 4px; border-bottom-left-radius: 4px;' : '' ?><?= $is_last ? ' border-top-right-radius: 4px; border-bottom-right-radius: 4px;' : '' ?>">
+                                            <?= htmlspecialchars($t['nama_tingkat']) ?>
+                                        </a>
+                                    </li>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <div class="text-muted">
-                                    Belum ada tingkat barung. Silakan buat di menu <strong>Data Tingkat Barung</strong>.
-                                </div>
+                                <li class="nav-item">
+                                    <span class="nav-link disabled text-muted py-1 px-3">
+                                        Belum ada tingkat barung. Silakan buat di menu <strong>Data Tingkat Barung</strong>.
+                                    </span>
+                                </li>
                             <?php endif; ?>
-                        </div>
+                        </ul>
                     </div>
 
                     <div class="table-responsive">

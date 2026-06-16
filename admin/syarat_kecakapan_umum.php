@@ -1410,24 +1410,37 @@ require_once '../templates/sidebar.php';
                         <div class="alert alert-warning mb-0">Belum ada data tingkat Pramuka. Tambahkan di menu <strong>Data Tingkat Barung</strong>.</div>
                     <?php else: ?>
                         <?php if ($can_manage_sku || count($assigned_tingkat_ids) > 1): ?>
-                        <div class="d-flex flex-wrap mb-4" style="gap:8px;">
-                            <?php foreach ($tingkat_list as $t): ?>
+                        <ul class="nav nav-pills flex-wrap mb-4" role="tablist">
+                            <?php 
+                                $filtered_tingkat = [];
+                                foreach ($tingkat_list as $t) {
+                                    if (!$can_manage_sku && !in_array((int)($t['id_tingkat_barung'] ?? 0), $assigned_tingkat_ids)) continue;
+                                    $filtered_tingkat[] = $t;
+                                }
+                                foreach ($filtered_tingkat as $index => $t):
+                                ?>
                                 <?php
                                     $tid = (int)($t['id_tingkat_barung'] ?? 0);
                                     $active = ($tid === $selected_tingkat_id);
-                                    if (!$can_manage_sku && !in_array($tid, $assigned_tingkat_ids)) continue;
                                     $golongan = $t['golongan'] ?? 'Siaga';
                                     if ($golongan === 'Penggalang') {
-                                        $btn_class = $active ? 'btn-danger' : 'btn-outline-danger';
+                                        $pill_class = $active ? 'nav-link active bg-danger border-danger' : 'nav-link border border-danger text-danger';
                                     } else {
-                                        $btn_class = $active ? 'btn-success' : 'btn-outline-success';
+                                        $pill_class = $active ? 'nav-link active bg-success border-success' : 'nav-link border border-success text-success';
                                     }
+                                    $is_first = $index === 0;
+                                    $is_last = $index === count($filtered_tingkat) - 1;
                                 ?>
-                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm <?= $btn_class ?>">
-                                    <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
-                                </a>
+                                <li class="nav-item" style="margin: 0;">
+                                    <a href="?tingkat=<?= $tid ?>" 
+                                       class="nav-link py-1 px-3 <?= $pill_class ?>" 
+                                       role="tab" 
+                                       style="transition: none; <?= !$is_first ? 'border-left: 0; margin-left: -1px;' : '' ?> <?= !$is_last ? 'border-right: 0;' : '' ?> border-radius: 0;<?= $is_first ? ' border-top-left-radius: 4px; border-bottom-left-radius: 4px;' : '' ?><?= $is_last ? ' border-top-right-radius: 4px; border-bottom-right-radius: 4px;' : '' ?>">
+                                        <?= htmlspecialchars((string)($t['nama_tingkat'] ?? '')) ?>
+                                    </a>
+                                </li>
                             <?php endforeach; ?>
-                        </div>
+                        </ul>
                         <?php endif; ?>
 
                         <?php if ($sku_assignment_missing): ?>

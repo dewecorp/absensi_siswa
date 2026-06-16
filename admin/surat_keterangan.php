@@ -264,21 +264,29 @@ include '../templates/sidebar.php';
                 <div class="card-body">
                     <div class="form-group">
                         <label class="d-block">Pilih Tingkat:</label>
-                        <div class="suket-tingkat-pills d-flex flex-wrap align-items-stretch" role="group" aria-label="Filter tingkat surat">
-                            <?php foreach ($tingkat_list as $tingkat):
+                        <ul class="nav nav-pills flex-wrap mb-2" role="tablist">
+                            <?php foreach ($tingkat_list as $index => $tingkat):
                                 $tid = (int)($tingkat['id_tingkat_barung'] ?? 0);
                                 $aktif = ($selected_tingkat_id === $tid);
                                 $golongan = $tingkat['golongan'] ?? 'Siaga';
                                 if ($golongan === 'Penggalang') {
-                                    $btn_class = $aktif ? 'btn-danger' : 'btn-outline-danger';
+                                    $pill_class = $aktif ? 'nav-link active bg-danger border-danger' : 'nav-link border border-danger text-danger';
                                 } else {
-                                    $btn_class = $aktif ? 'btn-success' : 'btn-outline-success';
-                                } ?>
-                                <a href="?tingkat=<?= $tid ?>" class="btn btn-sm mb-2 mr-2 <?= $btn_class ?>">
-                                    <?= htmlspecialchars($tingkat['nama_tingkat'] ?? '') ?>
-                                </a>
+                                    $pill_class = $aktif ? 'nav-link active bg-success border-success' : 'nav-link border border-success text-success';
+                                }
+                                $is_first = $index === 0;
+                                $is_last = $index === count($tingkat_list) - 1;
+                                ?>
+                                <li class="nav-item" style="margin: 0;">
+                                    <a href="?tingkat=<?= $tid ?>" 
+                                       class="nav-link py-1 px-3 <?= $pill_class ?>" 
+                                       role="tab" 
+                                       style="transition: none; <?= !$is_first ? 'border-left: 0; margin-left: -1px;' : '' ?> <?= !$is_last ? 'border-right: 0;' : '' ?> border-radius: 0;<?= $is_first ? ' border-top-left-radius: 4px; border-bottom-left-radius: 4px;' : '' ?><?= $is_last ? ' border-top-right-radius: 4px; border-bottom-right-radius: 4px;' : '' ?>">
+                                        <?= htmlspecialchars($tingkat['nama_tingkat'] ?? '') ?>
+                                    </a>
+                                </li>
                             <?php endforeach; ?>
-                        </div>
+                        </ul>
                     </div>
 
                     <?php if (!empty($participants)): ?>
