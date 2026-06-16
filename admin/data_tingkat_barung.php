@@ -10,7 +10,7 @@ if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
-$page_title = 'Data Tingkat Barung';
+$page_title = 'Data Tingkat Pramuka';
 
 // DataTables
 $css_libs = [
@@ -70,10 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ok = $stmt->execute([$nama_tingkat, $golongan]);
                 if ($ok) {
                     $username = $_SESSION['username'] ?? 'system';
-                    logActivity($pdo, $username, 'Tambah Tingkat Barung', $nama_tingkat);
-                    $message = ['type' => 'success', 'text' => 'Data tingkat barung berhasil ditambahkan!'];
+                    logActivity($pdo, $username, 'Tambah Tingkat Pramuka', $nama_tingkat);
+                    $message = ['type' => 'success', 'text' => 'Data tingkat Pramuka berhasil ditambahkan!'];
                 } else {
-                    $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data tingkat barung.'];
+                    $message = ['type' => 'danger', 'text' => 'Gagal menambahkan data tingkat Pramuka.'];
                 }
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Error DB: ' . $e->getMessage()];
@@ -94,8 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ok = $stmt->execute([$nama_tingkat, $golongan, $id]);
                 if ($ok) {
                     $username = $_SESSION['username'] ?? 'system';
-                    logActivity($pdo, $username, 'Update Tingkat Barung', "ID {$id}: {$nama_tingkat}");
-                    $message = ['type' => 'success', 'text' => 'Data tingkat barung berhasil diperbarui!'];
+                    logActivity($pdo, $username, 'Update Tingkat Pramuka', "ID {$id}: {$nama_tingkat}");
+                    $message = ['type' => 'success', 'text' => 'Data tingkat Pramuka berhasil diperbarui!'];
                 } else {
                     $message = ['type' => 'danger', 'text' => 'Gagal memperbarui data.'];
                 }
@@ -120,8 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ok = $stmt->execute([$id]);
                 if ($ok) {
                     $username = $_SESSION['username'] ?? 'system';
-                    logActivity($pdo, $username, 'Hapus Tingkat Barung', "ID {$id}: {$nama}");
-                    $message = ['type' => 'success', 'text' => 'Data tingkat barung berhasil dihapus!'];
+                    logActivity($pdo, $username, 'Hapus Tingkat Pramuka', "ID {$id}: {$nama}");
+                    $message = ['type' => 'success', 'text' => 'Data tingkat Pramuka berhasil dihapus!'];
                 } else {
                     $message = ['type' => 'danger', 'text' => 'Gagal menghapus data.'];
                 }
@@ -242,18 +242,18 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Data Tingkat Barung</h1>
+            <h1>Data Tingkat Pramuka</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
                 <div class="breadcrumb-item">Ekstrakurikuler</div>
-                <div class="breadcrumb-item">Tingkat Barung</div>
+                <div class="breadcrumb-item">Tingkat Pramuka</div>
             </div>
         </div>
 
         <div class="section-body">
             <div class="card">
                 <div class="card-header">
-                    <h4>Data Tingkat Barung</h4>
+                    <h4>Data Tingkat Pramuka</h4>
                     <div class="card-header-action">
                         <button class="btn btn-primary" data-toggle="modal" data-target="#addModal" type="button">
                             <i class="fas fa-plus"></i> Tambah
@@ -319,7 +319,7 @@ include '../templates/sidebar.php';
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addModalLabel">Tambah Tingkat Barung</h5>
+                <h5 class="modal-title" id="addModalLabel">Tambah Tingkat Pramuka</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -353,7 +353,7 @@ include '../templates/sidebar.php';
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editModalLabel">Edit Tingkat Barung</h5>
+                <h5 class="modal-title" id="editModalLabel">Edit Tingkat Pramuka</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>

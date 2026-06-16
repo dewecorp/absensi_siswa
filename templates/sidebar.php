@@ -350,6 +350,7 @@ switch ($user_level) {
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
+            ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_tingkat_barung.php'],
             ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
             ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_anggota_rebana.php'],
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_barung.php'],
@@ -376,7 +377,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_kepala,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'data_tingkat_barung.php'])
             ],
             [
                 'title' => 'Rekap Absensi',

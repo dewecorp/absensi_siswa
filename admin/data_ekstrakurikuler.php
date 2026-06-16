@@ -471,8 +471,8 @@ include '../templates/sidebar.php';
             <h1>Data Ekstrakurikuler</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item">Master Data</div>
                 <div class="breadcrumb-item">Ekstrakurikuler</div>
+                <div class="breadcrumb-item">Data Ekstrakurikuler</div>
             </div>
         </div>
 

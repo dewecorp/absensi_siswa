@@ -398,6 +398,11 @@ include '../templates/sidebar.php';
     <section class="section">
         <div class="section-header">
             <h1><?= htmlspecialchars($ekskul_title) ?></h1>
+            <div class="section-header-breadcrumb">
+                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
+                <div class="breadcrumb-item">Ekstrakurikuler</div>
+                <div class="breadcrumb-item"><?= htmlspecialchars($ekskul_title) ?></div>
+            </div>
         </div>
         <div class="section-body">
             <div class="card">
