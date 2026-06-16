@@ -25,7 +25,8 @@ $print_settings_data = [
     'tempat_surat' => '',
     'tanggal_surat' => date('d F Y'),
     'logo_pramuka' => '',
-    'template_surat' => ''
+    'template_surat' => '',
+    'tanda_tangan_ketua_gudep' => ''
 ];
 
 try {
@@ -41,7 +42,8 @@ try {
             'tempat_surat' => $settings_tmp['tempat_surat'] ?? '',
             'tanggal_surat' => $settings_tmp['tanggal_surat'] ?? date('d F Y'),
             'logo_pramuka' => $settings_tmp['logo_pramuka'] ?? ($settings_tmp['bingkai_surat'] ?? ''),
-            'template_surat' => $settings_tmp['template_surat'] ?? ''
+            'template_surat' => $settings_tmp['template_surat'] ?? '',
+            'tanda_tangan_ketua_gudep' => $settings_tmp['tanda_tangan_ketua_gudep'] ?? ''
         ];
     }
 } catch (Exception $e) {
@@ -59,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
     $tanggal_surat = $_POST['tanggal_surat'] ?? '';
     $logo_pramuka = $print_settings_data['logo_pramuka'] ?? '';
     $template_surat = $print_settings_data['template_surat'] ?? '';
+    $tanda_tangan_ketua_gudep = $print_settings_data['tanda_tangan_ketua_gudep'] ?? '';
 
     try {
         $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN nta_ketua_gudep VARCHAR(50) NULL");
@@ -77,6 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
     } catch (Exception $e) { /* ignore */ }
     try {
         $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN template_surat VARCHAR(255) NULL");
+    } catch (Exception $e) { /* ignore */ }
+    try {
+        $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN tanda_tangan_ketua_gudep VARCHAR(255) NULL");
     } catch (Exception $e) { /* ignore */ }
 
     if (isset($_FILES['logo_pramuka_file']) && $_FILES['logo_pramuka_file']['error'] == 0) {
@@ -109,21 +115,51 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
         }
     }
 
+    if (isset($_FILES['tanda_tangan_ketua_gudep_file']) && $_FILES['tanda_tangan_ketua_gudep_file']['error'] == 0) {
+        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+        $filename = $_FILES['tanda_tangan_ketua_gudep_file']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        if (in_array($ext, $allowed)) {
+            $max_size = 2 * 1024 * 1024;
+            if ($_FILES['tanda_tangan_ketua_gudep_file']['size'] <= $max_size) {
+                $new_filename = 'tanda_tangan_ketua_gudep_' . time() . '.' . $ext;
+                $upload_dir = __DIR__ . '/../uploads/';
+
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+
+                if (move_uploaded_file($_FILES['tanda_tangan_ketua_gudep_file']['tmp_name'], $upload_dir . $new_filename)) {
+                    // Remove old signature file to avoid unused files piling up.
+                    $old_tanda_tangan = trim((string)($print_settings_data['tanda_tangan_ketua_gudep'] ?? ''));
+                    if ($old_tanda_tangan !== '' && $old_tanda_tangan !== $new_filename) {
+                        $old_tanda_tangan_path = $upload_dir . basename($old_tanda_tangan);
+                        if (is_file($old_tanda_tangan_path)) {
+                            @unlink($old_tanda_tangan_path);
+                        }
+                    }
+                    $tanda_tangan_ketua_gudep = $new_filename;
+                }
+            }
+        }
+    }
+
     try {
         $check = $pdo->query("SELECT id FROM tb_pengaturan_cetak_barung LIMIT 1")->fetch();
 
         if ($check) {
             $stmt = $pdo->prepare("
                 UPDATE tb_pengaturan_cetak_barung
-                SET ketua_gudep = ?, nta_ketua_gudep = ?, nomor_gudep = ?, gugus_depan = ?, nomor_surat = ?, tempat_pelantikan = ?, tempat_surat = ?, tanggal_surat = ?, logo_pramuka = ?, template_surat = ?
+                SET ketua_gudep = ?, nta_ketua_gudep = ?, nomor_gudep = ?, gugus_depan = ?, nomor_surat = ?, tempat_pelantikan = ?, tempat_surat = ?, tanggal_surat = ?, logo_pramuka = ?, template_surat = ?, tanda_tangan_ketua_gudep = ?
             ");
-            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat]);
+            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat, $tanda_tangan_ketua_gudep]);
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO tb_pengaturan_cetak_barung (ketua_gudep, nta_ketua_gudep, nomor_gudep, gugus_depan, nomor_surat, tempat_pelantikan, tempat_surat, tanggal_surat, logo_pramuka, template_surat)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tb_pengaturan_cetak_barung (ketua_gudep, nta_ketua_gudep, nomor_gudep, gugus_depan, nomor_surat, tempat_pelantikan, tempat_surat, tanggal_surat, logo_pramuka, template_surat, tanda_tangan_ketua_gudep)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat]);
+            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat, $tanda_tangan_ketua_gudep]);
         }
 
         $message = ['type' => 'success', 'text' => 'Pengaturan cetak suket berhasil disimpan.'];
@@ -145,7 +181,8 @@ try {
             'tempat_surat' => $settings['tempat_surat'] ?? '',
             'tanggal_surat' => $settings['tanggal_surat'] ?? date('d F Y'),
             'logo_pramuka' => $settings['logo_pramuka'] ?? '',
-            'template_surat' => $settings['template_surat'] ?? ''
+            'template_surat' => $settings['template_surat'] ?? '',
+            'tanda_tangan_ketua_gudep' => $settings['tanda_tangan_ketua_gudep'] ?? ''
         ];
     }
 } catch (Exception $e) {
@@ -218,14 +255,47 @@ include '../templates/sidebar.php';
                                     </div>
                                     <small class="text-muted">Format: JPG, PNG, maksimal 2MB</small>
                                 </div>
+
+                                <div class="form-group">
+                                    <label>Tanda Tangan Ketua Gudep (gambar):</label>
+                                    <div class="custom-file">
+                                        <input type="file" name="tanda_tangan_ketua_gudep_file" class="custom-file-input" id="tandaTanganKetuaGudepFile" accept="image/*">
+                                        <label class="custom-file-label" for="tandaTanganKetuaGudepFile">Pilih tanda tangan ketua gudep...</label>
+                                    </div>
+                                    <small class="text-muted">Format: JPG, PNG, maksimal 2MB</small>
+                                </div>
                             </div>
                         </div>
 
-                        <?php if (!empty($print_settings_data['logo_pramuka'])): ?>
+                        <?php if (!empty($print_settings_data['logo_pramuka']) || !empty($print_settings_data['tanda_tangan_ketua_gudep'])): ?>
                         <div class="form-group">
-                            <label>Preview Logo Pramuka:</label>
-                            <div class="border rounded bg-light d-flex align-items-center justify-content-center p-2 mt-2" style="width: 220px; height: 220px;">
-                                <img src="../uploads/<?= htmlspecialchars($print_settings_data['logo_pramuka']) ?>" alt="Logo Pramuka" class="img-fluid" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <label>Preview:</label>
+                            <div class="row mt-3">
+                                <?php if (!empty($print_settings_data['logo_pramuka'])): ?>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card shadow-sm">
+                                        <div class="card-header bg-light text-center font-weight-bold py-2">
+                                            Logo Pramuka
+                                        </div>
+                                        <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 220px;">
+                                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['logo_pramuka']) ?>" alt="Logo Pramuka" class="img-fluid" style="max-width: 100%; max-height: 200px; object-fit: contain;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <?php if (!empty($print_settings_data['tanda_tangan_ketua_gudep'])): ?>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card shadow-sm">
+                                        <div class="card-header bg-light text-center font-weight-bold py-2">
+                                            Tanda Tangan Ketua Gudep
+                                        </div>
+                                        <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 150px;">
+                                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['tanda_tangan_ketua_gudep']) ?>" alt="Tanda Tangan Ketua Gudep" class="img-fluid" style="max-width: 100%; max-height: 130px; object-fit: contain;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <?php endif; ?>

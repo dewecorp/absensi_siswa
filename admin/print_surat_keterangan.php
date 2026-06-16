@@ -54,6 +54,7 @@ $print_settings_data = [
     'logo_pramuka' => '',
     'bingkai_surat' => '',
     'tempat_pelantikan' => '',
+    'tanda_tangan_ketua_gudep' => '',
 ];
 
 try {
@@ -70,6 +71,7 @@ try {
             'logo_pramuka' => $settings['logo_pramuka'] ?? '',
             'bingkai_surat' => $settings['bingkai_surat'] ?? '',
             'tempat_pelantikan' => $settings['tempat_pelantikan'] ?? '',
+            'tanda_tangan_ketua_gudep' => $settings['tanda_tangan_ketua_gudep'] ?? '',
         ];
     }
 } catch (Exception $e) {
@@ -562,9 +564,9 @@ function h($v): string {
     .sign-table { width: 100%; }
     .sign-table td { vertical-align: top; }
     .sign-right { width: 44%; padding-right: 2mm; }
-    .name { font-weight: 800; text-decoration: underline; margin-bottom: 1mm; }
+    .name { font-weight: 800; text-decoration: underline; margin-bottom: 0mm; }
     .nta { margin-top: 1mm; }
-    .ketua-block { margin-top: 14mm; }
+    .ketua-block { margin-top: 1mm; }
   </style>
 </head>
 <body>
@@ -638,13 +640,19 @@ function h($v): string {
               <tr>
                 <td></td>
                 <td class="sign-right">
-                  <div>Dikeluarkan di : <?= h($tempat_surat) ?></div>
-                  <div>Pada Tanggal : <?= h($formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '')) ?></div>
+                  <div>Dikeluarkan di: <?= h($tempat_surat) ?></div>
+                  <div>Pada Tanggal: <?= h($formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '')) ?></div>
                   <div class="center ketua-block">Ketua Gugus Depan</div>
-                  <div style="height: 3mm;"></div>
+                  <?php if (!empty($print_settings_data['tanda_tangan_ketua_gudep'])): ?>
+                  <div style="display: flex; justify-content: center; align-items: center; margin-top: 0mm; margin-bottom: -22mm;">
+                    <img src="../uploads/<?= htmlspecialchars($print_settings_data['tanda_tangan_ketua_gudep']) ?>" alt="Tanda Tangan Ketua Gudep" style="max-width: 200px; max-height: 100px; object-fit: contain;">
+                  </div>
+                  <?php else: ?>
+                  <div style="height: 8mm;"></div>
+                  <?php endif; ?>
                   <div class="center name"><?= h($ketua_gudep) ?></div>
                   <?php if ($nta_ketua_gudep !== ''): ?>
-                    <div class="center nta">NTA : <?= h($nta_ketua_gudep) ?></div>
+                    <div class="center nta">NTA: <?= h($nta_ketua_gudep) ?></div>
                   <?php endif; ?>
                 </td>
               </tr>
