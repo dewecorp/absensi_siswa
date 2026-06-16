@@ -114,16 +114,7 @@ require_once '../templates/sidebar.php';
     <section class="section">
         <div class="section-header">
             <h1><?= $page_title ?></h1>
-            <div class="section-header-breadcrumb">
-                <?php if (in_array($user_level, ['admin', 'tata_usaha'])): ?>
-                    <div class="breadcrumb-item active"><a href="<?= $dashboard_url ?>">Dashboard</a></div>
-                    <div class="breadcrumb-item"><a href="#">Master Data</a></div>
-                    <div class="breadcrumb-item">Kalender Pendidikan</div>
-                <?php else: ?>
-                    <div class="breadcrumb-item active"><a href="<?= $dashboard_url ?>">Dashboard</a></div>
-                    <div class="breadcrumb-item">Kalender Pendidikan</div>
-                <?php endif; ?>
-            </div>
+            <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">

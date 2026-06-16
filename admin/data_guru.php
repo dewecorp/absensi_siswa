@@ -1094,10 +1094,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                 <section class="section">
                     <div class="section-header">
                         <h1>Data Guru</h1>
-                        <div class="section-header-breadcrumb">
-                            <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                            <div class="breadcrumb-item">Data Guru</div>
-                        </div>
+                        <?php echo render_breadcrumb(); ?>
                     </div>
 
                     <div class="row">

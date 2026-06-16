@@ -760,15 +760,8 @@ require_once '../templates/sidebar.php';
     <section class="section">
 
         <div class="section-header">
-
             <h1><?= htmlspecialchars($page_title) ?></h1>
-
-            <div class="section-header-breadcrumb">
-                <div class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item"><a href="#">Master Data</a></div>
-                <div class="breadcrumb-item"><?= htmlspecialchars($page_title) ?></div>
-            </div>
-
+            <?php echo render_breadcrumb(); ?>
         </div>
 
 

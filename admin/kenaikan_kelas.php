@@ -219,11 +219,7 @@ require_once '../templates/sidebar.php';
     <section class="section">
         <div class="section-header">
             <h1>Kenaikan Kelas</h1>
-            <div class="section-header-breadcrumb">
-                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item"><a href="#">Master Data</a></div>
-                <div class="breadcrumb-item">Kenaikan Kelas</div>
-            </div>
+            <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="row">

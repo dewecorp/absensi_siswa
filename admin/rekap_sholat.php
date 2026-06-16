@@ -384,6 +384,7 @@ include '../templates/sidebar.php';
     <section class="section">
         <div class="section-header">
             <h1>Rekap Sholat Berjamaah</h1>
+            <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">

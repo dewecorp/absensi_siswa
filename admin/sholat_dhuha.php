@@ -105,11 +105,7 @@ include '../templates/header.php';
     <section class="section">
         <div class="section-header">
             <h1>Sholat Dhuha</h1>
-            <div class="section-header-breadcrumb">
-                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item">Absensi</div>
-                <div class="breadcrumb-item">Sholat Dhuha</div>
-            </div>
+            <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="row">

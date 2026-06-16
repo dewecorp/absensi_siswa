@@ -88,7 +88,8 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
     ?>
     <link rel="stylesheet" href="../assets/css/modal_fix.css?v=<?php echo htmlspecialchars($_modal_fix_v, ENT_QUOTES, 'UTF-8'); ?>">
 
-    <!-- Custom Responsive CSS -->
+    <!-- Dynamic breadcrumb rendering will be handled in the page content -->
+        <!-- Custom Responsive CSS -->
     <style>
         /* Ensure all elements respect box-sizing */
         *, *::before, *::after {

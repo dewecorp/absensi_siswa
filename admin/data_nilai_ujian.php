@@ -63,11 +63,7 @@ require_once '../templates/sidebar.php';
     <section class="section">
         <div class="section-header">
             <h1><?= $page_title ?></h1>
-            <div class="section-header-breadcrumb">
-                <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item"><a href="#">Nilai Siswa</a></div>
-                <div class="breadcrumb-item">Data Nilai Ujian</div>
-            </div>
+            <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">

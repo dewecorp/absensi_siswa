@@ -12,6 +12,104 @@ $user_level = getUserLevel();
 global $menu_items;
 $menu_items = [];
 
+// Function to get dynamic breadcrumb based on current page and menu structure
+if (!function_exists('get_dynamic_breadcrumb')) {
+    function get_dynamic_breadcrumb($menu_items, $current_page, $page_title = '') {
+        // Always start with Dashboard
+        $breadcrumb = [
+            ['title' => 'Dashboard', 'url' => 'dashboard.php', 'active' => false]
+        ];
+
+        // If current page is Dashboard, just return that as active
+        if ($current_page === 'dashboard.php') {
+            $breadcrumb[0]['active'] = true;
+            return $breadcrumb;
+        }
+
+        // Search through menu items
+        foreach ($menu_items as $menu) {
+            // Check if this menu is the direct match (no submenu)
+            if (isset($menu['url']) && strpos($menu['url'], $current_page) !== false) {
+                $breadcrumb[] = [
+                    'title' => $menu['title'],
+                    'url' => $menu['url'],
+                    'active' => true
+                ];
+                return $breadcrumb;
+            }
+
+            // Check submenu
+            if (isset($menu['submenu']) && is_array($menu['submenu'])) {
+                foreach ($menu['submenu'] as $submenu) {
+                    if (isset($submenu['url']) && strpos($submenu['url'], $current_page) !== false) {
+                        $breadcrumb[] = [
+                            'title' => $menu['title'],
+                            'url' => null,
+                            'active' => false
+                        ];
+                        $breadcrumb[] = [
+                            'title' => $submenu['title'],
+                            'url' => $submenu['url'],
+                            'active' => true
+                        ];
+                        return $breadcrumb;
+                    }
+                }
+            }
+        }
+
+        // Fallback if no match found in menu
+        if ($page_title) {
+            $breadcrumb[] = [
+                'title' => $page_title,
+                'url' => null,
+                'active' => true
+            ];
+        }
+
+        return $breadcrumb;
+    }
+}
+
+// Function to render dynamic breadcrumb - SIMPLE TO USE!
+if (!function_exists('render_breadcrumb')) {
+    function render_breadcrumb() {
+        global $menu_items, $current_page, $page_title;
+        return render_dynamic_breadcrumb($menu_items, $current_page, $page_title);
+    }
+}
+
+// Function to render dynamic breadcrumb
+if (!function_exists('render_dynamic_breadcrumb')) {
+    function render_dynamic_breadcrumb($menu_items, $current_page, $page_title = '') {
+        $breadcrumb = get_dynamic_breadcrumb($menu_items, $current_page, $page_title);
+        $html = '<div class="section-header-breadcrumb">';
+
+        foreach ($breadcrumb as $index => $item) {
+            $is_active = $item['active'];
+            if ($is_active || $item['url'] === null) {
+                $html .= '<div class="breadcrumb-item active">' . htmlspecialchars($item['title']) . '</div>';
+            } else {
+                // Fix URL path for different directories
+                $full_url = $item['url'];
+                // If URL doesn't start with http and doesn't have ../, adjust it
+                if (strpos($full_url, 'http') !== 0 && strpos($full_url, '../') === false) {
+                    // Check if we're in a subdirectory
+                    $request_uri = $_SERVER['REQUEST_URI'];
+                    $subdir_count = substr_count(trim($request_uri, '/'), '/') - 1;
+                    if ($subdir_count > 0) {
+                        $full_url = str_repeat('../', $subdir_count) . $full_url;
+                    }
+                }
+                $html .= '<div class="breadcrumb-item active"><a href="' . htmlspecialchars($full_url) . '">' . htmlspecialchars($item['title']) . '</a></div>';
+            }
+        }
+
+        $html .= '</div>';
+        return $html;
+    }
+}
+
 if (!function_exists('normalize_person_name_for_match')) {
     function normalize_person_name_for_match(?string $name): string {
         $v = strtolower(trim((string)$name));
