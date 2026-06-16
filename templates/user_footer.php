@@ -180,6 +180,24 @@ if (!isset($school_profile)) {
             }
         });
     }
+
+    // Auto scroll to menu section when hash exists in URL
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if URL has hash
+        if (window.location.hash) {
+            // Wait a bit for all content to load
+            setTimeout(function() {
+                var targetElement = document.querySelector(window.location.hash);
+                if (targetElement) {
+                    // Scroll to the element
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }, 300);
+        }
+    });
     </script>
 
 </body>

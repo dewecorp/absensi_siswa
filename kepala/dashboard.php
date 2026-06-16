@@ -580,7 +580,7 @@ include_once '../templates/sidebar.php';
                                             </div>
                                         <?php endif; ?>
                                         <?php foreach ($grouped_items as $group): ?>
-                                            <div class="mt-3">
+                                            <div class="mt-3" id="menu-<?php echo str_replace(' ', '-', $group['title']); ?>">
                                                 <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
                                                 <div class="row">
                                                     <?php foreach ($group['items'] as $subitem): ?>

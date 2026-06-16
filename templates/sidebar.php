@@ -1169,7 +1169,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             $has_submenu = isset($item['submenu']) && is_array($item['submenu']) && count($item['submenu']) > 0;
             $url = $has_submenu ? $item['submenu'][0]['url'] : $item['url'];
 
-            // Custom mapping for Guru & Wali bottom navbar
+            // Custom mapping for all user levels
             if ($user_level === 'guru' || $user_level === 'wali') {
                 if ($title === 'Data Utama') {
                     $title = 'Absensi';
@@ -1181,6 +1181,13 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                     $url = 'dashboard.php#menu-Nilai-Siswa';
                 } elseif ($title === 'Ekstrakurikuler') {
                     $url = 'dashboard.php#menu-Ekstrakurikuler';
+                }
+            } else {
+                // For admin, kepala_madrasah, tata_usaha
+                if ($has_submenu) {
+                    // If menu has submenu, link to dashboard with anchor
+                    $menu_anchor = 'menu-' . str_replace(' ', '-', $title);
+                    $url = 'dashboard.php#' . $menu_anchor;
                 }
             }
 

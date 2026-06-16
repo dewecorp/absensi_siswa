@@ -88,8 +88,35 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
     ?>
     <link rel="stylesheet" href="../assets/css/modal_fix.css?v=<?php echo htmlspecialchars($_modal_fix_v, ENT_QUOTES, 'UTF-8'); ?>">
 
-    <!-- Custom Mobile Layout CSS -->
+    <!-- Custom Responsive CSS -->
     <style>
+        /* Ensure all elements respect box-sizing */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        /* Base responsive settings */
+        html {
+            font-size: 16px;
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        /* Responsive images */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Responsive containers */
+        .container-fluid {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+
+        /* Mobile Header */
         .mobile-header {
             position: fixed;
             top: 0;
@@ -140,19 +167,6 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             padding-left: 0;
             padding-right: 0;
         }
-        /* Dropdown notifikasi: pastikan tidak ada fade/overlay (::after atau mask) di atas konten */
-        .navbar-notifikasi-scroll {
-            position: relative;
-            -webkit-mask-image: none !important;
-            mask-image: none !important;
-        }
-        .navbar-notifikasi-scroll::before,
-        .navbar-notifikasi-scroll::after {
-            content: none !important;
-            display: none !important;
-            background: none !important;
-            background-image: none !important;
-        }
         .notif-count-badge {
             position: absolute;
             top: -6px;
@@ -174,30 +188,101 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             z-index: 2;
             box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
-        .main-sidebar {
-            position: fixed !important;
-            display: block !important;
+
+        /* Responsive Breakpoints */
+
+        /* Mobile (<= 575px) */
+        @media (max-width: 575.98px) {
+            .mobile-header {
+                padding: 10px 15px;
+            }
+            .main-content {
+                padding: 15px !important;
+                padding-top: 90px !important;
+            }
+            .card-body {
+                padding: 1rem;
+            }
+            .btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+            }
+            .table-responsive {
+                font-size: 0.85rem;
+            }
         }
-        body.sidebar-gone .main-sidebar {
-            display: block !important;
-            left: 0 !important;
+
+        /* Mobile to Tablet (576px - 767px) */
+        @media (min-width: 576px) and (max-width: 767.98px) {
+            .main-content {
+                padding: 20px !important;
+                padding-top: 100px !important;
+            }
         }
-        body.sidebar-gone .main-content {
-            padding-left: 280px !important;
-        }
-        body.sidebar-gone .navbar {
-            left: 250px !important;
-        }
-        @media (max-width: 767.98px) {
+
+        /* Tablet (<= 991px) */
+        @media (max-width: 991.98px) {
+            .main-sidebar {
+                display: none !important;
+            }
             .main-navbar, .navbar-bg {
                 display: none !important;
             }
             .main-content {
-                padding-top: 120px !important;
+                padding-top: 100px !important;
+                padding-left: 20px !important;
+                padding-right: 20px !important;
             }
-            .main-sidebar {
+        }
+
+        /* Desktop & Proyektor (>= 992px) */
+        @media (min-width: 992px) {
+            .mobile-header {
                 display: none !important;
             }
+            .main-sidebar {
+                display: block !important;
+            }
+            .main-navbar, .navbar-bg {
+                display: flex !important;
+            }
+            .main-content {
+                padding-left: 280px !important;
+                padding-top: 70px !important;
+            }
+        }
+
+        /* Large Proyektor (>= 1200px) */
+        @media (min-width: 1200px) {
+            .container-fluid {
+                padding-left: 30px;
+                padding-right: 30px;
+            }
+            .card-body {
+                padding: 1.5rem;
+            }
+            h1, .h1 { font-size: 2.5rem; }
+            h2, .h2 { font-size: 2rem; }
+            h3, .h3 { font-size: 1.75rem; }
+            h4, .h4 { font-size: 1.5rem; }
+        }
+
+        /* Extra Large Proyektor (>= 1400px) */
+        @media (min-width: 1400px) {
+            html {
+                font-size: 18px;
+            }
+            .container-fluid {
+                padding-left: 40px;
+                padding-right: 40px;
+            }
+        }
+
+        /* Prevent text overflow on small screens */
+        .text-truncate {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     </style>
 </head>

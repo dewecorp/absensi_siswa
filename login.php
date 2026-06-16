@@ -162,6 +162,78 @@ $school_profile = getSchoolProfile($pdo);
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/components.css">
     
+    <!-- Custom Responsive CSS -->
+    <style>
+        /* Ensure all elements respect box-sizing */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        /* Base responsive settings */
+        html {
+            font-size: 16px;
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        /* Responsive images */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Login page specific responsive */
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        /* Mobile (<= 575px) */
+        @media (max-width: 575.98px) {
+            body {
+                overflow-y: auto;
+            }
+            section {
+                min-height: auto;
+                padding: 1rem !important;
+            }
+            .card {
+                margin: 1rem 0;
+            }
+            .card-header h5 {
+                font-size: 1.1rem;
+            }
+            .card-header h6 {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Tablet (576px - 991px) */
+        @media (min-width: 576px) and (max-width: 991.98px) {
+            .card {
+                margin: 2rem 0;
+            }
+        }
+
+        /* Large Proyektor (>= 1200px) */
+        @media (min-width: 1200px) {
+            html {
+                font-size: 18px;
+            }
+            .card {
+                max-width: 100%;
+            }
+        }
+
+        /* Extra Large Proyektor (>= 1400px) */
+        @media (min-width: 1400px) {
+            html {
+                font-size: 20px;
+            }
+        }
+    </style>
+    
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
