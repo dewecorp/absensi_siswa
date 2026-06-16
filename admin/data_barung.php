@@ -1094,21 +1094,13 @@ $js_page[] = <<<'JS_BLOCK'
 $(document).ready(function() {
     var table = $('#table-1').DataTable({
         'order': [[1, 'asc']],
+        'paging': false,
         'columnDefs': [
             { 'sortable': false, 'targets': [0, 6] }
         ],
         'language': {
-            'lengthMenu': 'Tampilkan _MENU_ entri',
             'zeroRecords': 'Tidak ada data yang ditemukan',
-            'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-            'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-            'search': 'Cari:',
-            'paginate': {
-                'first': 'Pertama',
-                'last': 'Terakhir',
-                'next': 'Selanjutnya',
-                'previous': 'Sebelumnya'
-            }
+            'search': 'Cari:'
         }
     });
 

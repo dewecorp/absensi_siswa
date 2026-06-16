@@ -157,19 +157,30 @@ if ($mode === 'all' || $mode === 'data') {
         }
 
         $stmt = $pdo->prepare("
-            SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
-            FROM tb_peserta_didik_barung
-            WHERE IFNULL(status, 'aktif') = 'aktif'
-              AND id_tingkat_barung = ?
-              AND (
-                sku_kecakapan_lulus_at IS NOT NULL
+            SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
+                   COALESCE(NULLIF(TRIM(p.tempat_lahir), ''), NULLIF(TRIM(s.tempat_lahir), '')) AS tempat_lahir,
+                   COALESCE(p.tanggal_lahir, s.tanggal_lahir) AS tanggal_lahir
+            FROM tb_peserta_didik_barung p
+            LEFT JOIN tb_siswa s ON (
+                s.id_siswa = p.id_siswa
                 OR (
-                    promoted_at IS NOT NULL
-                    AND promoted_from_tingkat_id = ?
+                    p.id_siswa IS NULL
+                    AND TRIM(IFNULL(p.nta, '')) <> ''
+                    AND CONVERT(TRIM(IFNULL(s.nisn, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                        = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                )
+            )
+            WHERE IFNULL(p.status, 'aktif') = 'aktif'
+              AND p.id_tingkat_barung = ?
+              AND (
+                p.sku_kecakapan_lulus_at IS NOT NULL
+                OR (
+                    p.promoted_at IS NOT NULL
+                    AND p.promoted_from_tingkat_id = ?
                     AND ? > 0
                 )
               )
-            ORDER BY nama_peserta_didik ASC
+            ORDER BY p.nama_peserta_didik ASC
         ");
         $stmt->execute([$tingkat_id, $prev_tingkat_id, $prev_tingkat_id]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -180,10 +191,21 @@ if ($mode === 'all' || $mode === 'data') {
     $prev_for_target = 0;
     if ($id > 0 && $requested_tingkat_id > 0) {
         $stmt = $pdo->prepare("
-            SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta, p.tempat_lahir, p.tanggal_lahir,
+            SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta,
+                   COALESCE(NULLIF(TRIM(p.tempat_lahir), ''), NULLIF(TRIM(s.tempat_lahir), '')) AS tempat_lahir,
+                   COALESCE(p.tanggal_lahir, s.tanggal_lahir) AS tanggal_lahir,
                    p.sku_kecakapan_lulus_at, p.promoted_at, p.promoted_from_tingkat_id, t.nama_tingkat
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
+            LEFT JOIN tb_siswa s ON (
+                s.id_siswa = p.id_siswa
+                OR (
+                    p.id_siswa IS NULL
+                    AND TRIM(IFNULL(p.nta, '')) <> ''
+                    AND CONVERT(TRIM(IFNULL(s.nisn, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                        = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                )
+            )
             WHERE p.id_peserta_didik_barung = ?
               AND IFNULL(p.status, 'aktif') = 'aktif'
             LIMIT 1
