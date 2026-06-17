@@ -1646,7 +1646,7 @@ include '../templates/sidebar.php';
                                             <td><?= htmlspecialchars(htmlspecialchars_decode($row['nama_peserta_didik'] ?? '', ENT_QUOTES)) ?></td>
                                             <td><?= htmlspecialchars($row['nta'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['tempat_lahir'] ?? '') ?></td>
-                                            <td><?= !empty($row['tanggal_lahir']) ? htmlspecialchars($row['tanggal_lahir']) : '' ?></td>
+                                            <td><?= !empty($row['tanggal_lahir']) ? htmlspecialchars(date('d-m-Y', strtotime((string)$row['tanggal_lahir']))) : '' ?></td>
                                             <?php if ($can_manage_barung): ?><td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)$row['id_peserta_didik_barung'] ?>"
