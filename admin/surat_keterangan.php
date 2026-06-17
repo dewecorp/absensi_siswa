@@ -122,7 +122,20 @@ if ($selected_tingkat_id > 0) {
         $stmt = $pdo->prepare("
             SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
                    COALESCE(NULLIF(TRIM(p.tempat_lahir), ''), NULLIF(TRIM(s.tempat_lahir), '')) AS tempat_lahir,
-                   COALESCE(p.tanggal_lahir, s.tanggal_lahir) AS tanggal_lahir
+                   COALESCE(
+                     CASE
+                       WHEN p.tanggal_lahir IS NULL THEN NULL
+                       WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                       WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                       ELSE LEFT(p.tanggal_lahir, 10)
+                     END,
+                     CASE
+                       WHEN s.tanggal_lahir IS NULL THEN NULL
+                       WHEN LEFT(s.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                       WHEN CAST(LEFT(s.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                       ELSE LEFT(s.tanggal_lahir, 10)
+                     END
+                   ) AS tanggal_lahir
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_siswa s ON (
                 s.id_siswa = p.id_siswa
@@ -310,7 +323,7 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($participant['nama_peserta_didik']) ?></td>
                                         <td><?= htmlspecialchars($participant['nta']) ?></td>
                                         <td><?= htmlspecialchars($participant['tempat_lahir'] ?? '-') ?></td>
-                                        <td><?= !empty($participant['tanggal_lahir']) ? date('d-m-Y', strtotime($participant['tanggal_lahir'])) : '-' ?></td>
+                                        <td><?= formatDateDMY($participant['tanggal_lahir'] ?? null) ?></td>
                                         <td>
                                             <button class="btn btn-sm btn-success btn-print-single" data-id="<?= htmlspecialchars($participant['id_peserta_didik_barung'] ?? $participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>" data-nta="<?= htmlspecialchars($participant['nta'] ?? '') ?>">
                                                 <i class="fas fa-print"></i> Cetak Surat
@@ -333,4 +346,3 @@ include '../templates/sidebar.php';
 </div>
 
 <?php include '../templates/footer.php'; ?>
-

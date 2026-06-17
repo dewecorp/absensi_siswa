@@ -520,8 +520,15 @@ function getTeacherAccessibleClasses(PDO $pdo, ?int $id_guru, bool $only_grade_6
 
 // Function to format date
 function formatDate(string $date): string {
-    if (empty($date)) return '-';
-    $dateObj = new DateTime($date);
+    $v = trim($date);
+    if ($v === '' || strpos($v, '0000-00-00') === 0) return '-';
+    try {
+        $dateObj = new DateTime($v);
+    } catch (Throwable $e) {
+        return '-';
+    }
+    $yearInt = (int)$dateObj->format('Y');
+    if ($yearInt < 1900) return '-';
     $bulan = array(
         'Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr', 'May' => 'Mei',
         'Jun' => 'Jun', 'Jul' => 'Jul', 'Aug' => 'Agu', 'Sep' => 'Sep', 'Oct' => 'Okt',
@@ -532,6 +539,19 @@ function formatDate(string $date): string {
     $month = $bulan[$month_en] ?? $month_en;
     $year = $dateObj->format('Y');
     return "$day $month $year";
+}
+
+function formatDateDMY(?string $date_string, string $fallback = '-'): string {
+    $v = trim((string)$date_string);
+    if ($v === '' || strpos($v, '0000-00-00') === 0) return $fallback;
+    try {
+        $dt = new DateTime($v);
+    } catch (Throwable $e) {
+        return $fallback;
+    }
+    $yearInt = (int)$dt->format('Y');
+    if ($yearInt < 1900) return $fallback;
+    return $dt->format('d-m-Y');
 }
 
 // Function to get current date in Indonesian format
@@ -805,8 +825,15 @@ function isHoliday(PDO $pdo, string $date): array {
 
 // Function to format specific date in Indonesian format
 function formatDateIndonesia(?string $date_string): string {
-    if (empty($date_string)) return '-';
-    $date = new DateTime($date_string);
+    $v = trim((string)$date_string);
+    if ($v === '' || strpos($v, '0000-00-00') === 0) return '-';
+    try {
+        $date = new DateTime($v);
+    } catch (Throwable $e) {
+        return '-';
+    }
+    $yearInt = (int)$date->format('Y');
+    if ($yearInt < 1900) return '-';
     $bulan = array(
         'January' => 'Januari',
         'February' => 'Februari',
@@ -822,7 +849,8 @@ function formatDateIndonesia(?string $date_string): string {
         'December' => 'Desember'
     );
     $day = $date->format('d');
-    $month = $bulan[$date->format('F')];
+    $month_en = $date->format('F');
+    $month = $bulan[$month_en] ?? $month_en;
     $year = $date->format('Y');
     return "$day $month $year";
 }

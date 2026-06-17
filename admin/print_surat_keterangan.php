@@ -161,7 +161,20 @@ if ($mode === 'all' || $mode === 'data') {
         $stmt = $pdo->prepare("
             SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
                    COALESCE(NULLIF(TRIM(p.tempat_lahir), ''), NULLIF(TRIM(s.tempat_lahir), '')) AS tempat_lahir,
-                   COALESCE(p.tanggal_lahir, s.tanggal_lahir) AS tanggal_lahir
+                   COALESCE(
+                     CASE
+                       WHEN p.tanggal_lahir IS NULL THEN NULL
+                       WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                       WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                       ELSE LEFT(p.tanggal_lahir, 10)
+                     END,
+                     CASE
+                       WHEN s.tanggal_lahir IS NULL THEN NULL
+                       WHEN LEFT(s.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                       WHEN CAST(LEFT(s.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                       ELSE LEFT(s.tanggal_lahir, 10)
+                     END
+                   ) AS tanggal_lahir
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_siswa s ON (
                 s.id_siswa = p.id_siswa
@@ -195,7 +208,20 @@ if ($mode === 'all' || $mode === 'data') {
         $stmt = $pdo->prepare("
             SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, p.nama_peserta_didik, p.nta,
                    COALESCE(NULLIF(TRIM(p.tempat_lahir), ''), NULLIF(TRIM(s.tempat_lahir), '')) AS tempat_lahir,
-                   COALESCE(p.tanggal_lahir, s.tanggal_lahir) AS tanggal_lahir,
+                   COALESCE(
+                     CASE
+                       WHEN p.tanggal_lahir IS NULL THEN NULL
+                       WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                       WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                       ELSE LEFT(p.tanggal_lahir, 10)
+                     END,
+                     CASE
+                       WHEN s.tanggal_lahir IS NULL THEN NULL
+                       WHEN LEFT(s.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                       WHEN CAST(LEFT(s.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                       ELSE LEFT(s.tanggal_lahir, 10)
+                     END
+                   ) AS tanggal_lahir,
                    p.sku_kecakapan_lulus_at, p.promoted_at, p.promoted_from_tingkat_id, t.nama_tingkat
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
@@ -317,7 +343,7 @@ if ($mode === 'data' && $format === 'print') {
         $nama = h($p['nama_peserta_didik'] ?? '');
         $nta = h($p['nta'] ?? '');
         $tempat_lahir = h($p['tempat_lahir'] ?? '-');
-        $tanggal_lahir = !empty($p['tanggal_lahir']) ? date('d-m-Y', strtotime((string)$p['tanggal_lahir'])) : '-';
+        $tanggal_lahir = formatDateDMY($p['tanggal_lahir'] ?? null);
         $rows_html .= '<tr>'
             . '<td>' . ($idx + 1) . '</td>'
             . '<td>' . $nama . '</td>'
@@ -421,7 +447,7 @@ if ($format === 'pdf' && $mode === 'data') {
         $nama = h($p['nama_peserta_didik'] ?? '');
         $nta = h($p['nta'] ?? '');
         $tempat_lahir = h($p['tempat_lahir'] ?? '-');
-        $tanggal_lahir = !empty($p['tanggal_lahir']) ? date('d-m-Y', strtotime((string)$p['tanggal_lahir'])) : '-';
+        $tanggal_lahir = formatDateDMY($p['tanggal_lahir'] ?? null);
         $rows_html .= '<tr>'
             . '<td>' . ($idx + 1) . '</td>'
             . '<td>' . $nama . '</td>'
@@ -607,7 +633,15 @@ function h($v): string {
               <td>
                 <?php
                   $ttl = trim((string)($p['tempat_lahir'] ?? ''));
-                  $tgl = !empty($p['tanggal_lahir']) ? $formatTanggalIndo($p['tanggal_lahir']) : '';
+                  $tgl_raw = trim((string)($p['tanggal_lahir'] ?? ''));
+                  if ($tgl_raw !== '' && strpos($tgl_raw, '0000-00-00') !== 0) {
+                    $tgl = formatDateIndonesia($tgl_raw);
+                    if ($tgl === '-') {
+                      $tgl = '';
+                    }
+                  } else {
+                    $tgl = '';
+                  }
                   echo h($ttl . ($ttl && $tgl ? ', ' : '') . $tgl);
                 ?>
               </td>
@@ -675,4 +709,3 @@ function h($v): string {
   </script>
 </body>
 </html>
-
