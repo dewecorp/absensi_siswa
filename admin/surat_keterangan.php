@@ -121,19 +121,19 @@ if ($selected_tingkat_id > 0) {
     try {
         $stmt = $pdo->prepare("
             SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
-                   COALESCE(NULLIF(TRIM(p.tempat_lahir), ''), NULLIF(TRIM(s.tempat_lahir), '')) AS tempat_lahir,
+                   COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
                    COALESCE(
-                     CASE
-                       WHEN p.tanggal_lahir IS NULL THEN NULL
-                       WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
-                       WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
-                       ELSE LEFT(p.tanggal_lahir, 10)
-                     END,
                      CASE
                        WHEN s.tanggal_lahir IS NULL THEN NULL
                        WHEN LEFT(s.tanggal_lahir, 10) = '0000-00-00' THEN NULL
                        WHEN CAST(LEFT(s.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
                        ELSE LEFT(s.tanggal_lahir, 10)
+                     END,
+                     CASE
+                       WHEN p.tanggal_lahir IS NULL THEN NULL
+                       WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                       WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                       ELSE LEFT(p.tanggal_lahir, 10)
                      END
                    ) AS tanggal_lahir
             FROM tb_peserta_didik_barung p
