@@ -170,7 +170,8 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Jadwal Seragam Guru <?php echo $school_profile['tahun_ajaran'] ?? ''; ?></h1>
+            <h1><?php echo htmlspecialchars($page_title); ?></h1>
+            <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
