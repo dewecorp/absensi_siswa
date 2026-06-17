@@ -843,8 +843,8 @@ if ($selected_tingkat_id > 0) {
                 p.id_peserta_didik_barung,
                 p.nama_peserta_didik,
                 p.nta,
-                COALESCE(NULLIF(TRIM(p.tempat_lahir), ''), NULLIF(TRIM(s.tempat_lahir), '')) AS tempat_lahir,
-                COALESCE(p.tanggal_lahir, s.tanggal_lahir) AS tanggal_lahir,
+                COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
+                COALESCE(s.tanggal_lahir, p.tanggal_lahir) AS tanggal_lahir,
                 p.id_tingkat_barung
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_siswa s ON (
