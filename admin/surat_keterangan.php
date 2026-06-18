@@ -62,8 +62,9 @@ try {
 
 $isPraMula = static function (string $name): bool {
     $n = strtolower(trim($name));
-    $k = strtolower(str_replace(' ', '', $n));
-    return $n === 'pra mula' || $k === 'pramula' || $k === 'pra-mula';
+    $k = strtolower(str_replace([' ', '-'], '', $n));
+    // Blok semua tingkat yang berawalan "pra" (Pra Mula, Pra-..., dst.)
+    return strpos($k, 'pra') === 0 || strpos($n, 'pra ') === 0 || strpos($n, 'pra-') === 0;
 };
 $isMula = static function (string $name): bool {
     $n = strtolower(trim($name));
