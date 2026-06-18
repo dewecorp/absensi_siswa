@@ -321,14 +321,14 @@ if (empty($participants)) {
     exit;
 }
 
-// Build printable title/filename base: Surat_keterangan_tingkat_MULA
+// Build printable title/filename base: Data_Surat_Keterangan_MULA
 $tingkat_name_for_file = trim((string)($tingkat_name ?? ''));
 if ($tingkat_name_for_file === '') {
     $tingkat_name_for_file = (string)$tingkat_id;
 }
 $tingkat_name_for_file = preg_replace('/[^A-Za-z0-9]+/', '_', strtoupper($tingkat_name_for_file)) ?? (string)$tingkat_id;
 $tingkat_name_for_file = trim($tingkat_name_for_file, '_');
-$doc_base_name = 'Surat_keterangan_tingkat_' . $tingkat_name_for_file;
+$doc_base_name = 'Data_Surat_Keterangan_' . $tingkat_name_for_file;
 
 if ($mode === 'data' && $format === 'print') {
     $school_name = (string)($school_profile['nama_madrasah'] ?? $school_profile['nama_sekolah'] ?? 'Sistem Informasi Madrasah');
@@ -410,20 +410,6 @@ if ($mode === 'data' && $format === 'print') {
 
       <div class="signature-wrap">
         <div class="signature-box">
-          <div class="signature-meta">
-            <table style="border-collapse: collapse; font-size: 13px;">
-              <tr>
-                <td style="padding: 1mm 0; white-space: nowrap;">Dikeluarkan di</td>
-                <td style="padding: 1mm 4px; text-align: center; vertical-align: top;">:</td>
-                <td style="padding: 1mm 0;"><?= h($tempat_surat) ?></td>
-              </tr>
-              <tr>
-                <td style="padding: 1mm 0; white-space: nowrap;">Tanggal</td>
-                <td style="padding: 1mm 4px; text-align: center; vertical-align: top;">:</td>
-                <td style="padding: 1mm 0;"><?= h($print_date) ?></td>
-              </tr>
-            </table>
-          </div>
           <div>Ketua Gudep,</div>
           <img class="signature-qr" src="<?= h($qr_url) ?>" alt="QR Tanda Tangan" referrerpolicy="no-referrer">
           <div class="signature-name"><?= h($ketua_gudep) ?></div>
