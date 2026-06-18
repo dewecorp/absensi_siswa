@@ -55,6 +55,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                         if ($alumni) {
                             $stmtBack = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
                             $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $target_class_id]);
+                            $new_id_siswa = (int)$pdo->lastInsertId();
+
+                            // Restore barung records to aktif (match by new id_siswa or NISN stored as NTA)
+                            $alumni_nisn = (string)($alumni['nisn'] ?? '');
+                            $barRestore = $pdo->prepare("
+                                UPDATE tb_peserta_didik_barung
+                                SET status = 'aktif', tanggal_keluar = NULL
+                                WHERE status = 'keluar'
+                                  AND (
+                                      (id_siswa IS NOT NULL AND id_siswa = ?)
+                                      OR (id_siswa IS NULL AND ? <> ''
+                                          AND CONVERT(TRIM(IFNULL(nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                                              = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci)
+                                  )
+                            ");
+                            $barRestore->execute([$new_id_siswa, $alumni_nisn, $alumni_nisn]);
+
                             $stmtDel = $pdo->prepare("DELETE FROM tb_alumni WHERE id_alumni = ?");
                             $stmtDel->execute([$id_alumni]);
                         }
@@ -72,12 +89,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
             } else {
                 // HANDLE PROMOTION (NAIK KELAS)
                 if ($target_class_id === 999999) {
+                    // Pre-fetch NISN map before siswa rows are deleted
+                    $ph = str_repeat('?,', count($selected_students) - 1) . '?';
+                    $nisnMap = $pdo->prepare("SELECT id_siswa, nisn FROM tb_siswa WHERE id_siswa IN ($ph)");
+                    $nisnMap->execute($selected_students);
+                    $siswaNisn = [];
+                    foreach ($nisnMap->fetchAll(PDO::FETCH_ASSOC) as $ns) {
+                        $siswaNisn[(int)$ns['id_siswa']] = (string)$ns['nisn'];
+                    }
+
                     foreach ($selected_students as $id_siswa) {
                         $stmtSiswa = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_siswa = ?");
                         $stmtSiswa->execute([$id_siswa]);
                         $siswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
 
                         if ($siswa) {
+                            // Soft-delete from barung: direct id_siswa link OR NISN stored as NTA
+                            $nisn_val = $siswaNisn[(int)$id_siswa] ?? '';
+                            $barUpdate = $pdo->prepare("
+                                UPDATE tb_peserta_didik_barung
+                                SET status = 'keluar', tanggal_keluar = NOW()
+                                WHERE IFNULL(status, 'aktif') = 'aktif'
+                                  AND (
+                                      (id_siswa IS NOT NULL AND id_siswa = ?)
+                                      OR (id_siswa IS NULL AND ? <> ''
+                                          AND CONVERT(TRIM(IFNULL(nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                                              = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci)
+                                  )
+                            ");
+                            $barUpdate->execute([(int)$id_siswa, $nisn_val, $nisn_val]);
+
                             $stmtAlumni = $pdo->prepare("INSERT INTO tb_alumni (nama_siswa, nisn, jenis_kelamin, tahun_lulus) VALUES (?, ?, ?, ?)");
                             $stmtAlumni->execute([$siswa['nama_siswa'], $siswa['nisn'], $siswa['jenis_kelamin'], $current_tahun_ajaran]);
                             $stmtDel = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
