@@ -411,8 +411,18 @@ if ($mode === 'data' && $format === 'print') {
       <div class="signature-wrap">
         <div class="signature-box">
           <div class="signature-meta">
-            <div>Dikeluarkan di: <?= h($tempat_surat) ?></div>
-            <div>Tanggal: <?= h($print_date) ?></div>
+            <table style="border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="padding: 1mm 0; white-space: nowrap;">Dikeluarkan di</td>
+                <td style="padding: 1mm 4px; text-align: center; vertical-align: top;">:</td>
+                <td style="padding: 1mm 0;"><?= h($tempat_surat) ?></td>
+              </tr>
+              <tr>
+                <td style="padding: 1mm 0; white-space: nowrap;">Tanggal</td>
+                <td style="padding: 1mm 4px; text-align: center; vertical-align: top;">:</td>
+                <td style="padding: 1mm 0;"><?= h($print_date) ?></td>
+              </tr>
+            </table>
           </div>
           <div>Ketua Gudep,</div>
           <img class="signature-qr" src="<?= h($qr_url) ?>" alt="QR Tanda Tangan" referrerpolicy="no-referrer">
@@ -674,8 +684,18 @@ function h($v): string {
               <tr>
                 <td></td>
                 <td class="sign-right">
-                  <div>Dikeluarkan di: <?= h($tempat_surat) ?></div>
-                  <div>Pada Tanggal: <?= h($formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '')) ?></div>
+                  <table style="margin-left: auto; font-size: 12pt; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 1mm 0; white-space: nowrap;">Dikeluarkan di</td>
+                      <td style="padding: 1mm 4px; text-align: center; vertical-align: top;">:</td>
+                      <td style="padding: 1mm 0;"><?= h($tempat_surat) ?></td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 1mm 0; white-space: nowrap;">Pada Tanggal</td>
+                      <td style="padding: 1mm 4px; text-align: center; vertical-align: top;">:</td>
+                      <td style="padding: 1mm 0;"><?= h($formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '')) ?></td>
+                    </tr>
+                  </table>
                   <div class="center ketua-block">Ketua Gugus Depan</div>
                   <?php if (!empty($print_settings_data['tanda_tangan_ketua_gudep'])): ?>
                   <div style="display: flex; justify-content: center; align-items: center; margin-top: 0mm; margin-bottom: -22mm;">
