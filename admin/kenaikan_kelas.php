@@ -57,20 +57,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                             $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $target_class_id]);
                             $new_id_siswa = (int)$pdo->lastInsertId();
 
-                            // Restore barung records to aktif (match by new id_siswa or NISN stored as NTA)
+                            // Restore barung records to aktif and re-link to new id_siswa.
+                            // Old barung rows carry the OLD id_siswa (= id_alumni), so we match
+                            // by old id, NISN/NTA, or name — whichever catches more rows.
                             $alumni_nisn = (string)($alumni['nisn'] ?? '');
+                            $alumni_name = (string)($alumni['nama_siswa'] ?? '');
                             $barRestore = $pdo->prepare("
                                 UPDATE tb_peserta_didik_barung
-                                SET status = 'aktif', tanggal_keluar = NULL
-                                WHERE status = 'keluar'
-                                  AND (
-                                      (id_siswa IS NOT NULL AND id_siswa = ?)
-                                      OR (id_siswa IS NULL AND ? <> ''
-                                          AND CONVERT(TRIM(IFNULL(nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
-                                              = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci)
-                                  )
+                                SET status = 'aktif', tanggal_keluar = NULL, id_siswa = ?
+                                WHERE (
+                                    id_siswa = ?
+                                    OR (? <> ''
+                                        AND CONVERT(TRIM(IFNULL(nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                                           = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci)
+                                    OR (? <> ''
+                                        AND LOWER(TRIM(nama_peserta_didik)) = LOWER(TRIM(?)))
+                                )
                             ");
-                            $barRestore->execute([$new_id_siswa, $alumni_nisn, $alumni_nisn]);
+                            $barRestore->execute([
+                                $new_id_siswa,
+                                (int)$alumni['id_alumni'],
+                                $alumni_nisn, $alumni_nisn,
+                                $alumni_name, $alumni_name,
+                            ]);
+
+                            // Deduplicate: if multiple aktif records exist for the same tingkat,
+                            // keep only the oldest (lowest id) and soft-delete the rest.
+                            $dedup = $pdo->prepare("
+                                SELECT id_tingkat_barung,
+                                       MIN(id_peserta_didik_barung) AS keep_id,
+                                       GROUP_CONCAT(id_peserta_didik_barung ORDER BY id_peserta_didik_barung) AS all_ids
+                                FROM tb_peserta_didik_barung
+                                WHERE id_siswa = ? AND IFNULL(status,'aktif') = 'aktif'
+                                GROUP BY id_tingkat_barung
+                                HAVING COUNT(*) > 1
+                            ");
+                            $dedup->execute([$new_id_siswa]);
+                            foreach ($dedup->fetchAll(PDO::FETCH_ASSOC) as $dup) {
+                                $ids = explode(',', $dup['all_ids']);
+                                array_shift($ids); // remove keep_id
+                                $ph = str_repeat('?,', count($ids) - 1) . '?';
+                                $pdo->prepare("
+                                    UPDATE tb_peserta_didik_barung
+                                    SET status = 'keluar', tanggal_keluar = NOW()
+                                    WHERE id_peserta_didik_barung IN ($ph) AND id_siswa = ?
+                                ")->execute(array_merge($ids, [$new_id_siswa]));
+                            }
 
                             $stmtDel = $pdo->prepare("DELETE FROM tb_alumni WHERE id_alumni = ?");
                             $stmtDel->execute([$id_alumni]);
