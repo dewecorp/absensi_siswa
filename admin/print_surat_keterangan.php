@@ -38,7 +38,7 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 $mode = (string)($_GET['mode'] ?? 'single'); // single | all | data
-$autoPrint = (int)($_GET['auto'] ?? 1) === 1;
+$autoPrint = (int)($_GET['auto'] ?? 0) === 1;
 $format = (string)($_GET['format'] ?? 'html'); // html | pdf | print
 $tingkat_name = '';
 
@@ -86,8 +86,6 @@ $formatTanggal = function ($value) {
     return $v;
 };
 
-$tempat_surat = $print_settings_data['tempat_surat'] ?: '................';
-$tanggal_surat = $formatTanggal($print_settings_data['tanggal_surat'] ?: date('d-m-Y'));
 $gugus_depan = trim((string)(($print_settings_data['nomor_gudep'] ?? '') ?: ($print_settings_data['gugus_depan'] ?? '03.016')));
 $nomor_surat = trim((string)($print_settings_data['nomor_surat'] ?? ''));
 $tempat_pelantikan = trim((string)($print_settings_data['tempat_pelantikan'] ?? ''));
@@ -98,6 +96,55 @@ $bingkai = '../assets/img/template_surat_keterangan.png';
 $asset_ver = (string)time();
 $school_profile = getSchoolProfile($pdo);
 
+// === Tahun Ajaran filter logic ===
+$current_tahun_ajaran = (string)($school_profile['tahun_ajaran'] ?? date('Y') . '/' . (date('Y') + 1));
+$selected_tahun_ajaran = (string)($_GET['tahun_ajaran'] ?? $current_tahun_ajaran);
+$is_current_ta = ($selected_tahun_ajaran === $current_tahun_ajaran);
+
+preg_match('/^(\d{4})\//', $selected_tahun_ajaran, $_tam);
+$_ta_y0 = (int)($_tam[1] ?? date('Y'));
+$ta_start_date = sprintf('%04d-07-01', $_ta_y0);
+$ta_end_date   = sprintf('%04d-06-30', $_ta_y0 + 1);
+
+// Ensure tb_tahun_ajaran_suket exists
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tb_tahun_ajaran_suket (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tahun_ajaran VARCHAR(20) NOT NULL UNIQUE,
+        tanggal_surat VARCHAR(50) NULL,
+        tempat_surat VARCHAR(100) NULL,
+        updated_at DATETIME NULL
+    )");
+} catch (Exception $e) { /* ignore */ }
+
+// Lock tanggal_surat for past academic years (read from frozen store)
+if (!$is_current_ta) {
+    // Try reading frozen settings for this TA
+    $frozen_stmt = $pdo->prepare("SELECT tanggal_surat, tempat_surat FROM tb_tahun_ajaran_suket WHERE tahun_ajaran = ? LIMIT 1");
+    $frozen_stmt->execute([$selected_tahun_ajaran]);
+    $frozen = $frozen_stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($frozen && !empty($frozen['tanggal_surat'])) {
+        // Use frozen value (already stored in Indonesian format like "18 Juni 2026")
+        $tanggal_surat = $frozen['tanggal_surat'];
+        $tempat_surat  = $frozen['tempat_surat'] ?: ($print_settings_data['tempat_surat'] ?: '................');
+    } else {
+        // No frozen record yet: use current settings as fallback (best effort)
+        $ts_raw = $print_settings_data['tanggal_surat'] ?? '';
+        $ts_parsed = strtotime($ts_raw);
+        if ($ts_parsed !== false && $ts_raw !== '') {
+            $_bln = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',
+                     7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
+            $tanggal_surat = (int)date('j', $ts_parsed) . ' ' . ($_bln[(int)date('n', $ts_parsed)] ?? date('F', $ts_parsed)) . ' ' . date('Y', $ts_parsed);
+        } else {
+            $tanggal_surat = date('j') . ' ' . ([1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'][(int)date('n')] ?? date('F')) . ' ' . date('Y');
+        }
+        $tempat_surat  = $print_settings_data['tempat_surat'] ?: '................';
+    }
+} else {
+    $tempat_surat  = $print_settings_data['tempat_surat'] ?: '................';
+    $tanggal_surat = $formatTanggal($print_settings_data['tanggal_surat'] ?: date('d-m-Y'));
+}
 $formatTanggalIndo = function ($value) {
     $v = trim((string)$value);
     if ($v === '') return date('d F Y');
@@ -188,16 +235,25 @@ if ($mode === 'all' || $mode === 'data') {
             WHERE IFNULL(p.status, 'aktif') = 'aktif'
               AND p.id_tingkat_barung = ?
               AND (
-                p.sku_kecakapan_lulus_at IS NOT NULL
+                (
+                    p.sku_kecakapan_lulus_at IS NOT NULL
+                    AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                )
                 OR (
                     p.promoted_at IS NOT NULL
+                    AND DATE(p.promoted_at) BETWEEN ? AND ?
                     AND p.promoted_from_tingkat_id = ?
                     AND ? > 0
                 )
               )
             ORDER BY p.nama_peserta_didik ASC
         ");
-        $stmt->execute([$tingkat_id, $prev_tingkat_id, $prev_tingkat_id]);
+        $stmt->execute([
+            $tingkat_id,
+            $ta_start_date, $ta_end_date,
+            $ta_start_date, $ta_end_date,
+            $prev_tingkat_id, $prev_tingkat_id,
+        ]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } else {
@@ -281,15 +337,19 @@ if ($mode === 'all' || $mode === 'data') {
             }
         }
         if ($row) {
-            // Nomor urut di antara peserta yang berhak surat pada tingkat yang sama
+            // Nomor urut di antara peserta yang berhak surat pada tingkat yang sama dan tahun ajaran yang sama
             $seq_stmt = $pdo->prepare("
                 SELECT COUNT(*) + 1 AS nomor_urut FROM tb_peserta_didik_barung px
                 WHERE IFNULL(px.status,'aktif')='aktif'
                   AND px.id_tingkat_barung = ?
                   AND (
-                    px.sku_kecakapan_lulus_at IS NOT NULL
+                    (
+                        px.sku_kecakapan_lulus_at IS NOT NULL
+                        AND DATE(px.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                    )
                     OR (
                         px.promoted_at IS NOT NULL
+                        AND DATE(px.promoted_at) BETWEEN ? AND ?
                         AND px.promoted_from_tingkat_id = ?
                         AND ? > 0
                     )
@@ -301,6 +361,8 @@ if ($mode === 'all' || $mode === 'data') {
             ");
             $seqParams = [
                 $requested_tingkat_id,
+                $ta_start_date, $ta_end_date,
+                $ta_start_date, $ta_end_date,
                 $prev_for_target,
                 $prev_for_target,
                 (string)$row['nama_peserta_didik'],
@@ -332,9 +394,12 @@ $doc_base_name = 'Data_Surat_Keterangan_' . $tingkat_name_for_file;
 
 if ($mode === 'data' && $format === 'print') {
     $school_name = (string)($school_profile['nama_madrasah'] ?? $school_profile['nama_sekolah'] ?? 'Sistem Informasi Madrasah');
-    $school_year = (string)($school_profile['tahun_ajaran'] ?? '-');
+    $school_year = (string)($selected_tahun_ajaran ?: ($school_profile['tahun_ajaran'] ?? '-'));
     $school_logo = !empty($school_profile['logo']) ? ('../assets/img/' . $school_profile['logo']) : '';
-    $print_date = $formatTanggalIndo($print_settings_data['tanggal_surat'] ?? date('Y-m-d'));
+    // Use locked tanggal_surat for past years, settings for current year
+    $print_date = $is_current_ta
+        ? $formatTanggalIndo($print_settings_data['tanggal_surat'] ?? date('Y-m-d'))
+        : $tanggal_surat;
     $qr_payload = "Ketua Gudep: {$ketua_gudep}\nNTA: {$nta_ketua_gudep}\nTanggal: {$print_date}\nDokumen: {$doc_base_name}";
     $qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . rawurlencode($qr_payload);
 
@@ -421,8 +486,12 @@ if ($mode === 'data' && $format === 'print') {
   <?php if ($autoPrint): ?>
   <script>
     window.addEventListener('load', () => setTimeout(() => window.print(), 250));
+    // Auto-close this window after print dialog finishes (printed or cancelled)
+    window.addEventListener('afterprint', () => {
+      setTimeout(() => window.close(), 100);
+    });
   </script>
-  <?php endif; ?>
+<?php endif; ?>
 </body>
 </html>
 <?php
@@ -594,11 +663,11 @@ function h($v): string {
 <body>
   <div class="toolbar">
     <div class="left">
-      <button class="primary" onclick="window.print()">Print</button>
+      <button class="primary" onclick="window.print()" style="font-size:16px; padding: 10px 20px;">&#128424; Cetak Surat</button>
       <button onclick="window.location.reload()">Reload</button>
       <a href="surat_keterangan.php">Kembali</a>
     </div>
-    <div class="hint">Tab ini bisa di-reload untuk melihat perubahan terbaru.</div>
+    <div class="hint">Klik tombol <strong>Cetak Surat</strong> untuk mencetak. Tab ini bisa di-reload untuk melihat perubahan terbaru.</div>
   </div>
 
   <?php foreach ($participants as $p): ?>
@@ -650,8 +719,15 @@ function h($v): string {
 
           <?php
             $tingkat_upper = strtoupper(trim((string)($tingkat_name ?? '')));
-            $hari = $hariIndo($print_settings_data['tanggal_surat'] ?? '');
-            $tgl_kegiatan = $formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '');
+            // For past TA: use locked tanggal_surat (already formatted); for current TA: use settings
+            $_surat_date_raw = $is_current_ta
+                ? ($print_settings_data['tanggal_surat'] ?? date('Y-m-d'))
+                : $tanggal_surat;
+            // Compute hari and tgl_kegiatan for both current and past years
+            $hari = $hariIndo($_surat_date_raw);
+            $tgl_kegiatan = $is_current_ta
+                ? $formatTanggalIndo($_surat_date_raw)
+                : $tanggal_surat; // past years: already in Indonesian format
           ?>
 
           <div class="para">
@@ -679,7 +755,7 @@ function h($v): string {
                     <tr>
                       <td style="padding: 1mm 0; white-space: nowrap;">Pada Tanggal</td>
                       <td style="padding: 1mm 4px; text-align: center; vertical-align: top;">:</td>
-                      <td style="padding: 1mm 0;"><?= h($formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '')) ?></td>
+                      <td style="padding: 1mm 0;"><?= h($is_current_ta ? $formatTanggalIndo($print_settings_data['tanggal_surat'] ?? '') : $tanggal_surat) ?></td>
                     </tr>
                   </table>
                   <div class="center ketua-block">Ketua Gugus Depan</div>
@@ -708,8 +784,11 @@ function h($v): string {
       const auto = <?= $autoPrint ? 'true' : 'false' ?>;
       if (!auto) return;
       window.addEventListener('load', () => {
-        // Small delay helps rendering before print dialog
         setTimeout(() => window.print(), 250);
+      });
+      // Auto-close this window after print dialog finishes (printed or cancelled)
+      window.addEventListener('afterprint', () => {
+        setTimeout(() => window.close(), 100);
       });
     })();
   </script>

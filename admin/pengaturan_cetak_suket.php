@@ -162,6 +162,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
             $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat, $tanda_tangan_ketua_gudep]);
         }
 
+        // Freeze tanggal_surat and tempat_surat for the current academic year
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS tb_tahun_ajaran_suket (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tahun_ajaran VARCHAR(20) NOT NULL UNIQUE,
+                tanggal_surat VARCHAR(50) NULL,
+                tempat_surat VARCHAR(100) NULL,
+                updated_at DATETIME NULL
+            )");
+            $school_profile_tmp = getSchoolProfile($pdo);
+            $current_ta_tmp = (string)($school_profile_tmp['tahun_ajaran'] ?? date('Y') . '/' . (date('Y') + 1));
+            $pdo->prepare("
+                INSERT INTO tb_tahun_ajaran_suket (tahun_ajaran, tanggal_surat, tempat_surat, updated_at)
+                VALUES (?, ?, ?, NOW())
+                ON DUPLICATE KEY UPDATE tanggal_surat = VALUES(tanggal_surat), tempat_surat = VALUES(tempat_surat), updated_at = NOW()
+            ")->execute([$current_ta_tmp, $tanggal_surat, $tempat_surat]);
+        } catch (Exception $e) { /* best effort */ }
+
         $message = ['type' => 'success', 'text' => 'Pengaturan cetak suket berhasil disimpan.'];
     } catch (Exception $e) {
         $message = ['type' => 'danger', 'text' => 'Gagal menyimpan pengaturan: ' . $e->getMessage()];

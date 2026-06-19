@@ -35,6 +35,58 @@ try {
 $school_profile = getSchoolProfile($pdo);
 $page_title = 'Surat Keterangan';
 
+// === Tahun Ajaran filter logic ===
+$current_tahun_ajaran = (string)($school_profile['tahun_ajaran'] ?? date('Y') . '/' . (date('Y') + 1));
+
+// Build list of available academic years:
+// Always include current TA + 1 year ahead + all past TAs that have records
+$tahun_ajaran_set = [$current_tahun_ajaran];
+
+// Add 1 year ahead dynamically
+preg_match('/^(\d{4})\//', $current_tahun_ajaran, $_m);
+$_cur_y = (int)($_m[1] ?? date('Y'));
+$next_ta = ($_cur_y + 1) . '/' . ($_cur_y + 2);
+if (!in_array($next_ta, $tahun_ajaran_set)) {
+    $tahun_ajaran_set[] = $next_ta;
+}
+
+try {
+    $ta_stmt = $pdo->query("
+        SELECT DISTINCT
+            IF(MONTH(COALESCE(sku_kecakapan_lulus_at, promoted_at)) >= 7,
+               CONCAT(YEAR(COALESCE(sku_kecakapan_lulus_at, promoted_at)), '/', YEAR(COALESCE(sku_kecakapan_lulus_at, promoted_at)) + 1),
+               CONCAT(YEAR(COALESCE(sku_kecakapan_lulus_at, promoted_at)) - 1, '/', YEAR(COALESCE(sku_kecakapan_lulus_at, promoted_at)))
+            ) AS ta
+        FROM tb_peserta_didik_barung
+        WHERE sku_kecakapan_lulus_at IS NOT NULL OR promoted_at IS NOT NULL
+    ");
+    while ($row = $ta_stmt->fetch(PDO::FETCH_ASSOC)) {
+        if (!empty($row['ta']) && !in_array($row['ta'], $tahun_ajaran_set)) {
+            $tahun_ajaran_set[] = $row['ta'];
+        }
+    }
+} catch (Exception $e) { /* ignore */ }
+
+// Sort descending (newest first)
+usort($tahun_ajaran_set, function ($a, $b) {
+    $ya = (int)explode('/', $a)[0];
+    $yb = (int)explode('/', $b)[0];
+    return $yb - $ya;
+});
+
+$selected_tahun_ajaran = (string)($_GET['tahun_ajaran'] ?? $current_tahun_ajaran);
+if (!in_array($selected_tahun_ajaran, $tahun_ajaran_set)) {
+    $selected_tahun_ajaran = $current_tahun_ajaran;
+}
+
+// Derive date range for selected tahun ajaran (July y0 - June y0+1)
+preg_match('/^(\d{4})\//', $selected_tahun_ajaran, $_tam);
+$_ta_y0 = (int)($_tam[1] ?? date('Y'));
+$ta_start_date = sprintf('%04d-07-01', $_ta_y0);
+$ta_end_date   = sprintf('%04d-06-30', $_ta_y0 + 1);
+$is_current_ta = ($selected_tahun_ajaran === $current_tahun_ajaran);
+
+
 // Tabel tidak memakai DataTables — hindari ekstra parsing/heap setelah cetak/pemakaian lain
 
 // Fetch semua tingkat dulu (untuk rantai kenaikan), lalu buat list tampilan tanpa Pra Mula
@@ -150,16 +202,25 @@ if ($selected_tingkat_id > 0) {
             WHERE IFNULL(p.status, 'aktif') = 'aktif'
               AND p.id_tingkat_barung = ?
               AND (
-                p.sku_kecakapan_lulus_at IS NOT NULL
+                (
+                    p.sku_kecakapan_lulus_at IS NOT NULL
+                    AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                )
                 OR (
                     p.promoted_at IS NOT NULL
+                    AND DATE(p.promoted_at) BETWEEN ? AND ?
                     AND p.promoted_from_tingkat_id = ?
                     AND ? > 0
                 )
               )
             ORDER BY p.nama_peserta_didik ASC
         ");
-        $stmt->execute([$selected_tingkat_id, $prev_tingkat_id, $prev_tingkat_id]);
+        $stmt->execute([
+            $selected_tingkat_id,
+            $ta_start_date, $ta_end_date,
+            $ta_start_date, $ta_end_date,
+            $prev_tingkat_id, $prev_tingkat_id,
+        ]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // ignore
@@ -170,45 +231,46 @@ $custom_script = '';
 
 // Page-specific JS (rendered by templates/footer.php after libraries)
 $js_print_letters = <<<'JS'
-// Print single letter
+// Tahun Ajaran filter: navigate on change
+$('#filterTahunAjaran').on('change', function () {
+  var val = $(this).val();
+  var tingkat = ($('#selectedTingkatId').val() || '').toString();
+  window.location.href = '?tingkat=' + encodeURIComponent(tingkat) + '&tahun_ajaran=' + encodeURIComponent(val);
+});
+
+// Print single letter — opens preview without auto-print to avoid browser freeze
 function printSingleLetter(id, nama, nta) {
   if (!id) {
     Swal.fire('Error', 'ID peserta didik tidak valid.', 'error');
     return;
   }
   const tingkat = ($('#selectedTingkatId').val() || '').toString();
-  const url = `print_surat_keterangan.php?mode=single&id=${encodeURIComponent(id)}&tingkat=${encodeURIComponent(tingkat)}&auto=1`;
-  const w = window.open(url, '_blank');
-  if (w) {
-    w.opener = null;
-  }
+  const tahunAjaran = ($('#selectedTahunAjaran').val() || '').toString();
+  const url = `print_surat_keterangan.php?mode=single&id=${encodeURIComponent(id)}&tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`;
+  window.open(url, '_blank');
 }
 
 // Print all letters
 function printAllLetters() {
   const tingkat = ($('#selectedTingkatId').val() || '').toString();
+  const tahunAjaran = ($('#selectedTahunAjaran').val() || '').toString();
   if (!tingkat) {
     Swal.fire('Peringatan', 'Pilih tingkat terlebih dahulu.', 'warning');
     return;
   }
-  const url = `print_surat_keterangan.php?mode=all&tingkat=${encodeURIComponent(tingkat)}&auto=1`;
-  const w = window.open(url, '_blank');
-  if (w) {
-    w.opener = null;
-  }
+  const url = `print_surat_keterangan.php?mode=all&tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`;
+  window.open(url, '_blank');
 }
 
 function exportPDF() {
   const tingkat = ($('#selectedTingkatId').val() || '').toString();
+  const tahunAjaran = ($('#selectedTahunAjaran').val() || '').toString();
   if (!tingkat) {
     Swal.fire('Peringatan', 'Pilih tingkat terlebih dahulu.', 'warning');
     return;
   }
-  const url = `export_surat_keterangan_pdf.php?tingkat=${encodeURIComponent(tingkat)}`;
-  const w = window.open(url, '_blank');
-  if (w) {
-    w.opener = null;
-  }
+  const url = `export_surat_keterangan_pdf.php?tingkat=${encodeURIComponent(tingkat)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`;
+  window.open(url, '_blank');
 }
 
 // Event listener for print buttons using data attributes
@@ -262,6 +324,7 @@ include '../templates/sidebar.php';
             <input type="hidden" id="printPlace" value="<?= htmlspecialchars($print_settings['print_place']) ?>">
             <input type="hidden" id="tingkatName" value="<?= htmlspecialchars($selected_tingkat_name) ?>">
             <input type="hidden" id="selectedTingkatId" value="<?= (int)$selected_tingkat_id ?>">
+            <input type="hidden" id="selectedTahunAjaran" value="<?= htmlspecialchars($selected_tahun_ajaran) ?>">
             <input type="hidden" id="printDate" value="<?= date('d F Y') ?>">
 
             <div class="card">
@@ -277,6 +340,26 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
+                    <!-- Tahun Ajaran filter -->
+                    <div class="form-group row align-items-center">
+                        <label class="col-sm-2 col-form-label">Tahun Ajaran:</label>
+                        <div class="col-sm-5">
+                            <select class="form-control" id="filterTahunAjaran">
+                                <?php foreach ($tahun_ajaran_set as $_ta): ?>
+                                    <option value="<?= htmlspecialchars($_ta) ?>"
+                                        <?= ($_ta === $selected_tahun_ajaran) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($_ta) ?><?= ($_ta === $current_tahun_ajaran) ? ' (Aktif)' : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php if (!$is_current_ta): ?>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-lock"></i> Tahun ajaran sebelumnya — tanggal surat terkunci.
+                                </small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label class="d-block">Pilih Tingkat:</label>
                         <ul class="nav nav-pills flex-wrap mb-2" role="tablist">
@@ -293,7 +376,7 @@ include '../templates/sidebar.php';
                                 $is_last = $index === count($tingkat_list) - 1;
                                 ?>
                                 <li class="nav-item" style="margin: 0;">
-                                    <a href="?tingkat=<?= $tid ?>" 
+                                    <a href="?tingkat=<?= $tid ?>&tahun_ajaran=<?= urlencode($selected_tahun_ajaran) ?>" 
                                        class="nav-link py-1 px-3 <?= $pill_class ?>" 
                                        role="tab" 
                                        style="transition: none; <?= !$is_first ? 'border-left: 0; margin-left: -1px;' : '' ?> <?= !$is_last ? 'border-right: 0;' : '' ?> border-radius: 0;<?= $is_first ? ' border-top-left-radius: 4px; border-bottom-left-radius: 4px;' : '' ?><?= $is_last ? ' border-top-right-radius: 4px; border-bottom-right-radius: 4px;' : '' ?>">
