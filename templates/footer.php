@@ -26,6 +26,13 @@
             <footer class="main-footer">
                 <div class="footer-left">
                     Copyright &copy; <?php echo date('Y'); ?> <div class="bullet"></div> Sistem Informasi Madrasah
+                    <?php
+                    $_version_file = dirname(__DIR__) . '/version.txt';
+                    $_app_version = is_file($_version_file) ? trim((string)@file_get_contents($_version_file)) : '';
+                    ?>
+                    <?php if ($_app_version !== ''): ?>
+                        <span class="text-muted" style="font-size: 11px; margin-left: 8px;">v<?php echo htmlspecialchars($_app_version); ?></span>
+                    <?php endif; ?>
                 </div>
                 <div class="footer-right">
                     <?php echo $school_profile['nama_madrasah']; ?>

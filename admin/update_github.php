@@ -38,6 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         if ($all_success) {
+            // Write new version timestamp after successful git update
+            @file_put_contents($project_root . '/version.txt', date('YmdHis'));
             logActivity($pdo, $_SESSION['username'], 'Update Aplikasi', 'Update via Git berhasil');
             echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui.']);
             exit;
@@ -125,6 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $delete_recursive($temp_extract_path);
 
             logActivity($pdo, $_SESSION['username'], 'Update Aplikasi', 'Update via ZIP berhasil');
+            // Write new version timestamp after successful ZIP update
+            @file_put_contents($project_root . '/version.txt', date('YmdHis'));
             echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui.']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Struktur ZIP tidak sesuai.']);

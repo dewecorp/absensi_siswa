@@ -61,3 +61,6 @@ cache/
 # PHP specific
 composer.phar
 composer.lock
+
+# App version file (updated only on deployment, not in git)
+version.txt
