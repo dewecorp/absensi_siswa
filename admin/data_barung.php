@@ -843,6 +843,7 @@ if ($selected_tingkat_id > 0) {
                 p.id_peserta_didik_barung,
                 p.nama_peserta_didik,
                 p.nta,
+                COALESCE(NULLIF(TRIM(k.nama_kelas), ''), '-') AS nama_kelas,
                 COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
                 COALESCE(s.tanggal_lahir, p.tanggal_lahir) AS tanggal_lahir,
                 p.id_tingkat_barung
@@ -856,9 +857,10 @@ if ($selected_tingkat_id > 0) {
                         = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
                 )
             )
+            LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
             WHERE p.id_tingkat_barung = ?
               AND IFNULL(p.status, 'aktif') = 'aktif'
-            ORDER BY p.nama_peserta_didik ASC
+            ORDER BY k.nama_kelas ASC, p.nama_peserta_didik ASC
         ");
         $stmt->execute([$selected_tingkat_id]);
         $peserta_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -866,6 +868,21 @@ if ($selected_tingkat_id > 0) {
         $table_error = $e->getMessage();
     }
 }
+
+$kelas_summary_barung = [];
+$kelas_summary_unmapped = 0;
+foreach ($peserta_rows as $row) {
+    $nama_kelas_summary = trim((string)($row['nama_kelas'] ?? ''));
+    if ($nama_kelas_summary === '' || $nama_kelas_summary === '-') {
+        $kelas_summary_unmapped++;
+        continue;
+    }
+    if (!isset($kelas_summary_barung[$nama_kelas_summary])) {
+        $kelas_summary_barung[$nama_kelas_summary] = 0;
+    }
+    $kelas_summary_barung[$nama_kelas_summary]++;
+}
+ksort($kelas_summary_barung, SORT_NATURAL | SORT_FLAG_CASE);
 
 /** Siswa di tb_kelas sesuai tab (untuk modal tambah kolektif); belum ada di tingkat ini */
 $barung_tingkat_slug = barung_resolve_tingkat_slug($selected_tingkat_name);
@@ -1092,11 +1109,20 @@ if ($message) {
 
 $js_page[] = <<<'JS_BLOCK'
 $(document).ready(function() {
+    var hasManageColumn = $('#checkAllRows').length > 0;
+    var numberColumnIndex = hasManageColumn ? 1 : 0;
+    var nameColumnIndex = hasManageColumn ? 2 : 1;
+    var actionColumnIndex = hasManageColumn ? ($('#table-1 thead th').length - 1) : null;
+    var unsortableColumns = [numberColumnIndex];
+    if (hasManageColumn) {
+        unsortableColumns.push(0, actionColumnIndex);
+    }
+
     var table = $('#table-1').DataTable({
-        'order': [[1, 'asc']],
+        'order': [[nameColumnIndex, 'asc']],
         'paging': false,
         'columnDefs': [
-            { 'sortable': false, 'targets': [0, 6] }
+            { 'sortable': false, 'targets': unsortableColumns }
         ],
         'language': {
             'zeroRecords': 'Tidak ada data yang ditemukan',
@@ -1107,7 +1133,7 @@ $(document).ready(function() {
     table.on('order.dt search.dt draw.dt', function() {
         var info = table.page.info();
         var start = info.page * info.length;
-        table.column(1, { search: 'applied', order: 'applied' }).nodes().each(function(cell, i) {
+        table.column(numberColumnIndex, { search: 'applied', order: 'applied' }).nodes().each(function(cell, i) {
             $(cell).text(start + i + 1);
         });
     }).draw();
@@ -1401,6 +1427,24 @@ $(document).ready(function() {
     });
 });
 
+function cleanBarungExportTable(table) {
+    var clonedTable = table.cloneNode(true);
+    var hasManageColumn = table.querySelector('#checkAllRows') !== null;
+    var actionIndex = hasManageColumn && table.rows.length ? table.rows[0].cells.length - 1 : -1;
+    var rows = clonedTable.rows;
+
+    for (var i = 0; i < rows.length; i++) {
+        if (actionIndex >= 0 && rows[i].cells.length > actionIndex) {
+            rows[i].deleteCell(actionIndex);
+        }
+        if (hasManageColumn && rows[i].cells.length > 0) {
+            rows[i].deleteCell(0);
+        }
+    }
+
+    return clonedTable;
+}
+
 function exportToExcel() {
     var table = document.getElementById('table-1');
     if (!table) return;
@@ -1409,13 +1453,7 @@ function exportToExcel() {
     var academicYear = $('#academicYear').val() || '-';
     var tingkatName = $('#tingkatName').val() || '';
     
-    // Clone table to remove checkbox and actions columns
-    var newTable = table.cloneNode(true);
-    var rows = newTable.rows;
-    for (var i = 0; i < rows.length; i++) {
-        rows[i].deleteCell(-1); // Remove last column (Aksi)
-        rows[i].deleteCell(0);  // Remove first column (Checkbox)
-    }
+    var newTable = cleanBarungExportTable(table);
     
     if (typeof XLSX !== 'undefined') {
         var wb = XLSX.utils.book_new();
@@ -1490,13 +1528,7 @@ function exportToPDF() {
     printWindow.document.write('</div>');
     printWindow.document.write('<hr style="border: 1px solid #000; margin-bottom: 20px;">');
     
-    // Clone and clean up table
-    var cleanTable = table.cloneNode(true);
-    var rows = cleanTable.rows;
-    for (var i = 0; i < rows.length; i++) {
-        rows[i].deleteCell(-1); // Remove action column
-        rows[i].deleteCell(0);  // Remove checkbox column
-    }
+    var cleanTable = cleanBarungExportTable(table);
     
     printWindow.document.write(cleanTable.outerHTML);
     
@@ -1618,6 +1650,31 @@ include '../templates/sidebar.php';
                         </ul>
                     </div>
 
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-4 col-lg-3 mb-2">
+                            <div class="border rounded bg-light px-3 py-2 h-100">
+                                <div class="text-muted small">Total Anggota</div>
+                                <div class="h5 mb-0"><?= (int)count($peserta_rows) ?> siswa</div>
+                            </div>
+                        </div>
+                        <?php foreach ($kelas_summary_barung as $nama_kelas_info => $jumlah_kelas_info): ?>
+                            <div class="col-6 col-md-3 col-lg-2 mb-2">
+                                <div class="border rounded px-3 py-2 h-100">
+                                    <div class="text-muted small">Kelas <?= htmlspecialchars($nama_kelas_info, ENT_QUOTES, 'UTF-8') ?></div>
+                                    <div class="h6 mb-0"><?= (int)$jumlah_kelas_info ?> siswa</div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if ($kelas_summary_unmapped > 0): ?>
+                            <div class="col-6 col-md-3 col-lg-2 mb-2">
+                                <div class="border rounded px-3 py-2 h-100">
+                                    <div class="text-muted small">Belum Terkait Kelas</div>
+                                    <div class="h6 mb-0"><?= (int)$kelas_summary_unmapped ?> siswa</div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table table-striped" id="table-1">
                             <thead>
@@ -1625,6 +1682,7 @@ include '../templates/sidebar.php';
                                     <?php if ($can_manage_barung): ?><th class="text-center" width="36px"><input type="checkbox" id="checkAllRows"></th><?php endif; ?>
                                     <th class="text-center" width="6%">No</th>
                                     <th>Nama Peserta Didik</th>
+                                    <th width="10%">Kelas</th>
                                     <th width="14%">NTA</th>
                                     <th>Tempat Lahir</th>
                                     <th width="14%">Tanggal Lahir</th>
@@ -1644,6 +1702,7 @@ include '../templates/sidebar.php';
                                             </td><?php endif; ?>
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
                                             <td><?= htmlspecialchars(htmlspecialchars_decode($row['nama_peserta_didik'] ?? '', ENT_QUOTES)) ?></td>
+                                            <td><?= htmlspecialchars($row['nama_kelas'] ?? '-') ?></td>
                                             <td><?= htmlspecialchars($row['nta'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['tempat_lahir'] ?? '') ?></td>
                                             <td><?= !empty($row['tanggal_lahir']) ? htmlspecialchars(date('d-m-Y', strtotime((string)$row['tanggal_lahir']))) : '' ?></td>
