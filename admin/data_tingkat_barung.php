@@ -12,6 +12,45 @@ if (!isAuthorized(['admin', 'tata_usaha'])) {
 
 $page_title = 'Data Tingkat Pramuka';
 
+function tingkat_barung_resolve_slug(?string $nama_tingkat): ?string
+{
+    $raw = trim((string)$nama_tingkat);
+    if ($raw === '') {
+        return null;
+    }
+
+    $compact = strtolower(preg_replace('/[^a-z]/u', '', $raw));
+    switch ($compact) {
+        case 'pramula':
+            return 'pra_mula';
+        case 'mula':
+            return 'mula';
+        case 'bantu':
+            return 'bantu';
+        case 'tata':
+            return 'tata';
+        case 'praramu':
+            return 'pra_ramu';
+        case 'ramu':
+            return 'ramu';
+        default:
+            return null;
+    }
+}
+
+function tingkat_barung_golongan_otomatis(?string $nama_tingkat, ?string $fallback = null): string
+{
+    $slug = tingkat_barung_resolve_slug($nama_tingkat);
+    if (in_array($slug, ['pra_mula', 'mula', 'bantu', 'tata'], true)) {
+        return 'Siaga';
+    }
+    if (in_array($slug, ['pra_ramu', 'ramu'], true)) {
+        return 'Penggalang';
+    }
+
+    return trim((string)$fallback) !== '' ? (string)$fallback : 'Siaga';
+}
+
 // DataTables
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
@@ -50,6 +89,14 @@ try {
             }
         }
     }
+    $pdo->exec("
+        UPDATE {$table_name}
+        SET golongan = CASE
+            WHEN LOWER(REPLACE(REPLACE(nama_tingkat, ' ', ''), '-', '')) IN ('pramula', 'mula', 'bantu', 'tata') THEN 'Siaga'
+            WHEN LOWER(REPLACE(REPLACE(nama_tingkat, ' ', ''), '-', '')) IN ('praramu', 'ramu') THEN 'Penggalang'
+            ELSE golongan
+        END
+    ");
 } catch (Exception $e) {
     $schema_error = $e->getMessage();
 }
@@ -62,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_tingkat_barung'])) {
         $nama_tingkat = sanitizeInput($_POST['nama_tingkat'] ?? '');
         $golongan = sanitizeInput($_POST['golongan'] ?? 'Siaga');
+        $golongan = tingkat_barung_golongan_otomatis($nama_tingkat, $golongan);
         if ($nama_tingkat === '') {
             $message = ['type' => 'warning', 'text' => 'Harap isi nama tingkat.'];
         } else {
@@ -86,6 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id_tingkat_barung'] ?? 0);
         $nama_tingkat = sanitizeInput($_POST['nama_tingkat'] ?? '');
         $golongan = sanitizeInput($_POST['golongan'] ?? 'Siaga');
+        $golongan = tingkat_barung_golongan_otomatis($nama_tingkat, $golongan);
         if ($id <= 0 || $nama_tingkat === '') {
             $message = ['type' => 'warning', 'text' => 'Harap isi nama tingkat.'];
         } else {
@@ -145,6 +194,8 @@ try {
                 WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 2
                 WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 3
                 WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 4
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('praramu', 'pra-ramu') OR LOWER(nama_tingkat) = 'pra ramu' THEN 5
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('ramu') THEN 6
                 ELSE 99
             END,
             nama_tingkat ASC
@@ -279,15 +330,19 @@ include '../templates/sidebar.php';
                             <tbody>
                                 <?php if (!empty($rows)): ?>
                                     <?php foreach ($rows as $idx => $row): ?>
+                                        <?php
+                                            $golongan_tampil = tingkat_barung_golongan_otomatis($row['nama_tingkat'] ?? '', $row['golongan'] ?? '');
+                                            $golongan_badge = $golongan_tampil === 'Penggalang' ? 'badge-danger' : 'badge-success';
+                                        ?>
                                         <tr>
                                             <td class="text-center"><?= (int)($idx + 1) ?></td>
                                             <td><?= htmlspecialchars($row['nama_tingkat'] ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['golongan'] ?? '') ?></td>
+                                            <td><span class="badge <?= $golongan_badge ?>"><?= htmlspecialchars($golongan_tampil) ?></span></td>
                                             <td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)($row['id_tingkat_barung'] ?? 0) ?>"
                                                     data-nama="<?= htmlspecialchars($row['nama_tingkat'] ?? '', ENT_QUOTES) ?>"
-                                                    data-golongan="<?= htmlspecialchars($row['golongan'] ?? '', ENT_QUOTES) ?>"
+                                                    data-golongan="<?= htmlspecialchars($golongan_tampil, ENT_QUOTES) ?>"
                                                     type="button">
                                                     <i class="fas fa-edit"></i>
                                                 </button>

@@ -54,10 +54,25 @@ try {
         $pdo->exec("
             CREATE TABLE tb_tingkat_barung (
                 id_tingkat_barung INT AUTO_INCREMENT PRIMARY KEY,
-                nama_tingkat VARCHAR(100) NOT NULL
+                nama_tingkat VARCHAR(100) NOT NULL,
+                golongan VARCHAR(50) NOT NULL DEFAULT 'Siaga'
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+    } else {
+        $colStmt = $pdo->query("SHOW COLUMNS FROM tb_tingkat_barung LIKE 'golongan'");
+        $has_col = (bool)$colStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$has_col) {
+            $pdo->exec("ALTER TABLE tb_tingkat_barung ADD COLUMN golongan VARCHAR(50) NOT NULL DEFAULT 'Siaga'");
+        }
     }
+    $pdo->exec("
+        UPDATE tb_tingkat_barung
+        SET golongan = CASE
+            WHEN LOWER(REPLACE(REPLACE(nama_tingkat, ' ', ''), '-', '')) IN ('pramula', 'mula', 'bantu', 'tata') THEN 'Siaga'
+            WHEN LOWER(REPLACE(REPLACE(nama_tingkat, ' ', ''), '-', '')) IN ('praramu', 'ramu') THEN 'Penggalang'
+            ELSE golongan
+        END
+    ");
 
     // tb_peserta_didik_barung (peserta didik per tingkat)
     $stmt = $pdo->query("SHOW TABLES LIKE 'tb_peserta_didik_barung'");
@@ -154,6 +169,12 @@ function barung_resolve_tingkat_slug(?string $nama_tingkat): ?string
         if ($t === 'tata') {
             return 'tata';
         }
+        if ($t === 'praramu') {
+            return 'pra_ramu';
+        }
+        if ($t === 'ramu') {
+            return 'ramu';
+        }
         if ($t === 'garuda') {
             return 'garuda';
         }
@@ -173,11 +194,74 @@ function barung_kelas_nomor_for_slug(?string $slug): array
             return [2, 3, 4, 5, 6];
         case 'tata':
             return [4, 5, 6];
+        case 'pra_ramu':
+        case 'ramu':
+            return [1, 2, 3, 4, 5, 6];
         case 'garuda':
             return [3, 4, 5, 6];
         default:
             return [];
     }
+}
+
+function barung_golongan_for_slug(?string $slug): ?string
+{
+    if (in_array($slug, ['pra_mula', 'mula', 'bantu', 'tata'], true)) {
+        return 'Siaga';
+    }
+    if (in_array($slug, ['pra_ramu', 'ramu'], true)) {
+        return 'Penggalang';
+    }
+
+    return null;
+}
+
+function barung_golongan_for_tingkat(?string $nama_tingkat, ?string $fallback = null): string
+{
+    $slug = barung_resolve_tingkat_slug($nama_tingkat);
+    $golongan = barung_golongan_for_slug($slug);
+
+    return $golongan ?? (trim((string)$fallback) !== '' ? (string)$fallback : '-');
+}
+
+function barung_umur_bulan(?string $tanggal_lahir): ?int
+{
+    $raw = trim((string)$tanggal_lahir);
+    if ($raw === '' || $raw === '0000-00-00') {
+        return null;
+    }
+
+    try {
+        $lahir = new DateTime(substr($raw, 0, 10));
+        $hari_ini = new DateTime('today');
+        if ($lahir > $hari_ini) {
+            return null;
+        }
+        $diff = $lahir->diff($hari_ini);
+
+        return ($diff->y * 12) + $diff->m;
+    } catch (Exception $e) {
+        return null;
+    }
+}
+
+function barung_siswa_lolos_usia_tingkat(?string $slug, ?string $tanggal_lahir): bool
+{
+    $golongan = barung_golongan_for_slug($slug);
+    $umur_bulan = barung_umur_bulan($tanggal_lahir);
+    if ($golongan === null || $umur_bulan === null) {
+        return true;
+    }
+
+    $batas_penggalang_bulan = 11 * 12;
+    if ($golongan === 'Siaga') {
+        return $umur_bulan < $batas_penggalang_bulan;
+    }
+    if ($golongan === 'Penggalang') {
+        return $umur_bulan >= $batas_penggalang_bulan;
+    }
+
+    return true;
 }
 
 /**
@@ -244,6 +328,141 @@ function barung_nama_kelas_ke_nomor(string $nama_kelas): ?int
     return barung_nomor_mi_dari_tb_kelas_row(0, $nama_kelas);
 }
 
+function barung_ensure_tingkat_pra_ramu(PDO $pdo): int
+{
+    $stmt = $pdo->query("
+        SELECT id_tingkat_barung
+        FROM tb_tingkat_barung
+        WHERE LOWER(REPLACE(REPLACE(nama_tingkat, ' ', ''), '-', '')) = 'praramu'
+        ORDER BY id_tingkat_barung ASC
+        LIMIT 1
+    ");
+    $id = (int)($stmt->fetchColumn() ?: 0);
+    if ($id > 0) {
+        $pdo->prepare("UPDATE tb_tingkat_barung SET golongan = 'Penggalang' WHERE id_tingkat_barung = ?")->execute([$id]);
+
+        return $id;
+    }
+
+    $stmt = $pdo->prepare("INSERT INTO tb_tingkat_barung (nama_tingkat, golongan) VALUES ('Pra Ramu', 'Penggalang')");
+    $stmt->execute();
+
+    return (int)$pdo->lastInsertId();
+}
+
+function barung_auto_assign_pra_ramu_usia_11(PDO $pdo): array
+{
+    $pra_ramu_id = barung_ensure_tingkat_pra_ramu($pdo);
+    if ($pra_ramu_id <= 0) {
+        return ['added' => 0, 'closed_siaga' => 0, 'skipped_active_penggalang' => 0];
+    }
+
+    $stmt = $pdo->query("
+        SELECT s.id_siswa, s.nisn, s.nama_siswa, s.tempat_lahir, s.tanggal_lahir
+        FROM tb_siswa s
+        WHERE s.tanggal_lahir IS NOT NULL
+          AND YEAR(s.tanggal_lahir) > 0
+          AND s.tanggal_lahir <= DATE_SUB(CURDATE(), INTERVAL 11 YEAR)
+        ORDER BY s.nama_siswa ASC
+    ");
+    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmtActive = $pdo->prepare("
+        SELECT p.id_peserta_didik_barung, p.id_tingkat_barung, t.nama_tingkat
+        FROM tb_peserta_didik_barung p
+        LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
+        WHERE IFNULL(p.status, 'aktif') = 'aktif'
+          AND (
+            (p.id_siswa IS NOT NULL AND p.id_siswa = ?)
+            OR (p.id_siswa IS NULL AND TRIM(IFNULL(p.nta, '')) <> '' AND TRIM(p.nta) = ? AND ? <> '')
+            OR (p.id_siswa IS NULL AND TRIM(IFNULL(p.nta, '')) = '' AND LOWER(TRIM(p.nama_peserta_didik)) = LOWER(TRIM(?)))
+          )
+        ORDER BY p.id_peserta_didik_barung ASC
+    ");
+    $stmtClose = $pdo->prepare("
+        UPDATE tb_peserta_didik_barung
+        SET status = 'keluar', tanggal_keluar = NOW()
+        WHERE id_peserta_didik_barung = ?
+    ");
+    $stmtInsert = $pdo->prepare("
+        INSERT INTO tb_peserta_didik_barung
+            (id_tingkat_barung, id_siswa, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, status, tanggal_masuk, tanggal_keluar)
+        VALUES (?, ?, ?, '', ?, ?, 'aktif', NOW(), NULL)
+    ");
+
+    $added = 0;
+    $closed_siaga = 0;
+    $skipped_active_penggalang = 0;
+
+    foreach ($students as $student) {
+        $id_siswa = ensureInt($student['id_siswa'] ?? 0);
+        if ($id_siswa <= 0 || !barung_siswa_lolos_usia_tingkat('pra_ramu', $student['tanggal_lahir'] ?? null)) {
+            continue;
+        }
+
+        $nisn = trim((string)($student['nisn'] ?? ''));
+        $nama_siswa_raw = trim((string)($student['nama_siswa'] ?? ''));
+        $stmtActive->execute([$id_siswa, $nisn, $nisn, $nama_siswa_raw]);
+        $activeRows = $stmtActive->fetchAll(PDO::FETCH_ASSOC);
+
+        $hasPraRamuOrRamu = false;
+        $hasOtherActive = false;
+        foreach ($activeRows as $active) {
+            $slug = barung_resolve_tingkat_slug($active['nama_tingkat'] ?? '');
+            if (in_array($slug, ['pra_ramu', 'ramu'], true)) {
+                $hasPraRamuOrRamu = true;
+                break;
+            }
+            if (in_array($slug, ['pra_mula', 'mula', 'bantu', 'tata'], true)) {
+                continue;
+            }
+            $hasOtherActive = true;
+        }
+
+        if ($hasPraRamuOrRamu) {
+            continue;
+        }
+        if ($hasOtherActive) {
+            $skipped_active_penggalang++;
+            continue;
+        }
+
+        foreach ($activeRows as $active) {
+            $slug = barung_resolve_tingkat_slug($active['nama_tingkat'] ?? '');
+            if (in_array($slug, ['pra_mula', 'mula', 'bantu', 'tata'], true)) {
+                $stmtClose->execute([(int)$active['id_peserta_didik_barung']]);
+                $closed_siaga++;
+            }
+        }
+
+        $nama = sanitizeInput((string)($student['nama_siswa'] ?? ''));
+        if ($nama === '') {
+            continue;
+        }
+        $tempat = sanitizeInput((string)($student['tempat_lahir'] ?? ''));
+        $tanggal = substr((string)$student['tanggal_lahir'], 0, 10);
+        $stmtInsert->execute([
+            $pra_ramu_id,
+            $id_siswa,
+            $nama,
+            $tempat !== '' ? $tempat : null,
+            $tanggal !== '' ? $tanggal : null,
+        ]);
+        $added++;
+    }
+
+    return ['added' => $added, 'closed_siaga' => $closed_siaga, 'skipped_active_penggalang' => $skipped_active_penggalang];
+}
+
+$auto_pra_ramu_result = ['added' => 0, 'closed_siaga' => 0, 'skipped_active_penggalang' => 0];
+if ($can_manage_barung && empty($_POST)) {
+    try {
+        $auto_pra_ramu_result = barung_auto_assign_pra_ramu_usia_11($pdo);
+    } catch (Exception $e) {
+        $schema_error = trim((string)$schema_error) !== '' ? $schema_error . ' | Auto Pra Ramu: ' . $e->getMessage() : 'Auto Pra Ramu: ' . $e->getMessage();
+    }
+}
+
 // --- Fetch tingkat list ---
 $tingkat_list = [];
 $fetch_error = null;
@@ -257,7 +476,9 @@ try {
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 2
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 3
                     WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 4
-                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 5
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('praramu', 'pra-ramu') OR LOWER(nama_tingkat) = 'pra ramu' THEN 5
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('ramu') THEN 6
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 7
                     ELSE 99
                 END,
                 nama_tingkat ASC
@@ -515,7 +736,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
         if ($id_tingkat <= 0) {
             $message = ['type' => 'warning', 'text' => 'Tingkat tidak valid.'];
         } elseif ($slug_thr === null || $allowed_nums === []) {
-            $message = ['type' => 'warning', 'text' => 'Pemetaan kelas otomatis hanya untuk tingkat Pra Mula, Mula, Bantu, Tata, atau Garuda.'];
+            $message = ['type' => 'warning', 'text' => 'Pemetaan otomatis hanya untuk tingkat Pra Mula, Mula, Bantu, Tata, Pra Ramu, Ramu, atau Garuda.'];
         } elseif (empty($picked)) {
             $message = ['type' => 'warning', 'text' => 'Pilih minimal satu siswa.'];
         } else {
@@ -553,6 +774,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
                 $pdo->beginTransaction();
                 $added = 0;
                 $blocked_other_tingkat = 0;
+                $blocked_age = 0;
                 foreach ($picked as $sid) {
                     $stmt_siswa->execute([$sid]);
                     $row = $stmt_siswa->fetch(PDO::FETCH_ASSOC);
@@ -561,6 +783,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
                     }
                     $id_kelas = (int)($row['id_kelas'] ?? 0);
                     if ($id_kelas <= 0 || !in_array($id_kelas, $id_kelas_ok, true)) {
+                        continue;
+                    }
+                    if (!barung_siswa_lolos_usia_tingkat($slug_thr, $row['tanggal_lahir'] ?? null)) {
+                        $blocked_age++;
                         continue;
                     }
                     /** NTA disimpan kosong; bisa diisi lewat Edit */
@@ -614,8 +840,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
 
                 $username = $_SESSION['username'] ?? 'system';
                 logActivity($pdo, $username, 'Tambah Peserta Didik Barung (Kolektif)', "Tingkat ID {$id_tingkat}: ditambahkan {$added} dari data siswa");
-                if ($blocked_other_tingkat > 0) {
-                    $message = ['type' => 'warning', 'text' => "Berhasil menambahkan {$added} peserta. {$blocked_other_tingkat} siswa dilewati karena masih aktif di tingkat pramuka lain."];
+                if ($blocked_other_tingkat > 0 || $blocked_age > 0) {
+                    $notes = [];
+                    if ($blocked_other_tingkat > 0) {
+                        $notes[] = "{$blocked_other_tingkat} siswa dilewati karena masih aktif di tingkat pramuka lain";
+                    }
+                    if ($blocked_age > 0) {
+                        $notes[] = "{$blocked_age} siswa dilewati karena tidak sesuai batas usia golongan";
+                    }
+                    $message = ['type' => 'warning', 'text' => "Berhasil menambahkan {$added} peserta. " . implode('; ', $notes) . '.'];
                 } else {
                     $message = ['type' => 'success', 'text' => "Berhasil menambahkan {$added} peserta dari data siswa."];
                 }
@@ -890,6 +1123,7 @@ $barung_kelas_allowed = barung_kelas_nomor_for_slug($barung_tingkat_slug);
 $available_siswa_barung = [];
 $barung_avail_kelas_tidak_terpetakan = false;
 $barung_avail_sql_error = null;
+$barung_avail_usia_filtered = 0;
 if ($selected_tingkat_id > 0 && $barung_tingkat_slug !== null && $barung_kelas_allowed !== []) {
     try {
         $kelas_all = $pdo->query('SELECT id_kelas, nama_kelas FROM tb_kelas')->fetchAll(PDO::FETCH_ASSOC);
@@ -1032,7 +1266,7 @@ SQL_OTH_NO_ID;
         if (!empty($id_kelas_allow)) {
             $placeholders = implode(',', array_fill(0, count($id_kelas_allow), '?'));
             $sql_avail =
-                'SELECT s.id_siswa, s.nisn, s.nama_siswa,' .
+                'SELECT s.id_siswa, s.nisn, s.nama_siswa, s.tanggal_lahir,' .
                 " COALESCE(NULLIF(TRIM(k.nama_kelas), ''), CONCAT('#id ', CAST(s.id_kelas AS CHAR))) AS nama_kelas," .
                 trim($caseSudahTd) . ',' . trim($caseTingkatLain) .
                 ' FROM tb_siswa s' .
@@ -1043,6 +1277,14 @@ SQL_OTH_NO_ID;
             $st_avail = $pdo->prepare($sql_avail);
             $st_avail->execute($params_avail);
             $available_siswa_barung = $st_avail->fetchAll(PDO::FETCH_ASSOC);
+            $available_siswa_barung = array_values(array_filter($available_siswa_barung, static function (array $row) use ($barung_tingkat_slug, &$barung_avail_usia_filtered): bool {
+                $ok = barung_siswa_lolos_usia_tingkat($barung_tingkat_slug, $row['tanggal_lahir'] ?? null);
+                if (!$ok) {
+                    $barung_avail_usia_filtered++;
+                }
+
+                return $ok;
+            }));
         }
     } catch (Exception $e) {
         $available_siswa_barung = [];
@@ -1069,18 +1311,25 @@ ksort($available_siswa_by_kelas, SORT_NATURAL | SORT_FLAG_CASE);
 $barung_modal_tabs_kelas = count($available_siswa_by_kelas) > 1;
 
 $barung_kelas_hint = '';
+$barung_golongan_hint = barung_golongan_for_slug($barung_tingkat_slug) ?? '';
 switch ($barung_tingkat_slug) {
     case 'pra_mula':
-        $barung_kelas_hint = 'Kelas 1–2';
+        $barung_kelas_hint = 'Kelas 1–2, usia kurang dari 11 tahun';
         break;
     case 'mula':
-        $barung_kelas_hint = 'Kelas 2–6';
+        $barung_kelas_hint = 'Kelas 2–6, usia kurang dari 11 tahun';
         break;
     case 'bantu':
-        $barung_kelas_hint = 'Kelas 2–6';
+        $barung_kelas_hint = 'Kelas 2–6, usia kurang dari 11 tahun';
         break;
     case 'tata':
-        $barung_kelas_hint = 'Kelas 4–6';
+        $barung_kelas_hint = 'Kelas 4–6, usia kurang dari 11 tahun';
+        break;
+    case 'pra_ramu':
+        $barung_kelas_hint = 'Siswa usia 11 tahun ke atas';
+        break;
+    case 'ramu':
+        $barung_kelas_hint = 'Siswa usia 11 tahun ke atas';
         break;
     case 'garuda':
         $barung_kelas_hint = 'Kelas 3–6';
@@ -1580,7 +1829,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-file-pdf"></i> PDF
                         </button>
                         <?php if ($can_manage_barung): ?>
-                        <button class="btn btn-primary ml-1" data-toggle="modal" data-target="#modalTambahAnggotaBarung" type="button" <?php echo $barung_bisa_modal_tambah ? '' : 'disabled'; ?> title="<?= $barung_bisa_modal_tambah ? '' : 'Pilih tab Pra Mula / Mula / Bantu / Tata untuk menambah dari data siswa' ?>">
+                        <button class="btn btn-primary ml-1" data-toggle="modal" data-target="#modalTambahAnggotaBarung" type="button" <?php echo $barung_bisa_modal_tambah ? '' : 'disabled'; ?> title="<?= $barung_bisa_modal_tambah ? '' : 'Pilih tab Pra Mula / Mula / Bantu / Tata / Pra Ramu / Ramu untuk menambah dari data siswa' ?>">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
                         <button class="btn btn-info ml-1" data-toggle="modal" data-target="#importModal" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
@@ -1606,6 +1855,16 @@ include '../templates/sidebar.php';
                     <input type="hidden" id="printDate" value="<?= htmlspecialchars($print_settings_data['tanggal_surat'] ?? date('d F Y')) ?>">
                     <input type="hidden" id="tingkatName" value="<?= htmlspecialchars($selected_tingkat_name) ?>">
                     <input type="hidden" id="id_tingkat_barung_hidden" value="<?= (int)$selected_tingkat_id ?>">
+                    <?php if ($can_manage_barung && ((int)($auto_pra_ramu_result['added'] ?? 0) > 0 || (int)($auto_pra_ramu_result['closed_siaga'] ?? 0) > 0)): ?>
+                        <div class="alert alert-info">
+                            Sistem otomatis memasukkan <?= (int)($auto_pra_ramu_result['added'] ?? 0) ?> siswa usia 11 tahun ke tingkat <strong>Pra Ramu</strong>
+                            <?php if ((int)($auto_pra_ramu_result['closed_siaga'] ?? 0) > 0): ?>
+                                dan menutup <?= (int)($auto_pra_ramu_result['closed_siaga'] ?? 0) ?> catatan aktif di golongan Siaga.
+                            <?php else: ?>
+                                .
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                     <?php if ($schema_error || $fetch_error || $table_error): ?>
                         <div class="alert alert-danger">
                             <strong>Terjadi masalah pada database.</strong><br>
@@ -1622,11 +1881,13 @@ include '../templates/sidebar.php';
                                     <?php
                                         $tid = (int)($t['id_tingkat_barung'] ?? 0);
                                         $active = $tid === $selected_tingkat_id;
-                                        $golongan = $t['golongan'] ?? 'Siaga';
+                                        $golongan = barung_golongan_for_tingkat($t['nama_tingkat'] ?? '', $t['golongan'] ?? 'Siaga');
                                         if ($golongan === 'Penggalang') {
                                             $pill_class = $active ? 'nav-link active bg-danger border-danger' : 'nav-link border border-danger text-danger';
+                                            $badge_class = $active ? 'badge-light' : 'badge-danger';
                                         } else {
                                             $pill_class = $active ? 'nav-link active bg-success border-success' : 'nav-link border border-success text-success';
+                                            $badge_class = $active ? 'badge-light' : 'badge-success';
                                         }
                                         $is_first = $index === 0;
                                         $is_last = $index === count($tingkat_list) - 1;
@@ -1637,6 +1898,7 @@ include '../templates/sidebar.php';
                                            role="tab" 
                                            style="pointer-events: auto; transition: none; <?= !$is_first ? 'border-left: 0; margin-left: -1px;' : '' ?> <?= !$is_last ? 'border-right: 0;' : '' ?> border-radius: 0;<?= $is_first ? ' border-top-left-radius: 4px; border-bottom-left-radius: 4px;' : '' ?><?= $is_last ? ' border-top-right-radius: 4px; border-bottom-right-radius: 4px;' : '' ?>">
                                             <?= htmlspecialchars($t['nama_tingkat']) ?>
+                                            <span class="badge <?= $badge_class ?> ml-1"><?= htmlspecialchars($golongan) ?></span>
                                         </a>
                                     </li>
                                 <?php endforeach; ?>
@@ -1756,7 +2018,7 @@ include '../templates/sidebar.php';
                 <div class="modal-body">
                     <?php if (!$barung_bisa_modal_tambah): ?>
                         <div class="alert alert-warning mb-0">
-                            Pemilihan siswa dari data kelas otomatis hanya untuk tingkat <strong>Pra Mula</strong>, <strong>Mula</strong>, <strong>Bantu</strong>, <strong>Tata</strong>, atau <strong>Garuda</strong>. Gunakan tombol Import untuk tingkat lain.
+                            Pemilihan siswa dari data kelas otomatis hanya untuk tingkat <strong>Pra Mula</strong>, <strong>Mula</strong>, <strong>Bantu</strong>, <strong>Tata</strong>, <strong>Pra Ramu</strong>, <strong>Ramu</strong>, atau <strong>Garuda</strong>. Gunakan tombol Import untuk tingkat lain.
                         </div>
                     <?php else: ?>
                         <?php if (!empty($barung_avail_sql_error)): ?>
@@ -1767,8 +2029,14 @@ include '../templates/sidebar.php';
                         <?php endif; ?>
                         <p class="text-muted mb-3">
                             Menampilkan siswa dari <strong><?= htmlspecialchars($barung_kelas_hint !== '' ? $barung_kelas_hint : 'kelas sesuai aturan tingkat') ?></strong>
-                            untuk tingkat ini. Yang sudah terdaftar ditandai dan tidak bisa dipilih ulang. Kolom <strong>NTA</strong> bisa dikosongkan dulu dan diisi kemudian lewat tombol Edit.
+                            untuk tingkat ini<?= $barung_golongan_hint !== '' ? ' (' . htmlspecialchars($barung_golongan_hint, ENT_QUOTES, 'UTF-8') . ')' : '' ?>.
+                            Batas usia <strong>Siaga</strong> maksimal 10 tahun 11 bulan; siswa yang sudah 11 tahun masuk <strong>Penggalang</strong> mulai tingkat <strong>Pra Ramu</strong>. Yang sudah terdaftar ditandai dan tidak bisa dipilih ulang. Kolom <strong>NTA</strong> bisa dikosongkan dulu dan diisi kemudian lewat tombol Edit.
                         </p>
+                        <?php if ($barung_avail_usia_filtered > 0): ?>
+                            <div class="alert alert-light border mb-3 small">
+                                <?= (int)$barung_avail_usia_filtered ?> siswa tidak ditampilkan karena tidak sesuai batas usia golongan tingkat ini.
+                            </div>
+                        <?php endif; ?>
                         <?php if (!empty($available_siswa_barung)): ?>
                             <div class="form-group mb-2">
                                 <div class="custom-control custom-checkbox">
@@ -1903,7 +2171,7 @@ include '../templates/sidebar.php';
                                 <?php if (!empty($barung_avail_kelas_tidak_terpetakan)): ?>
                                     <strong>Belum ada kelas yang dikenali sebagai bagian tingkat ini.</strong> Nama kelas di master harus bisa dipetakan ke kelas 1–6 (biasanya «I», «II», … «VI», atau angka «1», «2», … atau <code>id_kelas</code> bernilai 1–6 untuk kelas 1–6). Perbarui nama kelas di menu Kelas atau pastikan siswa sudah ada di kelas yang sesuai.
                                 <?php else: ?>
-                                    Tidak ada siswa baru yang dapat ditambahkan pada rentang kelas ini (semua siswa kelas tersebut sudah terdaftar di tingkat ini/tingkat lain, atau tidak ada siswa pada kelas-kelas itu di Data Siswa).
+                                    Tidak ada siswa baru yang dapat ditambahkan pada rentang kelas/usia ini (semua siswa sudah terdaftar di tingkat ini/tingkat lain, tidak ada siswa pada kelas tersebut, atau tidak sesuai batas usia golongan).
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
