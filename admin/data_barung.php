@@ -245,6 +245,19 @@ function barung_umur_bulan(?string $tanggal_lahir): ?int
     }
 }
 
+function barung_format_usia(?string $tanggal_lahir): string
+{
+    $umur_bulan = barung_umur_bulan($tanggal_lahir);
+    if ($umur_bulan === null) {
+        return '-';
+    }
+
+    $tahun = intdiv($umur_bulan, 12);
+    $bulan = $umur_bulan % 12;
+
+    return $tahun . ' tahun ' . $bulan . ' bulan';
+}
+
 function barung_siswa_lolos_usia_tingkat(?string $slug, ?string $tanggal_lahir): bool
 {
     $golongan = barung_golongan_for_slug($slug);
@@ -1948,6 +1961,7 @@ include '../templates/sidebar.php';
                                     <th width="14%">NTA</th>
                                     <th>Tempat Lahir</th>
                                     <th width="14%">Tanggal Lahir</th>
+                                    <th width="14%">Usia</th>
                                     <?php if ($can_manage_barung): ?><th width="15%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
@@ -1968,6 +1982,7 @@ include '../templates/sidebar.php';
                                             <td><?= htmlspecialchars($row['nta'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['tempat_lahir'] ?? '') ?></td>
                                             <td><?= !empty($row['tanggal_lahir']) ? htmlspecialchars(date('d-m-Y', strtotime((string)$row['tanggal_lahir']))) : '' ?></td>
+                                            <td><?= htmlspecialchars(barung_format_usia($row['tanggal_lahir'] ?? null), ENT_QUOTES, 'UTF-8') ?></td>
                                             <?php if ($can_manage_barung): ?><td>
                                                 <button class="btn btn-warning btn-sm edit-btn"
                                                     data-id="<?= (int)$row['id_peserta_didik_barung'] ?>"
