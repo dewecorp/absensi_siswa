@@ -1258,18 +1258,40 @@ function cleanupPramukaDataForSiswa(PDO $pdo, array $siswaIds = [], array $nisns
     }
 
     $hasIdSiswa = dbColumnExists($pdo, 'tb_peserta_didik_barung', 'id_siswa');
-    $stmt = $pdo->query('SELECT id_peserta_didik_barung, ' . ($hasIdSiswa ? 'id_siswa' : 'NULL AS id_siswa') . ', nta, nama_peserta_didik FROM tb_peserta_didik_barung');
+    $stmt = $pdo->query('SELECT id_peserta_didik_barung, ' . ($hasIdSiswa ? 'id_siswa' : 'NULL AS id_siswa') . ', nta, nama_peserta_didik FROM tb_peserta_didik_barung WHERE status != \'keluar\'');
     $participantIds = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $rowIdSiswa = (int)($row['id_siswa'] ?? 0);
         $rowNta = trim((string)($row['nta'] ?? ''));
         $rowName = strtolower(trim((string)($row['nama_peserta_didik'] ?? '')));
+        $rowNameNormalized = preg_replace('/[^a-z0-9]+/', '', $rowName);
 
+        // Match by id_siswa (most reliable)
         $matchById = $rowIdSiswa > 0 && in_array($rowIdSiswa, $siswaIds, true);
-        $matchByNisn = $rowNta !== '' && in_array($rowNta, $nisns, true);
-        $matchByNameFallback = $rowIdSiswa <= 0 && $rowNta === '' && $rowName !== '' && in_array($rowName, $names, true);
+        
+        // Match by NISN (nta column often contains nisn, or we try both ways)
+        $matchByNisn = false;
+        if ($rowNta !== '') {
+            $matchByNisn = in_array($rowNta, $nisns, true);
+        }
+        
+        // Match by name with normalization (more lenient)
+        $matchByName = false;
+        if ($rowNameNormalized !== '') {
+            foreach ($names as $searchName) {
+                $searchNameNormalized = preg_replace('/[^a-z0-9]+/', '', strtolower(trim($searchName)));
+                if ($searchNameNormalized !== '' && (
+                    $rowNameNormalized === $searchNameNormalized ||
+                    strpos($rowNameNormalized, $searchNameNormalized) !== false ||
+                    strpos($searchNameNormalized, $rowNameNormalized) !== false
+                )) {
+                    $matchByName = true;
+                    break;
+                }
+            }
+        }
 
-        if ($matchById || $matchByNisn || $matchByNameFallback) {
+        if ($matchById || $matchByNisn || $matchByName) {
             $participantIds[] = (int)$row['id_peserta_didik_barung'];
         }
     }
@@ -1281,20 +1303,26 @@ function cleanupPramukaDataForSiswa(PDO $pdo, array $siswaIds = [], array $nisns
         return ['peserta' => 0, 'sku' => 0];
     }
 
+    $pesertaDeleted = 0;
     $skuDeleted = 0;
+    
     foreach (array_chunk($participantIds, 500) as $chunk) {
         $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+        
+        // Delete SKU data first
         if (dbTableExists($pdo, 'tb_sku_kecakapan_nilai')) {
             $delSku = $pdo->prepare("DELETE FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung IN ($placeholders)");
             $delSku->execute($chunk);
             $skuDeleted += $delSku->rowCount();
         }
 
+        // Then delete pramuka members
         $delPeserta = $pdo->prepare("DELETE FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung IN ($placeholders)");
         $delPeserta->execute($chunk);
+        $pesertaDeleted += $delPeserta->rowCount();
     }
 
-    return ['peserta' => count($participantIds), 'sku' => $skuDeleted];
+    return ['peserta' => $pesertaDeleted, 'sku' => $skuDeleted];
 }
 
 function ensureAlumniOriginalIdColumn(PDO $pdo): void {

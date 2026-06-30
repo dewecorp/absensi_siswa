@@ -27,6 +27,19 @@ $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
 ];
 
+// Helper function for class detection (moved here so it's available throughout)
+if (!function_exists('detectClassLevel')) {
+    function detectClassLevel($name) {
+        $name = strtoupper(trim($name));
+        $roman_map = ['VI' => 6, 'V' => 5, 'IV' => 4, 'III' => 3, 'II' => 2, 'I' => 1];
+        foreach ($roman_map as $roman => $num) {
+            if (preg_match('/\b' . $roman . '\b/', $name) || $name === $roman) return $num;
+        }
+        if (preg_match('/(\d)/', $name, $matches)) return (int)$matches[1];
+        return 0;
+    }
+}
+
 // Get school profile for academic years
 $school_profile = getSchoolProfile($pdo);
 $current_tahun_ajaran = $school_profile['tahun_ajaran'];
@@ -156,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                 if ($target_class_id === 999999) {
                     ensureAlumniOriginalIdColumn($pdo);
 
-                    // Pre-fetch NISN map before siswa rows are moved out of active class
+                    // Pre-fetch NISN map and source class name before siswa rows are moved out of active class
                     $ph = str_repeat('?,', count($selected_students) - 1) . '?';
                     $nisnMap = $pdo->prepare("SELECT id_siswa, nisn FROM tb_siswa WHERE id_siswa IN ($ph)");
                     $nisnMap->execute($selected_students);
@@ -165,13 +178,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                         $siswaNisn[(int)$ns['id_siswa']] = (string)$ns['nisn'];
                     }
 
+                    // Get source class name to validate it's class 6 for proper cleanup
+                    $stmtSourceClass = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+                    $stmtSourceClass->execute([$source_class_id]);
+                    $source_class_name = (string)($stmtSourceClass->fetchColumn() ?: '');
+                    $is_class_6 = detectClassLevel($source_class_name) == 6;
+
+                    $total_peserta_deleted = 0;
+                    $total_sku_deleted = 0;
+
                     foreach ($selected_students as $id_siswa) {
                         $stmtSiswa = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_siswa = ?");
                         $stmtSiswa->execute([$id_siswa]);
                         $siswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
 
                         if ($siswa) {
-                            cleanupPramukaDataForSiswa($pdo, [(int)$id_siswa], [$siswaNisn[(int)$id_siswa] ?? $siswa['nisn'] ?? ''], [$siswa['nama_siswa'] ?? '']);
+                            // Clean up pramuka data (members, SKU scores, surat keterangan) when class 6 graduates
+                            if ($is_class_6) {
+                                // Method 1: Try function cleanup first
+                                $cleanup_result = cleanupPramukaDataForSiswa($pdo, [(int)$id_siswa], [$siswaNisn[(int)$id_siswa] ?? $siswa['nisn'] ?? ''], [$siswa['nama_siswa'] ?? '']);
+                                $peserta_this_student = $cleanup_result['peserta'];
+                                $sku_this_student = $cleanup_result['sku'];
+                                $total_peserta_deleted += $peserta_this_student;
+                                $total_sku_deleted += $sku_this_student;
+                                
+                                // Method 2: Direct aggressive cleanup with multiple fallback attempts
+                                // This ensures even if id_siswa/nisn/nama doesn't match, we catch data
+                                if ($peserta_this_student == 0) {
+                                    $attempt_count = 0;
+                                    
+                                    // Attempt 1: By id_siswa (most reliable)
+                                    if (!empty($id_siswa)) {
+                                        $checkStmt = $pdo->prepare("SELECT id_peserta_didik_barung FROM tb_peserta_didik_barung WHERE id_siswa = ?");
+                                        $checkStmt->execute([(int)$id_siswa]);
+                                        $records = $checkStmt->fetchAll(PDO::FETCH_COLUMN);
+                                        if (!empty($records)) {
+                                            $ph = implode(',', array_fill(0, count($records), '?'));
+                                            $pdo->prepare("DELETE FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung IN ($ph)")->execute($records);
+                                            $delStmt = $pdo->prepare("DELETE FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung IN ($ph)");
+                                            $delStmt->execute($records);
+                                            $total_peserta_deleted += $delStmt->rowCount();
+                                            $attempt_count++;
+                                        }
+                                    }
+                                    
+                                    // Attempt 2: By NISN (nta column) - if attempt 1 didn't work
+                                    if ($attempt_count == 0 && !empty($siswa['nisn'])) {
+                                        $checkStmt = $pdo->prepare("SELECT id_peserta_didik_barung FROM tb_peserta_didik_barung WHERE TRIM(IFNULL(nta, '')) = TRIM(?)");
+                                        $checkStmt->execute([$siswa['nisn']]);
+                                        $records = $checkStmt->fetchAll(PDO::FETCH_COLUMN);
+                                        if (!empty($records)) {
+                                            $ph = implode(',', array_fill(0, count($records), '?'));
+                                            $pdo->prepare("DELETE FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung IN ($ph)")->execute($records);
+                                            $delStmt = $pdo->prepare("DELETE FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung IN ($ph)");
+                                            $delStmt->execute($records);
+                                            $total_peserta_deleted += $delStmt->rowCount();
+                                            $attempt_count++;
+                                        }
+                                    }
+                                    
+                                    // Attempt 3: By normalized name matching
+                                    if ($attempt_count == 0 && !empty($siswa['nama_siswa'])) {
+                                        $normalized_name = strtolower(preg_replace('/[^a-z0-9]+/u', '', $siswa['nama_siswa']));
+                                        if (!empty($normalized_name)) {
+                                            // Get all records and do PHP-level normalization (safer than SQL regex)
+                                            $checkStmt = $pdo->query("SELECT id_peserta_didik_barung, nama_peserta_didik FROM tb_peserta_didik_barung");
+                                            $matching_ids = [];
+                                            foreach ($checkStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                                                $row_normalized = strtolower(preg_replace('/[^a-z0-9]+/u', '', $row['nama_peserta_didik']));
+                                                if ($row_normalized === $normalized_name) {
+                                                    $matching_ids[] = (int)$row['id_peserta_didik_barung'];
+                                                }
+                                            }
+                                            if (!empty($matching_ids)) {
+                                                $matching_ids = array_unique($matching_ids);
+                                                $ph = implode(',', array_fill(0, count($matching_ids), '?'));
+                                                $pdo->prepare("DELETE FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung IN ($ph)")->execute($matching_ids);
+                                                $delStmt = $pdo->prepare("DELETE FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung IN ($ph)");
+                                                $delStmt->execute($matching_ids);
+                                                $total_peserta_deleted += $delStmt->rowCount();
+                                                $attempt_count++;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
                             $stmtAlumniCheck = $pdo->prepare("SELECT id_alumni FROM tb_alumni WHERE (original_id_siswa = ? OR TRIM(nisn) = TRIM(?)) AND tahun_lulus = ? LIMIT 1");
                             $stmtAlumniCheck->execute([(int)$id_siswa, $siswa['nisn'], $current_tahun_ajaran]);
@@ -187,7 +278,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                             $stmtMoveOut->execute([$id_siswa]);
                         }
                     }
-                    $message = ['type' => 'success', 'text' => "Berhasil meluluskan " . count($selected_students) . " siswa ke Alumni."];
+                    
+                    // Final cleanup round: remove ALL pramuka records for the graduated students
+                    // by checking if their id_kelas is now NULL (status as alumni)
+                    if ($is_class_6) {
+                        // Direct cleanup: mark all pramuka records as 'keluar' for alumni students
+                        // First, find all records by id_siswa OR nta OR name
+                        $find_orphans = $pdo->prepare("
+                            SELECT p.id_peserta_didik_barung 
+                            FROM tb_peserta_didik_barung p
+                            WHERE p.id_siswa IN (" . str_repeat('?,', count($selected_students) - 1) . "?)
+                               OR (
+                                   p.nta IS NOT NULL 
+                                   AND TRIM(p.nta) <> ''
+                                   AND p.nta IN (SELECT nisn FROM tb_siswa WHERE id_siswa IN (" . str_repeat('?,', count($selected_students) - 1) . "?))
+                               )
+                        ");
+                        $params = array_merge($selected_students, $selected_students);
+                        $find_orphans->execute($params);
+                        $orphan_ids = $find_orphans->fetchAll(PDO::FETCH_COLUMN);
+                        
+                        if (!empty($orphan_ids)) {
+                            $orphan_ids = array_unique(array_filter(array_map('intval', $orphan_ids)));
+                            if (!empty($orphan_ids)) {
+                                // Clean up SKU scores
+                                $ph = implode(',', array_fill(0, count($orphan_ids), '?'));
+                                $pdo->prepare("DELETE FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung IN ($ph)")->execute($orphan_ids);
+                                
+                                // Count before update
+                                $countBefore = count($orphan_ids);
+                                
+                                // Mark pramuka records as 'keluar' instead of deleting (soft delete)
+                                $finalUpdate = $pdo->prepare("
+                                    UPDATE tb_peserta_didik_barung 
+                                    SET status = 'keluar', tanggal_keluar = NOW() 
+                                    WHERE id_peserta_didik_barung IN ($ph)
+                                ");
+                                $finalUpdate->execute($orphan_ids);
+                                $final_deleted = $finalUpdate->rowCount();
+                                
+                                // Only add to total if we haven't already counted these
+                                if ($total_peserta_deleted == 0) {
+                                    $total_peserta_deleted = $final_deleted;
+                                }
+                            }
+                        }
+                    }
+                    
+                    $message_text = "Berhasil meluluskan " . count($selected_students) . " siswa ke Alumni.";
+                    if ($is_class_6) {
+                        if ($total_peserta_deleted > 0 || $total_sku_deleted > 0) {
+                            $message_text .= " Dibersihkan: " . $total_peserta_deleted . " anggota pramuka, " . $total_sku_deleted . " data SKU.";
+                        } else {
+                            $message_text .= " (Tidak ada data pramuka untuk dihapus)";
+                        }
+                    }
+                    $message = ['type' => 'success', 'text' => $message_text];
                 } else {
                     $placeholders = str_repeat('?,', count($selected_students) - 1) . '?';
                     $sql = "UPDATE tb_siswa SET id_kelas = ? WHERE id_siswa IN ($placeholders) AND id_kelas = ?";
@@ -214,6 +360,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
 $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
 $all_classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Helper function for class detection
 // Helper function for class detection
 if (!function_exists('detectClassLevel')) {
     function detectClassLevel($name) {
@@ -406,6 +553,8 @@ require_once '../templates/sidebar.php';
                             Kelas tujuan memiliki <?= count($target_students) ?> siswa. Siswa yang akan <?= $mode == 'promote' ? 'naik' : 'batal naik' ?> akan ditambahkan ke kelas ini.
                         </div>
 
+
+
                         <div class="table-responsive">
                             <form method="POST">
                                 <input type="hidden" name="source_class_id" value="<?= $target_id ?>">
@@ -537,6 +686,40 @@ document.addEventListener('DOMContentLoaded', function() {
         const cb = $(this).closest('tr').find('.check-target');
         cb.prop('checked', !cb.prop('checked'));
         toggleDemoteBtn();
+    });
+
+    // Handle promotion form submission with class 6 specific confirmation
+    $('form').on('submit', function(e) {
+        const form = this;
+        const hasPromoteBtn = $(form).find('button[name="promote_students"]');
+        const hasClass6Warning = $('.alert-warning').length > 0;
+        
+        if (hasPromoteBtn.length && hasClass6Warning.length) {
+            const checkedCount = $(form).find('.check-source:checked').length;
+            if (checkedCount > 0) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Konfirmasi Kelulusan Kelas 6',
+                    html: '<p>Anda akan meluluskan <strong>' + checkedCount + '</strong> siswa.</p>' +
+                          '<p>Siswa ini akan otomatis dihapus dari:</p>' +
+                          '<ul style="text-align: left;">' +
+                          '<li>Anggota Pramuka</li>' +
+                          '<li>Data Syarat Kecakapan Umum (SKU)</li>' +
+                          '<li>Surat Keterangan</li>' +
+                          '</ul>',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Luluskan',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            }
+        }
     });
 });
 </script>

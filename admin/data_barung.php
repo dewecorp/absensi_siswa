@@ -1106,6 +1106,7 @@ if ($selected_tingkat_id > 0) {
             LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
             WHERE p.id_tingkat_barung = ?
               AND IFNULL(p.status, 'aktif') = 'aktif'
+              AND (s.id_kelas IS NOT NULL OR p.id_siswa IS NULL)
             ORDER BY k.nama_kelas ASC, p.nama_peserta_didik ASC
         ");
         $stmt->execute([$selected_tingkat_id]);
@@ -1854,6 +1855,9 @@ include '../templates/sidebar.php';
                         <button class="btn btn-danger ml-1 d-none" id="btn-delete-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-sign-out-alt"></i> Keluarkan Terpilih
                         </button>
+                        <a href="cleanup_pramuka_alumni.php" class="btn btn-secondary ml-1" title="Membersihkan data alumni dari pramuka">
+                            <i class="fas fa-broom"></i> Cleanup Alumni
+                        </a>
                         <?php endif; ?>
                     </div>
                 </div>

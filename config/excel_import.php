@@ -38,34 +38,92 @@ function normalizeNisnFromImportCell($raw) {
     return $s === '' ? '' : $s;
 }
 
-/** @return int|null id_siswa baris pertama yang cocok */
-function findStudentIdForImportDuplicate(PDO $pdo, string $nisnNormalized) {
-    if ($nisnNormalized === '') {
+function normalizeStudentNameForImport(?string $name): string {
+    $name = strtolower(trim((string)$name));
+    $name = preg_replace('/\s+/', ' ', $name);
+    return $name ?? '';
+}
+
+function normalizeDateForImport(?string $date): ?string {
+    $date = trim((string)$date);
+    if ($date === '') {
         return null;
     }
-    $exact = $pdo->prepare(
-        'SELECT id_siswa FROM tb_siswa WHERE TRIM(nisn) = ? ORDER BY id_siswa ASC LIMIT 1'
-    );
-    $exact->execute([$nisnNormalized]);
-    $found = $exact->fetch();
-    if ($found) {
-        return (int) $found['id_siswa'];
+
+    $formats = ['Y-m-d', 'd-m-Y', 'd/m/Y', 'm/d/Y'];
+    foreach ($formats as $format) {
+        $dt = DateTime::createFromFormat($format, $date);
+        if ($dt && $dt->format($format) === $date) {
+            return $dt->format('Y-m-d');
+        }
     }
-    // Excel angka menggugurkan nol di depan; bandingkan nilai numerik jika sepenuhnya digit
-    if (ctype_digit($nisnNormalized)) {
-        $num = $pdo->prepare(
+
+    $ts = strtotime($date);
+    return $ts ? date('Y-m-d', $ts) : null;
+}
+
+/** @return int|null id_siswa baris pertama yang cocok */
+function findStudentIdForImportDuplicate(PDO $pdo, string $nisnNormalized, string $namaSiswa = '', ?string $tanggalLahir = null, string $wali = '', $idKelas = null) {
+    if ($nisnNormalized !== '') {
+        $exact = $pdo->prepare(
+            'SELECT id_siswa FROM tb_siswa WHERE TRIM(nisn) = ? ORDER BY id_siswa ASC LIMIT 1'
+        );
+        $exact->execute([$nisnNormalized]);
+        $found = $exact->fetch();
+        if ($found) {
+            return (int) $found['id_siswa'];
+        }
+        // Excel angka menggugurkan nol di depan; bandingkan nilai numerik jika sepenuhnya digit.
+        if (ctype_digit($nisnNormalized)) {
+            $num = $pdo->prepare(
+                'SELECT id_siswa FROM tb_siswa
+                 WHERE TRIM(nisn) REGEXP \'^[0-9]+$\'
+                   AND CAST(TRIM(nisn) AS UNSIGNED) = CAST(? AS UNSIGNED)
+                 ORDER BY id_siswa ASC
+                 LIMIT 1'
+            );
+            $num->execute([$nisnNormalized]);
+            $row = $num->fetch();
+            if ($row) {
+                return (int) $row['id_siswa'];
+            }
+        }
+    }
+
+    $namaSiswa = normalizeStudentNameForImport($namaSiswa);
+    $tanggalLahir = normalizeDateForImport($tanggalLahir);
+    if ($namaSiswa !== '' && $tanggalLahir !== null) {
+        $byIdentity = $pdo->prepare(
             'SELECT id_siswa FROM tb_siswa
-             WHERE TRIM(nisn) REGEXP \'^[0-9]+$\'
-               AND CAST(TRIM(nisn) AS UNSIGNED) = CAST(? AS UNSIGNED)
+             WHERE LOWER(TRIM(nama_siswa)) = ? AND tanggal_lahir = ?
              ORDER BY id_siswa ASC
              LIMIT 1'
         );
-        $num->execute([$nisnNormalized]);
-        $row = $num->fetch();
+        $byIdentity->execute([$namaSiswa, $tanggalLahir]);
+        $row = $byIdentity->fetch();
         if ($row) {
-            return (int) $row['id_siswa'];
+            return (int)$row['id_siswa'];
         }
     }
+
+    $wali = normalizeStudentNameForImport($wali);
+    $idKelas = trim((string)$idKelas);
+    if ($namaSiswa !== '' && $wali !== '' && $idKelas !== '') {
+        $byWaliAndClass = $pdo->prepare(
+            'SELECT id_siswa FROM tb_siswa
+             WHERE LOWER(TRIM(nama_siswa)) = ?
+               AND LOWER(TRIM(IFNULL(wali, \'\'))) = ?
+               AND id_kelas = ?
+             ORDER BY id_siswa ASC
+             LIMIT 1'
+        );
+        $byWaliAndClass->execute([$namaSiswa, $wali, $idKelas]);
+        $row = $byWaliAndClass->fetch();
+        if ($row) {
+            return (int)$row['id_siswa'];
+        }
+    }
+
     return null;
 }
 
@@ -242,6 +300,7 @@ function importStudentsFromExcelFile($filePath) {
                 $jenis_kelamin = trim($row[2]);
                 $tempat_lahir = trim($row[3]);
                 $tanggal_lahir = trim($row[4]);
+                $tanggal_lahir_db = normalizeDateForImport($tanggal_lahir);
                 $wali = trim($row[5]);
                 $id_kelas = trim($row[6]);
                 
@@ -257,7 +316,7 @@ function importStudentsFromExcelFile($filePath) {
                     continue;
                 }
                 
-                $existingId = findStudentIdForImportDuplicate($pdo, $nisn);
+                $existingId = findStudentIdForImportDuplicate($pdo, $nisn, $nama_siswa, $tanggal_lahir_db, $wali, $id_kelas);
                 
                 if ($existingId !== null) {
                     // Update existing student (satu baris, hindari sisip ganda walau pola nisn di DB beda dengan sel Excel)
@@ -266,7 +325,7 @@ function importStudentsFromExcelFile($filePath) {
                             'UPDATE tb_siswa SET nama_siswa=?, nisn=?, jenis_kelamin=?, tempat_lahir=?, tanggal_lahir=?, wali=?, id_kelas=? WHERE id_siswa=?'
                         );
                         $updateStmt->execute(
-                            [$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas, $existingId]
+                            [$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir_db, $wali, $id_kelas, $existingId]
                         );
                         $rowCount++;
                         $updatedCount++;
@@ -277,7 +336,7 @@ function importStudentsFromExcelFile($filePath) {
                     // Insert new student
                     try {
                         $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                        $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas]);
+                        $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir_db, $wali, $id_kelas]);
                         $rowCount++;
                     } catch (PDOException $e) {
                         $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
@@ -434,7 +493,7 @@ function importStudentsFromCSV($filePath) {
                 continue;
             }
             
-            $existingId = findStudentIdForImportDuplicate($pdo, $nisn);
+            $existingId = findStudentIdForImportDuplicate($pdo, $nisn, $nama_siswa, null, '', $id_kelas);
             
             if ($existingId !== null) {
                 // Update existing student
@@ -469,7 +528,7 @@ function importStudentsFromCSV($filePath) {
                 continue;
             }
             
-            $existingId = findStudentIdForImportDuplicate($pdo, $nisn);
+            $existingId = findStudentIdForImportDuplicate($pdo, $nisn, $nama_siswa, null, '', $id_kelas);
             
             if ($existingId !== null) {
                 // Update existing student
