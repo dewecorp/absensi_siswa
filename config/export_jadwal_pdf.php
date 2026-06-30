@@ -168,7 +168,7 @@ $html = '
     <style>
         @page {
             size: 330mm 215mm; /* F4 / Folio Landscape */
-            margin: 5mm 10mm 10mm 10mm;
+            margin: 3mm 10mm 10mm 10mm; /* margin atas lebih kecil */
         }
         @media print {
             body {
@@ -182,19 +182,25 @@ $html = '
         body { font-family: Arial, sans-serif; font-size: 10pt; margin: 0; padding: 0; }
         .header { 
             text-align: center; 
-            margin: 0 0 8px 0; 
+            margin: 0 0 5px 0; 
             border-bottom: 3px double black; 
-            padding: 8px 0;
+            padding: 5px 20px;
             line-height: 1.2;
-            position: relative;
         }
-        .header img { 
-            width: 90px;
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .header-logo {
+            width: 100px;
             height: auto;
-            position: absolute;
-            left: 25px;
-            top: 50%;
-            transform: translateY(-50%);
+            flex-shrink: 0;
+            margin-right: 30px;
+        }
+        .header-text {
+            flex-grow: 1;
+            text-align: center;
         }
         .header h2, .header h3, .header p { margin: 2px 0; padding: 0; }
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
@@ -229,19 +235,20 @@ $html = '
         <i class="fas fa-print"></i> Cetak / Simpan PDF
     </button>
 
-    <div class="header">';
+    <div class="header">
+        <div class="header-container">';
     
-if ($logo_full_path) {
-    $type = pathinfo($logo_full_path, PATHINFO_EXTENSION);
-    $data = file_get_contents($logo_full_path);
-    $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
-    $html .= '<img src="' . $base64 . '" alt="Logo">';
+if ($logo_path) {
+    $html .= '<img class="header-logo" src="' . htmlspecialchars($logo_path) . '" alt="Logo">';
 }
 
 $html .= '
-        <h3>' . strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN ISLAM') . '</h3>
-        <h2>' . strtoupper($school_profile['nama_madrasah']) . '</h2>
-        <p style="font-size: 12pt; font-weight: bold; margin: 3px 0 0 0;">TAHUN AJARAN ' . ($school_profile['tahun_ajaran'] ?? '') . '</p>
+            <div class="header-text">
+                <h3>' . strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN ISLAM') . '</h3>
+                <h2>' . strtoupper($school_profile['nama_madrasah']) . '</h2>
+                <p style="font-size: 12pt; font-weight: bold; margin: 3px 0 0 0;">TAHUN AJARAN ' . ($school_profile['tahun_ajaran'] ?? '') . '</p>
+            </div>
+        </div>
     </div>
 
     <h3 style="text-align: center;">' . $display_title . '</h3>
