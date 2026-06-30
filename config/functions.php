@@ -1130,6 +1130,99 @@ function updateSholatAttendance(PDO $pdo, int $id_siswa, string $tanggal, string
     }
 }
 
+function dbTableExists(PDO $pdo, string $table): bool {
+    try {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+        $stmt->execute([$table]);
+        return (int)$stmt->fetchColumn() > 0;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function dbColumnExists(PDO $pdo, string $table, string $column): bool {
+    try {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+        $stmt->execute([$table, $column]);
+        return (int)$stmt->fetchColumn() > 0;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Hapus data Pramuka yang melekat pada siswa aktif/lulus/alumni.
+ * Sumber surat keterangan adalah tb_peserta_didik_barung, jadi penghapusan
+ * anggota otomatis membersihkan daftar surat keterangan juga.
+ *
+ * @param int[] $siswaIds
+ * @param string[] $nisns
+ * @param string[] $names
+ * @return array{peserta:int, sku:int}
+ */
+function cleanupPramukaDataForSiswa(PDO $pdo, array $siswaIds = [], array $nisns = [], array $names = []): array {
+    if (!dbTableExists($pdo, 'tb_peserta_didik_barung')) {
+        return ['peserta' => 0, 'sku' => 0];
+    }
+
+    $siswaIds = array_values(array_unique(array_filter(array_map('intval', $siswaIds), static function ($v) {
+        return $v > 0;
+    })));
+    $nisns = array_values(array_unique(array_filter(array_map(static function ($v) {
+        return trim((string)$v);
+    }, $nisns), static function ($v) {
+        return $v !== '';
+    })));
+    $names = array_values(array_unique(array_filter(array_map(static function ($v) {
+        return strtolower(trim((string)$v));
+    }, $names), static function ($v) {
+        return $v !== '';
+    })));
+
+    if (empty($siswaIds) && empty($nisns) && empty($names)) {
+        return ['peserta' => 0, 'sku' => 0];
+    }
+
+    $hasIdSiswa = dbColumnExists($pdo, 'tb_peserta_didik_barung', 'id_siswa');
+    $stmt = $pdo->query('SELECT id_peserta_didik_barung, ' . ($hasIdSiswa ? 'id_siswa' : 'NULL AS id_siswa') . ', nta, nama_peserta_didik FROM tb_peserta_didik_barung');
+    $participantIds = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $rowIdSiswa = (int)($row['id_siswa'] ?? 0);
+        $rowNta = trim((string)($row['nta'] ?? ''));
+        $rowName = strtolower(trim((string)($row['nama_peserta_didik'] ?? '')));
+
+        $matchById = $rowIdSiswa > 0 && in_array($rowIdSiswa, $siswaIds, true);
+        $matchByNisn = $rowNta !== '' && in_array($rowNta, $nisns, true);
+        $matchByNameFallback = $rowIdSiswa <= 0 && $rowNta === '' && $rowName !== '' && in_array($rowName, $names, true);
+
+        if ($matchById || $matchByNisn || $matchByNameFallback) {
+            $participantIds[] = (int)$row['id_peserta_didik_barung'];
+        }
+    }
+
+    $participantIds = array_values(array_unique(array_filter($participantIds, static function ($v) {
+        return $v > 0;
+    })));
+    if (empty($participantIds)) {
+        return ['peserta' => 0, 'sku' => 0];
+    }
+
+    $skuDeleted = 0;
+    foreach (array_chunk($participantIds, 500) as $chunk) {
+        $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+        if (dbTableExists($pdo, 'tb_sku_kecakapan_nilai')) {
+            $delSku = $pdo->prepare("DELETE FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung IN ($placeholders)");
+            $delSku->execute($chunk);
+            $skuDeleted += $delSku->rowCount();
+        }
+
+        $delPeserta = $pdo->prepare("DELETE FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung IN ($placeholders)");
+        $delPeserta->execute($chunk);
+    }
+
+    return ['peserta' => count($participantIds), 'sku' => $skuDeleted];
+}
+
 /**
  * Jenjang pendidikan formal (kolom tb_guru.pendidikan).
  *

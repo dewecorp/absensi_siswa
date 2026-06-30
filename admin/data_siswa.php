@@ -233,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_delete_siswa'])) 
             $id = (int)$id;
             if ($id > 0) {
                 // Get student name for logging
-                $stmt = $pdo->prepare("SELECT nama_siswa FROM tb_siswa WHERE id_siswa = ?");
+                $stmt = $pdo->prepare("SELECT nama_siswa, nisn FROM tb_siswa WHERE id_siswa = ?");
                 $stmt->execute([$id]);
                 $student = $stmt->fetch(PDO::FETCH_ASSOC);
                 
@@ -248,11 +248,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_delete_siswa'])) 
                         continue;
                     }
                     
-                    $stmt = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
-                    if ($stmt->execute([$id])) {
+                    try {
+                        if (!$pdo->inTransaction()) {
+                            $pdo->beginTransaction();
+                        }
+                        $pramukaCleanup = cleanupPramukaDataForSiswa($pdo, [$id], [$student['nisn'] ?? ''], [$student['nama_siswa'] ?? '']);
+                        $stmt = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
+                        $ok = $stmt->execute([$id]);
+                        if ($ok) {
+                            if ($pdo->inTransaction()) {
+                                $pdo->commit();
+                            }
+                        } elseif ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+                    } catch (Exception $e) {
+                        if ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+                        $errors[] = "Siswa {$student['nama_siswa']} gagal dihapus: " . $e->getMessage();
+                        continue;
+                    }
+
+                    if ($ok) {
                         $deletedCount++;
                         $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                        $log_result = logActivity($pdo, $username, 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']}");
+                        $log_result = logActivity($pdo, $username, 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']} dan membersihkan {$pramukaCleanup['peserta']} data anggota Pramuka/Barung");
                         if (!$log_result) error_log("Failed to log activity for Hapus Siswa: {$student['nama_siswa']}");
                     }
                 }
@@ -279,18 +300,35 @@ if ($_POST['delete_siswa'] ?? false) {
     if ($id_siswa) {
         global $pdo;
         // Get student name for logging
-        $stmt = $pdo->prepare("SELECT nama_siswa FROM tb_siswa WHERE id_siswa = ?");
+        $stmt = $pdo->prepare("SELECT nama_siswa, nisn FROM tb_siswa WHERE id_siswa = ?");
         $stmt->execute([$id_siswa]);
         $student = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($student) {
-            $stmt = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
-            if ($stmt->execute([$id_siswa])) {
+            try {
+                $pdo->beginTransaction();
+                $pramukaCleanup = cleanupPramukaDataForSiswa($pdo, [$id_siswa], [$student['nisn'] ?? ''], [$student['nama_siswa'] ?? '']);
+                $stmt = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
+                $ok = $stmt->execute([$id_siswa]);
+                if ($ok) {
+                    $pdo->commit();
+                } else {
+                    $pdo->rollBack();
+                }
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $message = ['type' => 'danger', 'text' => 'Gagal menghapus data siswa: ' . $e->getMessage()];
+                $ok = false;
+            }
+
+            if ($ok) {
                 $message = ['type' => 'success', 'text' => 'Data siswa berhasil dihapus!'];
                 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
-                $log_result = logActivity($pdo, $username, 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']}");
+                $log_result = logActivity($pdo, $username, 'Hapus Siswa', "Menghapus data siswa: {$student['nama_siswa']} dan membersihkan {$pramukaCleanup['peserta']} data anggota Pramuka/Barung");
                 if (!$log_result) error_log("Failed to log activity for Hapus Siswa: {$student['nama_siswa']}");
-            } else {
+            } elseif ($message === null) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menghapus data siswa!'];
             }
         } else {
