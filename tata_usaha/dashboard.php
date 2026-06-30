@@ -14,7 +14,8 @@ $page_title = 'Dashboard';
 $stmt = $pdo->query("SELECT COUNT(*) as total_siswa, 
                              SUM(CASE WHEN jenis_kelamin = 'L' THEN 1 ELSE 0 END) as total_laki,
                              SUM(CASE WHEN jenis_kelamin = 'P' THEN 1 ELSE 0 END) as total_perempuan
-                      FROM tb_siswa");
+                      FROM tb_siswa
+                      WHERE id_kelas IS NOT NULL");
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $total_siswa = isset($result['total_siswa']) ? (int)$result['total_siswa'] : 0;
 $siswa_laki = isset($result['total_laki']) ? (int)$result['total_laki'] : 0;

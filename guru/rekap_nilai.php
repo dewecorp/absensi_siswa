@@ -159,10 +159,8 @@ if ($selected_class && $selected_jenis) {
         }));
     }
     
-    // Get Students
-    $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
-    $stmt->execute([$selected_class_id]);
-    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Ambil siswa aktif dan siswa historis yang masih punya nilai tersimpan untuk kelas ini.
+    $students = getStudentsForNilaiKelas($pdo, (int)$selected_class_id, (string)$tahun_ajaran, (string)$semester_aktif, $selected_jenis === 'Harian' ? null : (string)$db_jenis, null);
     $progress_total = count($subjects);
     $mapel_has_data = [];
     foreach ($subjects as $mapel) {

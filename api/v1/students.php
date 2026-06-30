@@ -34,6 +34,7 @@ try {
                      k.id_kelas, k.nama_kelas 
               FROM tb_siswa s 
               LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas 
+              WHERE s.id_kelas IS NOT NULL
               ORDER BY k.nama_kelas ASC, s.nama_siswa ASC";
     
     $stmt = $pdo->query($query);

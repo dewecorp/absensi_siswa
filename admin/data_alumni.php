@@ -55,6 +55,7 @@ $(document).ready(function() {
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS `tb_alumni` (
         `id_alumni` int NOT NULL AUTO_INCREMENT,
+        `original_id_siswa` int DEFAULT NULL,
         `nama_siswa` varchar(100) NOT NULL,
         `nisn` varchar(20) NOT NULL,
         `jenis_kelamin` enum('L','P') DEFAULT NULL,
@@ -68,6 +69,7 @@ try {
 
     // Check for missing columns and add them if they don't exist
     $columns_to_check = [
+        'original_id_siswa' => "INT DEFAULT NULL AFTER id_alumni",
         'tempat_lahir' => "VARCHAR(100) DEFAULT NULL AFTER jenis_kelamin",
         'tanggal_lahir' => "DATE DEFAULT NULL AFTER tempat_lahir",
         'wali' => "VARCHAR(100) DEFAULT NULL AFTER tanggal_lahir"

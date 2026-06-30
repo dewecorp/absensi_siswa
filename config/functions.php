@@ -1223,6 +1223,61 @@ function cleanupPramukaDataForSiswa(PDO $pdo, array $siswaIds = [], array $nisns
     return ['peserta' => count($participantIds), 'sku' => $skuDeleted];
 }
 
+function ensureAlumniOriginalIdColumn(PDO $pdo): void {
+    if (!dbTableExists($pdo, 'tb_alumni')) {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `tb_alumni` (
+            `id_alumni` int NOT NULL AUTO_INCREMENT,
+            `original_id_siswa` int DEFAULT NULL,
+            `nama_siswa` varchar(100) NOT NULL,
+            `nisn` varchar(20) NOT NULL,
+            `jenis_kelamin` enum('L','P') DEFAULT NULL,
+            `tempat_lahir` varchar(100) DEFAULT NULL,
+            `tanggal_lahir` date DEFAULT NULL,
+            `wali` varchar(100) DEFAULT NULL,
+            `tahun_lulus` varchar(20) NOT NULL,
+            `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id_alumni`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+    if (!dbColumnExists($pdo, 'tb_alumni', 'original_id_siswa')) {
+        $pdo->exec('ALTER TABLE tb_alumni ADD COLUMN original_id_siswa INT NULL AFTER id_alumni');
+    }
+}
+
+function getStudentsForNilaiKelas(PDO $pdo, int $id_kelas, string $tahun_ajaran, string $semester, ?string $jenis_semester = null, ?int $id_mapel = null): array {
+    $extra = '';
+    if ($jenis_semester !== null && $jenis_semester !== '') {
+        $extra .= ' AND ns.jenis_semester = ?';
+    }
+    if ($id_mapel !== null && $id_mapel > 0) {
+        $extra .= ' AND ns.id_mapel = ?';
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT s.*
+        FROM tb_siswa s
+        LEFT JOIN tb_nilai_semester ns ON ns.id_siswa = s.id_siswa
+            AND ns.id_kelas = ?
+            AND ns.tahun_ajaran = ?
+            AND ns.semester = ?
+            $extra
+        WHERE s.id_kelas = ? OR ns.id_siswa IS NOT NULL
+        ORDER BY s.nama_siswa ASC
+    ");
+
+    $orderedParams = [$id_kelas, $tahun_ajaran, $semester];
+    if ($jenis_semester !== null && $jenis_semester !== '') {
+        $orderedParams[] = $jenis_semester;
+    }
+    if ($id_mapel !== null && $id_mapel > 0) {
+        $orderedParams[] = $id_mapel;
+    }
+    $orderedParams[] = $id_kelas;
+
+    $stmt->execute($orderedParams);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 /**
  * Jenjang pendidikan formal (kolom tb_guru.pendidikan).
  *

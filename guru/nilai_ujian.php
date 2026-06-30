@@ -132,10 +132,8 @@ $nilai_min_target_setting = null;
 $nilai_max_target_setting = null;
 
 if ($selected_class && $selected_mapel) {
-    // Get students
-    $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
-    $stmt->execute([$selected_class_id]);
-    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Ambil siswa aktif dan siswa historis yang nilainya tersimpan untuk kelas ini.
+    $students = getStudentsForNilaiKelas($pdo, (int)$selected_class_id, (string)$tahun_ajaran, (string)$semester_aktif, (string)$jenis_semester, (int)$selected_mapel_id);
 
     // Get grades
     $stmt = $pdo->prepare("

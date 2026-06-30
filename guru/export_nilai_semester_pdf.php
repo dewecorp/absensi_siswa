@@ -83,10 +83,8 @@ if (strpos($mapel_info['nama_mapel'], 'Asmaul Husna') !== false ||
 // School profile already fetched above
 
 
-// Get Students
-$stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
-$stmt->execute([$selected_class_id]);
-$students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get active students and historical students that still have grades for this class.
+$students = getStudentsForNilaiKelas($pdo, (int)$selected_class_id, (string)$tahun_ajaran, (string)$semester_aktif, (string)$jenis_semester, (int)$selected_mapel_id);
 
 // Get Grades
 $grades_data = [];

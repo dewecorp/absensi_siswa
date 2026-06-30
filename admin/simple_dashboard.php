@@ -11,7 +11,7 @@ if (!isAuthorized(['admin'])) {
 $page_title = 'Dashboard';
 
 // Get statistics
-$stmt = $pdo->query("SELECT COUNT(*) as total_siswa FROM tb_siswa");
+$stmt = $pdo->query("SELECT COUNT(*) as total_siswa FROM tb_siswa WHERE id_kelas IS NOT NULL");
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 $total_siswa = isset($result['total_siswa']) ? (int)$result['total_siswa'] : 0;
 

@@ -9,6 +9,12 @@ if (!isAuthorized(['admin'])) {
 
 $page_title = 'Kenaikan Kelas';
 
+try {
+    ensureAlumniOriginalIdColumn($pdo);
+} catch (Exception $e) {
+    // Kolom ini hanya pengait riwayat; proses utama akan menampilkan error jika benar-benar gagal saat dipakai.
+}
+
 // Define CSS libraries for this page
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
@@ -53,9 +59,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                         $alumni = $stmtAlumni->fetch(PDO::FETCH_ASSOC);
 
                         if ($alumni) {
-                            $stmtBack = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
-                            $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $target_class_id]);
-                            $new_id_siswa = (int)$pdo->lastInsertId();
+                            $original_id_siswa = (int)($alumni['original_id_siswa'] ?? 0);
+                            $stmtExisting = null;
+                            if ($original_id_siswa > 0) {
+                                $stmtExisting = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE id_siswa = ? LIMIT 1");
+                                $stmtExisting->execute([$original_id_siswa]);
+                            }
+                            $existing_id_siswa = $stmtExisting ? (int)($stmtExisting->fetchColumn() ?: 0) : 0;
+                            if ($existing_id_siswa <= 0 && trim((string)($alumni['nisn'] ?? '')) !== '') {
+                                $stmtExisting = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE TRIM(nisn) = TRIM(?) ORDER BY id_siswa ASC LIMIT 1");
+                                $stmtExisting->execute([$alumni['nisn']]);
+                                $existing_id_siswa = (int)($stmtExisting->fetchColumn() ?: 0);
+                            }
+
+                            if ($existing_id_siswa > 0) {
+                                $stmtBack = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, id_kelas = ? WHERE id_siswa = ?");
+                                $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $target_class_id, $existing_id_siswa]);
+                                $new_id_siswa = $existing_id_siswa;
+                            } else {
+                                $stmtBack = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
+                                $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $target_class_id]);
+                                $new_id_siswa = (int)$pdo->lastInsertId();
+                            }
 
                             // Restore barung records to aktif and re-link to new id_siswa.
                             // Old barung rows carry the OLD id_siswa (= id_alumni), so we match
@@ -121,7 +146,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
             } else {
                 // HANDLE PROMOTION (NAIK KELAS)
                 if ($target_class_id === 999999) {
-                    // Pre-fetch NISN map before siswa rows are deleted
+                    ensureAlumniOriginalIdColumn($pdo);
+
+                    // Pre-fetch NISN map before siswa rows are moved out of active class
                     $ph = str_repeat('?,', count($selected_students) - 1) . '?';
                     $nisnMap = $pdo->prepare("SELECT id_siswa, nisn FROM tb_siswa WHERE id_siswa IN ($ph)");
                     $nisnMap->execute($selected_students);
@@ -136,25 +163,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                         $siswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
 
                         if ($siswa) {
-                            // Soft-delete from barung: direct id_siswa link OR NISN stored as NTA
-                            $nisn_val = $siswaNisn[(int)$id_siswa] ?? '';
-                            $barUpdate = $pdo->prepare("
-                                UPDATE tb_peserta_didik_barung
-                                SET status = 'keluar', tanggal_keluar = NOW()
-                                WHERE IFNULL(status, 'aktif') = 'aktif'
-                                  AND (
-                                      (id_siswa IS NOT NULL AND id_siswa = ?)
-                                      OR (id_siswa IS NULL AND ? <> ''
-                                          AND CONVERT(TRIM(IFNULL(nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
-                                              = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci)
-                                  )
-                            ");
-                            $barUpdate->execute([(int)$id_siswa, $nisn_val, $nisn_val]);
+                            cleanupPramukaDataForSiswa($pdo, [(int)$id_siswa], [$siswaNisn[(int)$id_siswa] ?? $siswa['nisn'] ?? ''], [$siswa['nama_siswa'] ?? '']);
 
-                            $stmtAlumni = $pdo->prepare("INSERT INTO tb_alumni (nama_siswa, nisn, jenis_kelamin, tahun_lulus) VALUES (?, ?, ?, ?)");
-                            $stmtAlumni->execute([$siswa['nama_siswa'], $siswa['nisn'], $siswa['jenis_kelamin'], $current_tahun_ajaran]);
-                            $stmtDel = $pdo->prepare("DELETE FROM tb_siswa WHERE id_siswa = ?");
-                            $stmtDel->execute([$id_siswa]);
+                            $stmtAlumniCheck = $pdo->prepare("SELECT id_alumni FROM tb_alumni WHERE (original_id_siswa = ? OR TRIM(nisn) = TRIM(?)) AND tahun_lulus = ? LIMIT 1");
+                            $stmtAlumniCheck->execute([(int)$id_siswa, $siswa['nisn'], $current_tahun_ajaran]);
+                            $existingAlumniId = (int)($stmtAlumniCheck->fetchColumn() ?: 0);
+                            if ($existingAlumniId > 0) {
+                                $stmtAlumni = $pdo->prepare("UPDATE tb_alumni SET original_id_siswa = ?, nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, wali = ? WHERE id_alumni = ?");
+                                $stmtAlumni->execute([(int)$id_siswa, $siswa['nama_siswa'], $siswa['nisn'], $siswa['jenis_kelamin'], $siswa['tempat_lahir'] ?? null, $siswa['tanggal_lahir'] ?? null, $siswa['wali'] ?? null, $existingAlumniId]);
+                            } else {
+                                $stmtAlumni = $pdo->prepare("INSERT INTO tb_alumni (original_id_siswa, nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, tahun_lulus) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                                $stmtAlumni->execute([(int)$id_siswa, $siswa['nama_siswa'], $siswa['nisn'], $siswa['jenis_kelamin'], $siswa['tempat_lahir'] ?? null, $siswa['tanggal_lahir'] ?? null, $siswa['wali'] ?? null, $current_tahun_ajaran]);
+                            }
+                            $stmtMoveOut = $pdo->prepare("UPDATE tb_siswa SET id_kelas = NULL WHERE id_siswa = ?");
+                            $stmtMoveOut->execute([$id_siswa]);
                         }
                     }
                     $message = ['type' => 'success', 'text' => "Berhasil meluluskan " . count($selected_students) . " siswa ke Alumni."];
