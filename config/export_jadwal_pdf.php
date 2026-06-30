@@ -22,10 +22,13 @@ $qr_img = '<img src="' . $qr_url . '" alt="QR Signature" style="width: 80px; hei
 
 $logo_file = $school_profile['logo'] ?? '';
 $logo_path = '';
+$logo_full_path = '';
 if ($logo_file && file_exists(__DIR__ . '/../assets/img/' . $logo_file)) {
     $logo_path = '../assets/img/' . $logo_file;
+    $logo_full_path = __DIR__ . '/../assets/img/' . $logo_file;
 } elseif (file_exists(__DIR__ . '/../assets/img/logo.png')) {
     $logo_path = '../assets/img/logo.png';
+    $logo_full_path = __DIR__ . '/../assets/img/logo.png';
 }
 
 // Urutan kolom hari mengikuti profil libur mingguan (Jumat vs Ahad)
@@ -165,7 +168,7 @@ $html = '
     <style>
         @page {
             size: 330mm 215mm; /* F4 / Folio Landscape */
-            margin: 10mm;
+            margin: 5mm 10mm 10mm 10mm;
         }
         @media print {
             body {
@@ -176,10 +179,24 @@ $html = '
                 display: none;
             }
         }
-        body { font-family: Arial, sans-serif; font-size: 10pt; }
-        .header { text-align: center; margin-bottom: 10px; border-bottom: 3px double black; padding-bottom: 5px; position: relative; min-height: 90px; }
-        .header img { width: 80px; position: absolute; left: 10px; top: 5px; }
-        .header h2, .header h3, .header p { margin: 2px 0; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; margin: 0; padding: 0; }
+        .header { 
+            text-align: center; 
+            margin: 0 0 8px 0; 
+            border-bottom: 3px double black; 
+            padding: 8px 0;
+            line-height: 1.2;
+            position: relative;
+        }
+        .header img { 
+            width: 90px;
+            height: auto;
+            position: absolute;
+            left: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header h2, .header h3, .header p { margin: 2px 0; padding: 0; }
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { border: 1px solid black; padding: 3px; text-align: center; font-size: 9pt; word-wrap: break-word; }
         th { background-color: #f0f0f0; }
@@ -214,21 +231,17 @@ $html = '
 
     <div class="header">';
     
-if ($logo_path) {
-    // For HTML print, we can use direct path or base64. Base64 is safer for cross-browser printing sometimes.
-    // Reusing the base64 logic just in case path access is restricted, though relative path usually works.
-    // Actually, simple src is better for HTML if accessible.
-    // Let's use base64 to be 100% sure it prints.
-    $type = pathinfo($logo_path, PATHINFO_EXTENSION);
-    $data = file_get_contents($logo_path);
+if ($logo_full_path) {
+    $type = pathinfo($logo_full_path, PATHINFO_EXTENSION);
+    $data = file_get_contents($logo_full_path);
     $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
-    $html .= '<img src="' . $base64 . '">';
+    $html .= '<img src="' . $base64 . '" alt="Logo">';
 }
 
 $html .= '
         <h3>' . strtoupper($school_profile['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN ISLAM') . '</h3>
         <h2>' . strtoupper($school_profile['nama_madrasah']) . '</h2>
-        <p style="font-size: 12pt; font-weight: bold;">TAHUN AJARAN ' . ($school_profile['tahun_ajaran'] ?? '') . '</p>
+        <p style="font-size: 12pt; font-weight: bold; margin: 3px 0 0 0;">TAHUN AJARAN ' . ($school_profile['tahun_ajaran'] ?? '') . '</p>
     </div>
 
     <h3 style="text-align: center;">' . $display_title . '</h3>
