@@ -169,6 +169,80 @@ function isTahunAjaranFormatValid(?string $ta): bool {
     return (int)$m[2] === (int)$m[1] + 1;
 }
 
+/** Tahun ajaran aktif yang benar-benar disimpan di Pengaturan. */
+function getTahunAjaranAktifDariPengaturan(PDO $pdo): string {
+    try {
+        $stmt = $pdo->query("SELECT tahun_ajaran FROM tb_profil_madrasah ORDER BY id ASC LIMIT 1");
+        return trim((string)($stmt ? $stmt->fetchColumn() : ''));
+    } catch (Throwable $e) {
+        return '';
+    }
+}
+
+/** Simpan snapshot siswa baru tahun ajaran aktif sekali saja, agar tidak berubah saat kelas I naik. */
+function ensureSiswaBaruSnapshotForActiveYear(PDO $pdo): void {
+    $tahunAjaran = getTahunAjaranAktifDariPengaturan($pdo);
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tb_siswa_baru (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        tahun_ajaran VARCHAR(20) NOT NULL UNIQUE,
+        jumlah_laki INT DEFAULT 0,
+        jumlah_perempuan INT DEFAULT 0,
+        total INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+
+    if (!isTahunAjaranFormatValid($tahunAjaran)) {
+        return;
+    }
+
+    $stmt = $pdo->prepare("SELECT id FROM tb_siswa_baru WHERE tahun_ajaran = ? LIMIT 1");
+    $stmt->execute([$tahunAjaran]);
+    if ($stmt->fetchColumn()) {
+        return;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT id_kelas
+        FROM tb_kelas
+        WHERE TRIM(UPPER(nama_kelas)) IN ('I', '1', 'KELAS I', 'KELAS 1')
+           OR UPPER(nama_kelas) REGEXP '(^|[^A-Z0-9])(I|1)([^A-Z0-9]|$)'
+        ORDER BY
+            CASE
+                WHEN TRIM(UPPER(nama_kelas)) IN ('I', '1') THEN 0
+                WHEN TRIM(UPPER(nama_kelas)) IN ('KELAS I', 'KELAS 1') THEN 1
+                ELSE 2
+            END,
+            nama_kelas ASC
+        LIMIT 1
+    ");
+    $stmt->execute();
+    $kelas1Id = (int)($stmt->fetchColumn() ?: 0);
+
+    $currentData = [
+        'jumlah_laki' => 0,
+        'jumlah_perempuan' => 0,
+        'total' => 0,
+    ];
+    if ($kelas1Id > 0) {
+        $stmt = $pdo->prepare("SELECT
+            COUNT(CASE WHEN jenis_kelamin = 'L' THEN 1 END) as jumlah_laki,
+            COUNT(CASE WHEN jenis_kelamin = 'P' THEN 1 END) as jumlah_perempuan,
+            COUNT(*) as total
+            FROM tb_siswa WHERE id_kelas = ?");
+        $stmt->execute([$kelas1Id]);
+        $currentData = $stmt->fetch(PDO::FETCH_ASSOC) ?: $currentData;
+    }
+
+    $stmt = $pdo->prepare("INSERT IGNORE INTO tb_siswa_baru (tahun_ajaran, jumlah_laki, jumlah_perempuan, total) VALUES (?, ?, ?, ?)");
+    $stmt->execute([
+        $tahunAjaran,
+        $currentData['jumlah_laki'] ?? 0,
+        $currentData['jumlah_perempuan'] ?? 0,
+        $currentData['total'] ?? 0,
+    ]);
+}
+
 /** Dua digit akhir tahun kedua pada tahun ajaran "YYYY/YYYY+1" (contoh 2025/2026 → "26"). */
 function tahunAjaranSuffix2(?string $tahunAjaran): string {
     $tahunAjaran = trim((string)$tahunAjaran);

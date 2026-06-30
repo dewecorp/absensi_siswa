@@ -48,6 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
 
     if (($source_class_id || $source_class_id === 0) && ($target_class_id || $target_class_id === 0) && !empty($selected_students)) {
         try {
+            if (!$is_demotion) {
+                ensureSiswaBaruSnapshotForActiveYear($pdo);
+            }
+
             $pdo->beginTransaction();
 
             if ($is_demotion) {

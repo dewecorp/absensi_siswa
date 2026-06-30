@@ -16,68 +16,70 @@ if (!isAuthorized(['admin', 'tata_usaha', 'kepala_madrasah', 'kepala'])) {
 $page_title = 'Data Siswa Baru';
 $export_session_type = $_SESSION['level'] ?? 'admin';
 
-// Get current academic year from school profile
+// Get current academic year from school profile. Untuk halaman ini harus murni
+// mengikuti Pengaturan, bukan fallback dari data nilai/absensi.
 $school_profile = getSchoolProfile($pdo);
-$current_tahun_ajaran = $school_profile['tahun_ajaran'] ?? date('Y') . '/' . (date('Y') + 1);
-
-// Create table if not exists
+$current_tahun_ajaran = '';
+$current_tahun_ajaran_from_settings = false;
 try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS tb_siswa_baru (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        tahun_ajaran VARCHAR(20) NOT NULL UNIQUE,
-        jumlah_laki INT DEFAULT 0,
-        jumlah_perempuan INT DEFAULT 0,
-        total INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )");
-} catch (PDOException $e) {
-    error_log("Error creating tb_siswa_baru table: " . $e->getMessage());
+    $stmtTa = $pdo->query("SELECT tahun_ajaran FROM tb_profil_madrasah ORDER BY id ASC LIMIT 1");
+    $current_tahun_ajaran = trim((string)($stmtTa ? $stmtTa->fetchColumn() : ''));
+    $current_tahun_ajaran_from_settings = $current_tahun_ajaran !== '';
+} catch (Exception $e) {
+    $current_tahun_ajaran = '';
+}
+if ($current_tahun_ajaran === '') {
+    $tahun_berjalan = getTahunAjaranBerjalanStartYear();
+    $current_tahun_ajaran = $tahun_berjalan . '/' . ($tahun_berjalan + 1);
 }
 
-// Get Class 1 ID (Kelas I)
-$stmt = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE nama_kelas = 'I' OR nama_kelas LIKE '%I%' LIMIT 1");
-$stmt->execute();
-$kelas_1 = $stmt->fetch(PDO::FETCH_ASSOC);
+$tahunAjaranStartYear = static function (?string $tahun_ajaran): ?int {
+    $tahun_ajaran = trim((string)$tahun_ajaran);
+    if (preg_match('/^(\d{4})\s*\/\s*\d{4}$/', $tahun_ajaran, $m)) {
+        return (int)$m[1];
+    }
 
-// Get current Class 1 student count by gender
-$current_data = [
-    'jumlah_laki' => 0,
-    'jumlah_perempuan' => 0,
-    'total' => 0
-];
+    return null;
+};
 
-if ($kelas_1) {
-    $stmt = $pdo->prepare("SELECT 
-        COUNT(CASE WHEN jenis_kelamin = 'L' THEN 1 END) as jumlah_laki,
-        COUNT(CASE WHEN jenis_kelamin = 'P' THEN 1 END) as jumlah_perempuan,
-        COUNT(*) as total
-        FROM tb_siswa WHERE id_kelas = ?");
-    $stmt->execute([$kelas_1['id_kelas']]);
-    $current_data = $stmt->fetch(PDO::FETCH_ASSOC);
-}
+ensureSiswaBaruSnapshotForActiveYear($pdo);
 
-// Check if current academic year data exists in tb_siswa_baru
-$stmt = $pdo->prepare("SELECT * FROM tb_siswa_baru WHERE tahun_ajaran = ?");
-$stmt->execute([$current_tahun_ajaran]);
-$existing_data = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Only insert if not exists - DON'T update existing historical data
-// This ensures previous years' data is preserved
-if (!$existing_data) {
-    // Insert new record for new academic year only
-    $stmt = $pdo->prepare("INSERT INTO tb_siswa_baru (tahun_ajaran, jumlah_laki, jumlah_perempuan, total) VALUES (?, ?, ?, ?)");
-    $stmt->execute([
-        $current_tahun_ajaran,
-        $current_data['jumlah_laki'] ?? 0,
-        $current_data['jumlah_perempuan'] ?? 0,
-        $current_data['total'] ?? 0
-    ]);
-}
-
-// Get all historical data for chart and table
+// Get all historical data for chart and table. Tampilkan hanya sampai tahun ajaran
+// yang dipilih; default-nya tahun ajaran aktif di Pengaturan.
 $stmt = $pdo->query("SELECT * FROM tb_siswa_baru ORDER BY tahun_ajaran ASC");
-$siswa_baru_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$raw_siswa_baru_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$tahun_ajaran_options = [];
+foreach ($raw_siswa_baru_data as $row) {
+    $ta = trim((string)($row['tahun_ajaran'] ?? ''));
+    if ($ta !== '') {
+        $tahun_ajaran_options[] = $ta;
+    }
+}
+if ($current_tahun_ajaran !== '') {
+    $tahun_ajaran_options[] = $current_tahun_ajaran;
+}
+$tahun_ajaran_options = array_values(array_unique(array_filter($tahun_ajaran_options, static function ($ta) use ($tahunAjaranStartYear): bool {
+    return $tahunAjaranStartYear((string)$ta) !== null;
+})));
+usort($tahun_ajaran_options, static function ($a, $b) use ($tahunAjaranStartYear): int {
+    return ($tahunAjaranStartYear((string)$a) ?? 0) <=> ($tahunAjaranStartYear((string)$b) ?? 0);
+});
+
+$selected_tahun_akhir = trim((string)($_GET['sampai_tahun_ajaran'] ?? $current_tahun_ajaran));
+if ($tahunAjaranStartYear($selected_tahun_akhir) === null) {
+    $selected_tahun_akhir = $current_tahun_ajaran;
+}
+$selected_ta_start_year = $tahunAjaranStartYear($selected_tahun_akhir);
+
+$siswa_baru_data = array_values(array_filter($raw_siswa_baru_data, static function (array $row) use ($tahunAjaranStartYear, $selected_ta_start_year): bool {
+    if ($selected_ta_start_year === null) {
+        return true;
+    }
+
+    $row_start_year = $tahunAjaranStartYear($row['tahun_ajaran'] ?? null);
+    return $row_start_year !== null && $row_start_year <= $selected_ta_start_year;
+}));
 
 // Prepare data for Chart.js
 $chart_labels = [];
@@ -149,6 +151,19 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                         <div class="card-body">
+                            <div class="alert alert-light border mb-3 py-2">
+                                Tahun ajaran aktif di Pengaturan: <strong><?php echo htmlspecialchars($current_tahun_ajaran_from_settings ? $current_tahun_ajaran : 'Belum diatur'); ?></strong>
+                            </div>
+                            <form method="GET" class="form-inline mb-3">
+                                <label for="sampai_tahun_ajaran" class="mr-2 mb-2 mb-sm-0">Tampilkan sampai tahun ajaran</label>
+                                <select name="sampai_tahun_ajaran" id="sampai_tahun_ajaran" class="form-control form-control-sm" onchange="this.form.submit()">
+                                    <?php foreach ($tahun_ajaran_options as $tahun_ajaran_option): ?>
+                                        <option value="<?php echo htmlspecialchars($tahun_ajaran_option); ?>" <?php echo $tahun_ajaran_option === $selected_tahun_akhir ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($tahun_ajaran_option); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
                             <div class="table-responsive">
                                 <table class="table table-striped table-hover" id="table-siswa-baru">
                                     <thead>
