@@ -64,6 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
 
                         if ($alumni) {
                             $original_id_siswa = (int)($alumni['original_id_siswa'] ?? 0);
+                            $alumni_tempat_lahir = trim((string)($alumni['tempat_lahir'] ?? ''));
+                            $alumni_tanggal_lahir = trim((string)($alumni['tanggal_lahir'] ?? ''));
+                            $alumni_tanggal_lahir = $alumni_tanggal_lahir !== '' ? $alumni_tanggal_lahir : null;
+                            $alumni_wali = trim((string)($alumni['wali'] ?? ''));
                             $stmtExisting = null;
                             if ($original_id_siswa > 0) {
                                 $stmtExisting = $pdo->prepare("SELECT id_siswa FROM tb_siswa WHERE id_siswa = ? LIMIT 1");
@@ -77,12 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                             }
 
                             if ($existing_id_siswa > 0) {
-                                $stmtBack = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, id_kelas = ? WHERE id_siswa = ?");
-                                $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $target_class_id, $existing_id_siswa]);
+                                $stmtBack = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = CASE WHEN ? <> '' THEN ? ELSE tempat_lahir END, tanggal_lahir = COALESCE(?, tanggal_lahir), wali = CASE WHEN ? <> '' THEN ? ELSE wali END, id_kelas = ? WHERE id_siswa = ?");
+                                $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $alumni_tempat_lahir, $alumni_tempat_lahir, $alumni_tanggal_lahir, $alumni_wali, $alumni_wali, $target_class_id, $existing_id_siswa]);
                                 $new_id_siswa = $existing_id_siswa;
                             } else {
-                                $stmtBack = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
-                                $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $target_class_id]);
+                                $stmtBack = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                                $stmtBack->execute([$alumni['nama_siswa'], $alumni['nisn'], $alumni['jenis_kelamin'], $alumni_tempat_lahir !== '' ? $alumni_tempat_lahir : null, $alumni_tanggal_lahir, $alumni_wali !== '' ? $alumni_wali : null, $target_class_id]);
                                 $new_id_siswa = (int)$pdo->lastInsertId();
                             }
 
@@ -173,8 +177,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                             $stmtAlumniCheck->execute([(int)$id_siswa, $siswa['nisn'], $current_tahun_ajaran]);
                             $existingAlumniId = (int)($stmtAlumniCheck->fetchColumn() ?: 0);
                             if ($existingAlumniId > 0) {
-                                $stmtAlumni = $pdo->prepare("UPDATE tb_alumni SET original_id_siswa = ?, nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, wali = ? WHERE id_alumni = ?");
-                                $stmtAlumni->execute([(int)$id_siswa, $siswa['nama_siswa'], $siswa['nisn'], $siswa['jenis_kelamin'], $siswa['tempat_lahir'] ?? null, $siswa['tanggal_lahir'] ?? null, $siswa['wali'] ?? null, $existingAlumniId]);
+                                $stmtAlumni = $pdo->prepare("UPDATE tb_alumni SET original_id_siswa = ?, nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = COALESCE(NULLIF(?, ''), tempat_lahir), tanggal_lahir = COALESCE(?, tanggal_lahir), wali = COALESCE(NULLIF(?, ''), wali) WHERE id_alumni = ?");
+                                $stmtAlumni->execute([(int)$id_siswa, $siswa['nama_siswa'], $siswa['nisn'], $siswa['jenis_kelamin'], trim((string)($siswa['tempat_lahir'] ?? '')), !empty($siswa['tanggal_lahir']) ? $siswa['tanggal_lahir'] : null, trim((string)($siswa['wali'] ?? '')), $existingAlumniId]);
                             } else {
                                 $stmtAlumni = $pdo->prepare("INSERT INTO tb_alumni (original_id_siswa, nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, tahun_lulus) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                 $stmtAlumni->execute([(int)$id_siswa, $siswa['nama_siswa'], $siswa['nisn'], $siswa['jenis_kelamin'], $siswa['tempat_lahir'] ?? null, $siswa['tanggal_lahir'] ?? null, $siswa['wali'] ?? null, $current_tahun_ajaran]);
