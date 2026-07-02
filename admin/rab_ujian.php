@@ -12,6 +12,10 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
     redirect('../login.php');
 }
 $is_admin = isAuthorized(['admin']);
+$is_bendahara = isBendahara($pdo);
+if ($is_bendahara) {
+    $is_admin = true;
+}
 
 $page_title = 'RAB Ujian';
 

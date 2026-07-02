@@ -691,6 +691,7 @@ switch ($user_level) {
     case 'guru':
         $is_grade_6_guru = false;
         $is_guru_pembina_pramuka = is_current_guru_pembina_pramuka($pdo);
+        $is_bendahara = isBendahara($pdo);
         $id_guru_login = 0;
         if (isset($_SESSION['user_id'])) {
             $id_guru_check = $_SESSION['user_id'];
@@ -833,7 +834,10 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
             ],
-            [
+        ];
+
+        if ($is_bendahara) {
+            $menu_items[] = [
                 'title' => 'Keuangan',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
@@ -842,8 +846,8 @@ switch ($user_level) {
                     ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
                 ],
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
-            ],
-        ];
+            ];
+        }
 
         // Jurnal menu for all teachers
         $jurnal_submenu_guru = [
@@ -889,6 +893,7 @@ switch ($user_level) {
     case 'wali':
         $is_grade_6 = false;
         $is_wali_pembina_pramuka = is_current_guru_pembina_pramuka($pdo);
+        $is_bendahara = isBendahara($pdo);
         
         // Cek jika Wali Kelas 6
         if (isset($_SESSION['nama_guru'])) {
@@ -1049,7 +1054,10 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
             ],
-            [
+        ];
+
+        if ($is_bendahara) {
+            $menu_items[] = [
                 'title' => 'Keuangan',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
@@ -1058,8 +1066,8 @@ switch ($user_level) {
                     ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
                 ],
                 'active' => in_array($current_page, ['rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
-            ],
-        ];
+            ];
+        }
 
         // Jurnal menu for all wali
         $jurnal_submenu_wali = [

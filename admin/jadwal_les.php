@@ -8,14 +8,14 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'guru', 'wali', 'siswa', 'tata_us
 }
 
 $user_level = getUserLevel();
-$is_admin = ($user_level === 'admin');
+$is_editable = in_array($user_level, ['admin', 'tata_usaha']);
 
 // Set page title
 $page_title = 'Jadwal Les';
 
 // Handle Form Submission
 $message = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_admin) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_editable) {
     if (isset($_POST['action'])) {
         try {
             if ($_POST['action'] == 'add') {
@@ -236,7 +236,7 @@ include '../templates/sidebar.php';
                                         <i class="fas fa-file-excel"></i> Export Excel
                                     </a>
                                 </div>
-                                <?php if ($is_admin): ?>
+                                <?php if ($is_editable): ?>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#addModal">
                                     <i class="fas fa-plus"></i> Tambah Jadwal
                                 </button>
@@ -253,7 +253,7 @@ include '../templates/sidebar.php';
                                             <th>Tanggal</th>
                                             <th>Nama Guru</th>
                                             <th>Waktu</th>
-                                            <?php if ($is_admin): ?>
+                                            <?php if ($is_editable): ?>
                                             <th>Aksi</th>
                                             <?php endif; ?>
                                         </tr>
@@ -266,7 +266,7 @@ include '../templates/sidebar.php';
                                                 <td><?php echo date('d-m-Y', strtotime($s['tanggal'])); ?></td>
                                                 <td><?php echo htmlspecialchars($s['nama_guru']); ?></td>
                                                 <td><?php echo date('H.i', strtotime($s['waktu_mulai'])) . ' - ' . date('H.i', strtotime($s['waktu_selesai'])); ?></td>
-                                                <?php if ($is_admin): ?>
+                                                <?php if ($is_editable): ?>
                                                 <td>
                                                     <button class="btn btn-warning btn-sm edit-btn" 
                                                             data-id="<?php echo $s['id_les']; ?>"
@@ -296,7 +296,7 @@ include '../templates/sidebar.php';
 </div>
 
 <!-- Add Modal -->
-<?php if ($is_admin): ?>
+<?php if ($is_editable): ?>
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <form method="POST">

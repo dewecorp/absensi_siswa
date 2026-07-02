@@ -118,11 +118,11 @@ $page_title = 'Jadwal Imam Dhuha';
 
 // Get user level
 $user_level = getUserLevel();
-$is_admin = ($user_level === 'admin');
+$is_editable = in_array($user_level, ['admin', 'tata_usaha']);
 
 // Handle Form Submission
 $message = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_admin) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_editable) {
     if (isset($_POST['action'])) {
         try {
             if ($_POST['action'] == 'add') {

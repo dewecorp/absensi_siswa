@@ -101,6 +101,21 @@ function getUserLevel(): string {
     return $level;
 }
 
+// Function to check if current user is bendahara
+function isBendahara(PDO $pdo): bool {
+    if (!isLoggedIn()) {
+        return false;
+    }
+    
+    $school_profile = getSchoolProfile($pdo);
+    if (empty($school_profile['id_bendahara'])) {
+        return false;
+    }
+    
+    $current_user_id = getLoggedInTeacherId($pdo);
+    return $current_user_id === $school_profile['id_bendahara'];
+}
+
 // Function to check user authorization
 function isAuthorized(array $allowed_levels = []): bool {
     if (!isLoggedIn()) {
@@ -345,12 +360,14 @@ function getSchoolProfile(PDO $pdo): array {
         'id' => null,
         'nama_yayasan' => '',
         'nama_madrasah' => 'Madrasah',
+        'id_kepala' => null,
         'alamat' => '',
         'email_madrasah' => '',
         'website_madrasah' => '',
         'kepala_madrasah' => '',
         'nama_kepala' => '',
         'nip_kepala' => '',
+        'id_bendahara' => null,
         'logo' => '',
         'ttd_kepala' => '',
         'dashboard_hero_image' => '',

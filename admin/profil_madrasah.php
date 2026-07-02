@@ -28,6 +28,16 @@ try {
         $after = in_array('tempat_jadwal', $cols, true) ? 'tempat_jadwal' : 'semester';
         $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN hari_libur_mingguan VARCHAR(20) NOT NULL DEFAULT 'jumat' AFTER {$after}");
     }
+    $cols = $pdo->query('SHOW COLUMNS FROM tb_profil_madrasah')->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('id_kepala', $cols, true)) {
+        $after = in_array('nama_madrasah', $cols, true) ? 'nama_madrasah' : 'nama_yayasan';
+        $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN id_kepala INT NULL AFTER {$after}");
+    }
+    $cols = $pdo->query('SHOW COLUMNS FROM tb_profil_madrasah')->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('id_bendahara', $cols, true)) {
+        $after = in_array('nip_kepala', $cols, true) ? 'nip_kepala' : 'kepala_madrasah';
+        $pdo->exec("ALTER TABLE tb_profil_madrasah ADD COLUMN id_bendahara INT NULL AFTER {$after}");
+    }
 } catch (Throwable $e) {
     error_log('Profil madrasah: pastikan kolom extended — ' . $e->getMessage());
 }
@@ -37,6 +47,9 @@ $page_title = 'Profil Madrasah';
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
+
+// Get list of teachers for kepala and bendahara dropdown
+$teachers = $pdo->query("SELECT id_guru, nama_guru FROM tb_guru ORDER BY nama_guru ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Tahun ajaran yang pernah dipakai di data nilai (untuk hapus nilai + opsi dropdown)
 $years = [];
@@ -221,8 +234,19 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
                     $website_madrasah = mb_substr($normalized, 0, 512);
                 }
             }
-            $kepala_madrasah = sanitizeInput($_POST['kepala_madrasah']);
+            $id_kepala = !empty($_POST['id_kepala']) ? (int)$_POST['id_kepala'] : null;
+            // Get nama from tb_guru based on id_kepala for backward compatibility
+            $kepala_madrasah = '';
+            if ($id_kepala) {
+                $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
+                $stmt->execute([$id_kepala]);
+                $guru = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($guru) {
+                    $kepala_madrasah = $guru['nama_guru'];
+                }
+            }
             $nip_kepala = sanitizeInput($_POST['nip_kepala']);
+            $id_bendahara = !empty($_POST['id_bendahara']) ? (int)$_POST['id_bendahara'] : null;
             $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
             $tahun_ajaran_allowed = buildTahunAjaranProfilOptions($school_profile['tahun_ajaran'] ?? null, $tahun_untuk_opsi_profil);
             if (empty($message) && !in_array($tahun_ajaran, $tahun_ajaran_allowed, true)) {
@@ -312,8 +336,8 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
     }
     
             if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, hari_libur_mingguan=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
-        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $hari_libur_mingguan, $logo, $hero_image, $ttd_kepala])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, id_kepala=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, id_bendahara=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, hari_libur_mingguan=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $id_kepala, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $id_bendahara, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $hari_libur_mingguan, $logo, $hero_image, $ttd_kepala])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
@@ -378,46 +402,96 @@ include '../templates/sidebar.php';
                                             </div>
                                         </div>
 
-                                        <div class="row">
-                                            <div class="col-12">
+                                        <div class="row mt-2">
+                                            <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Alamat Madrasah</label>
-                                                    <textarea class="form-control" name="alamat" rows="2" placeholder="Alamat lengkap madrasah"><?php echo htmlspecialchars($school_profile['alamat'] ?? ''); ?></textarea>
+                                                    <textarea class="form-control" name="alamat" rows="3" placeholder="Alamat lengkap madrasah"><?php echo htmlspecialchars($school_profile['alamat'] ?? ''); ?></textarea>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Kepala Madrasah</label>
+                                                    <select class="form-control" name="id_kepala" id="id_kepala" required>
+                                                        <option value="">Pilih Kepala Madrasah</option>
+                                                        <?php foreach ($teachers as $teacher): ?>
+                                                            <option value="<?= $teacher['id_guru'] ?>" data-nama="<?= htmlspecialchars($teacher['nama_guru']) ?>" <?= (isset($school_profile['id_kepala']) && $school_profile['id_kepala'] == $teacher['id_guru']) ? 'selected' : '' ?>>
+                                                                <?= htmlspecialchars($teacher['nama_guru']) ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>NIP Kepala Madrasah</label>
+                                                    <input type="text" class="form-control" name="nip_kepala" id="nip_kepala" value="<?php echo htmlspecialchars($school_profile['nip_kepala'] ?? ''); ?>" placeholder="NIP (Kosongkan jika tidak ada)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Logo Madrasah</label>
+                                                    <div class="mb-2">
+                                                        <?php if ($school_profile['logo']): ?>
+                                                        <img src="../assets/img/<?php echo $school_profile['logo']; ?>" alt="Logo Madrasah" width="80" height="80" class="img-thumbnail">
+                                                        <?php else: ?>
+                                                        <p class="text-muted">Logo belum diupload</p>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <input type="file" class="form-control" name="logo">
+                                                    <small class="text-muted">Format: JPG, PNG, GIF. Maksimal: 2MB</small>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Email Madrasah</label>
                                                     <input type="email" class="form-control" name="email_madrasah" value="<?php echo htmlspecialchars($school_profile['email_madrasah'] ?? ''); ?>" placeholder="Contoh: info@madrasah.sch.id" autocomplete="email">
                                                 </div>
-                                            </div>
-                                            <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Website Madrasah</label>
                                                     <input type="text" class="form-control" name="website_madrasah" value="<?php echo htmlspecialchars($school_profile['website_madrasah'] ?? ''); ?>" placeholder="Contoh: https://madrasah.sch.id">
                                                 </div>
+                                                <div class="form-group">
+                                                    <label>Bendahara</label>
+                                                    <select class="form-control" name="id_bendahara">
+                                                        <option value="">Pilih Bendahara</option>
+                                                        <?php foreach ($teachers as $teacher): ?>
+                                                            <option value="<?= $teacher['id_guru'] ?>" <?= (isset($school_profile['id_bendahara']) && $school_profile['id_bendahara'] == $teacher['id_guru']) ? 'selected' : '' ?>>
+                                                                <?= htmlspecialchars($teacher['nama_guru']) ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Hari libur mingguan</label>
+                                                    <select class="form-control" name="hari_libur_mingguan" id="hari_libur_mingguan">
+                                                        <?php
+                                                        $hlm = strtolower(trim((string)($school_profile['hari_libur_mingguan'] ?? 'jumat')));
+                                                        if (!in_array($hlm, ['jumat', 'minggu'], true)) {
+                                                            $hlm = 'jumat';
+                                                        }
+                                                        ?>
+                                                        <option value="jumat" <?php echo $hlm === 'jumat' ? 'selected' : ''; ?>>Jum'at</option>
+                                                        <option value="minggu" <?php echo $hlm === 'minggu' ? 'selected' : ''; ?>>Ahad</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div class="row">
+                                        <div class="row mt-2">
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>Kepala Madrasah</label>
-                                                    <input type="text" class="form-control" name="kepala_madrasah" value="<?php echo htmlspecialchars($school_profile['kepala_madrasah'] ?? ''); ?>" required>
+                                                    <label>Tanggal Jadwal Pelajaran</label>
+                                                    <input type="date" class="form-control" name="tanggal_jadwal" value="<?php echo htmlspecialchars($school_profile['tanggal_jadwal'] ?? ''); ?>">
+                                                    <small class="text-muted">Tanggal pada cetakan jadwal.</small>
                                                 </div>
-                                            </div>
-                                            <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>NIP Kepala Madrasah</label>
-                                                    <input type="text" class="form-control" name="nip_kepala" value="<?php echo htmlspecialchars($school_profile['nip_kepala'] ?? ''); ?>" placeholder="NIP (Kosongkan jika tidak ada)">
+                                                    <label>Tanda Tangan Kepala Madrasah</label>
+                                                    <div class="mb-2">
+                                                        <?php if (!empty($school_profile['ttd_kepala'])): ?>
+                                                        <img src="../assets/img/<?php echo $school_profile['ttd_kepala']; ?>" alt="TTD Kepala" height="80" class="img-thumbnail" style="object-fit: contain;">
+                                                        <?php else: ?>
+                                                        <p class="text-muted">Tanda tangan belum diupload</p>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <input type="file" class="form-control" name="ttd_kepala">
+                                                    <small class="text-muted">Format: JPG, PNG. Background transparan disarankan.</small>
                                                 </div>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="row mt-3">
                                             <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Tahun Ajaran</label>
@@ -432,8 +506,6 @@ include '../templates/sidebar.php';
                                                         ?>
                                                     </select>
                                                 </div>
-                                            </div>
-                                            <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Semester</label>
                                                     <select class="form-control" name="semester" required>
@@ -442,96 +514,23 @@ include '../templates/sidebar.php';
                                                         <option value="Semester 2" <?php echo (isset($school_profile['semester']) && $school_profile['semester'] == 'Semester 2') ? 'selected' : ''; ?>>Semester 2</option>
                                                     </select>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row mt-3">
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Hari libur mingguan (absensi &amp; kalender)</label>
-                                                    <select class="form-control" name="hari_libur_mingguan" id="hari_libur_mingguan">
-                                                        <?php
-                                                        $hlm = strtolower(trim((string)($school_profile['hari_libur_mingguan'] ?? 'jumat')));
-                                                        if (!in_array($hlm, ['jumat', 'minggu'], true)) {
-                                                            $hlm = 'jumat';
-                                                        }
-                                                        ?>
-                                                        <option value="jumat" <?php echo $hlm === 'jumat' ? 'selected' : ''; ?>>Jum'at</option>
-                                                        <option value="minggu" <?php echo $hlm === 'minggu' ? 'selected' : ''; ?>>Ahad</option>
-                                                    </select>
-                                                    <small class="text-muted">Hari ini diperlakukan sebagai libur mingguan (selain libur di kalender pendidikan).</small>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row mt-3">
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Tanggal Jadwal Pelajaran</label>
-                                                    <input type="date" class="form-control" name="tanggal_jadwal" value="<?php echo htmlspecialchars($school_profile['tanggal_jadwal'] ?? ''); ?>">
-                                                    <small class="text-muted">Tanggal yang akan muncul pada cetakan jadwal pelajaran.</small>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label>Tempat Jadwal</label>
                                                     <input type="text" class="form-control" name="tempat_jadwal" value="<?php echo htmlspecialchars($school_profile['tempat_jadwal'] ?? ''); ?>" placeholder="Contoh: Jakarta">
-                                                    <small class="text-muted">Tempat yang akan muncul pada cetakan jadwal pelajaran.</small>
+                                                    <small class="text-muted">Tempat pada cetakan jadwal.</small>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row">
-                                            <div class="col-12">
-                                                <!-- Reset Data options removed from here -->
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="row mt-3">
-                                            <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>Logo Madrasah</label>
-                                                    <div class="mb-2">
-                                                        <?php if ($school_profile['logo']): ?>
-                                                        <img src="../assets/img/<?php echo $school_profile['logo']; ?>" alt="Logo Madrasah" width="100" height="100" class="img-thumbnail">
-                                                        <?php else: ?>
-                                                        <p class="text-muted">Logo belum diupload</p>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                    <input type="file" class="form-control" name="logo">
-                                                    <small class="text-muted">Format: JPG, PNG, GIF. Ukuran maksimal: 2MB</small>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Background Dashboard (Hero Semua Dashboard)</label>
+                                                    <label>Background Dashboard (Hero)</label>
                                                     <div class="mb-2">
                                                         <?php if (!empty($school_profile['dashboard_hero_image'])): ?>
-                                                        <img src="../assets/img/<?php echo $school_profile['dashboard_hero_image']; ?>" alt="Hero Image" height="100" class="img-thumbnail" style="object-fit: cover; width: 100%;">
+                                                        <img src="../assets/img/<?php echo $school_profile['dashboard_hero_image']; ?>" alt="Hero Image" height="80" class="img-thumbnail" style="object-fit: cover; width: 100%;">
                                                         <?php else: ?>
-                                                        <img src="../assets/img/unsplash/eberhard-grossgasteiger-1207565-unsplash.jpg" alt="Default Hero" height="100" class="img-thumbnail" style="object-fit: cover; width: 100%;">
-                                                        <p class="text-muted small">Menggunakan gambar default</p>
+                                                        <img src="../assets/img/unsplash/eberhard-grossgasteiger-1207565-unsplash.jpg" alt="Default Hero" height="80" class="img-thumbnail" style="object-fit: cover; width: 100%;">
+                                                        <p class="text-muted small">Gambar default</p>
                                                         <?php endif; ?>
                                                     </div>
                                                     <input type="file" class="form-control" name="hero_image">
-                                                    <small class="text-muted">Format: JPG, PNG, GIF. Ukuran maksimal: 2MB. Digunakan sebagai gambar hero di dashboard (mobile) semua level pengguna. Disarankan gambar landscape.</small>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row mt-3">
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Tanda Tangan Kepala Madrasah</label>
-                                                    <div class="mb-2">
-                                                        <?php if (!empty($school_profile['ttd_kepala'])): ?>
-                                                        <img src="../assets/img/<?php echo $school_profile['ttd_kepala']; ?>" alt="TTD Kepala" height="100" class="img-thumbnail" style="object-fit: contain;">
-                                                        <?php else: ?>
-                                                        <p class="text-muted">Tanda tangan belum diupload</p>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                    <input type="file" class="form-control" name="ttd_kepala">
-                                                    <small class="text-muted">Format: JPG, PNG. Background transparan disarankan.</small>
+                                                    <small class="text-muted">Format: JPG, PNG, GIF. Maksimal: 2MB. Gambar landscape disarankan.</small>
                                                 </div>
                                             </div>
                                         </div>

@@ -14,7 +14,7 @@ if (!isAuthorized($allowed_roles)) {
 }
 
 $user_role = getUserLevel();
-$is_editable = ($user_role === 'admin');
+$is_editable = in_array($user_role, ['admin', 'tata_usaha']);
 $export_session_type = 'admin';
 if ($user_role === 'wali') {
     $export_session_type = 'wali';
@@ -401,7 +401,7 @@ require_once '../templates/sidebar.php';
                                                             <div class="p-1 text-center font-weight-bold" style="background: #f0f0f0; border-radius: 4px;"><?= htmlspecialchars($current_day_guru_code) ?></div>
                                                         <?php endif; ?>
                                                     </th>
-                                                    <th colspan="<?= $user_role == 'admin' ? 3 : 2 ?>" class="p-1">
+                                                    <th colspan="<?= $is_editable ? 3 : 2 ?>" class="p-1">
                                                         <input type="text" class="form-control form-control-sm day-guru-name-display" 
                                                                value="<?= htmlspecialchars($current_day_guru_name) ?>" 
                                                                readonly 
@@ -412,11 +412,11 @@ require_once '../templates/sidebar.php';
                                                 <tr class="text-center">
                                                     <th style="width: 5%">Jam Ke</th>
                                                     <th style="width: 20%">Waktu</th>
-                                                    <?php if ($user_role == 'admin'): ?>
+                                                    <?php if ($is_editable): ?>
                                                     <th style="width: 15%">KM</th>
                                                     <?php endif; ?>
-                                                    <th style="width: <?= $user_role == 'admin' ? '55%' : '75%' ?>">Mata Pelajaran</th>
-                                                    <?php if ($user_role == 'admin'): ?>
+                                                    <th style="width: <?= $is_editable ? '55%' : '75%' ?>">Mata Pelajaran</th>
+                                                    <?php if ($is_editable): ?>
                                                     <th style="width: 5%"></th>
                                                     <?php endif; ?>
                                                 </tr>
@@ -427,7 +427,7 @@ require_once '../templates/sidebar.php';
                                                 // ksort($day_schedule); // Removed ksort as we now rely on query order
                                                 
                                                 if (empty($day_schedule)): ?>
-                                                    <tr><td colspan="<?= $user_role == 'admin' ? 5 : 3 ?>" class="text-center text-muted p-3">Belum ada jadwal</td></tr>
+                                                    <tr><td colspan="<?= $is_editable ? 5 : 3 ?>" class="text-center text-muted p-3">Belum ada jadwal</td></tr>
                                                 <?php else:
                                                     foreach ($day_schedule as $sched): 
                                                         $jam_ke = $sched['jam_ke'];
@@ -472,7 +472,7 @@ require_once '../templates/sidebar.php';
                                                     </td>
                                                     <td class="text-center align-middle waktu-display" style="font-size: 0.75rem;"><?= $waktu ?></td>
                                                     
-                                                    <?php if ($user_role == 'admin'): ?>
+                                                    <?php if ($is_editable): ?>
                                                     <!-- KM (Kode Mapel) -->
                                                     <td class="p-1 km-col-container">
                                                         <?php if ($is_editable): ?>
@@ -519,7 +519,7 @@ require_once '../templates/sidebar.php';
                                                                style="height: 30px; font-size: 0.8rem; background-color: #f9f9f9; border: 1px solid #ced4da;">
                                                     </td>
                                                     
-                                                    <?php if ($user_role == 'admin'): ?>
+                                                    <?php if ($is_editable): ?>
                                                     <td class="text-center align-middle p-1">
                                                         <?php if ($is_editable): ?>
                                                         <button type="button" class="btn btn-danger btn-sm p-0" style="width: 24px; height: 24px; line-height: 24px;" onclick="deleteSchedule(<?= $sched['id_jadwal'] ?>)" title="Hapus">
