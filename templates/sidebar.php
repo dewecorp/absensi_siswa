@@ -1165,9 +1165,10 @@ switch ($user_level) {
                 'submenu' => array_filter([
                     ['title' => 'Tagihan Siswa', 'url' => '../siswa/tagihan_siswa.php', 'active' => $current_page === 'tagihan_siswa.php'],
                     ['title' => 'Laporan Pembayaran', 'url' => '../siswa/laporan_pembayaran.php', 'active' => $current_page === 'laporan_pembayaran.php'],
+                    ['title' => 'Tabungan Siswa', 'url' => '../siswa/tabungan_siswa.php', 'active' => $current_page === 'tabungan_siswa.php'],
                     $is_grade_6_siswa ? ['title' => 'Biaya Ujian', 'url' => '../siswa/biaya_ujian.php', 'active' => $current_page === 'biaya_ujian.php'] : null
                 ]),
-                'active' => in_array($current_page, ['tagihan_siswa.php', 'laporan_pembayaran.php', 'biaya_ujian.php'])
+                'active' => in_array($current_page, ['tagihan_siswa.php', 'laporan_pembayaran.php', 'tabungan_siswa.php', 'biaya_ujian.php'])
             ],
             [
                 'title' => 'Kalender Pendidikan',
