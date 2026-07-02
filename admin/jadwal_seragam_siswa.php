@@ -128,11 +128,11 @@ $page_title = 'Jadwal Seragam Siswa';
 
 // Get user level
 $user_level = getUserLevel();
-$is_admin = ($user_level === 'admin');
+$is_editable = in_array($user_level, ['admin', 'tata_usaha']);
 
 // Handle Form Submission
 $message = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_admin) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_editable) {
     if (isset($_POST['action'])) {
         try {
             if ($_POST['action'] == 'add') {
@@ -181,7 +181,7 @@ include '../templates/sidebar.php';
                         <div class="card-header">
                             <h4>Daftar Jadwal Seragam Siswa Tahun Ajaran <?php echo $school_profile['tahun_ajaran'] ?? ''; ?></h4>
                             <div class="card-header-action">
-                                <?php if ($is_admin): ?>
+                                <?php if ($is_editable): ?>
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#modalAdd">
                                     <i class="fas fa-plus"></i> Tambah Jadwal
                                 </button>
@@ -199,7 +199,7 @@ include '../templates/sidebar.php';
                                             <th class="text-center" width="10%">NO</th>
                                             <th class="text-center" width="30%">HARI</th>
                                             <th class="text-center">JENIS SERAGAM</th>
-                                            <?php if ($is_admin): ?>
+                                            <?php if ($is_editable): ?>
                                             <th class="text-center" width="15%">AKSI</th>
                                             <?php endif; ?>
                                         </tr>
@@ -210,7 +210,7 @@ include '../templates/sidebar.php';
                                             <td class="text-center"><?php echo $idx + 1; ?></td>
                                             <td class="text-center"><?php echo strtoupper($row['hari']); ?></td>
                                             <td><?php echo $row['jenis_seragam']; ?></td>
-                                            <?php if ($is_admin): ?>
+                                            <?php if ($is_editable): ?>
                                             <td class="text-center">
                                                 <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#modalEdit<?php echo $row['id']; ?>"><i class="fas fa-edit"></i></button>
                                                 <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#modalDelete<?php echo $row['id']; ?>"><i class="fas fa-trash"></i></button>
@@ -230,7 +230,7 @@ include '../templates/sidebar.php';
 </div>
 
 <!-- Modals -->
-<?php if ($is_admin): ?>
+<?php if ($is_editable): ?>
 <div class="modal fade" id="modalAdd" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
