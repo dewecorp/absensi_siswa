@@ -36,7 +36,7 @@ $count_stmt->execute($params);
 $total_records = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
 $total_pages = ceil($total_records / $limit);
 
-// Get activity logs with pagination
+// Get all users with pagination
 $teacher_map = [];
 $guru_stmt = $pdo->query("SELECT nuptk, nama_guru, id_guru FROM tb_guru");
 $gurus = $guru_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -46,30 +46,38 @@ foreach ($gurus as $guru) {
     $teacher_map[$guru['id_guru']] = $guru['nama_guru'];
 }
 
+// Create user mapping for tb_pengguna
+$user_map = [];
+$pengguna_stmt = $pdo->query("SELECT username, nama FROM tb_pengguna");
+$penggunas = $pengguna_stmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($penggunas as $pengguna) {
+    $user_map[$pengguna['username']] = $pengguna['nama'];
+}
+
 if (!empty($where_clause)) {
     $query = "SELECT 
-            id,
-            username, 
-            action, 
-            description, 
-            ip_address,
-            created_at
-        FROM tb_activity_log 
-        " . $where_clause . " ORDER BY created_at DESC LIMIT ?, ?";
+        id,
+        username, 
+        action, 
+        description, 
+        ip_address,
+        created_at
+    FROM tb_activity_log 
+    " . $where_clause . " ORDER BY created_at DESC LIMIT ?, ?";
     $stmt = $pdo->prepare($query);
     $params[] = (int)$offset;
     $params[] = (int)$limit;
     $stmt->execute($params);
 } else {
     $query = "SELECT 
-            id,
-            username, 
-            action, 
-            description, 
-            ip_address,
-            created_at
-        FROM tb_activity_log 
-        ORDER BY created_at DESC LIMIT ?, ?";
+        id,
+        username, 
+        action, 
+        description, 
+        ip_address,
+        created_at
+    FROM tb_activity_log 
+    ORDER BY created_at DESC LIMIT ?, ?";
     $stmt = $pdo->prepare($query);
     $stmt->bindValue(1, $offset, PDO::PARAM_INT);
     $stmt->bindValue(2, $limit, PDO::PARAM_INT);
@@ -80,7 +88,7 @@ $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Add display_name to each activity
 foreach ($activities as &$activity) {
-    $display_name = $teacher_map[$activity['username']] ?? $activity['username'];
+    $display_name = $teacher_map[$activity['username']] ?? $user_map[$activity['username']] ?? $activity['username'];
     $activity['display_name'] = $display_name;
 }
 

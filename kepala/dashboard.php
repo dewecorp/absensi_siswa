@@ -174,6 +174,14 @@ try {
             $teacher_map[$guru['id_guru']] = $guru['nama_guru'];
         }
         
+        // Create user mapping for tb_pengguna
+        $user_map = [];
+        $pengguna_stmt = $pdo->query("SELECT username, nama FROM tb_pengguna");
+        $penggunas = $pengguna_stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($penggunas as $pengguna) {
+            $user_map[$pengguna['username']] = $pengguna['nama'];
+        }
+        
         // Get latest 20 activities
         $activity_stmt = $pdo->query(
             "SELECT 
@@ -189,7 +197,7 @@ try {
         
         // Add display_name to each activity
         foreach ($activities as &$activity) {
-            $display_name = $teacher_map[$activity['username']] ?? $activity['username'];
+            $display_name = $teacher_map[$activity['username']] ?? $user_map[$activity['username']] ?? $activity['username'];
             $activity['display_name'] = $display_name;
         }
     }
