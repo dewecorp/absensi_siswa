@@ -237,12 +237,27 @@ include_once '../templates/sidebar.php';
                                     <th>Tanggal</th>
                                     <th>Jenis</th>
                                     <th>Nominal</th>
+                                    <th>Keterangan</th>
                                     <th>Petugas</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if ($riwayatTransaksi['success'] ?? false && !empty($riwayatTransaksi['data']['transaksi'])): ?>
-                                    <?php foreach ($riwayatTransaksi['data']['transaksi'] as $transaksi): ?>
+                                <?php 
+                                $transaksinya = $riwayatTransaksi['data']['transaksi'] ?? [];
+                                if (($riwayatTransaksi['success'] ?? false) && !empty($transaksinya)): ?>
+                                    <?php foreach ($transaksinya as $transaksi): ?>
+                                        <?php 
+                                        $keterangan = '';
+                                        if ($transaksi['jenis'] === 'setoran') {
+                                            $keterangan = 'Setoran Tunai';
+                                        } else {
+                                            if (!empty($transaksi['keterangan'])) {
+                                                $keterangan = $transaksi['keterangan'];
+                                            } else {
+                                                $keterangan = 'Penarikan Tunai';
+                                            }
+                                        }
+                                        ?>
                                         <tr>
                                             <td><?= htmlspecialchars(date('d-m-Y', strtotime($transaksi['tanggal'] ?? '-'))) ?></td>
                                             <td>
@@ -253,19 +268,20 @@ include_once '../templates/sidebar.php';
                                                 <?php endif; ?>
                                             </td>
                                             <td>Rp <?= number_format($transaksi['nominal'] ?? 0, 0, ',', '.') ?></td>
+                                            <td><?= htmlspecialchars($keterangan) ?></td>
                                             <td><?= htmlspecialchars($transaksi['petugas'] ?? '-') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="4" class="text-center py-4">
+                                        <td colspan="5" class="text-center py-4">
                                             <?php if (!($tabunganSummary['success'] ?? false) || !($riwayatTransaksi['success'] ?? false)): ?>
                                                 <div class="alert alert-warning">
                                                     <i class="fas fa-exclamation-triangle"></i> 
                                                     <?= htmlspecialchars($tabunganSummary['message'] ?? $riwayatTransaksi['message'] ?? 'Tidak dapat mengambil data dari server.') ?>
                                                 </div>
                                             <?php else: ?>
-                                                Tidak ada riwayat transaksi.
+                                                <span class="text-muted">Belum ada data transaksi.</span>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
