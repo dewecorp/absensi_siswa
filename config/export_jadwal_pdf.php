@@ -101,6 +101,11 @@ foreach ($mapels as $m) {
     $i++;
 }
 
+// Sort mapel legend by code ascending
+usort($mapel_legend, function($a, $b) {
+    return $a['code'] - $b['code'];
+});
+
 // Get Guru Map
 // Sort by Kode Guru
 $stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY kode_guru ASC, nama_guru ASC");
@@ -292,8 +297,8 @@ if ($kelas_id) {
     // --- JADWAL UTAMA (All Classes) ---
     $html .= '
             <tr>
-                <th rowspan="2" style="width: 40px;">JAM<br>KE</th>
-                <th rowspan="2" style="width: 80px;">WAKTU</th>';
+                <th rowspan="2" style="width: 50px;">JAM<br>KE</th>
+                <th rowspan="2" style="width: 100px;">WAKTU</th>';
     
     foreach ($days as $day) {
         $html .= '<th colspan="' . count($classes) . '">' . strtoupper($day) . '</th>';
@@ -499,4 +504,3 @@ $html .= '
 </html>';
 
 echo $html;
-?>

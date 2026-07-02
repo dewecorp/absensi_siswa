@@ -71,6 +71,11 @@ foreach ($mapels as $m) {
     $i++;
 }
 
+// Sort mapel legend by code ascending
+usort($mapel_legend, function($a, $b) {
+    return $a['code'] - $b['code'];
+});
+
 // Get Guru Map
 $stmt = $pdo->query("SELECT * FROM tb_guru ORDER BY kode_guru ASC, nama_guru ASC");
 $gurus = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -176,55 +181,59 @@ header("Expires: 0");
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($jam_display as $jam): 
+            <?php foreach ($jam_display as $jam): ?>
+                <?php
                 $jam_label = $jam['jam_ke'];
                 $is_special = in_array(strtoupper((string)$jam_label), ['A', 'B', 'C', 'D']);
                 $waktu = date('H.i', strtotime($jam['waktu_mulai'])) . '-' . date('H.i', strtotime($jam['waktu_selesai']));
-            ?>
-            <tr>
-                <td><?= $jam_label ?></td>
-                <td><?= $waktu ?></td>
-                
-                <?php foreach ($days as $day): 
-                    $special_text = '';
-                    if ($is_special) {
-                        if (isset($main_schedule[$day][$jam_label])) {
-                            foreach ($main_schedule[$day][$jam_label] as $sched) {
-                                if (isset($mapel_map[$sched['mapel_id']])) {
-                                    $special_text = $mapel_map[$sched['mapel_id']]['nama_mapel'];
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                ?>
+                <tr>
+                    <td><?= $jam_label ?></td>
+                    <td><?= $waktu ?></td>
                     
-                    if ($is_special): ?>
-                        <td colspan="<?= count($classes) ?>" class="special-slot"><?= htmlspecialchars($special_text) ?></td>
-                    <?php else: 
-                        foreach ($classes as $c): 
-                            $content = '';
-                            if (isset($main_schedule[$day][$jam_label][$c['id_kelas']])) {
-                                $sched = $main_schedule[$day][$jam_label][$c['id_kelas']];
-                                if (isset($mapel_map[$sched['mapel_id']])) {
-                                    $m = $mapel_map[$sched['mapel_id']];
-                                    if ($kelas_id) {
-                                        $content = $m['nama_mapel'];
-                                    } else {
-                                        $content = $m['display_code'];
+                    <?php foreach ($days as $day): ?>
+                        <?php
+                        $special_text = '';
+                        if ($is_special) {
+                            if (isset($main_schedule[$day][$jam_label])) {
+                                foreach ($main_schedule[$day][$jam_label] as $sched) {
+                                    if (isset($mapel_map[$sched['mapel_id']])) {
+                                        $special_text = $mapel_map[$sched['mapel_id']]['nama_mapel'];
+                                        break;
                                     }
                                 }
                             }
+                        }
                         ?>
-                        <td><?= $kelas_id ? htmlspecialchars($content) : '<b>'.htmlspecialchars($content).'</b>' ?></td>
-                    <?php endforeach; endif; ?>
-                <?php endforeach; ?>
-            </tr>
+                        <?php if ($is_special): ?>
+                            <td colspan="<?= count($classes) ?>" class="special-slot"><?= htmlspecialchars($special_text) ?></td>
+                        <?php else: ?>
+                            <?php foreach ($classes as $c): ?>
+                                <?php
+                                $content = '';
+                                if (isset($main_schedule[$day][$jam_label][$c['id_kelas']])) {
+                                    $sched = $main_schedule[$day][$jam_label][$c['id_kelas']];
+                                    if (isset($mapel_map[$sched['mapel_id']])) {
+                                        $m = $mapel_map[$sched['mapel_id']];
+                                        if ($kelas_id) {
+                                            $content = $m['nama_mapel'];
+                                        } else {
+                                            $content = $m['display_code'];
+                                        }
+                                    }
+                                }
+                                ?>
+                                <td><?= $kelas_id ? htmlspecialchars($content) : '<b>' . htmlspecialchars($content) . '</b>' ?></td>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 
     <br><br>
-    <?php 
+    <?php
     $tempat = !empty($school_profile['tempat_jadwal']) ? $school_profile['tempat_jadwal'] : 'Jakarta';
     $tanggal = !empty($school_profile['tanggal_jadwal']) 
         ? formatDateIndonesia($school_profile['tanggal_jadwal']) 
@@ -251,7 +260,7 @@ header("Expires: 0");
             <td style="border: none; vertical-align: top;" width="70%">
                 <table style="border: none;">
                     <tr style="border: none;">
-                        <td valign="top" style="border:none">
+                        <td valign="top" style="border:none;">
                             <table style="border: 1px solid black; border-collapse: collapse;">
                                 <tr><th colspan="2" style="background-color: #f0f0f0; border: 1px solid black;">KODE MATA PELAJARAN</th></tr>
                                 <?php foreach ($mapel_legend as $item): ?>
@@ -263,7 +272,7 @@ header("Expires: 0");
                             </table>
                         </td>
                         <td style="border:none; width: 20px;"></td>
-                        <td valign="top" style="border:none">
+                        <td valign="top" style="border:none;">
                             <table style="border: 1px solid black; border-collapse: collapse;">
                                 <tr><th colspan="2" style="background-color: #f0f0f0; border: 1px solid black;">KODE GURU</th></tr>
                                 <?php foreach ($guru_legend as $item): ?>
