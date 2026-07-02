@@ -282,20 +282,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                     // Final cleanup round: remove ALL pramuka records for the graduated students
                     // by checking if their id_kelas is now NULL (status as alumni)
                     if ($is_class_6) {
-                        // Direct cleanup: mark all pramuka records as 'keluar' for alumni students
-                        // First, find all records by id_siswa OR nta OR name
+                        // Direct cleanup: delete all pramuka records for students who are now alumni
                         $find_orphans = $pdo->prepare("
                             SELECT p.id_peserta_didik_barung 
                             FROM tb_peserta_didik_barung p
                             WHERE p.id_siswa IN (" . str_repeat('?,', count($selected_students) - 1) . "?)
-                               OR (
-                                   p.nta IS NOT NULL 
-                                   AND TRIM(p.nta) <> ''
-                                   AND p.nta IN (SELECT nisn FROM tb_siswa WHERE id_siswa IN (" . str_repeat('?,', count($selected_students) - 1) . "?))
-                               )
                         ");
-                        $params = array_merge($selected_students, $selected_students);
-                        $find_orphans->execute($params);
+                        $find_orphans->execute($selected_students);
                         $orphan_ids = $find_orphans->fetchAll(PDO::FETCH_COLUMN);
                         
                         if (!empty($orphan_ids)) {
@@ -305,17 +298,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                                 $ph = implode(',', array_fill(0, count($orphan_ids), '?'));
                                 $pdo->prepare("DELETE FROM tb_sku_kecakapan_nilai WHERE id_peserta_didik_barung IN ($ph)")->execute($orphan_ids);
                                 
-                                // Count before update
+                                // Count before delete
                                 $countBefore = count($orphan_ids);
                                 
-                                // Mark pramuka records as 'keluar' instead of deleting (soft delete)
-                                $finalUpdate = $pdo->prepare("
-                                    UPDATE tb_peserta_didik_barung 
-                                    SET status = 'keluar', tanggal_keluar = NOW() 
-                                    WHERE id_peserta_didik_barung IN ($ph)
-                                ");
-                                $finalUpdate->execute($orphan_ids);
-                                $final_deleted = $finalUpdate->rowCount();
+                                // Delete pramuka records
+                                $finalDel = $pdo->prepare("DELETE FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung IN ($ph)");
+                                $finalDel->execute($orphan_ids);
+                                $final_deleted = $finalDel->rowCount();
                                 
                                 // Only add to total if we haven't already counted these
                                 if ($total_peserta_deleted == 0) {
@@ -553,7 +542,28 @@ require_once '../templates/sidebar.php';
                             Kelas tujuan memiliki <?= count($target_students) ?> siswa. Siswa yang akan <?= $mode == 'promote' ? 'naik' : 'batal naik' ?> akan ditambahkan ke kelas ini.
                         </div>
 
+                        <?php 
+                        // Check if source is class 6 and target is Alumni
+                        $is_class_6_promotion = false;
+                        if ($source_id && $target_id === 999999) {
+                            $stmtSourceName = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+                            $stmtSourceName->execute([$source_id]);
+                            $src_name = (string)($stmtSourceName->fetchColumn() ?: '');
+                            $is_class_6_promotion = (detectClassLevel($src_name) == 6);
+                        }
+                        ?>
 
+                        <?php if ($is_class_6_promotion): ?>
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-graduation-cap"></i> <strong>Kelulusan Kelas 6:</strong><br>
+                            Siswa yang diluluskan akan otomatis dihapus dari:
+                            <ul style="margin: 10px 0 0 20px;">
+                                <li>Anggota Pramuka</li>
+                                <li>Data Syarat Kecakapan Umum (SKU)</li>
+                                <li>Surat Keterangan</li>
+                            </ul>
+                        </div>
+                        <?php endif; ?>
 
                         <div class="table-responsive">
                             <form method="POST">

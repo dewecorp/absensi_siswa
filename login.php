@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // 3. Try Student (tb_siswa) if not authenticated
     if (!$authenticated) {
-        $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE TRIM(nisn) = ?");
+        $stmt = $pdo->prepare("SELECT * FROM tb_siswa WHERE TRIM(nisn) = ? AND id_kelas IS NOT NULL");
         $stmt->execute([$login_identifier]);
         $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($siswa) {
@@ -133,7 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Pastikan sesi tersimpan permanen sebelum redireksi
         @session_write_close();
     } else {
-        $error = "Username/NUPTK/NISN atau password salah!";
+        $login_error_title = 'Login Gagal';
+        $login_error_html = '<div class="login-error-box login-error-box-danger">Username/NUPTK/NISN atau password tidak sesuai.</div><div class="login-error-box login-error-box-warning">Untuk siswa, akun hanya berlaku jika masih tercatat di data siswa dan memiliki kelas aktif.</div>';
     }
 }
 
@@ -187,6 +188,73 @@ $school_profile = getSchoolProfile($pdo);
         /* Login page specific responsive */
         .card {
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .login-error-popup {
+            width: 360px !important;
+            max-width: calc(100vw - 32px) !important;
+            padding: 1.2rem 1.35rem 1.35rem !important;
+            border-radius: 8px !important;
+        }
+
+        .login-error-title {
+            font-size: 16px !important;
+            line-height: 1.35 !important;
+            font-weight: 600 !important;
+            margin: 0.45rem 0 0.35rem !important;
+            letter-spacing: 0 !important;
+        }
+
+        .login-error-text {
+            font-size: 14px !important;
+            line-height: 1.45 !important;
+            margin: 0 !important;
+        }
+
+        .login-error-box {
+            padding: 0.55rem 0.7rem;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.45;
+            text-align: center;
+        }
+
+        .login-error-box + .login-error-box {
+            margin-top: 0.5rem;
+        }
+
+        .login-error-box-danger {
+            color: #8f1d1d;
+            background: #fff1f1;
+            border: 1px solid #f5b8b8;
+        }
+
+        .login-error-box-warning {
+            color: #795200;
+            background: #fff8df;
+            border: 1px solid #efd37a;
+        }
+
+        .login-error-button {
+            font-size: 14px !important;
+            padding: 0.45rem 0.9rem !important;
+            border-radius: 6px !important;
+        }
+
+        .login-error-popup .swal2-icon {
+            width: 52px !important;
+            height: 52px !important;
+            margin: 0.4rem auto 0.7rem !important;
+        }
+
+        .login-error-popup .swal2-icon .swal2-x-mark-line-left,
+        .login-error-popup .swal2-icon .swal2-x-mark-line-right {
+            top: 24px !important;
+            width: 30px !important;
+        }
+
+        .login-error-popup .swal2-actions {
+            margin-top: 1rem !important;
         }
 
         /* Mobile (<= 575px) */
@@ -251,17 +319,6 @@ $school_profile = getSchoolProfile($pdo);
                             </div>
                         </div>
                         <div class="card-body">
-                            <?php if (isset($error)): ?>
-                                <div class="alert alert-danger alert-dismissible show fade text-left">
-                                    <div class="alert-body">
-                                        <button class="close" data-dismiss="alert">
-                                            <span>&times;</span>
-                                        </button>
-                                        <?php echo $error; ?>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
                             <form method="POST" action="">
                                 <div class="form-group">
                                     <label for="username">Username / NUPTK / NISN</label>
@@ -321,6 +378,30 @@ $school_profile = getSchoolProfile($pdo);
         });
     </script>
     <?php unset($_SESSION['login_success_msg']); ?>
+    <?php endif; ?>
+
+    <?php if (isset($login_error_title, $login_error_html)): ?>
+    <script>
+        Swal.fire({
+            title: <?php echo json_encode($login_error_title); ?>,
+            html: <?php echo json_encode($login_error_html); ?>,
+            icon: 'error',
+            confirmButtonText: 'Coba Lagi',
+            confirmButtonColor: '#6777ef',
+            customClass: {
+                popup: 'login-error-popup',
+                title: 'login-error-title',
+                htmlContainer: 'login-error-text',
+                confirmButton: 'login-error-button'
+            }
+        }).then(() => {
+            const usernameInput = document.getElementById('username');
+            if (usernameInput) {
+                usernameInput.focus();
+                usernameInput.select();
+            }
+        });
+    </script>
     <?php endif; ?>
 
     <!-- JS Libraies -->

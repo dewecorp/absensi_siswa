@@ -101,24 +101,40 @@ function getUserLevel(): string {
     return $level;
 }
 
-// Function to check if current user is bendahara
-function isBendahara(PDO $pdo): bool {
-    if (!isLoggedIn()) {
+function isActiveStudentSession(): bool {
+    if (($_SESSION['login_source'] ?? '') !== 'tb_siswa' || getUserLevel() !== 'siswa') {
+        return true;
+    }
+
+    $idSiswa = (int)($_SESSION['user_id'] ?? 0);
+    if ($idSiswa <= 0) {
         return false;
     }
-    
-    $school_profile = getSchoolProfile($pdo);
-    if (empty($school_profile['id_bendahara'])) {
+
+    global $pdo;
+    if (!$pdo instanceof PDO) {
         return false;
     }
-    
-    $current_user_id = getLoggedInTeacherId($pdo);
-    return $current_user_id === $school_profile['id_bendahara'];
+
+    try {
+        $stmt = $pdo->prepare('SELECT id_kelas FROM tb_siswa WHERE id_siswa = ? AND id_kelas IS NOT NULL LIMIT 1');
+        $stmt->execute([$idSiswa]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return false;
+    }
 }
 
 // Function to check user authorization
 function isAuthorized(array $allowed_levels = []): bool {
     if (!isLoggedIn()) {
+        return false;
+    }
+    if (!isActiveStudentSession()) {
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_destroy();
+        }
         return false;
     }
     
@@ -360,14 +376,12 @@ function getSchoolProfile(PDO $pdo): array {
         'id' => null,
         'nama_yayasan' => '',
         'nama_madrasah' => 'Madrasah',
-        'id_kepala' => null,
         'alamat' => '',
         'email_madrasah' => '',
         'website_madrasah' => '',
         'kepala_madrasah' => '',
         'nama_kepala' => '',
         'nip_kepala' => '',
-        'id_bendahara' => null,
         'logo' => '',
         'ttd_kepala' => '',
         'dashboard_hero_image' => '',
