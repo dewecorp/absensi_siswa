@@ -101,6 +101,52 @@ function getUserLevel(): string {
     return $level;
 }
 
+function getCurrentGuruId(PDO $pdo): int {
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+    if ($userId <= 0) {
+        return 0;
+    }
+
+    $loginSource = $_SESSION['login_source'] ?? '';
+    if ($loginSource === 'tb_guru') {
+        return $userId;
+    }
+
+    if ($loginSource === 'tb_pengguna') {
+        try {
+            if (!dbColumnExists($pdo, 'tb_pengguna', 'id_guru')) {
+                return 0;
+            }
+            $stmt = $pdo->prepare('SELECT id_guru FROM tb_pengguna WHERE id_pengguna = ? LIMIT 1');
+            $stmt->execute([$userId]);
+            return (int)($stmt->fetchColumn() ?: 0);
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+function isBendahara(PDO $pdo): bool {
+    try {
+        if (!dbTableExists($pdo, 'tb_profil_madrasah') || !dbColumnExists($pdo, 'tb_profil_madrasah', 'id_bendahara')) {
+            return false;
+        }
+
+        $idGuru = getCurrentGuruId($pdo);
+        if ($idGuru <= 0) {
+            return false;
+        }
+
+        $stmt = $pdo->query('SELECT id_bendahara FROM tb_profil_madrasah ORDER BY id ASC LIMIT 1');
+        $idBendahara = (int)($stmt ? ($stmt->fetchColumn() ?: 0) : 0);
+        return $idBendahara > 0 && $idBendahara === $idGuru;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
 function isActiveStudentSession(): bool {
     if (($_SESSION['login_source'] ?? '') !== 'tb_siswa' || getUserLevel() !== 'siswa') {
         return true;
@@ -379,9 +425,11 @@ function getSchoolProfile(PDO $pdo): array {
         'alamat' => '',
         'email_madrasah' => '',
         'website_madrasah' => '',
+        'id_kepala' => null,
         'kepala_madrasah' => '',
         'nama_kepala' => '',
         'nip_kepala' => '',
+        'id_bendahara' => null,
         'logo' => '',
         'ttd_kepala' => '',
         'dashboard_hero_image' => '',
