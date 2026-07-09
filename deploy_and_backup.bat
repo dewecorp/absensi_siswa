@@ -47,7 +47,49 @@ if exist ".git\index.lock" (
     del /f /q ".git\index.lock"
 )
 
-:: 4. Add all changes
+:: 4. Create ZIP Backup before commit/deploy
+echo [Backup] Preparing backup...
+
+:: Keep one latest backup only so the backups directory does not grow forever
+set "BACKUP_DIR=backups"
+if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
+set "BACKUP_FILE=%BACKUP_DIR%\source_backup.zip"
+
+if exist "%BACKUP_FILE%" (
+    echo [Backup] Removing previous backup: %BACKUP_FILE%
+    del /f /q "%BACKUP_FILE%"
+)
+
+echo [Backup] Creating ZIP: %BACKUP_FILE%
+echo This might take a while...
+
+:: Create backup using PowerShell/.NET so it works even when tar is unavailable on hosting/local Windows
+powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\create_backup.ps1" -BackupFile "%BACKUP_FILE%"
+
+if errorlevel 1 (
+    echo.
+    echo Error: Backup failed. Commit and push cancelled.
+    goto :error
+)
+
+if not exist "%BACKUP_FILE%" (
+    echo.
+    echo Error: Backup file was not created. Commit and push cancelled.
+    goto :error
+)
+
+for %%A in ("%BACKUP_FILE%") do set "BACKUP_SIZE=%%~zA"
+if "%BACKUP_SIZE%"=="0" (
+    echo.
+    echo Error: Backup file is empty. Commit and push cancelled.
+    goto :error
+)
+
+echo.
+echo [Success] Backup saved to: %BACKUP_FILE% (%BACKUP_SIZE% bytes)
+echo.
+
+:: 5. Add all changes
 echo [Git] Adding changes...
 git add .
 if %errorlevel% neq 0 (
@@ -68,7 +110,7 @@ if %errorlevel% equ 0 (
     goto :sync_updates
 )
 
-:: 5. Commit changes
+:: 6. Commit changes
 :get_message
 echo.
 set "commit_msg="
@@ -93,7 +135,7 @@ if !errorlevel! neq 0 (
 )
 
 :sync_updates
-:: 6. Pull (Rebase) and Push
+:: 7. Pull (Rebase) and Push
 echo [Git] Pulling latest changes (rebase)...
 call git pull --rebase origin main
 if errorlevel 1 (
@@ -115,31 +157,6 @@ if errorlevel 1 (
 echo.
 echo [Git] Push successful.
 echo.
-
-:: 7. Create ZIP Backup
-echo [Backup] Preparing backup...
-
-:: Define Backup Filename (Fixed name to overwrite previous backup)
-set "BACKUP_DIR=backups"
-if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
-set "BACKUP_FILE=%BACKUP_DIR%\source_backup.zip"
-
-echo [Backup] Creating ZIP: %BACKUP_FILE%
-echo This might take a while...
-
-:: Create backup using tar
-:: Exclude .git folder, the backups folder itself, and node_modules
-tar -a -c -f "%BACKUP_FILE%" --exclude ".git" --exclude "backups" --exclude "node_modules" *
-
-if %errorlevel% neq 0 (
-    echo.
-    echo [Warning] Tar command returned error code %errorlevel%.
-    echo Some files might be locked or inaccessible.
-    echo Backup might be partial.
-) else (
-    echo.
-    echo [Success] Backup saved to: %BACKUP_FILE%
-)
 
 echo.
 echo ==========================================
