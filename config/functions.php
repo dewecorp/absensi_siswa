@@ -45,6 +45,12 @@ if (!defined('STUDENT_RANDOM_PASSWORD_LENGTH')) {
 if (!defined('APP_SELF_UPDATE_ENABLED')) {
     define('APP_SELF_UPDATE_ENABLED', false);
 }
+if (!defined('CLEAN_URL_ENABLED')) {
+    define('CLEAN_URL_ENABLED', false);
+}
+if (!defined('PHP_LINK_CACHE_BUSTER')) {
+    define('PHP_LINK_CACHE_BUSTER', true);
+}
 
 function sendSecurityHeaders(): void {
     if (headers_sent()) {
@@ -58,6 +64,10 @@ function sendSecurityHeaders(): void {
 }
 
 function enforceCleanPhpUrl(): void {
+    if (!CLEAN_URL_ENABLED) {
+        return;
+    }
+
     if (headers_sent()) {
         return;
     }
@@ -154,7 +164,12 @@ function app_url(string $path): string {
     }
 
     $cleanPath = implode('/', $segments);
-    $cleanPath = preg_replace('/\.php$/i', '', $cleanPath);
+    $isPhpPath = preg_match('/\.php$/i', $cleanPath) === 1;
+    if (CLEAN_URL_ENABLED) {
+        $cleanPath = preg_replace('/\.php$/i', '', $cleanPath);
+    } elseif (PHP_LINK_CACHE_BUSTER && $isPhpPath) {
+        $query .= ($query === '' ? '?' : '&') . '_simad=php';
+    }
     $base = app_base_path();
     return ($base !== '' ? $base : '') . '/' . $cleanPath . $query . $fragment;
 }
