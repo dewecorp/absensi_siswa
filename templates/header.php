@@ -460,6 +460,9 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <?php if (getUserLevel() === 'admin'): ?>
+                            <a href="#" id="btn-toggle-self-update" class="dropdown-item has-icon <?php echo APP_SELF_UPDATE_ENABLED ? 'text-warning' : 'text-muted'; ?>" data-enabled="<?php echo APP_SELF_UPDATE_ENABLED ? '1' : '0'; ?>">
+                                <i class="fas <?php echo APP_SELF_UPDATE_ENABLED ? 'fa-toggle-on' : 'fa-toggle-off'; ?>"></i> <?php echo APP_SELF_UPDATE_ENABLED ? 'Nonaktifkan Update Sistem' : 'Aktifkan Update Sistem'; ?>
+                            </a>
                             <a href="#" id="btn-update-github" class="dropdown-item has-icon text-primary">
                                 <i class="fas fa-sync-alt"></i> Update Sistem
                             </a>
@@ -475,10 +478,71 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
 
             <script>
             document.addEventListener('DOMContentLoaded', function() {
+                const updateCsrfToken = <?php echo json_encode(appCsrfToken()); ?>;
+                const btnToggleUpdate = document.getElementById('btn-toggle-self-update');
                 const btnUpdate = document.getElementById('btn-update-github');
+                let selfUpdateEnabled = btnToggleUpdate ? btnToggleUpdate.getAttribute('data-enabled') === '1' : false;
+
+                function refreshUpdateToggle(enabled) {
+                    selfUpdateEnabled = enabled;
+                    if (!btnToggleUpdate) return;
+                    btnToggleUpdate.setAttribute('data-enabled', enabled ? '1' : '0');
+                    btnToggleUpdate.classList.toggle('text-warning', enabled);
+                    btnToggleUpdate.classList.toggle('text-muted', !enabled);
+                    btnToggleUpdate.innerHTML = enabled
+                        ? '<i class="fas fa-toggle-on"></i> Nonaktifkan Update Sistem'
+                        : '<i class="fas fa-toggle-off"></i> Aktifkan Update Sistem';
+                }
+
+                if (btnToggleUpdate) {
+                    btnToggleUpdate.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const nextEnabled = !selfUpdateEnabled;
+                        Swal.fire({
+                            title: nextEnabled ? 'Aktifkan Update Sistem?' : 'Nonaktifkan Update Sistem?',
+                            text: nextEnabled ? 'Aktifkan hanya saat maintenance dan setelah backup tersedia.' : 'Update dari web akan dikunci kembali.',
+                            icon: nextEnabled ? 'warning' : 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: nextEnabled ? '#f59e0b' : '#6777ef',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: nextEnabled ? 'Ya, Aktifkan' : 'Ya, Nonaktifkan',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (!result.isConfirmed) return;
+
+                            $.ajax({
+                                url: 'update_github.php',
+                                type: 'POST',
+                                data: { action: 'set_self_update', enabled: nextEnabled ? '1' : '0', csrf_token: updateCsrfToken },
+                                dataType: 'json',
+                                success: function(response) {
+                                    if (response.success) {
+                                        refreshUpdateToggle(!!response.enabled);
+                                        Swal.fire({ icon: 'success', title: 'Berhasil', text: response.message });
+                                    } else {
+                                        Swal.fire({ icon: 'error', title: 'Gagal', text: response.message });
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan pengaturan update.' });
+                                }
+                            });
+                        });
+                    });
+                }
+
                 if (btnUpdate) {
                     btnUpdate.addEventListener('click', function(e) {
                         e.preventDefault();
+
+                        if (!selfUpdateEnabled) {
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Update Sistem Nonaktif',
+                                text: 'Aktifkan Update Sistem dulu dari menu akun saat maintenance.'
+                            });
+                            return;
+                        }
                         
                         Swal.fire({
                             title: 'Update Aplikasi?',
@@ -503,7 +567,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                                 $.ajax({
                                     url: 'update_github.php',
                                     type: 'POST',
-                                    data: { action: 'update_from_github' },
+                                    data: { action: 'update_from_github', csrf_token: updateCsrfToken },
                                     dataType: 'json',
                                     success: function(response) {
                                         if (response.success) {

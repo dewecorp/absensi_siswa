@@ -66,3 +66,6 @@ composer.lock
 
 # App version file (updated only on deployment, not in git)
 version.txt
+
+# Runtime admin settings generated on hosting/local machine
+config/runtime_settings.php

@@ -42,14 +42,60 @@ if (!defined('DEFAULT_GURU_PASSWORD')) {
 if (!defined('STUDENT_RANDOM_PASSWORD_LENGTH')) {
     define('STUDENT_RANDOM_PASSWORD_LENGTH', 6);
 }
+
+function appRuntimeSettingsPath(): string {
+    return __DIR__ . '/runtime_settings.php';
+}
+
+function appLoadRuntimeSettings(): array {
+    $path = appRuntimeSettingsPath();
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $settings = include $path;
+    return is_array($settings) ? $settings : [];
+}
+
+function appSaveRuntimeSettings(array $settings): bool {
+    $path = appRuntimeSettingsPath();
+    $dir = dirname($path);
+    if (!is_dir($dir) || !is_writable($dir)) {
+        return false;
+    }
+
+    $allowed = [
+        'self_update_enabled' => !empty($settings['self_update_enabled']),
+        'clean_url_enabled' => array_key_exists('clean_url_enabled', $settings) ? !empty($settings['clean_url_enabled']) : appRuntimeBool('clean_url_enabled', appEnvBool('CLEAN_URL_ENABLED', true)),
+    ];
+    $php = "<?php\nreturn " . var_export($allowed, true) . ";\n";
+    return @file_put_contents($path, $php, LOCK_EX) !== false;
+}
+
+function appRuntimeBool(string $key, bool $default = false): bool {
+    $settings = appLoadRuntimeSettings();
+    if (array_key_exists($key, $settings)) {
+        return filter_var($settings[$key], FILTER_VALIDATE_BOOLEAN);
+    }
+    return $default;
+}
+
+function appEnvBool(string $key, bool $default = false): bool {
+    $value = getenv($key);
+    if ($value === false || $value === '') {
+        return $default;
+    }
+    return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+}
+
 if (!defined('APP_SELF_UPDATE_ENABLED')) {
-    define('APP_SELF_UPDATE_ENABLED', false);
+    define('APP_SELF_UPDATE_ENABLED', appRuntimeBool('self_update_enabled', appEnvBool('APP_SELF_UPDATE_ENABLED', false)));
 }
 if (!defined('CLEAN_URL_ENABLED')) {
-    define('CLEAN_URL_ENABLED', false);
+    define('CLEAN_URL_ENABLED', appRuntimeBool('clean_url_enabled', appEnvBool('CLEAN_URL_ENABLED', true)));
 }
 if (!defined('PHP_LINK_CACHE_BUSTER')) {
-    define('PHP_LINK_CACHE_BUSTER', true);
+    define('PHP_LINK_CACHE_BUSTER', false);
 }
 
 function sendSecurityHeaders(): void {
@@ -84,10 +130,20 @@ function enforceCleanPhpUrl(): void {
     }
 
     $cleanPath = preg_replace('/\.php$/i', '', $path);
-    $query = (string)(parse_url($requestUri, PHP_URL_QUERY) ?? '');
+    $query = appCleanQueryString((string)(parse_url($requestUri, PHP_URL_QUERY) ?? ''));
     $target = $cleanPath . ($query !== '' ? '?' . $query : '');
     header('Location: ' . $target, true, 301);
     exit();
+}
+
+function appCleanQueryString(string $query): string {
+    if ($query === '') {
+        return '';
+    }
+
+    parse_str($query, $params);
+    unset($params['simad'], $params['_simad']);
+    return http_build_query($params);
 }
 
 function app_base_path(): string {
@@ -130,6 +186,11 @@ function app_url(string $path): string {
     if ($queryPos !== false) {
         $query = substr($path, $queryPos);
         $path = substr($path, 0, $queryPos);
+    }
+
+    if ($query !== '') {
+        $cleanQuery = appCleanQueryString(ltrim($query, '?'));
+        $query = $cleanQuery !== '' ? '?' . $cleanQuery : '';
     }
 
     $path = str_replace('\\', '/', $path);
@@ -236,13 +297,31 @@ function startUserSession(string $level): void {
     }
 }
 
+function appCsrfToken(): string {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        @session_start();
+    }
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return (string)$_SESSION['csrf_token'];
+}
+
+function appVerifyCsrfToken(?string $token): bool {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        @session_start();
+    }
+    return is_string($token) && isset($_SESSION['csrf_token']) && hash_equals((string)$_SESSION['csrf_token'], $token);
+}
+
 // Function to redirect user
 function redirect(string $page): void {
+    $target = app_url($page);
     if (!headers_sent()) {
-        header("Location: $page");
+        header("Location: $target");
         exit();
     } else {
-        echo "<script>window.location.href='$page';</script>";
+        echo "<script>window.location.href=" . json_encode($target) . ";</script>";
         exit();
     }
 }

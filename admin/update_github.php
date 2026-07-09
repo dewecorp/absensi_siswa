@@ -9,13 +9,40 @@ if (!isAuthorized(['admin'])) {
     exit;
 }
 
-if (!APP_SELF_UPDATE_ENABLED) {
+$action = $_POST['action'] ?? '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !appVerifyCsrfToken($_POST['csrf_token'] ?? null)) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Update aplikasi dari web dinonaktifkan demi keamanan. Aktifkan APP_SELF_UPDATE_ENABLED hanya saat maintenance.']);
+    echo json_encode(['success' => false, 'message' => 'Token keamanan tidak valid. Muat ulang halaman lalu coba lagi.']);
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_from_github') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'set_self_update') {
+    while (ob_get_level()) ob_end_clean();
+    header('Content-Type: application/json');
+
+    $enabled = isset($_POST['enabled']) && (string)$_POST['enabled'] === '1';
+    if (!appSaveRuntimeSettings(['self_update_enabled' => $enabled])) {
+        echo json_encode(['success' => false, 'message' => 'Gagal menyimpan pengaturan update. Pastikan folder config bisa ditulis oleh PHP.']);
+        exit;
+    }
+
+    logActivity($pdo, (string)($_SESSION['username'] ?? 'admin'), 'Pengaturan Update Sistem', $enabled ? 'Update sistem diaktifkan' : 'Update sistem dinonaktifkan');
+    echo json_encode([
+        'success' => true,
+        'enabled' => $enabled,
+        'message' => $enabled ? 'Update sistem sudah diaktifkan. Jalankan hanya saat maintenance.' : 'Update sistem sudah dinonaktifkan.'
+    ]);
+    exit;
+}
+
+if (!APP_SELF_UPDATE_ENABLED) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Update aplikasi dari web dinonaktifkan demi keamanan. Aktifkan Update Sistem dari menu akun admin hanya saat maintenance.']);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
     // Bersihkan semua output sebelumnya untuk memastikan hanya JSON yang dikirim
     while (ob_get_level()) ob_end_clean();
     header('Content-Type: application/json');
@@ -46,8 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($all_success) {
             // Write new version timestamp after successful git update
             @file_put_contents($project_root . '/version.txt', date('YmdHis'));
+            appSaveRuntimeSettings(['self_update_enabled' => false]);
             logActivity($pdo, $_SESSION['username'], 'Update Aplikasi', 'Update via Git berhasil');
-            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui.']);
+            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui. Update sistem otomatis dinonaktifkan kembali.']);
             exit;
         }
     }
@@ -135,7 +163,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             logActivity($pdo, $_SESSION['username'], 'Update Aplikasi', 'Update via ZIP berhasil');
             // Write new version timestamp after successful ZIP update
             @file_put_contents($project_root . '/version.txt', date('YmdHis'));
-            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui.']);
+            appSaveRuntimeSettings(['self_update_enabled' => false]);
+            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui. Update sistem otomatis dinonaktifkan kembali.']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Struktur ZIP tidak sesuai.']);
         }

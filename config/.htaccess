@@ -1,6 +1,6 @@
 Options -Indexes
 
-<FilesMatch "^(database|functions|excel_import|update_schema|deduplicate_siswa_nisn)\.php$">
+<FilesMatch "^(database|functions|runtime_settings|excel_import|update_schema|deduplicate_siswa_nisn)\.php$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
