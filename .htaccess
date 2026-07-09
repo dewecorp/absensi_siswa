@@ -1,18 +1,53 @@
-RewriteEngine On
+Options -Indexes
 DirectoryIndex index.php
+RewriteEngine On
 
-# 1. Menambahkan trailing slash jika itu adalah direktori
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteCond %{REQUEST_URI} !/$
-RewriteRule (.*) $1/ [R=301,L]
-
-# 2. Menghapus ekstensi .php dari URL (Redirect eksternal untuk browser)
-# Pengecualian untuk POST agar tidak error saat submit form
-RewriteCond %{REQUEST_METHOD} !POST
-RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
+# Bersihkan URL rusak dari local Windows path, misalnya /D:/laragon/www/absen_siswa/admin/dashboard.
+RewriteRule ^[A-Z]:/.*/absen_siswa/(.+)$ /$1 [R=301,L,NE,NC]
+RewriteCond %{REQUEST_URI} ^/[A-Z]:/.*/absen_siswa/(.+)$ [NC]
 RewriteRule ^ /%1 [R=301,L,NE]
 
-# 3. Menangani request tanpa ekstensi (Rewrite internal)
+# Blokir pola file backdoor WordPress palsu di aplikasi non-WordPress ini.
+<FilesMatch "^(wp-(blog-header|cron|config|login|load|mail|settings|signup|trackback)\.php|xmlrpc\.php|tmp_.*\.php)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Lindungi file konfigurasi, backup, metadata, dan script maintenance dari akses web langsung.
+<FilesMatch "^(composer\.(json|lock)|package(-lock)?\.json|\.env|\.gitignore|\.editorconfig|deploy_and_backup\.bat|download\.ps1|apply_migration\.php|migration_.*\.sql|.*\.md|.*\.sql|.*\.bak|.*\.zip)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Permitted-Cross-Domain-Policies "none"
+</IfModule>
+
+# 1. Tambahkan trailing slash jika request adalah direktori.
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_URI} !/$
+RewriteRule ^(.+)$ $1/ [R=301,L]
+
+# 2. Redirect URL .php ke URL tanpa ekstensi untuk GET/HEAD.
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$ [NC]
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.php(?:[\s?]|$) [NC]
+RewriteRule ^(.+)\.php$ $1 [R=301,L,NE]
+
+# 3. Rewrite internal request tanpa ekstensi ke file PHP yang cocok.
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(.+?)/?$ $1.php [L]
+RewriteRule ^(.+?)/?$ $1.php [L,QSA]

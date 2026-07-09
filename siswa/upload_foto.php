@@ -10,12 +10,19 @@ if (!isAuthorized(['siswa'])) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto'])) {
     $id_siswa = $_SESSION['user_id'];
     $file = $_FILES['foto'];
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
+        echo json_encode(['status' => 'error', 'message' => 'Upload tidak valid.']);
+        exit;
+    }
     
     // Validate file
     $allowed_extensions = ['jpg', 'jpeg', 'png'];
+    $allowed_mimes = ['image/jpeg', 'image/png'];
     $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime_type = $finfo->file($file['tmp_name']);
     
-    if (!in_array($file_extension, $allowed_extensions)) {
+    if (!in_array($file_extension, $allowed_extensions, true) || !in_array($mime_type, $allowed_mimes, true)) {
         echo json_encode(['status' => 'error', 'message' => 'Format file tidak didukung. Gunakan JPG atau PNG.']);
         exit;
     }

@@ -19,6 +19,9 @@ $user_level = function_exists('getUserLevel') ? getUserLevel() : null;
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
+$favicon_logo = !empty($school_profile['logo']) ? basename((string)$school_profile['logo']) : 'logo.png';
+$favicon_path = __DIR__ . '/../assets/img/' . $favicon_logo;
+$favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path) : '1';
 
 // Check if user is logged in
 // TEMPORARY: Bypass authentication for testing
@@ -52,8 +55,8 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
     <title><?php echo $page_title; ?> | Sistem Informasi Madrasah</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="../assets/img/logo_1768301957.png">
-    <link rel="apple-touch-icon" href="../assets/img/logo_1768301957.png">
+    <link rel="icon" type="image/png" href="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="apple-touch-icon" href="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
 
     <!-- General CSS Files -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -303,7 +306,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                             <i class="fas fa-arrow-left"></i>
                         </a>
                     <?php endif; ?>
-                    <img src="../assets/img/logo_1768301957.png" alt="logo" class="mr-2" style="height: 40px;">
+                    <img src="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>" alt="logo" class="mr-2" style="height: 40px;">
                     <div style="line-height: 1.2;">
                         <h6 class="mb-0 text-success font-weight-bold" style="font-size: 1rem;">Sistem Informasi Madrasah</h6>
                         <small class="text-dark font-weight-bold" style="font-size: 0.8rem;"><?php echo isset($school_profile['nama_sekolah']) ? $school_profile['nama_sekolah'] : 'MI Sultan Fattah Sukosono'; ?></small>

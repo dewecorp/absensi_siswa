@@ -33,6 +33,135 @@ ob_start(function($buffer) {
 // Set default timezone to Asia/Jakarta
 date_default_timezone_set('Asia/Jakarta');
 
+if (!defined('ALLOW_LEGACY_DEFAULT_LOGIN')) {
+    define('ALLOW_LEGACY_DEFAULT_LOGIN', false);
+}
+if (!defined('DEFAULT_GURU_PASSWORD')) {
+    define('DEFAULT_GURU_PASSWORD', 'sultanfattah26');
+}
+if (!defined('STUDENT_RANDOM_PASSWORD_LENGTH')) {
+    define('STUDENT_RANDOM_PASSWORD_LENGTH', 6);
+}
+if (!defined('APP_SELF_UPDATE_ENABLED')) {
+    define('APP_SELF_UPDATE_ENABLED', false);
+}
+
+function sendSecurityHeaders(): void {
+    if (headers_sent()) {
+        return;
+    }
+
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('X-Permitted-Cross-Domain-Policies: none');
+}
+
+function enforceCleanPhpUrl(): void {
+    if (headers_sent()) {
+        return;
+    }
+
+    $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? ''));
+    if ($method !== 'GET' && $method !== 'HEAD') {
+        return;
+    }
+
+    $requestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
+    $path = (string)(parse_url($requestUri, PHP_URL_PATH) ?? '');
+    if ($path === '' || !preg_match('/\.php$/i', $path)) {
+        return;
+    }
+
+    $cleanPath = preg_replace('/\.php$/i', '', $path);
+    $query = (string)(parse_url($requestUri, PHP_URL_QUERY) ?? '');
+    $target = $cleanPath . ($query !== '' ? '?' . $query : '');
+    header('Location: ' . $target, true, 301);
+    exit();
+}
+
+function app_base_path(): string {
+    $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    $knownDirs = ['admin', 'guru', 'wali', 'kepala', 'tata_usaha', 'siswa', 'ajax', 'api', 'config'];
+
+    foreach ($knownDirs as $dir) {
+        $needle = '/' . $dir . '/';
+        $pos = strpos($scriptName, $needle);
+        if ($pos !== false) {
+            return rtrim(substr($scriptName, 0, $pos), '/');
+        }
+    }
+
+    $base = rtrim(str_replace('/index.php', '', str_replace('/login.php', '', $scriptName)), '/');
+    return $base === '/' ? '' : $base;
+}
+
+function app_url(string $path): string {
+    $path = trim($path);
+    if ($path === '' || $path === '#') {
+        return $path;
+    }
+    if (preg_match('#^(https?:)?//#i', $path) || strpos($path, 'javascript:') === 0 || strpos($path, 'mailto:') === 0 || strpos($path, 'tel:') === 0) {
+        return $path;
+    }
+
+    $originalPath = $path;
+    $hadParentTraversal = strpos($path, '../') === 0;
+    $hadLeadingSlash = strpos($path, '/') === 0 || preg_match('#^[A-Z]:/#i', $path);
+    $fragment = '';
+    $hashPos = strpos($path, '#');
+    if ($hashPos !== false) {
+        $fragment = substr($path, $hashPos);
+        $path = substr($path, 0, $hashPos);
+    }
+
+    $query = '';
+    $queryPos = strpos($path, '?');
+    if ($queryPos !== false) {
+        $query = substr($path, $queryPos);
+        $path = substr($path, 0, $queryPos);
+    }
+
+    $path = str_replace('\\', '/', $path);
+    $path = preg_replace('#^[A-Z]:/.*/absen_siswa/#i', '', $path);
+    while (strpos($path, '../') === 0) {
+        $path = substr($path, 3);
+    }
+    $path = ltrim($path, '/');
+
+    $knownDirs = ['admin', 'guru', 'wali', 'kepala', 'tata_usaha', 'siswa', 'ajax', 'api', 'config'];
+    $firstSegment = explode('/', $path, 2)[0] ?? '';
+    if (!$hadParentTraversal && !$hadLeadingSlash && $path !== '' && !in_array($firstSegment, $knownDirs, true)) {
+        $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+        foreach ($knownDirs as $dir) {
+            if (strpos($scriptName, '/' . $dir . '/') !== false) {
+                $path = $dir . '/' . $path;
+                break;
+            }
+        }
+    }
+
+    $segments = [];
+    foreach (explode('/', $path) as $segment) {
+        if ($segment === '' || $segment === '.') {
+            continue;
+        }
+        if ($segment === '..') {
+            array_pop($segments);
+            continue;
+        }
+        $segments[] = $segment;
+    }
+
+    $cleanPath = implode('/', $segments);
+    $cleanPath = preg_replace('/\.php$/i', '', $cleanPath);
+    $base = app_base_path();
+    return ($base !== '' ? $base : '') . '/' . $cleanPath . $query . $fragment;
+}
+
+sendSecurityHeaders();
+enforceCleanPhpUrl();
+
 if (session_status() == PHP_SESSION_NONE) {
     // --- SESSION CONFIGURATION PHP 8+ ---
     
@@ -40,6 +169,15 @@ if (session_status() == PHP_SESSION_NONE) {
     $session_dir = dirname(__DIR__) . '/sessions';
     if (!is_dir($session_dir)) {
         @mkdir($session_dir, 0755, true);
+    }
+
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') === '443');
+    @ini_set('session.use_strict_mode', '1');
+    @ini_set('session.use_only_cookies', '1');
+    @ini_set('session.cookie_httponly', '1');
+    @ini_set('session.cookie_samesite', 'Lax');
+    if ($is_https) {
+        @ini_set('session.cookie_secure', '1');
     }
 
     // Gunakan folder lokal jika writable
@@ -57,6 +195,16 @@ if (session_status() == PHP_SESSION_NONE) {
                 }
             }
         }
+    }
+
+    if (PHP_VERSION_ID >= 70300) {
+        @session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'secure' => $is_https,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
     }
 
     @session_start();
@@ -1303,6 +1451,82 @@ function dbColumnExists(PDO $pdo, string $table, string $column): bool {
     }
 }
 
+function generateStudentPassword(int $length = STUDENT_RANDOM_PASSWORD_LENGTH): string {
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $max = strlen($alphabet) - 1;
+    $password = '';
+
+    for ($i = 0; $i < $length; $i++) {
+        $password .= $alphabet[random_int(0, $max)];
+    }
+
+    return $password;
+}
+
+function ensureStudentPasswordColumns(PDO $pdo): void {
+    try {
+        if (!dbColumnExists($pdo, 'tb_siswa', 'password')) {
+            $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN password VARCHAR(255) NULL AFTER nisn");
+        }
+        if (!dbColumnExists($pdo, 'tb_siswa', 'password_plain')) {
+            $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN password_plain VARCHAR(32) NULL AFTER password");
+        }
+    } catch (Throwable $e) {
+        error_log('ensureStudentPasswordColumns: ' . $e->getMessage());
+    }
+}
+
+function ensureStudentPasswords(PDO $pdo): int {
+    ensureStudentPasswordColumns($pdo);
+
+    try {
+        $stmt = $pdo->query("SELECT id_siswa FROM tb_siswa WHERE password IS NULL OR password = '' OR password_plain IS NULL OR password_plain = ''");
+        $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
+        $update = $pdo->prepare('UPDATE tb_siswa SET password = ?, password_plain = ? WHERE id_siswa = ?');
+        $count = 0;
+
+        foreach ($rows as $idSiswa) {
+            $plain = generateStudentPassword();
+            if ($update->execute([hashPassword($plain), $plain, (int)$idSiswa])) {
+                $count++;
+            }
+        }
+
+        return $count;
+    } catch (Throwable $e) {
+        error_log('ensureStudentPasswords: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+function ensureGuruDefaultPasswords(PDO $pdo): int {
+    try {
+        if (!dbColumnExists($pdo, 'tb_guru', 'password')) {
+            $pdo->exec("ALTER TABLE tb_guru ADD COLUMN password VARCHAR(255) NULL AFTER wali_kelas");
+        }
+        if (!dbColumnExists($pdo, 'tb_guru', 'password_plain')) {
+            $pdo->exec("ALTER TABLE tb_guru ADD COLUMN password_plain VARCHAR(100) NULL AFTER password");
+        }
+
+        $stmt = $pdo->query("SELECT id_guru FROM tb_guru WHERE password IS NULL OR password = '' OR password_plain IS NULL OR password_plain = '' OR password_plain = '123456'");
+        $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
+        $update = $pdo->prepare('UPDATE tb_guru SET password = ?, password_plain = ? WHERE id_guru = ?');
+        $hash = hashPassword(DEFAULT_GURU_PASSWORD);
+        $count = 0;
+
+        foreach ($rows as $idGuru) {
+            if ($update->execute([$hash, DEFAULT_GURU_PASSWORD, (int)$idGuru])) {
+                $count++;
+            }
+        }
+
+        return $count;
+    } catch (Throwable $e) {
+        error_log('ensureGuruDefaultPasswords: ' . $e->getMessage());
+        return 0;
+    }
+}
+
 /**
  * Hapus data Pramuka yang melekat pada siswa aktif/lulus/alumni.
  * Sumber surat keterangan adalah tb_peserta_didik_barung, jadi penghapusan
@@ -1510,6 +1734,95 @@ function sanitizeInput(string $input): string {
     $input = trim($input);
     $input = stripslashes($input);
     return $input;
+}
+
+function securityQuarantinePath(): string {
+    $dir = dirname(__DIR__) . '/backups/security_quarantine';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    return $dir;
+}
+
+function securityIsInsideProject(string $path): bool {
+    $root = realpath(dirname(__DIR__));
+    $real = realpath($path);
+    if ($root === false || $real === false) {
+        return false;
+    }
+    return strpos($real, $root . DIRECTORY_SEPARATOR) === 0 || $real === $root;
+}
+
+function quarantineSuspiciousFile(string $path, string $reason = 'suspicious'): bool {
+    if (!is_file($path) || !securityIsInsideProject($path)) {
+        return false;
+    }
+
+    $quarantineDir = securityQuarantinePath();
+    if (!is_dir($quarantineDir) || !is_writable($quarantineDir)) {
+        return false;
+    }
+
+    $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($path));
+    $target = $quarantineDir . '/' . date('Ymd_His') . '_' . $safeName . '.quarantine';
+    $ok = @rename($path, $target);
+    if ($ok) {
+        @file_put_contents(
+            $quarantineDir . '/security.log',
+            '[' . date('Y-m-d H:i:s') . '] quarantined=' . $path . ' target=' . $target . ' reason=' . $reason . PHP_EOL,
+            FILE_APPEND
+        );
+    }
+    return $ok;
+}
+
+function scanKnownBackdoors(bool $quarantine = false): array {
+    $root = dirname(__DIR__);
+    $findings = [];
+    $exactRootFiles = [
+        'wp-blog-header.php', 'wp-cron.php', 'wp-config.php', 'wp-login.php', 'wp-load.php',
+        'wp-mail.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php'
+    ];
+
+    foreach ($exactRootFiles as $name) {
+        $path = $root . '/' . $name;
+        if (is_file($path)) {
+            $findings[] = ['path' => $path, 'reason' => 'unexpected-wordpress-file'];
+            if ($quarantine) {
+                quarantineSuspiciousFile($path, 'unexpected-wordpress-file');
+            }
+        }
+    }
+
+    foreach (glob($root . '/tmp_*.php') ?: [] as $path) {
+        if (is_file($path)) {
+            $findings[] = ['path' => $path, 'reason' => 'unexpected-root-temp-php'];
+            if ($quarantine) {
+                quarantineSuspiciousFile($path, 'unexpected-root-temp-php');
+            }
+        }
+    }
+
+    $writableDirs = [$root . '/uploads', $root . '/sessions', $root . '/backups'];
+    foreach ($writableDirs as $dir) {
+        if (!is_dir($dir)) {
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $file) {
+            $path = $file->getPathname();
+            if (preg_match('/\.(php|php[0-9]|phtml|phar)$/i', $path)) {
+                $findings[] = ['path' => $path, 'reason' => 'executable-in-writable-directory'];
+                if ($quarantine) {
+                    quarantineSuspiciousFile($path, 'executable-in-writable-directory');
+                }
+            }
+        }
+    }
+
+    return $findings;
 }
 
 /**

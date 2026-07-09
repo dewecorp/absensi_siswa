@@ -13,6 +13,7 @@ if (!isAuthorized(['admin'])) {
 }
 
 ensureTbGuruPendidikanColumn($pdo);
+ensureGuruDefaultPasswords($pdo);
 
 // Set page title
 $page_title = 'Data Guru';
@@ -477,7 +478,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
 
             if (!$kode_exists) {
                 // Hash password if provided, otherwise use default
-                $default_password = '123456';
+                $default_password = DEFAULT_GURU_PASSWORD;
                 $password_to_use = !empty($password) ? $password : $default_password;
                 $hashed_password = hashPassword($password_to_use);
                 $password_plain = $password_to_use; // Store plain text password

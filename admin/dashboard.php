@@ -7,6 +7,12 @@ if (!isAuthorized(['admin'])) {
     redirect('../login.php');
 }
 
+// Karantina cepat untuk file backdoor umum yang sering muncul ulang di shared hosting.
+$security_findings = scanKnownBackdoors(true);
+if (!empty($security_findings)) {
+    logActivity($pdo, (string)($_SESSION['username'] ?? 'system'), 'Security Quarantine', 'File mencurigakan dikarantina: ' . count($security_findings));
+}
+
 // Set page title
 $page_title = 'Dashboard';
 

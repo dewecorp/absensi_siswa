@@ -224,7 +224,7 @@ function importTeachersFromExcelFile($filePath) {
                 $tempat_lahir_val = !empty($tempat_lahir) ? $tempat_lahir : NULL;
                 
                 // Hash password if provided
-                $default_password = '123456';
+                $default_password = DEFAULT_GURU_PASSWORD;
                 $password_to_use = !empty($password) ? $password : $default_password;
                 $hashed_password = hashPassword($password_to_use);
                 $password_plain = $password_to_use; // Store plain text password
@@ -280,6 +280,7 @@ function importTeachersFromExcelFile($filePath) {
  */
 function importStudentsFromExcelFile($filePath) {
     global $pdo;
+    ensureStudentPasswordColumns($pdo);
     
     try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
@@ -335,8 +336,9 @@ function importStudentsFromExcelFile($filePath) {
                 } else {
                     // Insert new student
                     try {
-                        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                        $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir_db, $wali, $id_kelas]);
+                        $plain_password = generateStudentPassword();
+                        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        $stmt->execute([$nama_siswa, $nisn, hashPassword($plain_password), $plain_password, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir_db, $wali, $id_kelas]);
                         $rowCount++;
                     } catch (PDOException $e) {
                         $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
@@ -410,7 +412,7 @@ function importTeachersFromCSV($filePath) {
             $tempat_lahir_val = !empty($tempat_lahir) ? $tempat_lahir : NULL;
             
             // Hash password if provided
-            $default_password = '123456';
+            $default_password = DEFAULT_GURU_PASSWORD;
             $password_to_use = !empty($password) ? $password : $default_password;
             $hashed_password = hashPassword($password_to_use);
             $password_plain = $password_to_use; // Store plain text password
@@ -458,6 +460,7 @@ function importTeachersFromCSV($filePath) {
  */
 function importStudentsFromCSV($filePath) {
     global $pdo;
+    ensureStudentPasswordColumns($pdo);
     
     $handle = fopen($filePath, "r");
     if (!$handle) {
@@ -510,8 +513,9 @@ function importStudentsFromCSV($filePath) {
             } else {
                 // Insert new student
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?)");
-                    $stmt->execute([$nama_siswa, $nisn, $jenis_kelamin ?: null, $id_kelas]);
+                    $plain_password = generateStudentPassword();
+                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$nama_siswa, $nisn, hashPassword($plain_password), $plain_password, $jenis_kelamin ?: null, $id_kelas]);
                     $rowCount++;
                 } catch (PDOException $e) {
                     $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();
@@ -543,8 +547,9 @@ function importStudentsFromCSV($filePath) {
             } else {
                 // Insert new student
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, id_kelas) VALUES (?, ?, ?)");
-                    $stmt->execute([$nama_siswa, $nisn, $id_kelas ?: null]);
+                    $plain_password = generateStudentPassword();
+                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, id_kelas) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->execute([$nama_siswa, $nisn, hashPassword($plain_password), $plain_password, $id_kelas ?: null]);
                     $rowCount++;
                 } catch (PDOException $e) {
                     $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();

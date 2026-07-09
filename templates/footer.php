@@ -72,14 +72,14 @@
                 <div class="container-fluid h-100 px-0">
                     <div class="row w-100 mx-0 h-100 no-gutters">
                         <div class="col px-0 h-100">
-                            <a href="<?php echo $bottom_home_url; ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-primary">
+                            <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-primary">
                                 <i class="fas fa-home fa-lg mb-1"></i>
                                 <span class="bottom-nav-label">Home</span>
                             </a>
                         </div>
                         <?php foreach ($bottom_quick_links as $link): ?>
                             <div class="col px-0 h-100">
-                                <a href="<?php echo $link['url']; ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
+                                <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
                                     <i class="<?php echo $link['icon']; ?> fa-lg mb-1"></i>
                                     <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
                                 </a>
@@ -107,7 +107,7 @@
                         </div>
                         <div class="modal-body p-0">
                             <div class="list-group list-group-flush">
-                                <a href="<?php echo $bottom_profile_url; ?>" class="list-group-item list-group-item-action d-flex align-items-center">
+                                <a href="<?php echo htmlspecialchars(app_url($bottom_profile_url), ENT_QUOTES, 'UTF-8'); ?>" class="list-group-item list-group-item-action d-flex align-items-center">
                                     <i class="fas fa-user-circle fa-lg mr-3 text-primary"></i> Profil Saya
                                 </a>
                                 <a href="#" onclick="confirmLogout('../logout.php?level=<?php echo htmlspecialchars(getUserLevel(), ENT_QUOTES, 'UTF-8'); ?>'); return false;" class="list-group-item list-group-item-action d-flex align-items-center text-danger">

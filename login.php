@@ -3,6 +3,9 @@ ob_start();
 require_once 'config/database.php';
 require_once 'config/functions.php';
 
+ensureStudentPasswords($pdo);
+ensureGuruDefaultPasswords($pdo);
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $login_identifier = trim(sanitizeInput($_POST['username'] ?? ''));
@@ -33,12 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if (!empty($guru['password']) && password_verify($password, $guru['password'])) {
                 $auth_guru = true;
             }
-            // B. Cek Password Default '123456'
-            if (!$auth_guru && $password === '123456') {
-                $auth_guru = true;
-            }
-            // C. Cek Password NUPTK
-            if (!$auth_guru && (string)$password === (string)$guru['nuptk']) {
+            // B. Password default guru hanya untuk akun yang belum pernah diganti password.
+            if (!$auth_guru && empty($guru['password']) && $password === DEFAULT_GURU_PASSWORD) {
                 $auth_guru = true;
             }
             
@@ -58,8 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($siswa) {
             $auth_siswa = false;
             if (!empty($siswa['password']) && password_verify($password, $siswa['password'])) $auth_siswa = true;
-            // Gunakan perbandingan string yang aman untuk NISN
-            if (!$auth_siswa && (string)$password === (string)$siswa['nisn']) $auth_siswa = true;
             
             if ($auth_siswa) {
                 $authenticated = true;
@@ -70,6 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if ($authenticated) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_regenerate_id(true);
+        }
+
         // Normalisasi data untuk menghindari error null di PHP 8
         $user_data = $user_data ?? [];
         
@@ -89,12 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             $redirect_url = '';
             switch ($level) {
-                case 'admin': $redirect_url = 'admin/dashboard.php'; break;
-                case 'guru': $redirect_url = 'guru/dashboard.php'; break;
-                case 'wali': $redirect_url = 'wali/dashboard.php'; break;
-                case 'kepala_madrasah': $redirect_url = 'kepala/dashboard.php'; break;
-                case 'tata_usaha': $redirect_url = 'tata_usaha/dashboard.php'; break;
-                default: $redirect_url = 'index.php'; break;
+                case 'admin': $redirect_url = app_url('admin/dashboard.php'); break;
+                case 'guru': $redirect_url = app_url('guru/dashboard.php'); break;
+                case 'wali': $redirect_url = app_url('wali/dashboard.php'); break;
+                case 'kepala_madrasah': $redirect_url = app_url('kepala/dashboard.php'); break;
+                case 'tata_usaha': $redirect_url = app_url('tata_usaha/dashboard.php'); break;
+                default: $redirect_url = app_url('index.php'); break;
             }
             $show_swal = true;
             logActivity($pdo, (string)($_SESSION['username']), 'Login', 'User logged in successfully');
@@ -113,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['login_source'] = 'tb_guru';
             $_SESSION['login_success_msg'] = "Selamat datang, " . $nama_guru . "!";
             
-            $redirect_url = ($level === 'wali') ? 'wali/dashboard.php' : 'guru/dashboard.php';
+            $redirect_url = ($level === 'wali') ? app_url('wali/dashboard.php') : app_url('guru/dashboard.php');
             $show_swal = true;
             logActivity($pdo, (string)($_SESSION['username']), 'Login', 'Teacher logged in successfully');
         } elseif ($user_type === 'siswa') {
@@ -125,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['login_source'] = 'tb_siswa';
             $_SESSION['login_success_msg'] = "Selamat datang, " . ($_SESSION['nama_siswa']) . "!";
 
-            $redirect_url = 'siswa/dashboard.php';
+            $redirect_url = app_url('siswa/dashboard.php');
             $show_swal = true;
             logActivity($pdo, (string)($_SESSION['username']), 'Login', 'Student logged in successfully');
         }
@@ -140,6 +141,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
+$favicon_logo = !empty($school_profile['logo']) ? basename((string)$school_profile['logo']) : 'logo.png';
+$favicon_path = __DIR__ . '/assets/img/' . $favicon_logo;
+$favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path) : '1';
 ?>
 
 <!DOCTYPE html>
@@ -150,8 +154,8 @@ $school_profile = getSchoolProfile($pdo);
     <title>Login | Sistem Informasi Madrasah</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="assets/img/logo_1768301957.png">
-    <link rel="apple-touch-icon" href="assets/img/logo_1768301957.png">
+    <link rel="icon" type="image/png" href="assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="apple-touch-icon" href="assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
 
     <!-- General CSS Files -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">

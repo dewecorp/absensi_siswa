@@ -1,18 +1,24 @@
 <?php
-// Database configuration with environment detection
+// Database configuration with environment detection.
+// Di hosting, isi environment variable DB_HOST, DB_USER, DB_PASS, DB_NAME jika tersedia.
+$env = static function (string $key, string $fallback): string {
+    $value = getenv($key);
+    return ($value !== false && $value !== '') ? $value : $fallback;
+};
+
 $host = $_SERVER['HTTP_HOST'] ?? '';
 if ($host == 'localhost' || $host == '127.0.0.1' || strpos($host, '.test') !== false || strpos($host, '.local') !== false) {
     // Local environment (Laragon, XAMPP, etc.)
-    define('DB_HOST', 'localhost');
-    define('DB_USER', 'root');
-    define('DB_PASS', '');
-    define('DB_NAME', 'db_absensi');
+    define('DB_HOST', $env('DB_HOST', 'localhost'));
+    define('DB_USER', $env('DB_USER', 'root'));
+    define('DB_PASS', $env('DB_PASS', ''));
+    define('DB_NAME', $env('DB_NAME', 'db_absensi'));
 } else {
     // Hosting environment
-    define('DB_HOST', 'localhost');
-    define('DB_USER', 'kvzveyrg_simad');
-    define('DB_PASS', 'sultanfattah26');
-    define('DB_NAME', 'kvzveyrg_simad');
+    define('DB_HOST', $env('DB_HOST', 'localhost'));
+    define('DB_USER', $env('DB_USER', 'kvzveyrg_simad'));
+    define('DB_PASS', $env('DB_PASS', 'sultanfattah26'));
+    define('DB_NAME', $env('DB_NAME', 'kvzveyrg_simad'));
 }
 
 date_default_timezone_set('Asia/Jakarta');

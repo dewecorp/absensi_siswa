@@ -101,7 +101,7 @@ if (!function_exists('render_dynamic_breadcrumb')) {
                         $full_url = str_repeat('../', $subdir_count) . $full_url;
                     }
                 }
-                $html .= '<div class="breadcrumb-item active"><a href="' . htmlspecialchars($full_url) . '">' . htmlspecialchars($item['title']) . '</a></div>';
+                $html .= '<div class="breadcrumb-item active"><a href="' . htmlspecialchars(app_url($full_url)) . '">' . htmlspecialchars($item['title']) . '</a></div>';
             }
         }
 
@@ -1313,10 +1313,10 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 <div class="main-sidebar">
     <aside id="sidebar-wrapper">
         <div class="sidebar-brand">
-            <a href="dashboard.php" style="line-height: 1.2; display: inline-block; padding: 12px 0;">Sistem Informasi Madrasah</a>
+            <a href="<?php echo htmlspecialchars(app_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>" style="line-height: 1.2; display: inline-block; padding: 12px 0;">Sistem Informasi Madrasah</a>
         </div>
         <div class="sidebar-brand sidebar-brand-sm">
-            <a href="dashboard.php">SIM</a>
+            <a href="<?php echo htmlspecialchars(app_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>">SIM</a>
         </div>
         <ul class="sidebar-menu">
             <?php foreach ($menu_items as $item): ?>
@@ -1325,14 +1325,14 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                         <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span></a>
                         <ul class="dropdown-menu">
                             <?php foreach ($item['submenu'] as $subitem): ?>
-                                <li><a class="nav-link <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo $subitem['url']; ?>"><?php echo $subitem['title']; ?></a></li>
+                                <li><a class="nav-link <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo htmlspecialchars(app_url($subitem['url']), ENT_QUOTES, 'UTF-8'); ?>"><?php echo $subitem['title']; ?></a></li>
                             <?php endforeach; ?>
                         </ul>
                     </li>
                 <?php else: ?>
                     <li class="<?php echo $item['active'] ? 'active' : ''; ?>">
                         <a class="nav-link" 
-                           href="<?php echo $item['url']; ?>" 
+                           href="<?php echo htmlspecialchars(app_url($item['url']), ENT_QUOTES, 'UTF-8'); ?>" 
                            <?php if (isset($item['attributes'])): ?>
                                <?php echo $item['attributes']; ?>
                            <?php endif; ?>>

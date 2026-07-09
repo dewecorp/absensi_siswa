@@ -33,6 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['foto'])) {
     }
 
     $file = $_FILES['foto'];
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
+        echo json_encode(['success' => false, 'message' => 'Upload tidak valid.']);
+        exit;
+    }
     
     // Validate file using finfo (Server-side MIME check)
     $finfo = new finfo(FILEINFO_MIME_TYPE);
@@ -63,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['foto'])) {
 
     // Create directory if not exists
     if (!file_exists($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
+        mkdir($upload_dir, 0755, true);
     }
 
     // Get old photo to delete

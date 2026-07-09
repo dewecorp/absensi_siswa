@@ -12,6 +12,8 @@ if (!isAuthorized(['admin'])) {
     redirect('../login.php');
 }
 
+ensureStudentPasswords($pdo);
+
 // Define CSS libraries for this page
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
@@ -47,9 +49,11 @@ if ($_POST['add_siswa'] ?? false) {
     
     if ($nama_siswa && $nisn && $jenis_kelamin && $id_kelas) {
         global $pdo;
-        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        if ($stmt->execute([$nama_siswa, $nisn, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas])) {
-            $message = ['type' => 'success', 'text' => 'Data siswa berhasil ditambahkan!'];
+        $plain_password = generateStudentPassword();
+        $hashed_password = hashPassword($plain_password);
+        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$nama_siswa, $nisn, $hashed_password, $plain_password, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas])) {
+            $message = ['type' => 'success', 'text' => 'Data siswa berhasil ditambahkan! Password: ' . $plain_password];
             $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
             logActivity($pdo, $username, 'Tambah Siswa', "Menambahkan siswa baru: $nama_siswa");
         } else {
@@ -369,8 +373,8 @@ if ($selected_kelas_id > 0) {
         elseif ($s['jenis_kelamin'] == 'P') $total_perempuan++;
     }
 } else {
-    // If no class selected, get overall stats
-    $stmt_all = $pdo->query("SELECT jenis_kelamin, COUNT(*) as jumlah FROM tb_siswa GROUP BY jenis_kelamin");
+    // If no class selected, get overall active-student stats only.
+    $stmt_all = $pdo->query("SELECT jenis_kelamin, COUNT(*) as jumlah FROM tb_siswa WHERE id_kelas IS NOT NULL GROUP BY jenis_kelamin");
     while ($row = $stmt_all->fetch(PDO::FETCH_ASSOC)) {
         if ($row['jenis_kelamin'] == 'L') $total_laki = (int)$row['jumlah'];
         elseif ($row['jenis_kelamin'] == 'P') $total_perempuan = (int)$row['jumlah'];
@@ -552,6 +556,7 @@ include '../templates/sidebar.php';
                                             <th>Foto</th>
                                             <th>Nama Siswa</th>
                                             <th>NISN</th>
+                                            <th>Password</th>
                                             <th>Jenis Kelamin</th>
                                             <th>Tempat, Tgl Lahir</th>
                                             <th>Orang Tua/Wali</th>
@@ -579,6 +584,7 @@ include '../templates/sidebar.php';
                                             </td>
                                             <td><?php echo htmlspecialchars(htmlspecialchars_decode($student['nama_siswa'], ENT_QUOTES)); ?></td>
                                             <td><?php echo htmlspecialchars($student['nisn']); ?></td>
+                                            <td><span class="badge badge-light border font-weight-bold"><?php echo htmlspecialchars($student['password_plain'] ?? '-'); ?></span></td>
                                             <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
                                             <td><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-') . ', ' . ($student['tanggal_lahir'] ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-'); ?></td>
                                             <td><?php echo htmlspecialchars($student['wali'] ?? '-'); ?></td>
@@ -692,6 +698,7 @@ include '../templates/sidebar.php';
                                             <th>No</th>
                                             <th>Nama Siswa</th>
                                             <th>NISN</th>
+                                            <th>Password</th>
                                             <th>Jenis Kelamin</th>
                                             <th>Tempat Lahir</th>
                                             <th>Tanggal Lahir</th>
@@ -704,6 +711,7 @@ include '../templates/sidebar.php';
                                             <td><?php echo $no++; ?></td>
                                             <td><?php echo htmlspecialchars($student['nama_siswa']); ?></td>
                                             <td><?php echo htmlspecialchars($student['nisn']); ?></td>
+                                            <td><?php echo htmlspecialchars($student['password_plain'] ?? '-'); ?></td>
                                             <td><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : ($student['jenis_kelamin'] == 'P' ? 'Perempuan' : '-'); ?></td>
                                             <td><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-'); ?></td>
                                             <td><?php echo $student['tanggal_lahir'] ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-'; ?></td>
@@ -952,7 +960,7 @@ window.bulkEdit = function() {
         if (id && id !== 'on') {
             var row = $(this).closest('tr');
             var cells = row.find('td');
-            var fullBirth = cells.eq(5).text().trim();
+            var fullBirth = cells.eq(7).text().trim();
             var birthParts = fullBirth.split(', ');
             var tempat = birthParts[0] || '';
             var tanggal = birthParts[1] || '';
@@ -967,12 +975,12 @@ window.bulkEdit = function() {
 
             selectedStudents.push({
                 id: id,
-                nama: cells.eq(2).text().trim(),
-                nisn: cells.eq(3).text().trim(),
-                jenis_kelamin: cells.eq(4).text().trim(),
+                nama: cells.eq(3).text().trim(),
+                nisn: cells.eq(4).text().trim(),
+                jenis_kelamin: cells.eq(6).text().trim(),
                 tempat_lahir: tempat !== '-' ? tempat : '',
                 tanggal_lahir: tanggal,
-                wali: cells.eq(6).text().trim() !== '-' ? cells.eq(6).text().trim() : '',
+                wali: cells.eq(8).text().trim() !== '-' ? cells.eq(8).text().trim() : '',
                 id_kelas: row.data('id-kelas') || ''
             });
         }
@@ -1041,7 +1049,7 @@ window.bulkDelete = function() {
         if (id && id !== 'on') {
             selectedIds.push(id);
             var row = $(this).closest('tr');
-            var nameCell = row.find('td').eq(2); // Nama Siswa column
+            var nameCell = row.find('td').eq(3); // Nama Siswa column
             var name = nameCell.text().trim();
             if (name) {
                 selectedNames.push(name);

@@ -5,13 +5,16 @@
  */
 
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/functions.php';
 
 try {
     // 1. Update tb_siswa schema
     $columns_to_add_siswa = [
         'tempat_lahir' => "ALTER TABLE tb_siswa ADD COLUMN tempat_lahir VARCHAR(100) AFTER jenis_kelamin",
         'tanggal_lahir' => "ALTER TABLE tb_siswa ADD COLUMN tanggal_lahir DATE AFTER tempat_lahir",
-        'wali' => "ALTER TABLE tb_siswa ADD COLUMN wali VARCHAR(100) AFTER tanggal_lahir"
+        'wali' => "ALTER TABLE tb_siswa ADD COLUMN wali VARCHAR(100) AFTER tanggal_lahir",
+        'password' => "ALTER TABLE tb_siswa ADD COLUMN password VARCHAR(255) NULL AFTER nisn",
+        'password_plain' => "ALTER TABLE tb_siswa ADD COLUMN password_plain VARCHAR(32) NULL AFTER password"
     ];
 
     foreach ($columns_to_add_siswa as $col => $sql) {
@@ -21,6 +24,9 @@ try {
             echo "Added column '$col' to tb_siswa.\n";
         }
     }
+
+    ensureStudentPasswords($pdo);
+    ensureGuruDefaultPasswords($pdo);
 
     // 2. Update tb_mata_pelajaran schema
     $colCheckMapel = $pdo->query("SHOW COLUMNS FROM tb_mata_pelajaran LIKE 'jenis_mapel'");

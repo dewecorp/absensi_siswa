@@ -9,6 +9,12 @@ if (!isAuthorized(['admin'])) {
     exit;
 }
 
+if (!APP_SELF_UPDATE_ENABLED) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Update aplikasi dari web dinonaktifkan demi keamanan. Aktifkan APP_SELF_UPDATE_ENABLED hanya saat maintenance.']);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_from_github') {
     // Bersihkan semua output sebelumnya untuk memastikan hanya JSON yang dikirim
     while (ob_get_level()) ob_end_clean();
@@ -61,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     curl_setopt($ch, CURLOPT_URL, $zip_url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
     curl_setopt($ch, CURLOPT_USERAGENT, 'PHP-Update-Script');
     $zip_content = curl_exec($ch);
     $curl_error = curl_error($ch);

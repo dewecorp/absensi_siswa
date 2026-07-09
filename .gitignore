@@ -24,11 +24,13 @@ desktop.ini
 logs/
 
 # PHP session files (if any)
-sessions/
+sessions/*
+!sessions/.htaccess
 
 # Uploads (jika tidak ingin di-commit)
 uploads/*
 !uploads/.gitkeep
+!uploads/.htaccess
 
 # Temporary files
 tmp/
