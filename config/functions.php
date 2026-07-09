@@ -1082,13 +1082,13 @@ function isKalenderEntriLiburLuarPolaMingguan(string $label): bool {
         return false;
     }
     if (preg_match(
-        '/idul\s*fitri|idul\s*adha|lebaran|hari\s+raya|natal|tahun\s+baru|(?:m)?aulid|isra\s*\'?\s*mi\'?raj|waisak|vesak|nyepi|imlek|toleransi|pancasila|kemerdekaan|merdeka|17\s+agustus|agustusan|cuti\s+bersama|hari\s+besar|hari\s+olah\s+raga|may\s+day|buruh|paskah|jumat\s+agung|good\s+friday|wafat\s+yesus|kenaikan|isa\s+almasih|ascension|kristus\s+raja|rebo\s*wekasan|sumpah\s+pemuda|hari\s+ibu|hari\s+guru|silaturahmi|tahun\s+baru\s+islam|tahun\s+baru\s+masehi|suro|tujuh\s+belas|harlah|hgn/i',
+        '/idul\s*fitri|idul\s*adha|lebaran|hari\s+raya|natal|tahun\s+baru|akhir\s+tahun|libur\s+akhir\s+tahun|tahun\s+ajaran|tahun\s+pelajaran|(?:m)?aulid|isra\s*\'?\s*mi\'?raj|waisak|vesak|nyepi|imlek|toleransi|pancasila|kemerdekaan|merdeka|17\s+agustus|agustusan|cuti\s+bersama|hari\s+besar|hari\s+olah\s+raga|may\s+day|buruh|paskah|jumat\s+agung|good\s+friday|wafat\s+yesus|kenaikan|isa\s+almasih|ascension|kristus\s+raja|rebo\s*wekasan|sumpah\s+pemuda|hari\s+ibu|hari\s+guru|silaturahmi|tahun\s+baru\s+islam|tahun\s+baru\s+masehi|suro|tujuh\s+belas|harlah|hgn/i',
         $t
     )) {
         return true;
     }
     if (preg_match(
-        '/\b(semester|pekan|ujian|usbn|ujian\s+nasional|assessment|wisuda|prakerin|mos|study\s*tour|study\s*band|pts|pat|susulan|evaluasi)\b/i',
+        '/\b(semester|rapor|libur\s+semester|libur\s+madrasah|libur\s+sekolah|pekan|ujian|usbn|ujian\s+nasional|assessment|wisuda|prakerin|mos|study\s*tour|study\s*band|pts|pat|susulan|evaluasi)\b/i',
         $t
     )) {
         return true;
@@ -2051,15 +2051,15 @@ function getHolidays(PDO $pdo, int $year, ?int $month = null): array {
     $params = [];
 
     if ($month) {
-        $query .= " AND (
-            (MONTH(tgl_mulai) = ? AND YEAR(tgl_mulai) = ?) OR 
-            (MONTH(tgl_selesai) = ? AND YEAR(tgl_selesai) = ?) OR
-            (? BETWEEN MONTH(tgl_mulai) AND MONTH(tgl_selesai) AND ? BETWEEN YEAR(tgl_mulai) AND YEAR(tgl_selesai))
-        )";
-        $params = [$month, $year, $month, $year, $month, $year];
+        $rangeStart = sprintf('%04d-%02d-01', $year, $month);
+        $rangeEnd = sprintf('%04d-%02d-%02d', $year, $month, cal_days_in_month(CAL_GREGORIAN, (int)$month, (int)$year));
+        $query .= " AND tgl_mulai <= ? AND tgl_selesai >= ?";
+        $params = [$rangeEnd, $rangeStart];
     } else {
-        $query .= " AND (YEAR(tgl_mulai) = ? OR YEAR(tgl_selesai) = ?)";
-        $params = [$year, $year];
+        $rangeStart = sprintf('%04d-01-01', $year);
+        $rangeEnd = sprintf('%04d-12-31', $year);
+        $query .= " AND tgl_mulai <= ? AND tgl_selesai >= ?";
+        $params = [$rangeEnd, $rangeStart];
     }
 
     try {
