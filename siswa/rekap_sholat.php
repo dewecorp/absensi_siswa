@@ -9,18 +9,23 @@ if (!isAuthorized(['siswa'])) {
 
 $id_siswa = $_SESSION['user_id'];
 $school_profile = getSchoolProfile($pdo);
-$tahun_ajaran = $school_profile['tahun_ajaran'] ?? date('Y/Y', strtotime('+1 year'));
-$semester_aktif = $school_profile['semester'] ?? '1';
+$current_start_year = getTahunAjaranBerjalanStartYear();
+$tahun_ajaran = sprintf('%04d/%04d', $current_start_year, $current_start_year + 1);
+$semester_aktif = ((int)date('n') >= 7) ? 'Semester 1' : 'Semester 2';
+$tahun_ajaran_range = getRentangTanggalTahunAjaran($tahun_ajaran);
+$tahun_ajaran_start = $tahun_ajaran_range['mulai'];
+$tahun_ajaran_end = $tahun_ajaran_range['sampai'];
 
 // --- 1. Harian Data ---
 $stmt = $pdo->prepare("
     SELECT a.tanggal, COALESCE(s.status, 'Melaksanakan') as status 
     FROM tb_absensi a 
     LEFT JOIN tb_sholat s ON a.id_siswa = s.id_siswa AND a.tanggal = s.tanggal 
-    WHERE a.id_siswa = ? AND a.keterangan IN ('Hadir', 'Terlambat') 
+    WHERE a.id_siswa = ? AND a.keterangan IN ('Hadir', 'Terlambat')
+      AND a.tanggal BETWEEN ? AND ?
     ORDER BY a.tanggal DESC
 ");
-$stmt->execute([$id_siswa]);
+$stmt->execute([$id_siswa, $tahun_ajaran_start, $tahun_ajaran_end]);
 $harian_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // --- 2. Bulanan Data ---
@@ -40,11 +45,11 @@ $stmt = $pdo->prepare("
         SUM(CASE WHEN s.status = 'Berhalangan' THEN 1 ELSE 0 END) as berhalangan
     FROM tb_absensi a
     LEFT JOIN tb_sholat s ON a.id_siswa = s.id_siswa AND a.tanggal = s.tanggal
-    WHERE a.id_siswa = ? 
+    WHERE a.id_siswa = ? AND a.tanggal BETWEEN ? AND ?
     GROUP BY periode 
     ORDER BY periode DESC
 ");
-$stmt->execute([$id_siswa]);
+$stmt->execute([$id_siswa, $tahun_ajaran_start, $tahun_ajaran_end]);
 $bulanan_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // --- 3. Semester Data ---
@@ -72,6 +77,8 @@ if (stripos($semester_aktif, '2') !== false || stripos($semester_aktif, 'Genap')
     $semester_end = "$start_year-12-31";
     $semester_label = "Semester Ganjil $tahun_ajaran";
 }
+$semester_start = max($semester_start, $tahun_ajaran_start);
+$semester_end = min($semester_end, $tahun_ajaran_end);
 
 $stmt = $pdo->prepare("
     SELECT 
@@ -131,6 +138,10 @@ include '../templates/sidebar.php';
                             <h4>Data Sholat Berjamaah Anda</h4>
                         </div>
                         <div class="card-body">
+                            <div class="alert alert-light border mb-3">
+                                <i class="fas fa-calendar-alt mr-2"></i>
+                                Tahun ajaran aktif: <strong><?php echo htmlspecialchars($tahun_ajaran); ?></strong>
+                            </div>
                             <ul class="nav nav-tabs" id="myTab" role="tablist">
                                 <li class="nav-item">
                                     <a class="nav-link active" id="harian-tab" data-toggle="tab" href="#harian" role="tab" aria-controls="harian" aria-selected="true">Harian</a>

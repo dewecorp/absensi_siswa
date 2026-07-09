@@ -2,6 +2,64 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
+function createSourceBackupBeforeUpdate(string $project_root): array {
+    if (!class_exists('ZipArchive')) {
+        return ['success' => false, 'message' => 'PHP ZipArchive tidak aktif, backup source sebelum update tidak bisa dibuat.'];
+    }
+
+    $backup_dir = $project_root . '/backups';
+    $backup_file = $backup_dir . '/source_backup.zip';
+    if (!is_dir($backup_dir) && !@mkdir($backup_dir, 0755, true)) {
+        return ['success' => false, 'message' => 'Folder backups tidak bisa dibuat/ditulis.'];
+    }
+    if (is_file($backup_file) && !@unlink($backup_file)) {
+        return ['success' => false, 'message' => 'Backup lama tidak bisa diganti.'];
+    }
+
+    $zip = new ZipArchive();
+    if ($zip->open($backup_file, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        return ['success' => false, 'message' => 'File backup source tidak bisa dibuat.'];
+    }
+
+    $excluded_dirs = ['.git', 'backups', 'node_modules', 'vendor', 'sessions', 'cache', 'tmp', 'temp', 'update_temp_folder'];
+    $excluded_files = ['update_temp.zip'];
+    $root_len = strlen(rtrim($project_root, '/\\')) + 1;
+    $file_count = 0;
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($project_root, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+
+    foreach ($iterator as $file) {
+        $path = $file->getPathname();
+        $relative = str_replace('\\', '/', substr($path, $root_len));
+        $parts = explode('/', $relative);
+
+        if (array_intersect($parts, $excluded_dirs) || in_array(basename($relative), $excluded_files, true)) {
+            continue;
+        }
+        if ($file->isFile()) {
+            $zip->addFile($path, $relative);
+            $file_count++;
+        }
+    }
+
+    $zip->close();
+    if ($file_count === 0 || !is_file($backup_file) || filesize($backup_file) <= 0) {
+        @unlink($backup_file);
+        return ['success' => false, 'message' => 'Backup source kosong, update dibatalkan.'];
+    }
+
+    return ['success' => true, 'file' => $backup_file, 'count' => $file_count];
+}
+
+function failUpdateAndLock(string $message): void {
+    appSaveRuntimeSettings(['self_update_enabled' => false]);
+    echo json_encode(['success' => false, 'message' => $message . ' Update sistem otomatis dinonaktifkan kembali.']);
+    exit;
+}
+
 // Check if user is logged in and is admin
 if (!isAuthorized(['admin'])) {
     header('Content-Type: application/json');
@@ -54,19 +112,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
     exec('git --version', $output, $return_var);
     $project_root = dirname(__DIR__);
 
+    $backup = createSourceBackupBeforeUpdate($project_root);
+    if (!$backup['success']) {
+        appSaveRuntimeSettings(['self_update_enabled' => false]);
+        echo json_encode(['success' => false, 'message' => $backup['message'] . ' Update sistem otomatis dinonaktifkan kembali.']);
+        exit;
+    }
+
     if ($return_var === 0) {
-        // --- METHOD 1: GIT PULL ---
+        // --- METHOD 1: GIT PULL aman tanpa reset paksa ---
         chdir($project_root);
         $commands = [
-            'git fetch --all 2>&1',
-            'git reset --hard origin/main 2>&1',
-            'git pull origin main 2>&1'
+            'git fetch origin main 2>&1',
+            'git pull --ff-only origin main 2>&1'
         ];
 
         $all_success = true;
+        $last_output = [];
         foreach ($commands as $cmd) {
             exec($cmd, $cmd_output, $cmd_return);
-            if ($cmd_return !== 0) $all_success = false;
+            $last_output = $cmd_output;
+            if ($cmd_return !== 0) {
+                $all_success = false;
+                break;
+            }
             unset($cmd_output);
         }
 
@@ -75,15 +144,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
             @file_put_contents($project_root . '/version.txt', date('YmdHis'));
             appSaveRuntimeSettings(['self_update_enabled' => false]);
             logActivity($pdo, $_SESSION['username'], 'Update Aplikasi', 'Update via Git berhasil');
-            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui. Update sistem otomatis dinonaktifkan kembali.']);
+            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui via Git. Backup source tersimpan di backups/source_backup.zip. Update sistem otomatis dinonaktifkan kembali.']);
             exit;
         }
+
+        error_log('Git update gagal: ' . implode("\n", array_slice($last_output, -20)));
     }
 
     // --- METHOD 2: ZIP DOWNLOAD (Fallback) ---
     if (!class_exists('ZipArchive')) {
-        echo json_encode(['success' => false, 'message' => 'Git tidak tersedia dan PHP ZipArchive tidak aktif.']);
-        exit;
+        failUpdateAndLock('Git tidak tersedia dan PHP ZipArchive tidak aktif.');
+    }
+    if (!function_exists('curl_init')) {
+        failUpdateAndLock('PHP cURL tidak aktif, fallback ZIP tidak bisa mengunduh update.');
     }
 
     $zip_url = 'https://github.com/dewecorp/absensi_siswa/archive/refs/heads/main.zip';
@@ -102,13 +175,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
     curl_close($ch);
 
     if ($zip_content === false) {
-        echo json_encode(['success' => false, 'message' => 'Gagal mengunduh update: ' . $curl_error]);
-        exit;
+        failUpdateAndLock('Gagal mengunduh update: ' . $curl_error);
     }
 
     if (file_put_contents($temp_zip, $zip_content) === false) {
-        echo json_encode(['success' => false, 'message' => 'Gagal menyimpan file temporary di server.']);
-        exit;
+        failUpdateAndLock('Gagal menyimpan file temporary di server.');
     }
 
     // Extract ZIP
@@ -132,8 +203,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
                         $src_file = $src . '/' . $file;
                         $dst_file = $dst . '/' . $file;
                         
-                        // PROTECT DATABASE CONFIG: Jangan timpa file config/database.php
-                        if (strpos($dst_file, 'config/database.php') !== false) {
+                        // Lindungi konfigurasi lokal hosting.
+                        if (strpos($dst_file, 'config/database.php') !== false || strpos($dst_file, 'config/runtime_settings.php') !== false) {
                             continue;
                         }
 
@@ -164,12 +235,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
             // Write new version timestamp after successful ZIP update
             @file_put_contents($project_root . '/version.txt', date('YmdHis'));
             appSaveRuntimeSettings(['self_update_enabled' => false]);
-            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui. Update sistem otomatis dinonaktifkan kembali.']);
+            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui via ZIP. Backup source tersimpan di backups/source_backup.zip. Update sistem otomatis dinonaktifkan kembali.']);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Struktur ZIP tidak sesuai.']);
+            failUpdateAndLock('Struktur ZIP tidak sesuai.');
         }
     } else {
-        echo json_encode(['success' => false, 'message' => 'Gagal mengekstrak file update.']);
+        failUpdateAndLock('Gagal mengekstrak file update.');
     }
     exit;
 }
