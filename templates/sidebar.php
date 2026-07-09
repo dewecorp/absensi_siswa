@@ -1258,6 +1258,11 @@ if (!function_exists('get_mobile_menu_groups')) {
 }
 
 if (!function_exists('get_bottom_nav_quick_links')) {
+    function get_mobile_menu_anchor_id(string $title): string
+    {
+        return 'menu-' . preg_replace('/[^A-Za-z0-9_-]+/', '-', trim($title));
+    }
+
     function get_bottom_nav_quick_links(array $menu_items, int $limit = 3): array
     {
         $links = [];
@@ -1278,20 +1283,17 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                 if ($title === 'Data Utama') {
                     $title = 'Absensi';
                     $icon = 'fas fa-calendar-check';
-                    $url = 'dashboard.php#menu-Absensi';
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Absensi');
                 } elseif ($title === 'Absensi') {
                     $title = 'Nilai Siswa';
                     $icon = 'fas fa-graduation-cap';
-                    $url = 'dashboard.php#menu-Nilai-Siswa';
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Nilai Siswa');
                 } elseif ($title === 'Ekstrakurikuler') {
-                    $url = 'dashboard.php#menu-Ekstrakurikuler';
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Ekstrakurikuler');
                 }
             } else {
-                // For admin, kepala_madrasah, tata_usaha
                 if ($has_submenu) {
-                    // If menu has submenu, link to dashboard with anchor
-                    $menu_anchor = 'menu-' . str_replace(' ', '-', $title);
-                    $url = 'dashboard.php#' . $menu_anchor;
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
                 }
             }
 

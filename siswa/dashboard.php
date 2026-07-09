@@ -544,7 +544,8 @@ include_once '../templates/sidebar.php';
                                 </div>
                             <?php endif; ?>
                             <?php foreach ($grouped_items as $group): ?>
-                                <div class="mt-3">
+                                <?php $group_anchor_id = 'menu-' . preg_replace('/[^A-Za-z0-9_-]+/', '-', trim((string)$group['title'])); ?>
+                                <div class="mt-3" id="<?php echo htmlspecialchars($group_anchor_id, ENT_QUOTES, 'UTF-8'); ?>" style="scroll-margin-top: 90px;">
                                     <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
                                     <div class="row">
                                         <?php foreach ($group['items'] as $subitem): ?>
