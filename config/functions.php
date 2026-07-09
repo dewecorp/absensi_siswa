@@ -66,7 +66,6 @@ function appSaveRuntimeSettings(array $settings): bool {
 
     $allowed = [
         'self_update_enabled' => !empty($settings['self_update_enabled']),
-        'clean_url_enabled' => array_key_exists('clean_url_enabled', $settings) ? !empty($settings['clean_url_enabled']) : appRuntimeBool('clean_url_enabled', appEnvBool('CLEAN_URL_ENABLED', true)),
     ];
     $php = "<?php\nreturn " . var_export($allowed, true) . ";\n";
     return @file_put_contents($path, $php, LOCK_EX) !== false;
@@ -82,6 +81,12 @@ function appRuntimeBool(string $key, bool $default = false): bool {
 
 function appEnvBool(string $key, bool $default = false): bool {
     $value = getenv($key);
+    if (($value === false || $value === '') && isset($_SERVER[$key])) {
+        $value = $_SERVER[$key];
+    }
+    if (($value === false || $value === '') && isset($_ENV[$key])) {
+        $value = $_ENV[$key];
+    }
     if ($value === false || $value === '') {
         return $default;
     }
@@ -91,13 +96,6 @@ function appEnvBool(string $key, bool $default = false): bool {
 if (!defined('APP_SELF_UPDATE_ENABLED')) {
     define('APP_SELF_UPDATE_ENABLED', appRuntimeBool('self_update_enabled', appEnvBool('APP_SELF_UPDATE_ENABLED', false)));
 }
-if (!defined('CLEAN_URL_ENABLED')) {
-    define('CLEAN_URL_ENABLED', appRuntimeBool('clean_url_enabled', appEnvBool('CLEAN_URL_ENABLED', false)));
-}
-if (!defined('PHP_LINK_CACHE_BUSTER')) {
-    define('PHP_LINK_CACHE_BUSTER', false);
-}
-
 function sendSecurityHeaders(): void {
     if (headers_sent()) {
         return;
@@ -107,33 +105,6 @@ function sendSecurityHeaders(): void {
     header('X-Frame-Options: SAMEORIGIN');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('X-Permitted-Cross-Domain-Policies: none');
-}
-
-function enforceCleanPhpUrl(): void {
-    if (!CLEAN_URL_ENABLED) {
-        return;
-    }
-
-    if (headers_sent()) {
-        return;
-    }
-
-    $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? ''));
-    if ($method !== 'GET' && $method !== 'HEAD') {
-        return;
-    }
-
-    $requestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
-    $path = (string)(parse_url($requestUri, PHP_URL_PATH) ?? '');
-    if ($path === '' || !preg_match('/\.php$/i', $path)) {
-        return;
-    }
-
-    $cleanPath = preg_replace('/\.php$/i', '', $path);
-    $query = appCleanQueryString((string)(parse_url($requestUri, PHP_URL_QUERY) ?? ''));
-    $target = $cleanPath . ($query !== '' ? '?' . $query : '');
-    header('Location: ' . $target, true, 301);
-    exit();
 }
 
 function appCleanQueryString(string $query): string {
@@ -225,18 +196,11 @@ function app_url(string $path): string {
     }
 
     $cleanPath = implode('/', $segments);
-    $isPhpPath = preg_match('/\.php$/i', $cleanPath) === 1;
-    if (CLEAN_URL_ENABLED) {
-        $cleanPath = preg_replace('/\.php$/i', '', $cleanPath);
-    } elseif (PHP_LINK_CACHE_BUSTER && $isPhpPath) {
-        $query .= ($query === '' ? '?' : '&') . '_simad=php';
-    }
     $base = app_base_path();
     return ($base !== '' ? $base : '') . '/' . $cleanPath . $query . $fragment;
 }
 
 sendSecurityHeaders();
-enforceCleanPhpUrl();
 
 if (session_status() == PHP_SESSION_NONE) {
     // --- SESSION CONFIGURATION PHP 8+ ---

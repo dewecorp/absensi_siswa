@@ -34,6 +34,10 @@ Options -Indexes
     RewriteEngine On
     RewriteBase /
 
+    # Tes diagnostik: buka /rewrite-ping. Jika tidak redirect ke /login.php,
+    # berarti mod_rewrite domain/folder ini tidak aktif atau .htaccess bukan root aktif.
+    RewriteRule ^rewrite-ping/?$ /login.php [R=302,L,NC]
+
     # Blok folder WordPress palsu/backdoor pada aplikasi non-WordPress ini.
     RewriteRule ^(wp-admin|wp-content|wp-includes)(/|$) - [F,L,NC]
 
@@ -45,6 +49,23 @@ Options -Indexes
 
     # File backup/arsip tidak boleh diunduh langsung dari web.
     RewriteRule ^backups/ - [F,L,NC]
+
+    # Clean URL dikelola hanya di .htaccess.
+    # GET ke file .php diarahkan ke URL tanpa ekstensi, POST dibiarkan aman.
+    RewriteCond %{REQUEST_METHOD} GET [NC]
+    RewriteCond %{THE_REQUEST} \s/+index\.php[?\s] [NC]
+    RewriteRule ^index\.php$ ./ [R=302,L]
+
+    RewriteCond %{REQUEST_METHOD} GET [NC]
+    RewriteCond %{THE_REQUEST} \s/+(.+)/index\.php[?\s] [NC]
+    RewriteRule ^(.+)/index\.php$ $1/ [R=302,L]
+
+    # Redirect akses browser ke .php menjadi URL bersih.
+    # THE_REQUEST memastikan hanya request asli browser yang diarahkan,
+    # bukan hasil rewrite internal dari URL bersih ke file .php.
+    RewriteCond %{REQUEST_METHOD} GET [NC]
+    RewriteCond %{THE_REQUEST} \s/+(.+)\.php[?\s] [NC]
+    RewriteRule ^(.+)\.php$ /$1 [R=302,L,NE]
 
     # Fallback aman: URL lama tanpa .php tetap bisa dibuka,
     # tetapi aplikasi tidak dipaksa memakai clean URL.
