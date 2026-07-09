@@ -92,7 +92,7 @@ if (!defined('APP_SELF_UPDATE_ENABLED')) {
     define('APP_SELF_UPDATE_ENABLED', appRuntimeBool('self_update_enabled', appEnvBool('APP_SELF_UPDATE_ENABLED', false)));
 }
 if (!defined('CLEAN_URL_ENABLED')) {
-    define('CLEAN_URL_ENABLED', appRuntimeBool('clean_url_enabled', appEnvBool('CLEAN_URL_ENABLED', true)));
+    define('CLEAN_URL_ENABLED', appRuntimeBool('clean_url_enabled', appEnvBool('CLEAN_URL_ENABLED', false)));
 }
 if (!defined('PHP_LINK_CACHE_BUSTER')) {
     define('PHP_LINK_CACHE_BUSTER', false);

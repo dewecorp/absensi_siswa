@@ -1,5 +1,5 @@
 DirectoryIndex index.php
-Options -MultiViews -Indexes
+Options -Indexes
 
 # Blokir pola file backdoor WordPress palsu di aplikasi non-WordPress ini.
 <FilesMatch "^(wp-(blog-header|cron|config|login|load|mail|settings|signup|trackback)\.php|xmlrpc\.php|tmp_.*\.php)$">
@@ -34,14 +34,6 @@ Options -MultiViews -Indexes
     RewriteEngine On
     RewriteBase /
 
-    # Tes cepat apakah .htaccess ini benar-benar aktif di hosting.
-    # Buka /rewrite-test setelah upload; harus menampilkan login.php.
-    RewriteRule ^rewrite-test/?$ login.php [L,QSA,NC]
-
-    # Route paling eksplisit untuk halaman yang sedang gagal.
-    RewriteRule ^admin/dashboard/?$ admin/dashboard.php [L,QSA,NC]
-    RewriteRule ^admin/dashboard\.php$ admin/dashboard.php [L,QSA,NC]
-
     # Blok folder WordPress palsu/backdoor pada aplikasi non-WordPress ini.
     RewriteRule ^(wp-admin|wp-content|wp-includes)(/|$) - [F,L,NC]
 
@@ -54,38 +46,13 @@ Options -MultiViews -Indexes
     # File backup/arsip tidak boleh diunduh langsung dari web.
     RewriteRule ^backups/ - [F,L,NC]
 
-    # Bersihkan akses langsung ke index.php tanpa mengganggu proses POST.
-    RewriteCond %{REQUEST_METHOD} GET [NC]
-    RewriteCond %{THE_REQUEST} \s/+index\.php[?\s] [NC]
-    RewriteRule ^index\.php$ ./ [R=301,L]
-
-    RewriteCond %{REQUEST_METHOD} GET [NC]
-    RewriteCond %{THE_REQUEST} \s/+(.+)/index\.php[?\s] [NC]
-    RewriteRule ^(.+)/index\.php$ $1/ [R=301,L]
-
-    # Paksa URL kanonik tanpa ekstensi .php untuk request dari browser.
-    # Parameter lama simad/_simad dibuang karena hanya penanda cache-buster internal.
-    RewriteCond %{REQUEST_METHOD} GET [NC]
-    RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[?\s] [NC]
-    RewriteCond %{QUERY_STRING} (^|&)_*simad=php(&|$) [NC]
-    RewriteRule ^(.+)\.php$ $1? [R=301,L]
-
-    RewriteCond %{REQUEST_METHOD} GET [NC]
-    RewriteCond %{THE_REQUEST} \s/+(.+?)\.php\s [NC]
-    RewriteRule ^(.+)\.php$ $1 [R=301,L]
-
-    # Route eksplisit untuk LiteSpeed/cPanel yang kadang gagal pada REQUEST_FILENAME.php.
+    # Fallback aman: URL lama tanpa .php tetap bisa dibuka,
+    # tetapi aplikasi tidak dipaksa memakai clean URL.
     RewriteRule ^(login|logout)/?$ $1.php [L,QSA,NC]
     RewriteRule ^(admin|guru|wali|kepala|tata_usaha|siswa)/([A-Za-z0-9_-]+)/?$ $1/$2.php [L,QSA,NC]
     RewriteRule ^ajax/([A-Za-z0-9_-]+)/?$ ajax/$1.php [L,QSA,NC]
     RewriteRule ^api/v1/([A-Za-z0-9_-]+)/?$ api/v1/$1.php [L,QSA,NC]
 
-    # Tambahkan trailing slash jika request adalah direktori.
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteCond %{REQUEST_URI} !/$
-    RewriteRule ^(.+)$ /$1/ [R=301,L]
-
-    # Rewrite internal request tanpa ekstensi ke file PHP yang cocok.
     RewriteCond %{REQUEST_FILENAME}.php -f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.+)$ $1.php [L,QSA]
