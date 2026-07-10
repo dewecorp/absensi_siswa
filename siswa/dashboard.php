@@ -29,6 +29,16 @@ if (!$student) {
 // Set page title
 $page_title = 'Dashboard Siswa';
 
+$tagihan_summary_response = !empty($student['nisn']) ? fetchSibayarData((string)$student['nisn'], 'tagihan') : ['status' => 'error'];
+$tagihan_summary = is_array($tagihan_summary_response['summary'] ?? null) ? $tagihan_summary_response['summary'] : [];
+$tagihan_total_aktif = (int)($tagihan_summary['total_tunggakan_aktif'] ?? 0);
+$tagihan_total_lama = (int)($tagihan_summary['total_tunggakan_tahun_lama'] ?? 0);
+$tagihan_total_semua = (int)($tagihan_summary['total_tunggakan'] ?? ($tagihan_total_aktif + $tagihan_total_lama));
+$tagihan_tahun_aktif = (string)($tagihan_summary_response['tahun_ajaran'] ?? $tagihan_summary_response['tahun_ajaran_aktif'] ?? '-');
+$tagihan_tahun_lama = $tagihan_summary['tahun_ajaran_tunggakan'] ?? [];
+$tagihan_tahun_lama = is_array($tagihan_tahun_lama) ? $tagihan_tahun_lama : [];
+$tagihan_status_ok = ($tagihan_summary_response['status'] ?? 'error') === 'success';
+
 // Get today's attendance status
 $today = date('Y-m-d');
 $holiday = isSchoolHoliday($pdo, $today);
@@ -450,6 +460,56 @@ include_once '../templates/sidebar.php';
                 </div>
             </div>
             <?php endif; ?>
+        </div>
+
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card card-warning">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-file-invoice-dollar mr-2"></i>Ringkasan Tagihan Sibayar</h4>
+                        <a href="tagihan_siswa.php" class="btn btn-sm btn-warning text-white">
+                            Detail Tagihan
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($tagihan_status_ok): ?>
+                            <div class="row">
+                                <div class="col-md-4 col-12 mb-3 mb-md-0">
+                                    <div class="border rounded bg-light p-3 h-100">
+                                        <div class="small text-muted">Total Tunggakan</div>
+                                        <div class="h5 mb-0 <?php echo $tagihan_total_semua > 0 ? 'text-danger' : 'text-success'; ?> font-weight-bold">
+                                            Rp <?php echo number_format($tagihan_total_semua, 0, ',', '.'); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-6 mb-3 mb-md-0">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="small text-muted">Tahun Ajaran Aktif</div>
+                                        <div class="font-weight-bold"><?php echo htmlspecialchars($tagihan_tahun_aktif); ?></div>
+                                        <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_aktif, 0, ',', '.'); ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-6 mb-3 mb-md-0">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="small text-muted">Tahun Ajaran Lama</div>
+                                        <div class="font-weight-bold"><?php echo empty($tagihan_tahun_lama) ? '-' : htmlspecialchars(implode(', ', $tagihan_tahun_lama)); ?></div>
+                                        <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_lama, 0, ',', '.'); ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php if ($tagihan_total_semua <= 0): ?>
+                                <div class="alert alert-success mb-0 mt-3">
+                                    <i class="fas fa-check-circle mr-2"></i> Tidak ada tagihan yang belum dibayar menurut data Sibayar.
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-plug mr-2"></i> Ringkasan tagihan belum bisa diambil dari Sibayar. Buka detail tagihan untuk mencoba lagi.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <?php if ($is_grade_6): ?>

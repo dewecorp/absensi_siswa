@@ -1299,7 +1299,7 @@ function logActivity(PDO $pdo, string $username, string $action, string $descrip
 
 /**
  * SIBAYAR SPP - INTEGRATION CLIENT FOR SIMAD
- * Versi: 1.0.0
+ * Versi: 1.1.0
  */
 class SibayarClient {
     private string $apiUrl;
@@ -1353,22 +1353,42 @@ class SibayarClient {
         return $result;
     }
 
-    public function getStudentDetail(string $nisn): array {
-        return $this->request('get_student_data', ['nisn' => $nisn]);
+    public function checkConnection(): array {
+        return $this->request('check');
+    }
+
+    public function getTahunAjaran(): array {
+        return $this->request('get_tahun_ajaran');
+    }
+
+    public function getAllStudentSummary(?string $tahunAjaran = null): array {
+        $params = [];
+        if ($tahunAjaran !== null && trim($tahunAjaran) !== '') {
+            $params['tahun_ajaran'] = trim($tahunAjaran);
+        }
+        return $this->request('get_all_summary', $params);
+    }
+
+    public function getStudentDetail(string $nisn, ?string $tahunAjaran = null): array {
+        $params = ['nisn' => $nisn];
+        if ($tahunAjaran !== null && trim($tahunAjaran) !== '') {
+            $params['tahun_ajaran'] = trim($tahunAjaran);
+        }
+        return $this->request('get_student_data', $params);
     }
 }
 
-function fetchSibayarData(string $nisn, string $type = 'tagihan'): array {
+function fetchSibayarData(string $nisn, string $type = 'tagihan', ?string $tahunAjaran = null): array {
      $client = new SibayarClient();
-     $response = $client->getStudentDetail($nisn);
+     $response = $client->getStudentDetail($nisn, $tahunAjaran);
  
      if ($response['status'] === 'success') {
          // Map response based on request type
          if ($type === 'tagihan') {
-             return [
+             return array_merge($response, [
                  'status' => 'success',
                  'data' => $response['billing'] ?? []
-             ];
+             ]);
          } elseif ($type === 'laporan') {
              // Return everything for detailed report page
              return $response;
