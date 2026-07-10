@@ -10,6 +10,15 @@ ensure_nilai_semester_enum_ujian_praktik($pdo);
 $page_title = nilai_ujian_page_title();
 $jenis_semester = nilai_ujian_jenis_semester();
 $ujian_praktik_tanpa_remidi = nilai_ujian_is_praktik_mode();
+
+if (!$ujian_praktik_tanpa_remidi) {
+    $target = 'data_nilai_ujian.php';
+    if (isset($_GET['session_type']) && $_GET['session_type'] !== '') {
+        $target .= '?session_type=' . urlencode((string)$_GET['session_type']);
+    }
+    redirect($target);
+}
+
 $is_admin_view = true;
 $can_edit = false;
 

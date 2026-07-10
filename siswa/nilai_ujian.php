@@ -37,6 +37,94 @@ $semester_aktif = $school_profile['semester'];
 // Jenis nilai ujian / ujian praktik — siswa: MAX(asli, remidi); ujian praktik: asli saja
 $selected_jenis = nilai_ujian_jenis_semester();
 
+if ($selected_jenis === 'Ujian') {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS tb_data_nilai_ujian (
+            id_nilai_ujian INT NOT NULL AUTO_INCREMENT,
+            id_siswa INT NOT NULL,
+            id_kelas INT DEFAULT NULL,
+            tahun_ajaran VARCHAR(30) NOT NULL,
+            nilai_ujian DECIMAL(5,2) NOT NULL DEFAULT 0,
+            keterangan VARCHAR(255) DEFAULT NULL,
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id_nilai_ujian),
+            UNIQUE KEY uniq_data_nilai_ujian_siswa_ta (id_siswa, tahun_ajaran),
+            KEY idx_data_nilai_ujian_ta (tahun_ajaran),
+            KEY idx_data_nilai_ujian_siswa (id_siswa),
+            KEY idx_data_nilai_ujian_kelas (id_kelas)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (PDOException $e) {
+        error_log('tb_data_nilai_ujian siswa: ' . $e->getMessage());
+    }
+
+    $stmt = $pdo->prepare("SELECT nilai_ujian, keterangan, tahun_ajaran, updated_at
+        FROM tb_data_nilai_ujian
+        WHERE id_siswa = ? AND tahun_ajaran = ?
+        LIMIT 1");
+    $stmt->execute([$id_siswa, $tahun_ajaran]);
+    $nilai_resmi = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    require_once '../templates/header.php';
+    require_once '../templates/sidebar.php';
+    ?>
+
+    <div class="main-content">
+        <section class="section">
+            <div class="section-header">
+                <h1><?= $page_title ?></h1>
+                <div class="section-header-breadcrumb">
+                    <div class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></div>
+                    <div class="breadcrumb-item active"><?= htmlspecialchars($page_title) ?></div>
+                </div>
+            </div>
+
+            <div class="section-body">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <th width="150">Nama Siswa</th>
+                                        <td>: <?= htmlspecialchars($student['nama_siswa']) ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Kelas</th>
+                                        <td>: <?= htmlspecialchars($student['nama_kelas']) ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Tahun Ajaran</th>
+                                        <td>: <?= htmlspecialchars($tahun_ajaran) ?></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <?php if ($nilai_resmi): ?>
+                            <div class="text-center py-4">
+                                <div class="text-muted mb-2">Nilai Ujian Resmi</div>
+                                <div class="display-4 font-weight-bold text-primary"><?= number_format((float)$nilai_resmi['nilai_ujian'], 2) ?></div>
+                                <?php if (!empty($nilai_resmi['keterangan'])): ?>
+                                    <div class="mt-3"><?= htmlspecialchars($nilai_resmi['keterangan']) ?></div>
+                                <?php endif; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="alert alert-light text-center mb-0">
+                                Nilai ujian resmi tahun ajaran ini belum diinput oleh madrasah.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <?php require_once '../templates/footer.php'; ?>
+    <?php
+    exit;
+}
+
 // Get Subjects (Mapel)
 $subjects = getFilteredSubjects($pdo);
 
