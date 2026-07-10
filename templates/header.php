@@ -192,6 +192,25 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             z-index: 2;
             box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
+        .user-dropdown-menu {
+            min-width: 240px;
+            max-width: calc(100vw - 24px);
+            overflow: hidden;
+        }
+        .user-dropdown-menu .dropdown-item.has-icon {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: normal;
+            line-height: 1.35;
+            padding-right: 16px;
+        }
+        .user-dropdown-menu .dropdown-item.has-icon i {
+            flex: 0 0 18px;
+            width: 18px;
+            margin-right: 0;
+            text-align: center;
+        }
 
         /* Responsive Breakpoints */
 
@@ -458,7 +477,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                             <?php echo $avatar_html; ?>
                             <div class="d-none d-lg-inline-block"><?php echo htmlspecialchars($display_name); ?></div>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-right">
+                        <div class="dropdown-menu dropdown-menu-right user-dropdown-menu">
                             <?php if (getUserLevel() === 'admin'): ?>
                             <a href="#" id="btn-toggle-self-update" class="dropdown-item has-icon <?php echo APP_SELF_UPDATE_ENABLED ? 'text-warning' : 'text-muted'; ?>" data-enabled="<?php echo APP_SELF_UPDATE_ENABLED ? '1' : '0'; ?>">
                                 <i class="fas <?php echo APP_SELF_UPDATE_ENABLED ? 'fa-toggle-on' : 'fa-toggle-off'; ?>"></i> <?php echo APP_SELF_UPDATE_ENABLED ? 'Nonaktifkan Update Sistem' : 'Aktifkan Update Sistem'; ?>
