@@ -2048,10 +2048,40 @@ function getGuruName(PDO $pdo, int $id): ?string {
 
 function normalizeAgendaDashboardName(string $name): string {
     $name = strtolower(trim($name));
+    $name = preg_replace('/\b(kegiatan|agenda|acara)\b/', ' ', $name);
     $name = preg_replace('/\b20\d{2}\s*\/\s*20\d{2}\b/', '', $name);
     $name = preg_replace('/\b20\d{2}\b/', '', $name);
     $name = preg_replace('/[^a-z0-9]+/u', ' ', (string)$name);
     return trim((string)preg_replace('/\s+/', ' ', (string)$name));
+}
+
+function getAgendaDashboardTahunAjaranScore($tahunAjaran): int {
+    if (preg_match('/\b(20\d{2})\s*\/\s*(20\d{2})\b/', (string)$tahunAjaran, $m)) {
+        return ((int)$m[1] * 10000) + (int)$m[2];
+    }
+
+    if (preg_match('/\b(20\d{2})\b/', (string)$tahunAjaran, $m)) {
+        return (int)$m[1] * 10000;
+    }
+
+    return 0;
+}
+
+function shouldReplaceDashboardAgenda(array $incoming, array $existing): bool {
+    $incomingScore = getAgendaDashboardTahunAjaranScore($incoming['tahun_ajaran'] ?? '');
+    $existingScore = getAgendaDashboardTahunAjaranScore($existing['tahun_ajaran'] ?? '');
+
+    if ($incomingScore !== $existingScore) {
+        return $incomingScore > $existingScore;
+    }
+
+    $incomingId = (int)($incoming['id_kalender'] ?? 0);
+    $existingId = (int)($existing['id_kalender'] ?? 0);
+    if ($incomingId !== $existingId) {
+        return $incomingId > $existingId;
+    }
+
+    return strlen((string)($incoming['nama_kegiatan'] ?? '')) > strlen((string)($existing['nama_kegiatan'] ?? ''));
 }
 
 function getAgendaBulanBerjalan(PDO $pdo, ?string $date = null): array {
@@ -2120,6 +2150,21 @@ function getAgendaBulanBerjalan(PDO $pdo, ?string $date = null): array {
             $deduped[$key] = $merged;
         }
 
+        $rangeDeduped = [];
+        foreach ($deduped as $row) {
+            $rangeKey = (string)($row['_display_start'] ?? $row['tgl_mulai'] ?? '') . '|' . (string)($row['_display_end'] ?? $row['tgl_selesai'] ?? '');
+            if ($rangeKey === '|') {
+                $rangeDeduped[] = $row;
+                continue;
+            }
+
+            if (!isset($rangeDeduped[$rangeKey]) || shouldReplaceDashboardAgenda($row, $rangeDeduped[$rangeKey])) {
+                $rangeDeduped[$rangeKey] = $row;
+            }
+        }
+
+        $deduped = array_values($rangeDeduped);
+
         usort($deduped, static function ($a, $b) {
             return strcmp((string)($a['_display_start'] ?? $a['tgl_mulai'] ?? ''), (string)($b['_display_start'] ?? $b['tgl_mulai'] ?? ''))
                 ?: strcmp((string)($a['_display_end'] ?? $a['tgl_selesai'] ?? ''), (string)($b['_display_end'] ?? $b['tgl_selesai'] ?? ''))
@@ -2172,15 +2217,16 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                                 $displayStart = (string)($item['_display_start'] ?? max($start, $rangeStart));
                                 $displayEnd = (string)($item['_display_end'] ?? min($end, $rangeEnd));
                                 $isToday = $start <= $today && $end >= $today;
+                                $dateBoxDate = $isToday ? $today : $displayStart;
                                 $dateLabel = $displayStart === $displayEnd
                                     ? (function_exists('formatDateIndonesia') ? formatDateIndonesia($displayStart) : date('d-m-Y', strtotime($displayStart)))
                                     : ((function_exists('formatDateIndonesia') ? formatDateIndonesia($displayStart) : date('d-m-Y', strtotime($displayStart))) . ' s.d. ' . (function_exists('formatDateIndonesia') ? formatDateIndonesia($displayEnd) : date('d-m-Y', strtotime($displayEnd))));
                                 $bulanPendek = [1 => 'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGS', 'SEP', 'OKT', 'NOV', 'DES'];
-                                $monthShort = $bulanPendek[(int)date('n', strtotime($displayStart))] ?? strtoupper(date('M', strtotime($displayStart)));
+                                $monthShort = $bulanPendek[(int)date('n', strtotime($dateBoxDate))] ?? strtoupper(date('M', strtotime($dateBoxDate)));
                                 ?>
                                 <div class="dashboard-agenda-item <?php echo $isToday ? 'is-today' : ''; ?>">
                                     <div class="agenda-date-box">
-                                        <div class="agenda-day"><?php echo htmlspecialchars(date('d', strtotime($displayStart)), ENT_QUOTES, 'UTF-8'); ?></div>
+                                        <div class="agenda-day"><?php echo htmlspecialchars(date('d', strtotime($dateBoxDate)), ENT_QUOTES, 'UTF-8'); ?></div>
                                         <div class="agenda-month"><?php echo htmlspecialchars($monthShort, ENT_QUOTES, 'UTF-8'); ?></div>
                                     </div>
                                     <div class="agenda-content">
@@ -2190,7 +2236,7 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                                                 <span class="badge badge-success">Hari ini</span>
                                             <?php endif; ?>
                                         </div>
-                                        <div class="text-muted small">
+                                        <div class="agenda-meta">
                                             <i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($dateLabel, ENT_QUOTES, 'UTF-8'); ?>
                                             <?php if (!empty($item['tahun_ajaran'])): ?>
                                                 <span class="mx-2">&bull;</span>Tahun Ajaran <?php echo htmlspecialchars((string)$item['tahun_ajaran'], ENT_QUOTES, 'UTF-8'); ?>
@@ -2215,6 +2261,12 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
         .agenda-month { font-size: 10px; font-weight: 700; padding: 3px 0 5px; background: #f4f6f9; color: #6777ef; }
         .agenda-content { min-width: 0; flex: 1; }
         .agenda-content h6 { font-size: 14px; line-height: 1.35; }
+        .agenda-meta { display: inline-block; color: #40506a; font-size: 12px; line-height: 1.45; font-weight: 700; margin-top: 6px; padding: 5px 8px; border-left: 3px solid #6777ef; border-radius: 6px; background: #f0f4ff; box-shadow: inset 0 0 0 1px rgba(103, 119, 239, .08); }
+        .agenda-meta i { color: #6777ef; }
+        .agenda-meta .mx-2 { color: #6777ef; font-weight: 800; }
+        .dashboard-agenda-item.is-today .agenda-meta { background: #edfdf2; border-left-color: #47c363; box-shadow: inset 0 0 0 1px rgba(71, 195, 99, .12); }
+        .dashboard-agenda-item.is-today .agenda-meta i,
+        .dashboard-agenda-item.is-today .agenda-meta .mx-2 { color: #28a745; }
         @media (max-width: 575.98px) {
             .dashboard-agenda-list { grid-template-columns: 1fr; }
             .dashboard-agenda-item { padding: 10px; }
