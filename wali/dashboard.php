@@ -829,6 +829,8 @@ include_once '../templates/sidebar.php';
                         <?php endif; ?>
                     </div>
 
+                    <?php echo renderDashboardAgendaBulanBerjalan($pdo); ?>
+
                     <div class="row">
                         <div class="col-12">
                             <div class="card">

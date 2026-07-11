@@ -2046,6 +2046,184 @@ function getGuruName(PDO $pdo, int $id): ?string {
     return $res !== false ? (string)$res : null;
 }
 
+function normalizeAgendaDashboardName(string $name): string {
+    $name = strtolower(trim($name));
+    $name = preg_replace('/\b20\d{2}\s*\/\s*20\d{2}\b/', '', $name);
+    $name = preg_replace('/\b20\d{2}\b/', '', $name);
+    $name = preg_replace('/[^a-z0-9]+/u', ' ', (string)$name);
+    return trim((string)preg_replace('/\s+/', ' ', (string)$name));
+}
+
+function getAgendaBulanBerjalan(PDO $pdo, ?string $date = null): array {
+    $date = $date ?: date('Y-m-d');
+    $timestamp = strtotime($date) ?: time();
+    $rangeStart = date('Y-m-01', $timestamp);
+    $rangeEnd = date('Y-m-t', $timestamp);
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id_kalender, nama_kegiatan, tgl_mulai, tgl_selesai, tahun_ajaran, warna
+             FROM tb_kalender_pendidikan
+             WHERE tgl_mulai <= ? AND tgl_selesai >= ?
+             ORDER BY tgl_mulai ASC, tgl_selesai ASC, nama_kegiatan ASC"
+        );
+        $stmt->execute([$rangeEnd, $rangeStart]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $deduped = [];
+        foreach ($rows as $row) {
+            $start = (string)($row['tgl_mulai'] ?? '');
+            $end = (string)($row['tgl_selesai'] ?? $start);
+            if ($start === '' || $end === '') {
+                continue;
+            }
+
+            $displayStart = max($start, $rangeStart);
+            $displayEnd = min($end, $rangeEnd);
+            $name = (string)($row['nama_kegiatan'] ?? '');
+            $key = normalizeAgendaDashboardName($name);
+            if ($key === '') {
+                $key = strtolower(trim($name));
+            }
+
+            if (preg_match('/\b(20\d{2}\s*\/\s*20\d{2})\b/', $name, $m)) {
+                $row['tahun_ajaran'] = str_replace(' ', '', $m[1]);
+            }
+
+            if (!isset($deduped[$key])) {
+                $row['_display_start'] = $displayStart;
+                $row['_display_end'] = $displayEnd;
+                $deduped[$key] = $row;
+                continue;
+            }
+
+            $existing = $deduped[$key];
+            $overlap = $displayStart <= (string)$existing['_display_end'] && $displayEnd >= (string)$existing['_display_start'];
+            if (!$overlap) {
+                $deduped[$key . '#' . count($deduped)] = array_merge($row, [
+                    '_display_start' => $displayStart,
+                    '_display_end' => $displayEnd,
+                ]);
+                continue;
+            }
+
+            $existingName = (string)($existing['nama_kegiatan'] ?? '');
+            $keepIncomingText = strlen($name) > strlen($existingName);
+            $merged = $keepIncomingText ? $row : $existing;
+            $merged['_display_start'] = min((string)$existing['_display_start'], $displayStart);
+            $merged['_display_end'] = max((string)$existing['_display_end'], $displayEnd);
+            $merged['tgl_mulai'] = min((string)$existing['tgl_mulai'], $start);
+            $merged['tgl_selesai'] = max((string)$existing['tgl_selesai'], $end);
+            if (empty($merged['tahun_ajaran']) && !empty($existing['tahun_ajaran'])) {
+                $merged['tahun_ajaran'] = $existing['tahun_ajaran'];
+            }
+            $deduped[$key] = $merged;
+        }
+
+        usort($deduped, static function ($a, $b) {
+            return strcmp((string)($a['_display_start'] ?? $a['tgl_mulai'] ?? ''), (string)($b['_display_start'] ?? $b['tgl_mulai'] ?? ''))
+                ?: strcmp((string)($a['_display_end'] ?? $a['tgl_selesai'] ?? ''), (string)($b['_display_end'] ?? $b['tgl_selesai'] ?? ''))
+                ?: strcmp((string)($a['nama_kegiatan'] ?? ''), (string)($b['nama_kegiatan'] ?? ''));
+        });
+
+        return array_values($deduped);
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): string {
+    $date = $date ?: date('Y-m-d');
+    $timestamp = strtotime($date) ?: time();
+    $rangeStart = date('Y-m-01', $timestamp);
+    $rangeEnd = date('Y-m-t', $timestamp);
+    $bulanIndonesia = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    $monthName = $bulanIndonesia[(int)date('n', $timestamp)] ?? date('F', $timestamp);
+    $monthTitle = $monthName . ' ' . date('Y', $timestamp);
+    $agenda = getAgendaBulanBerjalan($pdo, $date);
+    $today = date('Y-m-d', $timestamp);
+
+    ob_start();
+    ?>
+    <div class="row">
+        <div class="col-12">
+            <div class="card dashboard-agenda-card">
+                <div class="card-header">
+                    <h4><i class="fas fa-calendar-alt mr-2 text-primary"></i>Agenda Bulan <?php echo htmlspecialchars($monthName, ENT_QUOTES, 'UTF-8'); ?></h4>
+                    <div class="card-header-action">
+                        <span class="badge badge-primary"><?php echo htmlspecialchars($monthTitle, ENT_QUOTES, 'UTF-8'); ?></span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <?php if (empty($agenda)): ?>
+                        <div class="empty-state py-3" data-height="140">
+                            <div class="empty-state-icon bg-light text-muted">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <h2 class="mt-3">Belum ada agenda bulan ini</h2>
+                            <p class="lead mb-0">Kegiatan akan tampil otomatis dari Kalender Pendidikan.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="dashboard-agenda-list">
+                            <?php foreach ($agenda as $item): ?>
+                                <?php
+                                $start = (string)($item['tgl_mulai'] ?? '');
+                                $end = (string)($item['tgl_selesai'] ?? $start);
+                                $displayStart = (string)($item['_display_start'] ?? max($start, $rangeStart));
+                                $displayEnd = (string)($item['_display_end'] ?? min($end, $rangeEnd));
+                                $isToday = $start <= $today && $end >= $today;
+                                $dateLabel = $displayStart === $displayEnd
+                                    ? (function_exists('formatDateIndonesia') ? formatDateIndonesia($displayStart) : date('d-m-Y', strtotime($displayStart)))
+                                    : ((function_exists('formatDateIndonesia') ? formatDateIndonesia($displayStart) : date('d-m-Y', strtotime($displayStart))) . ' s.d. ' . (function_exists('formatDateIndonesia') ? formatDateIndonesia($displayEnd) : date('d-m-Y', strtotime($displayEnd))));
+                                $bulanPendek = [1 => 'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGS', 'SEP', 'OKT', 'NOV', 'DES'];
+                                $monthShort = $bulanPendek[(int)date('n', strtotime($displayStart))] ?? strtoupper(date('M', strtotime($displayStart)));
+                                ?>
+                                <div class="dashboard-agenda-item <?php echo $isToday ? 'is-today' : ''; ?>">
+                                    <div class="agenda-date-box">
+                                        <div class="agenda-day"><?php echo htmlspecialchars(date('d', strtotime($displayStart)), ENT_QUOTES, 'UTF-8'); ?></div>
+                                        <div class="agenda-month"><?php echo htmlspecialchars($monthShort, ENT_QUOTES, 'UTF-8'); ?></div>
+                                    </div>
+                                    <div class="agenda-content">
+                                        <div class="d-flex flex-wrap align-items-center mb-1">
+                                            <h6 class="mb-0 mr-2"><?php echo htmlspecialchars((string)$item['nama_kegiatan'], ENT_QUOTES, 'UTF-8'); ?></h6>
+                                            <?php if ($isToday): ?>
+                                                <span class="badge badge-success">Hari ini</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="text-muted small">
+                                            <i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($dateLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php if (!empty($item['tahun_ajaran'])): ?>
+                                                <span class="mx-2">&bull;</span>Tahun Ajaran <?php echo htmlspecialchars((string)$item['tahun_ajaran'], ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+        .dashboard-agenda-card .card-body { padding-top: 10px; }
+        .dashboard-agenda-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+        .dashboard-agenda-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid #f0f1f5; border-radius: 8px; background: #fff; }
+        .dashboard-agenda-item.is-today { border-color: #47c363; background: #f8fff9; }
+        .agenda-date-box { width: 52px; min-width: 52px; border-radius: 8px; overflow: hidden; text-align: center; border: 1px solid #e9ecef; }
+        .agenda-day { font-size: 20px; line-height: 1.25; font-weight: 700; padding-top: 5px; color: #34395e; }
+        .agenda-month { font-size: 10px; font-weight: 700; padding: 3px 0 5px; background: #f4f6f9; color: #6777ef; }
+        .agenda-content { min-width: 0; flex: 1; }
+        .agenda-content h6 { font-size: 14px; line-height: 1.35; }
+        @media (max-width: 575.98px) {
+            .dashboard-agenda-list { grid-template-columns: 1fr; }
+            .dashboard-agenda-item { padding: 10px; }
+        }
+    </style>
+    <?php
+    return ob_get_clean();
+}
+
 // Function to get activity color based on action
 function getActivityColor(string $action): string {
     $action = strtolower($action);
