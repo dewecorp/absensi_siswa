@@ -15,6 +15,7 @@ if (!isAuthorized($allowed_roles)) {
 
 $user_role = getUserLevel();
 $is_editable = in_array($user_role, ['admin', 'tata_usaha']);
+$jadwal_ajax_base = ($user_role === 'tata_usaha') ? '../admin/' : '';
 $export_session_type = 'admin';
 if ($user_role === 'wali') {
     $export_session_type = 'wali';
@@ -658,6 +659,7 @@ require_once '../templates/sidebar.php';
     var allSlots = <?= json_encode($jam_mengajar) ?>;
     var mapelMap = <?= json_encode($mapel_map) ?>;
     var guruMap = <?= json_encode($guru_map) ?>;
+    var jadwalAjaxBase = <?= json_encode($jadwal_ajax_base) ?>;
 
     // Initialize Select2 with Custom Template
     // Use window.load and setTimeout to ensure it runs after all other scripts (including Stisla/scripts.js)
@@ -734,7 +736,7 @@ require_once '../templates/sidebar.php';
             }
 
             $.ajax({
-                url: 'update_day_guru_ajax.php',
+                url: jadwalAjaxBase + 'update_day_guru_ajax.php',
                 type: 'POST',
                 data: {
                     kelas_id: kelasId,
@@ -787,7 +789,7 @@ require_once '../templates/sidebar.php';
             $('#save-error').hide();
 
             $.ajax({
-                url: 'update_jadwal_ajax.php',
+                url: jadwalAjaxBase + 'update_jadwal_ajax.php',
                 type: 'POST',
                 data: {
                     id_jadwal: idJadwal,
@@ -849,7 +851,7 @@ require_once '../templates/sidebar.php';
                     return false;
                 }
                 return $.ajax({
-                    url: 'add_jadwal_ajax.php',
+                    url: jadwalAjaxBase + 'add_jadwal_ajax.php',
                     type: 'POST',
                     data: {
                         kelas_id: kelasId,
@@ -894,7 +896,7 @@ require_once '../templates/sidebar.php';
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: 'delete_jadwal_ajax.php',
+                    url: jadwalAjaxBase + 'delete_jadwal_ajax.php',
                     type: 'POST',
                     data: { id_jadwal: idJadwal },
                     dataType: 'json',
