@@ -285,7 +285,7 @@ require_once '../templates/sidebar.php';
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label>Tahun Ajaran</label>
-                        <input type="text" name="tahun_ajaran" class="form-control" value="<?= htmlspecialchars($selected_ta) ?>" placeholder="2025/2026" required>
+                        <input type="text" name="tahun_ajaran" class="form-control" value="<?= htmlspecialchars($selected_ta) ?>" placeholder="Tahun Ajaran" required>
                     </div>
                     <div class="form-group col-md-4">
                         <label>Nilai Terendah</label>
