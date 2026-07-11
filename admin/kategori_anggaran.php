@@ -8,10 +8,10 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check authorization
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
     redirect('../login.php');
 }
-$is_admin = true;
+$is_admin = isAuthorized(['admin']) || isBendahara($pdo);
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
