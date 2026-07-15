@@ -1805,6 +1805,74 @@ function ensureTbGuruPendidikanColumn(PDO $pdo): bool {
     }
 }
 
+/**
+ * Tambah kolom tmt (Tanggal Mulai Tugas) ke tb_guru jika belum ada.
+ */
+function ensureTbGuruTmtColumn(PDO $pdo): bool {
+    static $checked = false;
+    if ($checked) {
+        return true;
+    }
+    $checked = true;
+    try {
+        $row = $pdo->query("SHOW COLUMNS FROM tb_guru LIKE 'tmt'")->fetch();
+        if (!$row) {
+            $pdo->exec("ALTER TABLE tb_guru ADD COLUMN tmt DATE DEFAULT NULL AFTER pendidikan");
+        }
+        return true;
+    } catch (PDOException $e) {
+        error_log('ensureTbGuruTmtColumn: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Generate kode guru selanjutnya secara urut abjad.
+ * Contoh: A, B, ..., Z, AA, AB, ...
+ */
+function generateNextKodeGuru(PDO $pdo): string {
+    try {
+        $stmt = $pdo->query("SELECT kode_guru FROM tb_guru WHERE kode_guru IS NOT NULL AND kode_guru != '' ORDER BY LENGTH(kode_guru) DESC, kode_guru DESC LIMIT 1");
+        $last = $stmt->fetchColumn();
+        if (!$last) return 'A';
+
+        $chars = str_split(strtoupper($last));
+        $i = count($chars) - 1;
+        while ($i >= 0) {
+            if ($chars[$i] === 'Z') {
+                $chars[$i] = 'A';
+                $i--;
+            } else {
+                $chars[$i] = chr(ord($chars[$i]) + 1);
+                break;
+            }
+        }
+        if ($i < 0) {
+            array_unshift($chars, 'A');
+        }
+        return implode('', $chars);
+    } catch (Exception $e) {
+        error_log('generateNextKodeGuru: ' . $e->getMessage());
+        return 'A';
+    }
+}
+
+/**
+ * Hitung masa bakti dari TMT ke tanggal sekarang.
+ * Format: "X tahun Y bulan" atau "-" jika TMT kosong.
+ */
+function calculateMasaBakti(?string $tmt): string {
+    if (empty($tmt)) return '-';
+    try {
+        $start = new DateTime($tmt);
+        $end = new DateTime();
+        $diff = $start->diff($end);
+        return $diff->y . ' tahun ' . $diff->m . ' bulan';
+    } catch (Exception $e) {
+        return '-';
+    }
+}
+
 // --- Helper Functions for Security ---
 
 // Function to sanitize user input

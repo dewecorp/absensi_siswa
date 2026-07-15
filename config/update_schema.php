@@ -25,6 +25,13 @@ try {
         }
     }
 
+    // Add tmt column to tb_guru
+    $checkTmt = $pdo->query("SHOW COLUMNS FROM tb_guru LIKE 'tmt'");
+    if ($checkTmt && $checkTmt->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE tb_guru ADD COLUMN tmt DATE DEFAULT NULL AFTER pendidikan");
+        echo "Added column 'tmt' to tb_guru.\n";
+    }
+
     ensureStudentPasswords($pdo);
     ensureGuruDefaultPasswords($pdo);
 

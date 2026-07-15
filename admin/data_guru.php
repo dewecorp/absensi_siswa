@@ -13,6 +13,7 @@ if (!isAuthorized(['admin'])) {
 }
 
 ensureTbGuruPendidikanColumn($pdo);
+ensureTbGuruTmtColumn($pdo);
 ensureGuruDefaultPasswords($pdo);
 
 // Set page title
@@ -52,6 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
     $id_guru = (int)$_POST['id_guru'];
     $nama_guru = sanitizeInput($_POST['nama_guru']);
     $kode_guru = sanitizeInput($_POST['kode_guru'] ?? '');
+    if (empty($kode_guru)) {
+        $kode_guru = generateNextKodeGuru($pdo);
+    }
     $nuptk = sanitizeInput($_POST['nuptk']);
     $tempat_lahir = sanitizeInput($_POST['tempat_lahir']);
     $tanggal_lahir = !empty($_POST['tanggal_lahir']) ? $_POST['tanggal_lahir'] : null;
@@ -59,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
     $pendidikan = normalizeGuruPendidikan($_POST['pendidikan'] ?? '');
     $password = $_POST['password'] ?? '';
     $mengajar = isset($_POST['mengajar']) ? json_encode($_POST['mengajar']) : null;
+    $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
     
     $error_message = null;
     $foto = null;
@@ -140,8 +145,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
         }
     }
     
-    $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $mengajar];
-    $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, mengajar=?";
+    $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar];
+    $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, tmt=?, mengajar=?";
     
     // Add password to update if provided
     if (!empty($password)) {
@@ -416,6 +421,9 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') == 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
     $nama_guru = sanitizeInput($_POST['nama_guru']);
     $kode_guru = sanitizeInput($_POST['kode_guru'] ?? '');
+    if (empty($kode_guru)) {
+        $kode_guru = generateNextKodeGuru($pdo);
+    }
     $nuptk = sanitizeInput($_POST['nuptk']);
     $tempat_lahir = sanitizeInput($_POST['tempat_lahir']);
     $tanggal_lahir = !empty($_POST['tanggal_lahir']) ? $_POST['tanggal_lahir'] : null;
@@ -423,6 +431,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
     $pendidikan = normalizeGuruPendidikan($_POST['pendidikan'] ?? '');
     $password = $_POST['password'];
     $mengajar = isset($_POST['mengajar']) ? json_encode($_POST['mengajar']) : null;
+    $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
     
     // Handle photo upload
     $foto = null;
@@ -483,8 +492,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
                 $hashed_password = hashPassword($password_to_use);
                 $password_plain = $password_to_use; // Store plain text password
                 
-                $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, kode_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, pendidikan, mengajar, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                if ($stmt->execute([$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $mengajar, $hashed_password, $password_plain, $foto])) {
+                $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, kode_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, pendidikan, tmt, mengajar, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                if ($stmt->execute([$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar, $hashed_password, $password_plain, $foto])) {
                     $message = ['type' => 'success', 'text' => 'Data guru berhasil ditambahkan!'];
                     
                     // Log activity - ensure session is available
@@ -517,6 +526,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !iss
     $pendidikan = normalizeGuruPendidikan($_POST['pendidikan'] ?? '');
     $password = $_POST['password'];
     $mengajar = isset($_POST['mengajar']) ? json_encode($_POST['mengajar']) : null;
+    $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
     
     // Handle photo upload
     $foto = null;
@@ -576,8 +586,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !iss
         if ($check_stmt->rowCount() > 0) {
             $message = ['type' => 'danger', 'text' => 'NUPTK sudah terdaftar oleh guru lain!'];
         } else {
-            $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $mengajar];
-            $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, mengajar=?";
+            $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar];
+            $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, tmt=?, mengajar=?";
             
             // Add password to update if provided
             if (!empty($password)) {
@@ -631,7 +641,7 @@ if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') ===
                 
                 foreach ($fields as $field) {
                     // Validate field name to prevent SQL injection
-                    $allowedFields = ['nama_guru', 'kode_guru', 'nuptk', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'pendidikan', 'wali_kelas'];
+                    $allowedFields = ['nama_guru', 'kode_guru', 'nuptk', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'pendidikan', 'tmt', 'wali_kelas'];
                     if (!in_array($field, $allowedFields)) {
                         continue; // Skip invalid fields
                     }
@@ -1015,7 +1025,7 @@ $(document).ready(function() {
             
             $('#table-1').DataTable({
                 \"columnDefs\": [
-                    { \"sortable\": false, \"targets\": [1, 2, 11] } // Disable sorting for checkbox, foto, and action columns
+                    { \"sortable\": false, \"targets\": [1, 2, 14] } // Disable sorting for checkbox, foto, and action columns
                 ],
                 \"paging\": true,
                 \"lengthChange\": true,
@@ -1088,6 +1098,43 @@ echo "<!-- DEBUG: After template inclusion -->\n";
         z-index: 5000 !important;
         transform: none !important;
     }
+}
+
+#table-1 th:nth-child(1),
+#table-1 td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: #fff;
+    min-width: 50px;
+    text-align: center;
+}
+#table-1 th:nth-child(3),
+#table-1 td:nth-child(3) {
+    position: sticky;
+    left: 55px;
+    z-index: 2;
+    background-color: #fff;
+    min-width: 50px;
+}
+#table-1 th:nth-child(4),
+#table-1 td:nth-child(4) {
+    position: sticky;
+    left: 115px;
+    z-index: 3;
+    background-color: #fff;
+    min-width: 220px;
+}
+#table-1 th:nth-child(1),
+#table-1 th:nth-child(3),
+#table-1 th:nth-child(4) {
+    z-index: 4;
+}
+#table-1 tbody tr:nth-child(odd) td:nth-child(1),
+#table-1 tbody tr:nth-child(odd) td:nth-child(3),
+#table-1 tbody tr:nth-child(odd) td:nth-child(4) {
+    background-color: #f2f2f2;
+}
 }
 </style>
             <!-- Main Content -->
@@ -1222,6 +1269,8 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                     <th>Tempat Tanggal Lahir</th>
                                                     <th>Jenis Kelamin</th>
                                                     <th>Pendidikan</th>
+                                                    <th>TMT</th>
+                                                    <th>Masa Bakti</th>
                                                     <th>Mengajar</th>
                                                     <th>Wali Kelas</th>
                                                     <th>Password</th>
@@ -1282,6 +1331,8 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                     <td><?php echo htmlspecialchars($teacher['tempat_lahir']); ?>, <?php echo $teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-'; ?></td>
                                                     <td><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></td>
                                                     <td><?php echo !empty($teacher['pendidikan']) ? htmlspecialchars($teacher['pendidikan']) : '-'; ?></td>
+                                                    <td><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></td>
+                                                    <td><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></td>
                                                     <td><?php echo htmlspecialchars($mengajar_display ?: '-'); ?></td>
                                                     <td><?php echo htmlspecialchars($teacher['kelas_wali'] ?? '-'); ?></td>
                                                     <td><?php echo !empty($teacher['password_plain']) ? htmlspecialchars($teacher['password_plain']) : ($teacher['password'] ? '***' : 'Belum Diatur'); ?></td>
@@ -1370,6 +1421,8 @@ function setImportType(type) {
                 $pend_opts_add .= '<option value="' . htmlspecialchars($__pd_row, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($__pd_row, ENT_QUOTES, 'UTF-8') . '</option>';
             }
             
+            $next_kode_guru = generateNextKodeGuru($pdo);
+            
             echo '<!-- Add Modal -->
             <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
                 <div class="modal-dialog" role="document">
@@ -1394,7 +1447,7 @@ function setImportType(type) {
                                 </div>
                                 <div class="form-group">
                                     <label>Kode Guru</label>
-                                    <input type="text" class="form-control" name="kode_guru" required>
+                                    <input type="text" class="form-control" name="kode_guru" value="' . htmlspecialchars($next_kode_guru) . '" readonly required>
                                 </div>
                                 <div class="form-group">
                                     <label>NUPTK</label>
@@ -1422,6 +1475,14 @@ function setImportType(type) {
                                         <option value="">Pilih pendidikan (opsional)</option>
                                         ' . $pend_opts_add . '
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tanggal Mulai Tugas (TMT)</label>
+                                    <input type="date" class="form-control tmt-date" name="tmt">
+                                </div>
+                                <div class="form-group">
+                                    <label>Masa Bakti</label>
+                                    <input type="text" class="form-control" id="addMasaBakti" readonly placeholder="Terhitung otomatis setelah TMT diisi">
                                 </div>
                                 <div class="form-group">
                                     <label>Mengajar Kelas</label>
@@ -1539,6 +1600,14 @@ function setImportType(type) {
                                         <select class="form-control" name="pendidikan">' . $pend_opts_edit . '</select>
                                     </div>
                                     <div class="form-group">
+                                        <label>Tanggal Mulai Tugas (TMT)</label>
+                                        <input type="date" class="form-control tmt-date" name="tmt" value="' . htmlspecialchars($teacher['tmt'] ?? '') . '">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Masa Bakti</label>
+                                        <input type="text" class="form-control masa-bakti" id="masaBakti' . $teacher['id_guru'] . '" readonly value="' . calculateMasaBakti($teacher['tmt'] ?? null) . '">
+                                    </div>
+                                    <div class="form-group">
                                         <label>Mengajar Kelas</label>
                                         <select class="form-control select2" name="mengajar[]" multiple="multiple" data-placeholder="Pilih kelas yang diajarkan" style="width: 100%;">
                                         '; 
@@ -1568,9 +1637,34 @@ function setImportType(type) {
                 </div>';
             }
             
-            // Add JavaScript for initializing Select2 elements
+            // Add JavaScript for initializing Select2 elements and auto-calculate masa bakti
             echo '<script>
+            function hitungMasaBakti(tmtDate) {
+                if (!tmtDate) return \'\';
+                var parts = tmtDate.split(\'-\');
+                var start = new Date(parts[0], parts[1] - 1, parts[2]);
+                var end = new Date();
+                var years = end.getFullYear() - start.getFullYear();
+                var months = end.getMonth() - start.getMonth();
+                if (months < 0) {
+                    years--;
+                    months += 12;
+                }
+                return years + \' tahun \' + months + \' bulan\';
+            }
+
             $(document).ready(function() {
+                // Auto-calculate masa bakti when TMT changes
+                $(document).on(\'change\', \'.tmt-date\', function() {
+                    var tmt = $(this).val();
+                    var $modal = $(this).closest(\'.modal\');
+                    var $masaBakti = $modal.find(\'.masa-bakti\');
+                    if ($masaBakti.length === 0) {
+                        $masaBakti = $(\'#addMasaBakti\');
+                    }
+                    $masaBakti.val(hitungMasaBakti(tmt));
+                });
+
                 // Initialize Select2 when modals are shown
                 $(\'#addModal\').on(\'shown.bs.modal\', function() {
                     var $select = $(this).find(\'select.select2\');

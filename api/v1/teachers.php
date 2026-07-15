@@ -88,6 +88,7 @@ try {
             g.tanggal_lahir,
             g.jenis_kelamin,
             g.pendidikan,
+            g.tmt,
             g.wali_kelas,
             g.mengajar,
             g.foto,

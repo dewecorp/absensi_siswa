@@ -43,7 +43,7 @@ if (empty($table_data)) {
         }
         
         // Build a basic HTML table
-        $table_data = '<table><thead><tr><th>No</th><th>Nama Guru</th><th>NUPTK</th><th>Tempat Lahir</th><th>Tanggal Lahir</th><th>Jenis Kelamin</th><th>Mengajar</th><th>Wali Kelas</th></tr></thead><tbody>';
+        $table_data = '<table><thead><tr><th>No</th><th>Nama Guru</th><th>Kode Guru</th><th>NUPTK</th><th>Tempat Lahir</th><th>Tanggal Lahir</th><th>Jenis Kelamin</th><th>Pendidikan</th><th>TMT</th><th>Masa Bakti</th><th>Mengajar</th><th>Wali Kelas</th></tr></thead><tbody>';
         $no = 1;
         foreach ($teachers as $teacher) {
             // Decode mengajar JSON and get class names
@@ -66,10 +66,14 @@ if (empty($table_data)) {
             $table_data .= '<tr>';
             $table_data .= '<td>' . $no++ . '</td>';
             $table_data .= '<td>' . htmlspecialchars($teacher['nama_guru']) . '</td>';
+            $table_data .= '<td>' . htmlspecialchars($teacher['kode_guru'] ?? '-') . '</td>';
             $table_data .= '<td>' . htmlspecialchars($teacher['nuptk']) . '</td>';
             $table_data .= '<td>' . htmlspecialchars($teacher['tempat_lahir']) . '</td>';
             $table_data .= '<td>' . ($teacher['tanggal_lahir'] ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-') . '</td>';
             $table_data .= '<td>' . htmlspecialchars($teacher['jenis_kelamin']) . '</td>';
+            $table_data .= '<td>' . htmlspecialchars($teacher['pendidikan'] ?? '-') . '</td>';
+            $table_data .= '<td>' . (!empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-') . '</td>';
+            $table_data .= '<td>' . calculateMasaBakti($teacher['tmt'] ?? null) . '</td>';
             $table_data .= '<td>' . htmlspecialchars($mengajar_display) . '</td>';
             $table_data .= '<td>' . htmlspecialchars($teacher['kelas_wali'] ?? '-') . '</td>';
             $table_data .= '</tr>';

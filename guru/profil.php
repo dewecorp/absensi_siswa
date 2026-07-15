@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     $jenis_kelamin = trim((string)($_POST['jenis_kelamin'] ?? ''));
     $tempat_lahir = trim((string)($_POST['tempat_lahir'] ?? ''));
     $tanggal_lahir = trim((string)($_POST['tanggal_lahir'] ?? ''));
+    $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
 
     if ($nama_guru === '') {
         $message = ['type' => 'warning', 'text' => 'Nama guru wajib diisi.'];
@@ -57,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         try {
             $stmt = $pdo->prepare("
                 UPDATE tb_guru
-                SET nama_guru = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?
+                SET nama_guru = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, tmt = ?
                 WHERE id_guru = ?
             ");
             $ok = $stmt->execute([
@@ -65,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
                 $jenis_kelamin,
                 ($tempat_lahir !== '' ? $tempat_lahir : null),
                 ($tanggal_lahir !== '' ? $tanggal_lahir : null),
+                $tmt,
                 $teacher['id_guru'],
             ]);
 
@@ -172,6 +174,14 @@ include '../templates/user_header.php';
                                     <label>Tanggal Lahir</label>
                                     <input type="date" class="form-control" name="tanggal_lahir" value="<?php echo !empty($teacher['tanggal_lahir']) ? htmlspecialchars(date('Y-m-d', strtotime($teacher['tanggal_lahir']))) : ''; ?>">
                                 </div>
+                                <div class="form-group">
+                                    <label>Tanggal Mulai Tugas (TMT)</label>
+                                    <input type="date" class="form-control" name="tmt" value="<?php echo !empty($teacher['tmt']) ? htmlspecialchars($teacher['tmt']) : ''; ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Masa Bakti</label>
+                                    <input type="text" class="form-control" id="profilMasaBakti" readonly value="<?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?>">
+                                </div>
                                 
                                 <div class="form-group text-right">
                                     <button type="submit" name="update_profile" class="btn btn-primary">
@@ -234,6 +244,25 @@ include '../templates/user_header.php';
 <?php
 // Add JavaScript for SweetAlert
 $js_page = [];
+$js_page[] = "
+$(document).ready(function() {
+    $('input[name=\"tmt\"]').on('change', function() {
+        var tmt = $(this).val();
+        if (tmt) {
+            var parts = tmt.split('-');
+            var start = new Date(parts[0], parts[1] - 1, parts[2]);
+            var end = new Date();
+            var years = end.getFullYear() - start.getFullYear();
+            var months = end.getMonth() - start.getMonth();
+            if (months < 0) { years--; months += 12; }
+            $('#profilMasaBakti').val(years + ' tahun ' + months + ' bulan');
+        } else {
+            $('#profilMasaBakti').val('');
+        }
+    });
+});
+
+";
 if ($message) {
     $js_page[] = "
     $(document).ready(function() {
