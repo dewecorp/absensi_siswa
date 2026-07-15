@@ -410,6 +410,10 @@ include '../templates/sidebar.php';
         transform: none !important;
     }
 }
+#table-1 td:last-child {
+    white-space: nowrap;
+    min-width: 140px;
+}
 </style>
 
 <div class="main-content">

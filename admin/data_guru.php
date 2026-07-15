@@ -1135,6 +1135,10 @@ echo "<!-- DEBUG: After template inclusion -->\n";
 #table-1 tbody tr:nth-child(odd) td:nth-child(4) {
     background-color: #f2f2f2;
 }
+#table-1 td:last-child {
+    white-space: nowrap;
+    min-width: 140px;
+}
 }
 </style>
             <!-- Main Content -->
