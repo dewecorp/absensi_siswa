@@ -173,8 +173,8 @@ include '../templates/user_header.php';
                                 <div><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></div>
                             </div>
                             <div class="mb-2">
-                                <div class="font-weight-bold"><i class="fas fa-calendar-alt mr-1"></i>Masa Bakti</div>
-                                <div class="font-weight-bold"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                                <div class="font-weight-bold text-success"><i class="fas fa-calendar-alt mr-1"></i>Masa Bakti</div>
+                                <div class="font-weight-bold text-success"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
                             </div>
                         </div>
                     </div>
@@ -223,8 +223,8 @@ include '../templates/user_header.php';
                                 <div class="col-7"><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 font-weight-bold">Masa Bakti</div>
-                                <div class="col-7 font-weight-bold"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                                <div class="col-5 font-weight-bold text-success">Masa Bakti</div>
+                                <div class="col-7 font-weight-bold text-success"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
                             </div>
                         </div>
                     </div>
