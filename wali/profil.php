@@ -134,6 +134,9 @@ $page_title = 'Profil & Pengaturan';
 include '../templates/user_header.php';
 ?>
 <style>
+.profile-card .card-body {
+    font-size: 12pt;
+}
 </style>
 
 <div class="main-content">
@@ -159,16 +162,16 @@ include '../templates/user_header.php';
                             </div>
                             <hr>
                             <div class="mb-2">
-                                <small class="text-muted"><i class="fas fa-fingerprint mr-1"></i>NUPTK</small>
-                                <div class="font-weight-bold"><?php echo htmlspecialchars($teacher['nuptk']); ?></div>
+                                <div class="font-weight-bold"><i class="fas fa-fingerprint mr-1"></i>NUPTK</div>
+                                <div><?php echo htmlspecialchars($teacher['nuptk']); ?></div>
                             </div>
                             <div class="mb-2">
-                                <small class="text-muted"><i class="fas fa-venus-mars mr-1"></i>Jenis Kelamin</small>
-                                <div class="font-weight-bold"><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></div>
+                                <div class="font-weight-bold"><i class="fas fa-venus-mars mr-1"></i>Jenis Kelamin</div>
+                                <div><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></div>
                             </div>
                             <div class="mb-2">
-                                <small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>Masa Bakti</small>
-                                <div class="font-weight-bold text-success"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                                <div class="font-weight-bold"><i class="fas fa-calendar-alt mr-1"></i>Masa Bakti</div>
+                                <div class="font-weight-bold"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
                             </div>
                         </div>
                     </div>
@@ -185,40 +188,40 @@ include '../templates/user_header.php';
                         </div>
                         <div class="card-body">
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">Nama Lengkap</div>
-                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['nama_guru']); ?></div>
+                                <div class="col-5 font-weight-bold">Nama Lengkap</div>
+                                <div class="col-7"><?php echo htmlspecialchars($teacher['nama_guru']); ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">Kode Guru</div>
-                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></div>
+                                <div class="col-5 font-weight-bold">Kode Guru</div>
+                                <div class="col-7"><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">NUPTK</div>
-                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['nuptk']); ?></div>
+                                <div class="col-5 font-weight-bold">NUPTK</div>
+                                <div class="col-7"><?php echo htmlspecialchars($teacher['nuptk']); ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">Jenis Kelamin</div>
-                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></div>
+                                <div class="col-5 font-weight-bold">Jenis Kelamin</div>
+                                <div class="col-7"><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">Tempat Lahir</div>
-                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['tempat_lahir'] ?? '-'); ?></div>
+                                <div class="col-5 font-weight-bold">Tempat Lahir</div>
+                                <div class="col-7"><?php echo htmlspecialchars($teacher['tempat_lahir'] ?? '-'); ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">Tanggal Lahir</div>
-                                <div class="col-7 font-weight-bold"><?php echo !empty($teacher['tanggal_lahir']) ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-'; ?></div>
+                                <div class="col-5 font-weight-bold">Tanggal Lahir</div>
+                                <div class="col-7"><?php echo !empty($teacher['tanggal_lahir']) ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-'; ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">Pendidikan</div>
-                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars(!empty($teacher['pendidikan']) ? $teacher['pendidikan'] : '-'); ?></div>
+                                <div class="col-5 font-weight-bold">Pendidikan</div>
+                                <div class="col-7"><?php echo htmlspecialchars(!empty($teacher['pendidikan']) ? $teacher['pendidikan'] : '-'); ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">TMT</div>
-                                <div class="col-7 font-weight-bold"><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></div>
+                                <div class="col-5 font-weight-bold">TMT</div>
+                                <div class="col-7"><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></div>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-5 text-muted small">Masa Bakti</div>
-                                <div class="col-7 font-weight-bold text-success"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                                <div class="col-5 font-weight-bold">Masa Bakti</div>
+                                <div class="col-7 font-weight-bold"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
                             </div>
                         </div>
                     </div>
