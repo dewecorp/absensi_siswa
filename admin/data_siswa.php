@@ -414,6 +414,10 @@ include '../templates/sidebar.php';
     white-space: nowrap;
     min-width: 140px;
 }
+#table-1 th:nth-child(4),
+#table-1 td:nth-child(4) {
+    min-width: 220px;
+}
 </style>
 
 <div class="main-content">

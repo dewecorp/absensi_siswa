@@ -609,7 +609,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                         <div class="font-weight-bold text-white-50">Status</div>
                                                         <div><?php echo !empty($teacher['status_kepegawaian']) ? htmlspecialchars($teacher['status_kepegawaian']) : 'Aktif'; ?></div>
                                                     </div>
+                                                    <div class="col-auto">
+                                                        <div class="font-weight-bold text-white-50">TMT</div>
+                                                        <div><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></div>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <div class="font-weight-bold text-white-50">Masa Bakti</div>
+                                                        <div><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                                                    </div>
                                                 </div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <a href="profil.php" class="text-white-50 small" title="Edit Profil"><i class="fas fa-pen mr-1"></i>Edit Profil</a>
                                             </div>
                                         </div>
                                     </div>

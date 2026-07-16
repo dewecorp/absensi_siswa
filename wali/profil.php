@@ -2,22 +2,17 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-// Check if user is logged in and has wali level
-if (!isAuthorized(['wali'])) {
+if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
 }
 
-// Get school profile
 $school_profile = getSchoolProfile($pdo);
 
-// Get teacher information
 if ($_SESSION['level'] == 'guru' || $_SESSION['level'] == 'wali') {
-    // Direct login via NUPTK, user_id is actually the id_guru
     $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 } else {
-    // Traditional login via tb_pengguna
     $stmt = $pdo->prepare("SELECT g.* FROM tb_guru g JOIN tb_pengguna p ON g.id_guru = p.id_guru WHERE p.id_pengguna = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -27,26 +22,61 @@ if (!$teacher) {
     redirect('../login.php');
 }
 
-// Ensure nama_guru is set in session for consistent navbar display
 if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
     $_SESSION['nama_guru'] = $teacher['nama_guru'];
 }
 
-
 $message = null;
 
-// Handle profile update
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile_modal'])) {
+    header('Content-Type: application/json');
+    $nama_guru = trim((string)($_POST['nama_guru'] ?? ''));
+    $jenis_kelamin = trim((string)($_POST['jenis_kelamin'] ?? ''));
+    $tempat_lahir = trim((string)($_POST['tempat_lahir'] ?? ''));
+    $tanggal_lahir = !empty($_POST['tanggal_lahir']) ? $_POST['tanggal_lahir'] : null;
+    $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
+
+    if ($nama_guru === '') {
+        echo json_encode(['success' => false, 'message' => 'Nama guru wajib diisi.']);
+        exit;
+    }
+    if (!in_array($jenis_kelamin, ['Laki-laki', 'Perempuan'], true)) {
+        echo json_encode(['success' => false, 'message' => 'Jenis kelamin tidak valid.']);
+        exit;
+    }
+    if ($tanggal_lahir !== null) {
+        $parts = explode('-', $tanggal_lahir);
+        if (count($parts) !== 3 || !checkdate((int)$parts[1], (int)$parts[2], (int)$parts[0])) {
+            echo json_encode(['success' => false, 'message' => 'Tanggal lahir tidak valid.']);
+            exit;
+        }
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, jenis_kelamin=?, tempat_lahir=?, tanggal_lahir=?, tmt=? WHERE id_guru=?");
+        $stmt->execute([$nama_guru, $jenis_kelamin, ($tempat_lahir ?: null), $tanggal_lahir, $tmt, $teacher['id_guru']]);
+        $_SESSION['nama_guru'] = $nama_guru;
+        $_SESSION['nama'] = $nama_guru;
+        logActivity($pdo, $teacher['nuptk'] ?? 'system', 'Ubah Profil', 'Guru memperbarui profil sendiri');
+        echo json_encode(['success' => true, 'message' => 'Profil berhasil diperbarui!']);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'Gagal menyimpan profil.']);
+    }
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     $nama_guru = trim((string)($_POST['nama_guru'] ?? ''));
     $jenis_kelamin = trim((string)($_POST['jenis_kelamin'] ?? ''));
     $tempat_lahir = trim((string)($_POST['tempat_lahir'] ?? ''));
-    $tanggal_lahir = trim((string)($_POST['tanggal_lahir'] ?? ''));
+    $tanggal_lahir = !empty($_POST['tanggal_lahir']) ? $_POST['tanggal_lahir'] : null;
+    $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
 
     if ($nama_guru === '') {
         $message = ['type' => 'warning', 'text' => 'Nama guru wajib diisi.'];
     } elseif (!in_array($jenis_kelamin, ['Laki-laki', 'Perempuan'], true)) {
         $message = ['type' => 'warning', 'text' => 'Jenis kelamin tidak valid.'];
-    } elseif ($tanggal_lahir !== '') {
+    } elseif ($tanggal_lahir !== null) {
         $parts = explode('-', $tanggal_lahir);
         if (count($parts) !== 3 || !checkdate((int)$parts[1], (int)$parts[2], (int)$parts[0])) {
             $message = ['type' => 'warning', 'text' => 'Tanggal lahir tidak valid.'];
@@ -55,44 +85,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
 
     if ($message === null) {
         try {
-            $stmt = $pdo->prepare("
-                UPDATE tb_guru
-                SET nama_guru = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?
-                WHERE id_guru = ?
-            ");
-            $ok = $stmt->execute([
-                $nama_guru,
-                $jenis_kelamin,
-                ($tempat_lahir !== '' ? $tempat_lahir : null),
-                ($tanggal_lahir !== '' ? $tanggal_lahir : null),
-                $teacher['id_guru'],
-            ]);
-
-            if ($ok) {
-                $_SESSION['nama_guru'] = $nama_guru;
-                $_SESSION['nama'] = $nama_guru;
-                $message = ['type' => 'success', 'text' => 'Profil berhasil diperbarui.'];
-                $username = isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system';
-                logActivity($pdo, $username, 'Ubah Profil', 'Wali memperbarui profil sendiri');
-                $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
-                $stmt->execute([$teacher['id_guru']]);
-                $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
-            } else {
-                $message = ['type' => 'danger', 'text' => 'Gagal memperbarui profil.'];
-            }
+            $stmt = $pdo->prepare("UPDATE tb_guru SET nama_guru=?, jenis_kelamin=?, tempat_lahir=?, tanggal_lahir=?, tmt=? WHERE id_guru=?");
+            $stmt->execute([$nama_guru, $jenis_kelamin, ($tempat_lahir ?: null), $tanggal_lahir, $tmt, $teacher['id_guru']]);
+            $_SESSION['nama_guru'] = $nama_guru;
+            $_SESSION['nama'] = $nama_guru;
+            $message = ['type' => 'success', 'text' => 'Profil berhasil diperbarui.'];
+            logActivity($pdo, $teacher['nuptk'] ?? 'system', 'Ubah Profil', 'Guru memperbarui profil sendiri');
+            $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+            $stmt->execute([$teacher['id_guru']]);
+            $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            $message = ['type' => 'danger', 'text' => 'Terjadi kesalahan saat menyimpan profil.'];
+            $message = ['type' => 'danger', 'text' => 'Gagal menyimpan profil.'];
         }
     }
 }
 
-// Handle password change
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ubah_password'])) {
     $current_password = $_POST['current_password'] ?? '';
     $new_password = $_POST['new_password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
-    
-    // Validate
+
     if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
         $message = ['type' => 'warning', 'text' => 'Harap lengkapi semua field!'];
     } elseif ($new_password !== $confirm_password) {
@@ -100,17 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ubah_password'])) {
     } elseif (strlen($new_password) < 6) {
         $message = ['type' => 'warning', 'text' => 'Password baru minimal 6 karakter!'];
     } else {
-        // Verify current password
         if ($teacher['password'] && password_verify($current_password, $teacher['password'])) {
-            // Update password
             $hashed_password = hashPassword($new_password);
-            $stmt = $pdo->prepare("UPDATE tb_guru SET password = ?, password_plain = ? WHERE id_guru = ?");
+            $stmt = $pdo->prepare("UPDATE tb_guru SET password=?, password_plain=? WHERE id_guru=?");
             if ($stmt->execute([$hashed_password, $new_password, $teacher['id_guru']])) {
                 $message = ['type' => 'success', 'text' => 'Password berhasil diubah!'];
-                $username = isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system';
-                $log_result = logActivity($pdo, $username, 'Ubah Password', 'Wali mengubah password sendiri');
-                if (!$log_result) error_log("Failed to log activity for Ubah Password: Wali");
-                // Refresh teacher data
+                logActivity($pdo, $teacher['nuptk'] ?? 'system', 'Ubah Password', 'Guru mengubah password sendiri');
                 $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
                 $stmt->execute([$teacher['id_guru']]);
                 $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -123,12 +130,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ubah_password'])) {
     }
 }
 
-// Set page title
 $page_title = 'Profil & Pengaturan';
-
-// Include header
 include '../templates/user_header.php';
 ?>
+<style>
+</style>
 
 <div class="main-content">
     <section class="section">
@@ -142,85 +148,101 @@ include '../templates/user_header.php';
 
         <div class="section-body">
             <div class="row">
-                <div class="col-12 col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Informasi Profil</h4>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" action="">
-                                <div class="form-group">
-                                    <label>Nama Guru</label>
-                                    <input type="text" class="form-control" name="nama_guru" value="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>NUPTK</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($teacher['nuptk']); ?>" readonly>
-                                </div>
-                                <div class="form-group">
-                                    <label>Jenis Kelamin</label>
-                                    <select class="form-control" name="jenis_kelamin" required>
-                                        <option value="Laki-laki" <?php echo (($teacher['jenis_kelamin'] ?? '') === 'Laki-laki') ? 'selected' : ''; ?>>Laki-laki</option>
-                                        <option value="Perempuan" <?php echo (($teacher['jenis_kelamin'] ?? '') === 'Perempuan') ? 'selected' : ''; ?>>Perempuan</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Tempat Lahir</label>
-                                    <input type="text" class="form-control" name="tempat_lahir" value="<?php echo htmlspecialchars((string)($teacher['tempat_lahir'] ?? '')); ?>" placeholder="Contoh: Jepara">
-                                </div>
-                                <div class="form-group">
-                                    <label>Tanggal Lahir</label>
-                                    <input type="date" class="form-control" name="tanggal_lahir" value="<?php echo !empty($teacher['tanggal_lahir']) ? htmlspecialchars(date('Y-m-d', strtotime($teacher['tanggal_lahir']))) : ''; ?>">
-                                </div>
-                                <div class="form-group text-right">
-                                    <button type="submit" name="update_profile" class="btn btn-primary">
-                                        <i class="fas fa-save"></i> Simpan Profil
-                                    </button>
-                                </div>
-                            </form>
+                <div class="col-12 col-md-5 mb-4">
+                    <div class="card profile-card shadow-sm">
+                        <div class="card-body py-4">
+                            <div class="text-center">
+                                <?php echo getTeacherAvatarImage($teacher, 130); ?>
+                                <h4 class="mt-3 mb-1 font-weight-bold"><?php echo htmlspecialchars($teacher['nama_guru']); ?></h4>
+                                <span class="badge badge-primary"><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></span>
+                                <span class="badge badge-info"><?php echo htmlspecialchars($teacher['pendidikan'] ?? '-'); ?></span>
+                            </div>
+                            <hr>
+                            <div class="mb-2">
+                                <small class="text-muted"><i class="fas fa-fingerprint mr-1"></i>NUPTK</small>
+                                <div class="font-weight-bold"><?php echo htmlspecialchars($teacher['nuptk']); ?></div>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted"><i class="fas fa-venus-mars mr-1"></i>Jenis Kelamin</small>
+                                <div class="font-weight-bold"><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></div>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>Masa Bakti</small>
+                                <div class="font-weight-bold text-success"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-12 col-md-6">
-                    <div class="card">
+                <div class="col-12 col-md-7 mb-4">
+                    <div class="card profile-card shadow-sm">
                         <div class="card-header">
-                            <h4>Ubah Password</h4>
+                            <h4><i class="fas fa-id-card mr-2"></i>Data Diri</h4>
+                            <div class="card-header-action">
+                                <a href="#" class="text-primary" data-toggle="modal" data-target="#editProfileModal" title="Edit Profil">
+                                    <i class="fas fa-pen fa-lg"></i>
+                                </a>
+                            </div>
                         </div>
                         <div class="card-body">
-                            <?php if ($message): ?>
-                            <div class="alert alert-<?php echo $message['type']; ?> alert-dismissible show fade">
-                                <div class="alert-body">
-                                    <button class="close" data-dismiss="alert">
-                                        <span>&times;</span>
-                                    </button>
-                                    <?php echo $message['text']; ?>
-                                </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">Nama Lengkap</div>
+                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['nama_guru']); ?></div>
                             </div>
-                            <?php endif; ?>
-                            
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">Kode Guru</div>
+                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">NUPTK</div>
+                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['nuptk']); ?></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">Jenis Kelamin</div>
+                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">Tempat Lahir</div>
+                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars($teacher['tempat_lahir'] ?? '-'); ?></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">Tanggal Lahir</div>
+                                <div class="col-7 font-weight-bold"><?php echo !empty($teacher['tanggal_lahir']) ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-'; ?></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">Pendidikan</div>
+                                <div class="col-7 font-weight-bold"><?php echo htmlspecialchars(!empty($teacher['pendidikan']) ? $teacher['pendidikan'] : '-'); ?></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">TMT</div>
+                                <div class="col-7 font-weight-bold"><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted small">Masa Bakti</div>
+                                <div class="col-7 font-weight-bold text-success"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h4><i class="fas fa-key mr-2"></i>Ubah Password</h4>
+                        </div>
+                        <div class="card-body">
                             <form method="POST" action="">
                                 <div class="form-group">
                                     <label>Password Lama</label>
                                     <input type="password" class="form-control" name="current_password" required>
                                 </div>
-                                
                                 <div class="form-group">
                                     <label>Password Baru</label>
                                     <input type="password" class="form-control" name="new_password" minlength="6" required>
                                     <small class="form-text text-muted">Minimal 6 karakter</small>
                                 </div>
-                                
                                 <div class="form-group">
                                     <label>Konfirmasi Password Baru</label>
                                     <input type="password" class="form-control" name="confirm_password" minlength="6" required>
                                 </div>
-                                
-                                <div class="form-group">
-                                    <button type="submit" name="ubah_password" class="btn btn-primary">
-                                        <i class="fas fa-key"></i> Ubah Password
-                                    </button>
-                                </div>
+                                <button type="submit" name="ubah_password" class="btn btn-primary"><i class="fas fa-key mr-2"></i>Ubah Password</button>
                             </form>
                         </div>
                     </div>
@@ -230,9 +252,57 @@ include '../templates/user_header.php';
     </section>
 </div>
 
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Profil</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <form id="editProfileForm" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="update_profile_modal" value="1">
+                    <div class="form-group">
+                        <label>Nama Guru</label>
+                        <input type="text" class="form-control" name="nama_guru" value="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Jenis Kelamin</label>
+                        <select class="form-control" name="jenis_kelamin" required>
+                            <option value="Laki-laki" <?php echo $teacher['jenis_kelamin'] == 'Laki-laki' ? 'selected' : ''; ?>>Laki-laki</option>
+                            <option value="Perempuan" <?php echo $teacher['jenis_kelamin'] == 'Perempuan' ? 'selected' : ''; ?>>Perempuan</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tempat Lahir</label>
+                        <input type="text" class="form-control" name="tempat_lahir" value="<?php echo htmlspecialchars($teacher['tempat_lahir'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Tanggal Lahir</label>
+                        <input type="date" class="form-control" name="tanggal_lahir" value="<?php echo !empty($teacher['tanggal_lahir']) ? $teacher['tanggal_lahir'] : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Tanggal Mulai Tugas (TMT)</label>
+                        <input type="date" class="form-control" name="tmt" id="modalTmt" value="<?php echo !empty($teacher['tmt']) ? $teacher['tmt'] : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Masa Bakti</label>
+                        <input type="text" class="form-control" id="modalMasaBakti" readonly value="<?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?>">
+                    </div>
+                </div>
+                <div class="modal-footer bg-whitesmoke br">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php
-// Add JavaScript for SweetAlert
 $js_page = [];
+
 if ($message) {
     $js_page[] = "
     $(document).ready(function() {
@@ -247,6 +317,49 @@ if ($message) {
     });
     ";
 }
+
+$js_page[] = "
+$(document).ready(function() {
+    function hitungMasaBakti(tmt) {
+        if (!tmt) return '';
+        var p = tmt.split('-');
+        var s = new Date(p[0], p[1]-1, p[2]);
+        var e = new Date();
+        var y = e.getFullYear() - s.getFullYear();
+        var m = e.getMonth() - s.getMonth();
+        if (m < 0) { y--; m += 12; }
+        return y + ' tahun ' + m + ' bulan';
+    }
+    $('#modalTmt').on('change', function() {
+        $('#modalMasaBakti').val(hitungMasaBakti($(this).val()));
+    });
+    $('#editProfileForm').on('submit', function(e) {
+        e.preventDefault();
+        var btn = $(this).find('button[type=submit]');
+        btn.prop('disabled', true).html('<i class=\"fas fa-spinner fa-spin mr-1\"></i>Menyimpan...');
+        $.ajax({
+            url: 'profil.php',
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(r) {
+                if (r.success) {
+                    $('#editProfileModal').modal('hide');
+                    Swal.fire({ title: 'Berhasil!', text: r.message, icon: 'success', timer: 2000, showConfirmButton: false })
+                    .then(function() { location.reload(); });
+                } else {
+                    Swal.fire('Gagal!', r.message, 'error');
+                    btn.prop('disabled', false).html('<i class=\"fas fa-save mr-1\"></i>Simpan');
+                }
+            },
+            error: function() {
+                Swal.fire('Error!', 'Terjadi kesalahan.', 'error');
+                btn.prop('disabled', false).html('<i class=\"fas fa-save mr-1\"></i>Simpan');
+            }
+        });
+    });
+});
+";
 
 include '../templates/user_footer.php';
 ?>
