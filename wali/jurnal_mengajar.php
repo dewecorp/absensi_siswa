@@ -403,8 +403,10 @@ $js_libs = [
 $js_page = [
     "
     var jamRegulerList = " . json_encode($jam_reguler_list) . ";
+
     var jamRamadhanList = " . json_encode($jam_ramadhan_list) . ";
 
+    var allMapels = " . json_encode(array_column($mapel_list, 'nama_mapel')) . ";
     function updateJamOptions(selectedJenis, selectedValues = []) {
         var \$jamSelect = $('select[name=\"jam_ke[]\"]');
         \$jamSelect.empty();
@@ -427,6 +429,21 @@ $js_page = [
         } else {
             \$jamSelect.trigger('change');
         }
+    }
+
+    function updateMapelOptions(classId) {
+        var \$mapelSelect = \$('select[name=\"mapel\"]');
+        \$mapelSelect.empty();
+        \$mapelSelect.append('<option value=\"\">-- Pilih Mata Pelajaran --</option>');
+
+        var mapels = allMapels;
+
+        mapels.forEach(function(mapel) {
+            var option = new Option(mapel, mapel, false, false);
+            \$mapelSelect.append(option);
+        });
+
+        \$mapelSelect.trigger('change');
     }
 
     $(document).ready(function() {
@@ -459,6 +476,11 @@ $js_page = [
         
         $('#jenis_jadwal').change(function() {
             updateJamOptions($(this).val());
+        });
+
+        // Update mapel options when class changes in modal
+        $('select[name=\"id_kelas\"]').change(function() {
+            updateMapelOptions($(this).val());
         });
 
         // Check all functionality
@@ -546,9 +568,12 @@ $js_page = [
             
             // Set class if selected
             var urlParams = new URLSearchParams(window.location.search);
+            var defaultClass = '';
             if(urlParams.has('kelas')) {
-                $('select[name=\"id_kelas\"]').val(urlParams.get('kelas'));
+                defaultClass = urlParams.get('kelas');
+                $('select[name=\"id_kelas\"]').val(defaultClass);
             }
+            updateMapelOptions(defaultClass);
         } else {
             $('#modalTitle').text('Edit Jurnal');
             $('#id_jurnal').val(data.id);
@@ -565,7 +590,13 @@ $js_page = [
             
             updateJamOptions(jenis, jamKeValues);
             
-            $('select[name=\"mapel\"]').val(data.mapel).trigger('change');
+            // Update mapel options first
+            updateMapelOptions(data.id_kelas);
+            
+            // Then set the value
+            setTimeout(function() {
+                $('select[name=\"mapel\"]').val(data.mapel).trigger('change');
+            }, 50);
             $('textarea[name=\"materi\"]').val(data.materi);
         }
         $('#jurnalModal').modal('show');
@@ -789,7 +820,7 @@ include '../templates/header.php';
 
 <!-- Modal -->
 <div class="modal fade" id="jurnalModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalTitle">Tambah Jurnal</h5>
