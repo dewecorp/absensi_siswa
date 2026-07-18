@@ -503,7 +503,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $msg_text = 'Absensi harian berhasil disimpan.';
                 }
                 
-                createNotification($pdo, "$nama_guru telah mengirim kehadiran harian", 'absensi_guru.php', 'absensi_guru');
+                $waktu = date('H:i');
+                    $tanggal_indo = date('d-m-Y');
+                    $notif_msg = "$nama_guru (Guru) telah mengirim kehadiran pada pukul $waktu tanggal $tanggal_indo";
+                    createNotification($pdo, $notif_msg, 'absensi_guru.php', 'absensi_guru');
                 logActivity($pdo, $nama_guru, 'Absensi Guru', "$nama_guru mengisi kehadiran harian: $status_to_save");
                 
                 echo "<script>
