@@ -235,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
             // Write new version timestamp after successful ZIP update
             @file_put_contents($project_root . '/version.txt', date('YmdHis'));
             appSaveRuntimeSettings(['self_update_enabled' => false]);
-            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui via ZIP']);
+            echo json_encode(['success' => true, 'message' => 'Berhasil diperbarui ke versi terbaru.']);
         } else {
             failUpdateAndLock('Struktur ZIP tidak sesuai.');
         }
