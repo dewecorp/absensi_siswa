@@ -115,9 +115,14 @@ switch ($action) {
                             'title' => $judul_libur,
                             'start' => $date_str,
                             'allDay' => true,
-                            'backgroundColor' => '#fc544b', // danger/red
+                            'backgroundColor' => '#fc544b',
                             'borderColor' => '#fc544b',
-                            'display' => 'block'
+                            'display' => 'block',
+                            'extendedProps' => [
+                                'nama_kegiatan' => $judul_libur,
+                                'tahun_ajaran' => $tahun_filter,
+                                'warna' => 'danger'
+                            ]
                         ];
                     }
                 }
