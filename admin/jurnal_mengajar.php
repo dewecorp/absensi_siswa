@@ -453,6 +453,7 @@ include '../templates/header.php';
                                         <th>Mata Pelajaran</th>
                                         <th>Materi Pokok</th>
                                         <th>Guru</th>
+                                        <th>Kelas</th>
                                         <th>Dibuat Pada</th>
                                         <?php if ($can_manage): ?>
                                         <th style="width: 100px;">Aksi</th>
@@ -508,6 +509,7 @@ include '../templates/header.php';
                                             <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                             <td><?php echo htmlspecialchars($journal['nama_guru'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($journal['nama_kelas'] ?? '-'); ?></td>
                                             <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>
                                             <?php if ($can_manage): ?>
                                             <td>
