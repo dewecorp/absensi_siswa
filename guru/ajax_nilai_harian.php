@@ -56,6 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             return null;
         }
 
+        if ($n <= 0) {
+            return 0;
+        }
+
         $floor = $kktp > 0 ? $kktp : 0;
         if ($minTarget !== null) {
             $floor = $minTarget;
@@ -221,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             foreach ($grades as $g) {
                 if (isset($g['nilai']) && $g['nilai'] !== '') {
                     $v = $normalize_float_or_null($g['nilai']);
-                    if ($v !== null) {
+                    if ($v !== null && $v > 0) {
                         if ($v > $observedMax) $observedMax = $v;
                         if ($v < $observedMin) $observedMin = $v;
                         $hasScores = true;

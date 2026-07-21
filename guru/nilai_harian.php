@@ -393,8 +393,8 @@ require_once '../templates/sidebar.php';
                                                 $val = isset($data_nilai['nilai']) ? $data_nilai['nilai'] : '';
                                                 $val_jadi = isset($data_nilai['nilai_jadi']) ? $data_nilai['nilai_jadi'] : '';
                                                 
-                                                if ($val !== '') {
-                                                    $val_float = (float)$val;
+                                                $val_float = $val !== '' ? (float)$val : 0;
+                                                if ($val_float > 0) {
                                                     $total_score += $val_float;
                                                     $count_score++;
                                                     
@@ -406,8 +406,8 @@ require_once '../templates/sidebar.php';
                                                     }
                                                 }
                                                 
-                                                if ($val_jadi !== '') {
-                                                    $val_jadi_float = (float)$val_jadi;
+                                                $val_jadi_float = $val_jadi !== '' ? (float)$val_jadi : 0;
+                                                if ($val_jadi_float > 0) {
                                                     $total_score_jadi += $val_jadi_float;
                                                     $count_score_jadi++;
                                                 }
@@ -417,16 +417,16 @@ require_once '../templates/sidebar.php';
                                                            class="form-control form-control-sm text-center grade-input grade-col-<?= $header['id_header'] ?>" 
                                                            data-student-id="<?= $student['id_siswa'] ?>" 
                                                            data-header-id="<?= $header['id_header'] ?>"
-                                                           value="<?= $val ?>" 
-                                                           disabled
-                                                           placeholder="-">
+                                                            value="<?= $val_float > 0 ? (float)$val : '' ?>" 
+                                                            disabled
+                                                            placeholder="-">
                                                 </td>
                                                 <td class="text-center p-1">
                                                     <input type="number" 
                                                            class="form-control form-control-sm text-center grade-input-jadi grade-col-jadi-<?= $header['id_header'] ?>" 
                                                            data-student-id="<?= $student['id_siswa'] ?>" 
                                                            data-header-id="<?= $header['id_header'] ?>"
-                                                           value="<?= $val_jadi ?>" 
+                                                           value="<?= $val_jadi_float > 0 ? (float)$val_jadi : '' ?>" 
                                                            disabled
                                                            placeholder="-">
                                                 </td>
@@ -450,8 +450,8 @@ require_once '../templates/sidebar.php';
                                                 $found_jadi = false;
                                                 foreach ($students as $s) {
                                                     $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? $grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : '';
-                                                    if ($val_j !== '') {
-                                                        $val_j_f = (float)$val_j;
+                                                    $val_j_f = $val_j !== '' ? (float)$val_j : 0;
+                                                    if ($val_j_f > 0) {
                                                         if ($val_j_f > $max_jadi) $max_jadi = $val_j_f;
                                                         $found_jadi = true;
                                                     }
@@ -474,8 +474,8 @@ require_once '../templates/sidebar.php';
                                                 $found_jadi = false;
                                                 foreach ($students as $s) {
                                                     $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? $grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : '';
-                                                    if ($val_j !== '') {
-                                                        $val_j_f = (float)$val_j;
+                                                    $val_j_f = $val_j !== '' ? (float)$val_j : 0;
+                                                    if ($val_j_f > 0) {
                                                         if ($val_j_f < $min_jadi) $min_jadi = $val_j_f;
                                                         $found_jadi = true;
                                                     }
@@ -819,7 +819,7 @@ $(document).ready(function() {
                         if (res.data && Array.isArray(res.data.grades)) {
                             res.data.grades.forEach(function(g) {
                                 var selector = '.grade-col-jadi-' + id + '[data-student-id="' + g.id_siswa + '"]';
-                                if (g.nilai_jadi === null || typeof g.nilai_jadi === 'undefined') {
+                                if (g.nilai_jadi === null || typeof g.nilai_jadi === 'undefined' || g.nilai_jadi <= 0) {
                                     $(selector).val('');
                                 } else {
                                     $(selector).val(g.nilai_jadi);
@@ -899,14 +899,13 @@ $(document).ready(function() {
     });
 
     function updateRowAverage(studentId) {
-        // Average Asli
         var total = 0;
         var count = 0;
         $('input.grade-input[data-student-id="' + studentId + '"]').each(function() {
             var val = $(this).val();
             if (val !== '') {
                 var v = parseFloat(val);
-                if (!isNaN(v)) {
+                if (!isNaN(v) && v > 0) {
                     total += v;
                     count++;
                 }
@@ -932,7 +931,7 @@ $(document).ready(function() {
             var val = $(this).val();
             if (val !== '') {
                 var v = parseFloat(val);
-                if (!isNaN(v)) {
+                if (!isNaN(v) && v > 0) {
                     if (v > max) max = v;
                     if (v < min) min = v;
                     hasData = true;
@@ -944,7 +943,7 @@ $(document).ready(function() {
             var val = $(this).val();
             if (val !== '') {
                 var v = parseFloat(val);
-                if (!isNaN(v)) {
+                if (!isNaN(v) && v > 0) {
                     if (v > maxJadi) maxJadi = v;
                     if (v < minJadi) minJadi = v;
                     hasDataJadi = true;
