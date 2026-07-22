@@ -567,9 +567,10 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                     });
                 }
 
-                // Auto-check update on page load (once per SHA)
+                // Auto-check update on page load (hosting only, skip local)
                 <?php if (getUserLevel() === 'admin'): ?>
                 (function checkUpdate() {
+                    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
                     var lastSha = localStorage.getItem('sigaji_last_sha') || '';
                     $.ajax({
                         url: 'update_github.php',
