@@ -578,24 +578,22 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                         dataType: 'json',
                         timeout: 15000,
                         success: function(res) {
-                            if (res.update_available && res.sha && res.sha !== lastSha) {
-                                Swal.fire({
-                                    title: 'Pembaruan Tersedia!',
-                                    html: 'Versi baru tersedia. Update sekarang?',
-                                    icon: 'info',
-                                    showCancelButton: true,
-                                    confirmButtonColor: '#3085d6',
-                                    cancelButtonColor: '#6c757d',
-                                    confirmButtonText: 'Ya, Update!',
-                                    cancelButtonText: 'Nanti'
-                                }).then((result) => {
-                                    if (!result.isConfirmed) {
-                                        localStorage.setItem('sigaji_last_sha', res.sha);
-                                    } else {
-                                        runUpdateProcess();
-                                    }
-                                });
-                            }
+                            if (!res.sha || res.sha === lastSha) return;
+                            localStorage.setItem('sigaji_last_sha', res.sha);
+                            Swal.fire({
+                                title: 'Pembaruan Tersedia!',
+                                html: 'Versi baru tersedia. Update sekarang?',
+                                icon: 'info',
+                                showCancelButton: true,
+                                confirmButtonColor: '#3085d6',
+                                cancelButtonColor: '#6c757d',
+                                confirmButtonText: 'Ya, Update!',
+                                cancelButtonText: 'Nanti'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    runUpdateProcess();
+                                }
+                            });
                         }
                     });
                 })();

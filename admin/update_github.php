@@ -125,14 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'check_update') {
     $data = json_decode($resp, true);
     $remote_sha = $data['sha'] ?? '';
 
-    $need_update = false;
-    if ($remote_sha) {
-        $need_update = !$local_ver || $local_ver !== $remote_sha;
-    }
-
     echo json_encode([
         'success' => true,
-        'update_available' => $need_update,
         'sha' => $remote_sha
     ]);
     exit;
