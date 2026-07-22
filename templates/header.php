@@ -580,7 +580,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                             if (res.update_available) {
                                 Swal.fire({
                                     title: 'Pembaruan Tersedia!',
-                                    html: 'Versi baru tersedia di GitHub. Update sekarang?',
+                                    html: 'Versi baru tersedia. Update sekarang?',
                                     icon: 'info',
                                     showCancelButton: true,
                                     confirmButtonColor: '#3085d6',

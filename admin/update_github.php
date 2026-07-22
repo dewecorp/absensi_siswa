@@ -190,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
             @file_put_contents($project_root . '/version.txt', date('YmdHis'));
             appSaveRuntimeSettings(['self_update_enabled' => false]);
             logActivity($pdo, $_SESSION['username'], 'Update Aplikasi', 'Update via Git berhasil');
-            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui via Git. Backup source tersimpan di backups/source_backup.zip. Update sistem otomatis dinonaktifkan kembali.']);
+            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui. Update sistem otomatis dinonaktifkan kembali.']);
             exit;
         }
 
@@ -281,7 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_from_github') {
             // Write new version timestamp after successful ZIP update
             @file_put_contents($project_root . '/version.txt', date('YmdHis'));
             appSaveRuntimeSettings(['self_update_enabled' => false]);
-            echo json_encode(['success' => true, 'message' => 'Berhasil diperbarui ke versi terbaru.']);
+            echo json_encode(['success' => true, 'message' => 'Aplikasi berhasil diperbarui. Update sistem otomatis dinonaktifkan kembali.']);
         } else {
             failUpdateAndLock('Struktur ZIP tidak sesuai.');
         }
