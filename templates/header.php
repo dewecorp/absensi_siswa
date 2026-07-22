@@ -567,9 +567,10 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                     });
                 }
 
-                // Auto-check update on page load
+                // Auto-check update on page load (once per SHA)
                 <?php if (getUserLevel() === 'admin'): ?>
                 (function checkUpdate() {
+                    var lastSha = localStorage.getItem('sigaji_last_sha') || '';
                     $.ajax({
                         url: 'update_github.php',
                         type: 'POST',
@@ -577,7 +578,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                         dataType: 'json',
                         timeout: 15000,
                         success: function(res) {
-                            if (res.update_available) {
+                            if (res.update_available && res.sha && res.sha !== lastSha) {
                                 Swal.fire({
                                     title: 'Pembaruan Tersedia!',
                                     html: 'Versi baru tersedia. Update sekarang?',
@@ -588,7 +589,9 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                                     confirmButtonText: 'Ya, Update!',
                                     cancelButtonText: 'Nanti'
                                 }).then((result) => {
-                                    if (result.isConfirmed) {
+                                    if (!result.isConfirmed) {
+                                        localStorage.setItem('sigaji_last_sha', res.sha);
+                                    } else {
                                         runUpdateProcess();
                                     }
                                 });
