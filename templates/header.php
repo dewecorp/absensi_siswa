@@ -563,59 +563,102 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                             return;
                         }
                         
-                        Swal.fire({
-                            title: 'Update Aplikasi?',
-                            text: "Sistem akan mengambil perubahan terbaru dari GitHub. Pastikan koneksi internet stabil.",
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#3085d6',
-                            cancelButtonColor: '#d33',
-                            confirmButtonText: 'Ya, Update!',
-                            cancelButtonText: 'Batal'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                Swal.fire({
-                                    title: 'Sedang Update...',
-                                    text: 'Mohon tunggu sebentar.',
-                                    allowOutsideClick: false,
-                                    didOpen: () => {
-                                        Swal.showLoading();
-                                    }
-                                });
+                        runUpdateProcess();
+                    });
+                }
 
-                                $.ajax({
-                                    url: 'update_github.php',
-                                    type: 'POST',
-                                    data: { action: 'update_from_github', csrf_token: updateCsrfToken },
-                                    dataType: 'json',
-                                    success: function(response) {
-                                        if (response.success) {
-                                            Swal.fire({
-                                                icon: 'success',
-                                                title: 'Berhasil!',
-                                                text: response.message
-                                            }).then(() => {
-                                                window.location.reload();
-                                            });
-                                        } else {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'Gagal Update',
-                                                text: response.message
-                                            });
-                                        }
-                                    },
-                                    error: function(xhr, status, error) {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'Error',
-                                            text: 'Terjadi kesalahan sistem saat menghubungi server.'
-                                        });
+                // Auto-check update on page load
+                <?php if (getUserLevel() === 'admin'): ?>
+                (function checkUpdate() {
+                    $.ajax({
+                        url: 'update_github.php',
+                        type: 'POST',
+                        data: { action: 'check_update', csrf_token: updateCsrfToken },
+                        dataType: 'json',
+                        timeout: 15000,
+                        success: function(res) {
+                            if (res.update_available) {
+                                Swal.fire({
+                                    title: 'Pembaruan Tersedia!',
+                                    html: 'Versi baru tersedia di GitHub. Update sekarang?',
+                                    icon: 'info',
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#3085d6',
+                                    cancelButtonColor: '#6c757d',
+                                    confirmButtonText: 'Ya, Update!',
+                                    cancelButtonText: 'Nanti'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        runUpdateProcess();
                                     }
                                 });
                             }
-                        });
+                        }
                     });
+                })();
+                <?php endif; ?>
+
+                function runUpdateProcess() {
+                    function doUpdate() {
+                        Swal.fire({
+                            title: 'Sedang Update...',
+                            text: 'Mohon tunggu sebentar.',
+                            allowOutsideClick: false,
+                            didOpen: () => { Swal.showLoading(); }
+                        });
+
+                        $.ajax({
+                            url: 'update_github.php',
+                            type: 'POST',
+                            data: { action: 'update_from_github', csrf_token: updateCsrfToken },
+                            dataType: 'json',
+                            success: function(response) {
+                                if (response.success) {
+                                    selfUpdateEnabled = false;
+                                    if (btnToggleUpdate) {
+                                        btnToggleUpdate.setAttribute('data-enabled', '0');
+                                        btnToggleUpdate.classList.toggle('text-warning', false);
+                                        btnToggleUpdate.classList.toggle('text-muted', true);
+                                        btnToggleUpdate.innerHTML = '<i class="fas fa-toggle-off"></i> Aktifkan Update Sistem';
+                                    }
+                                    Swal.fire({ icon: 'success', title: 'Berhasil!', text: response.message }).then(() => { window.location.reload(); });
+                                } else {
+                                    Swal.fire({ icon: 'error', title: 'Gagal Update', text: response.message });
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({ icon: 'error', title: 'Error', text: 'Kesalahan sistem.' });
+                            }
+                        });
+                    }
+
+                    if (!selfUpdateEnabled) {
+                        $.ajax({
+                            url: 'update_github.php',
+                            type: 'POST',
+                            data: { action: 'set_self_update', enabled: '1', csrf_token: updateCsrfToken },
+                            dataType: 'json',
+                            success: function(res) {
+                                if (res.success) {
+                                    selfUpdateEnabled = true;
+                                    if (btnToggleUpdate) {
+                                        btnToggleUpdate.setAttribute('data-enabled', '1');
+                                        btnToggleUpdate.classList.toggle('text-warning', true);
+                                        btnToggleUpdate.classList.toggle('text-muted', false);
+                                        btnToggleUpdate.innerHTML = '<i class="fas fa-toggle-on"></i> Nonaktifkan Update Sistem';
+                                    }
+                                    doUpdate();
+                                } else {
+                                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.message });
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal mengaktifkan update.' });
+                            }
+                        });
+                    } else {
+                        doUpdate();
+                    }
                 }
             });
             </script>

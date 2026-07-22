@@ -94,6 +94,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'set_self_update') {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'check_update') {
+    while (ob_get_level()) ob_end_clean();
+    header('Content-Type: application/json');
+
+    $local_ver = '';
+    $ver_file = dirname(__DIR__) . '/version.txt';
+    if (is_file($ver_file)) {
+        $local_ver = trim(@file_get_contents($ver_file));
+    }
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => 'https://api.github.com/repos/dewecorp/absensi_siswa/commits/main',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_USERAGENT => 'SIMadrasah-Update-Checker/1.0',
+        CURLOPT_HTTPHEADER => ['Accept: application/vnd.github.v3+json'],
+        CURLOPT_SSL_VERIFYPEER => false,
+    ]);
+    $resp = curl_exec($ch);
+    $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($http !== 200 || $resp === false) {
+        echo json_encode(['success' => true, 'update_available' => false, 'message' => 'Tidak bisa memeriksa pembaruan.']);
+        exit;
+    }
+
+    $data = json_decode($resp, true);
+    $remote_ver = $data['sha'] ?? '';
+    $remote_date = $data['commit']['committer']['date'] ?? '';
+    $remote_msg = $data['commit']['message'] ?? '';
+
+    $need_update = $remote_ver && $remote_ver !== $local_ver;
+
+    echo json_encode([
+        'success' => true,
+        'update_available' => $need_update,
+        'local_version' => $local_ver,
+        'remote_version' => $remote_ver,
+        'remote_date' => $remote_date,
+        'remote_message' => $remote_msg
+    ]);
+    exit;
+}
+
 if (!APP_SELF_UPDATE_ENABLED) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Update aplikasi dari web dinonaktifkan demi keamanan. Aktifkan Update Sistem dari menu akun admin hanya saat maintenance.']);
