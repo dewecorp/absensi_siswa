@@ -123,19 +123,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'check_update') {
     }
 
     $data = json_decode($resp, true);
-    $remote_ver = $data['sha'] ?? '';
-    $remote_date = $data['commit']['committer']['date'] ?? '';
+    $remote_date_str = $data['commit']['committer']['date'] ?? '';
     $remote_msg = $data['commit']['message'] ?? '';
 
-    $need_update = $remote_ver && $remote_ver !== $local_ver;
+    $need_update = false;
+    if ($remote_date_str) {
+        $remote_ts = strtotime($remote_date_str);
+        $local_ts = $local_ver ? strtotime($local_ver) : 0;
+        if ($local_ver && preg_match('/^\d{14}$/', $local_ver)) {
+            $local_ts = strtotime(
+                substr($local_ver, 0, 4) . '-' . substr($local_ver, 4, 2) . '-' . substr($local_ver, 6, 2) .
+                ' ' . substr($local_ver, 8, 2) . ':' . substr($local_ver, 10, 2) . ':' . substr($local_ver, 12, 2)
+            );
+        }
+        $need_update = $remote_ts > $local_ts;
+    }
 
     echo json_encode([
         'success' => true,
         'update_available' => $need_update,
-        'local_version' => $local_ver,
-        'remote_version' => $remote_ver,
-        'remote_date' => $remote_date,
-        'remote_message' => $remote_msg
+        'remote_date' => $remote_date_str
     ]);
     exit;
 }
