@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch years for filter
 $stmt_years = $pdo->query("SELECT DISTINCT tahun FROM tb_prestasi_siswa ORDER BY tahun DESC");
 $filter_years = $stmt_years->fetchAll(PDO::FETCH_COLUMN);
-$selected_tahun = $_GET['tahun'] ?? ($filter_years[0] ?? '');
+$selected_tahun = $_GET['tahun'] ?? '';
 
 // Fetch prestasi data
 if ($selected_tahun) {
