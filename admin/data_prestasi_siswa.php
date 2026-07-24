@@ -149,7 +149,7 @@ include '../templates/sidebar.php';
                     <h4>Daftar Prestasi Siswa</h4>
                     <div class="card-header-action">
                         <button class="btn btn-primary" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah Prestasi</button>
-                        <?php if ($selected_tahun && !empty($prestasi_list)): ?>
+                        <?php if (!empty($prestasi_list)): ?>
                         <div class="btn-group btn-pill ml-2 overflow-hidden" style="border-radius: 30px;">
                             <button type="button" class="btn btn-danger px-3" onclick="exportToPDF()" style="background-color: #ff5e5e; border: none; border-top-left-radius: 30px; border-bottom-left-radius: 30px;">
                                 <i class="fas fa-file-pdf"></i> PDF
@@ -187,7 +187,7 @@ include '../templates/sidebar.php';
                     <div class="row mb-3">
                         <div class="col-12">
                             <div class="d-flex flex-wrap align-items-center" style="gap:8px">
-                                <strong class="mr-2"><?= $selected_tahun ?>:</strong>
+                                <?php if ($selected_tahun): ?><strong class="mr-2"><?= $selected_tahun ?>:</strong><?php endif; ?>
                                 <span class="badge badge-secondary p-2">Kecamatan: <?= $summary['Kecamatan'] ?></span>
                                 <span class="badge badge-info p-2">Kabupaten: <?= $summary['Kabupaten'] ?></span>
                                 <span class="badge badge-primary p-2">Provinsi: <?= $summary['Provinsi'] ?></span>

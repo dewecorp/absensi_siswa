@@ -5,11 +5,15 @@ require_once '../config/functions.php';
 if (!isAuthorized(['admin', 'tata_usaha'])) redirect('../login.php');
 
 $school_profile = getSchoolProfile($pdo);
-$tahun = $_GET['tahun'] ?? date('Y');
+$tahun = $_GET['tahun'] ?? '';
 
-// Query data tahun terpilih
-$stmt = $pdo->prepare("SELECT * FROM tb_prestasi_siswa WHERE tahun = ? ORDER BY nama_siswa ASC");
-$stmt->execute([$tahun]);
+// Query data
+if ($tahun) {
+    $stmt = $pdo->prepare("SELECT * FROM tb_prestasi_siswa WHERE tahun = ? ORDER BY nama_siswa ASC");
+    $stmt->execute([$tahun]);
+} else {
+    $stmt = $pdo->query("SELECT * FROM tb_prestasi_siswa ORDER BY tahun DESC, nama_siswa ASC");
+}
 $prestasi_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Summary semua tahun untuk ringkasan
@@ -25,7 +29,7 @@ foreach ($all_summary as $s) {
 $report_title = 'DATA PRESTASI SISWA';
 
 if (empty($prestasi_list)) {
-    echo 'Tidak ada data untuk tahun ' . htmlspecialchars($tahun) . '.';
+    echo 'Tidak ada data' . ($tahun ? ' untuk tahun ' . htmlspecialchars($tahun) : '') . '.';
     exit;
 }
 
