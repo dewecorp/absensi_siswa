@@ -309,8 +309,8 @@ require_once '../templates/sidebar.php';
                                                 $val = isset($data_nilai['nilai']) ? $data_nilai['nilai'] : '';
                                                 $val_jadi = isset($data_nilai['nilai_jadi']) ? $data_nilai['nilai_jadi'] : '';
                                                 
-                                                if ($val !== '') {
-                                                    $val_float = (float)$val;
+                                                $val_float = $val !== '' ? (float)$val : 0;
+                                                if ($val_float > 0) {
                                                     $total_score += $val_float;
                                                     $count_score++;
                                                     
@@ -324,10 +324,10 @@ require_once '../templates/sidebar.php';
                                                 }
                                                 ?>
                                                 <td class="text-center p-1">
-                                                    <?= $val !== '' ? $val : '-' ?>
+                                                    <?= $val_float > 0 ? (float)$val : '-' ?>
                                                 </td>
                                                 <td class="text-center p-1">
-                                                    <?= $val_jadi !== '' ? $val_jadi : '-' ?>
+                                                    <?= $val_jadi !== '' && (float)$val_jadi > 0 ? (float)$val_jadi : '-' ?>
                                                 </td>
                                             <?php endforeach; ?>
                                             <td class="text-center font-weight-bold student-avg">
@@ -349,8 +349,8 @@ require_once '../templates/sidebar.php';
                                                 $found_jadi = false;
                                                 foreach ($students as $s) {
                                                     $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? $grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : '';
-                                                    if ($val_j !== '') {
-                                                        $val_j_f = (float)$val_j;
+                                                    $val_j_f = $val_j !== '' ? (float)$val_j : 0;
+                                                    if ($val_j_f > 0) {
                                                         if ($val_j_f > $max_jadi) $max_jadi = $val_j_f;
                                                         $found_jadi = true;
                                                     }
@@ -373,8 +373,8 @@ require_once '../templates/sidebar.php';
                                                 $found_jadi = false;
                                                 foreach ($students as $s) {
                                                     $val_j = isset($grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi']) ? $grades_data[$s['id_siswa']][$header['id_header']]['nilai_jadi'] : '';
-                                                    if ($val_j !== '') {
-                                                        $val_j_f = (float)$val_j;
+                                                    $val_j_f = $val_j !== '' ? (float)$val_j : 0;
+                                                    if ($val_j_f > 0) {
                                                         if ($val_j_f < $min_jadi) $min_jadi = $val_j_f;
                                                         $found_jadi = true;
                                                     }
