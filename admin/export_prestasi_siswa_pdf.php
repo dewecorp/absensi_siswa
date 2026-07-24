@@ -2,7 +2,7 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['admin'])) redirect('../login.php');
+if (!isAuthorized(['admin', 'tata_usaha'])) redirect('../login.php');
 
 $school_profile = getSchoolProfile($pdo);
 $tahun = $_GET['tahun'] ?? date('Y');

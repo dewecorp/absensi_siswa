@@ -593,9 +593,10 @@ switch ($user_level) {
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'kalender_pendidikan.php'],
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'siswa_baru.php'],
                     ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_peserta_ujian.php'],
+                    ['title' => 'Data Prestasi Siswa', 'url' => '../admin/data_prestasi_siswa.php?session_type=tata_usaha', 'active' => $current_page === 'data_prestasi_siswa.php'],
                     ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_nilai_ujian.php']
                 ],
-                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php', 'data_nilai_ujian.php'])
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php', 'data_prestasi_siswa.php', 'data_nilai_ujian.php'])
             ],
             [
                 'title' => 'Absensi',

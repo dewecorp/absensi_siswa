@@ -4,7 +4,7 @@ require_once '../config/functions.php';
 
 if (session_status() == PHP_SESSION_NONE) session_start();
 
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
