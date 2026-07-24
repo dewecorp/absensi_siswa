@@ -7,14 +7,19 @@ if (!isAuthorized(['admin'])) redirect('../login.php');
 $school_profile = getSchoolProfile($pdo);
 $tahun = $_GET['tahun'] ?? date('Y');
 
-// Query langsung dari DB
+// Query data tahun terpilih
 $stmt = $pdo->prepare("SELECT * FROM tb_prestasi_siswa WHERE tahun = ? ORDER BY nama_siswa ASC");
 $stmt->execute([$tahun]);
 $prestasi_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$summary = ['Kecamatan' => 0, 'Kabupaten' => 0, 'Provinsi' => 0, 'Nasional' => 0];
-foreach ($prestasi_list as $p) {
-    if (isset($summary[$p['tingkat']])) $summary[$p['tingkat']]++;
+// Summary semua tahun untuk ringkasan
+$stmt_all = $pdo->query("SELECT tahun, tingkat, COUNT(*) as jml FROM tb_prestasi_siswa GROUP BY tahun, tingkat ORDER BY tahun DESC");
+$all_summary = $stmt_all->fetchAll(PDO::FETCH_ASSOC);
+$summary_by_year = [];
+foreach ($all_summary as $s) {
+    $th = $s['tahun'];
+    if (!isset($summary_by_year[$th])) $summary_by_year[$th] = ['Kecamatan' => 0, 'Kabupaten' => 0, 'Provinsi' => 0, 'Nasional' => 0];
+    $summary_by_year[$th][$s['tingkat']] = (int)$s['jml'];
 }
 
 $report_title = 'DATA PRESTASI SISWA';
@@ -90,13 +95,11 @@ $tgl_cetak = formatDateIndonesia(date('Y-m-d'));
 
     <?= $table_data ?>
 
-    <?php if (!empty($summary)): ?>
+    <?php if (!empty($summary_by_year)): ?>
     <div style="margin-top: 8px; font-size: 12px;">
-        <strong><?= htmlspecialchars($tahun) ?>:</strong>
-        Kecamatan: <?= (int)($summary['Kecamatan'] ?? 0) ?> |
-        Kabupaten: <?= (int)($summary['Kabupaten'] ?? 0) ?> |
-        Provinsi: <?= (int)($summary['Provinsi'] ?? 0) ?> |
-        Nasional: <?= (int)($summary['Nasional'] ?? 0) ?>
+        <?php $i = 1; foreach ($summary_by_year as $th => $s): ?>
+        <?= $i++ ?>. <?= htmlspecialchars($th) ?>: Kecamatan: <?= $s['Kecamatan'] ?>, Kabupaten: <?= $s['Kabupaten'] ?>, Provinsi: <?= $s['Provinsi'] ?>, Nasional: <?= $s['Nasional'] ?><br>
+        <?php endforeach; ?>
     </div>
     <?php endif; ?>
 
