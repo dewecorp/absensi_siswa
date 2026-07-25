@@ -685,9 +685,7 @@ include '../templates/header.php';
                             <?php else: ?>
                                 <?php if (!empty($classes)): ?>
                                 <input type="hidden" name="kelas" value="<?php echo $classes[0]['id_kelas']; ?>">
-                                <div class="alert alert-info mb-4">
-                                    Menampilkan jurnal untuk kelas <strong><?php echo htmlspecialchars($classes[0]['nama_kelas']); ?></strong>
-                                </div>
+                                
                                 <?php endif; ?>
                             <?php endif; ?>
 
