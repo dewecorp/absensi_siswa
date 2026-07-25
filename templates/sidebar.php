@@ -350,9 +350,10 @@ switch ($user_level) {
                     ['title' => 'Jadwal Les', 'url' => '../admin/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
                     ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
                     ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php', 'active' => $current_page === 'jadwal_seragam.php'],
-                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../admin/jadwal_seragam_siswa.php', 'active' => $current_page === 'jadwal_seragam_siswa.php']
+                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../admin/jadwal_seragam_siswa.php', 'active' => $current_page === 'jadwal_seragam_siswa.php'],
+                    ['title' => 'Jadwal Guru Piket', 'url' => '../admin/jadwal_piket.php', 'active' => $current_page === 'jadwal_piket.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php', 'jadwal_piket.php'])
             ],
             [
                 'title' => 'Jurnal',
@@ -493,9 +494,10 @@ switch ($user_level) {
                     ['title' => 'Jadwal Les Kelas 6', 'url' => '../kepala/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
                     ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php?session_type=kepala_madrasah', 'active' => $current_page === 'jadwal_imam.php'],
                     ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=kepala_madrasah', 'active' => $current_page === 'jadwal_seragam.php'],
-                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../admin/jadwal_seragam_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'jadwal_seragam_siswa.php']
+                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../admin/jadwal_seragam_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'jadwal_seragam_siswa.php'],
+                    ['title' => 'Jadwal Guru Piket', 'url' => '../admin/jadwal_piket.php?session_type=kepala_madrasah', 'active' => $current_page === 'jadwal_piket.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php', 'jadwal_piket.php'])
             ],
             [
                 'title' => 'Jurnal',
@@ -619,9 +621,10 @@ switch ($user_level) {
                     ['title' => 'Jadwal Les Kelas 6', 'url' => '../tata_usaha/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
                     ['title' => 'Jadwal Imam Dhuha', 'url' => '../tata_usaha/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
                     ['title' => 'Jadwal Seragam Guru', 'url' => '../tata_usaha/jadwal_seragam.php', 'active' => $current_page === 'jadwal_seragam.php'],
-                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../tata_usaha/jadwal_seragam_siswa.php', 'active' => $current_page === 'jadwal_seragam_siswa.php']
+                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../tata_usaha/jadwal_seragam_siswa.php', 'active' => $current_page === 'jadwal_seragam_siswa.php'],
+                    ['title' => 'Jadwal Piket', 'url' => '../admin/jadwal_piket.php?session_type=tata_usaha', 'active' => $current_page === 'jadwal_piket.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php', 'jadwal_piket.php'])
             ],
             [
                 'title' => 'Jurnal',
@@ -819,9 +822,10 @@ switch ($user_level) {
                     ['title' => 'Jadwal Reguler', 'url' => '../guru/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
                     ['title' => 'Jadwal Ramadhan', 'url' => '../guru/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
                     ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php?session_type=guru', 'active' => $current_page === 'jadwal_imam.php'],
-                    ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=guru', 'active' => $current_page === 'jadwal_seragam.php']
+                    ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=guru', 'active' => $current_page === 'jadwal_seragam.php'],
+                    ['title' => 'Jadwal Piket', 'url' => '../admin/jadwal_piket.php?session_type=guru', 'active' => $current_page === 'jadwal_piket.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_piket.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
@@ -1039,9 +1043,10 @@ switch ($user_level) {
                     ['title' => 'Jadwal Reguler', 'url' => '../wali/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
                     ['title' => 'Jadwal Ramadhan', 'url' => '../wali/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
                     ['title' => 'Jadwal Imam Dhuha', 'url' => '../admin/jadwal_imam.php?session_type=wali', 'active' => $current_page === 'jadwal_imam.php'],
-                    ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=wali', 'active' => $current_page === 'jadwal_seragam.php']
+                    ['title' => 'Jadwal Seragam Guru', 'url' => '../admin/jadwal_seragam.php?session_type=wali', 'active' => $current_page === 'jadwal_seragam.php'],
+                    ['title' => 'Jadwal Piket', 'url' => '../admin/jadwal_piket.php?session_type=wali', 'active' => $current_page === 'jadwal_piket.php']
                 ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php'])
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_piket.php'])
             ],
             [
                 'title' => 'Nilai Siswa',
