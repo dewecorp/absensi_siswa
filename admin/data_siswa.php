@@ -548,6 +548,7 @@ include '../templates/sidebar.php';
                                 </div>
                             </div>
                             
+                            <?php $edit_modals = ''; ?>
                             <!-- Table Section - Only shown when class is selected -->
                             <?php if ($selected_kelas_id > 0): ?>
                             <div class="table-responsive">
@@ -572,7 +573,7 @@ include '../templates/sidebar.php';
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php $edit_modals = ''; foreach ($students as $index => $student): ?>
+                                        <?php foreach ($students as $index => $student): ?>
                                         <tr data-id-kelas="<?php echo $student['id_kelas'] ?? ''; ?>">
                                             <td>
                                                 <div class="custom-checkbox custom-control">
