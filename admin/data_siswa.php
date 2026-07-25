@@ -572,7 +572,7 @@ include '../templates/sidebar.php';
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($students as $index => $student): ?>
+                                        <?php $edit_modals = ''; foreach ($students as $index => $student): ?>
                                         <tr data-id-kelas="<?php echo $student['id_kelas'] ?? ''; ?>">
                                             <td>
                                                 <div class="custom-checkbox custom-control">
@@ -602,99 +602,86 @@ include '../templates/sidebar.php';
                                                 <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $student['id_siswa']; ?>" data-name="<?php echo htmlspecialchars($student['nama_siswa']); ?>" data-action="delete_siswa"><i class="fas fa-trash"></i></a>
                                             </td>
                                         </tr>
-                                        
-                                        <!-- Edit Modal -->
-                                        <div class="modal fade edit-modal" id="editModal<?php echo $student['id_siswa']; ?>" tabindex="-1" role="dialog" aria-labelledby="editModalLabel<?php echo $student['id_siswa']; ?>" aria-hidden="true">
+                                        <?php
+                                        $edit_modals .= '<div class="modal fade edit-modal" id="editModal' . $student['id_siswa'] . '" tabindex="-1" role="dialog" aria-hidden="true">
                                             <div class="modal-dialog" role="document">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
-                                                        <h5 class="modal-title" id="editModalLabel<?php echo $student['id_siswa']; ?>">Edit Data Siswa</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                            <span aria-hidden="true">&times;</span>
-                                                        </button>
+                                                        <h5 class="modal-title">Edit Data Siswa</h5>
+                                                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                                                     </div>
-                                                    <form method="POST" action="" enctype="multipart/form-data">
+                                                    <form method="POST" enctype="multipart/form-data">
                                                         <div class="modal-body">
-                                                            <input type="hidden" name="id_siswa" value="<?php echo $student['id_siswa']; ?>">
+                                                            <input type="hidden" name="id_siswa" value="' . $student['id_siswa'] . '">
                                                             <input type="hidden" name="update_siswa" value="1">
-                                                            <div class="row">
-                                                                <div class="form-group col-12 text-center">
-                                                                    <div class="position-relative d-inline-block">
-                                                                        <?php 
-                                                                        $foto_path = !empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto']) 
-                                                                            ? '../assets/img/siswa/' . $student['foto'] 
-                                                                            : null;
-                                                                        ?>
-                                                                        <?php if ($foto_path): ?>
-                                                                            <img src="<?php echo $foto_path; ?>" class="rounded-circle shadow-sm mb-2" width="100" height="100" style="object-fit: cover; border: 3px solid #6777ef;">
-                                                                        <?php else: ?>
-                                                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm mb-2 mx-auto" style="width: 100px; height: 100px; font-weight: bold; font-size: 2.5rem; border: 3px solid #fff;">
-                                                                                <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
-                                                                            </div>
-                                                                        <?php endif; ?>
-                                                                    </div>
-                                                                    <div class="custom-file mt-2">
-                                                                        <input type="file" class="custom-file-input" name="foto" id="foto<?php echo $student['id_siswa']; ?>" accept="image/*">
-                                                                        <label class="custom-file-label" for="foto<?php echo $student['id_siswa']; ?>">Ubah Foto</label>
-                                                                    </div>
+                                                            <div class="text-center mb-3">
+                                                                <div class="position-relative d-inline-block">';
+                                        $foto_path = (!empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto'])) ? '../assets/img/siswa/' . $student['foto'] : null;
+                                        if ($foto_path) {
+                                            $edit_modals .= '<img src="' . $foto_path . '" class="rounded-circle shadow-sm" width="100" height="100" style="object-fit:cover;border:3px solid #6777ef;">';
+                                        } else {
+                                            $edit_modals .= '<div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto" style="width:100px;height:100px;font-weight:bold;font-size:2.5rem;border:3px solid #fff;">' . strtoupper(substr($student['nama_siswa'], 0, 1)) . '</div>';
+                                        }
+                                        $edit_modals .= '</div>
+                                                                <div class="custom-file mt-2">
+                                                                    <input type="file" class="custom-file-input" name="foto" accept="image/*">
+                                                                    <label class="custom-file-label">Ubah Foto</label>
                                                                 </div>
                                                             </div>
                                                             <div class="row">
                                                                 <div class="form-group col-6">
                                                                     <label>Nama Siswa</label>
-                                                                    <input type="text" class="form-control" name="nama_siswa" value="<?php echo htmlspecialchars($student['nama_siswa']); ?>" required>
+                                                                    <input type="text" class="form-control" name="nama_siswa" value="' . htmlspecialchars($student['nama_siswa']) . '" required>
                                                                 </div>
                                                                 <div class="form-group col-6">
                                                                     <label>NISN</label>
-                                                                    <input type="text" class="form-control" name="nisn" value="<?php echo htmlspecialchars($student['nisn']); ?>" required>
+                                                                    <input type="text" class="form-control" name="nisn" value="' . htmlspecialchars($student['nisn']) . '" required>
                                                                 </div>
                                                             </div>
                                                             <div class="row">
                                                                 <div class="form-group col-6">
                                                                     <label>Jenis Kelamin</label>
                                                                     <select class="form-control" name="jenis_kelamin" required>
-                                                                        <option value="">Pilih Jenis Kelamin</option>
-                                                                        <option value="L" <?php echo $student['jenis_kelamin'] == 'L' ? 'selected' : ''; ?>>Laki-laki</option>
-                                                                        <option value="P" <?php echo $student['jenis_kelamin'] == 'P' ? 'selected' : ''; ?>>Perempuan</option>
+                                                                        <option value="">Pilih</option>
+                                                                        <option value="L"' . ($student['jenis_kelamin'] == 'L' ? ' selected' : '') . '>Laki-laki</option>
+                                                                        <option value="P"' . ($student['jenis_kelamin'] == 'P' ? ' selected' : '') . '>Perempuan</option>
                                                                     </select>
                                                                 </div>
                                                                 <div class="form-group col-6">
                                                                     <label>Kelas</label>
                                                                     <select class="form-control" name="id_kelas" required>
-                                                                        <option value="">Pilih Kelas</option>
-                                                                        <?php foreach ($kelas_list as $kelas): ?>
-                                                                        <option value="<?php echo $kelas['id_kelas']; ?>" <?php echo $student['id_kelas'] == $kelas['id_kelas'] ? 'selected' : ''; ?>>
-                                                                            <?php echo htmlspecialchars($kelas['nama_kelas']); ?>
-                                                                        </option>
-                                                                        <?php endforeach; ?>
-                                                                    </select>
+                                                                        <option value="">Pilih</option>';
+                                        foreach ($kelas_list as $kelas) {
+                                            $sel = $student['id_kelas'] == $kelas['id_kelas'] ? ' selected' : '';
+                                            $edit_modals .= '<option value="' . $kelas['id_kelas'] . '"' . $sel . '>' . htmlspecialchars($kelas['nama_kelas']) . '</option>';
+                                        }
+                                        $edit_modals .= '</select>
                                                                 </div>
                                                             </div>
                                                             <div class="row">
                                                                 <div class="form-group col-6">
                                                                     <label>Tempat Lahir</label>
-                                                                    <input type="text" class="form-control" name="tempat_lahir" value="<?php echo htmlspecialchars($student['tempat_lahir'] ?? ''); ?>">
+                                                                    <input type="text" class="form-control" name="tempat_lahir" value="' . htmlspecialchars($student['tempat_lahir'] ?? '') . '">
                                                                 </div>
                                                                 <div class="form-group col-6">
                                                                     <label>Tanggal Lahir</label>
-                                                                    <input type="date" class="form-control" name="tanggal_lahir" value="<?php echo $student['tanggal_lahir'] ?? ''; ?>">
+                                                                    <input type="date" class="form-control" name="tanggal_lahir" value="' . ($student['tanggal_lahir'] ?? '') . '">
                                                                 </div>
                                                             </div>
                                                             <div class="form-group">
                                                                 <label>Orang Tua/Wali</label>
-                                                                <input type="text" class="form-control" name="wali" value="<?php echo htmlspecialchars($student['wali'] ?? ''); ?>">
+                                                                <input type="text" class="form-control" name="wali" value="' . htmlspecialchars($student['wali'] ?? '') . '">
                                                             </div>
                                                         </div>
-                                                        <div class="modal-footer bg-whitesmoke br">
-                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                                                             <button type="submit" class="btn btn-primary">Simpan</button>
                                                         </div>
                                                     </form>
                                                 </div>
                                             </div>
-                                        </div>
-                                        
-
+                                        </div>';
+                                        ?>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
@@ -1385,7 +1372,9 @@ function exportStudentsToPDF() {
     f.submit();
     document.body.removeChild(f);
 }
+
 ";
 
+echo $edit_modals;
 include '../templates/footer.php'; 
 ?>
