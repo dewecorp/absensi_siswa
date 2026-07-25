@@ -120,7 +120,19 @@ $computed_active_total = array_sum(array_map(static fn($item) => (int)($item['si
 $total_active = (int)($summary['total_tunggakan_aktif'] ?? $computed_active_total);
 $total_old = (int)($summary['total_tunggakan_tahun_lama'] ?? $computed_old_total);
 $total_all = (int)($summary['total_tunggakan'] ?? ($total_active + $total_old));
-$is_lunas = (bool)($summary['is_lunas'] ?? ($total_all <= 0));
+// Status: tagihan aktif > 0 = "Ada Tagihan", tunggakan lama > 0 = "Ada Tunggakan", lainnya "Lunas"
+$status_text = 'Lunas';
+$status_icon = 'check-circle';
+$status_color = 'success';
+if ($total_active > 0) {
+    $status_text = 'Ada Tagihan';
+    $status_icon = 'exclamation-circle';
+    $status_color = 'danger';
+} elseif ($total_old > 0) {
+    $status_text = 'Ada Tunggakan';
+    $status_icon = 'clock';
+    $status_color = 'warning';
+}
 $tahun_tunggakan = $summary['tahun_ajaran_tunggakan'] ?? array_keys($old_arrears_normalized);
 $tahun_tunggakan = is_array($tahun_tunggakan) ? $tahun_tunggakan : [];
 
@@ -185,18 +197,14 @@ include_once '../templates/sidebar.php';
                         <div class="col-md-3 col-6 mb-3">
                             <div class="border rounded p-3 h-100">
                                 <div class="small text-muted">Status</div>
-                                <?php if ($is_lunas): ?>
-                                    <span class="badge badge-success mt-1"><i class="fas fa-check-circle mr-1"></i> Lunas</span>
-                                <?php else: ?>
-                                    <span class="badge badge-danger mt-1"><i class="fas fa-exclamation-circle mr-1"></i> Ada Tunggakan</span>
-                                <?php endif; ?>
+                                <span class="badge badge-<?= $status_color ?> mt-1"><i class="fas fa-<?= $status_icon ?> mr-1"></i> <?= $status_text ?></span>
                             </div>
                         </div>
                     </div>
 
-                    <?php if ($api_status === 'success' && $is_lunas): ?>
+                    <?php if ($api_status === 'success' && $status_text === 'Lunas'): ?>
                         <div class="alert alert-success">
-                            <i class="fas fa-check-circle mr-2"></i> Tidak ada tagihan yang belum dibayar menurut data Sibayar.
+                            <i class="fas fa-check-circle mr-2"></i> Tidak ada tagihan yang belum dibayar.
                         </div>
                     <?php endif; ?>
 
