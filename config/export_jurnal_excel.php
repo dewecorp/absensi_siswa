@@ -73,6 +73,16 @@ if ($bulan) {
         ((count($parts) === 2 && isset($bulan_indo[$parts[1]])) ? ($bulan_indo[$parts[1]] . ' ' . $parts[0]) : $bulan);
 }
 
+// Filter by active academic year date range
+$school_profile = getSchoolProfile($pdo);
+$periode_ta = getRentangTanggalTahunAjaran($school_profile['tahun_ajaran'] ?? null);
+if ($periode_ta) {
+    $where_clauses[] = 'j.tanggal >= ?';
+    $where_clauses[] = 'j.tanggal <= ?';
+    $params[] = $periode_ta['mulai'];
+    $params[] = $periode_ta['sampai'];
+}
+
 $query = "SELECT j.*, g.nama_guru, k.nama_kelas 
           FROM tb_jurnal j 
           LEFT JOIN tb_guru g ON j.id_guru = g.id_guru 
