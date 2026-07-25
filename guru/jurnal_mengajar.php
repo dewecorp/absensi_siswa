@@ -809,7 +809,7 @@ include '../templates/header.php';
                                         <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
                                         <td><?php echo htmlspecialchars($journal['materi']); ?></td>
                                         <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>
-                                        <td>
+                                        <td style="white-space:nowrap">
                                             <?php if ($journal['id_guru'] == $teacher['id_guru']): ?>
                                             <button class="btn btn-warning btn-sm" onclick='openModal("edit", <?php echo json_encode($journal); ?>)'><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-danger btn-sm" onclick="confirmDelete(<?php echo $journal['id']; ?>)"><i class="fas fa-trash"></i></button>
