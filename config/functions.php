@@ -463,7 +463,7 @@ function getTahunAjaranAktifDariPengaturan(PDO $pdo): string {
 }
 
 /** Simpan snapshot siswa baru tahun ajaran aktif sekali saja, agar tidak berubah saat kelas I naik. */
-function ensureSiswaBaruSnapshotForActiveYear(PDO $pdo): void {
+function ensureSiswaBaruSnapshotForActiveYear(PDO $pdo, bool $forceRefresh = false): void {
     $tahunAjaran = getTahunAjaranAktifDariPengaturan($pdo);
     $pdo->exec("CREATE TABLE IF NOT EXISTS tb_siswa_baru (
         id INT PRIMARY KEY AUTO_INCREMENT,
@@ -479,10 +479,12 @@ function ensureSiswaBaruSnapshotForActiveYear(PDO $pdo): void {
         return;
     }
 
-    $stmt = $pdo->prepare("SELECT id FROM tb_siswa_baru WHERE tahun_ajaran = ? LIMIT 1");
-    $stmt->execute([$tahunAjaran]);
-    if ($stmt->fetchColumn()) {
-        return;
+    if (!$forceRefresh) {
+        $stmt = $pdo->prepare("SELECT id FROM tb_siswa_baru WHERE tahun_ajaran = ? LIMIT 1");
+        $stmt->execute([$tahunAjaran]);
+        if ($stmt->fetchColumn()) {
+            return;
+        }
     }
 
     $stmt = $pdo->prepare("
@@ -517,7 +519,9 @@ function ensureSiswaBaruSnapshotForActiveYear(PDO $pdo): void {
         $currentData = $stmt->fetch(PDO::FETCH_ASSOC) ?: $currentData;
     }
 
-    $stmt = $pdo->prepare("INSERT IGNORE INTO tb_siswa_baru (tahun_ajaran, jumlah_laki, jumlah_perempuan, total) VALUES (?, ?, ?, ?)");
+    $stmt = $pdo->prepare($forceRefresh
+        ? "REPLACE INTO tb_siswa_baru (tahun_ajaran, jumlah_laki, jumlah_perempuan, total) VALUES (?, ?, ?, ?)"
+        : "INSERT IGNORE INTO tb_siswa_baru (tahun_ajaran, jumlah_laki, jumlah_perempuan, total) VALUES (?, ?, ?, ?)");
     $stmt->execute([
         $tahunAjaran,
         $currentData['jumlah_laki'] ?? 0,

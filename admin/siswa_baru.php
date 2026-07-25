@@ -42,7 +42,13 @@ $tahunAjaranStartYear = static function (?string $tahun_ajaran): ?int {
     return null;
 };
 
-ensureSiswaBaruSnapshotForActiveYear($pdo);
+$has_refresh = isset($_GET['refresh']) && $_GET['refresh'] === '1';
+ensureSiswaBaruSnapshotForActiveYear($pdo, $has_refresh);
+
+$pesan_sukses = '';
+if ($has_refresh) {
+    $pesan_sukses = 'Snapshot siswa baru untuk tahun ajaran ' . htmlspecialchars($current_tahun_ajaran) . ' berhasil diperbarui.';
+}
 
 // Get all historical data for chart and table. Tampilkan hanya sampai tahun ajaran
 // yang dipilih; default-nya tahun ajaran aktif di Pengaturan.
@@ -151,8 +157,10 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="alert alert-light border mb-3 py-2">
-                                Tahun ajaran aktif di Pengaturan: <strong><?php echo htmlspecialchars($current_tahun_ajaran_from_settings ? $current_tahun_ajaran : 'Belum diatur'); ?></strong>
+                            <?php $pesan_sukses_js = json_encode($pesan_sukses); ?>
+                            <div class="alert alert-light border mb-3 py-2 d-flex justify-content-between align-items-center">
+                                <span>Tahun ajaran aktif: <strong><?php echo htmlspecialchars($current_tahun_ajaran_from_settings ? $current_tahun_ajaran : 'Belum diatur'); ?></strong></span>
+                                <button class="btn btn-sm btn-warning" id="btn-refresh-snapshot"><i class="fas fa-sync-alt"></i> Refresh Data</button>
                             </div>
                             <form method="GET" class="form-inline mb-3">
                                 <label for="sampai_tahun_ajaran" class="mr-2 mb-2 mb-sm-0">Tampilkan sampai tahun ajaran</label>
@@ -397,6 +405,28 @@ function exportChartToPDF() {
     f.submit();
     document.body.removeChild(f);
 }
+
+// Refresh snapshot with SweetAlert
+var pesanSukses = " . json_encode($pesan_sukses) . ";
+if (pesanSukses) {
+    Swal.fire({ icon: 'success', title: 'Berhasil', text: pesanSukses, timer: 3000, showConfirmButton: false });
+}
+document.getElementById('btn-refresh-snapshot').addEventListener('click', function() {
+    Swal.fire({
+        title: 'Refresh Data?',
+        text: 'Snapshot siswa baru untuk tahun ajaran " . htmlspecialchars($current_tahun_ajaran) . " akan diperbarui.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Refresh!',
+        cancelButtonText: 'Batal'
+    }).then(function(result) {
+        if (result.isConfirmed) {
+            window.location.href = '?refresh=1';
+        }
+    });
+});
 ";
 
 include '../templates/footer.php';
