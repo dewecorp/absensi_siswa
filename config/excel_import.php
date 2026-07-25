@@ -44,6 +44,14 @@ function normalizeStudentNameForImport(?string $name): string {
     return $name ?? '';
 }
 
+function normalizeGender(string $gender): string {
+    $gender = trim($gender);
+    $lower = strtolower($gender);
+    if (in_array($lower, ['p', 'perempuan', 'wanita', 'cewek'])) return 'P';
+    if (in_array($lower, ['l', 'laki-laki', 'laki', 'pria', 'cowok'])) return 'L';
+    return $gender;
+}
+
 function normalizeDateForImport(?string $date): ?string {
     $date = trim((string)$date);
     if ($date === '') {
@@ -306,6 +314,7 @@ function importStudentsFromExcelFile($filePath) {
                 $nama_siswa = trim($row[0]);
                 $nisn = normalizeNisnFromImportCell($row[1] ?? '');
                 $jenis_kelamin = trim($row[2]);
+                $jenis_kelamin = normalizeGender($jenis_kelamin);
                 $tempat_lahir = trim($row[3]);
                 $tanggal_lahir = trim($row[4]);
                 $tanggal_lahir_db = normalizeDateForImport($tanggal_lahir);
@@ -496,6 +505,7 @@ function importStudentsFromCSV($filePath) {
             $nama_siswa = trim($data[0]);
             $nisn = normalizeNisnFromImportCell($data[1]);
             $jenis_kelamin = trim($data[2]);
+            $jenis_kelamin = normalizeGender($jenis_kelamin);
             $id_kelas = trim($data[3]);
             
             // Validate required fields

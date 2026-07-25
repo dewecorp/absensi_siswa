@@ -32,17 +32,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['import_data'])) {
             }
             
             // Return JSON response
+            while (ob_get_level()) ob_end_clean();
             header('Content-Type: application/json');
             echo json_encode($result);
             exit;
         } else {
             $response = ['success' => false, 'message' => $upload_result['message']];
+            while (ob_get_level()) ob_end_clean();
             header('Content-Type: application/json');
             echo json_encode($response);
             exit;
         }
     } else {
         $response = ['success' => false, 'message' => 'Silakan pilih file untuk diimpor.'];
+        while (ob_get_level()) ob_end_clean();
         header('Content-Type: application/json');
         echo json_encode($response);
         exit;
@@ -50,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['import_data'])) {
 }
 
 // If not POST or import_data not set, return error
+while (ob_get_level()) ob_end_clean();
 $response = ['success' => false, 'message' => 'Permintaan tidak valid'];
 header('Content-Type: application/json');
 echo json_encode($response);
