@@ -107,7 +107,8 @@ if ($semester_raw === '') {
     }
 }
 
-$filename = "Jurnal_Mengajar_" . date('Ymd_His') . ".xls";
+$ta_slug = str_replace('/', '-', $school_profile['tahun_ajaran'] ?? '');
+$filename = "Jurnal_Mengajar" . ($ta_slug ? "_" . $ta_slug : "") . "_" . date('Ymd_His') . ".xls";
 
 // Headers for Excel download
 header("Content-Type: application/vnd.ms-excel");

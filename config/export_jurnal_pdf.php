@@ -121,7 +121,8 @@ if ($logo_file && file_exists(__DIR__ . '/../assets/img/' . $logo_file)) {
     $logo_path = '../assets/img/logo.png';
 }
 
-$page_title = "Laporan Jurnal Mengajar" . ($filter_title ? " - " . $filter_title : "");
+$ta = $school_profile['tahun_ajaran'] ?? '';
+$page_title = "Laporan Jurnal Mengajar" . ($ta ? " - TA " . $ta : "") . ($filter_title ? " - " . $filter_title : "");
 
 // HTML Output
 ?>
@@ -159,6 +160,7 @@ $page_title = "Laporan Jurnal Mengajar" . ($filter_title ? " - " . $filter_title
     </div>
 
     <h3 class="text-center">LAPORAN JURNAL MENGAJAR</h3>
+    <p class="text-center" style="font-size: 12px; margin-top: 2px;">TAHUN AJARAN <?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?></p>
     <?php if ($filter_title): ?>
         <p class="text-center"><strong><?= htmlspecialchars($filter_title) ?></strong></p>
     <?php endif; ?>
