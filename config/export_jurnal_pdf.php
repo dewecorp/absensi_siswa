@@ -78,7 +78,7 @@ $query = "SELECT j.*, g.nama_guru, k.nama_kelas
           LEFT JOIN tb_guru g ON j.id_guru = g.id_guru 
           LEFT JOIN tb_kelas k ON j.id_kelas = k.id_kelas
           WHERE " . implode(' AND ', $where_clauses) . "
-          ORDER BY j.tanggal DESC, j.jam_ke DESC";
+          ORDER BY j.tanggal DESC, j.created_at DESC";
 
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
