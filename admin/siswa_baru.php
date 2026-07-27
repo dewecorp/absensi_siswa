@@ -52,7 +52,7 @@ if ($has_refresh) {
 
 // Get all historical data for chart and table. Tampilkan hanya sampai tahun ajaran
 // yang dipilih; default-nya tahun ajaran aktif di Pengaturan.
-$stmt = $pdo->query("SELECT * FROM tb_siswa_baru ORDER BY tahun_ajaran ASC");
+$stmt = $pdo->query("SELECT * FROM tb_siswa_baru ORDER BY tahun_ajaran DESC");
 $raw_siswa_baru_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $tahun_ajaran_options = [];
