@@ -97,7 +97,7 @@ $stmt_chart = $pdo->query("SELECT tahun_lulus,
     COUNT(*) AS total
     FROM tb_alumni
     GROUP BY tahun_lulus
-    ORDER BY tahun_lulus ASC");
+    ORDER BY tahun_lulus DESC");
 $alumni_chart_data = $stmt_chart->fetchAll(PDO::FETCH_ASSOC);
 $chart_labels = [];
 $chart_laki = [];
