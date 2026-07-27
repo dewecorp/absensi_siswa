@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stmt = $pdo->query('SELECT * FROM tb_rekap_nilai_ujian ORDER BY tahun_ajaran ASC');
+$stmt = $pdo->query('SELECT * FROM tb_rekap_nilai_ujian ORDER BY tahun_ajaran DESC');
 $nilai_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $chart_labels = [];
