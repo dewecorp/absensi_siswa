@@ -44,6 +44,7 @@ if ($_POST['add_siswa'] ?? false) {
     $jenis_kelamin = sanitizeInput($_POST['jenis_kelamin'] ?? '');
     $tempat_lahir = sanitizeInput($_POST['tempat_lahir'] ?? '');
     $tanggal_lahir = sanitizeInput($_POST['tanggal_lahir'] ?? '');
+    $tanggal_masuk = sanitizeInput($_POST['tanggal_masuk'] ?? '');
     $wali = sanitizeInput($_POST['wali'] ?? '');
     $id_kelas = (int)($_POST['id_kelas'] ?? 0);
     
@@ -51,8 +52,8 @@ if ($_POST['add_siswa'] ?? false) {
         global $pdo;
         $plain_password = generateStudentPassword();
         $hashed_password = hashPassword($plain_password);
-        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        if ($stmt->execute([$nama_siswa, $nisn, $hashed_password, $plain_password, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $wali, $id_kelas])) {
+        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, tempat_lahir, tanggal_lahir, tanggal_masuk, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$nama_siswa, $nisn, $hashed_password, $plain_password, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $tanggal_masuk ?: null, $wali, $id_kelas])) {
             $message = ['type' => 'success', 'text' => 'Data siswa berhasil ditambahkan! Password: ' . $plain_password];
             $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
             logActivity($pdo, $username, 'Tambah Siswa', "Menambahkan siswa baru: $nama_siswa");
@@ -73,6 +74,7 @@ if ($_POST['update_siswa'] ?? false) {
     $tempat_lahir = sanitizeInput($_POST['tempat_lahir'] ?? '');
     $tanggal_lahir = sanitizeInput($_POST['tanggal_lahir'] ?? '');
     $wali = sanitizeInput($_POST['wali'] ?? '');
+    $tanggal_masuk = sanitizeInput($_POST['tanggal_masuk'] ?? '');
     $new_id_kelas = (int)($_POST['id_kelas'] ?? 0);
     
     if ($id_siswa && $nama_siswa && $nisn && $jenis_kelamin && $new_id_kelas) {
@@ -81,7 +83,7 @@ if ($_POST['update_siswa'] ?? false) {
         try {
             // Handle Foto Upload
             $foto_sql = "";
-            $params = [$nama_siswa, $nisn, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $wali, $new_id_kelas];
+            $params = [$nama_siswa, $nisn, $jenis_kelamin, $tempat_lahir, $tanggal_lahir ?: null, $tanggal_masuk ?: null, $wali, $new_id_kelas];
             
             if (!empty($_FILES['foto']['name'])) {
                 $file = $_FILES['foto'];
@@ -124,7 +126,7 @@ if ($_POST['update_siswa'] ?? false) {
             $current_kelas_name = $current_student['current_kelas_name'] ?? 'Tidak ada kelas';
             
             // Update student data
-            $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, wali = ?, id_kelas = ? $foto_sql WHERE id_siswa = ?");
+            $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa = ?, nisn = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, tanggal_masuk = ?, wali = ?, id_kelas = ? $foto_sql WHERE id_siswa = ?");
             $result = $stmt->execute($params);
             
             if ($result) {
@@ -669,9 +671,15 @@ include '../templates/sidebar.php';
                                                                     <input type="date" class="form-control" name="tanggal_lahir" value="' . ($student['tanggal_lahir'] ?? '') . '">
                                                                 </div>
                                                             </div>
-                                                            <div class="form-group">
-                                                                <label>Orang Tua/Wali</label>
-                                                                <input type="text" class="form-control" name="wali" value="' . htmlspecialchars($student['wali'] ?? '') . '">
+                                                            <div class="row">
+                                                                <div class="form-group col-6">
+                                                                    <label>Orang Tua/Wali</label>
+                                                                    <input type="text" class="form-control" name="wali" value="' . htmlspecialchars($student['wali'] ?? '') . '">
+                                                                </div>
+                                                                <div class="form-group col-6">
+                                                                    <label>Tanggal Masuk</label>
+                                                                    <input type="date" class="form-control" name="tanggal_masuk" value="' . ($student['tanggal_masuk'] ?? '') . '">
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer">
@@ -784,9 +792,15 @@ include '../templates/sidebar.php';
                             <input type="date" class="form-control" name="tanggal_lahir">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Orang Tua/Wali</label>
-                        <input type="text" class="form-control" name="wali">
+                    <div class="row">
+                        <div class="form-group col-6">
+                            <label>Orang Tua/Wali</label>
+                            <input type="text" class="form-control" name="wali">
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Tanggal Masuk</label>
+                            <input type="date" class="form-control" name="tanggal_masuk">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-whitesmoke br">

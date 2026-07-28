@@ -353,8 +353,8 @@ function importStudentsFromExcelFile($filePath) {
                     // Insert new student
                     try {
                         $plain_password = generateStudentPassword();
-                        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                        $stmt->execute([$nama_siswa, $nisn, hashPassword($plain_password), $plain_password, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir_db, $wali, $id_kelas]);
+                        $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, tempat_lahir, tanggal_lahir, tanggal_masuk, wali, id_kelas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        $stmt->execute([$nama_siswa, $nisn, hashPassword($plain_password), $plain_password, $jenis_kelamin ?: null, $tempat_lahir, $tanggal_lahir_db, date('Y-m-d'), $wali, $id_kelas]);
                         $rowCount++;
                     } catch (PDOException $e) {
                         $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
@@ -538,8 +538,8 @@ function importStudentsFromCSV($filePath) {
                 // Insert new student
                 try {
                     $plain_password = generateStudentPassword();
-                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, id_kelas) VALUES (?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$nama_siswa, $nisn, hashPassword($plain_password), $plain_password, $jenis_kelamin ?: null, $id_kelas]);
+                    $stmt = $pdo->prepare("INSERT INTO tb_siswa (nama_siswa, nisn, password, password_plain, jenis_kelamin, id_kelas, tanggal_masuk) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$nama_siswa, $nisn, hashPassword($plain_password), $plain_password, $jenis_kelamin ?: null, $id_kelas, date('Y-m-d')]);
                     $rowCount++;
                 } catch (PDOException $e) {
                     $errors[] = "Row " . ($rowCount + 2) . ": " . $e->getMessage();

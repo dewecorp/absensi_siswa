@@ -88,9 +88,27 @@ $nisn = (string)($student['nisn'] ?? '');
 $page_title = 'Tagihan Siswa';
 $school_profile = getSchoolProfile($pdo);
 
+// Auto-create tanggal_masuk column if not exists
+try {
+    $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN IF NOT EXISTS tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir");
+} catch (PDOException $e) {
+    try { $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir"); } catch (PDOException $e2) {}
+}
+
+// Auto-set tanggal_masuk from created_at for existing students if null
+if (empty($student['tanggal_masuk']) && !empty($student['created_at'])) {
+    $stmt_upd = $pdo->prepare("UPDATE tb_siswa SET tanggal_masuk = DATE(created_at) WHERE id_siswa = ? AND tanggal_masuk IS NULL");
+    $stmt_upd->execute([$id_siswa]);
+    $student['tanggal_masuk'] = date('Y-m-d', strtotime($student['created_at']));
+}
+
 $sibayar_response = fetchSibayarData($nisn, 'tagihan');
 $api_status = $sibayar_response['status'] ?? 'error';
 $api_message = $sibayar_response['message'] ?? 'Unknown error';
+
+// Get student entry date to filter bills before enrollment
+$tanggal_masuk = $student['tanggal_masuk'] ?? '';
+$tahun_masuk = $tanggal_masuk ? (int)substr($tanggal_masuk, 0, 4) : 0;
 
 $api_student = is_array($sibayar_response['student'] ?? null) ? $sibayar_response['student'] : [];
 $billing_data = normalizeSibayarItems($sibayar_response['billing'] ?? ($sibayar_response['data'] ?? []));
@@ -98,22 +116,28 @@ $old_arrears = is_array($sibayar_response['tunggakan_tahun_ajaran_lama'] ?? null
 $summary = is_array($sibayar_response['summary'] ?? null) ? $sibayar_response['summary'] : [];
 $tahun_ajaran_aktif = (string)($sibayar_response['tahun_ajaran'] ?? $sibayar_response['tahun_ajaran_aktif'] ?? $school_profile['tahun_ajaran'] ?? '-');
 
+// Helper: extract start year from "YYYY/YYYY" format
+$ta_start_year = function($ta) { return $ta && preg_match('/^(\d{4})\//', $ta, $m) ? (int)$m[1] : 0; };
+
+// Filter billing: exclude items whose tahun_ajaran is before student's entry year
+if ($tahun_masuk > 0) {
+    $billing_data = array_values(array_filter($billing_data, function($item) use ($ta_start_year, $tahun_masuk) {
+        return $ta_start_year($item['tahun_ajaran'] ?? '') >= $tahun_masuk;
+    }));
+}
+
 $old_arrears_normalized = [];
 $computed_old_total = 0;
 foreach ($old_arrears as $tahun => $group) {
-    if (!is_array($group)) {
-        continue;
-    }
+    if (!is_array($group)) continue;
+    $ta = (string)($group['tahun_ajaran'] ?? $tahun);
+    // Skip arrears from before student's entry year
+    if ($tahun_masuk > 0 && $ta_start_year($ta) < $tahun_masuk) continue;
     $items = normalizeSibayarItems($group['items'] ?? []);
     $total = (int)($group['total_tunggakan'] ?? array_sum(array_map(static fn($item) => (int)($item['sisa_tagihan'] ?? 0), $items)));
-    if ($total <= 0 && empty($items)) {
-        continue;
-    }
+    if ($total <= 0 && empty($items)) continue;
     $computed_old_total += $total;
-    $old_arrears_normalized[(string)($group['tahun_ajaran'] ?? $tahun)] = [
-        'total' => $total,
-        'items' => $items,
-    ];
+    $old_arrears_normalized[$ta] = ['total' => $total, 'items' => $items];
 }
 
 $computed_active_total = array_sum(array_map(static fn($item) => (int)($item['sisa_tagihan'] ?? 0), $billing_data));
