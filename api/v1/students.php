@@ -20,8 +20,7 @@ try {
 } catch (PDOException $e) {
     try { $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir"); } catch (PDOException $e2) {}
 }
-// Auto-fill tanggal_masuk for records with NULL
-$pdo->exec("UPDATE tb_siswa SET tanggal_masuk = DATE(created_at) WHERE tanggal_masuk IS NULL AND created_at IS NOT NULL");
+
 
 // --- AUTHENTICATION ---
 $headers = getallheaders();

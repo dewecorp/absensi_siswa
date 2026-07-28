@@ -58,8 +58,8 @@ try {
 
     $sql = "SELECT s.id_siswa, s.nisn, s.nama_siswa, s.jenis_kelamin,
                    s.tempat_lahir, s.tanggal_lahir, s.tanggal_masuk,
-                   s.wali, k.nama_kelas, k.id_kelas,
-                   s.created_at, s.updated_at
+                   YEAR(s.tanggal_masuk) AS tahun_masuk,
+                   s.wali, k.nama_kelas, k.id_kelas
             FROM tb_siswa s
             LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
             $where_clause
@@ -70,16 +70,14 @@ try {
     $stmt->execute($params);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Format tanggal_masuk: fallback ke created_at jika null, pastikan format Y-m-d
+    // Format tanggal_masuk: biarkan null jika tidak diisi, agar Sibayar tahu data ini belum ada
     foreach ($students as &$s) {
-        if (empty($s['tanggal_masuk'])) {
-            $s['tanggal_masuk'] = $s['created_at'] ? date('Y-m-d', strtotime($s['created_at'])) : null;
-        }
+        $s['tanggal_masuk'] = !empty($s['tanggal_masuk']) ? $s['tanggal_masuk'] : null;
+        $s['tahun_masuk'] = $s['tanggal_masuk'] ? (int)date('Y', strtotime($s['tanggal_masuk'])) : null;
     }
     unset($s);
 
-    // Auto-set tanggal_masuk di database untuk record yang masih null (proses satu kali)
-    $pdo->exec("UPDATE tb_siswa SET tanggal_masuk = DATE(created_at) WHERE tanggal_masuk IS NULL AND created_at IS NOT NULL");
+
 
     echo json_encode([
         'status' => 'success',
