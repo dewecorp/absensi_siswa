@@ -70,11 +70,16 @@ try {
     $stmt->execute($params);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Format tanggal_masuk to Y-m-d if set
+    // Format tanggal_masuk: fallback ke created_at jika null, pastikan format Y-m-d
     foreach ($students as &$s) {
-        $s['tanggal_masuk'] = $s['tanggal_masuk'] ?? null;
+        if (empty($s['tanggal_masuk'])) {
+            $s['tanggal_masuk'] = $s['created_at'] ? date('Y-m-d', strtotime($s['created_at'])) : null;
+        }
     }
     unset($s);
+
+    // Auto-set tanggal_masuk di database untuk record yang masih null (proses satu kali)
+    $pdo->exec("UPDATE tb_siswa SET tanggal_masuk = DATE(created_at) WHERE tanggal_masuk IS NULL AND created_at IS NOT NULL");
 
     echo json_encode([
         'status' => 'success',
