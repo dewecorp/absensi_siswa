@@ -9,6 +9,13 @@ if (!isAuthorized(['admin'])) {
     die('Unauthorized access');
 }
 
+// Auto-create tanggal_masuk column
+try {
+    $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN IF NOT EXISTS tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir");
+} catch (PDOException $e) {
+    try { $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir"); } catch (PDOException $e2) {}
+}
+
 // Try to load PhpSpreadsheet, fallback to CSV if not available
 $hasSpreadsheet = false;
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {

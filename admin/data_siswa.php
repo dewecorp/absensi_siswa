@@ -28,6 +28,13 @@ $js_libs = [
     'student_management_unified.js'
 ];
 
+// Auto-create tanggal_masuk column on hosting
+try {
+    $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN IF NOT EXISTS tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir");
+} catch (PDOException $e) {
+    try { $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir"); } catch (PDOException $e2) {}
+}
+
 // Define page-specific JS
 $js_page = [];
 
