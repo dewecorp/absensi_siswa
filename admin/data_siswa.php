@@ -175,6 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_siswa'])) {
     $nisns = $_POST['bulk_edit_nisn'] ?? [];
     $jenis_kelamins = $_POST['bulk_edit_jenis_kelamin'] ?? [];
     $id_kelass = $_POST['bulk_edit_id_kelas'] ?? [];
+    $tanggal_masuks = $_POST['bulk_edit_tanggal_masuk'] ?? [];
     
     if (!empty($ids) && is_array($ids)) {
         $updatedCount = 0;
@@ -187,6 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_siswa'])) {
                 $nisn = sanitizeInput($nisns[$i] ?? '');
                 $jenis_kelamin = sanitizeInput($jenis_kelamins[$i] ?? '');
                 $id_kelas = (int)($id_kelass[$i] ?? 0);
+                $tanggal_masuk = sanitizeInput($tanggal_masuks[$i] ?? '');
                 
                 // Validate
                 if (empty($nama) || empty($nisn) || empty($jenis_kelamin) || empty($id_kelas)) {
@@ -204,8 +206,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_edit_siswa'])) {
                 }
                 
                 // Update
-                $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, nisn=?, jenis_kelamin=?, id_kelas=? WHERE id_siswa=?");
-                if ($stmt->execute([$nama, $nisn, $jenis_kelamin, $id_kelas, $id])) {
+                $stmt = $pdo->prepare("UPDATE tb_siswa SET nama_siswa=?, nisn=?, jenis_kelamin=?, tanggal_masuk=?, id_kelas=? WHERE id_siswa=?");
+                if ($stmt->execute([$nama, $nisn, $jenis_kelamin, $tanggal_masuk ?: null, $id_kelas, $id])) {
                     $updatedCount++;
                 }
             }
@@ -583,7 +585,7 @@ include '../templates/sidebar.php';
                                     </thead>
                                     <tbody>
                                         <?php foreach ($students as $index => $student): ?>
-                                        <tr data-id-kelas="<?php echo $student['id_kelas'] ?? ''; ?>">
+                                        <tr data-id-kelas="<?php echo $student['id_kelas'] ?? ''; ?>" data-tanggal-masuk="<?php echo $student['tanggal_masuk'] ?? ''; ?>">
                                             <td>
                                                 <div class="custom-checkbox custom-control">
                                                     <input type="checkbox" data-checkboxes="siswa" class="custom-control-input" id="checkbox-<?php echo $student['id_siswa']; ?>" value="<?php echo $student['id_siswa']; ?>">
@@ -913,11 +915,12 @@ include '../templates/import_modal.php';
                             <thead>
                                 <tr>
                                     <th width="5%">No</th>
-                                    <th width="20%">Nama Siswa</th>
-                                    <th width="20%">Nama Baru</th>
-                                    <th width="20%">NISN Baru</th>
-                                    <th width="15%">Jenis Kelamin</th>
-                                    <th width="20%">Kelas</th>
+                                    <th width="15%">Nama Siswa</th>
+                                    <th width="15%">Nama Baru</th>
+                                    <th width="12%">NISN</th>
+                                    <th width="10%">JK</th>
+                                    <th width="12%">Kelas</th>
+                                    <th width="12%">Tgl Masuk</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -998,6 +1001,7 @@ window.bulkEdit = function() {
                 tempat_lahir: tempat !== '-' ? tempat : '',
                 tanggal_lahir: tanggal,
                 wali: cells.eq(8).text().trim() !== '-' ? cells.eq(8).text().trim() : '',
+                tanggal_masuk: row.data('tanggal-masuk') || '',
                 id_kelas: row.data('id-kelas') || ''
             });
         }
@@ -1033,6 +1037,7 @@ window.bulkEdit = function() {
             '<td><input type=\"text\" class=\"form-control form-control-sm\" name=\"bulk_edit_nisn[]\" value=\"' + student.nisn + '\" required></td>' +
             '<td><select class=\"form-control form-control-sm\" name=\"bulk_edit_jenis_kelamin[]\" required>' + jenisKelaminOptions + '</select></td>' +
             '<td>' + kelasSelectHtml + '</td>' +
+            '<td><input type=\"date\" class=\"form-control form-control-sm\" name=\"bulk_edit_tanggal_masuk[]\" value=\"' + student.tanggal_masuk + '\"></td>' +
             '<input type=\"hidden\" name=\"bulk_edit_ids[]\" value=\"' + student.id + '\">' +
             '</tr>';
         tableBody.append(row);
