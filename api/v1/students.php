@@ -12,7 +12,16 @@ require_once '../../config/database.php';
 
 // --- CONFIGURATION ---
 // Change this key to something very secure and share it only with trusted apps.
-define('API_KEY', 'SIS_CENTRAL_HUB_SECRET_2026'); 
+define('API_KEY', 'SIS_CENTRAL_HUB_SECRET_2026');
+
+// Auto-create tanggal_masuk column
+try {
+    $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN IF NOT EXISTS tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir");
+} catch (PDOException $e) {
+    try { $pdo->exec("ALTER TABLE tb_siswa ADD COLUMN tanggal_masuk DATE DEFAULT NULL AFTER tanggal_lahir"); } catch (PDOException $e2) {}
+}
+// Auto-fill tanggal_masuk for records with NULL
+$pdo->exec("UPDATE tb_siswa SET tanggal_masuk = DATE(created_at) WHERE tanggal_masuk IS NULL AND created_at IS NOT NULL");
 
 // --- AUTHENTICATION ---
 $headers = getallheaders();
@@ -30,7 +39,7 @@ if ($provided_key !== API_KEY) {
 try {
     // --- DATA RETRIEVAL ---
     $query = "SELECT s.id_siswa, s.nama_siswa, s.nisn, s.jenis_kelamin, 
-                     s.tempat_lahir, s.tanggal_lahir, s.wali,
+                     s.tempat_lahir, s.tanggal_lahir, s.tanggal_masuk, s.wali,
                      k.id_kelas, k.nama_kelas 
               FROM tb_siswa s 
               LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas 
