@@ -83,7 +83,13 @@ if (count($classes) == 1 && (!isset($_GET['kelas']) || empty($_GET['kelas']))) {
 
 
 // Handle Form Submission (Add/Edit)
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
+$now_hour_jurnal = (int)date('H');
+if ($now_hour_jurnal < 7 || $now_hour_jurnal >= 14) {
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal'])) {
+        $message = ['type' => 'error', 'text' => 'Jurnal mengajar hanya dapat diisi pukul 07:00 - 14:00 WIB.'];
+    }
+}
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_journal']) && $now_hour_jurnal >= 7 && $now_hour_jurnal < 14) {
     $id_kelas = (int)$_POST['id_kelas'];
     
     // Handle jam_ke array

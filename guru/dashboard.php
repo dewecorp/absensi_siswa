@@ -474,6 +474,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nama_guru = isset($_SESSION['nama_guru']) ? $_SESSION['nama_guru'] : 'Guru';
 
         if (isset($_POST['submit_attendance'])) {
+            // Time validation for teacher attendance: 06:00-15:00
+            $now_hour = (int)date('H');
+            if ($now_hour < 6 || $now_hour >= 15) {
+                echo "<script>document.addEventListener('DOMContentLoaded',function(){Swal.fire({title:'Diluar Jam Absensi',text:'Absensi guru hanya dapat diisi pukul 06:00 - 15:00 WIB.',icon:'warning',confirmButtonText:'OK'});});</script>";
+            } else {
             // Regular attendance checks holidays
             $holiday = isSchoolHoliday($pdo, $current_date);
             if ($holiday['is_holiday']) {
@@ -515,7 +520,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 </script>";
             }
-        } elseif (isset($_POST['submit_attendance_les'])) {
+        }
+    } elseif (isset($_POST['submit_attendance_les'])) {
             // Tutoring attendance - no holiday check, only schedule check
             $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tanggal = ? AND id_guru = ?");
             $stmt_check_sched->execute([$current_date, $current_teacher_id]);
@@ -625,6 +631,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <div class="mt-2">
                                                 <a href="profil.php" class="text-white-50 small" title="Edit Profil"><i class="fas fa-pen mr-1"></i>Edit Profil</a>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KBM Info -->
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <div class="card border-left-primary shadow-sm">
+                                <div class="card-body py-3">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <h6 class="font-weight-bold mb-2"><i class="fas fa-info-circle text-primary mr-2"></i>Ketentuan Pengisian Absensi dan Jurnal KBM Hari Ini</h6>
+                                            <p class="mb-2 font-weight-bold" style="font-size:17px;color:#856404;background:#fff3cd;padding:8px 14px;border-radius:5px;">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>Pastikan mengisi <u>Absensi Siswa</u> sebelum memulai KBM hari ini!
+                                            </p>
+                                            <div class="d-flex flex-wrap" style="gap:12px;">
+                                                <div><span class="badge badge-success px-3 py-2"><i class="fas fa-user-check mr-1"></i> Absensi Siswa</span> <span class="text-muted" style="font-size:13px;">07:00 - 14:00 WIB</span></div>
+                                                <div><span class="badge badge-primary px-3 py-2"><i class="fas fa-chalkboard-teacher mr-1"></i> Absensi Guru</span> <span class="text-muted" style="font-size:13px;">06:00 - 15:00 WIB</span></div>
+                                                <div><span class="badge badge-warning px-3 py-2"><i class="fas fa-book mr-1"></i> Jurnal Mengajar</span> <span class="text-muted" style="font-size:13px;">07:00 - 14:00 WIB</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 text-md-right mt-2 mt-md-0">
+                                            <span class="font-weight-bold" style="font-size:17px;color:#e74c3c;"><i class="fas fa-exclamation-circle mr-1"></i>Isilah tepat waktu agar KBM tercatat rapi!</span>
                                         </div>
                                     </div>
                                 </div>

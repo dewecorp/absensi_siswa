@@ -112,6 +112,11 @@ if (count($classes) === 1 && (!isset($_GET['kelas']) || empty($_GET['kelas']))) 
 
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
+    // Time validation: only 07:00-14:00 for student attendance
+    $now_hour = (int)date('H');
+    if ($now_hour < 7 || $now_hour >= 14) {
+        $message = ['type' => 'danger', 'text' => 'Absensi siswa hanya dapat diisi pukul 07:00 - 14:00 WIB.'];
+    } else {
     $id_kelas = (int)$_POST['id_kelas'];
     $tanggal = $_POST['tanggal'];
     $holiday = isSchoolHoliday($pdo, $tanggal);
@@ -182,6 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             
             $notif_msg = "$nama_guru telah mengirim kehadiran siswa kelas $nama_kelas pada pukul $waktu tanggal $tanggal_notif";
             createNotification($pdo, $notif_msg, 'absensi_harian.php?kelas=' . $id_kelas . '&tanggal=' . $tanggal, 'absensi_siswa');
+        }
         }
     }
 }
