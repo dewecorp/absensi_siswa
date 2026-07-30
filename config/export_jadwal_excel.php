@@ -166,8 +166,8 @@ header("Expires: 0");
     <table>
         <thead>
             <tr>
-                <th rowspan="2" style="width: 50px;">JAM<br>KE</th>
-                <th rowspan="2" style="width: 100px;">WAKTU</th>
+                <th rowspan="3" style="width: 50px;">JAM<br>KE</th>
+                <th rowspan="3" style="width: 100px;">WAKTU</th>
                 <?php foreach ($days as $day): ?>
                     <th colspan="<?= count($classes) ?>" style="background-color: #e0e0e0;"><?= strtoupper($day) ?></th>
                 <?php endforeach; ?>
@@ -176,6 +176,29 @@ header("Expires: 0");
                 <?php foreach ($days as $day): ?>
                     <?php foreach ($classes as $c): ?>
                         <th><?= $c['nama_kelas'] ?></th>
+                    <?php endforeach; ?>
+                <?php endforeach; ?>
+            </tr>
+            <tr>
+                <?php foreach ($days as $day): ?>
+                    <?php foreach ($classes as $c): ?>
+                        <th style="font-size:9px;">
+                        <?php
+                        $code = '';
+                        if (isset($main_schedule[$day])) {
+                            foreach ($main_schedule[$day] as $jam_data) {
+                                if (isset($jam_data[$c['id_kelas']]) && !empty($jam_data[$c['id_kelas']]['guru_id'])) {
+                                    $gid = $jam_data[$c['id_kelas']]['guru_id'];
+                                    if (isset($guru_map[$gid]['display_code'])) {
+                                        $code = $guru_map[$gid]['display_code'];
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        echo htmlspecialchars($code);
+                        ?>
+                        </th>
                     <?php endforeach; ?>
                 <?php endforeach; ?>
             </tr>
@@ -223,7 +246,7 @@ header("Expires: 0");
                                     }
                                 }
                                 ?>
-                                <td><?= $kelas_id ? htmlspecialchars($content) : '<b>' . htmlspecialchars($content) . '</b>' ?></td>
+                                <td><?= htmlspecialchars($content) ?></td>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     <?php endforeach; ?>

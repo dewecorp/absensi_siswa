@@ -129,6 +129,20 @@ foreach ($gurus as $g) {
     $i++;
 }
 
+// Map homeroom teacher code per class (by wali_kelas name)
+$kelas_guru_code = [];
+foreach ($classes as $c) {
+    $kelas_guru_code[$c['id_kelas']] = '';
+    if (!empty($c['wali_kelas'])) {
+        foreach ($gurus as $g) {
+            if ($g['nama_guru'] === $c['wali_kelas'] && isset($guru_codes[$g['id_guru']])) {
+                $kelas_guru_code[$c['id_kelas']] = $guru_codes[$g['id_guru']];
+                break;
+            }
+        }
+    }
+}
+
 // Get Jam Mengajar (Ordered by Waktu Mulai)
 $stmt = $pdo->prepare("SELECT * FROM tb_jam_mengajar WHERE jenis = ? ORDER BY waktu_mulai ASC");
 $stmt->execute([$jenis]);
@@ -289,7 +303,8 @@ if ($kelas_id) {
                 }
             }
         }
-        $html .= '<th style="font-size: 8pt;">' . htmlspecialchars($teacher_name) . '</th>';
+        $teacher_label = $teacher_name !== '-' && isset($sched['guru_id']) && isset($guru_codes[$sched['guru_id']]) ? $guru_codes[$sched['guru_id']] : $teacher_name;
+        $html .= '<th style="font-size: 8pt;">' . htmlspecialchars($teacher_label) . '</th>';
     }
     $html .= '</tr>';
 
@@ -297,8 +312,8 @@ if ($kelas_id) {
     // --- JADWAL UTAMA (All Classes) ---
     $html .= '
             <tr>
-                <th rowspan="2" style="width: 50px;">JAM<br>KE</th>
-                <th rowspan="2" style="width: 100px;">WAKTU</th>';
+                <th rowspan="3" style="width: 50px;">JAM<br>KE</th>
+                <th rowspan="3" style="width: 100px;">WAKTU</th>';
     
     foreach ($days as $day) {
         $html .= '<th colspan="' . count($classes) . '">' . strtoupper($day) . '</th>';
@@ -310,6 +325,26 @@ if ($kelas_id) {
     foreach ($days as $day) {
         foreach ($classes as $c) {
             $html .= '<th>' . $c['nama_kelas'] . '</th>';
+        }
+    }
+    $html .= '</tr>
+            <tr>';
+    foreach ($days as $day) {
+        foreach ($classes as $c) {
+            // Get teacher code from schedule data (first valid guru for this class on this day)
+            $code = '';
+            if (isset($main_schedule[$day])) {
+                foreach ($main_schedule[$day] as $jam_data) {
+                    if (isset($jam_data[$c['id_kelas']]) && !empty($jam_data[$c['id_kelas']]['guru_id'])) {
+                        $gid = $jam_data[$c['id_kelas']]['guru_id'];
+                        if (isset($guru_codes[$gid])) {
+                            $code = $guru_codes[$gid];
+                            break;
+                        }
+                    }
+                }
+            }
+            $html .= '<th style="font-size:8pt;font-weight:bold;color:#555;">' . htmlspecialchars($code) . '</th>';
         }
     }
     $html .= '</tr>';
@@ -357,7 +392,6 @@ foreach ($jam_display as $jam) {
                         } else {
                             // Use Generated Codes for Jadwal Utama
                             $m_code = isset($mapel_codes[$sched['mapel_id']]) ? $mapel_codes[$sched['mapel_id']] : '-';
-                            // Only show Mapel Code in the main schedule cell as requested
                             $content = '<b>' . $m_code . '</b>';
                         }
                     }
