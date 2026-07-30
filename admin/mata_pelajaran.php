@@ -50,8 +50,19 @@ if (!$is_readonly && $_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_mapel'])) {
         $nama_mapel = trim($_POST['nama_mapel']);
         $kode_mapel = trim($_POST['kode_mapel']);
+        if (!$kode_mapel) {
+            // Auto-generate kode_mapel based on jenis
+            if ($jenis_mapel === 'Tambahan') {
+                $last = $pdo->query("SELECT kode_mapel FROM tb_mata_pelajaran WHERE jenis_mapel = 'Tambahan' AND kode_mapel REGEXP '^[A-Z]$' ORDER BY kode_mapel DESC LIMIT 1")->fetchColumn();
+                $kode_mapel = $last ? chr(ord($last) + 1) : 'A';
+                if ($kode_mapel > 'Z') $kode_mapel = 'A';
+            } else {
+                $max = $pdo->query("SELECT MAX(CAST(kode_mapel AS UNSIGNED)) FROM tb_mata_pelajaran WHERE kode_mapel REGEXP '^[0-9]+$' AND (jenis_mapel IS NULL OR jenis_mapel IN ('Akademik','Non Akademik'))")->fetchColumn();
+                $kode_mapel = (int)$max + 1;
+            }
+        }
         $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
-        $jenis_mapel = isset($_POST['jenis_mapel']) && in_array($_POST['jenis_mapel'], ['Akademik', 'Non Akademik']) ? $_POST['jenis_mapel'] : 'Akademik';
+        $jenis_mapel = isset($_POST['jenis_mapel']) && in_array($_POST['jenis_mapel'], ['Akademik', 'Non Akademik', 'Tambahan']) ? $_POST['jenis_mapel'] : 'Akademik';
         
         // Cek duplikasi mata pelajaran
         $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE nama_mapel = ? OR kode_mapel = ?");
@@ -81,7 +92,7 @@ if (!$is_readonly && $_SERVER['REQUEST_METHOD'] == 'POST') {
         $nama_mapel = trim($_POST['nama_mapel']);
         $kode_mapel = trim($_POST['kode_mapel']);
         $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
-        $jenis_mapel = isset($_POST['jenis_mapel']) && in_array($_POST['jenis_mapel'], ['Akademik', 'Non Akademik']) ? $_POST['jenis_mapel'] : 'Akademik';
+        $jenis_mapel = isset($_POST['jenis_mapel']) && in_array($_POST['jenis_mapel'], ['Akademik', 'Non Akademik', 'Tambahan']) ? $_POST['jenis_mapel'] : 'Akademik';
         
         // Cek duplikasi mata pelajaran selain ID ini
         $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE (nama_mapel = ? OR kode_mapel = ?) AND id_mapel != ?");
@@ -152,18 +163,45 @@ if ($is_readonly) {
     $mata_pelajaran = getFilteredSubjects($pdo);
 } else {
     // Admin: all
-    // Order by kode_mapel with natural sorting (numeric aware)
+    // Order by nama_mapel ASC
     $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY 
-        CASE 
-            WHEN kode_mapel REGEXP '^[0-9]+$' THEN 1
-            ELSE 0
-        END,
-        CASE 
-            WHEN kode_mapel REGEXP '^[0-9]+$' THEN CAST(kode_mapel AS UNSIGNED)
-            ELSE 999999
-        END,
-        kode_mapel ASC");
+        CASE WHEN jenis_mapel = 'Tambahan' THEN 1 ELSE 0 END,
+        LOWER(nama_mapel) ASC");
     $mata_pelajaran = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Auto-renumber kode_mapel silently on every load
+if (!$is_readonly) {
+    $stmt_rn = $pdo->query("SELECT id_mapel, jenis_mapel FROM tb_mata_pelajaran ORDER BY 
+        CASE WHEN jenis_mapel = 'Tambahan' THEN 1 ELSE 0 END, LOWER(nama_mapel) ASC");
+    $n = 1;
+    $l = 'A';
+    foreach ($stmt_rn as $r) {
+        if (($r['jenis_mapel'] ?? 'Akademik') === 'Tambahan') {
+            $new_code = $l;
+            $l++;
+        } else {
+            $new_code = (string)$n;
+            $n++;
+        }
+        $pdo->prepare("UPDATE tb_mata_pelajaran SET kode_mapel = ? WHERE id_mapel = ?")->execute([$new_code, $r['id_mapel']]);
+    }
+}
+
+// Auto-generate next kode_mapel
+$next_kode = $pdo->query("SELECT MAX(CAST(kode_mapel AS UNSIGNED)) FROM tb_mata_pelajaran WHERE kode_mapel REGEXP '^[0-9]+$' AND (jenis_mapel IS NULL OR jenis_mapel IN ('Akademik','Non Akademik'))")->fetchColumn();
+$next_kode = (int)$next_kode + 1;
+
+// Auto-generate next letter code for Tambahan
+$next_letter = $pdo->query("SELECT kode_mapel FROM tb_mata_pelajaran WHERE jenis_mapel = 'Tambahan' AND kode_mapel REGEXP '^[A-Z]$' ORDER BY kode_mapel DESC LIMIT 1")->fetchColumn();
+if ($next_letter) {
+    $next_letter = chr(ord($next_letter) + 1);
+    if ($next_letter > 'Z') $next_letter = 'A';
+} else {
+    $next_letter = 'A';
+}
+    
+    // Add renumber button in card-header
+    $renumber_url = htmlspecialchars(strtok($_SERVER['REQUEST_URI'], '?') . '?renumber=1');
 }
 
 // Define CSS libraries for this page
@@ -202,9 +240,8 @@ jQuery.fn.dataTableExt.oSort['natural-desc'] = function(a, b) {
 $(document).ready(function() {
     // Initialize DataTable
     var table = $('#table-1').DataTable({
-        \"order\": [[1, 'asc']],  // Sort by Kode Mapel (column index 1) ascending
+        \"order\": " . ($is_readonly ? "[[2, 'asc']]" : "[[3, 'asc'], [2, 'asc']]") . ",  // Sort by Jenis then Nama
         \"columnDefs\": [
-            { \"type\": \"natural\", \"targets\": [1] },  // Natural sort for Kode Mapel
             { \"sortable\": false, \"targets\": $no_sort_targets }  // No sorting for No (and Aksi if exists)
         ],
         \"language\": {
@@ -563,8 +600,8 @@ include '../templates/sidebar.php';
             <form method="POST" action="">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>Kode Mapel</label>
-                        <input type="text" class="form-control" name="kode_mapel" required>
+                        <label>Kode Mapel (otomatis)</label>
+                        <input type="text" class="form-control" name="kode_mapel" id="add_kode_mapel" value="<?= $next_kode ?>" readonly>
                     </div>
                     <div class="form-group">
                         <label>Nama Mata Pelajaran</label>
@@ -572,9 +609,18 @@ include '../templates/sidebar.php';
                     </div>
                     <div class="form-group">
                         <label>Jenis Mapel</label>
-                        <select class="form-control" name="jenis_mapel">
+                        <select class="form-control" name="jenis_mapel" id="add_jenis_mapel" onchange="
+                            var v = this.value;
+                            var inp = document.getElementById('add_kode_mapel');
+                            if (v === 'Tambahan') {
+                                inp.value = '<?= $next_letter ?>';
+                            } else {
+                                inp.value = '<?= $next_kode ?>';
+                            }
+                        ">
                             <option value="Akademik">Akademik</option>
                             <option value="Non Akademik">Non Akademik</option>
+                            <option value="Tambahan">Tambahan</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -637,7 +683,7 @@ include '../templates/sidebar.php';
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Kode Mapel</label>
-                        <input type="text" class="form-control" name="kode_mapel" id="edit_kode_mapel" required>
+                        <input type="text" class="form-control" name="kode_mapel" id="edit_kode_mapel" required readonly>
                     </div>
                     <div class="form-group">
                         <label>Nama Mata Pelajaran</label>
@@ -648,6 +694,7 @@ include '../templates/sidebar.php';
                         <select class="form-control" name="jenis_mapel" id="edit_jenis_mapel">
                             <option value="Akademik">Akademik</option>
                             <option value="Non Akademik">Non Akademik</option>
+                            <option value="Tambahan">Tambahan</option>
                         </select>
                     </div>
                     <div class="form-group">

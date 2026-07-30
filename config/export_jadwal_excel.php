@@ -24,16 +24,16 @@ if ($kelas_id) {
     $stmt->execute([$kelas_id]);
     $kelas_data = $stmt->fetch(PDO::FETCH_ASSOC);
     $classes = [$kelas_data];
-    $page_title = "JADWAL PELAJARAN " . $title_jenis . " KELAS " . strtoupper($kelas_data['nama_kelas']);
+    $page_title = "Jadwal Pelajaran " . $title_jenis . " Kelas " . $kelas_data['nama_kelas'];
     $wali_kelas = $kelas_data['wali_kelas'];
 } else {
     $stmt = $pdo->query("SELECT * FROM tb_kelas ORDER BY nama_kelas ASC");
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // For Main Schedule
     if ($jenis === 'Ramadhan') {
-        $page_title = "JADWAL PELAJARAN RAMADHAN";
+        $page_title = "Jadwal Pelajaran Ramadhan";
     } else {
-        $page_title = "JADWAL PELAJARAN";
+        $page_title = "Jadwal Pelajaran";
     }
 }
 

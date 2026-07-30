@@ -802,7 +802,9 @@ function getFilteredSubjects(PDO $pdo, bool $semuaJenis = false): array {
         $sql .= ' WHERE ' . implode(' AND ', $conditions);
     }
 
-    $sql .= ' ORDER BY CAST(kode_mapel AS UNSIGNED), kode_mapel ASC';
+    $sql .= ' ORDER BY 
+        CASE WHEN jenis_mapel = \'Tambahan\' THEN 1 ELSE 0 END,
+        LOWER(nama_mapel) ASC';
 
     try {
         $stmt = $pdo->query($sql);

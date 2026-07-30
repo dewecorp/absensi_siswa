@@ -43,12 +43,12 @@ if ($kelas_id) {
     
     // For Class Schedule
     if ($jenis === 'Ramadhan') {
-        $display_title = "JADWAL PELAJARAN RAMADHAN KELAS " . strtoupper($kelas_data['nama_kelas']);
+        $display_title = "Jadwal Pelajaran Ramadhan Kelas " . $kelas_data['nama_kelas'];
     } else {
-        $display_title = "JADWAL PELAJARAN KELAS " . strtoupper($kelas_data['nama_kelas']);
+        $display_title = "Jadwal Pelajaran Kelas " . $kelas_data['nama_kelas'];
     }
     $tahun_file = isset($school_profile['tahun_ajaran']) ? str_replace(['/', ' '], ['-', '_'], $school_profile['tahun_ajaran']) : date('Y');
-    $page_title = "jadwal_kelas_" . strtolower($jenis) . "_" . str_replace(['/', ' '], ['-', '_'], $kelas_data['nama_kelas']) . "_" . $tahun_file;
+    $page_title = "Jadwal_Kelas_" . ($jenis === 'Ramadhan' ? 'Ramadhan_' : '') . str_replace(['/', ' '], ['-', '_'], $kelas_data['nama_kelas']) . "_" . $tahun_file;
     
     $wali_kelas = $kelas_data['wali_kelas'];
 } else {
@@ -57,12 +57,12 @@ if ($kelas_id) {
     
     // For Main Schedule
     if ($jenis === 'Ramadhan') {
-        $display_title = "JADWAL PELAJARAN RAMADHAN";
+        $display_title = "Jadwal Pelajaran Ramadhan";
     } else {
-        $display_title = "JADWAL PELAJARAN";
+        $display_title = "Jadwal Pelajaran";
     }
     $tahun_file = isset($school_profile['tahun_ajaran']) ? str_replace(['/', ' '], ['-', '_'], $school_profile['tahun_ajaran']) : date('Y');
-    $page_title = "jadwal_utama_" . strtolower($jenis) . "_" . $tahun_file;
+    $page_title = "Jadwal_Utama_" . ($jenis === 'Ramadhan' ? 'Ramadhan_' : '') . $tahun_file;
 }
 
 // Get Mapel Map
