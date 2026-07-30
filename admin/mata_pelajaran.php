@@ -64,11 +64,11 @@ if (!$is_readonly && $_SERVER['REQUEST_METHOD'] == 'POST') {
         $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
         $jenis_mapel = isset($_POST['jenis_mapel']) && in_array($_POST['jenis_mapel'], ['Akademik', 'Non Akademik', 'Tambahan']) ? $_POST['jenis_mapel'] : 'Akademik';
         
-        // Cek duplikasi mata pelajaran
-        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE nama_mapel = ? OR kode_mapel = ?");
-        $check->execute([$nama_mapel, $kode_mapel]);
+        // Cek duplikasi nama mapel saja (kode diurus auto-renumber)
+        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE nama_mapel = ?");
+        $check->execute([$nama_mapel]);
         if ($check->fetchColumn() > 0) {
-            $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
+            $message = ['type' => 'danger', 'text' => 'Mata pelajaran sudah ada!'];
         } else {
             if ($has_jenis_mapel) {
                 $stmt = $pdo->prepare("INSERT INTO tb_mata_pelajaran (nama_mapel, kode_mapel, jenis_mapel, kktp) VALUES (?, ?, ?, ?)");
@@ -94,19 +94,14 @@ if (!$is_readonly && $_SERVER['REQUEST_METHOD'] == 'POST') {
         $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
         $jenis_mapel = isset($_POST['jenis_mapel']) && in_array($_POST['jenis_mapel'], ['Akademik', 'Non Akademik', 'Tambahan']) ? $_POST['jenis_mapel'] : 'Akademik';
         
-        // Cek duplikasi mata pelajaran selain ID ini
-        $check = $pdo->prepare("SELECT COUNT(*) FROM tb_mata_pelajaran WHERE (nama_mapel = ? OR kode_mapel = ?) AND id_mapel != ?");
-        $check->execute([$nama_mapel, $kode_mapel, $id_mapel]);
-        if ($check->fetchColumn() > 0) {
-            $message = ['type' => 'danger', 'text' => 'Mata pelajaran atau Kode Mapel sudah ada!'];
+        // Skip kode_mapel duplicate check — auto-renumber akan betulkan setelahnya
+        if ($has_jenis_mapel) {
+            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, jenis_mapel=?, kktp=? WHERE id_mapel=?");
+            $ok = $stmt->execute([$nama_mapel, $kode_mapel, $jenis_mapel, $kktp, $id_mapel]);
         } else {
-            if ($has_jenis_mapel) {
-                $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, jenis_mapel=?, kktp=? WHERE id_mapel=?");
-                $ok = $stmt->execute([$nama_mapel, $kode_mapel, $jenis_mapel, $kktp, $id_mapel]);
-            } else {
-                $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, kktp=? WHERE id_mapel=?");
-                $ok = $stmt->execute([$nama_mapel, $kode_mapel, $kktp, $id_mapel]);
-            }
+            $stmt = $pdo->prepare("UPDATE tb_mata_pelajaran SET nama_mapel=?, kode_mapel=?, kktp=? WHERE id_mapel=?");
+            $ok = $stmt->execute([$nama_mapel, $kode_mapel, $kktp, $id_mapel]);
+        }
 
             if ($ok) {
                 $message = ['type' => 'success', 'text' => 'Mata pelajaran berhasil diupdate!'];
@@ -116,7 +111,6 @@ if (!$is_readonly && $_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengupdate mata pelajaran!'];
             }
-        }
     } elseif (isset($_POST['set_global_kktp'])) {
         $kktp = isset($_POST['kktp']) && $_POST['kktp'] !== '' ? (int)$_POST['kktp'] : null;
         $only_empty = isset($_POST['only_empty']);
@@ -166,7 +160,8 @@ if ($is_readonly) {
     // Order by nama_mapel ASC
     $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY 
         CASE WHEN jenis_mapel = 'Tambahan' THEN 1 ELSE 0 END,
-        LOWER(nama_mapel) ASC");
+        CASE WHEN kode_mapel REGEXP '^[0-9]+$' THEN CAST(kode_mapel AS UNSIGNED) ELSE 999 END ASC,
+        kode_mapel ASC");
     $mata_pelajaran = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Auto-renumber kode_mapel silently on every load
