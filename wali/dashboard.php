@@ -296,15 +296,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status_to_save = ucfirst($_POST['attendance_status']);
             $attendance_note = $_POST['attendance_note'] ?? '';
             
+            // Late check: after 07:30
+            $is_late_wali = time() > strtotime('07:30');
+            $late_note_wali = $is_late_wali ? 'Terlambat' : 'Tepat Waktu';
+            $keterangan_wali = trim(($attendance_note ? $attendance_note . ' | ' : '') . $late_note_wali);
+            $late_text_wali = $is_late_wali ? ' Maaf anda terlambat.' : '';
+            
             if ($check_stmt->rowCount() > 0) {
                 // Update existing
                  $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
-                 if ($update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date])) {
+                 if ($update_stmt->execute([$status_to_save, $keterangan_wali, $now_time, $current_teacher_id, $current_date])) {
                      echo "<script>
                         document.addEventListener('DOMContentLoaded', function() {
                             Swal.fire({
                                 title: 'Berhasil!',
-                                text: 'Absensi berhasil diperbarui.',
+                                text: 'Absensi berhasil diperbarui.$late_text_wali',
                                 icon: 'success',
                                 timer: 3000,
                                 timerProgressBar: true,
@@ -316,7 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // Insert new
                 $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
-                if ($insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time])) {
+                if ($insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $keterangan_wali, $now_time])) {
                      
                      // Send notification to admin
                      $waktu = date('H:i');
@@ -333,7 +339,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         document.addEventListener('DOMContentLoaded', function() {
                             Swal.fire({
                                 title: 'Berhasil!',
-                                text: 'Absensi berhasil disimpan.',
+                                text: 'Absensi berhasil disimpan.$late_text_wali',
                                 icon: 'success',
                                 timer: 3000,
                                 timerProgressBar: true,

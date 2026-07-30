@@ -494,18 +494,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 </script>";
             } else {
+                // Late check: after 07:30
+                $late_time = strtotime('07:30');
+                $current_time_ts = time();
+                $is_late = $current_time_ts > $late_time;
+                $late_note = $is_late ? 'Terlambat' : 'Tepat Waktu';
+                $keterangan_final = trim(($attendance_note ? $attendance_note . ' | ' : '') . $late_note);
+                
                 // Check if already attended regular
                 $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
                 $check_stmt->execute([$current_teacher_id, $current_date]);
                 
+                $late_text = $is_late ? ' Maaf anda terlambat.' : '';
                 if ($check_stmt->rowCount() > 0) {
                     $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
-                    $update_stmt->execute([$status_to_save, $attendance_note, $now_time, $current_teacher_id, $current_date]);
-                    $msg_text = 'Absensi harian berhasil diperbarui.';
+                    $update_stmt->execute([$status_to_save, $keterangan_final, $now_time, $current_teacher_id, $current_date]);
+                    $msg_text = 'Absensi harian berhasil diperbarui.' . $late_text;
                 } else {
                     $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
-                    $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $attendance_note, $now_time]);
-                    $msg_text = 'Absensi harian berhasil disimpan.';
+                    $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $keterangan_final, $now_time]);
+                    $msg_text = 'Absensi harian berhasil disimpan.' . $late_text;
                 }
                 
                 $waktu = date('H:i');
