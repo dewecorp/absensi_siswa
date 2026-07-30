@@ -163,28 +163,21 @@ if ($is_readonly) {
         LOWER(nama_mapel) ASC");
     $mata_pelajaran = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Auto-renumber kode_mapel (silent on every load, or triggered by ?renumber=1)
+// Auto-renumber kode_mapel silently on every load
 if (!$is_readonly) {
-    $do_renumber = !$is_readonly; // auto on every load
-    if ($do_renumber) {
-        $stmt_rn = $pdo->query("SELECT id_mapel, jenis_mapel FROM tb_mata_pelajaran ORDER BY 
-            CASE WHEN jenis_mapel = 'Tambahan' THEN 1 ELSE 0 END, LOWER(nama_mapel) ASC");
-        $n = 1;
-        $l = 'A';
-        foreach ($stmt_rn as $r) {
-            if (($r['jenis_mapel'] ?? 'Akademik') === 'Tambahan') {
-                $new_code = $l;
-                $l++;
-            } else {
-                $new_code = (string)$n;
-                $n++;
-            }
-            $pdo->prepare("UPDATE tb_mata_pelajaran SET kode_mapel = ? WHERE id_mapel = ?")->execute([$new_code, $r['id_mapel']]);
+    $stmt_rn = $pdo->query("SELECT id_mapel, jenis_mapel FROM tb_mata_pelajaran ORDER BY 
+        CASE WHEN jenis_mapel = 'Tambahan' THEN 1 ELSE 0 END, LOWER(nama_mapel) ASC");
+    $n = 1;
+    $l = 'A';
+    foreach ($stmt_rn as $r) {
+        if (($r['jenis_mapel'] ?? 'Akademik') === 'Tambahan') {
+            $new_code = $l;
+            $l++;
+        } else {
+            $new_code = (string)$n;
+            $n++;
         }
-    }
-    // If triggered by button, show message
-    if (isset($_GET['renumber'])) {
-        $message = ['type' => 'success', 'text' => 'Kode mapel berhasil diurutkan ulang!'];
+        $pdo->prepare("UPDATE tb_mata_pelajaran SET kode_mapel = ? WHERE id_mapel = ?")->execute([$new_code, $r['id_mapel']]);
     }
 }
 
@@ -506,9 +499,6 @@ include '../templates/sidebar.php';
                                 <button class="btn btn-info ml-1" data-toggle="modal" data-target="#globalKktpModal">
                                     <i class="fas fa-cog"></i> Set KKTP Global
                                 </button>
-                                <a href="?renumber=1" class="btn btn-warning ml-1" onclick="Swal.fire({title:'Urutkan Kode Mapel?',text:'Semua kode mapel akan diurutkan ulang.',icon:'question',showCancelButton:true,confirmButtonText:'Ya, Urutkan!',cancelButtonText:'Batal'}).then(r=>{if(r.isConfirmed){window.location.href='?renumber=1';}});return false;">
-                                    <i class="fas fa-sort-numeric-up-alt"></i> Urutkan
-                                </a>
                                 <?php endif; ?>
                                 <a href="#" class="btn btn-success ml-1 export-btn" data-type="excel">
                                     <i class="fas fa-file-excel"></i> Export Excel
