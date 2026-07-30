@@ -160,25 +160,31 @@ if ($is_readonly) {
     // Order by nama_mapel ASC
     $stmt = $pdo->query("SELECT * FROM tb_mata_pelajaran ORDER BY 
         CASE WHEN jenis_mapel = 'Tambahan' THEN 1 ELSE 0 END,
-        CASE WHEN kode_mapel REGEXP '^[0-9]+$' THEN CAST(kode_mapel AS UNSIGNED) ELSE 999 END ASC,
-        kode_mapel ASC");
+        LOWER(nama_mapel) ASC");
     $mata_pelajaran = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Auto-renumber kode_mapel silently on every load
+// Auto-renumber kode_mapel (silent on every load, or triggered by ?renumber=1)
 if (!$is_readonly) {
-    $stmt_rn = $pdo->query("SELECT id_mapel, jenis_mapel FROM tb_mata_pelajaran ORDER BY 
-        CASE WHEN jenis_mapel = 'Tambahan' THEN 1 ELSE 0 END, LOWER(nama_mapel) ASC");
-    $n = 1;
-    $l = 'A';
-    foreach ($stmt_rn as $r) {
-        if (($r['jenis_mapel'] ?? 'Akademik') === 'Tambahan') {
-            $new_code = $l;
-            $l++;
-        } else {
-            $new_code = (string)$n;
-            $n++;
+    $do_renumber = !$is_readonly; // auto on every load
+    if ($do_renumber) {
+        $stmt_rn = $pdo->query("SELECT id_mapel, jenis_mapel FROM tb_mata_pelajaran ORDER BY 
+            CASE WHEN jenis_mapel = 'Tambahan' THEN 1 ELSE 0 END, LOWER(nama_mapel) ASC");
+        $n = 1;
+        $l = 'A';
+        foreach ($stmt_rn as $r) {
+            if (($r['jenis_mapel'] ?? 'Akademik') === 'Tambahan') {
+                $new_code = $l;
+                $l++;
+            } else {
+                $new_code = (string)$n;
+                $n++;
+            }
+            $pdo->prepare("UPDATE tb_mata_pelajaran SET kode_mapel = ? WHERE id_mapel = ?")->execute([$new_code, $r['id_mapel']]);
         }
-        $pdo->prepare("UPDATE tb_mata_pelajaran SET kode_mapel = ? WHERE id_mapel = ?")->execute([$new_code, $r['id_mapel']]);
+    }
+    // If triggered by button, show message
+    if (isset($_GET['renumber'])) {
+        $message = ['type' => 'success', 'text' => 'Kode mapel berhasil diurutkan ulang!'];
     }
 }
 
@@ -219,23 +225,10 @@ $js_page = [];
 $no_sort_targets = $is_readonly ? "[0]" : "[0, 5]";
 $export_session_type = addslashes($user_level ?: 'admin');
 $js_page[] = "
-// Natural sort plugin for DataTables
-jQuery.fn.dataTableExt.oSort['natural-asc'] = function(a, b) {
-    var x = a.toString().replace(/<[^>]*>/g, ''); // Remove HTML tags
-    var y = b.toString().replace(/<[^>]*>/g, '');
-    return x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' });
-};
-
-jQuery.fn.dataTableExt.oSort['natural-desc'] = function(a, b) {
-    var x = a.toString().replace(/<[^>]*>/g, '');
-    var y = b.toString().replace(/<[^>]*>/g, '');
-    return y.localeCompare(x, undefined, { numeric: true, sensitivity: 'base' });
-};
-
 $(document).ready(function() {
     // Initialize DataTable
     var table = $('#table-1').DataTable({
-        \"order\": " . ($is_readonly ? "[[2, 'asc']]" : "[[3, 'asc'], [2, 'asc']]") . ",  // Sort by Jenis then Nama
+        \"order\": [],  // Use server-side ordering
         \"columnDefs\": [
             { \"sortable\": false, \"targets\": $no_sort_targets }  // No sorting for No (and Aksi if exists)
         ],
@@ -513,6 +506,9 @@ include '../templates/sidebar.php';
                                 <button class="btn btn-info ml-1" data-toggle="modal" data-target="#globalKktpModal">
                                     <i class="fas fa-cog"></i> Set KKTP Global
                                 </button>
+                                <a href="?renumber=1" class="btn btn-warning ml-1" onclick="Swal.fire({title:'Urutkan Kode Mapel?',text:'Semua kode mapel akan diurutkan ulang.',icon:'question',showCancelButton:true,confirmButtonText:'Ya, Urutkan!',cancelButtonText:'Batal'}).then(r=>{if(r.isConfirmed){window.location.href='?renumber=1';}});return false;">
+                                    <i class="fas fa-sort-numeric-up-alt"></i> Urutkan
+                                </a>
                                 <?php endif; ?>
                                 <a href="#" class="btn btn-success ml-1 export-btn" data-type="excel">
                                     <i class="fas fa-file-excel"></i> Export Excel
