@@ -237,9 +237,13 @@ if (session_status() == PHP_SESSION_NONE) {
         }
     }
 
+    $session_lifetime = 604800; // 7 hari
+    @ini_set('session.gc_maxlifetime', $session_lifetime);
+    @ini_set('session.cookie_lifetime', $session_lifetime);
+
     if (PHP_VERSION_ID >= 70300) {
         @session_set_cookie_params([
-            'lifetime' => 0,
+            'lifetime' => $session_lifetime,
             'path' => '/',
             'secure' => $is_https,
             'httponly' => true,
