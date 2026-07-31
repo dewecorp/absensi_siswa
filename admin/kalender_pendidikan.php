@@ -126,12 +126,17 @@ require_once '../templates/sidebar.php';
                             <option value="">Semua Tahun Ajaran</option>
                             <?php
                             $stmt_thn = $pdo->query("SELECT DISTINCT tahun_ajaran FROM tb_kalender_pendidikan ORDER BY tahun_ajaran DESC");
-                            while($thn = $stmt_thn->fetch()) {
-                                $selected = ($thn['tahun_ajaran'] == $tahun_ajaran_aktif) ? 'selected' : '';
-                                echo "<option value='".htmlspecialchars($thn['tahun_ajaran'])."' $selected>".htmlspecialchars($thn['tahun_ajaran'])."</option>";
+                            $tahun_dropdown = [];
+                            while ($thn = $stmt_thn->fetch()) {
+                                $tahun_dropdown[] = trim((string)$thn['tahun_ajaran']);
                             }
-                            if ($stmt_thn->rowCount() == 0) {
-                                echo "<option value='".htmlspecialchars($tahun_ajaran_aktif)."' selected>".htmlspecialchars($tahun_ajaran_aktif)."</option>";
+                            $tahun_dropdown = array_values(array_unique(array_filter($tahun_dropdown)));
+                            if (!empty($tahun_ajaran_aktif) && !in_array($tahun_ajaran_aktif, $tahun_dropdown, true)) {
+                                array_unshift($tahun_dropdown, $tahun_ajaran_aktif);
+                            }
+                            foreach ($tahun_dropdown as $thn) {
+                                $selected = ($thn == $tahun_ajaran_aktif) ? 'selected' : '';
+                                echo "<option value='".htmlspecialchars($thn)."' $selected>".htmlspecialchars($thn)."</option>";
                             }
                             ?>
                         </select>
@@ -357,11 +362,7 @@ $(document).ready(function() {
             } else {
                  // Otherwise, normal add logic
                  resetForm();
-                 // Set tahun ajaran modal to match current filter
-                 var currentFilter = $('#filterTahunAjaran').val();
-                 if (currentFilter) {
-                     $('#tahun_ajaran').val(currentFilter);
-                 }
+                 // Default ke tahun ajaran aktif profil (field sudah terisi default dari PHP)
                  $('#tgl_mulai').val(info.dateStr);
                  $('#tgl_selesai').val(info.dateStr); // Set end date to same as start date
                  $('#modalKegiatan').modal('show');
@@ -527,11 +528,6 @@ $(document).ready(function() {
         $('#tgl_mulai').val(defaultDate);
         $('#tgl_selesai').val(defaultDate); // Set end date to same as start date
 
-        // Set tahun ajaran modal to match current filter
-        var currentFilter = $('#filterTahunAjaran').val();
-        if (currentFilter) {
-            $('#tahun_ajaran').val(currentFilter);
-        }
         $('#modalKegiatan').modal('show');
         $('#modalKegiatanLabel').text('Tambah Kegiatan');
     });

@@ -2381,6 +2381,8 @@ function getAgendaBulanBerjalan(PDO $pdo, ?string $date = null): array {
         $stmt->execute([$rangeEnd, $rangeStart]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $tahunAjaranAktif = trim((string)(getSchoolProfile($pdo)['tahun_ajaran'] ?? ''));
+
         $deduped = [];
         foreach ($rows as $row) {
             $start = (string)($row['tgl_mulai'] ?? '');
@@ -2389,16 +2391,22 @@ function getAgendaBulanBerjalan(PDO $pdo, ?string $date = null): array {
                 continue;
             }
 
-            $displayStart = max($start, $rangeStart);
-            $displayEnd = min($end, $rangeEnd);
             $name = (string)($row['nama_kegiatan'] ?? '');
-            $key = normalizeAgendaDashboardName($name);
-            if ($key === '') {
-                $key = strtolower(trim($name));
-            }
 
             if (preg_match('/\b(20\d{2}\s*\/\s*20\d{2})\b/', $name, $m)) {
                 $row['tahun_ajaran'] = str_replace(' ', '', $m[1]);
+            }
+
+            $rowTA = trim((string)($row['tahun_ajaran'] ?? ''));
+            if ($tahunAjaranAktif !== '' && $rowTA !== '' && $rowTA !== $tahunAjaranAktif) {
+                continue;
+            }
+
+            $displayStart = max($start, $rangeStart);
+            $displayEnd = min($end, $rangeEnd);
+            $key = normalizeAgendaDashboardName($name);
+            if ($key === '') {
+                $key = strtolower(trim($name));
             }
 
             if (!isset($deduped[$key])) {
@@ -2504,11 +2512,20 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                                     : ((function_exists('formatDateIndonesia') ? formatDateIndonesia($displayStart) : date('d-m-Y', strtotime($displayStart))) . ' s.d. ' . (function_exists('formatDateIndonesia') ? formatDateIndonesia($displayEnd) : date('d-m-Y', strtotime($displayEnd))));
                                 $bulanPendek = [1 => 'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGS', 'SEP', 'OKT', 'NOV', 'DES'];
                                 $monthShort = $bulanPendek[(int)date('n', strtotime($dateBoxDate))] ?? strtoupper(date('M', strtotime($dateBoxDate)));
+                                $warnaMap = [
+                                    'danger'  => '#fc544b',
+                                    'success' => '#47c363',
+                                    'primary' => '#6777ef',
+                                    'warning' => '#ffa426',
+                                    'info'    => '#3abaf4',
+                                ];
+                                $itemWarna = (string)($item['warna'] ?? 'info');
+                                $itemColor = $warnaMap[$itemWarna] ?? $warnaMap['info'];
                                 ?>
                                 <div class="dashboard-agenda-item <?php echo $isToday ? 'is-today' : ''; ?>">
-                                    <div class="agenda-date-box">
+                                    <div class="agenda-date-box" style="border-color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>;">
                                         <div class="agenda-day"><?php echo htmlspecialchars(date('d', strtotime($dateBoxDate)), ENT_QUOTES, 'UTF-8'); ?></div>
-                                        <div class="agenda-month"><?php echo htmlspecialchars($monthShort, ENT_QUOTES, 'UTF-8'); ?></div>
+                                        <div class="agenda-month" style="background: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>; color: #fff;"><?php echo htmlspecialchars($monthShort, ENT_QUOTES, 'UTF-8'); ?></div>
                                     </div>
                                     <div class="agenda-content">
                                         <div class="d-flex flex-wrap align-items-center mb-1">
@@ -2517,10 +2534,10 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                                                 <span class="badge badge-success">Hari ini</span>
                                             <?php endif; ?>
                                         </div>
-                                        <div class="agenda-meta">
-                                            <i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($dateLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                        <div class="agenda-meta" style="border-left-color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>; background: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>14; box-shadow: inset 0 0 0 1px <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>26;">
+                                            <i class="far fa-clock mr-1" style="color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>;"></i><?php echo htmlspecialchars($dateLabel, ENT_QUOTES, 'UTF-8'); ?>
                                             <?php if (!empty($item['tahun_ajaran'])): ?>
-                                                <span class="mx-2">&bull;</span>Tahun Ajaran <?php echo htmlspecialchars((string)$item['tahun_ajaran'], ENT_QUOTES, 'UTF-8'); ?>
+                                                <span class="mx-2" style="color: <?php echo htmlspecialchars($itemColor, ENT_QUOTES, 'UTF-8'); ?>;">&bull;</span>Tahun Ajaran <?php echo htmlspecialchars((string)$item['tahun_ajaran'], ENT_QUOTES, 'UTF-8'); ?>
                                             <?php endif; ?>
                                         </div>
                                     </div>
