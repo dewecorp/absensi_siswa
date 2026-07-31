@@ -143,7 +143,7 @@ include '../templates/user_header.php';
 <?php if (!empty($tanggal)) :
     $todayHoliday = isSchoolHoliday($pdo, $tanggal);
     if ($todayHoliday['is_holiday']) :
-        $holiday_name = htmlspecialchars($todayHoliday['name'], ENT_QUOTES, 'UTF-8'); ?>
+        $holiday_name = addslashes($todayHoliday['name']); ?>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             Swal.fire({
