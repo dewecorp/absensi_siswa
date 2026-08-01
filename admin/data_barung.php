@@ -1743,76 +1743,10 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    var table = document.getElementById('table-1');
-    if (!table) return;
-    
-    var schoolName = $('#schoolName').val() || 'MADRASAH';
-    var schoolLogo = $('#schoolLogo').val() || '';
-    var academicYear = $('#academicYear').val() || '-';
-    var tingkatName = $('#tingkatName').val() || '';
-    var ketuaGudep = $('#ketuaGudep').val() || '-';
-    var ntaKetuaGudep = $('#ntaKetuaGudep').val() || '-';
-    var printPlace = $('#printPlace').val() || 'Padang';
-    var printDate = $('#printDate').val() || '';
-    
-    // Generate QR Code content
-    var qrContent = "Dokumen Sah: " + schoolName + "\nKetua Gudep: " + ketuaGudep + "\nNTA: " + ntaKetuaGudep;
-    var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" + encodeURIComponent(qrContent);
-    
-    // Create a new window for printing
-    var printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Data Peserta Didik Barung ' + academicYear + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }');
-    printWindow.document.write('th, td { border: 1px solid #000; padding: 8px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f2f2f2; }');
-    printWindow.document.write('h2, h3 { text-align: center; margin: 2px 0; }');
-    printWindow.document.write('.header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; position: relative; }');
-    printWindow.document.write('.logo { position: absolute; left: 0; top: 0; height: 70px; }');
-    printWindow.document.write('.header-text { text-align: center; width: 100%; }');
-    printWindow.document.write('.signature-container { margin-top: 40px; float: right; text-align: left; width: 280px; }');
-    printWindow.document.write('.signature-header { text-align: left; margin-bottom: 5px; }');
-    printWindow.document.write('.signature-space { height: 90px; display: flex; align-items: flex-end; justify-content: flex-start; margin-bottom: 5px; }');
-    printWindow.document.write('.qr-code { height: 80px; width: 80px; margin-right: 10px; }');
-    printWindow.document.write('.signature-info { text-align: left; }');
-    printWindow.document.write('.no-print { display: none; }');
-    printWindow.document.write('</style></head><body>');
-    
-    printWindow.document.write('<div class="header-container">');
-    if (schoolLogo) {
-        printWindow.document.write('<img src="' + schoolLogo + '" class="logo">');
-    }
-    printWindow.document.write('<div class="header-text">');
-    printWindow.document.write('<h2>' + schoolName.toUpperCase() + '</h2>');
-    printWindow.document.write('<h3>DATA ANGGOTA PRAMUKA</h3>');
-    printWindow.document.write('<h3>TINGKAT: ' + tingkatName.toUpperCase() + '</h3>');
-    printWindow.document.write('<h3>TAHUN AJARAN: ' + academicYear + '</h3>');
-    printWindow.document.write('</div>');
-    printWindow.document.write('</div>');
-    printWindow.document.write('<hr style="border: 1px solid #000; margin-bottom: 20px;">');
-    
-    var cleanTable = cleanBarungExportTable(table);
-    
-    printWindow.document.write(cleanTable.outerHTML);
-    
-    // Add signature section
-    printWindow.document.write('<div class="signature-container">');
-    printWindow.document.write('<div class="signature-header">');
-    printWindow.document.write('<p>' + printPlace + ', ' + printDate + '</p>');
-    printWindow.document.write('<p>Ketua Gudep,</p>');
-    printWindow.document.write('</div>');
-    printWindow.document.write('<div class="signature-space">');
-    printWindow.document.write('<img src="' + qrUrl + '" class="qr-code">');
-    printWindow.document.write('</div>');
-    printWindow.document.write('<div class="signature-info">');
-    printWindow.document.write('<p><strong>' + ketuaGudep + '</strong></p>');
-    printWindow.document.write('<p>NTA. ' + ntaKetuaGudep + '</p>');
-    printWindow.document.write('</div>');
-    printWindow.document.write('</div>');
-    
-    printWindow.document.write('<script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); }<\/script>');
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
+    var tingkatId = $('#id_tingkat_barung_hidden').val() || '';
+    // Buka halaman cetak server-side di tab independen (noopener)
+    // Tidak ada POST raksasa, tidak berbagi proses dengan halaman utama → tidak freeze
+    window.open('cetak_data_barung.php?tingkat=' + encodeURIComponent(tingkatId), '_blank', 'noopener');
 }
 JS_BLOCK;
 
@@ -1959,9 +1893,9 @@ include '../templates/sidebar.php';
                             <thead>
                                 <tr>
                                     <?php if ($can_manage_barung): ?><th class="text-center" width="36px"><input type="checkbox" id="checkAllRows"></th><?php endif; ?>
-                                    <th class="text-center" width="6%">No</th>
+                                    <th class="text-center" width="40px">No</th>
                                     <th>Nama Peserta Didik</th>
-                                    <th width="10%">Kelas</th>
+                                    <th width="60px">Kelas</th>
                                     <th width="14%">NTA</th>
                                     <th>Tempat Lahir</th>
                                     <th width="14%">Tanggal Lahir</th>
