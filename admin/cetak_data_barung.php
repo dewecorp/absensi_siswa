@@ -30,23 +30,18 @@ if ($selected_tingkat_id > 0) {
 $ketuaGudep = $school_profile['nama_kepala'] ?? '-';
 $ntaKetuaGudep = $school_profile['nip_kepala'] ?? '-';
 $printPlace = $placeFallback;
-$printDateRaw = date('d F Y');
 try {
-    $settings = $pdo->query("SELECT ketua_gudep, nta_ketua_gudep, tempat_surat, tanggal_surat FROM tb_pengaturan_cetak_barung LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    $settings = $pdo->query("SELECT ketua_gudep, nta_ketua_gudep, tempat_surat FROM tb_pengaturan_cetak_barung LIMIT 1")->fetch(PDO::FETCH_ASSOC);
     if ($settings) {
         $ketuaGudep = $settings['ketua_gudep'] ?? $ketuaGudep;
         $ntaKetuaGudep = $settings['nta_ketua_gudep'] ?? $ntaKetuaGudep;
         $printPlace = $settings['tempat_surat'] ?? $printPlace;
-        $printDateRaw = $settings['tanggal_surat'] ?? $printDateRaw;
     }
 } catch (Exception $e) {
     // ignore
 }
-$printDate = '';
-if (trim((string)$printDateRaw) !== '') {
-    $ts = strtotime((string)$printDateRaw);
-    $printDate = $ts ? date('d-m-Y', $ts) : (string)$printDateRaw;
-}
+// Tanggal cetak = hari ini (tanggal saat mencetak), bukan tanggal surat
+$printDate = date('d-m-Y');
 
 // Fetch peserta rows (sama seperti data_barung.php)
 $peserta_rows = [];
