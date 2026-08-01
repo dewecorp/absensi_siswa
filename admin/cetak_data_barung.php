@@ -73,7 +73,7 @@ if ($selected_tingkat_id > 0) {
             WHERE p.id_tingkat_barung = ?
               AND IFNULL(p.status, 'aktif') = 'aktif'
               AND (s.id_kelas IS NOT NULL OR p.id_siswa IS NULL)
-            ORDER BY k.nama_kelas ASC, p.nama_peserta_didik ASC
+            ORDER BY p.nama_peserta_didik ASC
         ");
         $stmt->execute([$selected_tingkat_id]);
         $peserta_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
