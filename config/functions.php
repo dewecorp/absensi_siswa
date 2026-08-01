@@ -2498,6 +2498,18 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                             <p class="lead mb-0">Kegiatan akan tampil otomatis dari Kalender Pendidikan.</p>
                         </div>
                     <?php else: ?>
+                        <?php
+                        $hariIndonesia = ['Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'];
+                        $formatHariTanggal = static function (string $d) use ($hariIndonesia, $bulanIndonesia): string {
+                            $ts = strtotime($d);
+                            if (!$ts) {
+                                return $d;
+                            }
+                            $namaHari = $hariIndonesia[date('l', $ts)] ?? date('l', $ts);
+                            $namaBulan = $bulanIndonesia[(int)date('n', $ts)] ?? date('F', $ts);
+                            return $namaHari . ', ' . date('j', $ts) . ' ' . $namaBulan . ' ' . date('Y', $ts);
+                        };
+                        ?>
                         <div class="dashboard-agenda-list">
                             <?php foreach ($agenda as $item): ?>
                                 <?php
@@ -2508,8 +2520,8 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                                 $isToday = $start <= $today && $end >= $today;
                                 $dateBoxDate = $isToday ? $today : $displayStart;
                                 $dateLabel = $displayStart === $displayEnd
-                                    ? (function_exists('formatDateIndonesia') ? formatDateIndonesia($displayStart) : date('d-m-Y', strtotime($displayStart)))
-                                    : ((function_exists('formatDateIndonesia') ? formatDateIndonesia($displayStart) : date('d-m-Y', strtotime($displayStart))) . ' s.d. ' . (function_exists('formatDateIndonesia') ? formatDateIndonesia($displayEnd) : date('d-m-Y', strtotime($displayEnd))));
+                                    ? $formatHariTanggal($displayStart)
+                                    : $formatHariTanggal($displayStart) . ' s.d. ' . $formatHariTanggal($displayEnd);
                                 $bulanPendek = [1 => 'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGS', 'SEP', 'OKT', 'NOV', 'DES'];
                                 $monthShort = $bulanPendek[(int)date('n', strtotime($dateBoxDate))] ?? strtoupper(date('M', strtotime($dateBoxDate)));
                                 $warnaMap = [

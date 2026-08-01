@@ -586,6 +586,8 @@ include_once '../templates/sidebar.php';
             </div>
         </div>
 
+        <?php echo renderDashboardAgendaBulanBerjalan($pdo); ?>
+
         <!-- Mobile Menu Utama - Last Position -->
         <div class="row d-lg-none mt-4">
             <div class="col-12 mb-4">
