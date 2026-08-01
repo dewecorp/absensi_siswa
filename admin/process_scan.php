@@ -68,8 +68,8 @@ try {
         // Determine id_guru (who scanned). If admin, id_guru might be null or special.
         $id_guru = ($_SESSION['level'] === 'admin') ? NULL : $_SESSION['user_id'];
         
-        // Default status 'Hadir' for scan
-        $keterangan = 'Hadir';
+        // Default status 'Hadir' untuk scan, jika melebihi 07:15 dinyatakan terlambat
+        $keterangan = (strtotime($currentTime) > strtotime('07:15:00')) ? 'Terlambat' : 'Hadir';
 
         $insertStmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru, jam_masuk) VALUES (?, ?, ?, ?, ?)");
         $insertStmt->execute([$student['id_siswa'], $today, $keterangan, $id_guru, $currentTime]);
@@ -80,7 +80,7 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => "Absensi Siswa berhasil dicatat: {$student['nama_siswa']}",
+            'message' => ($keterangan === 'Terlambat') ? "Maaf anda terlambat. Absensi berhasil dicatat: {$student['nama_siswa']}" : "Absensi Siswa berhasil dicatat: {$student['nama_siswa']}",
             'data' => [
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],

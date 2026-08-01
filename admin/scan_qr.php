@@ -218,9 +218,10 @@ document.addEventListener('DOMContentLoaded', function() {
             data: { nisn: value },
             success: function(response) {
                 if (response.success) {
+                    const isLate = response.data && response.data.keterangan == 'Terlambat';
                     Swal.fire({
                         icon: 'success',
-                        title: 'Berhasil!',
+                        title: isLate ? 'Maaf, Anda Terlambat!' : 'Berhasil!',
                         text: response.message,
                         timer: 2000,
                         showConfirmButton: false
@@ -274,10 +275,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function addToLog(data) {
         const tbody = document.getElementById('scan-log-body');
         const row = document.createElement('tr');
+        const logBadge = data.keterangan == 'Hadir' ? 'success' : 'warning';
         row.innerHTML = `
             <td>${data.jam_masuk}</td>
             <td>${data.nama_siswa}</td>
-            <td><div class="badge badge-success">${data.keterangan}</div></td>
+            <td><div class="badge badge-${logBadge}">${data.keterangan}</div></td>
         `;
         
         if (tbody.firstChild) {

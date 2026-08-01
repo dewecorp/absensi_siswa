@@ -126,13 +126,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Always allow update (INSERT or UPDATE)
             $jam_masuk = $attendance ? $attendance['jam_masuk'] : date('H:i:s');
             
+            // Validasi keterlambatan: absensi dari dashboard siswa yang melebihi 07:15 dinyatakan terlambat
+            if ($status === 'Hadir') {
+                $jam_cek = $jam_masuk ? strtotime($jam_masuk) : time();
+                if ($jam_cek > strtotime('07:15:00')) {
+                    $status = 'Terlambat';
+                }
+            }
+            if (in_array($status, ['Hadir', 'Terlambat']) && empty($jam_masuk)) {
+                $jam_masuk = date('H:i:s');
+            }
+            
             if ($attendance) {
                 // Update existing attendance
                 $stmt = $pdo->prepare("UPDATE tb_absensi SET keterangan = ?, jam_masuk = ? WHERE id_siswa = ? AND tanggal = ?");
                 if ($stmt->execute([$status, $jam_masuk, $id_siswa, $today])) {
                     $swal_message = [
-                        'title' => 'Berhasil!',
-                        'text' => 'Status absensi berhasil diubah!',
+                        'title' => ($status === 'Terlambat') ? 'Maaf, Anda Terlambat!' : 'Berhasil!',
+                        'text' => ($status === 'Terlambat') ? 'Maaf anda terlambat. Status absensi berhasil diubah!' : 'Status absensi berhasil diubah!',
                         'icon' => 'success'
                     ];
                     // Refresh attendance data
@@ -151,8 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $stmt = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, jam_masuk, keterangan) VALUES (?, ?, ?, ?)");
                 if ($stmt->execute([$id_siswa, $today, $jam_masuk, $status])) {
                     $swal_message = [
-                        'title' => 'Berhasil!',
-                        'text' => 'Absensi berhasil disimpan!',
+                        'title' => ($status === 'Terlambat') ? 'Maaf, Anda Terlambat!' : 'Berhasil!',
+                        'text' => ($status === 'Terlambat') ? 'Maaf anda terlambat. Absensi berhasil disimpan!' : 'Absensi berhasil disimpan!',
                         'icon' => 'success'
                     ];
                     // Refresh attendance data
@@ -316,7 +327,7 @@ include_once '../templates/sidebar.php';
                         <div class="row justify-content-center mb-3">
                             <div class="col-4 mb-2">
                                 <form method="POST" action="" class="mb-0">
-                                    <button type="submit" name="absen_status" value="Hadir" class="btn btn-<?php echo ($attendance && $attendance['keterangan'] == 'Hadir') ? 'success' : 'outline-success'; ?> btn-block btn-icon-split py-2">
+                                    <button type="submit" name="absen_status" value="Hadir" class="btn btn-<?php echo ($attendance && in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])) ? 'success' : 'outline-success'; ?> btn-block btn-icon-split py-2">
                                         <i class="fas fa-check d-block mb-1" style="font-size: 1.5rem;"></i>
                                         <span class="font-weight-bold">Hadir</span>
                                     </button>
@@ -344,13 +355,15 @@ include_once '../templates/sidebar.php';
                         <div class="text-center">
                             <div class="badge badge-<?php 
                                 echo $attendance['keterangan'] == 'Hadir' ? 'success' : 
+                                    ($attendance['keterangan'] == 'Terlambat' ? 'warning' : 
                                     ($attendance['keterangan'] == 'Sakit' ? 'warning' : 
-                                    ($attendance['keterangan'] == 'Izin' ? 'info' : 'danger')); 
+                                    ($attendance['keterangan'] == 'Izin' ? 'info' : 'danger'))); 
                             ?> px-4 py-2" style="font-size: 1.1rem;">
                                 <i class="fas fa-<?php 
                                     echo $attendance['keterangan'] == 'Hadir' ? 'check' : 
+                                        ($attendance['keterangan'] == 'Terlambat' ? 'clock' : 
                                         ($attendance['keterangan'] == 'Sakit' ? 'procedures' : 
-                                        ($attendance['keterangan'] == 'Izin' ? 'envelope' : 'times')); 
+                                        ($attendance['keterangan'] == 'Izin' ? 'envelope' : 'times'))); 
                                 ?> mr-2"></i>
                                 Status: <?php echo htmlspecialchars($attendance['keterangan']); ?> pada <?php echo $attendance['jam_masuk']; ?>
                             </div>
