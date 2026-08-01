@@ -668,12 +668,12 @@ include '../templates/sidebar.php';
                     }
                 });
                 
-                // Initialize DataTables
+                // Initialize DataTables (tanpa pagination)
                 if ($('#dailyTable').length) {
-                    $('#dailyTable').DataTable();
+                    $('#dailyTable').DataTable({ "paging": false });
                 }
                 if ($('#teacherTable').length) {
-                    $('#teacherTable').DataTable();
+                    $('#teacherTable').DataTable({ "paging": false });
                 }
                 
                 // Excel Export
@@ -757,14 +757,15 @@ include '../templates/sidebar.php';
                     printWindow.document.write('<!DOCTYPE html><html><head><title>' + title + '</title>');
                     printWindow.document.write('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">');
                     printWindow.document.write('<style>');
-                    printWindow.document.write('@page { size: landscape; margin: 10mm; }');
+                    printWindow.document.write('@page { size: 210mm 330mm; margin: 10mm; }'); // F4 Portrait
                     printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
                     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; }');
                     printWindow.document.write('.header { text-align: center; margin-bottom: 20px; }');
                     printWindow.document.write('.header h2 { margin: 0; color: #333; }');
                     printWindow.document.write('.header p { margin: 5px 0; color: #666; }');
-                    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10px; }'); // Smaller font for big tables
-                    printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
+                    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }');
+                    printWindow.document.write('th, td { border: 1px solid #000; padding: 5px; text-align: center; }');
+                    printWindow.document.write('td:nth-child(2) { text-align: left; white-space: normal; }');
                     printWindow.document.write('th { background-color: #368DBC !important; color: white !important; font-weight: bold; }');
                     printWindow.document.write('tr:nth-child(even) { background-color: #f2f2f2; }');
                     printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 9999; }');
