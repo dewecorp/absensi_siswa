@@ -481,69 +481,70 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
-            <?php if ($can_manage_anggota_ekskul): ?>
-            <div class="modal fade" id="modalTambahKolektif" tabindex="-1" role="dialog" aria-hidden="true">
-                <div class="modal-dialog modal-lg" role="document">
-                    <div class="modal-content">
-                        <form method="POST">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Tambah Anggota Kolektif - Kelas <?= htmlspecialchars($selected_class_name) ?></h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                            <div class="modal-body">
-                                <input type="hidden" name="action" value="add_collective">
-                                <input type="hidden" name="id_kelas" value="<?= (int)$selected_class_id ?>">
-
-                                <?php if (!empty($available_students)): ?>
-                                    <div class="form-group">
-                                        <div class="custom-control custom-checkbox mb-2">
-                                            <input type="checkbox" class="custom-control-input" id="checkAllSiswa">
-                                            <label class="custom-control-label" for="checkAllSiswa">Pilih Semua</label>
-                                        </div>
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width: 40px;">#</th>
-                                                    <th>NISN</th>
-                                                    <th>Nama Siswa</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($available_students as $s): ?>
-                                                    <tr>
-                                                        <td class="text-center">
-                                                            <input type="checkbox" class="check-siswa" name="selected_siswa[]" value="<?= (int)$s['id_siswa'] ?>">
-                                                        </td>
-                                                        <td><?= htmlspecialchars($s['nisn'] ?? '-') ?></td>
-                                                        <td><?= htmlspecialchars($s['nama_siswa']) ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="alert alert-info mb-0">Semua siswa di kelas ini sudah menjadi anggota aktif ekstrakurikuler lain. Keluarkan dari ekstrakurikuler lain jika ingin menambahkan.</div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                                <button type="submit" class="btn btn-primary" <?= empty($available_students) ? 'disabled' : '' ?>>
-                                    <i class="fas fa-save"></i> Tambahkan
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
 </div>
+
+<?php if ($can_manage_anggota_ekskul && $selected_class_id > 0): ?>
+<div class="modal fade" id="modalTambahKolektif" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tambah Anggota Kolektif - Kelas <?= htmlspecialchars($selected_class_name) ?></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="add_collective">
+                    <input type="hidden" name="id_kelas" value="<?= (int)$selected_class_id ?>">
+
+                    <?php if (!empty($available_students)): ?>
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox mb-2">
+                                <input type="checkbox" class="custom-control-input" id="checkAllSiswa">
+                                <label class="custom-control-label" for="checkAllSiswa">Pilih Semua</label>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;">#</th>
+                                        <th>NISN</th>
+                                        <th>Nama Siswa</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($available_students as $s): ?>
+                                        <tr>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="check-siswa" name="selected_siswa[]" value="<?= (int)$s['id_siswa'] ?>">
+                                            </td>
+                                            <td><?= htmlspecialchars($s['nisn'] ?? '-') ?></td>
+                                            <td><?= htmlspecialchars($s['nama_siswa']) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-info mb-0">Semua siswa di kelas ini sudah menjadi anggota aktif ekstrakurikuler lain. Keluarkan dari ekstrakurikuler lain jika ingin menambahkan.</div>
+                    <?php endif; ?>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" <?= empty($available_students) ? 'disabled' : '' ?>>
+                        <i class="fas fa-save"></i> Tambahkan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php include '../templates/footer.php'; ?>
 <style>
