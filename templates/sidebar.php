@@ -990,6 +990,11 @@ switch ($user_level) {
             $absensi_submenu_wali[] = ['title' => 'Rekap Absensi Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php?session_type=wali', 'active' => $current_page === 'rekap_absensi_les_guru.php'];
         }
 
+        // Urutkan submenu Absensi wali secara ascending
+        usort($absensi_submenu_wali, static function ($a, $b) {
+            return strcasecmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
+        });
+
         $data_utama_submenu_wali = [
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=wali', 'active' => $current_page === 'struktur_kelas.php'],
             ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=wali', 'active' => $current_page === 'mata_pelajaran.php'],
@@ -999,6 +1004,11 @@ switch ($user_level) {
             $data_utama_submenu_wali[] = ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=wali', 'active' => $current_page === 'data_nilai_ujian.php'];
             $data_utama_submenu_wali[] = ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php?session_type=wali', 'active' => $current_page === 'data_peserta_ujian.php'];
         }
+
+        // Urutkan submenu Data Utama wali secara ascending
+        usort($data_utama_submenu_wali, static function ($a, $b) {
+            return strcasecmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
+        });
 
         $data_utama_urls_wali = array_map(function($item) {
             return basename($item['url']);
