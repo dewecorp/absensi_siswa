@@ -1789,9 +1789,6 @@ include '../templates/sidebar.php';
                         <button class="btn btn-danger ml-1 d-none" id="btn-delete-selected" type="button" <?php echo $selected_tingkat_id > 0 ? '' : 'disabled'; ?>>
                             <i class="fas fa-sign-out-alt"></i> Keluarkan Terpilih
                         </button>
-                        <a href="cleanup_pramuka_alumni.php" class="btn btn-secondary ml-1" title="Membersihkan data alumni dari pramuka">
-                            <i class="fas fa-broom"></i> Cleanup Alumni
-                        </a>
                         <?php endif; ?>
                     </div>
                 </div>
