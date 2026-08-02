@@ -322,12 +322,13 @@ switch ($user_level) {
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php', 'active' => $current_page === 'siswa_baru.php'],
                     ['title' => 'Data Alumni', 'url' => '../admin/data_alumni.php', 'active' => $current_page === 'data_alumni.php'],
                     ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php', 'active' => $current_page === 'data_nilai_ujian.php'],
+                    ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php', 'active' => $current_page === 'struktur_kelas.php'],
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Jam Mengajar', 'url' => '../admin/jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
                     ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php', 'active' => $current_page === 'kalender_pendidikan.php']
                 ],
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'data_peserta_ujian.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php', 'data_prestasi_siswa.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'data_peserta_ujian.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php', 'data_prestasi_siswa.php', 'struktur_kelas.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -467,11 +468,12 @@ switch ($user_level) {
                 'title' => 'Data Utama',
                 'icon' => 'fas fa-database',
                 'submenu' => [
+                    ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'struktur_kelas.php'],
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=kepala_madrasah', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=kepala_madrasah', 'active' => $current_page === 'kalender_pendidikan.php'],
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=kepala_madrasah', 'active' => $current_page === 'siswa_baru.php']
                 ],
-                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
+                'active' => in_array($current_page, ['struktur_kelas.php', 'mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
             ],
             [
                 'title' => 'Ekstrakurikuler',
@@ -591,6 +593,7 @@ switch ($user_level) {
                 'title' => 'Data Utama',
                 'icon' => 'fas fa-database',
                 'submenu' => [
+                    ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=tata_usaha', 'active' => $current_page === 'struktur_kelas.php'],
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=tata_usaha', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'kalender_pendidikan.php'],
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'siswa_baru.php'],
@@ -598,7 +601,7 @@ switch ($user_level) {
                     ['title' => 'Data Prestasi Siswa', 'url' => '../admin/data_prestasi_siswa.php?session_type=tata_usaha', 'active' => $current_page === 'data_prestasi_siswa.php'],
                     ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_nilai_ujian.php']
                 ],
-                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php', 'data_prestasi_siswa.php', 'data_nilai_ujian.php'])
+                'active' => in_array($current_page, ['struktur_kelas.php', 'mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php', 'data_prestasi_siswa.php', 'data_nilai_ujian.php'])
             ],
             [
                 'title' => 'Absensi',
@@ -988,6 +991,7 @@ switch ($user_level) {
         }
 
         $data_utama_submenu_wali = [
+            ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=wali', 'active' => $current_page === 'struktur_kelas.php'],
             ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=wali', 'active' => $current_page === 'mata_pelajaran.php'],
             ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=wali', 'active' => $current_page === 'kalender_pendidikan.php']
         ];
