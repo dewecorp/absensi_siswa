@@ -152,6 +152,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
 
                             $stmtDel = $pdo->prepare("DELETE FROM tb_alumni WHERE id_alumni = ?");
                             $stmtDel->execute([$id_alumni]);
+
+                            // Reaktivasi ekstrakurikuler saat kelulusan dibatalkan
+                            $alumni_original_id = (int)($alumni['original_id_siswa'] ?? 0);
+                            foreach (['tb_anggota_rebana', 'tb_anggota_pencak_silat'] as $ekskul_table) {
+                                try {
+                                    $pdo->prepare("UPDATE `$ekskul_table` SET status = 'aktif', tanggal_keluar = NULL WHERE (id_siswa = ? OR id_siswa = ?) AND status = 'keluar'")->execute([$new_id_siswa, $alumni_original_id]);
+                                } catch (Exception $e) {
+                                    // ignore: tabel ekskul mungkin belum ada
+                                }
+                            }
                         }
                     }
                     $message = ['type' => 'success', 'text' => "Berhasil membatalkan kelulusan " . count($selected_students) . " siswa."];
@@ -276,6 +286,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['promote_students']) 
                             }
                             $stmtMoveOut = $pdo->prepare("UPDATE tb_siswa SET id_kelas = NULL WHERE id_siswa = ?");
                             $stmtMoveOut->execute([$id_siswa]);
+
+                            // Otomatis keluar dari semua ekstrakurikuler saat menjadi alumni
+                            foreach (['tb_anggota_rebana', 'tb_anggota_pencak_silat'] as $ekskul_table) {
+                                try {
+                                    $pdo->prepare("UPDATE `$ekskul_table` SET status = 'keluar', tanggal_keluar = NOW() WHERE id_siswa = ? AND status = 'aktif'")->execute([$id_siswa]);
+                                } catch (Exception $e) {
+                                    // ignore: tabel ekskul mungkin belum ada
+                                }
+                            }
                         }
                     }
                     

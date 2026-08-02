@@ -233,17 +233,16 @@ if ($mode === 'all' || $mode === 'data') {
                 )
             )
             WHERE IFNULL(p.status, 'aktif') = 'aktif'
-              AND p.id_tingkat_barung = ?
               AND (
                 (
                     p.sku_kecakapan_lulus_at IS NOT NULL
+                    AND p.id_tingkat_barung = ?
                     AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
                 )
                 OR (
                     p.promoted_at IS NOT NULL
-                    AND DATE(p.promoted_at) BETWEEN ? AND ?
                     AND p.promoted_from_tingkat_id = ?
-                    AND ? > 0
+                    AND DATE(p.promoted_at) BETWEEN ? AND ?
                 )
               )
             ORDER BY p.nama_peserta_didik ASC
@@ -251,8 +250,8 @@ if ($mode === 'all' || $mode === 'data') {
         $stmt->execute([
             $tingkat_id,
             $ta_start_date, $ta_end_date,
+            $tingkat_id,
             $ta_start_date, $ta_end_date,
-            $prev_tingkat_id, $prev_tingkat_id,
         ]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -319,10 +318,8 @@ if ($mode === 'all' || $mode === 'data') {
             }
             $tid_row = (int)($row['id_tingkat_barung'] ?? 0);
             $ok_target_lulus = $tid_row === $requested_tingkat_id && !empty($row['sku_kecakapan_lulus_at']);
-            $ok_target_promoted = $tid_row === $requested_tingkat_id
-                && !empty($row['promoted_at'])
-                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $prev_for_target
-                && $prev_for_target > 0;
+            $ok_target_promoted = !empty($row['promoted_at'])
+                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $requested_tingkat_id;
             $ok_lulus_prev_for_target = $ok_target_lulus || $ok_target_promoted;
             if (!$ok_lulus_prev_for_target) {
                 $row = null;
@@ -341,17 +338,16 @@ if ($mode === 'all' || $mode === 'data') {
             $seq_stmt = $pdo->prepare("
                 SELECT COUNT(*) + 1 AS nomor_urut FROM tb_peserta_didik_barung px
                 WHERE IFNULL(px.status,'aktif')='aktif'
-                  AND px.id_tingkat_barung = ?
                   AND (
                     (
                         px.sku_kecakapan_lulus_at IS NOT NULL
+                        AND px.id_tingkat_barung = ?
                         AND DATE(px.sku_kecakapan_lulus_at) BETWEEN ? AND ?
                     )
                     OR (
                         px.promoted_at IS NOT NULL
-                        AND DATE(px.promoted_at) BETWEEN ? AND ?
                         AND px.promoted_from_tingkat_id = ?
-                        AND ? > 0
+                        AND DATE(px.promoted_at) BETWEEN ? AND ?
                     )
                   )
                   AND (
@@ -362,9 +358,8 @@ if ($mode === 'all' || $mode === 'data') {
             $seqParams = [
                 $requested_tingkat_id,
                 $ta_start_date, $ta_end_date,
+                $requested_tingkat_id,
                 $ta_start_date, $ta_end_date,
-                $prev_for_target,
-                $prev_for_target,
                 (string)$row['nama_peserta_didik'],
                 (string)$row['nama_peserta_didik'],
                 (int)$row['id_peserta_didik_barung']

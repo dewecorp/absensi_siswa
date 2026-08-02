@@ -788,9 +788,21 @@ if ($selected_tingkat_id > 0) {
         $sku_butir_rows = $b->fetchAll(PDO::FETCH_ASSOC);
 
         $stP = $pdo->prepare('
-            SELECT id_peserta_didik_barung, nama_peserta_didik FROM tb_peserta_didik_barung
-            WHERE id_tingkat_barung = ? AND IFNULL(status, \'aktif\') = \'aktif\'
-            ORDER BY nama_peserta_didik ASC
+            SELECT p.id_peserta_didik_barung, p.nama_peserta_didik
+            FROM tb_peserta_didik_barung p
+            LEFT JOIN tb_siswa s ON (
+                s.id_siswa = p.id_siswa
+                OR (
+                    p.id_siswa IS NULL
+                    AND TRIM(IFNULL(p.nta, \'\')) <> \'\'
+                    AND CONVERT(TRIM(IFNULL(s.nisn, \'\')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                        = CONVERT(TRIM(IFNULL(p.nta, \'\')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                )
+            )
+            LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
+            WHERE p.id_tingkat_barung = ? AND IFNULL(p.status, \'aktif\') = \'aktif\'
+              AND (s.id_kelas IS NOT NULL OR p.id_siswa IS NULL)
+            ORDER BY p.nama_peserta_didik ASC
         ');
         $stP->execute([$selected_tingkat_id]);
         $peserta_rows = $stP->fetchAll(PDO::FETCH_ASSOC);
