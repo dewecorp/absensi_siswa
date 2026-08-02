@@ -238,18 +238,19 @@ if ($mode === 'all' || $mode === 'data') {
                             = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
                     )
                 )
-                WHERE (
-                  (
-                      p.sku_kecakapan_lulus_at IS NOT NULL
-                      AND p.id_tingkat_barung = ?
-                      AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                WHERE p.id_tingkat_barung = ?
+                  AND (
+                    (
+                        p.sku_kecakapan_lulus_at IS NOT NULL
+                        AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                    )
+                    OR (
+                        p.promoted_at IS NOT NULL
+                        AND DATE(p.promoted_at) BETWEEN ? AND ?
+                        AND p.promoted_from_tingkat_id = ?
+                        AND ? > 0
+                    )
                   )
-                  OR (
-                      p.promoted_at IS NOT NULL
-                      AND p.promoted_from_tingkat_id = ?
-                      AND DATE(p.promoted_at) BETWEEN ? AND ?
-                  )
-                )
             ) suket_rows
             WHERE rn = 1
             ORDER BY nama_peserta_didik ASC
@@ -257,8 +258,8 @@ if ($mode === 'all' || $mode === 'data') {
         $stmt->execute([
             $tingkat_id,
             $ta_start_date, $ta_end_date,
-            $tingkat_id,
             $ta_start_date, $ta_end_date,
+            $prev_tingkat_id, $prev_tingkat_id,
         ]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -328,8 +329,10 @@ if ($mode === 'all' || $mode === 'data') {
                 && !empty($row['sku_kecakapan_lulus_at'])
                 && date('Y-m-d', strtotime((string)$row['sku_kecakapan_lulus_at'])) >= $ta_start_date
                 && date('Y-m-d', strtotime((string)$row['sku_kecakapan_lulus_at'])) <= $ta_end_date;
-            $ok_target_promoted = !empty($row['promoted_at'])
-                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $requested_tingkat_id
+            $ok_target_promoted = $tid_row === $requested_tingkat_id
+                && !empty($row['promoted_at'])
+                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $prev_for_target
+                && $prev_for_target > 0
                 && date('Y-m-d', strtotime((string)$row['promoted_at'])) >= $ta_start_date
                 && date('Y-m-d', strtotime((string)$row['promoted_at'])) <= $ta_end_date;
             $ok_lulus_prev_for_target = $ok_target_lulus || $ok_target_promoted;
@@ -356,18 +359,19 @@ if ($mode === 'all' || $mode === 'data') {
                              ORDER BY CASE WHEN IFNULL(p.status, 'aktif') = 'aktif' THEN 0 ELSE 1 END, p.id_peserta_didik_barung ASC
                            ) AS rn
                     FROM tb_peserta_didik_barung p
-                    WHERE (
+                    WHERE p.id_tingkat_barung = ?
+                      AND (
                         (
                             p.sku_kecakapan_lulus_at IS NOT NULL
-                            AND p.id_tingkat_barung = ?
                             AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
                         )
                         OR (
                             p.promoted_at IS NOT NULL
-                            AND p.promoted_from_tingkat_id = ?
                             AND DATE(p.promoted_at) BETWEEN ? AND ?
+                            AND p.promoted_from_tingkat_id = ?
+                            AND ? > 0
                         )
-                    )
+                      )
                 ) suket_seq
                 WHERE rn = 1
                   AND (
@@ -378,8 +382,8 @@ if ($mode === 'all' || $mode === 'data') {
             $seqParams = [
                 $requested_tingkat_id,
                 $ta_start_date, $ta_end_date,
-                $requested_tingkat_id,
                 $ta_start_date, $ta_end_date,
+                $prev_for_target, $prev_for_target,
                 (string)$row['nama_peserta_didik'],
                 (string)$row['nama_peserta_didik'],
                 (int)$row['id_peserta_didik_barung']

@@ -205,18 +205,19 @@ if ($selected_tingkat_id > 0) {
                             = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
                     )
                 )
-                WHERE (
-                  (
-                      p.sku_kecakapan_lulus_at IS NOT NULL
-                      AND p.id_tingkat_barung = ?
-                      AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                WHERE p.id_tingkat_barung = ?
+                  AND (
+                    (
+                        p.sku_kecakapan_lulus_at IS NOT NULL
+                        AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                    )
+                    OR (
+                        p.promoted_at IS NOT NULL
+                        AND DATE(p.promoted_at) BETWEEN ? AND ?
+                        AND p.promoted_from_tingkat_id = ?
+                        AND ? > 0
+                    )
                   )
-                  OR (
-                      p.promoted_at IS NOT NULL
-                      AND p.promoted_from_tingkat_id = ?
-                      AND DATE(p.promoted_at) BETWEEN ? AND ?
-                  )
-                )
             ) suket_rows
             WHERE rn = 1
             ORDER BY nama_peserta_didik ASC
@@ -224,8 +225,8 @@ if ($selected_tingkat_id > 0) {
         $stmt->execute([
             $selected_tingkat_id,
             $ta_start_date, $ta_end_date,
-            $selected_tingkat_id,
             $ta_start_date, $ta_end_date,
+            $prev_tingkat_id, $prev_tingkat_id,
         ]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
