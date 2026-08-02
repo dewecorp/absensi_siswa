@@ -184,19 +184,22 @@ header("Expires: 0");
                     <?php foreach ($classes as $c): ?>
                         <th style="font-size:9px;">
                         <?php
-                        $code = '';
+                        $guru_label = '';
                         if (isset($main_schedule[$day])) {
                             foreach ($main_schedule[$day] as $jam_data) {
                                 if (isset($jam_data[$c['id_kelas']]) && !empty($jam_data[$c['id_kelas']]['guru_id'])) {
                                     $gid = $jam_data[$c['id_kelas']]['guru_id'];
-                                    if (isset($guru_map[$gid]['display_code'])) {
-                                        $code = $guru_map[$gid]['display_code'];
-                                        break;
+                                    // Jadwal Kelas (satu kelas): tampilkan nama guru
+                                    if ($kelas_id && isset($guru_map[$gid]['nama_guru'])) {
+                                        $guru_label = $guru_map[$gid]['nama_guru'];
+                                    } elseif (!$kelas_id && isset($guru_map[$gid]['display_code'])) {
+                                        $guru_label = $guru_map[$gid]['display_code'];
                                     }
+                                    break;
                                 }
                             }
                         }
-                        echo htmlspecialchars($code);
+                        echo htmlspecialchars($guru_label);
                         ?>
                         </th>
                     <?php endforeach; ?>

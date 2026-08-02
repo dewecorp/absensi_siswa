@@ -186,8 +186,8 @@ $html = '
     <title>' . $page_title . '</title>
     <style>
         @page {
-            size: 330mm 215mm; /* F4 / Folio Landscape */
-            margin: 3mm 10mm 10mm 10mm; /* margin atas lebih kecil */
+            size: 210mm 330mm; /* F4 / Folio Portrait */
+            margin: 10mm 15mm 12mm 15mm; /* atas, kanan, bawah, kiri */
         }
         @media print {
             body {
@@ -225,7 +225,7 @@ $html = '
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { border: 1px solid black; padding: 3px; text-align: center; font-size: 9pt; word-wrap: break-word; }
         th { background-color: #f0f0f0; }
-        .signature-table { margin-top: 5px; border: none; page-break-inside: avoid; }
+        .signature-table { margin-top: 10mm; border: none; page-break-inside: avoid; }
         .signature-table td { border: none; vertical-align: top; text-align: center; padding: 5px; font-size: 10pt; }
         .special-slot { background-color: #f9f9f9; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
         .legend-table { width: 100%; font-size: 7.5pt; border: 1px solid black; margin-bottom: 2px; }
@@ -270,43 +270,90 @@ $html .= '
         </div>
     </div>
 
-    <h3 style="text-align: center;">' . $display_title . '</h3>
+    <h3 style="text-align: center;">' . strtoupper($display_title) . '</h3>';
 
+$single_class_tables_rendered = false;
+if ($kelas_id) {
+    $single_class_tables_rendered = true;
+}
+
+if (!$single_class_tables_rendered) {
+    $html .= '
     <table>
         <thead>';
+}
 
 if ($kelas_id) {
-    // --- JADWAL KELAS (Single Class) ---
-    $html .= '
-            <tr>
-                <th rowspan="2" style="width: 40px;">JAM<br>KE</th>
-                <th rowspan="2" style="width: 80px;">WAKTU</th>';
-    
-    foreach ($days as $day) {
-        $html .= '<th>' . strtoupper($day) . '</th>';
-    }
-    $html .= '
-            </tr>
-            <tr>';
-            
-    foreach ($days as $day) {
-        // Find teacher for this day (First valid teacher in schedule)
-        $teacher_name = '-';
-        if (isset($main_schedule[$day])) {
-            foreach ($main_schedule[$day] as $jam_data) {
-                if (isset($jam_data[$classes[0]['id_kelas']])) {
-                    $sched = $jam_data[$classes[0]['id_kelas']];
-                    if (!empty($sched['guru_id']) && isset($guru_map[$sched['guru_id']])) {
-                        $teacher_name = $guru_map[$sched['guru_id']]['nama_guru'];
-                        break; 
+    // --- JADWAL KELAS (Single Class): F4 Portrait, 3 hari atas + 3 hari bawah ---
+    $day_chunks = array_chunk($days, 3);
+    foreach ($day_chunks as $chunk) {
+        if (empty($chunk)) {
+            continue;
+        }
+        $html .= '<table style="table-layout: fixed;">';
+        $html .= '<thead><tr>';
+        $html .= '<th rowspan="2" style="width: 40px;">JAM<br>KE</th>';
+        $html .= '<th rowspan="2" style="width: 90px;">WAKTU</th>';
+        foreach ($chunk as $day) {
+            $html .= '<th>' . strtoupper($day) . '</th>';
+        }
+        $html .= '</tr><tr>';
+        foreach ($chunk as $day) {
+            $teacher_name = '-';
+            if (isset($main_schedule[$day])) {
+                foreach ($main_schedule[$day] as $jam_data) {
+                    if (isset($jam_data[$classes[0]['id_kelas']])) {
+                        $sched = $jam_data[$classes[0]['id_kelas']];
+                        if (!empty($sched['guru_id']) && isset($guru_map[$sched['guru_id']])) {
+                            $teacher_name = $guru_map[$sched['guru_id']]['nama_guru'];
+                            break;
+                        }
                     }
                 }
             }
+            $html .= '<th>' . htmlspecialchars($teacher_name) . '</th>';
         }
-        $teacher_label = $teacher_name !== '-' && isset($sched['guru_id']) && isset($guru_codes[$sched['guru_id']]) ? $guru_codes[$sched['guru_id']] : $teacher_name;
-        $html .= '<th style="font-size: 8pt;">' . htmlspecialchars($teacher_label) . '</th>';
+        $html .= '</tr></thead><tbody>';
+
+        foreach ($jam_display as $jam) {
+            $jam_label = $jam['jam_ke'];
+            $is_special = in_array(strtoupper((string)$jam_label), ['A', 'B', 'C', 'D']);
+            $waktu = date('H.i', strtotime($jam['waktu_mulai'])) . '-' . date('H.i', strtotime($jam['waktu_selesai']));
+
+            $html .= '<tr>';
+            $html .= '<td>' . $jam_label . '</td>';
+            $html .= '<td>' . $waktu . '</td>';
+
+            if ($is_special) {
+                foreach ($chunk as $day) {
+                    $special_text = '';
+                    if (isset($main_schedule[$day][$jam_label])) {
+                        foreach ($main_schedule[$day][$jam_label] as $sched) {
+                            if (isset($mapel_map[$sched['mapel_id']])) {
+                                $special_text = $mapel_map[$sched['mapel_id']]['nama_mapel'];
+                                break;
+                            }
+                        }
+                    }
+                    $html .= '<td class="special-slot">' . htmlspecialchars($special_text) . '</td>';
+                }
+            } else {
+                foreach ($chunk as $day) {
+                    $content = '';
+                    if (isset($main_schedule[$day][$jam_label][$classes[0]['id_kelas']])) {
+                        $sched = $main_schedule[$day][$jam_label][$classes[0]['id_kelas']];
+                        if (isset($mapel_map[$sched['mapel_id']])) {
+                            $content = '<b>' . $mapel_map[$sched['mapel_id']]['nama_mapel'] . '</b>';
+                        }
+                    }
+                    $html .= '<td>' . $content . '</td>';
+                }
+            }
+            $html .= '</tr>';
+        }
+        $html .= '</tbody></table>';
+        $html .= '<div style="height: 8px;"></div>';
     }
-    $html .= '</tr>';
 
 } else {
     // --- JADWAL UTAMA (All Classes) ---
@@ -350,6 +397,7 @@ if ($kelas_id) {
     $html .= '</tr>';
 }
 
+if (!$single_class_tables_rendered) {
 $html .= '
         </thead>
         <tbody>';
@@ -386,14 +434,9 @@ foreach ($jam_display as $jam) {
                     $sched = $main_schedule[$day][$jam_label][$c['id_kelas']];
                     if (isset($mapel_map[$sched['mapel_id']])) {
                         $m = $mapel_map[$sched['mapel_id']];
-                        // If Single Class (Jadwal Kelas), show full name, else show code
-                        if ($kelas_id) {
-                            $content = '<b>' . $m['nama_mapel'] . '</b>';
-                        } else {
-                            // Use Generated Codes for Jadwal Utama
-                            $m_code = isset($mapel_codes[$sched['mapel_id']]) ? $mapel_codes[$sched['mapel_id']] : '-';
-                            $content = '<b>' . $m_code . '</b>';
-                        }
+                        // Use Generated Codes for Jadwal Utama
+                        $m_code = isset($mapel_codes[$sched['mapel_id']]) ? $mapel_codes[$sched['mapel_id']] : '-';
+                        $content = '<b>' . $m_code . '</b>';
                     }
                 }
                 $html .= '<td>' . $content . '</td>';
@@ -405,10 +448,12 @@ foreach ($jam_display as $jam) {
 
 $html .= '
         </tbody>
-    </table>
+    </table>';
+}
 
-    <table class="signature-table" style="width: 100%;">
-        <tr>';
+$html .= '
+
+    <table class="signature-table" style="width: 100%;">';
 
 // Signatures
 $tempat = !empty($school_profile['tempat_jadwal']) ? $school_profile['tempat_jadwal'] : 'Jakarta';
@@ -417,6 +462,15 @@ $tanggal = !empty($school_profile['tanggal_jadwal'])
     : formatDateIndonesia(date('Y-m-d'));
 $date_str = $tempat . ', ' . $tanggal;
 
+// Tempat & tanggal untuk Jadwal Kelas: dinaikkan (dekat tabel), terpisah dari tanda tangan
+if ($kelas_id) {
+    $html .= '
+    <div style="text-align: right; margin-top: 3mm; padding: 0 5px;">' . $date_str . '</div>';
+}
+
+$html .= '
+    <table class="signature-table" style="width: 100%;">';
+
 if ($kelas_id) {
     // Jadwal Kelas: Mengetahui (Kepala), Tanggal & Wali Kelas
     $qrContentWali = 'Validasi Tanda Tangan Digital: ' . $wali_kelas . ' - ' . ($school_profile['nama_madrasah'] ?? 'Madrasah');
@@ -424,18 +478,22 @@ if ($kelas_id) {
     $qrImgWali = '<img src="' . $qrUrlWali . '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">';
 
     $html .= '
-            <td width="50%">
-                Mengetahui,<br>
-                Kepala Madrasah<br>
-                ' . $qr_img . '
-                <b>' . htmlspecialchars($kepala_madrasah) . '</b>
-            </td>
-            <td width="50%">
-                ' . $date_str . '<br>
-                Wali Kelas ' . $classes[0]['nama_kelas'] . '<br>
-                ' . $qrImgWali . '
-                <b>' . htmlspecialchars($wali_kelas) . '</b>
-            </td>';
+            <tr>
+                <td width="50%" style="text-align: center; border: none; padding: 5px;">
+                    Mengetahui,<br>
+                    Kepala Madrasah<br>
+                    <br>
+                    ' . $qr_img . '
+                    <b>' . htmlspecialchars($kepala_madrasah) . '</b>
+                </td>
+                <td width="50%" style="text-align: center; border: none; padding: 5px;">
+                    <br>
+                    Wali Kelas ' . $classes[0]['nama_kelas'] . '<br>
+                    <br>
+                    ' . $qrImgWali . '
+                    <b>' . htmlspecialchars($wali_kelas) . '</b>
+                </td>
+            </tr>';
 } else {
     // Jadwal Utama: Legend on Left, Signature on Right
     
@@ -513,19 +571,20 @@ if ($kelas_id) {
     ';
     
     $html .= '
-            <td width="75%" style="vertical-align:top; padding-right: 15px;">
-                ' . $legend_html . '
-            </td>
-            <td width="25%" style="vertical-align:top;">
-                ' . $date_str . '<br>
-                Kepala Madrasah<br>
-                ' . $qr_img . '
-                <b>' . htmlspecialchars($kepala_madrasah) . '</b>
-            </td>';
+            <tr>
+                <td width="75%" style="vertical-align:top; padding-right: 15px;">
+                    ' . $legend_html . '
+                </td>
+                <td width="25%" style="vertical-align:top;">
+                    ' . $date_str . '<br>
+                    Kepala Madrasah<br>
+                    ' . $qr_img . '
+                    <b>' . htmlspecialchars($kepala_madrasah) . '</b>
+                </td>
+            </tr>';
 }
 
 $html .= '
-        </tr>
     </table>
     
     <script>
