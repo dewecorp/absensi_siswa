@@ -206,63 +206,59 @@ if ($mode === 'all' || $mode === 'data') {
         }
 
         $stmt = $pdo->prepare("
-            SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
-                   COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
-                   COALESCE(
-                     CASE
-                       WHEN s.tanggal_lahir IS NULL THEN NULL
-                       WHEN LEFT(s.tanggal_lahir, 10) = '0000-00-00' THEN NULL
-                       WHEN CAST(LEFT(s.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
-                       ELSE LEFT(s.tanggal_lahir, 10)
-                     END,
-                     CASE
-                       WHEN p.tanggal_lahir IS NULL THEN NULL
-                       WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
-                       WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
-                       ELSE LEFT(p.tanggal_lahir, 10)
-                     END
-                   ) AS tanggal_lahir
-            FROM tb_peserta_didik_barung p
-            LEFT JOIN tb_siswa s ON (
-                s.id_siswa = p.id_siswa
-                OR (
-                    p.id_siswa IS NULL
-                    AND TRIM(IFNULL(p.nta, '')) <> ''
-                    AND CONVERT(TRIM(IFNULL(s.nisn, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
-                        = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
-                )
-            )
-            WHERE p.id_tingkat_barung = ?
-              AND (
-                (
-                    IFNULL(p.status, 'aktif') = 'aktif'
-                    AND (
-                        (
-                            p.sku_kecakapan_lulus_at IS NOT NULL
-                            AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
-                        )
-                        OR (
-                            p.promoted_at IS NOT NULL
-                            AND DATE(p.promoted_at) BETWEEN ? AND ?
-                            AND p.promoted_from_tingkat_id = ?
-                            AND ? > 0
-                        )
+            SELECT id_peserta_didik_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir
+            FROM (
+                SELECT p.id_peserta_didik_barung, p.nama_peserta_didik, p.nta,
+                       COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
+                       COALESCE(
+                         CASE
+                           WHEN s.tanggal_lahir IS NULL THEN NULL
+                           WHEN LEFT(s.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                           WHEN CAST(LEFT(s.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                           ELSE LEFT(s.tanggal_lahir, 10)
+                         END,
+                         CASE
+                           WHEN p.tanggal_lahir IS NULL THEN NULL
+                           WHEN LEFT(p.tanggal_lahir, 10) = '0000-00-00' THEN NULL
+                           WHEN CAST(LEFT(p.tanggal_lahir, 4) AS UNSIGNED) < 1900 THEN NULL
+                           ELSE LEFT(p.tanggal_lahir, 10)
+                         END
+                       ) AS tanggal_lahir,
+                       ROW_NUMBER() OVER (
+                         PARTITION BY COALESCE(NULLIF(p.id_siswa, 0), 0), COALESCE(NULLIF(TRIM(p.nta), ''), '')
+                         ORDER BY CASE WHEN IFNULL(p.status, 'aktif') = 'aktif' THEN 0 ELSE 1 END, p.id_peserta_didik_barung ASC
+                       ) AS rn
+                FROM tb_peserta_didik_barung p
+                LEFT JOIN tb_siswa s ON (
+                    s.id_siswa = p.id_siswa
+                    OR (
+                        p.id_siswa IS NULL
+                        AND TRIM(IFNULL(p.nta, '')) <> ''
+                        AND CONVERT(TRIM(IFNULL(s.nisn, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                            = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
                     )
                 )
-                OR (
-                    p.status = 'keluar'
-                    AND DATE(p.tanggal_masuk) <= ?
-                    AND DATE(p.tanggal_keluar) >= ?
+                WHERE (
+                  (
+                      p.sku_kecakapan_lulus_at IS NOT NULL
+                      AND p.id_tingkat_barung = ?
+                      AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                  )
+                  OR (
+                      p.promoted_at IS NOT NULL
+                      AND p.promoted_from_tingkat_id = ?
+                      AND DATE(p.promoted_at) BETWEEN ? AND ?
+                  )
                 )
-              )
-            ORDER BY p.nama_peserta_didik ASC
+            ) suket_rows
+            WHERE rn = 1
+            ORDER BY nama_peserta_didik ASC
         ");
         $stmt->execute([
             $tingkat_id,
             $ta_start_date, $ta_end_date,
+            $tingkat_id,
             $ta_start_date, $ta_end_date,
-            $prev_tingkat_id, $prev_tingkat_id,
-            $ta_end_date, $ta_start_date,
         ]);
         $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -328,17 +324,15 @@ if ($mode === 'all' || $mode === 'data') {
                 }
             }
             $tid_row = (int)($row['id_tingkat_barung'] ?? 0);
-            $ok_target_lulus = $tid_row === $requested_tingkat_id && !empty($row['sku_kecakapan_lulus_at']);
-            $ok_target_promoted = $tid_row === $requested_tingkat_id
-                && !empty($row['promoted_at'])
-                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $prev_for_target
-                && $prev_for_target > 0;
-            $ok_closed_in_year = $tid_row === $requested_tingkat_id
-                && !empty($row['status']) && (string)$row['status'] === 'keluar'
-                && !empty($row['tanggal_masuk']) && !empty($row['tanggal_keluar'])
-                && date('Y-m-d', strtotime((string)$row['tanggal_masuk'])) <= $ta_end_date
-                && date('Y-m-d', strtotime((string)$row['tanggal_keluar'])) >= $ta_start_date;
-            $ok_lulus_prev_for_target = $ok_target_lulus || $ok_target_promoted || $ok_closed_in_year;
+            $ok_target_lulus = $tid_row === $requested_tingkat_id
+                && !empty($row['sku_kecakapan_lulus_at'])
+                && date('Y-m-d', strtotime((string)$row['sku_kecakapan_lulus_at'])) >= $ta_start_date
+                && date('Y-m-d', strtotime((string)$row['sku_kecakapan_lulus_at'])) <= $ta_end_date;
+            $ok_target_promoted = !empty($row['promoted_at'])
+                && (int)($row['promoted_from_tingkat_id'] ?? 0) === $requested_tingkat_id
+                && date('Y-m-d', strtotime((string)$row['promoted_at'])) >= $ta_start_date
+                && date('Y-m-d', strtotime((string)$row['promoted_at'])) <= $ta_end_date;
+            $ok_lulus_prev_for_target = $ok_target_lulus || $ok_target_promoted;
             if (!$ok_lulus_prev_for_target) {
                 $row = null;
             }
@@ -354,41 +348,38 @@ if ($mode === 'all' || $mode === 'data') {
         if ($row) {
             // Nomor urut di antara peserta yang berhak surat pada tingkat yang sama dan tahun ajaran yang sama
             $seq_stmt = $pdo->prepare("
-                SELECT COUNT(*) + 1 AS nomor_urut FROM tb_peserta_didik_barung px
-                WHERE px.id_tingkat_barung = ?
-                  AND (
-                    (
-                        IFNULL(px.status,'aktif')='aktif'
-                        AND (
-                            (
-                                px.sku_kecakapan_lulus_at IS NOT NULL
-                                AND DATE(px.sku_kecakapan_lulus_at) BETWEEN ? AND ?
-                            )
-                            OR (
-                                px.promoted_at IS NOT NULL
-                                AND DATE(px.promoted_at) BETWEEN ? AND ?
-                                AND px.promoted_from_tingkat_id = ?
-                                AND ? > 0
-                            )
+                SELECT COUNT(*) + 1 AS nomor_urut
+                FROM (
+                    SELECT p.nama_peserta_didik, p.id_peserta_didik_barung,
+                           ROW_NUMBER() OVER (
+                             PARTITION BY COALESCE(NULLIF(p.id_siswa, 0), 0), COALESCE(NULLIF(TRIM(p.nta), ''), '')
+                             ORDER BY CASE WHEN IFNULL(p.status, 'aktif') = 'aktif' THEN 0 ELSE 1 END, p.id_peserta_didik_barung ASC
+                           ) AS rn
+                    FROM tb_peserta_didik_barung p
+                    WHERE (
+                        (
+                            p.sku_kecakapan_lulus_at IS NOT NULL
+                            AND p.id_tingkat_barung = ?
+                            AND DATE(p.sku_kecakapan_lulus_at) BETWEEN ? AND ?
+                        )
+                        OR (
+                            p.promoted_at IS NOT NULL
+                            AND p.promoted_from_tingkat_id = ?
+                            AND DATE(p.promoted_at) BETWEEN ? AND ?
                         )
                     )
-                    OR (
-                        px.status = 'keluar'
-                        AND DATE(px.tanggal_masuk) <= ?
-                        AND DATE(px.tanggal_keluar) >= ?
-                    )
-                  )
+                ) suket_seq
+                WHERE rn = 1
                   AND (
-                    px.nama_peserta_didik < ?
-                    OR (px.nama_peserta_didik = ? AND px.id_peserta_didik_barung < ?)
+                    suket_seq.nama_peserta_didik < ?
+                    OR (suket_seq.nama_peserta_didik = ? AND suket_seq.id_peserta_didik_barung < ?)
                   )
             ");
             $seqParams = [
                 $requested_tingkat_id,
                 $ta_start_date, $ta_end_date,
+                $requested_tingkat_id,
                 $ta_start_date, $ta_end_date,
-                $prev_for_target, $prev_for_target,
-                $ta_end_date, $ta_start_date,
                 (string)$row['nama_peserta_didik'],
                 (string)$row['nama_peserta_didik'],
                 (int)$row['id_peserta_didik_barung']
