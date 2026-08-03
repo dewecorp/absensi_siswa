@@ -38,7 +38,7 @@ $nis_siswa = $student_info['nisn'] ?? '';
 $nama_kelas = $student_info['nama_kelas'] ?? '';
 $waliKelasName = $student_info['wali_kelas'] ?? '';
 
-// --- 1. Data Absensi Les ---
+// --- 1. Data Kehadiran Les ---
 // Fetch all schedules for Class 6 and join with student's attendance
 $stmt = $pdo->prepare("
     SELECT 
@@ -53,7 +53,7 @@ $stmt->execute([$id_siswa]);
 $harian_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Set page title
-$page_title = 'Rekap Absensi Les';
+$page_title = 'Rekap Kehadiran Les';
 
 // Define JS libraries for this page
 $js_libs = [
@@ -67,10 +67,10 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Rekap Absensi Les</h1>
+            <h1>Rekap Kehadiran Les</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item">Rekap Absensi Les</div>
+                <div class="breadcrumb-item">Rekap Kehadiran Les</div>
             </div>
         </div>
 
@@ -98,7 +98,7 @@ include '../templates/sidebar.php';
                                     <tbody>
                                         <?php if (empty($harian_data)): ?>
                                             <tr>
-                                                <td colspan="3" class="text-center">Belum ada data absensi les.</td>
+                                                <td colspan="3" class="text-center">Belum ada data kehadiran les.</td>
                                             </tr>
                                         <?php else: ?>
                                             <?php $no = 1; foreach ($harian_data as $row): ?>
@@ -201,7 +201,7 @@ function exportExcel() {
         { s: { r: 5, c: 0 }, e: { r: 5, c: 2 } }  // Title
     ];
 
-    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi Les");
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran Les");
     
     // Write file
     XLSX.writeFile(wb, "Rekap_Absensi_Les_<?= str_replace(' ', '_', $nama_siswa) ?>.xlsx");

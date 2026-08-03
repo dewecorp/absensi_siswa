@@ -8,7 +8,7 @@ if (!isAuthorized(['guru'])) {
 }
 
 // Set page title
-$page_title = 'Rekap Absensi';
+$page_title = 'Rekap Kehadiran';
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -388,10 +388,10 @@ include '../templates/user_header.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Rekap Absensi</h1>
+            <h1>Rekap Kehadiran</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item">Rekap Absensi</div>
+                <div class="breadcrumb-item">Rekap Kehadiran</div>
             </div>
         </div>
 
@@ -460,7 +460,7 @@ include '../templates/user_header.php';
                                     </div>
                                 <?php else: ?>
                                     <div class="alert alert-light mt-3 text-center">
-                                        Semua siswa hadir atau belum ada data absensi untuk tanggal ini.
+                                        Semua siswa hadir atau belum ada data kehadiran untuk tanggal ini.
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -473,7 +473,7 @@ include '../templates/user_header.php';
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Filter Rekap Absensi</h4>
+                            <h4>Filter Rekap Kehadiran</h4>
                         </div>
                         <div class="card-body">
                                         <form method="POST" class="row" id="attendanceFilterForm">
@@ -550,7 +550,7 @@ include '../templates/user_header.php';
                                         <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title">Berhasil</div>
-                                            Ditemukan <?php echo count($daily_results); ?> data absensi untuk tanggal yang dipilih.
+                                            Ditemukan <?php echo count($daily_results); ?> data kehadiran untuk tanggal yang dipilih.
                                         </div>
                                     </div>
                                     
@@ -604,7 +604,7 @@ include '../templates/user_header.php';
                                         <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title">Rekap Per Semester</div>
-                                            Menampilkan rekap absensi <?php echo $active_semester; ?> Tahun Ajaran <?php echo $school_profile['tahun_ajaran'] ?? (date('Y') . '/' . (date('Y') + 1)); ?> untuk <?php echo count($semester_results); ?> siswa.
+                                            Menampilkan rekap kehadiran <?php echo $active_semester; ?> Tahun Ajaran <?php echo $school_profile['tahun_ajaran'] ?? (date('Y') . '/' . (date('Y') + 1)); ?> untuk <?php echo count($semester_results); ?> siswa.
                                         </div>
                                     </div>
                                     
@@ -688,7 +688,7 @@ include '../templates/user_header.php';
                                         <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title">Rekap Bulanan</div>
-                                            Menampilkan rekap absensi bulanan untuk <?php echo count($monthly_results); ?> siswa.
+                                            Menampilkan rekap kehadiran bulanan untuk <?php echo count($monthly_results); ?> siswa.
                                         </div>
                                     </div>
                                     
@@ -775,8 +775,8 @@ include '../templates/user_header.php';
                                     <div class="alert alert-success alert-has-icon">
                                         <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                         <div class="alert-body">
-                                            <div class="alert-title">Data Absensi Siswa</div>
-                                            Menampilkan riwayat absensi untuk <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?>
+                                            <div class="alert-title">Data Kehadiran Siswa</div>
+                                            Menampilkan riwayat kehadiran untuk <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?>
                                         </div>
                                     </div>
                                     
@@ -967,7 +967,7 @@ function exportToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang'); ?></h3>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo $month_names[(int)substr($selected_month, 5, 2)] . " " . substr($selected_month, 0, 4); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Kehadiran Bulanan - <?php echo $month_names[(int)substr($selected_month, 5, 2)] . " " . substr($selected_month, 0, 4); ?></h4></div><br style="clear: both;">';
     
     var table = document.getElementById('monthlyTable');
     if (!table) {
@@ -995,7 +995,7 @@ function exportToExcel() {
     if (typeof XLSX !== 'undefined') {
         var wb = XLSX.utils.book_new();
         var ws = XLSX.utils.table_to_sheet(newTable);
-        XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran");
         XLSX.writeFile(wb, 'rekap_absensi_bulanan_' + '<?php echo str_replace(" ", "_", strtolower($month_names[(int)substr($selected_month, 5, 2)])); ?>' + '_' + '<?php echo substr($selected_month, 0, 4); ?>' + '.xlsx');
         
         // Fix for UI freeze after download
@@ -1047,7 +1047,7 @@ function exportSemesterToExcel() {
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo addslashes($school_profile['nama_madrasah'] ?? 'Madrasah Ibtidaiyah Negeri Pembina Kota Padang'); ?></h3>';
     headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi <?php echo $active_semester; ?> - Tahun <?php echo date('Y'); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Kehadiran <?php echo $active_semester; ?> - Tahun <?php echo date('Y'); ?></h4></div><br style="clear: both;">';
     
     var table = document.getElementById('semesterTable');
     if (!table) {

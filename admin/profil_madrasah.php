@@ -147,14 +147,14 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
                      if (isset($_POST['cleanup_attendance_student'])) {
                          $stmt = $pdo->prepare("DELETE FROM tb_absensi WHERE tanggal < ?");
                          $stmt->execute([$cutoff_date]);
-                         $messages[] = $stmt->rowCount() . " data absensi siswa";
+                         $messages[] = $stmt->rowCount() . " data kehadiran siswa";
                      }
         
                      // 2. Cleanup Attendance (Teachers)
                      if (isset($_POST['cleanup_attendance_teacher'])) {
                          $stmt = $pdo->prepare("DELETE FROM tb_absensi_guru WHERE tanggal < ?");
                          $stmt->execute([$cutoff_date]);
-                         $messages[] = $stmt->rowCount() . " data absensi guru";
+                         $messages[] = $stmt->rowCount() . " data kehadiran guru";
                      }
         
                      // 3. Cleanup Journals
@@ -190,9 +190,9 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
         elseif (isset($_POST['reset_annual_data'])) {
             $tahun_ajaran = isset($_POST['tahun_ajaran']) ? $_POST['tahun_ajaran'] : $school_profile['tahun_ajaran'];
             
-            // Reset massal absensi/jurnal dinonaktifkan: data dipertahankan per tahun ajaran (ubah TA di profil untuk kerja tahun baru).
+            // Reset massal kehadiran/jurnal dinonaktifkan: data dipertahankan per tahun ajaran (ubah TA di profil untuk kerja tahun baru).
             if (isset($_POST['reset_data']) && $_POST['reset_data'] == '1') {
-                $message = ['type' => 'info', 'text' => 'Data absensi tidak dihapus. Penyimpanan mengikuti Tahun Ajaran aktif di profil; arsip tahun lalu tetap ada di database.'];
+                $message = ['type' => 'info', 'text' => 'Data kehadiran tidak dihapus. Penyimpanan mengikuti Tahun Ajaran aktif di profil; arsip tahun lalu tetap ada di database.'];
                     if (function_exists('logActivity')) {
                         logActivity($pdo, $_SESSION['username'] ?? 'admin', 'Info Reset TA', 'Mencoba reset absensi (dinonaktifkan; data dipertahankan) TA ' . $tahun_ajaran);
                     }
@@ -682,11 +682,11 @@ include '../templates/sidebar.php';
                                             <div class="col-sm-9">
                                                 <div class="custom-control custom-checkbox">
                                                     <input type="checkbox" class="custom-control-input" id="cleanupAttendanceStudent" name="cleanup_attendance_student" value="1" checked>
-                                                    <label class="custom-control-label" for="cleanupAttendanceStudent">Absensi Siswa</label>
+                                                    <label class="custom-control-label" for="cleanupAttendanceStudent">Kehadiran Siswa</label>
                                                 </div>
                                                 <div class="custom-control custom-checkbox">
                                                     <input type="checkbox" class="custom-control-input" id="cleanupAttendanceTeacher" name="cleanup_attendance_teacher" value="1" checked>
-                                                    <label class="custom-control-label" for="cleanupAttendanceTeacher">Absensi Guru</label>
+                                                    <label class="custom-control-label" for="cleanupAttendanceTeacher">Kehadiran Guru</label>
                                                 </div>
                                                 <div class="custom-control custom-checkbox">
                                                     <input type="checkbox" class="custom-control-input" id="cleanupJournals" name="cleanup_journals" value="1">

@@ -42,7 +42,7 @@ try {
         if ($holiday['is_holiday']) {
             echo json_encode([
                 'success' => false,
-                'message' => 'Hari libur: ' . $holiday['name'] . '. Absensi siswa ditutup untuk tanggal ini.',
+                'message' => 'Hari libur: ' . $holiday['name'] . '. Kehadiran siswa ditutup untuk tanggal ini.',
                 'icon' => 'warning',
                 'title' => 'Hari Libur'
             ]);
@@ -80,7 +80,7 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => ($keterangan === 'Terlambat') ? "Maaf anda terlambat. Absensi berhasil dicatat: {$student['nama_siswa']}" : "Absensi Siswa berhasil dicatat: {$student['nama_siswa']}",
+            'message' => ($keterangan === 'Terlambat') ? "Maaf anda terlambat. Kehadiran berhasil dicatat: {$student['nama_siswa']}" : "Kehadiran Siswa berhasil dicatat: {$student['nama_siswa']}",
             'data' => [
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
@@ -103,7 +103,7 @@ try {
         if ($holiday['is_holiday']) {
             echo json_encode([
                 'success' => false,
-                'message' => 'Hari libur: ' . $holiday['name'] . '. Absensi guru ditutup untuk tanggal ini.',
+                'message' => 'Hari libur: ' . $holiday['name'] . '. Kehadiran guru ditutup untuk tanggal ini.',
                 'icon' => 'warning',
                 'title' => 'Hari Libur'
             ]);
@@ -136,7 +136,7 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => "Absensi Guru berhasil dicatat: {$teacher['nama_guru']}",
+            'message' => "Kehadiran Guru berhasil dicatat: {$teacher['nama_guru']}",
             'data' => [
                 'nama_siswa' => $teacher['nama_guru'], // Using 'nama_siswa' key for frontend compatibility
                 'nisn' => $teacher['nuptk'],

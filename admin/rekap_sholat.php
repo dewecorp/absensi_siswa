@@ -151,7 +151,7 @@ if ($class_id > 0) {
         $stmt->execute([$year, $month]);
         $sholat_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Get absensi data
+        // Get kehadiran data
         $stmt = $pdo->prepare("
             SELECT id_siswa, keterangan, DAY(tanggal) as day
             FROM tb_absensi
@@ -245,7 +245,7 @@ if ($class_id > 0) {
                  
                  if (in_array($abs, ['Sakit', 'Izin', 'Alpa'])) {
                  $final = 'Tidak Hadir';
-                 $note = "(Absensi: $abs)";
+                 $note = "(Kehadiran: $abs)";
              } elseif ($sho) {
                  $final = $sho;
                  $note = "";

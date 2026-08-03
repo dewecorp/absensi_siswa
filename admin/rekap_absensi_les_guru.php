@@ -12,7 +12,7 @@ $session_type = $user_level;
 if ($user_level == 'kepala_madrasah') $session_type = 'kepala';
 
 // Set page title
-$page_title = 'Rekap Absensi Les Guru';
+$page_title = 'Rekap Kehadiran Les Guru';
 
 // Define CSS and JS libraries
 $css_libs = [
@@ -135,7 +135,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Rekap Absensi Les Guru</h1>
+            <h1>Rekap Kehadiran Les Guru</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
@@ -144,7 +144,7 @@ include '../templates/sidebar.php';
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Filter Rekap Absensi Les Guru</h4>
+                            <h4>Filter Rekap Kehadiran Les Guru</h4>
                         </div>
                         <div class="card-body">
                             <!-- Print Header -->
@@ -231,7 +231,7 @@ include '../templates/sidebar.php';
                                                 <tr>
                                                     <th rowspan="2" class="align-middle text-center">No</th>
                                                     <th rowspan="2" class="align-middle">Nama Guru</th>
-                                                    <th colspan="<?= count($scheduled_dates) ?: 1 ?>" class="text-center">Rekap Absensi Les Guru (Semua Jadwal)</th>
+                                                    <th colspan="<?= count($scheduled_dates) ?: 1 ?>" class="text-center">Rekap Kehadiran Les Guru (Semua Jadwal)</th>
                                                     <th colspan="4" class="text-center">Total</th>
                                                 </tr>
                                                 <tr>
@@ -338,7 +338,7 @@ function exportToExcel(type) {
     var wb = XLSX.utils.book_new();
     var ws = XLSX.utils.table_to_sheet(newTable);
     
-    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi Les Guru");
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran Les Guru");
     XLSX.writeFile(wb, "Rekap_Absensi_Les_Guru_" + type + "_" + new Date().getTime() + ".xlsx");
 }
 

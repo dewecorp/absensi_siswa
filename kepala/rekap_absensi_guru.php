@@ -8,7 +8,7 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
 }
 
 // Set page title
-$page_title = 'Rekap Absensi Guru';
+$page_title = 'Rekap Kehadiran Guru';
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -328,10 +328,10 @@ include '../templates/sidebar.php';
             <div class="main-content">
                 <section class="section">
                     <div class="section-header">
-                        <h1>Rekap Absensi Guru</h1>
+                        <h1>Rekap Kehadiran Guru</h1>
                         <div class="section-header-breadcrumb">
                             <div class="breadcrumb-item active"><a href="#">Dashboard</a></div>
-                            <div class="breadcrumb-item">Rekap Absensi Guru</div>
+                            <div class="breadcrumb-item">Rekap Kehadiran Guru</div>
                         </div>
                     </div>
 
@@ -340,7 +340,7 @@ include '../templates/sidebar.php';
                             <div class="col-12">
                                 <div class="card">
                                     <div class="card-header">
-                                        <h4>Filter Absensi Guru</h4>
+                                        <h4>Filter Kehadiran Guru</h4>
                                     </div>
                                     <div class="card-body">
                                         <form method="POST" class="row" id="attendanceFilterForm">
@@ -506,7 +506,7 @@ include '../templates/sidebar.php';
                             <div class="col-12">
                                 <div class="card">
                                     <div class="card-header">
-                                        <h4>Rekap Absensi Per Guru</h4>
+                                        <h4>Rekap Kehadiran Per Guru</h4>
                                         <div class="card-header-action">
                                             <button class="btn btn-success" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Export Excel</button>
                                             <button class="btn btn-danger" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Export PDF</button>
@@ -710,7 +710,7 @@ include '../templates/sidebar.php';
                     // Create header info
                     var ws = XLSX.utils.aoa_to_sheet([
                         ['<?php echo $school_profile["nama_madrasah"] ?? "Sistem Informasi Madrasah"; ?>'],
-                        ['Rekap Absensi Guru - ' + titleInfo],
+                        ['Rekap Kehadiran Guru - ' + titleInfo],
                         ['Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?>'],
                         [''] // Spacer
                     ]);
@@ -721,14 +721,14 @@ include '../templates/sidebar.php';
                         XLSX.utils.sheet_add_dom(ws, table, {origin: "A5"});
                     }
                     
-                    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
+                    XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran");
                     XLSX.writeFile(wb, fileName + '.xlsx');
                 });
                 
                 // PDF Export using window.print() in new tab
                 $('#exportPdfBtn').click(function() {
                     var filterType = '<?php echo $filter_type; ?>';
-                    var title = 'Rekap Absensi Guru';
+                    var title = 'Rekap Kehadiran Guru';
                     var tableId = '';
                     
                     if (filterType === 'daily') {

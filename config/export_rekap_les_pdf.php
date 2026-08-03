@@ -36,7 +36,7 @@ $absent_summary = [];
 // Get all scheduled dates based on filter
 if ($filter_type == 'daily') {
     $scheduled_dates = [$selected_date];
-    $page_title = "Rekap Absensi Les Harian Kelas " . $nama_kelas_final . " - " . formatDateIndonesia($selected_date);
+    $page_title = "Rekap Kehadiran Les Harian Kelas " . $nama_kelas_final . " - " . formatDateIndonesia($selected_date);
     $page_size = "A4 portrait";
 
     $stmt_abs = $pdo->prepare("
@@ -53,7 +53,7 @@ if ($filter_type == 'daily') {
 } else {
     $stmt_sched = $pdo->query("SELECT DISTINCT tanggal FROM tb_jadwal_les ORDER BY tanggal ASC");
     $scheduled_dates = $stmt_sched->fetchAll(PDO::FETCH_COLUMN);
-    $page_title = "Rekap Absensi Les Kelas " . $nama_kelas_final;
+    $page_title = "Rekap Kehadiran Les Kelas " . $nama_kelas_final;
     $page_size = "legal landscape";
 }
 

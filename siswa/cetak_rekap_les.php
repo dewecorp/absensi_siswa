@@ -49,7 +49,7 @@ $logo_path = '../assets/img/' . ($school_profile['logo'] ?? '');
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Cetak Rekap Absensi Les - <?= htmlspecialchars($student['nama_siswa']) ?></title>
+    <title>Cetak Rekap Kehadiran Les - <?= htmlspecialchars($student['nama_siswa']) ?></title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; line-height: 1.5; margin: 0; padding: 20px; }
         .header { text-align: center; margin-bottom: 20px; border-bottom: 3px double #000; padding-bottom: 10px; position: relative; }
@@ -130,7 +130,7 @@ $logo_path = '../assets/img/' . ($school_profile['logo'] ?? '');
         <tbody>
             <?php if (empty($harian_data)): ?>
                 <tr>
-                    <td colspan="3" class="text-center">Belum ada data absensi les.</td>
+                    <td colspan="3" class="text-center">Belum ada data kehadiran les.</td>
                 </tr>
             <?php else: ?>
                 <?php $no = 1; foreach ($harian_data as $row): ?>

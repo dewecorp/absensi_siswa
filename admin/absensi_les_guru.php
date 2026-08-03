@@ -17,7 +17,7 @@ $school_profile = getSchoolProfile($pdo);
 $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'Sistem Informasi Madrasah');
 
 // Set page title
-$page_title = 'Absensi Les Guru';
+$page_title = 'Kehadiran Les Guru';
 
 // Get current user's guru ID if applicable
 $current_guru_id = null;
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
     // Only admin can fill for dates other than today
     if ($tanggal !== date('Y-m-d') && !$is_admin_exclusive) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'error' => 'Hanya Admin yang dapat mengisi absensi untuk tanggal yang sudah lewat.']);
+        echo json_encode(['success' => false, 'error' => 'Hanya Admin yang dapat mengisi kehadiran untuk tanggal yang sudah lewat.']);
         exit;
     }
 
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
         // Check if the teacher is trying to mark attendance for themselves
         if ($current_guru_id != $id_guru) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => 'Anda hanya dapat mengisi absensi untuk diri sendiri.']);
+            echo json_encode(['success' => false, 'error' => 'Anda hanya dapat mengisi kehadiran untuk diri sendiri.']);
             exit;
         }
         
@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
                         if (in_array($user_level, ['guru', 'wali'])) {
                             $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
                             $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
-                            $msg = "$nama_guru ($role_label) telah memperbarui absensi les pada " . date('d-m-Y H:i');
+                            $msg = "$nama_guru ($role_label) telah memperbarui kehadiran les pada " . date('d-m-Y H:i');
                             createNotification($pdo, $msg, 'absensi_les_guru.php');
                         }
                     }
@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
                         if (in_array($user_level, ['guru', 'wali'])) {
                             $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
                             $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
-                            $msg = "$nama_guru ($role_label) telah mengisi absensi les (dirinya) pada " . date('d-m-Y H:i');
+                            $msg = "$nama_guru ($role_label) telah mengisi kehadiran les (dirinya) pada " . date('d-m-Y H:i');
                             createNotification($pdo, $msg, 'absensi_les_guru.php');
                         }
                     }
@@ -206,12 +206,12 @@ $js_page = [];
 if (!$has_schedule) {
     $js_page[] = "
     $(document).ready(function() {
-        $('.btn-absensi').attr('disabled', true).addClass('disabled');
+        $('.btn-kehadiran').attr('disabled', true).addClass('disabled');
         $('.keterangan-input').attr('disabled', true);
         Swal.fire({
             icon: 'info',
             title: 'Tidak Ada Jadwal',
-            text: 'Tidak ada jadwal les untuk tanggal " . formatDateIndonesia($selected_date) . ". Absensi tidak dapat diisi.',
+            text: 'Tidak ada jadwal les untuk tanggal " . formatDateIndonesia($selected_date) . ". Kehadiran tidak dapat diisi.',
             confirmButtonText: 'Tutup'
         });
     });
@@ -229,7 +229,7 @@ $(document).ready(function() {
     console.log('isSingleView:', isSingleView);
     
     // Button click handler
-    $(document).on('click', '.btn-absensi', function(e) {
+    $(document).on('click', '.btn-kehadiran', function(e) {
         e.preventDefault();
         e.stopPropagation();
         
@@ -247,7 +247,7 @@ $(document).ready(function() {
         console.log('Current:', currentStatus, 'Is Toggle:', isToggle, 'New Status:', newStatus);
         
         // Reset all buttons
-        $('.btn-absensi[data-id=' + id + ']').each(function() {
+        $('.btn-kehadiran[data-id=' + id + ']').each(function() {
             var btnStat = $(this).attr('data-status');
             $(this).removeClass('active btn-success btn-info btn-warning')
                     .addClass('btn-outline-' + (btnStat == 'hadir' ? 'success' : (btnStat == 'sakit' ? 'info' : 'warning')))
@@ -256,7 +256,7 @@ $(document).ready(function() {
         
         // Set active button if not toggling off
         if (!isToggle && newStatus) {
-            var activeBtn = $('.btn-absensi[data-id=' + id + '][data-status=' + newStatus + ']');
+            var activeBtn = $('.btn-kehadiran[data-id=' + id + '][data-status=' + newStatus + ']');
             activeBtn.addClass('active').css('opacity', '1');
             
             if (newStatus == 'hadir') {
@@ -324,7 +324,7 @@ $(document).ready(function() {
             success: function(response) {
                 console.log('Response:', response);
                 if (response && response.success) {
-                    var msg = isToggle ? 'Absensi les berhasil dibatalkan' : 'Absensi les berhasil disimpan';
+                    var msg = isToggle ? 'Kehadiran les berhasil dibatalkan' : 'Kehadiran les berhasil disimpan';
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil',
@@ -348,7 +348,7 @@ $(document).ready(function() {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Gagal menyimpan absensi. Silakan coba lagi.'
+                    text: 'Gagal menyimpan kehadiran. Silakan coba lagi.'
                 });
             }
         });
@@ -395,27 +395,27 @@ include '../templates/sidebar.php';
 ?>
 
 <style>
-.btn-absensi {
+.btn-kehadiran {
     font-size: 1.15rem;
     font-weight: 600;
     border-width: 2px;
     transition: all .15s ease-in-out;
 }
-.btn-absensi i { font-size: 1.55rem; }
-.btn-absensi:hover { transform: translateY(-1px); }
+.btn-kehadiran i { font-size: 1.55rem; }
+.btn-kehadiran:hover { transform: translateY(-1px); }
 
 /* Filled color for single-view buttons */
-.btn-absensi.btn-outline-success {
+.btn-kehadiran.btn-outline-success {
     background-color: #28a745;
     color: #fff;
     border-color: #28a745;
 }
-.btn-absensi.btn-outline-info {
+.btn-kehadiran.btn-outline-info {
     background-color: #17a2b8;
     color: #fff;
     border-color: #17a2b8;
 }
-.btn-absensi.btn-outline-warning {
+.btn-kehadiran.btn-outline-warning {
     background-color: #ffc107;
     color: #212529;
     border-color: #ffc107;
@@ -431,7 +431,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Absensi Les Guru (Kelas 6)</h1>
+            <h1>Kehadiran Les Guru (Kelas 6)</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
@@ -440,7 +440,7 @@ include '../templates/sidebar.php';
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Data Absensi Les Guru - <?= formatDateIndonesia($selected_date) ?></h4>
+                            <h4>Data Kehadiran Les Guru - <?= formatDateIndonesia($selected_date) ?></h4>
                             <div class="card-header-action">
                                 <?php if ($is_admin_exclusive): ?>
                                     <form method="GET" action="" class="form-inline">
@@ -465,19 +465,19 @@ include '../templates/sidebar.php';
                                         <label class="d-block font-weight-bold mb-3">Status Kehadiran Les Hari Ini (<?php echo formatDateIndonesia(date('Y-m-d')); ?>)</label>
                                         <div class="row justify-content-center">
                                             <div class="col-4 col-md-3">
-                                                <button type="button" class="btn btn-outline-success btn-block btn-lg py-3 btn-absensi d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir">
+                                                <button type="button" class="btn btn-outline-success btn-block btn-lg py-3 btn-kehadiran d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir">
                                                     <i class="fas fa-check-circle fa-2x mb-2"></i>
                                                     <span>Hadir</span>
                                                 </button>
                                             </div>
                                             <div class="col-4 col-md-3">
-                                                <button type="button" class="btn btn-outline-info btn-block btn-lg py-3 btn-absensi d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit">
+                                                <button type="button" class="btn btn-outline-info btn-block btn-lg py-3 btn-kehadiran d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit">
                                                     <i class="fas fa-procedures fa-2x mb-2"></i>
                                                     <span>Sakit</span>
                                                 </button>
                                             </div>
                                             <div class="col-4 col-md-3">
-                                                <button type="button" class="btn btn-outline-warning btn-block btn-lg py-3 btn-absensi d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="izin">
+                                                <button type="button" class="btn btn-outline-warning btn-block btn-lg py-3 btn-kehadiran d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="izin">
                                                     <i class="fas fa-envelope-open-text fa-2x mb-2"></i>
                                                     <span>Izin</span>
                                                 </button>
@@ -528,13 +528,13 @@ include '../templates/sidebar.php';
                                                 <td><?= htmlspecialchars($teacher['nama_guru']) ?></td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-success btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir">
+                                                        <button type="button" class="btn btn-success btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir">
                                                             <i class="fas fa-check"></i> Hadir
                                                         </button>
-                                                        <button type="button" class="btn btn-info btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit">
+                                                        <button type="button" class="btn btn-info btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit">
                                                             <i class="fas fa-procedures"></i> Sakit
                                                         </button>
-                                                        <button type="button" class="btn btn-warning btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="izin">
+                                                        <button type="button" class="btn btn-warning btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="izin">
                                                             <i class="fas fa-envelope-open-text"></i> Izin
                                                         </button>
                                                     </div>

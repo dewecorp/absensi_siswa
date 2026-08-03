@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     $id_kelas = (int)$_POST['id_kelas'];
     $holiday = isSchoolHoliday($pdo, $tanggal);
     if ($holiday['is_holiday']) {
-        $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Absensi siswa tidak dapat disimpan untuk tanggal ini.'];
+        $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Kehadiran siswa tidak dapat disimpan untuk tanggal ini.'];
     } else {
     // Only process students that are actually in the POST data
     // This prevents DataTables pagination from affecting students on other pages
@@ -71,10 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
         }
     }
     
-        $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+        $message = ['type' => 'success', 'text' => "Data kehadiran berhasil disimpan untuk $saved_count siswa!"];
         $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
         $log_result = logActivity($pdo, $username, 'Input Absensi', "Admin " . $username . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
-        if (!$log_result) error_log("Failed to log activity for Input Absensi: kelas ID $id_kelas");
+        if (!$log_result) error_log("Failed to log activity for Input Kehadiran: kelas ID $id_kelas");
     }
 }
 
@@ -117,7 +117,7 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
 }
 
 // Set page title
-$page_title = 'Absensi Harian';
+$page_title = 'Kehadiran Harian';
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -135,7 +135,7 @@ include '../templates/header.php';
             Swal.fire({
                 icon: 'warning',
                 title: 'Hari Libur',
-                text: 'Hari ini adalah hari libur: <?php echo $holiday_name; ?>. Absensi siswa ditutup untuk tanggal ini.',
+                text: 'Hari ini adalah hari libur: <?php echo $holiday_name; ?>. Kehadiran siswa ditutup untuk tanggal ini.',
                 confirmButtonText: 'OK'
             });
         });
@@ -149,7 +149,7 @@ endif;
             <div class="main-content">
                 <section class="section">
                     <div class="section-header">
-                        <h1>Absensi Harian</h1>
+                        <h1>Kehadiran Harian</h1>
                         <?php echo render_breadcrumb(); ?>
                     </div>
 
@@ -159,7 +159,7 @@ endif;
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Form Absensi Harian</h4>
+                                    <h4>Form Kehadiran Harian</h4>
                                 </div>
                                 <div class="card-body">
                                     <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" id="filterForm">
@@ -247,16 +247,16 @@ endif;
                                                         <td>
                                                             <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
                                                             <div class="btn-group btn-group-sm attendance-btn-group" role="group">
-                                                                <button type="button" class="btn btn-success btn-absensi-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir">
+                                                                <button type="button" class="btn btn-success btn-kehadiran-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir">
                                                                     <i class="fas fa-check"></i> Hadir
                                                                 </button>
-                                                                <button type="button" class="btn btn-warning btn-absensi-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit">
+                                                                <button type="button" class="btn btn-warning btn-kehadiran-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit">
                                                                     <i class="fas fa-procedures"></i> Sakit
                                                                 </button>
-                                                                <button type="button" class="btn btn-info btn-absensi-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin">
+                                                                <button type="button" class="btn btn-info btn-kehadiran-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin">
                                                                     <i class="fas fa-envelope-open-text"></i> Izin
                                                                 </button>
-                                                                <button type="button" class="btn btn-danger btn-absensi-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa">
+                                                                <button type="button" class="btn btn-danger btn-kehadiran-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa">
                                                                     <i class="fas fa-user-times"></i> Alpa
                                                                 </button>
                                                             </div>
@@ -270,7 +270,7 @@ endif;
                                         
                                         <div class="row mt-4">
                                             <div class="col-12 text-center">
-                                                <button type="submit" class="btn btn-primary" id="saveAttendanceBtn">Simpan Absensi</button>
+                                                <button type="submit" class="btn btn-primary" id="saveAttendanceBtn">Simpan Kehadiran</button>
                                             </div>
                                         </div>
                                     </form>
@@ -354,7 +354,7 @@ var reportDate = '$report_date';
 
 // Auto-submit handler - ensure jQuery is loaded first
             $(document).ready(function() {
-                console.log('=== Absensi Harian Page Loaded ===');
+                console.log('=== Kehadiran Harian Page Loaded ===');
                 console.log('jQuery loaded:', typeof $ !== 'undefined');
                 console.log('Form exists:', $('#filterForm').length > 0);
                 console.log('Class select exists:', $('#kelasSelect').length > 0);
@@ -424,7 +424,7 @@ var reportDate = '$report_date';
                 var headerDiv = document.createElement('div');
                 headerDiv.innerHTML = '<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\"><div style=\"display: inline-block;\"><h2>Sistem Informasi Madrasah</h2>';
                 headerDiv.innerHTML += '<h3>" . $school_name_js . "</h3>';
-                headerDiv.innerHTML += '<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">';
+                headerDiv.innerHTML += '<h4>Kehadiran Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">';
                 
                 // Create a copy of the table to modify
                 var table = document.getElementById('table-1');
@@ -477,7 +477,7 @@ var reportDate = '$report_date';
                 printWindow.document.write('<img src=\"../assets/img/logo_1768301957.png\" alt=\"Logo\" style=\"max-width: 100px; float: left; margin-right: 20px;\">');
                 printWindow.document.write('<div style=\"display: inline-block;\"><h2>Sistem Informasi Madrasah</h2>');
                 printWindow.document.write('<h3>" . $school_name_js . "</h3>');
-                printWindow.document.write('<h4>Absensi Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">');
+                printWindow.document.write('<h4>Kehadiran Kelas ' + document.querySelector('#kelasSelect').options[document.querySelector('#kelasSelect').selectedIndex].text + ' - Tanggal ' + document.querySelector('#tanggalInput').value + '</h4></div><br style=\"clear: both;\">');
                 printWindow.document.write('</div>');
                 
                 // Create a copy of the table to modify
@@ -575,7 +575,7 @@ var reportDate = '$report_date';
                 initDataTable();
                 
                 // Tombol status per siswa (klik ulang tombol aktif = reset Belum Absen)
-                $(document).on('click', '.btn-absensi-siswa', function() {
+                $(document).on('click', '.btn-kehadiran-siswa', function() {
                     var studentId = $(this).data('id');
                     var status = $(this).data('status');
                     var input = $('#status_' + studentId);
@@ -583,9 +583,9 @@ var reportDate = '$report_date';
                     var nextStatus = (currentStatus === status) ? '' : status;
                     var group = $(this).closest('.attendance-btn-group');
 
-                    group.find('.btn-absensi-siswa').removeClass('active');
+                    group.find('.btn-kehadiran-siswa').removeClass('active');
                     if (nextStatus !== '') {
-                        group.find('.btn-absensi-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
+                        group.find('.btn-kehadiran-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
                     }
 
                     input.val(nextStatus);

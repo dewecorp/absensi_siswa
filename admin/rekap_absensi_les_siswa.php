@@ -12,7 +12,7 @@ $session_type = $user_level;
 if ($user_level == 'kepala_madrasah') $session_type = 'kepala';
 
 // Set page title
-$page_title = 'Rekap Absensi Les Siswa';
+$page_title = 'Rekap Kehadiran Les Siswa';
 
 // Define CSS and JS libraries
 $css_libs = [
@@ -111,7 +111,7 @@ if ($filter_type == 'daily') {
     $stmt->execute([$selected_date, $id_kelas_selected]);
     $daily_results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Ringkasan ketidakhadiran les (Sakit/Izin/Alpa) seperti rekap absensi harian
+    // Ringkasan ketidakhadiran les (Sakit/Izin/Alpa) seperti rekap kehadiran harian
     $summary_stmt = $pdo->prepare("
         SELECT s.nama_siswa, al.status AS keterangan
         FROM tb_absensi_les al
@@ -180,7 +180,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Rekap Absensi Les Siswa</h1>
+            <h1>Rekap Kehadiran Les Siswa</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
@@ -189,7 +189,7 @@ include '../templates/sidebar.php';
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Filter Rekap Absensi Les</h4>
+                            <h4>Filter Rekap Kehadiran Les</h4>
                         </div>
                         <div class="card-body">
                             <!-- Print Header -->
@@ -377,7 +377,7 @@ include '../templates/sidebar.php';
                                                 <tr>
                                                     <th rowspan="2" class="align-middle text-center">No</th>
                                                     <th rowspan="2" class="align-middle">Nama Siswa</th>
-                                                    <th colspan="<?= count($scheduled_dates) ?: 1 ?>" class="text-center">Rekap Absensi Les (Semua Jadwal)</th>
+                                                    <th colspan="<?= count($scheduled_dates) ?: 1 ?>" class="text-center">Rekap Kehadiran Les (Semua Jadwal)</th>
                                                     <th colspan="4" class="text-center">Total</th>
                                                 </tr>
                                                 <tr>
@@ -507,7 +507,7 @@ function exportToExcel(type) {
     
     // Prepend header manually in Excel is hard with table_to_sheet, 
     // so we'll use a simpler approach for the file name and content
-    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi Les");
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran Les");
     XLSX.writeFile(wb, "Rekap_Absensi_Les_Siswa_" + type + "_" + new Date().getTime() + ".xlsx");
 }
 

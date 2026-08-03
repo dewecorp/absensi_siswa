@@ -477,7 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Time validation for teacher attendance: 06:00-15:00
             $now_hour = (int)date('H');
             if ($now_hour < 6 || $now_hour >= 15) {
-                echo "<script>document.addEventListener('DOMContentLoaded',function(){Swal.fire({title:'Diluar Jam Absensi',text:'Absensi guru hanya dapat diisi pukul 06:00 - 15:00 WIB.',icon:'warning',confirmButtonText:'OK'});});</script>";
+                echo "<script>document.addEventListener('DOMContentLoaded',function(){Swal.fire({title:'Diluar Jam Kehadiran',text:'Kehadiran guru hanya dapat diisi pukul 06:00 - 15:00 WIB.',icon:'warning',confirmButtonText:'OK'});});</script>";
             } else {
             // Regular attendance checks holidays
             $holiday = isSchoolHoliday($pdo, $current_date);
@@ -486,7 +486,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({
                             title: 'Hari Libur',
-                            text: 'Absensi harian ditutup pada hari libur: " . addslashes($holiday['name']) . "',
+                            text: 'Kehadiran harian ditutup pada hari libur: " . addslashes($holiday['name']) . "',
                             icon: 'warning',
                             timer: 4000,
                             showConfirmButton: true
@@ -509,11 +509,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($check_stmt->rowCount() > 0) {
                     $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
                     $update_stmt->execute([$status_to_save, $keterangan_final, $now_time, $current_teacher_id, $current_date]);
-                    $msg_text = 'Absensi harian berhasil diperbarui.' . $late_text;
+                    $msg_text = 'Kehadiran harian berhasil diperbarui.' . $late_text;
                 } else {
                     $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
                     $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save, $keterangan_final, $now_time]);
-                    $msg_text = 'Absensi harian berhasil disimpan.' . $late_text;
+                    $msg_text = 'Kehadiran harian berhasil disimpan.' . $late_text;
                 }
                 
                 $waktu = date('H:i');
@@ -543,11 +543,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($check_stmt->rowCount() > 0) {
                     $update_stmt = $pdo->prepare("UPDATE tb_absensi_les_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
                     $update_stmt->execute([$status_to_save_les, $attendance_note_les, $now_time, $current_teacher_id, $current_date]);
-                    $msg_text = 'Absensi les berhasil diperbarui.';
+                    $msg_text = 'Kehadiran les berhasil diperbarui.';
                 } else {
                     $insert_stmt = $pdo->prepare("INSERT INTO tb_absensi_les_guru (id_guru, tanggal, status, keterangan, waktu_input) VALUES (?, ?, ?, ?, ?)");
                     $insert_stmt->execute([$current_teacher_id, $current_date, $status_to_save_les, $attendance_note_les, $now_time]);
-                    $msg_text = 'Absensi les berhasil disimpan.';
+                    $msg_text = 'Kehadiran les berhasil disimpan.';
                 }
                 
                 createNotification($pdo, "$nama_guru telah mengirim kehadiran les", 'absensi_les_guru.php', 'absensi_les_guru');
@@ -654,13 +654,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="card-body py-3">
                                     <div class="row align-items-center">
                                         <div class="col-md-8">
-                                            <h6 class="font-weight-bold mb-2"><i class="fas fa-info-circle text-primary mr-2"></i>Ketentuan Pengisian Absensi dan Jurnal KBM Hari Ini</h6>
+                                            <h6 class="font-weight-bold mb-2"><i class="fas fa-info-circle text-primary mr-2"></i>Ketentuan Pengisian Kehadiran dan Jurnal KBM Hari Ini</h6>
                                             <p class="mb-2 font-weight-bold" style="font-size:17px;color:#856404;background:#fff3cd;padding:8px 14px;border-radius:5px;">
-                                                <i class="fas fa-exclamation-triangle mr-1"></i>Pastikan mengisi <u>Absensi Siswa</u> sebelum memulai KBM hari ini!
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>Pastikan mengisi <u>Kehadiran Siswa</u> sebelum memulai KBM hari ini!
                                             </p>
                                             <div class="d-flex flex-wrap" style="gap:12px;">
-                                                <div><span class="badge badge-success px-3 py-2"><i class="fas fa-user-check mr-1"></i> Absensi Siswa</span> <span class="text-muted" style="font-size:13px;">07:00 - 14:00 WIB</span></div>
-                                                <div><span class="badge badge-primary px-3 py-2"><i class="fas fa-chalkboard-teacher mr-1"></i> Absensi Guru</span> <span class="text-muted" style="font-size:13px;">06:00 - 15:00 WIB</span></div>
+                                                <div><span class="badge badge-success px-3 py-2"><i class="fas fa-user-check mr-1"></i> Kehadiran Siswa</span> <span class="text-muted" style="font-size:13px;">07:00 - 14:00 WIB</span></div>
+                                                <div><span class="badge badge-primary px-3 py-2"><i class="fas fa-chalkboard-teacher mr-1"></i> Kehadiran Guru</span> <span class="text-muted" style="font-size:13px;">06:00 - 15:00 WIB</span></div>
                                                 <div><span class="badge badge-warning px-3 py-2"><i class="fas fa-book mr-1"></i> Jurnal Mengajar</span> <span class="text-muted" style="font-size:13px;">07:00 - 14:00 WIB</span></div>
                                             </div>
                                         </div>
@@ -691,14 +691,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="<?php echo $col_class; ?> mb-4">
                             <div class="card card-primary">
                                 <div class="card-header">
-                                    <h4>Absensi Harian</h4>
+                                    <h4>Kehadiran Harian</h4>
                                 </div>
                                 <div class="card-body">
                                     <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
                                         <div class="alert-icon text-primary"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title font-weight-bold">Penting</div>
-                                            Jangan lupa untuk mengisi <b>Absensi Kehadiran</b> Anda, <b>Absensi Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
+                                            Jangan lupa untuk mengisi <b>Kehadiran</b> Anda, <b>Kehadiran Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
                                         </div>
                                     </div>
                                     <form method="POST" action="" id="attendanceFormReg">
@@ -748,7 +748,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
                                         <?php endif; ?>
 
-                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Harian</button>
+                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Kehadiran Harian</button>
                                     </form>
                                 </div>
                             </div>
@@ -756,7 +756,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php else: ?>
                         <div class="<?php echo $col_class; ?> mb-4">
                             <div class="card card-warning">
-                                <div class="card-header"><h4>Absensi Harian Guru</h4></div>
+                                <div class="card-header"><h4>Kehadiran Harian Guru</h4></div>
                                 <div class="card-body d-flex align-items-center justify-content-center text-center">
                                     <div class="py-2">
                                         <div class="mb-3">
@@ -765,7 +765,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h5 class="font-weight-bold mb-1">Hari Libur Sekolah</h5>
                                         <p class="text-muted mb-2">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo $holiday['name']; ?></strong>.</p>
                                         <div class="badge badge-warning px-3 py-1" style="font-size: 0.9rem; border-radius: 30px;">
-                                            <i class="fas fa-info-circle mr-2"></i> Absensi Harian Ditutup
+                                            <i class="fas fa-info-circle mr-2"></i> Kehadiran Harian Ditutup
                                         </div>
                                     </div>
                                 </div>
@@ -783,7 +783,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="col-12 col-md-6 mb-4">
                             <div class="card card-dark">
                                 <div class="card-header">
-                                    <h4>Absensi Les Guru (Kelas 6)</h4>
+                                    <h4>Kehadiran Les Guru (Kelas 6)</h4>
                                 </div>
                                 <div class="card-body">
                                     <?php if ($has_les_schedule_guru): ?>
@@ -791,7 +791,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <div class="alert-icon text-dark"><i class="far fa-bell"></i></div>
                                         <div class="alert-body">
                                             <div class="alert-title font-weight-bold">Penting</div>
-                                            Jangan lupa untuk mengisi <b>Absensi Les</b> Anda, <b>Absensi Siswa Les</b>, serta <b>Jurnal Les</b> sesuai jadwal Anda.
+                                            Jangan lupa untuk mengisi <b>Kehadiran Les</b> Anda, <b>Kehadiran Siswa Les</b>, serta <b>Jurnal Les</b> sesuai jadwal Anda.
                                         </div>
                                     </div>
                                     <form method="POST" action="" id="attendanceFormLes">
@@ -841,7 +841,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
                                         <?php endif; ?>
 
-                                        <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Absensi Les</button>
+                                        <button type="submit" name="submit_attendance_les" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Kehadiran Les</button>
                                     </form>
                                     <?php else: ?>
                                     <div class="alert alert-info shadow-sm d-flex flex-column justify-content-center mb-0">

@@ -21,7 +21,7 @@ $web_root = $web_root == '/' || $web_root == '\\' ? '' : $web_root;
 $logo_url = $web_root . '/assets/img/' . $logo_file;
 
 // Set page title
-$page_title = 'Absensi Guru';
+$page_title = 'Kehadiran Guru';
 
 // Handle single teacher submission
 $message = '';
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi'])) {
     $result = ['success' => false];
     $holiday = isSchoolHoliday($pdo, $tanggal);
     if ($holiday['is_holiday'] && $status !== '') {
-        $result['error'] = 'Hari libur: ' . $holiday['name'] . '. Absensi untuk tanggal ini ditutup.';
+        $result['error'] = 'Hari libur: ' . $holiday['name'] . '. Kehadiran untuk tanggal ini ditutup.';
         header('Content-Type: application/json');
         echo json_encode($result);
         exit;
@@ -151,14 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_absensi'])) {
     }
 
     if ($success_count > 0) {
-        $message = ['type' => 'success', 'text' => "Berhasil menyimpan $success_count data absensi guru."];
+        $message = ['type' => 'success', 'text' => "Berhasil menyimpan $success_count data kehadiran guru."];
         $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
         logActivity($pdo, $username, 'Input Absensi Guru', "Menyimpan absensi guru untuk tanggal $tanggal");
     } else {
         if ($processed_count === 0 && $error_count === 0) {
             $message = ['type' => 'info', 'text' => 'Tidak ada data yang diubah.'];
         } else {
-            $message = ['type' => 'danger', 'text' => 'Gagal menyimpan data absensi guru!'];
+            $message = ['type' => 'danger', 'text' => 'Gagal menyimpan data kehadiran guru!'];
         }
     }
 }
@@ -299,7 +299,7 @@ $(document).ready(function() {
                 var status = $(this).val();
                 if (status) {
                     var statusLower = status.toLowerCase();
-                    $('.btn-absensi[data-id=\"' + id + '\"][data-status=\"' + statusLower + '\"]').addClass('active').css('opacity', '1');
+                    $('.btn-kehadiran[data-id=\"' + id + '\"][data-status=\"' + statusLower + '\"]').addClass('active').css('opacity', '1');
                     if (statusLower === 'izin' || statusLower === 'sakit') {
                         $('#keterangan_container_' + id).show();
                     }
@@ -320,7 +320,7 @@ $(document).ready(function() {
     });
 
     // Handle Attendance Buttons
-    $(document).on('click', '.btn-absensi', function() {
+    $(document).on('click', '.btn-kehadiran', function() {
         var id = $(this).data('id');
         var status = $(this).data('status');
         var row = $(this).closest('tr');
@@ -334,7 +334,7 @@ $(document).ready(function() {
         var newStatus = isToggleCancel ? '' : status;
 
         // Reset buttons untuk baris ini
-        var rowButtons = $('.btn-absensi[data-id=\"' + id + '\"]');
+        var rowButtons = $('.btn-kehadiran[data-id=\"' + id + '\"]');
         rowButtons.removeClass('active').css('opacity', '0.6');
         if (!isToggleCancel) {
             // Highlight tombol yang dipilih jika bukan batal
@@ -388,17 +388,17 @@ $(document).ready(function() {
             data: { single_absensi: 1, id_guru: id, status: newStatus, keterangan: ketVal, waktu_input: waktuVal },
             success: function(resp) {
                 if (resp && resp.success) {
-                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: (isToggleCancel ? 'Absensi dibatalkan' : 'Absensi guru diperbarui'), timer: 1200, showConfirmButton: false });
+                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: (isToggleCancel ? 'Kehadiran dibatalkan' : 'Kehadiran guru diperbarui'), timer: 1200, showConfirmButton: false });
                 } else if (resp && resp.error) {
                     Swal.fire({ icon: 'warning', title: 'Hari Libur', text: resp.error, confirmButtonText: 'OK' }).then(function() {
                         window.location.reload();
                     });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan absensi guru', timer: 1500, showConfirmButton: false });
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan kehadiran guru', timer: 1500, showConfirmButton: false });
                 }
             },
             error: function() {
-                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan absensi guru', timer: 1500, showConfirmButton: false });
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan kehadiran guru', timer: 1500, showConfirmButton: false });
             }
         });
     });
@@ -406,10 +406,10 @@ $(document).ready(function() {
     // Disable collective submit
     $('form').on('submit', function(e) {
         e.preventDefault();
-        Swal.fire({ icon: 'info', title: 'Otomatis', text: 'Absensi disimpan saat tombol diklik', timer: 1200, showConfirmButton: false });
+        Swal.fire({ icon: 'info', title: 'Otomatis', text: 'Kehadiran disimpan saat tombol diklik', timer: 1200, showConfirmButton: false });
     });
     
-    $('form button[type=\"submit\"], #btn-simpan-absensi').hide();
+    $('form button[type=\"submit\"], #btn-simpan-kehadiran').hide();
 });
 ";
 
@@ -422,7 +422,7 @@ if ($todayHoliday['is_holiday']) {
         Swal.fire({
             icon: 'warning',
             title: 'Hari Libur',
-            text: 'Hari ini adalah hari libur: $holiday_name. Absensi ditutup untuk semua pengguna.',
+            text: 'Hari ini adalah hari libur: $holiday_name. Kehadiran ditutup untuk semua pengguna.',
             confirmButtonText: 'OK'
         });
     });
@@ -453,7 +453,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Absensi Guru</h1>
+            <h1>Kehadiran Guru</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
@@ -489,7 +489,7 @@ include '../templates/sidebar.php';
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Data Absensi Guru - <?= date('d F Y') ?></h4>
+                            <h4>Data Kehadiran Guru - <?= date('d F Y') ?></h4>
                         </div>
                         <div class="card-body">
                             <form method="POST" action="">
@@ -520,13 +520,13 @@ include '../templates/sidebar.php';
                                                 <td><?= htmlspecialchars($teacher['nama_guru']) ?></td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-success btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir" style="opacity: 0.6;">
+                                                        <button type="button" class="btn btn-success btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir" style="opacity: 0.6;">
                                                             <i class="fas fa-check"></i> Hadir
                                                         </button>
-                                                        <button type="button" class="btn btn-info btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit" style="opacity: 0.6;">
+                                                        <button type="button" class="btn btn-info btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit" style="opacity: 0.6;">
                                                             <i class="fas fa-procedures"></i> Sakit
                                                         </button>
-                                                        <button type="button" class="btn btn-warning btn-absensi" data-id="<?= $teacher['id_guru'] ?>" data-status="izin" style="opacity: 0.6;">
+                                                        <button type="button" class="btn btn-warning btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="izin" style="opacity: 0.6;">
                                                             <i class="fas fa-envelope-open-text"></i> Izin
                                                         </button>
                                                     </div>
@@ -555,7 +555,7 @@ include '../templates/sidebar.php';
                                 </div>
                                 <div class="text-right mt-4">
                                     <button type="submit" name="simpan_absensi" class="btn btn-primary btn-lg">
-                                        <i class="fas fa-save"></i> Simpan Absensi
+                                        <i class="fas fa-save"></i> Simpan Kehadiran
                                     </button>
                                 </div>
                             </form>

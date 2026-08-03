@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     $tanggal = $_POST['tanggal'];
     $holiday = isSchoolHoliday($pdo, $tanggal);
     if ($holiday['is_holiday']) {
-        $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Absensi siswa tidak dapat disimpan untuk tanggal ini.'];
+        $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Kehadiran siswa tidak dapat disimpan untuk tanggal ini.'];
     } else {
         // Only process students that are actually in the POST data
         // This prevents DataTables pagination from affecting students on other pages
@@ -101,19 +101,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             }
         }
         
-        $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+        $message = ['type' => 'success', 'text' => "Data kehadiran berhasil disimpan untuk $saved_count siswa!"];
         
         // Send notification to admin
         if ($saved_count > 0) {
             $nama_wali = $_SESSION['nama_guru'] ?? 'Wali Kelas';
             $nama_kelas_notif = $wali_kelas ? $wali_kelas['nama_kelas'] : 'Kelas';
-            $notif_msg = "$nama_wali telah melakukan input absensi siswa $nama_kelas_notif ($saved_count siswa)";
+            $notif_msg = "$nama_wali telah melakukan input kehadiran siswa $nama_kelas_notif ($saved_count siswa)";
             createNotification($pdo, $notif_msg, 'rekap_absensi.php', 'absensi_siswa');
         }
 
         $username = isset($_SESSION['username']) ? $_SESSION['username'] : (isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system');
         $log_result = logActivity($pdo, $username, 'Input Absensi', "Wali " . $username . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
-        if (!$log_result) error_log("Failed to log activity for Input Absensi: kelas ID $id_kelas");
+        if (!$log_result) error_log("Failed to log activity for Input Kehadiran: kelas ID $id_kelas");
     }
 }
 
@@ -131,7 +131,7 @@ if ($wali_kelas) {
 }
 
 // Set page title
-$page_title = 'Absensi Harian';
+$page_title = 'Kehadiran Harian';
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -149,7 +149,7 @@ include '../templates/user_header.php';
             Swal.fire({
                 icon: 'warning',
                 title: 'Hari Libur',
-                text: 'Hari ini adalah hari libur: <?php echo $holiday_name; ?>. Absensi siswa ditutup untuk tanggal ini.',
+                text: 'Hari ini adalah hari libur: <?php echo $holiday_name; ?>. Kehadiran siswa ditutup untuk tanggal ini.',
                 confirmButtonText: 'OK'
             });
         });
@@ -163,10 +163,10 @@ endif;
             <div class="main-content">
                 <section class="section">
                     <div class="section-header">
-                        <h1>Absensi Harian Kelas <?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : 'Tidak Ada'; ?></h1>
+                        <h1>Kehadiran Harian Kelas <?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : 'Tidak Ada'; ?></h1>
                         <div class="section-header-breadcrumb">
                             <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                            <div class="breadcrumb-item">Absensi Harian Kelas Terpilih</div>
+                            <div class="breadcrumb-item">Kehadiran Harian Kelas Terpilih</div>
                         </div>
                     </div>
 
@@ -176,7 +176,7 @@ endif;
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Form Absensi Harian Kelas <?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : 'Tidak Ada'; ?></h4>
+                                    <h4>Form Kehadiran Harian Kelas <?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : 'Tidak Ada'; ?></h4>
                                 </div>
                                 <div class="card-body">
                                     <form method="GET" action="" id="filterForm">
@@ -242,10 +242,10 @@ endif;
                                                         <td>
                                                             <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
                                                             <div class="btn-group btn-group-sm attendance-btn-group" role="group">
-                                                                <button type="button" class="btn btn-success btn-absensi-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir"><i class="fas fa-check"></i> Hadir</button>
-                                                                <button type="button" class="btn btn-warning btn-absensi-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit"><i class="fas fa-procedures"></i> Sakit</button>
-                                                                <button type="button" class="btn btn-info btn-absensi-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin"><i class="fas fa-envelope-open-text"></i> Izin</button>
-                                                                <button type="button" class="btn btn-danger btn-absensi-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa"><i class="fas fa-user-times"></i> Alpa</button>
+                                                                <button type="button" class="btn btn-success btn-kehadiran-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir"><i class="fas fa-check"></i> Hadir</button>
+                                                                <button type="button" class="btn btn-warning btn-kehadiran-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit"><i class="fas fa-procedures"></i> Sakit</button>
+                                                                <button type="button" class="btn btn-info btn-kehadiran-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin"><i class="fas fa-envelope-open-text"></i> Izin</button>
+                                                                <button type="button" class="btn btn-danger btn-kehadiran-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa"><i class="fas fa-user-times"></i> Alpa</button>
                                                             </div>
                                                             <input type="hidden" class="student-status-input" name="keterangan_<?php echo $student['id_siswa']; ?>" id="status_<?php echo $student['id_siswa']; ?>" value="<?php echo htmlspecialchars($status_now, ENT_QUOTES); ?>">
                                                         </td>
@@ -257,7 +257,7 @@ endif;
                                         
                                         <div class="row mt-4">
                                             <div class="col-12 text-center">
-                                                <button type="submit" class="btn btn-primary">Simpan Absensi</button>
+                                                <button type="submit" class="btn btn-primary">Simpan Kehadiran</button>
                                             </div>
                                         </div>
                                     </form>
@@ -351,7 +351,7 @@ $js_page[] = "
             }
         });
 
-        $(document).on('click', '.btn-absensi-siswa', function() {
+        $(document).on('click', '.btn-kehadiran-siswa', function() {
             var studentId = $(this).data('id');
             var status = $(this).data('status');
             var input = $('#status_' + studentId);
@@ -359,9 +359,9 @@ $js_page[] = "
             var nextStatus = (currentStatus === status) ? '' : status;
             var group = $(this).closest('.attendance-btn-group');
 
-            group.find('.btn-absensi-siswa').removeClass('active');
+            group.find('.btn-kehadiran-siswa').removeClass('active');
             if (nextStatus !== '') {
-                group.find('.btn-absensi-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
+                group.find('.btn-kehadiran-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
             }
 
             input.val(nextStatus);

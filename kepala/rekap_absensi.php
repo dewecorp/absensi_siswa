@@ -8,7 +8,7 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
 }
 
 // Set page title
-$page_title = 'Rekap Absensi';
+$page_title = 'Rekap Kehadiran';
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -397,10 +397,10 @@ include '../templates/sidebar.php';
             <div class="main-content">
                 <section class="section">
                     <div class="section-header">
-                        <h1>Rekap Absensi</h1>
+                        <h1>Rekap Kehadiran</h1>
                         <div class="section-header-breadcrumb">
                             <div class="breadcrumb-item active"><a href="#">Dashboard</a></div>
-                            <div class="breadcrumb-item">Rekap Absensi</div>
+                            <div class="breadcrumb-item">Rekap Kehadiran</div>
                         </div>
                     </div>
 
@@ -469,7 +469,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             <?php else: ?>
                                                 <div class="alert alert-light mt-3 text-center">
-                                                    Semua siswa hadir atau belum ada data absensi untuk tanggal ini.
+                                                    Semua siswa hadir atau belum ada data kehadiran untuk tanggal ini.
                                                 </div>
                                             <?php endif; ?>
                                         </div>
@@ -482,7 +482,7 @@ include '../templates/sidebar.php';
                             <div class="col-12">
                                 <div class="card">
                                     <div class="card-header">
-                                        <h4>Filter Absensi Harian</h4>
+                                        <h4>Filter Kehadiran Harian</h4>
                                     </div>
                                     <div class="card-body">
                                         <form method="POST" class="row" id="attendanceFilterForm">
@@ -554,7 +554,7 @@ include '../templates/sidebar.php';
                                                     <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                                     <div class="alert-body">
                                                         <div class="alert-title">Berhasil</div>
-                                                        Ditemukan <?php echo count($daily_results); ?> data absensi untuk tanggal yang dipilih.
+                                                        Ditemukan <?php echo count($daily_results); ?> data kehadiran untuk tanggal yang dipilih.
                                                     </div>
                                                 </div>
                                                 
@@ -624,7 +624,7 @@ include '../templates/sidebar.php';
                                                     <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                                     <div class="alert-body">
                                                         <div class="alert-title">Rekap Per Semester</div>
-                                                        Menampilkan rekap absensi <?php echo $active_semester; ?> Tahun Ajaran <?php echo $school_profile['tahun_ajaran'] ?? (date('Y') . '/' . (date('Y') + 1)); ?> untuk <?php echo count($semester_results); ?> siswa.
+                                                        Menampilkan rekap kehadiran <?php echo $active_semester; ?> Tahun Ajaran <?php echo $school_profile['tahun_ajaran'] ?? (date('Y') . '/' . (date('Y') + 1)); ?> untuk <?php echo count($semester_results); ?> siswa.
                                                     </div>
                                                 </div>
                                                 
@@ -713,7 +713,7 @@ include '../templates/sidebar.php';
                                                     <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                                     <div class="alert-body">
                                                         <div class="alert-title">Rekap Bulanan</div>
-                                                        Menampilkan rekap absensi bulanan untuk <?php echo count($monthly_results); ?> siswa.
+                                                        Menampilkan rekap kehadiran bulanan untuk <?php echo count($monthly_results); ?> siswa.
                                                     </div>
                                                 </div>
                                                 
@@ -800,8 +800,8 @@ include '../templates/sidebar.php';
                                                 <div class="alert alert-success alert-has-icon">
                                                     <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                                     <div class="alert-body">
-                                                        <div class="alert-title">Data Absensi Siswa</div>
-                                                        Menampilkan riwayat absensi untuk <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?>
+                                                        <div class="alert-title">Data Kehadiran Siswa</div>
+                                                        Menampilkan riwayat kehadiran untuk <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?>
                                                     </div>
                                                 </div>
                                                 
@@ -944,7 +944,7 @@ include '../templates/sidebar.php';
                                                     <div class="alert-icon"><i class="fas fa-info-circle"></i></div>
                                                     <div class="alert-body">
                                                         <div class="alert-title">Informasi</div>
-                                                        Tidak ada data absensi ditemukan untuk kelas dan <?php 
+                                                        Tidak ada data kehadiran ditemukan untuk kelas dan <?php 
                                                             if ($filter_type == 'daily') echo 'tanggal';
                                                             elseif ($filter_type == 'monthly') echo 'bulan';
                                                             else echo 'siswa';
@@ -986,7 +986,7 @@ function exportDailyToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi Harian - Tanggal: <?php echo date("d-m-Y", strtotime($selected_date)); ?></h4>';
+    headerDiv.innerHTML += '<h4>Rekap Kehadiran Harian - Tanggal: <?php echo date("d-m-Y", strtotime($selected_date)); ?></h4>';
     headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('dailyTable');
@@ -1035,7 +1035,7 @@ function exportStudentToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi Siswa: <?php echo addslashes($student_results[0]["nama_siswa"] ?? ""); ?></h4>';
+    headerDiv.innerHTML += '<h4>Rekap Kehadiran Siswa: <?php echo addslashes($student_results[0]["nama_siswa"] ?? ""); ?></h4>';
     headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4></div><br style="clear: both;">';
     
     var table = document.getElementById('studentTable');
@@ -1080,7 +1080,7 @@ function exportToExcel() {
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
     headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Kehadiran Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
     // Create a copy of the table to modify
     var table = document.getElementById('monthlyTable');
@@ -1109,7 +1109,7 @@ function exportToExcel() {
         // Convert table to worksheet using SheetJS
         var wb = XLSX.utils.book_new();
         var ws = XLSX.utils.table_to_sheet(newTable);
-        XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran");
         XLSX.writeFile(wb, 'rekap_absensi_bulanan_' + '<?php echo $js_month_name_file; ?>' + '_' + '<?php echo $js_month_year_safe; ?>' + '.xlsx');
     } else {
         // Fallback to HTML-based Excel export
@@ -1131,7 +1131,7 @@ function exportToPDF() {
 function fallbackPrintPDF() {
     // Print the table as PDF with F4 landscape format
     var printWindow = window.open('', '_blank'); // New tab
-    printWindow.document.write('<html><head><title>Rekap Absensi Bulanan</title>');
+    printWindow.document.write('<html><head><title>Rekap Kehadiran Bulanan</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0cm 0.5cm 0.5cm 0.5cm; }'); // Landscape orientation
     printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
@@ -1161,7 +1161,7 @@ function fallbackPrintPDF() {
     printWindow.document.write('<div style="display: inline-block; vertical-align: middle;">');
     printWindow.document.write('<h2 style="margin: 0;">Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3 style="margin: 5px 0;"><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4 style="margin: 0;">Rekap Absensi Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div>');
+    printWindow.document.write('<h4 style="margin: 0;">Rekap Kehadiran Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div>');
     printWindow.document.write('</div>');
     
     // Get the table
@@ -1215,7 +1215,7 @@ function exportSemesterToExcel() {
     var headerDiv = document.createElement('div');
     headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>';
-    headerDiv.innerHTML += '<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
+    headerDiv.innerHTML += '<h4>Rekap Kehadiran <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     
     // Create a copy of the semester table to modify
     var table = document.getElementById('semesterTable');
@@ -1265,7 +1265,7 @@ function exportSemesterToPDF() {
 function fallbackSemesterPrintPDF() {
     // Print the semester table as PDF with F4 landscape format
     var printWindow = window.open('', '', 'height=860,width=1300'); // F4 dimensions in pixels
-    printWindow.document.write('<html><head><title>Rekap Absensi Semester</title>');
+    printWindow.document.write('<html><head><title>Rekap Kehadiran Semester</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('@page { size: legal landscape; margin: 0.5cm; }'); // Landscape orientation
     printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
@@ -1290,7 +1290,7 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "Madrasah Ibtidaiyah Negeri Pembina Kota Padang", ENT_QUOTES, "UTF-8"); ?></h3>');
-    printWindow.document.write('<h4>Rekap Absensi <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
+    printWindow.document.write('<h4>Rekap Kehadiran <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">');
     
     // Get the semester table
     var table = document.getElementById('semesterTable');

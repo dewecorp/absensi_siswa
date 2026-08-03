@@ -17,7 +17,7 @@ $page_title = 'Data Siswa Baru';
 $export_session_type = $_SESSION['level'] ?? 'admin';
 
 // Get current academic year from school profile. Untuk halaman ini harus murni
-// mengikuti Pengaturan, bukan fallback dari data nilai/absensi.
+// mengikuti Pengaturan, bukan fallback dari data nilai/kehadiran.
 $school_profile = getSchoolProfile($pdo);
 $current_tahun_ajaran = '';
 $current_tahun_ajaran_from_settings = false;

@@ -829,7 +829,7 @@ include_once '../templates/sidebar.php';
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h4>Rekap Harian Absensi Guru</h4>
+                                    <h4>Rekap Harian Kehadiran Guru</h4>
                                     <div class="card-header-action">
                                         <a href="../kepala/rekap_absensi_guru.php" class="btn btn-primary">Lihat Rekap</a>
                                     </div>
@@ -883,7 +883,7 @@ include_once '../templates/sidebar.php';
                                                     <?php endforeach; ?>
                                                 <?php else: ?>
                                                     <tr>
-                                                        <td colspan="6" class="text-center">Belum ada data absensi guru hari ini.</td>
+                                                        <td colspan="6" class="text-center">Belum ada data kehadiran guru hari ini.</td>
                                                     </tr>
                                                 <?php endif; ?>
                                             </tbody>

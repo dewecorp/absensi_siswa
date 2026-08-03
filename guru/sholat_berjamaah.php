@@ -208,7 +208,7 @@ include '../templates/header.php';
             <h1>Sholat Berjamaah</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item">Absensi</div>
+                <div class="breadcrumb-item">Kehadiran</div>
                 <div class="breadcrumb-item">Sholat Berjamaah</div>
             </div>
         </div>
@@ -217,7 +217,7 @@ include '../templates/header.php';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4>Form Absensi Sholat Berjamaah</h4>
+                        <h4>Form Kehadiran Sholat Berjamaah</h4>
                     </div>
                     <div class="card-body">
                         <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" id="filterForm">
@@ -330,7 +330,7 @@ include '../templates/header.php';
                             
                             <div class="row mt-4">
                                 <div class="col-12 text-center">
-                                    <button type="submit" class="btn btn-primary" id="saveAttendanceBtn">Simpan Absensi</button>
+                                    <button type="submit" class="btn btn-primary" id="saveAttendanceBtn">Simpan Kehadiran</button>
                                 </div>
                             </div>
                         </form>

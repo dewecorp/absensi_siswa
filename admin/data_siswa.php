@@ -259,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_delete_siswa'])) 
                     $absensi_count = $check_stmt->fetchColumn();
                     
                     if ($absensi_count > 0) {
-                        $errors[] = "Siswa {$student['nama_siswa']} memiliki data absensi dan tidak dapat dihapus";
+                        $errors[] = "Siswa {$student['nama_siswa']} memiliki data kehadiran dan tidak dapat dihapus";
                         continue;
                     }
                     

@@ -115,13 +115,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     // Time validation: only 07:00-14:00 for student attendance
     $now_hour = (int)date('H');
     if ($now_hour < 7 || $now_hour >= 14) {
-        $message = ['type' => 'danger', 'text' => 'Absensi siswa hanya dapat diisi pukul 07:00 - 14:00 WIB.'];
+        $message = ['type' => 'danger', 'text' => 'Kehadiran siswa hanya dapat diisi pukul 07:00 - 14:00 WIB.'];
     } else {
     $id_kelas = (int)$_POST['id_kelas'];
     $tanggal = $_POST['tanggal'];
     $holiday = isSchoolHoliday($pdo, $tanggal);
     if ($holiday['is_holiday']) {
-        $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Absensi siswa tidak dapat disimpan untuk tanggal ini.'];
+        $message = ['type' => 'danger', 'text' => 'Hari libur: ' . $holiday['name'] . '. Kehadiran siswa tidak dapat disimpan untuk tanggal ini.'];
     } else {
         // Only process students that are actually in the POST data
         // This prevents DataTables pagination from affecting students on other pages
@@ -169,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             }
         }
         
-        $message = ['type' => 'success', 'text' => "Data absensi berhasil disimpan untuk $saved_count siswa!"];
+        $message = ['type' => 'success', 'text' => "Data kehadiran berhasil disimpan untuk $saved_count siswa!"];
         logActivity($pdo, $teacher['nuptk'], 'Input Absensi', "Guru " . $teacher['nama_guru'] . " melakukan input absensi kelas ID: $id_kelas untuk $saved_count siswa");
 
         // Send notification to admin if data was saved
@@ -228,7 +228,7 @@ if (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
 }
 
 // Set page title
-$page_title = 'Absensi Harian';
+$page_title = 'Kehadiran Harian';
 
 // Define CSS libraries for this page
 $css_libs = [
@@ -249,7 +249,7 @@ $js_page = [];
 $js_page[] = "
 // Auto-submit handler - ensure jQuery is loaded first
 $(document).ready(function() {
-    console.log('=== Absensi Harian Page Loaded ===');
+    console.log('=== Kehadiran Harian Page Loaded ===');
     console.log('jQuery loaded:', typeof $ !== 'undefined');
     console.log('Form exists:', $('#filterForm').length > 0);
     console.log('Class select exists:', $('#kelasSelect').length > 0);
@@ -296,7 +296,7 @@ if (!empty($tanggal)) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Hari Libur',
-                text: 'Hari ini adalah hari libur: $holiday_name. Absensi siswa ditutup untuk tanggal ini.',
+                text: 'Hari ini adalah hari libur: $holiday_name. Kehadiran siswa ditutup untuk tanggal ini.',
                 confirmButtonText: 'OK'
             });
         });
@@ -372,7 +372,7 @@ function initDataTable() {
 $(document).ready(function() {
     initDataTable();
 
-    $(document).on('click', '.btn-absensi-siswa', function() {
+    $(document).on('click', '.btn-kehadiran-siswa', function() {
         var studentId = $(this).data('id');
         var status = $(this).data('status');
         var input = $('#status_' + studentId);
@@ -380,9 +380,9 @@ $(document).ready(function() {
         var nextStatus = (currentStatus === status) ? '' : status;
         var group = $(this).closest('.attendance-btn-group');
 
-        group.find('.btn-absensi-siswa').removeClass('active');
+        group.find('.btn-kehadiran-siswa').removeClass('active');
         if (nextStatus !== '') {
-            group.find('.btn-absensi-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
+            group.find('.btn-kehadiran-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
         }
 
         input.val(nextStatus);
@@ -479,10 +479,10 @@ include '../templates/user_header.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Absensi Harian</h1>
+            <h1>Kehadiran Harian</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item">Absensi Harian</div>
+                <div class="breadcrumb-item">Kehadiran Harian</div>
             </div>
         </div>
 
@@ -505,7 +505,7 @@ include '../templates/user_header.php';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4>Form Absensi Harian</h4>
+                        <h4>Form Kehadiran Harian</h4>
                     </div>
                     <div class="card-body">
                         <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" id="filterForm">
@@ -603,10 +603,10 @@ include '../templates/user_header.php';
                                             <td>
                                                 <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
                                                 <div class="btn-group btn-group-sm attendance-btn-group" role="group">
-                                                    <button type="button" class="btn btn-success btn-absensi-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir"><i class="fas fa-check"></i> Hadir</button>
-                                                    <button type="button" class="btn btn-warning btn-absensi-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit"><i class="fas fa-procedures"></i> Sakit</button>
-                                                    <button type="button" class="btn btn-info btn-absensi-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin"><i class="fas fa-envelope-open-text"></i> Izin</button>
-                                                    <button type="button" class="btn btn-danger btn-absensi-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa"><i class="fas fa-user-times"></i> Alpa</button>
+                                                    <button type="button" class="btn btn-success btn-kehadiran-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir"><i class="fas fa-check"></i> Hadir</button>
+                                                    <button type="button" class="btn btn-warning btn-kehadiran-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit"><i class="fas fa-procedures"></i> Sakit</button>
+                                                    <button type="button" class="btn btn-info btn-kehadiran-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin"><i class="fas fa-envelope-open-text"></i> Izin</button>
+                                                    <button type="button" class="btn btn-danger btn-kehadiran-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa"><i class="fas fa-user-times"></i> Alpa</button>
                                                 </div>
                                                 <input type="hidden" class="student-status-input" name="keterangan_<?php echo $student['id_siswa']; ?>" id="status_<?php echo $student['id_siswa']; ?>" value="<?php echo htmlspecialchars($status_now, ENT_QUOTES); ?>">
                                             </td>
@@ -618,7 +618,7 @@ include '../templates/user_header.php';
                             
                             <div class="row mt-4">
                                 <div class="col-12 text-center">
-                                    <button type="submit" class="btn btn-primary">Simpan Absensi</button>
+                                    <button type="submit" class="btn btn-primary">Simpan Kehadiran</button>
                                 </div>
                             </div>
                         </form>

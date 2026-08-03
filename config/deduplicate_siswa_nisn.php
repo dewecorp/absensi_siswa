@@ -194,7 +194,7 @@ echo 'Grup duplikat (setara angka UNSIGNED): ' . count($nGroups) . "\n";
 echo 'Grup duplikat (TRIM sama): ' . count($tGroups) . "\n";
 
 if (!$apply) {
-    echo "\nPratinjau: baris rangkap pada absensi/sholat per (id_siswa,tanggal) bisa dibersihkan setelah --apply.\n";
+    echo "\nPratinjau: baris rangkap pada kehadiran/sholat per (id_siswa,tanggal) bisa dibersihkan setelah --apply.\n";
     foreach ($nGroups as $g) {
         echo " [angka] simpan {$g['keeper']}, ids {$g['ids']}\n";
     }

@@ -7,7 +7,7 @@ if (!isAuthorized(['admin', 'guru', 'wali', 'kepala_madrasah', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
-$page_title = 'Scan Absensi QR';
+$page_title = 'Scan Kehadiran QR';
 
 // Additional JS for this page
 $js_libs = [
@@ -21,7 +21,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Scan Absensi QR Code</h1>
+            <h1>Scan Kehadiran QR Code</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 

@@ -26,12 +26,12 @@ $selected_date = $_GET['date'] ?? date('Y-m-d');
 // Get all scheduled dates based on filter
 if ($filter_type == 'daily') {
     $scheduled_dates = [$selected_date];
-    $page_title = "Rekap Absensi Les Guru Harian - " . formatDateIndonesia($selected_date);
+    $page_title = "Rekap Kehadiran Les Guru Harian - " . formatDateIndonesia($selected_date);
     $page_size = "A4 portrait";
 } else {
     $stmt_sched = $pdo->query("SELECT DISTINCT tanggal FROM tb_jadwal_les ORDER BY tanggal ASC");
     $scheduled_dates = $stmt_sched->fetchAll(PDO::FETCH_COLUMN);
-    $page_title = "Rekap Absensi Les Guru";
+    $page_title = "Rekap Kehadiran Les Guru";
     $page_size = "legal landscape";
 }
 

@@ -605,7 +605,7 @@ function getRentangTanggalTahunAjaran(?string $tahunAjaran): ?array {
     ];
 }
 
-/** Kumpulkan string TA dari kolom tanggal (absensi, jurnal) untuk dropdown / arsip. */
+/** Kumpulkan string TA dari kolom tanggal (kehadiran, jurnal) untuk dropdown / arsip. */
 function gatherTahunAjaranDariTabelDenganTanggal(PDO $pdo): array {
     $sql = 'SELECT DISTINCT CONCAT(
         IF(MONTH(tanggal) >= 7, YEAR(tanggal), YEAR(tanggal) - 1),
@@ -734,7 +734,7 @@ function getSchoolProfile(PDO $pdo): array {
 
 /**
  * Opsi tahun ajaran untuk dropdown profil: TA berjalan + 3 tahun ke depan,
- * digabung TA dari profil/nilai/absensi/jurnal agar bisa kembali melihat arsip.
+ * digabung TA dari profil/nilai/kehadiran/jurnal agar bisa kembali melihat arsip.
  *
  * @param array $additionalFromDb mis. tahun dari tb_nilai_* atau gatherTahunAjaranDariTabelDenganTanggal
  */
@@ -1125,7 +1125,7 @@ function stripKalenderLiburMingguanYangBentrokDenganProfil(array &$holidays, int
 }
 
 /**
- * Meta hari libur mingguan dari profil madrasah (dipakai absensi, rekap, kalender).
+ * Meta hari libur mingguan dari profil madrasah (dipakai kehadiran, rekap, kalender).
  *
  * @return array{n: int, w: int, nama_holiday: string, nama_rekap: string, kode: string}
  *   n = weekday ISO-8601 (1=Senin … 5=Jumat, 7=Minggu); w = PHP date('w') (0=Minggu … 5=Jumat)
@@ -1263,13 +1263,13 @@ if (!function_exists('sort_all_menu_items')) {
             } elseif (strcasecmp($normalized_title, 'Logout') === 0) {
                 $logout = $item;
             } else {
-                // Do not sort submenu A-Z. Only move "Scan Absensi" to the very top
+                // Do not sort submenu A-Z. Only move "Scan Kehadiran" to the very top
                 // while preserving the existing order of the other items.
-                if (isset($item['submenu']) && is_array($item['submenu']) && (strpos($normalized_title, 'Absensi') !== false)) {
+                if (isset($item['submenu']) && is_array($item['submenu']) && (strpos($normalized_title, 'Kehadiran') !== false)) {
                     $scan_index = null;
                     foreach ($item['submenu'] as $idx => $sub) {
                         $t = trim(strip_tags($sub['title'] ?? ''));
-                        if (strcasecmp($t, 'Scan Absensi') === 0) {
+                        if (strcasecmp($t, 'Scan Kehadiran') === 0) {
                             $scan_index = $idx;
                             break;
                         }

@@ -42,7 +42,7 @@ $results = [];
 $title = '';
 
 if ($filter_type == 'daily') {
-    $title = 'Rekap Absensi Harian - Tanggal: ' . formatDateIndonesia($attendance_date);
+    $title = 'Rekap Kehadiran Harian - Tanggal: ' . formatDateIndonesia($attendance_date);
     $stmt = $pdo->prepare("
         SELECT s.nama_siswa, a.keterangan, a.jam_masuk
         FROM tb_siswa s
@@ -56,7 +56,7 @@ if ($filter_type == 'daily') {
     $year = substr($month_picker, 0, 4);
     $month = substr($month_picker, 5, 2);
     $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-    $title = 'Rekap Absensi Bulanan - ' . $month_names[(int)$month] . ' ' . $year;
+    $title = 'Rekap Kehadiran Bulanan - ' . $month_names[(int)$month] . ' ' . $year;
     
     // Get all students
     $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
@@ -117,7 +117,7 @@ if ($filter_type == 'daily') {
         $results[] = $row;
     }
 } elseif ($filter_type == 'semester') {
-    $title = 'Rekap Absensi Semester - ' . $active_semester;
+    $title = 'Rekap Kehadiran Semester - ' . $active_semester;
     
     // Get all students
     $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
@@ -168,7 +168,7 @@ if ($filter_type == 'daily') {
     $stmt = $pdo->prepare("SELECT nama_siswa, nisn FROM tb_siswa WHERE id_siswa = ?");
     $stmt->execute([$student_id]);
     $student_info = $stmt->fetch(PDO::FETCH_ASSOC);
-    $title = 'Rekap Absensi Siswa: ' . ($student_info['nama_siswa'] ?? '');
+    $title = 'Rekap Kehadiran Siswa: ' . ($student_info['nama_siswa'] ?? '');
     
     $stmt = $pdo->prepare("
         SELECT tanggal, keterangan 
@@ -185,7 +185,7 @@ if ($filter_type == 'daily') {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Cetak Rekap Absensi</title>
+    <title>Cetak Rekap Kehadiran</title>
     <style>
         @page { size: legal landscape; margin: 0cm 0.5cm 0.5cm 0.5cm; }
         body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 10px; }

@@ -257,7 +257,7 @@ if ($class_id > 0) {
                  
                  if (in_array($abs, ['Sakit', 'Izin', 'Alpa'])) {
                      $final = 'Tidak Hadir';
-                     $note = "(Absensi: $abs)";
+                     $note = "(Kehadiran: $abs)";
                  } elseif ($sho) {
                      $final = $sho;
                      $note = "";
@@ -453,7 +453,7 @@ echo "<script>
             <h1>Rekap Sholat Berjamaah - Kelas <?php echo htmlspecialchars($wali_kelas['nama_kelas']); ?></h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item"><a href="#">Absensi Siswa</a></div>
+                <div class="breadcrumb-item"><a href="#">Kehadiran Siswa</a></div>
                 <div class="breadcrumb-item">Rekap Sholat Berjamaah</div>
             </div>
         </div>

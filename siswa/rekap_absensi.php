@@ -115,7 +115,7 @@ function getIndonesianMonth($periode) {
     return $months[$month] . ' ' . $year;
 }
 
-$page_title = 'Rekap Absensi';
+$page_title = 'Rekap Kehadiran';
 
 // Define JS libraries for this page
 $js_libs = [
@@ -129,10 +129,10 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Rekap Absensi Siswa</h1>
+            <h1>Rekap Kehadiran Siswa</h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></div>
-                <div class="breadcrumb-item active">Rekap Absensi</div>
+                <div class="breadcrumb-item active">Rekap Kehadiran</div>
             </div>
         </div>
 
@@ -214,7 +214,7 @@ include '../templates/sidebar.php';
                                                     <?php endforeach; ?>
                                                 <?php else: ?>
                                                     <tr>
-                                                        <td colspan="3" class="text-center">Belum ada data absensi.</td>
+                                                        <td colspan="3" class="text-center">Belum ada data kehadiran.</td>
                                                     </tr>
                                                 <?php endif; ?>
                                             </tbody>
@@ -248,7 +248,7 @@ include '../templates/sidebar.php';
                                                     <?php endforeach; ?>
                                                 <?php else: ?>
                                                     <tr>
-                                                        <td colspan="5" class="text-center">Belum ada data absensi.</td>
+                                                        <td colspan="5" class="text-center">Belum ada data kehadiran.</td>
                                                     </tr>
                                                 <?php endif; ?>
                                             </tbody>
@@ -383,12 +383,12 @@ function exportToExcel(type) {
 
     var wb = XLSX.utils.book_new();
     var ws = XLSX.utils.table_to_sheet(table);
-    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi " + type);
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran " + type);
     XLSX.writeFile(wb, 'rekap_absensi_' + type + '_' + studentName.replace(/\s+/g, '_') + '.xlsx');
 }
 
 function exportToPDF(type) {
-    var title = 'Rekap Absensi ' + type.charAt(0).toUpperCase() + type.slice(1);
+    var title = 'Rekap Kehadiran ' + type.charAt(0).toUpperCase() + type.slice(1);
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>' + title + '</title>');
     printWindow.document.write('<style>');

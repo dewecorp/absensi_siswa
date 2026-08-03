@@ -82,7 +82,7 @@ $has_schedule = $stmt_check_sched->fetchColumn() > 0;
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     if (!$has_schedule) {
-        $message = ['type' => 'danger', 'text' => 'Tidak ada jadwal les untuk tanggal ini. Absensi tidak dapat disimpan.'];
+        $message = ['type' => 'danger', 'text' => 'Tidak ada jadwal les untuk tanggal ini. Kehadiran tidak dapat disimpan.'];
     } else {
         $id_kelas = (int)$_POST['id_kelas'];
         $tanggal = $_POST['tanggal'];
@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             
             if (!$has_teacher_schedule) {
                 $validation_error = true;
-                $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki jadwal les pada tanggal tersebut. Tidak dapat mengisi absensi.'];
+                $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki jadwal les pada tanggal tersebut. Tidak dapat mengisi kehadiran.'];
             }
         }
         
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                     $check_stmt->execute([$id_siswa, $tanggal]);
                     $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
 
-                    // Reset ke Belum Absen (hapus record absensi jika ada)
+                    // Reset ke Belum Absen (hapus record kehadiran jika ada)
                     if ($status === '') {
                         if ($existing) {
                             $delete_stmt = $pdo->prepare("DELETE FROM tb_absensi_les WHERE id_absensi_les = ?");
@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
                 }
             }
             
-            $message = ['type' => 'success', 'text' => "Data absensi les berhasil disimpan untuk $saved_count siswa!"];
+            $message = ['type' => 'success', 'text' => "Data kehadiran les berhasil disimpan untuk $saved_count siswa!"];
             $username = $_SESSION['username'] ?? 'system';
             
             // Get class name for logging
@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
             if (in_array($user_level, ['guru', 'wali'])) {
                 $nama_guru = $_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Guru';
                 $role_label = ($user_level == 'wali') ? 'Wali' : 'Guru';
-                $msg = "$nama_guru ($role_label) telah mengisi absensi les siswa kelas $log_class_name pada " . date('d-m-Y H:i');
+                $msg = "$nama_guru ($role_label) telah mengisi kehadiran les siswa kelas $log_class_name pada " . date('d-m-Y H:i');
                 createNotification($pdo, $msg, 'absensi_les_siswa.php');
             }
         }
@@ -193,7 +193,7 @@ try {
     $students = [];
 }
 
-$page_title = 'Absensi Les Siswa';
+$page_title = 'Kehadiran Les Siswa';
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 
 include '../templates/header.php';
@@ -203,7 +203,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Absensi Les Siswa</h1>
+            <h1>Kehadiran Les Siswa</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
@@ -212,7 +212,7 @@ include '../templates/sidebar.php';
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Form Absensi Les Siswa</h4>
+                            <h4>Form Kehadiran Les Siswa</h4>
                             <?php if (!$has_schedule): ?>
                                 <div class="card-header-action">
                                     <span class="badge badge-warning">Tidak Ada Jadwal Les Hari Ini</span>
@@ -284,16 +284,16 @@ include '../templates/sidebar.php';
                                                 <td>
                                                     <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
                                                     <div class="btn-group btn-group-sm attendance-btn-group <?php echo !$has_schedule ? 'disabled' : ''; ?>" role="group">
-                                                        <button type="button" class="btn btn-success btn-absensi-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir">
+                                                        <button type="button" class="btn btn-success btn-kehadiran-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir">
                                                             <i class="fas fa-check"></i> Hadir
                                                         </button>
-                                                        <button type="button" class="btn btn-warning btn-absensi-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit">
+                                                        <button type="button" class="btn btn-warning btn-kehadiran-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit">
                                                             <i class="fas fa-procedures"></i> Sakit
                                                         </button>
-                                                        <button type="button" class="btn btn-info btn-absensi-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin">
+                                                        <button type="button" class="btn btn-info btn-kehadiran-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin">
                                                             <i class="fas fa-envelope-open-text"></i> Izin
                                                         </button>
-                                                        <button type="button" class="btn btn-danger btn-absensi-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa">
+                                                        <button type="button" class="btn btn-danger btn-kehadiran-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa">
                                                             <i class="fas fa-user-times"></i> Alpa
                                                         </button>
                                                     </div>
@@ -308,7 +308,7 @@ include '../templates/sidebar.php';
                                 <div class="row mt-4">
                                     <div class="col-12 text-center">
                                         <button type="submit" class="btn btn-primary" id="saveAttendanceBtn" <?php echo !$has_schedule ? 'disabled' : ''; ?>>
-                                            <i class="fas fa-save"></i> Simpan Absensi
+                                            <i class="fas fa-save"></i> Simpan Kehadiran
                                         </button>
                                     </div>
                                 </div>
@@ -366,10 +366,10 @@ $(document).ready(function() {
         $('#filterForm').submit();
     });
 
-    $('.attendance-btn-group.disabled .btn-absensi-siswa').prop('disabled', true);
+    $('.attendance-btn-group.disabled .btn-kehadiran-siswa').prop('disabled', true);
 
     // Handle klik tombol status untuk tiap siswa
-    $('.btn-absensi-siswa').on('click', function() {
+    $('.btn-kehadiran-siswa').on('click', function() {
         if ($(this).prop('disabled')) {
             return;
         }
@@ -382,9 +382,9 @@ $(document).ready(function() {
         // Klik ulang status yang sama = reset ke Belum Absen
         var nextStatus = (currentStatus === status) ? '' : status;
         var group = $(this).closest('.attendance-btn-group');
-        group.find('.btn-absensi-siswa').removeClass('active');
+        group.find('.btn-kehadiran-siswa').removeClass('active');
         if (nextStatus !== '') {
-            group.find('.btn-absensi-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
+            group.find('.btn-kehadiran-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
         }
 
         input.val(nextStatus);

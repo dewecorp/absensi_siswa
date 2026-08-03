@@ -119,14 +119,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($holiday['is_holiday']) {
             $swal_message = [
                 'title' => 'Hari Libur',
-                'text' => 'Absensi ditutup pada hari libur: ' . $holiday['name'],
+                'text' => 'Kehadiran ditutup pada hari libur: ' . $holiday['name'],
                 'icon' => 'warning'
             ];
         } else {
             // Always allow update (INSERT or UPDATE)
             $jam_masuk = $attendance ? $attendance['jam_masuk'] : date('H:i:s');
             
-            // Validasi keterlambatan: absensi dari dashboard siswa yang melebihi 07:15 dinyatakan terlambat
+            // Validasi keterlambatan: kehadiran dari dashboard siswa yang melebihi 07:15 dinyatakan terlambat
             if ($status === 'Hadir') {
                 $jam_cek = $jam_masuk ? strtotime($jam_masuk) : time();
                 if ($jam_cek > strtotime('07:15:00')) {
@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($stmt->execute([$status, $jam_masuk, $id_siswa, $today])) {
                     $swal_message = [
                         'title' => ($status === 'Terlambat') ? 'Maaf, Anda Terlambat!' : 'Berhasil!',
-                        'text' => ($status === 'Terlambat') ? 'Maaf anda terlambat. Status absensi berhasil diubah!' : 'Status absensi berhasil diubah!',
+                        'text' => ($status === 'Terlambat') ? 'Maaf anda terlambat. Status kehadiran berhasil diubah!' : 'Status kehadiran berhasil diubah!',
                         'icon' => 'success'
                     ];
                     // Refresh attendance data
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 } else {
                     $swal_message = [
                         'title' => 'Gagal!',
-                        'text' => 'Gagal memperbarui absensi!',
+                        'text' => 'Gagal memperbarui kehadiran!',
                         'icon' => 'error'
                     ];
                 }
@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($stmt->execute([$id_siswa, $today, $jam_masuk, $status])) {
                     $swal_message = [
                         'title' => ($status === 'Terlambat') ? 'Maaf, Anda Terlambat!' : 'Berhasil!',
-                        'text' => ($status === 'Terlambat') ? 'Maaf anda terlambat. Absensi berhasil disimpan!' : 'Absensi berhasil disimpan!',
+                        'text' => ($status === 'Terlambat') ? 'Maaf anda terlambat. Kehadiran berhasil disimpan!' : 'Kehadiran berhasil disimpan!',
                         'icon' => 'success'
                     ];
                     // Refresh attendance data
@@ -173,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 } else {
                     $swal_message = [
                         'title' => 'Gagal!',
-                        'text' => 'Gagal menyimpan absensi!',
+                        'text' => 'Gagal menyimpan kehadiran!',
                         'icon' => 'error'
                     ];
                 }
@@ -304,11 +304,11 @@ include_once '../templates/sidebar.php';
                 </div>
             </div>
 
-            <!-- Box Absensi Manual -->
+            <!-- Box Kehadiran Manual -->
             <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
                 <div class="card card-warning">
                     <div class="card-header py-3">
-                        <h4 class="mb-0">Absensi Hari Ini</h4>
+                        <h4 class="mb-0">Kehadiran Hari Ini</h4>
                         <div class="card-header-action">
                             <span class="badge badge-primary"><?php echo getCurrentDateIndonesia(); ?></span>
                         </div>
@@ -413,7 +413,7 @@ include_once '../templates/sidebar.php';
                                     <h5 class="font-weight-bold mb-1">Hari Libur Sekolah</h5>
                                     <p class="text-muted mb-2">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo $holiday['name']; ?></strong>.</p>
                                     <div class="badge badge-warning px-3 py-1" style="font-size: 0.9rem; border-radius: 30px;">
-                                        <i class="fas fa-info-circle mr-2"></i> Absensi Harian Ditutup
+                                        <i class="fas fa-info-circle mr-2"></i> Kehadiran Harian Ditutup
                                     </div>
                                 </div>
                             </div>
@@ -542,7 +542,7 @@ include_once '../templates/sidebar.php';
                             </div>
                             <div class="col-md-6 col-sm-6 col-12 mb-3">
                                 <a href="rekap_absensi_les.php" class="btn btn-success btn-lg btn-block py-3">
-                                    <i class="fas fa-history mr-2"></i> Rekap Absensi Les
+                                    <i class="fas fa-history mr-2"></i> Rekap Kehadiran Les
                                 </a>
                             </div>
                             <div class="col-md-6 col-sm-6 col-12 mb-3">
@@ -568,14 +568,14 @@ include_once '../templates/sidebar.php';
         <?php endif; ?>
 
         <div class="row">
-            <!-- Box Barcode Absensi -->
+            <!-- Box Barcode Kehadiran -->
             <div class="col-12">
                 <div class="card card-info">
                     <div class="card-header d-flex flex-column align-items-center flex-md-row justify-content-md-between py-3 h-auto">
-                        <h4 class="mb-0">Barcode Absensi</h4>
+                        <h4 class="mb-0">Barcode Kehadiran</h4>
                     </div>
                     <div class="card-body text-center">
-                        <p>Gunakan barcode ini untuk absensi di perangkat sekolah (jika tersedia).</p>
+                        <p>Gunakan barcode ini untuk kehadiran di perangkat sekolah (jika tersedia).</p>
                         <div class="barcode-container mb-3">
                             <!-- Generate QR Code using Google Charts API or similar -->
                             <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?php echo $student['nisn']; ?>" alt="QR Code NISN" class="img-fluid border p-2">
