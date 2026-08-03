@@ -179,16 +179,17 @@ $jam_display = array_filter($jam_mengajar, function($jam) use ($used_jam_ke) {
 });
 
 // HTML Content
+// Jadwal Kelas -> Portrait F4; Jadwal Utama (semua kelas) -> Landscape F4
+$page_css = $kelas_id
+    ? '@page { size: 210mm 330mm; /* F4 Portrait */ margin: 10mm 15mm 12mm 15mm; }'
+    : '@page { size: 330mm 215mm; /* F4 Landscape */ margin: 5mm 10mm 10mm 10mm; }';
 $html = '
 <!DOCTYPE html>
 <html>
 <head>
     <title>' . $page_title . '</title>
     <style>
-        @page {
-            size: 210mm 330mm; /* F4 / Folio Portrait */
-            margin: 10mm 15mm 12mm 15mm; /* atas, kanan, bawah, kiri */
-        }
+        ' . $page_css . '
         @media print {
             body {
                 -webkit-print-color-adjust: exact;
@@ -225,10 +226,10 @@ $html = '
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { border: 1px solid black; padding: 3px; text-align: center; font-size: 9pt; word-wrap: break-word; }
         th { background-color: #f0f0f0; }
-        .signature-table { margin-top: 10mm; border: none; page-break-inside: avoid; }
+        .signature-table { margin-top: 5mm; border: none; page-break-inside: avoid; break-inside: avoid; page-break-before: auto; }
         .signature-table td { border: none; vertical-align: top; text-align: center; padding: 5px; font-size: 10pt; }
         .special-slot { background-color: #f9f9f9; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-        .legend-table { width: 100%; font-size: 7.5pt; border: 1px solid black; margin-bottom: 2px; }
+        .legend-table { width: 100%; font-size: 7.5pt; border: 1px solid black; margin-bottom: 2px; page-break-inside: avoid; break-inside: avoid; }
         .legend-table th { background-color: #f0f0f0; border: 1px solid black; text-align: center; font-weight: bold; padding: 1px; }
         .legend-table td { border: 1px solid black; text-align: left; padding: 1px 3px; }
         .print-btn {
