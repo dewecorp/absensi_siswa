@@ -296,11 +296,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status_to_save = ucfirst($_POST['attendance_status']);
             $attendance_note = $_POST['attendance_note'] ?? '';
             
-            // Late check: after 07:30
+            // Late check: after 07:30 (hanya berlaku untuk status Hadir)
             $is_late_wali = time() > strtotime('07:30');
-            $late_note_wali = $is_late_wali ? 'Terlambat' : 'Tepat Waktu';
-            $keterangan_wali = trim(($attendance_note ? $attendance_note . ' | ' : '') . $late_note_wali);
-            $late_text_wali = $is_late_wali ? ' Maaf anda terlambat.' : '';
+            $late_note_wali = ($status_to_save === 'Hadir') ? ($is_late_wali ? 'Terlambat' : 'Tepat Waktu') : '';
+            $keterangan_wali = trim(implode(' | ', array_filter([$attendance_note, $late_note_wali])));
+            $late_text_wali = ($status_to_save === 'Hadir' && $is_late_wali) ? ' Maaf anda terlambat.' : '';
             
             if ($check_stmt->rowCount() > 0) {
                 // Update existing
@@ -730,21 +730,24 @@ include_once '../templates/sidebar.php';
                                     ?>
 
                                     <form method="POST" action="" id="attendanceForm">
-                                        <div class="form-group mb-4 text-center">
+                                        <div class="form-group mb-3 text-center">
                                             <label class="d-block font-weight-bold">Status Kehadiran (<?php echo date('d-m-Y'); ?>)</label>
-                                            <div class="selectgroup selectgroup-pills justify-content-center">
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" id="radio_izin" <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
-                                                </label>
+                                            <div class="row justify-content-center mb-3">
+                                                <div class="col-4 mb-2">
+                                                    <button type="button" onclick="waliAutoAtt('hadir')" class="btn btn-success btn-block btn-icon-split py-2" style="<?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Hadir</span>
+                                                    </button>
+                                                </div>
+                                                <div class="col-4 mb-2">
+                                                    <button type="button" onclick="waliAutoAtt('sakit')" class="btn btn-warning btn-block btn-icon-split py-2" style="<?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Sakit</span>
+                                                    </button>
+                                                </div>
+                                                <div class="col-4 mb-2">
+                                                    <button type="button" onclick="waliAutoAtt('izin')" class="btn btn-info btn-block btn-icon-split py-2" style="<?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Izin</span>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <?php
                                             $wali_att_label = '';
@@ -756,45 +759,48 @@ include_once '../templates/sidebar.php';
                                             }
                                             ?>
                                             <?php if ($wali_att_label !== ''): ?>
-                                            <div class="mt-2">
+                                            <div class="mt-2" id="waliAttBadge">
                                                 <span class="badge <?php echo $wali_att_late ? 'badge-warning' : 'badge-success'; ?> px-3 py-2">
                                                     <i class="fas fa-<?php echo $wali_att_late ? 'clock' : 'check-circle'; ?> mr-1"></i>
                                                     <?php echo $wali_att_label; ?>
                                                 </span>
                                             </div>
                                             <?php endif; ?>
-                                        </div>
-
-                                        <?php 
-                                        // Show keterangan as info if already saved with sakit/izin
-                                        $show_keterangan_info = ($today_attendance && in_array(strtolower($today_attendance['status']), ['sakit', 'izin']) && !empty($today_attendance['keterangan']));
-                                        ?>
-
-                                        <div class="form-group" id="keterangan_box" style="display: <?php echo $show_keterangan_info ? 'none' : (($today_attendance && in_array($today_attendance['status'], ['izin', 'sakit'])) ? 'block' : 'none'); ?>;">
-                                            <label>Keterangan</label>
-                                            <textarea name="attendance_note" class="form-control" placeholder="Masukkan keterangan..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
-                                        </div>
-
-                                        <?php if ($show_keterangan_info): ?>
-                                        <div class="form-group" id="keterangan_info" style="display: block;">
-                                            <label>Keterangan</label>
-                                            <div class="alert alert-light border shadow-sm mb-2">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div class="flex-grow-1">
-                                                        <i class="fas fa-info-circle text-info mr-2"></i>
-                                                        <span><?php echo htmlspecialchars($today_attendance['keterangan']); ?></span>
-                                                    </div>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit-keterangan" onclick="editKeterangan('attendanceForm', 'keterangan_box', 'keterangan_info')">
-                                                        <i class="fas fa-edit"></i> Edit
-                                                    </button>
-                                                </div>
+                                            <?php if ($today_attendance && strtolower($today_attendance['status']) == 'izin' && !empty($today_attendance['keterangan'])): ?>
+                                            <div class="mt-2">
+                                                <span class="badge badge-info px-3 py-2">
+                                                    <i class="fas fa-envelope mr-1"></i> Izin: <?php echo htmlspecialchars($today_attendance['keterangan']); ?>
+                                                </span>
                                             </div>
-                                            <input type="hidden" name="attendance_note" value="<?php echo htmlspecialchars($today_attendance['keterangan']); ?>">
+                                            <?php endif; ?>
                                         </div>
-                                        <?php endif; ?>
 
-                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Kehadiran Harian</button>
+                                        <div class="form-group" id="keteranganArea" style="display: none;">
+                                            <label class="font-weight-bold">Alasan Izin</label>
+                                            <textarea name="attendance_note" id="noteWali" class="form-control" placeholder="Tuliskan alasan izin..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
+                                            <button type="submit" class="btn btn-info btn-lg btn-block mt-2"><i class="fas fa-save mr-2"></i> Simpan Izin</button>
+                                        </div>
+
+                                        <input type="hidden" name="attendance_status" id="attStatusWali" value="">
+                                        <input type="hidden" name="submit_attendance" value="1">
                                     </form>
+                                    <script>
+                                    function waliAutoAtt(status) {
+                                        var form = document.getElementById('attendanceForm');
+                                        var cur = '<?php echo $today_attendance ? strtolower($today_attendance['status']) : ''; ?>';
+                                        if (cur !== '' && status === cur) { return; }
+                                        var badge = document.getElementById('waliAttBadge');
+                                        if (badge) badge.style.display = (status === 'hadir') ? '' : 'none';
+                                        document.getElementById('attStatusWali').value = status;
+                                        var area = document.getElementById('keteranganArea');
+                                        if (status === 'izin') {
+                                            area.style.display = 'block';
+                                            return;
+                                        }
+                                        area.style.display = 'none';
+                                        form.submit();
+                                    }
+                                    </script>
                                 </div>
                             </div>
                         </div>

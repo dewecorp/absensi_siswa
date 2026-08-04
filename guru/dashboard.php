@@ -494,18 +494,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 </script>";
             } else {
-                // Late check: after 07:30
+                // Late check: after 07:30 (hanya berlaku untuk status Hadir)
                 $late_time = strtotime('07:30');
                 $current_time_ts = time();
                 $is_late = $current_time_ts > $late_time;
-                $late_note = $is_late ? 'Terlambat' : 'Tepat Waktu';
-                $keterangan_final = trim(($attendance_note ? $attendance_note . ' | ' : '') . $late_note);
+                $late_note = ($status_to_save === 'Hadir') ? ($is_late ? 'Terlambat' : 'Tepat Waktu') : '';
+                $keterangan_final = trim(implode(' | ', array_filter([$attendance_note, $late_note])));
                 
                 // Check if already attended regular
                 $check_stmt = $pdo->prepare("SELECT id_absensi FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
                 $check_stmt->execute([$current_teacher_id, $current_date]);
                 
-                $late_text = $is_late ? ' Maaf anda terlambat.' : '';
+                $late_text = ($status_to_save === 'Hadir' && $is_late) ? ' Maaf anda terlambat.' : '';
                 if ($check_stmt->rowCount() > 0) {
                     $update_stmt = $pdo->prepare("UPDATE tb_absensi_guru SET status = ?, keterangan = ?, waktu_input = ? WHERE id_guru = ? AND tanggal = ?");
                     $update_stmt->execute([$status_to_save, $keterangan_final, $now_time, $current_teacher_id, $current_date]);
@@ -702,21 +702,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
                                     </div>
                                     <form method="POST" action="" id="attendanceFormReg">
-                                        <div class="form-group mb-4 text-center">
+                                        <div class="form-group mb-3 text-center">
                                             <label class="d-block font-weight-bold">Status Kehadiran (<?php echo date('d-m-Y'); ?>)</label>
-                                            <div class="selectgroup selectgroup-pills justify-content-center">
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="hadir" class="selectgroup-input" <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'checked' : ''; ?> required>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-success <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'active-hadir' : ''; ?>" data-status="hadir"><i class="fas fa-check"></i> Hadir</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="sakit" class="selectgroup-input" <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'sakit') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-warning <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'sakit') ? 'active-sakit' : ''; ?>" data-status="sakit"><i class="fas fa-procedures"></i> Sakit</span>
-                                                </label>
-                                                <label class="selectgroup-item">
-                                                    <input type="radio" name="attendance_status" value="izin" class="selectgroup-input" <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'checked' : ''; ?>>
-                                                    <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
-                                                </label>
+                                            <div class="row justify-content-center mb-3">
+                                                <div class="col-4 mb-2">
+                                                    <button type="button" onclick="regAutoAtt('hadir')" class="btn btn-success btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Hadir</span>
+                                                    </button>
+                                                </div>
+                                                <div class="col-4 mb-2">
+<button type="button" onclick="regAutoAtt('sakit')" class="btn btn-warning btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Sakit</span>
+                                                    </button>
+                                                </div>
+                                                <div class="col-4 mb-2">
+<button type="button" onclick="regAutoAtt('izin')" class="btn btn-info btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Izin</span>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <?php
                                             $reg_att_label = '';
@@ -728,45 +731,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             }
                                             ?>
                                             <?php if ($reg_att_label !== ''): ?>
-                                            <div class="mt-2">
+                                            <div class="mt-2" id="regAttBadge">
                                                 <span class="badge <?php echo $reg_att_late ? 'badge-warning' : 'badge-success'; ?> px-3 py-2">
                                                     <i class="fas fa-<?php echo $reg_att_late ? 'clock' : 'check-circle'; ?> mr-1"></i>
                                                     <?php echo $reg_att_label; ?>
                                                 </span>
                                             </div>
                                             <?php endif; ?>
-                                        </div>
-
-                                        <?php 
-                                        // Show keterangan as info if already saved with sakit/izin
-                                        $show_keterangan_info_reg = ($today_reg_attendance && in_array(strtolower($today_reg_attendance['status']), ['sakit', 'izin']) && !empty($today_reg_attendance['keterangan']));
-                                        ?>
-
-                                        <div class="form-group keterangan-box" id="keterangan_box_reg" style="display: <?php echo $show_keterangan_info_reg ? 'none' : (($today_reg_attendance && in_array(strtolower($today_reg_attendance['status']), ['izin', 'sakit'])) ? 'block' : 'none'); ?>;">
-                                            <label>Keterangan</label>
-                                            <textarea name="attendance_note" class="form-control"><?php echo $today_reg_attendance ? htmlspecialchars($today_reg_attendance['keterangan']) : ''; ?></textarea>
-                                        </div>
-
-                                        <?php if ($show_keterangan_info_reg): ?>
-                                        <div class="form-group" id="keterangan_info_reg" style="display: block;">
-                                            <label>Keterangan</label>
-                                            <div class="alert alert-light border shadow-sm mb-2">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div class="flex-grow-1">
-                                                        <i class="fas fa-info-circle text-info mr-2"></i>
-                                                        <span><?php echo htmlspecialchars($today_reg_attendance['keterangan']); ?></span>
-                                                    </div>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit-keterangan" onclick="editKeterangan('attendanceFormReg', 'keterangan_box_reg', 'keterangan_info_reg')">
-                                                        <i class="fas fa-edit"></i> Edit
-                                                    </button>
-                                                </div>
+                                            <?php if ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin' && !empty($today_reg_attendance['keterangan'])): ?>
+                                            <div class="mt-2">
+                                                <span class="badge badge-info px-3 py-2">
+                                                    <i class="fas fa-envelope mr-1"></i> Izin: <?php echo htmlspecialchars($today_reg_attendance['keterangan']); ?>
+                                                </span>
                                             </div>
-                                            <input type="hidden" name="attendance_note" value="<?php echo htmlspecialchars($today_reg_attendance['keterangan']); ?>">
+                                            <?php endif; ?>
                                         </div>
-                                        <?php endif; ?>
 
-                                        <button type="submit" name="submit_attendance" class="btn btn-primary btn-lg btn-block shadow-sm"><i class="fas fa-save mr-2"></i> Simpan Kehadiran Harian</button>
+                                        <div class="form-group" id="keteranganAreaReg" style="display: none;">
+                                            <label class="font-weight-bold">Alasan Izin</label>
+                                            <textarea name="attendance_note" id="noteReg" class="form-control" placeholder="Tuliskan alasan izin..."><?php echo $today_reg_attendance ? htmlspecialchars($today_reg_attendance['keterangan']) : ''; ?></textarea>
+                                            <button type="submit" class="btn btn-info btn-lg btn-block mt-2"><i class="fas fa-save mr-2"></i> Simpan Izin</button>
+                                        </div>
+
+                                        <input type="hidden" name="attendance_status" id="attStatusReg" value="">
+                                        <input type="hidden" name="submit_attendance" value="1">
                                     </form>
+                                    <script>
+                                    function regAutoAtt(status) {
+                                        var form = document.getElementById('attendanceFormReg');
+                                        var cur = '<?php echo $today_reg_attendance ? strtolower($today_reg_attendance['status']) : ''; ?>';
+                                        if (cur !== '' && status === cur) { return; }
+                                        var badge = document.getElementById('regAttBadge');
+                                        if (badge) badge.style.display = (status === 'hadir') ? '' : 'none';
+                                        document.getElementById('attStatusReg').value = status;
+                                        var area = document.getElementById('keteranganAreaReg');
+                                        if (status === 'izin') {
+                                            area.style.display = 'block';
+                                            return;
+                                        }
+                                        area.style.display = 'none';
+                                        form.submit();
+                                    }
+                                    </script>
                                 </div>
                             </div>
                         </div>

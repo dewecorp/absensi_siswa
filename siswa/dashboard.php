@@ -328,25 +328,22 @@ include_once '../templates/sidebar.php';
                             <div class="col-4 mb-2">
                                 <form method="POST" action="" class="mb-0">
                                     <?php $siswa_sudah_hadir = ($attendance && in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])); ?>
-                                    <button type="submit" name="absen_status" value="Hadir" class="btn btn-<?php echo $siswa_sudah_hadir ? 'success' : 'outline-success'; ?> btn-block btn-icon-split py-2" <?php echo $siswa_sudah_hadir ? 'disabled' : ''; ?>>
-                                        <i class="fas fa-check d-block mb-1" style="font-size: 1.5rem;"></i>
-                                        <span class="font-weight-bold">Hadir</span>
+                                    <button type="submit" name="absen_status" value="Hadir" class="btn btn-success btn-block btn-icon-split py-2" style="<?php echo $siswa_sudah_hadir ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo $siswa_sudah_hadir ? 'false' : 'true'; ?>;">
+                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Hadir</span>
                                     </button>
                                 </form>
                             </div>
                             <div class="col-4 mb-2">
                                 <form method="POST" action="" class="mb-0">
-                                    <button type="submit" name="absen_status" value="Sakit" class="btn btn-<?php echo ($attendance && $attendance['keterangan'] == 'Sakit') ? 'warning' : 'outline-warning'; ?> btn-block btn-icon-split py-2">
-                                        <i class="fas fa-procedures d-block mb-1" style="font-size: 1.5rem;"></i>
-                                        <span class="font-weight-bold">Sakit</span>
+                                    <button type="submit" name="absen_status" value="Sakit" class="btn btn-warning btn-block btn-icon-split py-2" style="<?php echo ($attendance && $attendance['keterangan'] == 'Sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo ($attendance && $attendance['keterangan'] == 'Sakit') ? 'false' : 'true'; ?>;">
+                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Sakit</span>
                                     </button>
                                 </form>
                             </div>
                             <div class="col-4 mb-2">
                                 <form method="POST" action="" class="mb-0">
-                                    <button type="submit" name="absen_status" value="Izin" class="btn btn-<?php echo ($attendance && $attendance['keterangan'] == 'Izin') ? 'info' : 'outline-info'; ?> btn-block btn-icon-split py-2">
-                                        <i class="fas fa-envelope d-block mb-1" style="font-size: 1.5rem;"></i>
-                                        <span class="font-weight-bold">Izin</span>
+                                    <button type="submit" name="absen_status" value="Izin" class="btn btn-info btn-block btn-icon-split py-2" style="<?php echo ($attendance && $attendance['keterangan'] == 'Izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo ($attendance && $attendance['keterangan'] == 'Izin') ? 'false' : 'true'; ?>;">
+                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Izin</span>
                                     </button>
                                 </form>
                             </div>
