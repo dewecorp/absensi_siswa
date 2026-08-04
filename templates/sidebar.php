@@ -521,7 +521,6 @@ switch ($user_level) {
                 'title' => 'Keuangan',
                 'icon' => 'fas fa-money-bill-wave',
                 'submenu' => [
-                    ['title' => 'Kategori Anggaran', 'url' => '../admin/kategori_anggaran.php', 'active' => $current_page === 'kategori_anggaran.php'],
                     ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
                     ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
                     ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
@@ -858,7 +857,6 @@ switch ($user_level) {
             'title' => 'Keuangan',
             'icon' => 'fas fa-money-bill-wave',
             'submenu' => [
-                ['title' => 'Kategori Anggaran', 'url' => '../admin/kategori_anggaran.php', 'active' => $current_page === 'kategori_anggaran.php'],
                     ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
                 ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
                 ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php'],
@@ -1090,7 +1088,6 @@ switch ($user_level) {
             'title' => 'Keuangan',
             'icon' => 'fas fa-money-bill-wave',
             'submenu' => [
-                ['title' => 'Kategori Anggaran', 'url' => '../admin/kategori_anggaran.php', 'active' => $current_page === 'kategori_anggaran.php'],
                     ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
                 ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
                 ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php'],
