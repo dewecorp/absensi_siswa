@@ -718,6 +718,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
+                                            <?php
+                                            $reg_att_label = '';
+                                            $reg_att_late = false;
+                                            if ($today_reg_attendance && strtolower($today_reg_attendance['status']) === 'hadir') {
+                                                $reg_att_ts = !empty($today_reg_attendance['waktu_input']) ? strtotime($today_reg_attendance['waktu_input']) : time();
+                                                $reg_att_late = $reg_att_ts > strtotime('07:30');
+                                                $reg_att_label = $reg_att_late ? 'Terlambat' : 'Tepat Waktu';
+                                            }
+                                            ?>
+                                            <?php if ($reg_att_label !== ''): ?>
+                                            <div class="mt-2">
+                                                <span class="badge <?php echo $reg_att_late ? 'badge-warning' : 'badge-success'; ?> px-3 py-2">
+                                                    <i class="fas fa-<?php echo $reg_att_late ? 'clock' : 'check-circle'; ?> mr-1"></i>
+                                                    <?php echo $reg_att_label; ?>
+                                                </span>
+                                            </div>
+                                            <?php endif; ?>
                                         </div>
 
                                         <?php 

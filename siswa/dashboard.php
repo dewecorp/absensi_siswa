@@ -351,6 +351,15 @@ include_once '../templates/sidebar.php';
                             </div>
                         </div>
 
+                        <?php if ($attendance && in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])): ?>
+                        <div class="text-center mb-3">
+                            <span class="badge badge-<?= $attendance['keterangan'] === 'Terlambat' ? 'warning' : 'success'; ?> px-4 py-2">
+                                <i class="fas fa-<?= $attendance['keterangan'] === 'Terlambat' ? 'clock' : 'check-circle'; ?> mr-2"></i>
+                                <?= $attendance['keterangan'] === 'Terlambat' ? 'Terlambat' : 'Tepat Waktu'; ?>
+                            </span>
+                        </div>
+                        <?php endif; ?>
+
                         <?php if ($attendance): ?>
                         <div class="text-center">
                             <div class="badge badge-<?php 

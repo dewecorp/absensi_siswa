@@ -746,6 +746,23 @@ include_once '../templates/sidebar.php';
                                                     <span class="selectgroup-button selectgroup-button-icon btn-outline-info <?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'active-izin' : ''; ?>" data-status="izin"><i class="fas fa-paper-plane"></i> Izin</span>
                                                 </label>
                                             </div>
+                                            <?php
+                                            $wali_att_label = '';
+                                            $wali_att_late = false;
+                                            if ($today_attendance && strtolower($today_attendance['status']) === 'hadir') {
+                                                $wali_att_ts = !empty($today_attendance['waktu_input']) ? strtotime($today_attendance['waktu_input']) : time();
+                                                $wali_att_late = $wali_att_ts > strtotime('07:30');
+                                                $wali_att_label = $wali_att_late ? 'Terlambat' : 'Tepat Waktu';
+                                            }
+                                            ?>
+                                            <?php if ($wali_att_label !== ''): ?>
+                                            <div class="mt-2">
+                                                <span class="badge <?php echo $wali_att_late ? 'badge-warning' : 'badge-success'; ?> px-3 py-2">
+                                                    <i class="fas fa-<?php echo $wali_att_late ? 'clock' : 'check-circle'; ?> mr-1"></i>
+                                                    <?php echo $wali_att_label; ?>
+                                                </span>
+                                            </div>
+                                            <?php endif; ?>
                                         </div>
 
                                         <?php 
