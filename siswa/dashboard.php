@@ -329,21 +329,21 @@ include_once '../templates/sidebar.php';
                                 <form method="POST" action="" class="mb-0">
                                     <?php $siswa_sudah_hadir = ($attendance && in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])); ?>
                                     <button type="submit" name="absen_status" value="Hadir" class="btn btn-success btn-block py-2" style="<?php echo $siswa_sudah_hadir ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo $siswa_sudah_hadir ? 'false' : 'true'; ?>;">
-                                        <span class="font-weight-bold" style="font-size: 1rem;"><i class="fas fa-check mr-1" style="font-size:0.85rem;"></i>Hadir</span>
+                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-check mr-1" style="font-size:0.75rem;"></i>Hadir</span>
                                     </button>
                                 </form>
                             </div>
                             <div class="col-4 mb-2">
                                 <form method="POST" action="" class="mb-0">
                                     <button type="submit" name="absen_status" value="Sakit" class="btn btn-warning btn-block py-2" style="<?php echo ($attendance && $attendance['keterangan'] == 'Sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo ($attendance && $attendance['keterangan'] == 'Sakit') ? 'false' : 'true'; ?>;">
-                                        <span class="font-weight-bold" style="font-size: 1rem;"><i class="fas fa-procedures mr-1" style="font-size:0.85rem;"></i>Sakit</span>
+                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-procedures mr-1" style="font-size:0.75rem;"></i>Sakit</span>
                                     </button>
                                 </form>
                             </div>
                             <div class="col-4 mb-2">
                                 <form method="POST" action="" class="mb-0">
                                     <button type="submit" name="absen_status" value="Izin" class="btn btn-info btn-block py-2" style="<?php echo ($attendance && $attendance['keterangan'] == 'Izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo ($attendance && $attendance['keterangan'] == 'Izin') ? 'false' : 'true'; ?>;">
-                                        <span class="font-weight-bold" style="font-size: 1rem;"><i class="fas fa-envelope mr-1" style="font-size:0.85rem;"></i>Izin</span>
+                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-envelope mr-1" style="font-size:0.75rem;"></i>Izin</span>
                                     </button>
                                 </form>
                             </div>
