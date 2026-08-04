@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'check_update') {
         CURLOPT_TIMEOUT => 10,
         CURLOPT_USERAGENT => 'SIMadrasah-Update-Checker/1.0',
         CURLOPT_HTTPHEADER => ['Accept: application/vnd.github.v3+json'],
-        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYPEER => true,
     ]);
     $resp = curl_exec($ch);
     $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
