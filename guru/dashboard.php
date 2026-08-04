@@ -706,18 +706,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <label class="d-block font-weight-bold">Status Kehadiran (<?php echo date('d-m-Y'); ?>)</label>
                                             <div class="row justify-content-center mb-3">
                                                 <div class="col-4 mb-2">
-                                                    <button type="button" onclick="regAutoAtt('hadir')" class="btn btn-success btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 1rem;">Hadir</span>
+                                                    <button type="button" onclick="regAutoAtt('hadir')" class="btn btn-success btn-block py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1rem;"><i class="fas fa-check mr-1" style="font-size:0.85rem;"></i>Hadir</span>
                                                     </button>
                                                 </div>
                                                 <div class="col-4 mb-2">
-<button type="button" onclick="regAutoAtt('sakit')" class="btn btn-warning btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 1rem;">Sakit</span>
+<button type="button" onclick="regAutoAtt('sakit')" class="btn btn-warning btn-block py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1rem;"><i class="fas fa-procedures mr-1" style="font-size:0.85rem;"></i>Sakit</span>
                                                     </button>
                                                 </div>
                                                 <div class="col-4 mb-2">
-<button type="button" onclick="regAutoAtt('izin')" class="btn btn-info btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 1rem;">Izin</span>
+<button type="button" onclick="regAutoAtt('izin')" class="btn btn-info btn-block py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
+                                                        <span class="font-weight-bold" style="font-size: 1rem;"><i class="fas fa-paper-plane mr-1" style="font-size:0.85rem;"></i>Izin</span>
                                                     </button>
                                                 </div>
                                             </div>
