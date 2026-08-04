@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -707,17 +707,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <div class="row justify-content-center mb-3">
                                                 <div class="col-4 mb-2">
                                                     <button type="button" onclick="regAutoAtt('hadir')" class="btn btn-success btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'hadir') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Hadir</span>
+                                                        <span class="font-weight-bold" style="font-size: 1rem;">Hadir</span>
                                                     </button>
                                                 </div>
                                                 <div class="col-4 mb-2">
 <button type="button" onclick="regAutoAtt('sakit')" class="btn btn-warning btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Sakit</span>
+                                                        <span class="font-weight-bold" style="font-size: 1rem;">Sakit</span>
                                                     </button>
                                                 </div>
                                                 <div class="col-4 mb-2">
 <button type="button" onclick="regAutoAtt('izin')" class="btn btn-info btn-block btn-icon-split py-2" style="<?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) == 'izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 1.15rem;">Izin</span>
+                                                        <span class="font-weight-bold" style="font-size: 1rem;">Izin</span>
                                                     </button>
                                                 </div>
                                             </div>
