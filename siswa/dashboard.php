@@ -327,7 +327,8 @@ include_once '../templates/sidebar.php';
                         <div class="row justify-content-center mb-3">
                             <div class="col-4 mb-2">
                                 <form method="POST" action="" class="mb-0">
-                                    <button type="submit" name="absen_status" value="Hadir" class="btn btn-<?php echo ($attendance && in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])) ? 'success' : 'outline-success'; ?> btn-block btn-icon-split py-2">
+                                    <?php $siswa_sudah_hadir = ($attendance && in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])); ?>
+                                    <button type="submit" name="absen_status" value="Hadir" class="btn btn-<?php echo $siswa_sudah_hadir ? 'success' : 'outline-success'; ?> btn-block btn-icon-split py-2" <?php echo $siswa_sudah_hadir ? 'disabled' : ''; ?>>
                                         <i class="fas fa-check d-block mb-1" style="font-size: 1.5rem;"></i>
                                         <span class="font-weight-bold">Hadir</span>
                                     </button>

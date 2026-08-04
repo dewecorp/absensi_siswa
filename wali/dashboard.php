@@ -1057,6 +1057,21 @@ include_once '../templates/sidebar.php';
                         const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
                         const keteranganBox = document.getElementById('keterangan_box');
                         const keteranganBoxLes = document.getElementById('keterangan_box_les');
+
+                        const alreadyHadirReg = <?php echo ($today_attendance && strtolower($today_attendance['status']) === 'hadir') ? 'true' : 'false'; ?>;
+                        const alreadyHadirLes = <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) === 'hadir') ? 'true' : 'false'; ?>;
+
+                        function updateSubmitBtn(radio) {
+                            const form = radio.closest('form');
+                            const btn = form ? form.querySelector('button[type="submit"]') : null;
+                            if (!btn) return;
+                            const alreadyHadir = (form && form.id === 'attendanceFormLes') ? alreadyHadirLes : alreadyHadirReg;
+                            if (radio.value === 'hadir' && alreadyHadir) {
+                                btn.disabled = true;
+                            } else {
+                                btn.disabled = false;
+                            }
+                        }
                         
                         function updateKeteranganBox(radio) {
                             const form = radio.closest('form');
@@ -1102,7 +1117,13 @@ include_once '../templates/sidebar.php';
                                 if (this.value === 'izin') btn.classList.add('active-izin');
                                 
                                 updateKeteranganBox(this);
+                                updateSubmitBtn(this);
                             });
+                        });
+
+                        // Inisialisasi status tombol simpan untuk radio yang sudah terpilih
+                        radioButtons.forEach(radio => {
+                            if (radio.checked) updateSubmitBtn(radio);
                         });
                         
                         const fotoUpload = document.getElementById('foto_upload');

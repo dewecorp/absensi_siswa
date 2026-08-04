@@ -926,7 +926,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     document.addEventListener('DOMContentLoaded', function() {
                         const radioButtons = document.querySelectorAll('input[name="attendance_status"], input[name="attendance_status_les"]');
                         const statusButtons = document.querySelectorAll('.selectgroup-button-icon');
-                        
+
+                        const alreadyHadirReg = <?php echo ($today_reg_attendance && strtolower($today_reg_attendance['status']) === 'hadir') ? 'true' : 'false'; ?>;
+                        const alreadyHadirLes = <?php echo ($today_les_attendance && strtolower($today_les_attendance['status']) === 'hadir') ? 'true' : 'false'; ?>;
+
+                        function updateSubmitBtn(radio) {
+                            const form = radio.closest('form');
+                            const btn = form ? form.querySelector('button[type="submit"]') : null;
+                            if (!btn) return;
+                            const alreadyHadir = (radio.name === 'attendance_status') ? alreadyHadirReg : alreadyHadirLes;
+                            if (radio.value === 'hadir' && alreadyHadir) {
+                                btn.disabled = true;
+                            } else {
+                                btn.disabled = false;
+                            }
+                        }
+
                         function updateKeteranganBox(radio) {
                             const form = radio.closest('form');
                             const keteranganBox = form.querySelector('.keterangan-box');
@@ -958,7 +973,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 if (this.value === 'izin') btn.classList.add('active-izin');
                                 
                                 updateKeteranganBox(this);
+                                updateSubmitBtn(this);
                             });
+                        });
+
+                        // Inisialisasi status tombol simpan untuk radio yang sudah terpilih
+                        radioButtons.forEach(radio => {
+                            if (radio.checked) updateSubmitBtn(radio);
                         });
                     });
                     </script>
