@@ -67,11 +67,11 @@ $page_title = 'Jadwal Ramadhan';
 
 // Add Select2 libs
 $css_libs = [
-    'assets/vendor/select2/css/select2.min.css'
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
 ];
 
 $js_libs = [
-    'assets/vendor/select2/js/select2.full.min.js'
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js'
 ];
 
 // Get classes based on role

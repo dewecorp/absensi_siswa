@@ -194,7 +194,7 @@ try {
 }
 
 $page_title = 'Kehadiran Les Siswa';
-$css_libs = ['assets/vendor/datatables/css/dataTables.bootstrap4.min.css'];
+$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 
 include '../templates/header.php';
 include '../templates/sidebar.php';
@@ -326,8 +326,8 @@ include '../templates/sidebar.php';
 
 <?php
 $js_libs = [
-    'assets/vendor/datatables/js/jquery.dataTables.min.js',
-    'assets/vendor/datatables/js/dataTables.bootstrap4.min.js'
+    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
+    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js'
 ];
 
 $js_page = [];

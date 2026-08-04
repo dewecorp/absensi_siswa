@@ -121,7 +121,7 @@ $page_title = 'Kehadiran Harian';
 
 // Define CSS libraries for this page
 $css_libs = [
-    'assets/vendor/datatables/css/dataTables.bootstrap4.min.css'
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
 ];
 
 include '../templates/header.php';
@@ -314,8 +314,8 @@ endif;
             <?php
             // Add DataTables JS libraries
             $js_libs = [];
-            $js_libs[] = 'assets/vendor/datatables/js/jquery.dataTables.min.js';
-            $js_libs[] = 'assets/vendor/datatables/js/dataTables.bootstrap4.min.js';
+            $js_libs[] = 'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js';
+            $js_libs[] = 'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js';
             
             // Prepare school name for JavaScript (escape it properly)
 $school_name_js = htmlspecialchars($school_profile['nama_madrasah'], ENT_QUOTES, 'UTF-8');

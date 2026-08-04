@@ -106,7 +106,7 @@ $title = 'Data Anggota Pramuka-' . $academicYear;
 <head>
 <meta charset="UTF-8">
 <title><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="stylesheet" href="../assets/vendor/font-awesome/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <style>
 @page { size: 210mm 330mm landscape; margin: 10mm; }
 body { font-family: Arial, sans-serif; font-size: 11pt; }

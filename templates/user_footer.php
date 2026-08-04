@@ -131,18 +131,18 @@ if (!isset($school_profile)) {
     </div>
 
     <!-- General JS Scripts -->
-    <script src="../assets/vendor/jquery/jquery.min.js></script>
-    <script src="../assets/vendor/popper/popper.min.js></script>
-    <script src="../assets/vendor/bootstrap/js/bootstrap.min.js></script>
-    <script src="../assets/vendor/nicescroll/jquery.nicescroll.min.js"></script>
-    <script src="../assets/vendor/moment/moment.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.nicescroll/3.7.6/jquery.nicescroll.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
     <script src="../assets/js/stisla.js"></script>
     
     <!-- Load Chart.js after other scripts to avoid conflicts -->
-    <script src="../assets/vendor/chart/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
     <!-- SweetAlert Library -->
-    <script src="../assets/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- JS Libraries -->
     <?php if (isset($js_libs) && is_array($js_libs)): ?>

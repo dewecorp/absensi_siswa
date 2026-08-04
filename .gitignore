@@ -1,9 +1,6 @@
 # Dependencies
 node_modules/
 vendor/
-# Aset vendor lokal (Bootstrap, Font Awesome, jQuery, dll) WAJIB ikut ter-deploy
-!assets/vendor/
-!assets/vendor/**
 
 # Environment files
 .env

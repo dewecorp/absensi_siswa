@@ -232,13 +232,13 @@ $page_title = 'Kehadiran Harian';
 
 // Define CSS libraries for this page
 $css_libs = [
-    'assets/vendor/datatables/css/dataTables.bootstrap4.min.css'
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
 ];
 
 // Define JS libraries for this page
 $js_libs = [
-    'assets/vendor/datatables/js/jquery.dataTables.min.js',
-    'assets/vendor/datatables/js/dataTables.bootstrap4.min.js'
+    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
+    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js'
 ];
 
 // Prepare school name for JavaScript (escape it properly)

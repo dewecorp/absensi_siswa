@@ -307,12 +307,12 @@ if ($export_type !== '' && $selected_class_id > 0) {
 }
 
 $css_libs = [
-    "assets/vendor/select2/css/select2.min.css",
-    "assets/vendor/toastr/toastr.min.css",
+    "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css",
 ];
 $js_libs = [
-    "assets/vendor/select2/js/select2.full.min.js",
-    "assets/vendor/toastr/toastr.min.js",
+    "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js",
 ];
 
 $js_page = [];

@@ -296,20 +296,20 @@ $jumlah_kegiatan_belum_terlaksana = count($rencana_pengeluaran) - $jumlah_kegiat
 
 // Define CSS libraries
 $css_libs = [
-    'assets/vendor/datatables/css/dataTables.bootstrap4.min.css',
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdn.datatables.net/select/1.3.3/css/select.bootstrap4.min.css',
     'https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.bootstrap4.min.css',
-    'assets/vendor/toastr/toastr.min.css'
+    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css'
 ];
 
 // Define JS libraries
 $js_libs = [
-    'assets/vendor/datatables/js/jquery.dataTables.min.js',
-    'assets/vendor/datatables/js/dataTables.bootstrap4.min.js',
+    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
+    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js',
     'https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js',
-    'assets/vendor/toastr/toastr.min.js'
+    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js'
 ];
 
 // Include header

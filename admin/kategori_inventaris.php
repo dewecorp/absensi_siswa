@@ -54,10 +54,10 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Add DataTables CSS and JS
 if (!isset($css_libs)) $css_libs = [];
-$css_libs[] = 'assets/vendor/datatables/css/dataTables.bootstrap4.min.css';
+$css_libs[] = 'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css';
 if (!isset($js_libs)) $js_libs = [];
-$js_libs[] = 'assets/vendor/datatables/js/jquery.dataTables.min.js';
-$js_libs[] = 'assets/vendor/datatables/js/dataTables.bootstrap4.min.js';
+$js_libs[] = 'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js';
+$js_libs[] = 'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js';
 
 include '../templates/header.php';
 include '../templates/sidebar.php';

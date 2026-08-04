@@ -44,8 +44,8 @@ if ($selected_class > 0 && !empty($selected_date)) {
 <html>
 <head>
     <title>Manual Daily Attendance Filter</title>
-    <link rel="stylesheet" href="../assets/vendor/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="assets/vendor/datatables/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css">
 </head>
 <body>
     <div class="container mt-4">
@@ -184,9 +184,9 @@ if ($selected_class > 0 && !empty($selected_date)) {
         </div>
     </div>
     
-    <script src="../assets/vendor/jquery/jquery.min.js"></script>
-    <script src="assets/vendor/datatables/js/jquery.dataTables.min.js"></script>
-    <script src="assets/vendor/datatables/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js"></script>
     <script>
     $(document).ready(function() {

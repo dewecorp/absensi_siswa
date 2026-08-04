@@ -63,7 +63,7 @@ $tgl_cetak = formatDateIndonesia(date('Y-m-d'));
 <html>
 <head>
     <title><?= $report_title ?></title>
-    <link rel="stylesheet" href="../assets/vendor/font-awesome/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         @page { size: landscape; margin: 10mm; }
         body { font-family: Arial, sans-serif; margin: 20px; }
