@@ -62,6 +62,15 @@
             <!-- Spacer for Bottom Navbar (Mobile Only) -->
             <div class="d-block d-lg-none" style="height: 70px;"></div>
 
+            <style>
+            /* Bottom nav: selalu satu baris, semua menu tampil (termasuk Akun) di layar sempit */
+            @media (max-width: 991.98px) {
+                .bottom-nav-row { flex-wrap: nowrap !important; }
+                .bottom-nav-row .col { flex: 1 1 0 !important; min-width: 0 !important; overflow: hidden; }
+                .bottom-nav-row .bottom-nav-label { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            }
+            </style>
+
             <!-- Bottom Navbar (Mobile Only) -->
             <?php
             $bottom_quick_links = function_exists('get_bottom_nav_quick_links') && isset($menu_items)
@@ -70,7 +79,7 @@
             ?>
             <nav class="navbar navbar-expand navbar-light bg-white d-block d-lg-none border-top shadow-lg" style="position: fixed; bottom: 0; left: 0; right: 0; height: 60px; padding: 0; z-index: 1030;">
                 <div class="container-fluid h-100 px-0">
-                    <div class="row w-100 mx-0 h-100 no-gutters">
+                    <div class="row w-100 mx-0 h-100 no-gutters bottom-nav-row">
                         <div class="col px-0 h-100">
                             <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-primary">
                                 <i class="fas fa-home fa-lg mb-1"></i>
