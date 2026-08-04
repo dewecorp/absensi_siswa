@@ -33,6 +33,19 @@ ob_start(function($buffer) {
 // Set default timezone to Asia/Jakarta
 date_default_timezone_set('Asia/Jakarta');
 
+// Keamanan: header HTTP dasar
+if (!headers_sent()) {
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('X-XSS-Protection: 1; mode=block');
+}
+
+// Harden session cookie
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
+ini_set('session.use_strict_mode', '1');
+
 if (!defined('ALLOW_LEGACY_DEFAULT_LOGIN')) {
     define('ALLOW_LEGACY_DEFAULT_LOGIN', false);
 }
@@ -386,6 +399,19 @@ function isAuthorized(array $allowed_levels = []): bool {
     if (!isLoggedIn()) {
         return false;
     }
+
+    // Idle timeout: lebih dari 2 jam tanpa aktivitas -> logout otomatis
+    $idle_limit = 2 * 3600; // 2 jam
+    $now_ts = time();
+    if (isset($_SESSION['last_activity']) && ($now_ts - (int)$_SESSION['last_activity'] > $idle_limit)) {
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_destroy();
+        }
+        return false;
+    }
+    $_SESSION['last_activity'] = $now_ts;
+
     if (!isActiveStudentSession()) {
         $_SESSION = [];
         if (session_status() === PHP_SESSION_ACTIVE) {

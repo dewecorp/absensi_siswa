@@ -49,6 +49,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $user_data = null;
     $user_type = '';
 
+    // CSRF login non-intrusif: hanya menolak bila token dikirim tapi tidak cocok.
+    // Jika token tidak ada (sesi baru / form lama), login tetap diproses agar tidak mengganggu.
+    $csrf_submitted = isset($_POST['csrf_token']) && trim((string)$_POST['csrf_token']) !== '';
+    $csrf_ok = !$csrf_submitted || appVerifyCsrfToken($_POST['csrf_token']);
+
+    if (!$csrf_ok) {
+        $login_error_title = 'Sesi Kadaluarsa';
+        $login_error_html = '<div class="login-error-box login-error-box-danger">Token keamanan tidak valid. Silakan muat ulang halaman dan coba lagi.</div>';
+    } else {
     // 1. Try Admin/Staff (tb_pengguna)
     $stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");
     $stmt->execute([$login_identifier]);
@@ -105,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         try {
             $pdo->prepare("DELETE FROM tb_login_attempts WHERE ip_address = ? OR username = ?")->execute([$client_ip, $login_identifier]);
         } catch (Exception $e) {}
+        $_SESSION['last_activity'] = time();
 
         if (session_status() === PHP_SESSION_ACTIVE) {
             @session_regenerate_id(true);
@@ -187,6 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $login_error_title = 'Login Gagal';
             $login_error_html = '<div class="login-error-box login-error-box-danger">Username/NUPTK/NISN atau password tidak sesuai.</div><div class="login-error-box login-error-box-warning">Untuk siswa, akun hanya berlaku jika masih tercatat di data siswa dan memiliki kelas aktif.</div>';
         }
+    }
     }
 }
 
@@ -375,6 +386,7 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
                         </div>
                         <div class="card-body">
                             <form method="POST" action="">
+                                <input type="hidden" name="csrf_token" value="<?php echo appCsrfToken(); ?>">
                                 <div class="form-group">
                                     <label for="username">Username / NUPTK / NISN</label>
                                     <input id="username" type="text" class="form-control" name="username" placeholder="Admin: Username | Guru: NUPTK | Siswa: NISN" tabindex="1" required autofocus>
