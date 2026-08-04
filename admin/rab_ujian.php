@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -11,7 +11,7 @@ if (session_status() == PHP_SESSION_NONE) {
 if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
     redirect('../login.php');
 }
-$is_admin = isAuthorized(['admin']);
+$is_admin = isAuthorized(['admin', 'tata_usaha']);
 $is_bendahara = isBendahara($pdo);
 if ($is_bendahara) {
     $is_admin = true;
