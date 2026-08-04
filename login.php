@@ -10,7 +10,41 @@ ensureGuruDefaultPasswords($pdo);
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $login_identifier = trim(sanitizeInput($_POST['username'] ?? ''));
     $password = trim($_POST['password'] ?? '');
-    
+
+    // ===== Proteksi brute force =====
+    $client_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $brute_max = 5;          // maksimum percobaan gagal sebelum terkunci
+    $brute_window = 900;     // jendela waktu 15 menit (detik)
+    $brute_blocked = false;
+    $brute_wait_sec = 0;
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS tb_login_attempts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            ip_address VARCHAR(45) NOT NULL,
+            username VARCHAR(191) NULL,
+            attempted_at DATETIME NOT NULL,
+            INDEX idx_ip (ip_address, attempted_at),
+            INDEX idx_user (username, attempted_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $stChk = $pdo->prepare("SELECT COUNT(*) FROM tb_login_attempts WHERE ip_address = ? AND attempted_at > (NOW() - INTERVAL $brute_window SECOND)");
+        $stChk->execute([$client_ip]);
+        $recent_fail = (int)$stChk->fetchColumn();
+        if ($recent_fail >= $brute_max) {
+            $brute_blocked = true;
+            $stOld = $pdo->prepare("SELECT MIN(attempted_at) FROM tb_login_attempts WHERE ip_address = ? AND attempted_at > (NOW() - INTERVAL $brute_window SECOND)");
+            $stOld->execute([$client_ip]);
+            $oldest = $stOld->fetchColumn();
+            if ($oldest) {
+                $stDiff = $pdo->prepare("SELECT TIMESTAMPDIFF(SECOND, ?, NOW())");
+                $stDiff->execute([$oldest]);
+                $elapsed = (int)$stDiff->fetchColumn();
+                $brute_wait_sec = max(0, $brute_window - $elapsed);
+            }
+        }
+    } catch (Exception $e) {
+        // jika tabel gagal dibuat, lanjutkan tanpa lockout
+    }
+
     $authenticated = false;
     $user_data = null;
     $user_type = '';
@@ -67,6 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if ($authenticated) {
+        // Reset riwayat percobaan gagal setelah login sukses
+        try {
+            $pdo->prepare("DELETE FROM tb_login_attempts WHERE ip_address = ? OR username = ?")->execute([$client_ip, $login_identifier]);
+        } catch (Exception $e) {}
+
         if (session_status() === PHP_SESSION_ACTIVE) {
             @session_regenerate_id(true);
         }
@@ -134,8 +173,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Pastikan sesi tersimpan permanen sebelum redireksi
         @session_write_close();
     } else {
-        $login_error_title = 'Login Gagal';
-        $login_error_html = '<div class="login-error-box login-error-box-danger">Username/NUPTK/NISN atau password tidak sesuai.</div><div class="login-error-box login-error-box-warning">Untuk siswa, akun hanya berlaku jika masih tercatat di data siswa dan memiliki kelas aktif.</div>';
+        // Catat percobaan gagal (proteksi brute force) + delay
+        try {
+            $pdo->prepare("INSERT INTO tb_login_attempts (ip_address, username, attempted_at) VALUES (?, ?, NOW())")->execute([$client_ip, $login_identifier]);
+        } catch (Exception $e) {}
+        usleep(250000); // 0.25 detik, memperlambat brute force
+
+        if ($brute_blocked) {
+            $wait_min = max(1, (int)ceil($brute_wait_sec / 60));
+            $login_error_title = 'Terlalu Banyak Percobaan';
+            $login_error_html = '<div class="login-error-box login-error-box-danger">Terlalu banyak percobaan login gagal dari perangkat ini. Akun sementara terkunci. Silakan coba lagi dalam sekitar ' . $wait_min . ' menit.</div>';
+        } else {
+            $login_error_title = 'Login Gagal';
+            $login_error_html = '<div class="login-error-box login-error-box-danger">Username/NUPTK/NISN atau password tidak sesuai.</div><div class="login-error-box login-error-box-warning">Untuk siswa, akun hanya berlaku jika masih tercatat di data siswa dan memiliki kelas aktif.</div>';
+        }
     }
 }
 
