@@ -1312,7 +1312,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             $has_submenu = isset($item['submenu']) && is_array($item['submenu']) && count($item['submenu']) > 0;
             $url = $has_submenu ? $item['submenu'][0]['url'] : $item['url'];
 
-            // Nama singkat untuk bottom nav (agar tidak terpotong di layar sempit)
+            // Nama singkat untuk tampilan bottom nav (URL tetap pakai judul asli)
             $short_map = [
                 'Master Data' => 'Master',
                 'Ekstrakurikuler' => 'Ekstra',
@@ -1328,22 +1328,20 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                 'Data Anggota Pencak Silat' => 'Pencak Silat',
                 'Pengaturan Cetak Suket' => 'Suket',
             ];
-            if (isset($short_map[$title])) {
-                $title = $short_map[$title];
-            }
+            $display_title = isset($short_map[$title]) ? $short_map[$title] : $title;
 
-            // Custom mapping for all user levels
+            // Custom mapping untuk semua level (URL/anchor memakai judul ASLI)
             if ($user_level === 'guru' || $user_level === 'wali') {
                 if ($title === 'Data Utama') {
-                    $title = 'Kehadiran';
+                    $display_title = 'Kehadiran';
                     $icon = 'fas fa-calendar-check';
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Absensi');
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
                 } elseif ($title === 'Kehadiran') {
-                    $title = 'Nilai Siswa';
+                    $display_title = 'Nilai Siswa';
                     $icon = 'fas fa-graduation-cap';
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Nilai Siswa');
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
                 } elseif ($title === 'Ekstrakurikuler') {
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Ekstrakurikuler');
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
                 }
             } else {
                 if ($has_submenu) {
@@ -1352,7 +1350,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             }
 
             $links[] = [
-                'title' => $title,
+                'title' => $display_title,
                 'icon' => $icon,
                 'url' => $url
             ];
