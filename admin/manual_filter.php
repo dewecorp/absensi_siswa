@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 $_SESSION['user_id'] = 1;
 $_SESSION['username'] = 'admin';
@@ -44,7 +44,7 @@ if ($selected_class > 0 && !empty($selected_date)) {
 <html>
 <head>
     <title>Manual Daily Attendance Filter</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../assets/vendor/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/vendor/datatables/css/dataTables.bootstrap4.min.css">
 </head>
 <body>
@@ -150,7 +150,7 @@ if ($selected_class > 0 && !empty($selected_date)) {
                             <div class="card bg-success text-white">
                                 <div class="card-body text-center">
                                     <h5>Database</h5>
-                                    <p class="mb-0">✓ Connected</p>
+                                    <p class="mb-0">âœ“ Connected</p>
                                 </div>
                             </div>
                         </div>
@@ -158,7 +158,7 @@ if ($selected_class > 0 && !empty($selected_date)) {
                             <div class="card bg-success text-white">
                                 <div class="card-body text-center">
                                     <h5>Data Query</h5>
-                                    <p class="mb-0">✓ Working</p>
+                                    <p class="mb-0">âœ“ Working</p>
                                 </div>
                             </div>
                         </div>
@@ -166,7 +166,7 @@ if ($selected_class > 0 && !empty($selected_date)) {
                             <div class="card bg-success text-white">
                                 <div class="card-body text-center">
                                     <h5>Records Found</h5>
-                                    <p class="mb-0">✓ <?php echo count($attendance_data); ?></p>
+                                    <p class="mb-0">âœ“ <?php echo count($attendance_data); ?></p>
                                 </div>
                             </div>
                         </div>
@@ -174,7 +174,7 @@ if ($selected_class > 0 && !empty($selected_date)) {
                             <div class="card <?php echo $show_results ? 'bg-success' : 'bg-secondary'; ?> text-white">
                                 <div class="card-body text-center">
                                     <h5>Filter Test</h5>
-                                    <p class="mb-0"><?php echo $show_results ? '✓ Working' : 'Ready'; ?></p>
+                                    <p class="mb-0"><?php echo $show_results ? 'âœ“ Working' : 'Ready'; ?></p>
                                 </div>
                             </div>
                         </div>
@@ -184,7 +184,7 @@ if ($selected_class > 0 && !empty($selected_date)) {
         </div>
     </div>
     
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="../assets/vendor/jquery/jquery.min.js"></script>
     <script src="assets/vendor/datatables/js/jquery.dataTables.min.js"></script>
     <script src="assets/vendor/datatables/js/dataTables.bootstrap4.min.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js"></script>

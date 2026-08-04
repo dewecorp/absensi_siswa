@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -90,10 +90,10 @@ $alpa_data_json = json_encode($alpa_data);
     <title><?php echo $page_title; ?> | Simple Dashboard</title>
     
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../assets/vendor/bootstrap/css/bootstrap.min.css">
     
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="../assets/vendor/chart/chart.min.js"></script>
 </head>
 <body>
     <div class="container-fluid mt-4">

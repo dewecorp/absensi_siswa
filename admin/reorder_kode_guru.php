@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -43,7 +43,7 @@ $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <html>
 <head>
     <title>Reorder Kode Guru</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../assets/vendor/bootstrap/css/bootstrap.min.css">
 </head>
 <body class="bg-light">
 <div class="container mt-5">
