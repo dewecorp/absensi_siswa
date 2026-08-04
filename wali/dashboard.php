@@ -397,14 +397,14 @@ $page_title = 'Dashboard Wali Kelas';
 
 // Define CSS libraries for this page (only essential ones)
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
+    'assets/vendor/datatables/css/dataTables.bootstrap4.min.css'
     // Removed JQVMap since files don't exist
 ];
 
 // Define JS libraries for this page (only essential ones)
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js'
+    'assets/vendor/datatables/js/jquery.dataTables.min.js',
+    'assets/vendor/datatables/js/dataTables.bootstrap4.min.js'
     // Removed JQVMap since files don't exist
 ];
 

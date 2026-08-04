@@ -159,9 +159,9 @@ $days = getUrutanHariPilihanModal7Hari($pdo);
 
 // Add Select2 CSS and JS
 if (!isset($css_libs)) $css_libs = [];
-$css_libs[] = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css';
+$css_libs[] = 'assets/vendor/select2/css/select2.min.css';
 if (!isset($js_libs)) $js_libs = [];
-$js_libs[] = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js';
+$js_libs[] = 'assets/vendor/select2/js/select2.full.min.js';
 
 include '../templates/header.php';
 include '../templates/sidebar.php';

@@ -173,11 +173,11 @@ $can_interact_sku = $can_manage_sku || (!$sku_assignment_missing && !empty($assi
 $page_title = 'Syarat Kecakapan Umum';
 
 $css_libs = [
-    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css',
+    'assets/vendor/toastr/toastr.min.css',
 ];
 $js_libs = [
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
-    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js',
+    'assets/vendor/toastr/toastr.min.js',
 ];
 
 $ensureSkuSchema = static function () use ($pdo): void {

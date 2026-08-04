@@ -77,7 +77,7 @@ $stmt_g = $pdo->query("SELECT id_guru, nama_guru FROM tb_guru ORDER BY nama_guru
 $all_guru = $stmt_g->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = 'Jadwal Guru Piket';
-$css_libs = ['https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'];
+$css_libs = ['assets/vendor/select2/css/select2.min.css'];
 $js_libs = ['https://cdn.jsdelivr.net/npm/sweetalert2@11', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js'];
 
 $js_page = ["

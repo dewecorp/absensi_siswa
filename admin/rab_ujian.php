@@ -166,15 +166,15 @@ $biaya_per_siswa = $jumlah_siswa > 0 ? $total_pengeluaran / $jumlah_siswa : 0;
 
 // Define CSS libraries
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+    'assets/vendor/datatables/css/dataTables.bootstrap4.min.css',
     'https://cdn.datatables.net/select/1.3.3/css/select.bootstrap4.min.css',
     'https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.bootstrap4.min.css'
 ];
 
 // Define JS libraries
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'assets/vendor/datatables/js/jquery.dataTables.min.js',
+    'assets/vendor/datatables/js/dataTables.bootstrap4.min.js',
     'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js',
     'https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js', // Mask Plugin for Rupiah

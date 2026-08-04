@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'database.php';
 require_once 'functions.php';
 
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chart_image'])) {
 <html>
 <head>
     <title>' . htmlspecialchars($report_title) . '</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="../assets/vendor/font-awesome/css/all.min.css">
     <style>
         @page {
             size: landscape;
@@ -208,7 +208,7 @@ $html = '
 <html>
 <head>
     <title>' . htmlspecialchars($report_title) . '</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="../assets/vendor/font-awesome/css/all.min.css">
     <style>
         @page {
             size: landscape;

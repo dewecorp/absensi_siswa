@@ -177,13 +177,13 @@ $page_title = 'Jurnal Mengajar';
 
 // Define CSS libraries
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
+    'assets/vendor/datatables/css/dataTables.bootstrap4.min.css'
 ];
 
 // Define JS libraries
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'assets/vendor/datatables/js/jquery.dataTables.min.js',
+    'assets/vendor/datatables/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11'
 ];
 

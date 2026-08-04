@@ -12,17 +12,17 @@ $page_title = 'Rekap Kehadiran Guru';
 
 // Define CSS libraries for this page
 $css_libs = [
-    "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css",
-    "https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css"
+    "assets/vendor/select2/css/select2.min.css",
+    "assets/vendor/datatables/css/dataTables.bootstrap4.min.css"
 ];
 
 // Define JS libraries for this page
 $js_libs = [
-    "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js",
-    "https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js",
-    "https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js",
+    "assets/vendor/select2/js/select2.full.min.js",
+    "assets/vendor/datatables/js/jquery.dataTables.min.js",
+    "assets/vendor/datatables/js/dataTables.bootstrap4.min.js",
     // Using SheetJS from jsDelivr as alternative to XLSX
-    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+    "assets/vendor/xlsx/xlsx.full.min.js"
 ];
 
 // Handle form submission

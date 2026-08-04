@@ -19,12 +19,12 @@ $page_title = 'Data Ekstrakurikuler';
 
 // DataTables
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+    'assets/vendor/datatables/css/dataTables.bootstrap4.min.css',
 ];
 
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'assets/vendor/datatables/js/jquery.dataTables.min.js',
+    'assets/vendor/datatables/js/dataTables.bootstrap4.min.js',
 ];
 
 $school_profile = getSchoolProfile($pdo);

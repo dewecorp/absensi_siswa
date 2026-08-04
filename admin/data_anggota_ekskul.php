@@ -24,13 +24,13 @@ $message = null;
 $toast_message = null;
 
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css',
+    'assets/vendor/datatables/css/dataTables.bootstrap4.min.css',
+    'assets/vendor/toastr/toastr.min.css',
 ];
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js',
+    'assets/vendor/datatables/js/jquery.dataTables.min.js',
+    'assets/vendor/datatables/js/dataTables.bootstrap4.min.js',
+    'assets/vendor/toastr/toastr.min.js',
 ];
 
 try {

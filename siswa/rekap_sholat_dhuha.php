@@ -119,7 +119,7 @@ function getIndonesianMonth($periode) {
 
 // Define JS libraries for this page
 $js_libs = [
-    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+    "assets/vendor/xlsx/xlsx.full.min.js"
 ];
 
 // Get student profile with class and wali info
