@@ -1312,6 +1312,26 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             $has_submenu = isset($item['submenu']) && is_array($item['submenu']) && count($item['submenu']) > 0;
             $url = $has_submenu ? $item['submenu'][0]['url'] : $item['url'];
 
+            // Nama singkat untuk bottom nav (agar tidak terpotong di layar sempit)
+            $short_map = [
+                'Master Data' => 'Master',
+                'Ekstrakurikuler' => 'Ekstra',
+                'Kalender Pendidikan' => 'Kalender',
+                'Mata Pelajaran' => 'Mapel',
+                'Data Alumni' => 'Alumni',
+                'Data Siswa Baru' => 'Siswa Baru',
+                'Kenaikan Kelas' => 'Kenaikan',
+                'Rekap Absensi' => 'Rekap',
+                'Syarat Kecakapan Umum' => 'SKU',
+                'Data Anggota Pramuka' => 'Pramuka',
+                'Data Anggota Rebana' => 'Rebana',
+                'Data Anggota Pencak Silat' => 'Pencak Silat',
+                'Pengaturan Cetak Suket' => 'Suket',
+            ];
+            if (isset($short_map[$title])) {
+                $title = $short_map[$title];
+            }
+
             // Custom mapping for all user levels
             if ($user_level === 'guru' || $user_level === 'wali') {
                 if ($title === 'Data Utama') {

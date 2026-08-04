@@ -67,7 +67,7 @@
             @media (max-width: 991.98px) {
                 .bottom-nav-row { flex-wrap: nowrap !important; }
                 .bottom-nav-row .col { flex: 1 1 0 !important; min-width: 0 !important; overflow: hidden; }
-                .bottom-nav-row .bottom-nav-label { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+                .bottom-nav-row .bottom-nav-label { white-space: normal !important; line-height: 1.15 !important; }
             }
             </style>
 
