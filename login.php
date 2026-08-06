@@ -397,7 +397,14 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
                                     <div class="d-block">
                                         <label for="password" class="control-label">Password</label>
                                     </div>
-                                    <input id="password" type="password" class="form-control" name="password" tabindex="2" required>
+                                    <div class="input-group">
+                                        <input id="password" type="password" class="form-control" name="password" tabindex="2" required>
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-secondary" id="togglePassword" tabindex="3" title="Lihat / Sembunyikan password" style="border-color: #ced4da; background: #fff;">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="form-group">
@@ -472,5 +479,21 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
     <?php endif; ?>
 
     <!-- JS Libraies -->
+<script>
+    // Toggle lihat/sembunyikan password
+    window.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('togglePassword');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var p = document.getElementById('password');
+            var i = btn.querySelector('i');
+            if (p.type === 'password') {
+                p.type = 'text'; i.classList.remove('fa-eye'); i.classList.add('fa-eye-slash');
+            } else {
+                p.type = 'password'; i.classList.remove('fa-eye-slash'); i.classList.add('fa-eye');
+            }
+        });
+    });
+    </script>
 </body>
 </html>
