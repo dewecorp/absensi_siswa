@@ -881,12 +881,14 @@ $(document).ready(function() {
 
     // Init DataTables
     var sumberTable = $('#table-sumber').DataTable({
+        autoWidth: false,
         ordering: false,
         paging: false,
         lengthChange: false,
         info: false
     });
     var pengeluaranTable = $('#table-pengeluaran').DataTable({
+        autoWidth: false,
         ordering: false,
         paging: false,
         lengthChange: false,

@@ -477,6 +477,7 @@ $(document).ready(function() {
 
     // Init DataTables
     $('#table-pengeluaran').DataTable({
+        autoWidth: false,
         ordering: false,
         paging: false,
         lengthChange: false,

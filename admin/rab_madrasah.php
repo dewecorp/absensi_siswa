@@ -879,6 +879,7 @@ $(document).ready(function() {
 
     // Init DataTables
     var tableOptions = {
+        autoWidth: false,
         ordering: false,
         paging: false,
         lengthChange: false,
