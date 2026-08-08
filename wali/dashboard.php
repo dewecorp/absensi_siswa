@@ -296,8 +296,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status_to_save = ucfirst($_POST['attendance_status']);
             $attendance_note = $_POST['attendance_note'] ?? '';
             
-            // Late check: after 07:30 (hanya berlaku untuk status Hadir)
-            $is_late_wali = time() > strtotime('07:30');
+            // Late check: after 07:10 (hanya berlaku untuk status Hadir)
+            $is_late_wali = time() > strtotime('07:10');
             $late_note_wali = ($status_to_save === 'Hadir') ? ($is_late_wali ? 'Terlambat' : 'Tepat Waktu') : '';
             $keterangan_wali = trim(implode(' | ', array_filter([$attendance_note, $late_note_wali])));
             $late_text_wali = ($status_to_save === 'Hadir' && $is_late_wali) ? ' Maaf anda terlambat.' : '';
@@ -754,7 +754,7 @@ include_once '../templates/sidebar.php';
                                             $wali_att_late = false;
                                             if ($today_attendance && strtolower($today_attendance['status']) === 'hadir') {
                                                 $wali_att_ts = !empty($today_attendance['waktu_input']) ? strtotime($today_attendance['waktu_input']) : time();
-                                                $wali_att_late = $wali_att_ts > strtotime('07:30');
+                                                $wali_att_late = $wali_att_ts > strtotime('07:10');
                                                 $wali_att_label = $wali_att_late ? 'Terlambat' : 'Tepat Waktu';
                                             }
                                             ?>

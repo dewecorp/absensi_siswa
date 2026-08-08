@@ -494,8 +494,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 </script>";
             } else {
-                // Late check: after 07:30 (hanya berlaku untuk status Hadir)
-                $late_time = strtotime('07:30');
+                // Late check: after 07:10 (hanya berlaku untuk status Hadir)
+                $late_time = strtotime('07:10');
                 $current_time_ts = time();
                 $is_late = $current_time_ts > $late_time;
                 $late_note = ($status_to_save === 'Hadir') ? ($is_late ? 'Terlambat' : 'Tepat Waktu') : '';
@@ -726,7 +726,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             $reg_att_late = false;
                                             if ($today_reg_attendance && strtolower($today_reg_attendance['status']) === 'hadir') {
                                                 $reg_att_ts = !empty($today_reg_attendance['waktu_input']) ? strtotime($today_reg_attendance['waktu_input']) : time();
-                                                $reg_att_late = $reg_att_ts > strtotime('07:30');
+                                                $reg_att_late = $reg_att_ts > strtotime('07:10');
                                                 $reg_att_label = $reg_att_late ? 'Terlambat' : 'Tepat Waktu';
                                             }
                                             ?>
