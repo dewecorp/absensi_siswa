@@ -400,7 +400,7 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
                                     <div class="input-group">
                                         <input id="password" type="password" class="form-control" name="password" tabindex="2" required>
                                         <div class="input-group-append">
-                                            <button type="button" class="btn btn-outline-secondary" id="togglePassword" tabindex="3" title="Lihat / Sembunyikan password" style="border-color: #ced4da; background: #fff;">
+                                            <button type="button" class="btn btn-outline-secondary" id="togglePassword" tabindex="3" title="Lihat / Sembunyikan password" style="border-color: #ced4da; background: #fff; display: none;">
                                                 <i class="fas fa-eye"></i>
                                             </button>
                                         </div>
@@ -484,8 +484,13 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
     window.addEventListener('DOMContentLoaded', function () {
         var btn = document.getElementById('togglePassword');
         if (!btn) return;
+        var p = document.getElementById('password');
+        function syncBtn() {
+            btn.style.display = p.value.length > 0 ? '' : 'none';
+        }
+        p.addEventListener('input', syncBtn);
+        syncBtn();
         btn.addEventListener('click', function () {
-            var p = document.getElementById('password');
             var i = btn.querySelector('i');
             if (p.type === 'password') {
                 p.type = 'text'; i.classList.remove('fa-eye'); i.classList.add('fa-eye-slash');
