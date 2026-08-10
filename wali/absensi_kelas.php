@@ -48,6 +48,11 @@ $wali_kelas = $wali_kelas_stmt->fetch(PDO::FETCH_ASSOC);
 
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
+    // Time validation: only 07:00-14:00 for student attendance
+    $now_hour = (int)date('H');
+    if ($now_hour < 7 || $now_hour >= 14) {
+        $message = ['type' => 'danger', 'text' => 'Kehadiran siswa hanya dapat diisi pukul 07:00 - 14:00 WIB.'];
+    } else {
     $id_kelas = (int)$wali_kelas['id_kelas']; // Use the wali's class
     $tanggal = $_POST['tanggal'];
     $holiday = isSchoolHoliday($pdo, $tanggal);
@@ -114,6 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
         $username = isset($_SESSION['username']) ? $_SESSION['username'] : (isset($teacher['nuptk']) ? $teacher['nuptk'] : 'system');
         $log_result = logActivity($pdo, $username, 'Input Absensi', "Wali " . $username . " melakukan input absensi harian kelas ID: $id_kelas untuk $saved_count siswa");
         if (!$log_result) error_log("Failed to log activity for Input Kehadiran: kelas ID $id_kelas");
+    }
     }
 }
 

@@ -366,7 +366,7 @@ include '../templates/user_header.php';
                             <!-- Ringkasan Ketidakhadiran Harian (Kelas Wali) - Box Tersendiri di Atas Filter -->
                             <div class="row">
                                 <div class="col-12">
-                                    <div class="card card-statistic-1 border">
+                                    <div class="card border">
                                         <div class="card-header pb-0">
                                             <h4>Ringkasan Ketidakhadiran Kelas (<?php echo date('d-m-Y', strtotime($selected_date)); ?>)</h4>
                                         </div>
