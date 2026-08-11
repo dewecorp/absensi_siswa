@@ -97,20 +97,20 @@ if (!isLoggedIn()) {
             padding-right: 15px;
         }
 
-        /* Mobile Header */
+/* Mobile Header */
         .mobile-header {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 70px;
+            height: 56px;
             z-index: 800;
             background: #ffffff;
-            padding: 10px 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            padding: 8px 16px;
+            box-shadow: 0 3px 12px rgba(47, 110, 240, 0.25);
             display: flex;
             align-items: center;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #e3ebff;
         }
         .mobile-menu-label {
             font-size: 0.78rem;
@@ -156,9 +156,9 @@ if (!isLoggedIn()) {
             .mobile-header {
                 padding: 10px 15px;
             }
-            .main-content {
+.main-content {
                 padding: 15px !important;
-                padding-top: 90px !important;
+                padding-top: 84px !important;
             }
             .card-body {
                 padding: 1rem;
@@ -172,11 +172,11 @@ if (!isLoggedIn()) {
             }
         }
 
-        /* Mobile to Tablet (576px - 767px) */
+/* Mobile to Tablet (576px - 767px) */
         @media (min-width: 576px) and (max-width: 767.98px) {
             .main-content {
                 padding: 20px !important;
-                padding-top: 100px !important;
+                padding-top: 84px !important;
             }
         }
 
@@ -189,9 +189,12 @@ if (!isLoggedIn()) {
                 display: none !important;
             }
             .main-content {
-                padding-top: 100px !important;
+                padding-top: 84px !important;
                 padding-left: 20px !important;
                 padding-right: 20px !important;
+            }
+            .main-content.has-mobile-app-header {
+                padding-top: 56px !important;
             }
         }
 
@@ -247,21 +250,12 @@ if (!isLoggedIn()) {
     </style>
 </head>
 
-<body>
+<body class="<?php echo in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?>">
     <div id="app">
         <div class="main-wrapper">
             <!-- Mobile Header -->
             <div class="mobile-header d-md-none">
                 <div class="d-flex align-items-center w-100">
-                    <?php 
-                    $current_page = basename($_SERVER['PHP_SELF']);
-                    $is_dashboard = ($current_page === 'dashboard.php' || $current_page === 'simple_dashboard.php');
-                    if (!$is_dashboard): 
-                    ?>
-                        <a href="javascript:history.back()" class="mr-3 text-dark d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background: #f8f9fa; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-decoration: none;">
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                    <?php endif; ?>
                     <img src="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>" alt="logo" class="mr-2" style="height: 40px;">
                     <div style="line-height: 1.2;">
                         <h6 class="mb-0 text-success font-weight-bold" style="font-size: 1rem;">Sistem Informasi Madrasah</h6>
@@ -273,6 +267,16 @@ if (!isLoggedIn()) {
                     </div>
                 </div>
             </div>
+
+            <?php if (!in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php'])): ?>
+            <!-- Mobile App Page Header (mobile only) -->
+            <div class="mobile-app-header d-md-none">
+                <a href="javascript:history.back()" class="mobile-app-back" aria-label="Kembali">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div class="mobile-app-title"><?php echo htmlspecialchars(trim($page_title ?? '')); ?></div>
+            </div>
+            <?php endif; ?>
             
             <div class="navbar-bg"></div>
             <nav class="navbar navbar-expand-lg main-navbar">

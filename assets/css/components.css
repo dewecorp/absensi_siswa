@@ -2084,3 +2084,44 @@ tr:first-child > td > .fc-day-grid-event {
     font-size: 16px;
   }
 }
+/* ===== Stat Card Mobile Center Fix (last wins) ===== */
+@media (max-width: 991.98px) {
+  .main-content .card-statistic-1,
+  .main-content .col-3 .card-statistic-1,
+  .main-content .col-4 .card-statistic-1,
+  .main-content .col-6 .card-statistic-1 {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  .main-content .card-statistic-1 .card-wrap,
+  .main-content .card-statistic-1 .card-header,
+  .main-content .card-statistic-1 .card-body {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    text-align: center !important;
+  }
+  .main-content .card-statistic-1 .card-header h4 {
+    display: block;
+    width: 100%;
+    text-align: center !important;
+    padding: 0 2px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .main-content .card-statistic-1 .card-icon {
+    float: none !important;
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    margin: 10px auto 4px !important;
+  }
+  .main-content .card-statistic-1 .card-body {
+    font-size: 15px !important;
+  }
+}

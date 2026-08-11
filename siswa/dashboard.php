@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -502,14 +502,14 @@ include_once '../templates/sidebar.php';
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4 col-6 mb-3 mb-md-0">
+                                <div class="col-4 col-md-4 mb-2">
                                     <div class="border rounded p-3 h-100">
                                         <div class="small text-muted">Tahun Ajaran Aktif</div>
                                         <div class="font-weight-bold"><?php echo htmlspecialchars($tagihan_tahun_aktif); ?></div>
                                         <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_aktif, 0, ',', '.'); ?></div>
                                     </div>
                                 </div>
-                                <div class="col-md-4 col-6 mb-3 mb-md-0">
+                                <div class="col-4 col-md-4 mb-2">
                                     <div class="border rounded p-3 h-100">
                                         <div class="small text-muted">Tahun Ajaran Lama</div>
                                         <div class="font-weight-bold"><?php echo empty($tagihan_tahun_lama) ? '-' : htmlspecialchars(implode(', ', $tagihan_tahun_lama)); ?></div>

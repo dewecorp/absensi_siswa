@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -100,7 +100,7 @@ $alpa_data_json = json_encode($alpa_data);
         <h1>Dashboard - Simplified Version</h1>
         
         <div class="row mb-4">
-            <div class="col-md-3">
+            <div class="col-4 col-md-3">
                 <div class="card bg-primary text-white">
                     <div class="card-body">
                         <h5>Total Siswa Hadir</h5>
@@ -108,7 +108,7 @@ $alpa_data_json = json_encode($alpa_data);
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-4 col-md-3">
                 <div class="card bg-danger text-white">
                     <div class="card-body">
                         <h5>Sakit</h5>
@@ -116,7 +116,7 @@ $alpa_data_json = json_encode($alpa_data);
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-4 col-md-3">
                 <div class="card bg-warning text-white">
                     <div class="card-body">
                         <h5>Izin</h5>
@@ -124,7 +124,7 @@ $alpa_data_json = json_encode($alpa_data);
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-4 col-md-3">
                 <div class="card bg-secondary text-white">
                     <div class="card-body">
                         <h5>Alpa</h5>

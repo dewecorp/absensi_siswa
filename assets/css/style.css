@@ -3588,41 +3588,136 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
 
 /* ===== Mobile App Style Page Header (Mobile only) ===== */
 @media (max-width: 991.98px) {
-  .section .section-header {
-    margin-left: -20px;
-    margin-right: -20px;
-    padding: 14px 20px;
-    border-radius: 0;
-    box-shadow: none;
-    border: none;
-    border-bottom: 1px solid #eef0f5;
-    background-color: #ffffff;
-    margin-bottom: 16px !important;
-    flex-wrap: nowrap;
+  .main-content .col-3.card-statistic-1,
+  .main-content .col-4 .card-statistic-1,
+  .main-content .col-3 .card-statistic-1,
+  .main-content .card-statistic-1 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
-  .section .section-header .section-header-breadcrumb {
+  .main-content .card-statistic-1 .card-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+  }
+  .main-content .card-statistic-1 .card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+    text-align: center;
+  }
+  .main-content .card-statistic-1 .card-header h4,
+  .main-content .card-statistic-1 .card-body {
+    display: block;
+    width: 100%;
+    text-align: center !important;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2px;
+    padding-right: 2px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .main-content .card-statistic-1 .card-icon {
+    float: none;
+    width: 44px;
+    height: 44px;
+    line-height: 44px !important;
+    margin: 10px auto 4px !important;
+  }
+  .main-content .card-statistic-1 .card-icon .ion,
+  .main-content .card-statistic-1 .card-icon .fas,
+  .main-content .card-statistic-1 .card-icon .far,
+  .main-content .card-statistic-1 .card-icon .fab,
+  .main-content .card-statistic-1 .card-icon .fal {
+    font-size: 16px !important;
+  }
+  .main-content .card-statistic-1 .card-body {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .section .section-header {
     display: none !important;
   }
-  .section .section-header h1 {
-    font-size: 18px;
-    margin: 0;
+}
+
+.mobile-app-header {
+  display: none;
+}
+
+@media (max-width: 991.98px) {
+  .mobile-app-header {
+    display: flex;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    margin: 56px 0 16px 0;
+    padding: 14px 16px 34px;
+    background: linear-gradient(135deg, #2f6ef0 0%, #5a8ff7 100%);
+    border-radius: 0 0 44px 44px;
+    box-shadow: 0 4px 14px rgba(47, 110, 240, 0.28);
+    color: #ffffff;
+    z-index: 5;
+  }
+  .mobile-app-header .mobile-app-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 16px;
+  }
+  .mobile-app-header .mobile-app-back:active {
+    background: rgba(255, 255, 255, 0.32);
+  }
+  .mobile-app-header .mobile-app-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 62%;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .section .section-header .section-header-back,
-  .section .section-header .section-header-button {
-    margin-left: 0;
-  }
 }
 
 @media (max-width: 575.98px) {
-  .section .section-header {
-    margin-left: -15px;
-    margin-right: -15px;
-    padding: 12px 15px;
+  .mobile-app-header {
+    width: 100%;
+    margin: 56px 0 16px 0;
+    padding: 12px 14px 30px;
+    border-radius: 0 0 36px 36px;
   }
-  .section .section-header h1 {
-    font-size: 16px;
+  .mobile-app-header .mobile-app-title {
+    font-size: 14px;
+  }
+}
+
+/* main-content padding mengikuti ada/tidaknya mobile-app-header */
+@media (max-width: 991.98px) {
+  body.mobile-has-app-header .main-content {
+    padding-top: 0 !important;
+  }
+  body.mobile-no-app-header .main-content {
+    padding-top: 84px !important;
   }
 }
