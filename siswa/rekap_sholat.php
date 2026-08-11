@@ -233,7 +233,7 @@ include '../templates/sidebar.php';
                                         </div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-lg-4 col-md-4 col-sm-12 col-12">
+                                        <div class="col-4 col-md-4 col-lg-4">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-success">
                                                     <i class="fas fa-check"></i>
@@ -248,7 +248,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-lg-4 col-md-4 col-sm-12 col-12">
+                                        <div class="col-4 col-md-4 col-lg-4">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-danger">
                                                     <i class="fas fa-times"></i>
@@ -263,7 +263,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-lg-4 col-md-4 col-sm-12 col-12">
+                                        <div class="col-4 col-md-4 col-lg-4">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-warning">
                                                     <i class="fas fa-female"></i>

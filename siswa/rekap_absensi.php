@@ -266,7 +266,7 @@ include '../templates/sidebar.php';
                                         </div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                                        <div class="col-3 col-md-6 col-lg-3">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-success">
                                                     <i class="fas fa-check"></i>
@@ -281,7 +281,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                                        <div class="col-3 col-md-6 col-lg-3">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-warning">
                                                     <i class="fas fa-procedures"></i>
@@ -296,7 +296,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                                        <div class="col-3 col-md-6 col-lg-3">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-info">
                                                     <i class="fas fa-envelope"></i>
@@ -311,7 +311,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                                        <div class="col-3 col-md-6 col-lg-3">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-danger">
                                                     <i class="fas fa-times"></i>
