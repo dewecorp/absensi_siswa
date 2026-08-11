@@ -624,7 +624,7 @@ include_once '../templates/sidebar.php';
                                             </div>
                                         </div>
                                         <div class="col-md-9">
-                                            <h2>Selamat Datang, <?php echo htmlspecialchars($teacher_name); ?></h2>
+                                            <h2>Assalamualaikum, <?php echo htmlspecialchars($teacher_name); ?></h2>
                                             <p class="lead">Anda login sebagai Wali Kelas <b><?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '-'; ?></b>.</p>
                                             
                                             <div class="mt-4">
