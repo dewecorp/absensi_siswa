@@ -3721,3 +3721,22 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
     padding-top: 84px !important;
   }
 }
+
+@media (max-width: 575.98px) {
+  .mapel-label {
+    display: none;
+  }
+  .card-statistic-1 .card-body {
+    align-items: stretch;
+  }
+  .card-statistic-1 .card-body .d-flex,
+  .card-statistic-1 .card-body .progress {
+    width: 100% !important;
+  }
+  .card-statistic-1 .card-body .d-flex {
+    justify-content: center;
+  }
+  .card-statistic-1 .card-body .d-flex span:first-child {
+    text-align: center;
+  }
+}

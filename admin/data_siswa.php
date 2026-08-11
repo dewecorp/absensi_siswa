@@ -510,7 +510,7 @@ include '../templates/sidebar.php';
                                 </div>
                                 <div class="col-md-8">
                                     <div class="row">
-                                        <div class="col-sm-4">
+                                        <div class="col-4 col-sm-4">
                                             <div class="card card-statistic-1 mb-0 shadow-none border">
                                                 <div class="card-icon bg-primary" style="width: 40px; height: 40px; line-height: 40px;">
                                                     <i class="fas fa-users" style="font-size: 15px;"></i>
@@ -525,7 +525,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-sm-4">
+                                        <div class="col-4 col-sm-4">
                                             <div class="card card-statistic-1 mb-0 shadow-none border">
                                                 <div class="card-icon bg-info" style="width: 40px; height: 40px; line-height: 40px;">
                                                     <i class="fas fa-mars" style="font-size: 15px;"></i>
@@ -540,7 +540,7 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-sm-4">
+                                        <div class="col-4 col-sm-4">
                                             <div class="card card-statistic-1 mb-0 shadow-none border">
                                                 <div class="card-icon bg-warning" style="width: 40px; height: 40px; line-height: 40px;">
                                                     <i class="fas fa-venus" style="font-size: 15px;"></i>

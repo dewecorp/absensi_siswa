@@ -1153,7 +1153,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                         <div class="col-12">
                             <!-- Statistics Section -->
                             <div class="row mb-4">
-                                <div class="col-md-4">
+                                <div class="col-4 col-md-4">
                                     <div class="card card-statistic-1 mb-0 shadow-none border">
                                         <div class="card-icon bg-primary" style="width: 40px; height: 40px; line-height: 40px;">
                                             <i class="fas fa-chalkboard-teacher" style="font-size: 15px;"></i>
@@ -1168,7 +1168,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-4 col-md-4">
                                     <div class="card card-statistic-1 mb-0 shadow-none border">
                                         <div class="card-icon bg-info" style="width: 40px; height: 40px; line-height: 40px;">
                                             <i class="fas fa-mars" style="font-size: 15px;"></i>
@@ -1183,7 +1183,7 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-4 col-md-4">
                                     <div class="card card-statistic-1 mb-0 shadow-none border">
                                         <div class="card-icon bg-warning" style="width: 40px; height: 40px; line-height: 40px;">
                                             <i class="fas fa-venus" style="font-size: 15px;"></i>

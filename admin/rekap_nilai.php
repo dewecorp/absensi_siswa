@@ -589,7 +589,7 @@ require_once '../templates/sidebar.php';
                                     <h6 class="text-muted text-uppercase small font-weight-bold">Ringkasan Progres Pengisian Nilai (Semua Kelas)</h6>
                                 </div>
                                 <?php foreach ($summary_progress as $type => $stats): ?>
-                                    <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="col-4 col-md-6 col-lg-4 mb-4">
                                         <div class="card card-statistic-1 border shadow-none mb-0">
                                             <div class="card-icon <?= $stats['color'] ?>">
                                                 <i class="fas fa-chart-line"></i>
@@ -601,7 +601,7 @@ require_once '../templates/sidebar.php';
                                                 <div class="card-body pt-0">
                                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                                         <span class="font-weight-bold" style="font-size: 16px;"><?= $stats['percent'] ?>%</span>
-                                                        <span class="text-muted small"><?= $stats['filled'] ?>/<?= $stats['total'] ?> Mapel</span>
+                                                        <span class="text-muted small mapel-label"><?= $stats['filled'] ?>/<?= $stats['total'] ?> Mapel</span>
                                                     </div>
                                                     <div class="progress" style="height: 6px;">
                                                         <div class="progress-bar <?= $stats['color'] ?>" role="progressbar" style="width: <?= $stats['percent'] ?>%" aria-valuenow="<?= $stats['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>

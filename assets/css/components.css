@@ -2125,3 +2125,20 @@ tr:first-child > td > .fc-day-grid-event {
     font-size: 15px !important;
   }
 }
+
+/* ===== Rekap Nilai card stat: persen center (mobile) ===== */
+@media (max-width: 575.98px) {
+  .main-content .card-statistic-1 .card-body {
+    align-items: stretch !important;
+  }
+  .main-content .card-statistic-1 .card-body .d-flex {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .main-content .card-statistic-1 .card-body .d-flex span:first-child {
+    text-align: center !important;
+  }
+  .main-content .card-statistic-1 .card-body .progress {
+    width: 100% !important;
+  }
+}
