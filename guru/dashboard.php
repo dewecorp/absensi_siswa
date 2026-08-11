@@ -647,7 +647,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <!-- KBM Info -->
-                    <?php if (!$holiday['is_holiday']): ?>
+                    <?php if (isset($holiday) && !$holiday['is_holiday']): ?>
                     <div class="row">
                         <div class="col-12 mb-4">
                             <div class="card border-left-primary shadow-sm">

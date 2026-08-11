@@ -323,6 +323,12 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
             margin-top: 1rem !important;
         }
 
+        /* Sembunyikan toggle mata bawaan browser (Edge/IE) di input password */
+        #password::-ms-reveal,
+        #password::-ms-clear {
+            display: none !important;
+        }
+
         /* Mobile (<= 575px) */
         @media (max-width: 575.98px) {
             body {
@@ -397,13 +403,11 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
                                     <div class="d-block">
                                         <label for="password" class="control-label">Password</label>
                                     </div>
-                                    <div class="input-group">
-                                        <input id="password" type="password" class="form-control" name="password" tabindex="2" required>
-                                        <div class="input-group-append">
-                                            <button type="button" class="btn btn-outline-secondary" id="togglePassword" tabindex="3" title="Lihat / Sembunyikan password" style="border-color: #ced4da; background: #fff; display: none;">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </div>
+                                    <div class="position-relative">
+                                        <input id="password" type="password" class="form-control" name="password" tabindex="2" required style="padding-right: 42px;">
+                                        <button type="button" id="togglePassword" tabindex="3" title="Lihat / Sembunyikan password" style="display: none; position: absolute; top: 50%; right: 4px; transform: translateY(-50%); border: none; outline: none; box-shadow: none; background: transparent; color: #6c757d; padding: 6px 10px; cursor: pointer; z-index: 2;">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                     </div>
                                 </div>
 
