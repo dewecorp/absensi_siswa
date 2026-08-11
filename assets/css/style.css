@@ -3585,3 +3585,44 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
   animation-iteration-count: infinite;
   opacity: 1;
 }
+
+/* ===== Mobile App Style Page Header (Mobile only) ===== */
+@media (max-width: 991.98px) {
+  .section .section-header {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding: 14px 20px;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    border-bottom: 1px solid #eef0f5;
+    background-color: #ffffff;
+    margin-bottom: 16px !important;
+    flex-wrap: nowrap;
+  }
+  .section .section-header .section-header-breadcrumb {
+    display: none !important;
+  }
+  .section .section-header h1 {
+    font-size: 18px;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .section .section-header .section-header-back,
+  .section .section-header .section-header-button {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .section .section-header {
+    margin-left: -15px;
+    margin-right: -15px;
+    padding: 12px 15px;
+  }
+  .section .section-header h1 {
+    font-size: 16px;
+  }
+}

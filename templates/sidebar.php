@@ -1332,11 +1332,11 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                 if ($title === 'Data Utama') {
                     $display_title = 'Kehadiran';
                     $icon = 'fas fa-calendar-check';
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Kehadiran');
                 } elseif ($title === 'Kehadiran') {
                     $display_title = 'Nilai Siswa';
                     $icon = 'fas fa-graduation-cap';
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
+                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Nilai Siswa');
                 } elseif ($title === 'Ekstrakurikuler') {
                     $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
                 }
