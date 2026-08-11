@@ -330,6 +330,10 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                         <h6 class="mb-0 text-success font-weight-bold" style="font-size: 1rem;">Sistem Informasi Madrasah</h6>
                         <small class="text-dark font-weight-bold" style="font-size: 0.8rem;"><?php echo isset($school_profile['nama_sekolah']) ? $school_profile['nama_sekolah'] : 'MI Sultan Fattah Sukosono'; ?></small>
                     </div>
+                    <div class="ml-auto text-right" style="line-height: 1.2;">
+                        <div id="mobile-header-date" class="text-dark font-weight-bold" style="font-size: 0.78rem;">-</div>
+                        <div id="mobile-header-time" class="text-muted" style="font-size: 0.78rem;">--:--:--</div>
+                    </div>
                 </div>
             </div>
             
@@ -358,7 +362,12 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                                 const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
                                 const dateStr = now.toLocaleDateString('id-ID', dateOptions);
                                 const timeStr = now.toLocaleTimeString('id-ID', timeOptions).replace(/\./g, ':');
-                                document.getElementById('header-date-time').textContent = `${dateStr} - ${timeStr}`;
+                                const headerDt = document.getElementById('header-date-time');
+                                if (headerDt) headerDt.textContent = `${dateStr} - ${timeStr}`;
+                                const mobileDate = document.getElementById('mobile-header-date');
+                                if (mobileDate) mobileDate.textContent = dateStr;
+                                const mobileTime = document.getElementById('mobile-header-time');
+                                if (mobileTime) mobileTime.textContent = timeStr;
                             }
                             setInterval(updateHeaderDateTime, 1000);
                             document.addEventListener('DOMContentLoaded', updateHeaderDateTime);
