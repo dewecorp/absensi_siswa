@@ -601,10 +601,17 @@ include_once '../templates/sidebar.php';
                             <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center mb-3">
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mr-3" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem;">
-                                            <?php echo strtoupper(substr($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'A'), 0, 1)); ?>
-                                        </div>
-                                        <div>
+                                        <?php
+                                        $greet_admin_user = null;
+                                        if (isset($_SESSION['username'])) {
+                                            $greet_stmt = $pdo->prepare("SELECT * FROM tb_pengguna WHERE username = ?");
+                                            $greet_stmt->execute([$_SESSION['username']]);
+                                            $greet_admin_user = $greet_stmt->fetch(PDO::FETCH_ASSOC);
+                                        }
+                                        $greet_avatar_html = getUserAvatarImage($greet_admin_user ?? ['nama' => ($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'A'))], 48);
+                                        echo $greet_avatar_html;
+                                        ?>
+                                        <div class="ml-2">
                                             <div class="text-dark mb-1" style="font-size: 0.95rem;">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Admin')); ?></span></div>
                                             <div class="text-dark" style="font-size: 0.95rem;">Selamat datang di Sistem Informasi Madrasah</div>
                                         </div>
