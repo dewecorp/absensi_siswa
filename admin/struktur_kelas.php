@@ -443,13 +443,13 @@ include '../templates/sidebar.php';
                                                         data-id="<?= (int)$row['id'] ?>"
                                                         data-nama="<?= htmlspecialchars($row['nama_siswa'], ENT_QUOTES) ?>"
                                                         data-jabatan="<?= htmlspecialchars($row['jabatan'], ENT_QUOTES) ?>">
-                                                    <i class="fas fa-edit"></i> Edit
+                                                    <i class="fas fa-edit"></i>
                                                 </button>
                                                 <form method="POST" class="d-inline form-hapus-jabatan">
                                                     <input type="hidden" name="action" value="hapus">
                                                     <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                                                     <button type="submit" class="btn btn-danger btn-sm">
-                                                        <i class="fas fa-trash"></i> Hapus
+                                                        <i class="fas fa-trash"></i>
                                                     </button>
                                                 </form>
                                             </td>

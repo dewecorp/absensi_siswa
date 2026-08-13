@@ -514,7 +514,7 @@ include '../templates/header.php';
                                             <?php if ($can_manage): ?>
                                             <td>
                                                 <button onclick="confirmDelete(<?php echo $journal['id']; ?>)" class="btn btn-danger btn-sm">
-                                                    <i class="fas fa-trash"></i> Hapus
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
                                             </td>
                                             <?php endif; ?>
