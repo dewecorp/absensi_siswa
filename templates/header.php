@@ -376,9 +376,9 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                         <script>
                             function updateHeaderDateTime() {
                                 const now = new Date();
-                                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                                 const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-                                const dateStr = now.toLocaleDateString('id-ID', dateOptions);
+                                const pad = (n) => String(n).padStart(2, '0');
+                                const dateStr = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
                                 const timeStr = now.toLocaleTimeString('id-ID', timeOptions).replace(/\./g, ':');
                                 const headerDt = document.getElementById('header-date-time');
                                 if (headerDt) headerDt.textContent = `${dateStr} - ${timeStr}`;
