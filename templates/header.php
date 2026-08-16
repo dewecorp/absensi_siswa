@@ -219,6 +219,20 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             .mobile-header {
                 padding: 10px 15px;
             }
+            .mobile-header-title {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+            .mobile-header-title .mobile-app-name,
+            .mobile-header-title .mobile-school-name {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: block;
+            }
+            .mobile-header-date {
+                flex: 0 0 auto;
+            }
             .main-content {
                 padding: 15px !important;
                 padding-top: 84px !important;
@@ -319,12 +333,12 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             <!-- Mobile Header -->
             <div class="mobile-header d-md-none">
                 <div class="d-flex align-items-center w-100">
-                    <img src="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>" alt="logo" class="mr-2" style="height: 40px;">
-                    <div style="line-height: 1.2;">
-                        <h6 class="mb-0 text-success font-weight-bold" style="font-size: 1rem;">Sistem Informasi Madrasah</h6>
-                        <small class="text-dark font-weight-bold" style="font-size: 0.8rem;"><?php echo isset($school_profile['nama_sekolah']) ? $school_profile['nama_sekolah'] : 'MI Sultan Fattah Sukosono'; ?></small>
+                    <img src="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>" alt="logo" class="mr-2 flex-shrink-0" style="height: 40px;">
+                    <div class="mobile-header-title" style="line-height: 1.2; min-width: 0;">
+                        <h6 class="mb-0 text-success font-weight-bold mobile-app-name" style="font-size: 0.95rem;">Sistem Informasi Madrasah</h6>
+                        <small class="text-dark font-weight-bold mobile-school-name" style="font-size: 0.75rem;"><?php echo isset($school_profile['nama_sekolah']) ? $school_profile['nama_sekolah'] : 'MI Sultan Fattah Sukosono'; ?></small>
                     </div>
-                    <div class="ml-auto text-right" style="line-height: 1.2;">
+                    <div class="mobile-header-date ml-2 text-right" style="line-height: 1.2;">
                         <div id="mobile-header-date" class="text-dark font-weight-bold" style="font-size: 0.78rem;">-</div>
                         <div id="mobile-header-time" class="text-muted" style="font-size: 0.78rem;">--:--:--</div>
                     </div>
