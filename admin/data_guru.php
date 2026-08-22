@@ -1100,6 +1100,8 @@ echo "<!-- DEBUG: After template inclusion -->\n";
     }
 }
 
+/* Kolom sticky hanya untuk desktop */
+@media (min-width: 992px) {
 #table-1 th:nth-child(1),
 #table-1 td:nth-child(1) {
     position: sticky;

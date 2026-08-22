@@ -549,6 +549,8 @@ include_once '../templates/sidebar.php';
                                             <div class="mt-1">
                                                 <span class="wb-chip wb-chip-glass"><i class="far fa-calendar-alt"></i> <span id="wb-date">-</span></span>
                                                 <span class="wb-chip wb-chip-glass"><i class="far fa-clock"></i> <span id="wb-time">--:--:--</span></span>
+                                                <span class="wb-chip wb-chip-glass"><i class="fas fa-graduation-cap"></i> <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
+                                                <span class="wb-chip wb-chip-glass"><i class="fas fa-calendar-check"></i> <?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
                                             </div>
                                         </div>
                                     </div>

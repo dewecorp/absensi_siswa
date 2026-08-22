@@ -605,6 +605,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <h2>Assalamualaikum, <?php echo isset($teacher['nama_guru']) ? htmlspecialchars($teacher['nama_guru']) : 'Guru'; ?></h2>
                                             <p class="lead">Anda mengajar <b><?php echo $total_kelas; ?></b> kelas dengan total <b><?php echo $total_siswa; ?></b> siswa.</p>
                                             <div class="d-lg-none" style="font-size: .95rem;"><i class="far fa-calendar-alt mr-1"></i><span id="wb-date">-</span> &bull; <span id="wb-time">--:--:--</span></div>
+                                            <div class="mt-2 d-lg-none">
+                                                <span class="wb-chip wb-chip-glass"><i class="fas fa-graduation-cap"></i> <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
+                                                <span class="wb-chip wb-chip-glass"><i class="fas fa-calendar-check"></i> <?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
+                                            </div>
                                             
                                             <div class="mt-4">
                                                 <div class="row">

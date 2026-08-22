@@ -165,6 +165,39 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             white-space: normal;
             word-break: normal;
         }
+        /* Dekorasi dashboard ala mobile app */
+        @media (max-width: 991.98px) {
+            .main-content { position: relative; }
+            .main-content::before {
+                content: '';
+                position: absolute;
+                top: -25px;
+                right: -45px;
+                width: 210px;
+                height: 210px;
+                border-radius: 50%;
+                background:
+                    radial-gradient(circle at 35% 35%, rgba(47, 110, 240, .30), rgba(47, 110, 240, 0) 66%),
+                    radial-gradient(circle at 68% 62%, rgba(99, 102, 241, .20), rgba(99, 102, 241, 0) 58%);
+                pointer-events: none;
+                z-index: -1;
+            }
+            .main-content::after {
+                content: '';
+                position: absolute;
+                top: 130px;
+                left: -60px;
+                width: 190px;
+                height: 190px;
+                border-radius: 50%;
+                background:
+                    radial-gradient(circle at 40% 38%, rgba(16, 185, 129, .26), rgba(16, 185, 129, 0) 64%),
+                    radial-gradient(circle at 66% 70%, rgba(6, 182, 212, .16), rgba(6, 182, 212, 0) 56%);
+                pointer-events: none;
+                z-index: -1;
+            }
+        }
+
         /* Navbar atas mobile dihapus (tampilan mobile app) */
         /* Chip tanggal & jam ala mobile app */
         .wb-chip {
