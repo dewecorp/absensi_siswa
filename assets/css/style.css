@@ -3732,6 +3732,19 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
   body.mobile-no-app-header .main-content {
     padding-top: 16px !important;
   }
+  /* Cegah scroll horizontal dari elemen dekoratif */
+  .main-content {
+    overflow-x: hidden;
+  }
+  /* Alert tak meluber di layar sempit */
+  .alert {
+    max-width: 100%;
+    margin-right: 0 !important;
+  }
+  .alert > * {
+    max-width: 100%;
+    word-break: break-word;
+  }
 }
 
 @media (max-width: 575.98px) {
