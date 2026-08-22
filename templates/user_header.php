@@ -149,6 +149,32 @@ if (!isLoggedIn()) {
             padding-right: 0;
         }
 
+        /* Menu grid gaya mobile app */
+        .menu-grid-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            color: #fff;
+            font-size: 1.4rem;
+            box-shadow: 0 6px 14px rgba(15, 23, 42, .14);
+            transition: transform .15s ease, box-shadow .2s ease;
+        }
+        a:active .menu-grid-icon {
+            transform: scale(.9);
+        }
+        .mg-c1 { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+        .mg-c2 { background: linear-gradient(135deg, #0ea5e9, #2563eb); }
+        .mg-c3 { background: linear-gradient(135deg, #10b981, #059669); }
+        .mg-c4 { background: linear-gradient(135deg, #f59e0b, #ea580c); }
+        .mg-c5 { background: linear-gradient(135deg, #ec4899, #db2777); }
+        .mg-c6 { background: linear-gradient(135deg, #14b8a6, #0891b2); }
+        .mg-c7 { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+        .mg-c8 { background: linear-gradient(135deg, #8b5cf6, #d946ef); }
+
         /* Responsive Breakpoints */
 
         /* Mobile (<= 575px) */

@@ -69,6 +69,27 @@
                 .bottom-nav-row .col { flex: 1 1 0 !important; min-width: 0 !important; overflow: hidden; }
                 .bottom-nav-row .bottom-nav-label { white-space: normal !important; line-height: 1.15 !important; }
             }
+            /* Bottom nav gaya mobile app modern */
+            @media (max-width: 991.98px) {
+                .bottom-nav-row a.nav-link { color: #8e9aad; padding-top: 5px; transition: color .2s ease; }
+                .bottom-nav-row a.nav-link i {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 36px; height: 36px; margin-bottom: 2px;
+                    border-radius: 12px; font-size: 16px;
+                    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+                    color: #64748b;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, .08);
+                    transition: transform .15s ease, background .25s ease, color .25s ease, box-shadow .25s ease;
+                }
+                .bottom-nav-row a.nav-link:active i { transform: scale(.88); }
+                .bottom-nav-row .bottom-nav-label { font-weight: 600; font-size: 10.5px !important; margin-top: 1px; }
+                .bottom-nav-row a.nav-link.bottom-nav-active { color: #4f46e5; }
+                .bottom-nav-row a.nav-link.bottom-nav-active i {
+                    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+                    color: #fff;
+                    box-shadow: 0 4px 12px rgba(99, 102, 241, .45);
+                }
+            }
             </style>
 
             <!-- Bottom Navbar (Mobile Only) -->
@@ -76,27 +97,29 @@
             $bottom_quick_links = function_exists('get_bottom_nav_quick_links') && isset($menu_items)
                 ? get_bottom_nav_quick_links($menu_items, 3)
                 : [];
+            $bottom_current = basename($_SERVER['PHP_SELF']);
+            $bottom_home_active = ($bottom_current === basename($bottom_home_url));
             ?>
             <nav class="navbar navbar-expand navbar-light bg-white d-block d-lg-none border-top shadow-lg" style="position: fixed; bottom: 0; left: 0; right: 0; height: 60px; padding: 0; z-index: 1030;">
                 <div class="container-fluid h-100 px-0">
                     <div class="row w-100 mx-0 h-100 no-gutters bottom-nav-row">
                         <div class="col px-0 h-100">
-                            <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-primary">
-                                <i class="fas fa-home fa-lg mb-1"></i>
+                            <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center<?php echo $bottom_home_active ? ' bottom-nav-active' : ''; ?>">
+                                <i class="fas fa-home"></i>
                                 <span class="bottom-nav-label">Home</span>
                             </a>
                         </div>
                         <?php foreach ($bottom_quick_links as $link): ?>
                             <div class="col px-0 h-100">
-                                <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
-                                    <i class="<?php echo $link['icon']; ?> fa-lg mb-1"></i>
+                                <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center<?php echo $bottom_current === basename($link['url']) ? ' bottom-nav-active' : ''; ?>">
+                                    <i class="<?php echo $link['icon']; ?>"></i>
                                     <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
                                 </a>
                             </div>
                         <?php endforeach; ?>
                         <div class="col px-0 h-100">
-                            <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center text-dark">
-                                <i class="fas fa-user fa-lg mb-1"></i>
+                            <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center">
+                                <i class="fas fa-user"></i>
                                 <span class="bottom-nav-label">Akun</span>
                             </a>
                         </div>

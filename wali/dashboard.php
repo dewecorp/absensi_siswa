@@ -951,11 +951,11 @@ include_once '../templates/sidebar.php';
                                     <?php if (!empty($single_items) || !empty($grouped_items)): ?>
                                         <?php if (!empty($single_items)): ?>
                                             <div class="row">
-                                                <?php foreach ($single_items as $item): ?>
+                                                <?php foreach ($single_items as $mg_idx => $item): ?>
                                                     <div class="col-3 mb-3">
                                                         <a href="<?php echo $item['url']; ?>" class="text-decoration-none text-center d-block">
-                                                            <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
-                                                                <i class="<?php echo $item['icon']; ?> text-primary" style="font-size: 1.4rem;"></i>
+                                                            <div class="mx-auto mb-2 menu-grid-icon mg-c<?php echo ($mg_idx % 8) + 1; ?>">
+                                                                <i class="<?php echo $item['icon']; ?>"></i>
                                                             </div>
                                                             <div class="mobile-menu-label small text-dark"><?php echo $item['title']; ?></div>
                                                         </a>
@@ -967,11 +967,11 @@ include_once '../templates/sidebar.php';
                                             <div class="mt-3" id="menu-<?php echo str_replace(' ', '-', $group['title']); ?>">
                                                 <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
                                                 <div class="row">
-                                                    <?php foreach ($group['items'] as $subitem): ?>
+                                                    <?php foreach ($group['items'] as $mg_idx => $subitem): ?>
                                                         <div class="col-3 mb-3">
                                                             <a href="<?php echo $subitem['url']; ?>" class="text-decoration-none text-center d-block">
-                                                                <div class="mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; border-radius: 18px; background: #f3f8f3;">
-                                                                    <i class="<?php echo $group['icon']; ?> text-primary" style="font-size: 1.4rem;"></i>
+                                                                <div class="mx-auto mb-2 menu-grid-icon mg-c<?php echo ($mg_idx % 8) + 1; ?>">
+                                                                    <i class="<?php echo $group['icon']; ?>"></i>
                                                                 </div>
                                                                 <div class="mobile-menu-label small text-dark"><?php echo $subitem['title']; ?></div>
                                                             </a>

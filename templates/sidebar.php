@@ -1364,10 +1364,13 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 <div class="main-sidebar">
     <aside id="sidebar-wrapper">
         <div class="sidebar-brand">
-            <a href="<?php echo htmlspecialchars(app_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>" style="line-height: 1.2; display: inline-block; padding: 12px 0;">Sistem Informasi Madrasah</a>
+            <a href="<?php echo htmlspecialchars(app_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>" style="display: flex; align-items: center; gap: 12px; line-height: 1.2; padding: 12px 20px;">
+                <img src="../assets/img/<?php echo htmlspecialchars(isset($favicon_logo) ? $favicon_logo : 'logo.png', ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars(isset($favicon_version) ? $favicon_version : '1', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" style="height: 38px; width: 38px; object-fit: contain; flex-shrink: 0;">
+                <span>Sistem Informasi Madrasah</span>
+            </a>
         </div>
         <div class="sidebar-brand sidebar-brand-sm">
-            <a href="<?php echo htmlspecialchars(app_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>">SIM</a>
+            <a href="<?php echo htmlspecialchars(app_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>" title="Sistem Informasi Madrasah"><img src="../assets/img/<?php echo htmlspecialchars(isset($favicon_logo) ? $favicon_logo : 'logo.png', ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars(isset($favicon_version) ? $favicon_version : '1', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" style="height: 32px; width: 32px; object-fit: contain;"></a>
         </div>
         <ul class="sidebar-menu">
             <?php foreach ($menu_items as $item): ?>
