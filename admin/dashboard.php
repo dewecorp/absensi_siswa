@@ -634,9 +634,7 @@ include_once '../templates/sidebar.php';
                         </div>
 
                         <div class="col-12 mb-4">
-                            <div class="card border-0 shadow-sm" style="border-radius: 16px;">
-                                <div class="card-body pb-2">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                      <div class="d-flex justify-content-between align-items-center mb-3">
                                         <h6 class="mb-0 font-weight-bold">Menu Utama</h6>
                                         <span class="badge badge-success badge-pill">Semua Fitur</span>
                                     </div>
@@ -681,8 +679,6 @@ include_once '../templates/sidebar.php';
                                             </div>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
-                                </div>
-                            </div>
                         </div>
                     </div>
 

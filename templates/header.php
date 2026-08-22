@@ -140,16 +140,15 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
         .mobile-menu-label {
             display: block;
             font-size: 10.5px;
-            line-height: 1.3;
+            line-height: 1.35;
             text-align: center;
-            width: auto;
-            max-width: 100%;
+            width: 100%;
             margin-left: auto;
             margin-right: auto;
-            padding: 0 2px;
-            white-space: normal;
-            word-break: break-word;
-            overflow-wrap: anywhere;
+            padding: 0 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             font-weight: 500;
             color: #334155;
         }

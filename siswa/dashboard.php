@@ -601,8 +601,6 @@ include_once '../templates/sidebar.php';
         <!-- Mobile Menu Utama - Last Position -->
         <div class="row d-lg-none mt-4">
             <div class="col-12 mb-4">
-                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
-                    <div class="card-body pb-2">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="mb-0 font-weight-bold">Menu Utama</h6>
                             <span class="badge badge-success badge-pill">Semua Fitur</span>
@@ -647,8 +645,6 @@ include_once '../templates/sidebar.php';
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
