@@ -117,15 +117,16 @@ if (!isLoggedIn()) {
         .mobile-menu-label {
             display: block;
             font-size: 10.5px;
-            line-height: 1.35;
+            line-height: 1.3;
             text-align: center;
             width: 100%;
             margin-left: auto;
             margin-right: auto;
             padding: 0 1px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            overflow: visible;
+            word-break: normal;
+            overflow-wrap: break-word;
             font-weight: 500;
             color: #334155;
         }
