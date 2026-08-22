@@ -136,15 +136,12 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             border-bottom: 1px solid #e3ebff;
         }
         .mobile-menu-label {
+            display: block;
             font-size: 10.5px;
             line-height: 1.3;
             text-align: center;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
             width: 100%;
-            max-width: 80px;
+            max-width: 84px;
             margin: 0 auto;
             white-space: normal;
             word-break: break-word;
@@ -163,18 +160,25 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             white-space: normal;
             word-break: normal;
         }
-        /* Navbar atas mobile: biru emerald */
-        @media (max-width: 991.98px) {
-            .mobile-header {
-                background: linear-gradient(135deg, #0e7490, #06b6d4);
-                border-bottom-color: rgba(255, 255, 255, .18);
-                box-shadow: 0 3px 12px rgba(14, 116, 144, .35);
-            }
-            .mobile-header .mobile-app-name { color: #fff !important; }
-            .mobile-header .mobile-school-name,
-            .mobile-header .text-dark,
-            .mobile-header .text-muted { color: #fff !important; }
-            .mobile-header #mobile-header-time { color: rgba(255, 255, 255, .85) !important; }
+        /* Navbar atas mobile dihapus (tampilan mobile app) */
+        /* Chip tanggal & jam ala mobile app */
+        .wb-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 11px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            line-height: 1.5;
+            margin: 0 6px 4px 0;
+        }
+        .wb-chip i { font-size: 0.9em; }
+        .wb-chip-default { background: #eef2f7; color: #334155; }
+        .wb-chip-glass {
+            background: rgba(255, 255, 255, .24);
+            color: #fff;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28);
         }
         #table-siswa_wrapper {
             max-width: 100%;
@@ -237,23 +241,9 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             .mobile-header {
                 padding: 10px 15px;
             }
-            .mobile-header-title {
-                flex: 1 1 auto;
-                min-width: 0;
-            }
-            .mobile-header-title .mobile-app-name,
-            .mobile-header-title .mobile-school-name {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                display: block;
-            }
-            .mobile-header-date {
-                flex: 0 0 auto;
-            }
             .main-content {
                 padding: 15px !important;
-                padding-top: 84px !important;
+                padding-top: 15px !important;
             }
             .card-body {
                 padding: 1rem;
@@ -271,7 +261,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
         @media (min-width: 576px) and (max-width: 767.98px) {
             .main-content {
                 padding: 20px !important;
-                padding-top: 84px !important;
+                padding-top: 20px !important;
             }
         }
 
@@ -284,7 +274,7 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                 display: none !important;
             }
             .main-content {
-                padding-top: 84px !important;
+                padding-top: 20px !important;
                 padding-left: 20px !important;
                 padding-right: 20px !important;
             }
@@ -371,23 +361,9 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
     </style>
 </head>
 
-<body class="<?php echo in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?>">
+        <body class="<?php echo in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php']) ? 'mobile-no-app-header' : 'mobile-has-app-header'; ?>">
     <div id="app">
         <div class="main-wrapper">
-            <!-- Mobile Header -->
-            <div class="mobile-header d-md-none">
-                <div class="d-flex align-items-center w-100">
-                    <img src="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>" alt="logo" class="mr-2 flex-shrink-0" style="height: 40px;">
-                    <div class="mobile-header-title" style="line-height: 1.2; min-width: 0;">
-                        <h6 class="mb-0 text-success font-weight-bold mobile-app-name" style="font-size: 0.95rem;">Sistem Informasi Madrasah</h6>
-                        <small class="text-dark font-weight-bold mobile-school-name" style="font-size: 0.75rem;"><?php echo isset($school_profile['nama_sekolah']) ? $school_profile['nama_sekolah'] : 'MI Sultan Fattah Sukosono'; ?></small>
-                    </div>
-                    <div class="mobile-header-date ml-2 text-right" style="line-height: 1.2;">
-                        <div id="mobile-header-date" class="text-dark font-weight-bold" style="font-size: 0.78rem;">-</div>
-                        <div id="mobile-header-time" class="text-muted" style="font-size: 0.78rem;">--:--:--</div>
-                    </div>
-                </div>
-            </div>
 
             <?php if (!in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php'])): ?>
             <!-- Mobile App Page Header (mobile only) -->
@@ -422,13 +398,15 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                                 const now = new Date();
                                 const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
                                 const pad = (n) => String(n).padStart(2, '0');
-                                const dateStr = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}`;
+                                const hariList = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+                                const bulanList = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+                                const dateStr = `${hariList[now.getDay()]}, ${now.getDate()} ${bulanList[now.getMonth()]} ${now.getFullYear()}`;
                                 const timeStr = now.toLocaleTimeString('id-ID', timeOptions).replace(/\./g, ':');
                                 const headerDt = document.getElementById('header-date-time');
                                 if (headerDt) headerDt.textContent = `${dateStr} - ${timeStr}`;
-                                const mobileDate = document.getElementById('mobile-header-date');
+                                const mobileDate = document.getElementById('wb-date');
                                 if (mobileDate) mobileDate.textContent = dateStr;
-                                const mobileTime = document.getElementById('mobile-header-time');
+                                const mobileTime = document.getElementById('wb-time');
                                 if (mobileTime) mobileTime.textContent = timeStr;
                             }
                             setInterval(updateHeaderDateTime, 1000);

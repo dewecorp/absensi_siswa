@@ -216,12 +216,16 @@ include_once '../templates/sidebar.php';
                 <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
                     <div class="card-body p-3">
                             <div class="d-flex align-items-center mb-3">
-                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mr-3" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem;">
+                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mr-3 flex-shrink-0" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem; box-shadow: 0 4px 12px rgba(37, 99, 235, .45);">
                                     <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
                                 </div>
                                 <div>
                                     <div class="text-dark mb-1" style="font-size: 0.95rem;">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($student['nama_siswa']); ?></span></div>
                                     <div class="text-dark" style="font-size: 0.95rem;">Selamat datang di Sistem Informasi Madrasah</div>
+                                    <div class="mt-1">
+                                        <span class="wb-chip wb-chip-default"><i class="far fa-calendar-alt"></i> <span id="wb-date">-</span></span>
+                                        <span class="wb-chip wb-chip-default"><i class="far fa-clock"></i> <span id="wb-time">--:--:--</span></span>
+                                    </div>
                                 </div>
                             </div>
                         <?php

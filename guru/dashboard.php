@@ -604,6 +604,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <div class="col-md-9">
                                             <h2>Assalamualaikum, <?php echo isset($teacher['nama_guru']) ? htmlspecialchars($teacher['nama_guru']) : 'Guru'; ?></h2>
                                             <p class="lead">Anda mengajar <b><?php echo $total_kelas; ?></b> kelas dengan total <b><?php echo $total_siswa; ?></b> siswa.</p>
+                                            <div style="font-size: .95rem;"><i class="far fa-calendar-alt mr-1"></i><span id="wb-date">-</span> &bull; <span id="wb-time">--:--:--</span></div>
                                             
                                             <div class="mt-4">
                                                 <div class="row">

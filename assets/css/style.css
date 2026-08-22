@@ -3662,7 +3662,7 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
     align-items: center;
     position: relative;
     width: 100%;
-    margin: 56px 0 16px 0;
+    margin: 0;
     padding: 14px 16px 34px;
     background: linear-gradient(135deg, #2f6ef0 0%, #5a8ff7 100%);
     border-radius: 0 0 44px 44px;
@@ -3703,7 +3703,7 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
 @media (max-width: 575.98px) {
   .mobile-app-header {
     width: 100%;
-    margin: 56px 0 16px 0;
+    margin: 0;
     padding: 12px 14px 30px;
     border-radius: 0 0 36px 36px;
   }
@@ -3718,7 +3718,7 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
     padding-top: 0 !important;
   }
   body.mobile-no-app-header .main-content {
-    padding-top: 84px !important;
+    padding-top: 16px !important;
   }
 }
 

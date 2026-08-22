@@ -537,15 +537,19 @@ include_once '../templates/sidebar.php';
 
                     <div class="row d-lg-none">
                         <div class="col-12 mb-3">
-                            <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+                            <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #2f6ef0, #5a8ff7);">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center mb-3">
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mr-3" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem;">
+                                        <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center mr-3 flex-shrink-0" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem; box-shadow: 0 4px 12px rgba(0, 0, 0, .25);">
                                             <?php echo strtoupper(substr($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'K'), 0, 1)); ?>
                                         </div>
                                         <div>
-                                            <div class="text-dark mb-1" style="font-size: 0.95rem;">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Kepala Madrasah')); ?></span></div>
-                                            <div class="text-dark" style="font-size: 0.95rem;">Selamat datang di Sistem Informasi Madrasah</div>
+                                            <div class="mb-1 text-white" style="font-size: 0.95rem;">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Kepala Madrasah')); ?></span></div>
+                                            <div class="text-white" style="font-size: 0.95rem;">Selamat datang di Sistem Informasi Madrasah</div>
+                                            <div class="mt-1">
+                                                <span class="wb-chip wb-chip-glass"><i class="far fa-calendar-alt"></i> <span id="wb-date">-</span></span>
+                                                <span class="wb-chip wb-chip-glass"><i class="far fa-clock"></i> <span id="wb-time">--:--:--</span></span>
+                                            </div>
                                         </div>
                                     </div>
                                     <?php
