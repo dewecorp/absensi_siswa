@@ -372,6 +372,55 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
                 font-size: 20px;
             }
         }
+
+        /* ===== Mobile app style (<= 767px) ===== */
+        @media (max-width: 767.98px) {
+            body { background: linear-gradient(160deg, #2f6ef0 0%, #5a8ff7 55%, #7ea4f9 100%) !important; }
+            .section { padding: 0 22px !important; align-items: center !important; min-height: 100vh; height: 100vh; height: 100dvh; }
+            .col-12.col-sm-8 { padding: 0; }
+            .card {
+                background: transparent !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+            .card-header {
+                background: transparent !important;
+                padding-top: 18px !important;
+                padding-bottom: 6px !important;
+            }
+            .card-header img {
+                width: 76px !important;
+                height: 76px !important;
+                margin-bottom: 10px !important;
+                filter: drop-shadow(0 8px 18px rgba(0,0,0,.25));
+            }
+            .card-header h5 { font-size: 1.15rem; letter-spacing: .3px; }
+            .card-header h6 { opacity: .85; font-weight: 400; }
+            .card-body { padding: 18px 0 0 !important; }
+            .card-body label { color: rgba(255,255,255,.9) !important; font-size: .85rem; font-weight: 600; }
+            .form-control {
+                background: #ffffff !important;
+                border: 0 !important;
+                border-radius: 14px !important;
+                height: 48px;
+                box-shadow: 0 6px 16px rgba(13, 40, 106, .18) !important;
+                font-size: .95rem;
+            }
+            .form-text { color: rgba(255,255,255,.75) !important; font-size: .75rem !important; }
+            #loginForm button[type="submit"] {
+                border-radius: 999px !important;
+                height: 50px;
+                font-weight: 700;
+                letter-spacing: .4px;
+                background: #ffffff !important;
+                color: #2f6ef0 !important;
+                border: 0 !important;
+                box-shadow: 0 10px 24px rgba(13, 40, 106, .30) !important;
+            }
+            #togglePassword { color: #2f6ef0 !important; }
+            .simple-footer { color: rgba(255,255,255,.8) !important; margin-top: 14px !important; }
+        }
     </style>
     
     <!-- SweetAlert2 -->
