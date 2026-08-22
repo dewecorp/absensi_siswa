@@ -189,6 +189,16 @@ if (!isLoggedIn()) {
                 font-size: .72rem;
             }
         }
+        /* Data identitas di hero: 2 kolom rapi saat mobile */
+        @media (max-width: 767.98px) {
+            .hero .row .col-auto {
+                flex: 0 0 50%;
+                max-width: 50%;
+                padding-left: 8px;
+                padding-right: 8px;
+                margin-bottom: 14px;
+            }
+        }
         /* Dekorasi dashboard ala mobile app */
         @media (max-width: 991.98px) {
             .main-content { position: relative; }
