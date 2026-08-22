@@ -392,7 +392,7 @@ function exportToPDF(type) {
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>' + title + '</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: portrait; margin: 1cm; }');
+    printWindow.document.write('@page { size: 330mm 215mm; margin: 1cm; }'); // F4 Landscape
     printWindow.document.write('body { font-family: Arial, sans-serif; font-size: 12px; }');
     printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; }');
     printWindow.document.write('th, td { border: 1px solid black; padding: 8px; text-align: left; }');

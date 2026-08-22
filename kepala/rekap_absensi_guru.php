@@ -28,11 +28,11 @@ $js_libs = [
     "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"
 ];
 
-// Handle form submission
-$filter_type = $_POST['filter_type'] ?? 'daily';
-$selected_date = isset($_POST['attendance_date']) ? $_POST['attendance_date'] : date('Y-m-d');
-$selected_month = isset($_POST['month_picker']) ? $_POST['month_picker'] : date('Y-m');
-$selected_teacher = isset($_POST['teacher_id']) ? (int)$_POST['teacher_id'] : 0;
+// Handle form submission (support GET so browser reload keeps filters without resubmission prompt)
+$filter_type = $_GET['filter_type'] ?? $_POST['filter_type'] ?? 'daily';
+$selected_date = isset($_GET['attendance_date']) ? $_GET['attendance_date'] : (isset($_POST['attendance_date']) ? $_POST['attendance_date'] : date('Y-m-d'));
+$selected_month = isset($_GET['month_picker']) ? $_GET['month_picker'] : (isset($_POST['month_picker']) ? $_POST['month_picker'] : date('Y-m'));
+$selected_teacher = isset($_GET['teacher_id']) ? (int)$_GET['teacher_id'] : (isset($_POST['teacher_id']) ? (int)$_POST['teacher_id'] : 0);
 $semester_results = [];
 $daily_results = [];
 $monthly_results = [];
@@ -343,7 +343,7 @@ include '../templates/sidebar.php';
                                         <h4>Filter Kehadiran Guru</h4>
                                     </div>
                                     <div class="card-body">
-                                        <form method="POST" class="row" id="attendanceFilterForm">
+                                        <form method="GET" class="row" id="attendanceFilterForm">
                                             <div class="form-group col-md-3">
                                                 <label>Jenis Filter</label>
                                                 <select name="filter_type" class="form-control selectric" id="filterType">
@@ -725,95 +725,22 @@ include '../templates/sidebar.php';
                     XLSX.writeFile(wb, fileName + '.xlsx');
                 });
                 
-                // PDF Export using window.print() in new tab
+                // PDF Export via hidden iframe (no popup, parent page stays responsive)
                 $('#exportPdfBtn').click(function() {
-                    var filterType = '<?php echo $filter_type; ?>';
-                    var title = 'Rekap Kehadiran Guru';
-                    var tableId = '';
-                    
-                    if (filterType === 'daily') {
-                        title += ' - Harian (<?php echo date('d F Y', strtotime($selected_date)); ?>)';
-                        tableId = '#dailyTable';
-                    } else if (filterType === 'monthly') {
-                        title += ' - Bulanan (<?php echo $js_month_name_safe . " " . $js_month_year_safe; ?>)';
-                        tableId = '#monthlyTable';
-                    } else if (filterType === 'semester') {
-                        title += ' - <?php echo $active_semester . " (" . ($school_profile["tahun_ajaran"] ?? "") . ")"; ?>';
-                        tableId = '#semesterTable';
-                    } else if (filterType === 'teacher') {
-                        title += ' - Per Guru';
-                        tableId = '#teacherTable';
+                    var url = '../admin/cetak_rekap_absensi_guru.php' + window.location.search;
+                    var frame = document.getElementById('printFrame');
+                    if (!frame) {
+                        frame = document.createElement('iframe');
+                        frame.id = 'printFrame';
+                        frame.style.position = 'fixed';
+                        frame.style.right = '0';
+                        frame.style.bottom = '0';
+                        frame.style.width = '0';
+                        frame.style.height = '0';
+                        frame.style.border = '0';
+                        document.body.appendChild(frame);
                     }
-                    
-                    var table = document.querySelector(tableId);
-                    if (!table) {
-                        alert('Tabel tidak ditemukan!');
-                        return;
-                    }
-
-                    // Clone table to avoid modifying original
-                    var tableClone = table.cloneNode(true);
-                    
-                    // Create new window
-                    var printWindow = window.open('', '_blank');
-                    printWindow.document.write('<!DOCTYPE html><html><head><title>' + title + '</title>');
-                    printWindow.document.write('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">');
-                    printWindow.document.write('<style>');
-                    printWindow.document.write('@page { size: landscape; margin: 10mm; }');
-                    printWindow.document.write('@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }');
-                    printWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; }');
-                    printWindow.document.write('.header { text-align: center; margin-bottom: 20px; }');
-                    printWindow.document.write('.header h2 { margin: 0; color: #333; }');
-                    printWindow.document.write('.header p { margin: 5px 0; color: #666; }');
-                    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10px; }'); // Smaller font for big tables
-                    printWindow.document.write('th, td { border: 1px solid #000; padding: 4px; text-align: center; }');
-                    printWindow.document.write('th { background-color: #368DBC !important; color: white !important; font-weight: bold; }');
-                    printWindow.document.write('tr:nth-child(even) { background-color: #f2f2f2; }');
-                    printWindow.document.write('.print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 9999; }');
-                    printWindow.document.write('.print-btn:hover { background: #0056b3; }');
-                    printWindow.document.write('</style>');
-                    printWindow.document.write('</head><body>');
-                    
-                    printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
-                    
-                    printWindow.document.write('<div class="header">');
-                    printWindow.document.write('<h2>' + title + '</h2>');
-                    printWindow.document.write('<p><?php echo $school_profile["nama_madrasah"] ?? "Sistem Informasi Madrasah"; ?></p>');
-                    printWindow.document.write('<p>Tahun Ajaran: <?php echo $school_profile["tahun_ajaran"] ?? "-"; ?> | Semester: <?php echo $active_semester ?? "-"; ?></p>');
-                    printWindow.document.write('<p>Dicetak pada: ' + new Date().toLocaleString('id-ID') + '</p>');
-                    printWindow.document.write('</div>');
-                    
-                    printWindow.document.write(tableClone.outerHTML);
-                    
-                    // Add signature block
-                    printWindow.document.write('<div style="margin-top: 30px; display: flex; justify-content: flex-end; width: 100%; page-break-inside: avoid;">');
-                    printWindow.document.write('<div style="text-align: center; width: 300px;">');
-                    
-                    var madrasahHeadName = '<?php echo addslashes($madrasah_head_name); ?>';
-                    var madrasahHeadSignature = '<?php echo addslashes($madrasah_head_signature); ?>';
-                    var schoolName = '<?php echo addslashes($school_name); ?>';
-                    var schoolCity = '<?php echo addslashes($schoolCity); ?>';
-                    var reportDate = '<?php echo addslashes($reportDate); ?>';
-
-                    printWindow.document.write('<p>' + schoolCity + ', ' + reportDate + '</p>');
-                    printWindow.document.write('<p>Kepala Madrasah,</p>');
-                    
-                    if (madrasahHeadSignature) {
-                        var qrContent = 'Validasi Tanda Tangan Digital: ' + madrasahHeadName + ' - ' + schoolName;
-                        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
-                        printWindow.document.write('<img src="' + qrUrl + '" alt="QR Signature" style="width: 80px; height: 80px; margin: 10px auto; display: block;">');
-                        printWindow.document.write('<p style="font-size: 10px; margin-top: 0;"></p>');
-                    } else {
-                        printWindow.document.write('<br><br><br>');
-                    }
-                    
-                    printWindow.document.write('<p><strong>' + madrasahHeadName + '</strong></p>');
-                    printWindow.document.write('</div>');
-                    printWindow.document.write('</div>');
-                    
-                    printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
-                    printWindow.document.write('</body></html>');
-                    printWindow.document.close();
+                    frame.src = url;
                 });
             });
             </script>
