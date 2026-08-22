@@ -198,6 +198,12 @@ if (!isLoggedIn()) {
                 padding-right: 8px;
                 margin-bottom: 14px;
             }
+            .hero .row .col-auto > div:last-child {
+                word-break: break-all;
+                overflow-wrap: anywhere;
+                font-size: .9rem;
+                line-height: 1.35;
+            }
         }
         /* Dekorasi dashboard ala mobile app */
         @media (max-width: 991.98px) {
