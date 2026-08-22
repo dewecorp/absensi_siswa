@@ -264,7 +264,7 @@ tr:nth-child(even) { background-color: #f2f2f2; }
 <div class="header">
     <h2><?php echo htmlspecialchars($title); ?></h2>
     <p><?php echo htmlspecialchars($school_name); ?></p>
-    <p>Tahun Ajaran: <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?> | Semester: <?php echo htmlspecialchars($active_semester); ?></p>
+    <p>Tahun Ajaran: <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?><?php if ($filter_type != 'semester'): ?> | <?php echo htmlspecialchars($active_semester); ?><?php endif; ?></p>
     <p>Dicetak pada: <?php echo date('d-m-Y H:i:s'); ?></p>
 </div>
 
