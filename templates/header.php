@@ -136,15 +136,20 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             border-bottom: 1px solid #e3ebff;
         }
         .mobile-menu-label {
-            font-size: 0.78rem;
-            line-height: 1.2;
+            font-size: 10.5px;
+            line-height: 1.3;
             text-align: center;
-            display: block;
-            width: 56px;
-            max-width: 56px;
-            margin: 2px auto 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            width: 100%;
+            max-width: 80px;
+            margin: 0 auto;
             white-space: normal;
-            word-break: normal;
+            word-break: break-word;
+            font-weight: 500;
+            color: #334155;
         }
         .bottom-nav-label {
             font-size: 11px !important;
@@ -157,6 +162,19 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             margin-right: auto;
             white-space: normal;
             word-break: normal;
+        }
+        /* Navbar atas mobile: biru emerald */
+        @media (max-width: 991.98px) {
+            .mobile-header {
+                background: linear-gradient(135deg, #0e7490, #06b6d4);
+                border-bottom-color: rgba(255, 255, 255, .18);
+                box-shadow: 0 3px 12px rgba(14, 116, 144, .35);
+            }
+            .mobile-header .mobile-app-name { color: #fff !important; }
+            .mobile-header .mobile-school-name,
+            .mobile-header .text-dark,
+            .mobile-header .text-muted { color: #fff !important; }
+            .mobile-header #mobile-header-time { color: rgba(255, 255, 255, .85) !important; }
         }
         #table-siswa_wrapper {
             max-width: 100%;

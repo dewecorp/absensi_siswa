@@ -79,7 +79,7 @@ if (!isset($school_profile)) {
     }
     /* Bottom nav gaya mobile app modern */
     @media (max-width: 991.98px) {
-        .bottom-nav-row a.nav-link { color: #8e9aad; padding-top: 5px; transition: color .2s ease; }
+        .bottom-nav-row a.nav-link { color: #8e9aad; padding-top: 5px; transition: color .2s ease; position: relative; }
         .bottom-nav-row a.nav-link i {
             display: inline-flex; align-items: center; justify-content: center;
             width: 36px; height: 36px; margin-bottom: 2px;
@@ -91,11 +91,13 @@ if (!isset($school_profile)) {
         }
         .bottom-nav-row a.nav-link:active i { transform: scale(.88); }
         .bottom-nav-row .bottom-nav-label { font-weight: 600; font-size: 10.5px !important; margin-top: 1px; }
-        .bottom-nav-row a.nav-link.bottom-nav-active { color: #4f46e5; }
+        .bottom-nav-row a.nav-link.bottom-nav-active,
+        .bottom-nav-row a.nav-link.bottom-nav-active .bottom-nav-label { color: #2563eb !important; }
+        .bottom-nav-row a.nav-link.bottom-nav-active .bottom-nav-label { font-weight: 700; }
         .bottom-nav-row a.nav-link.bottom-nav-active i {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, .45);
+            background: #e8f1ff;
+            color: #2563eb !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, .35);
         }
     }
     </style>
@@ -105,28 +107,26 @@ if (!isset($school_profile)) {
     $bottom_quick_links = function_exists('get_bottom_nav_quick_links') && isset($menu_items)
         ? get_bottom_nav_quick_links($menu_items, 3)
         : [];
-    $bottom_current = basename($_SERVER['PHP_SELF']);
-    $bottom_home_active = ($bottom_current === basename($bottom_home_url));
     ?>
     <nav class="navbar navbar-expand navbar-light bg-white d-block d-lg-none border-top shadow-lg" style="position: fixed; bottom: 0; left: 0; right: 0; height: 60px; padding: 0; z-index: 1030;">
         <div class="container-fluid h-100 px-0">
             <div class="row w-100 mx-0 h-100 no-gutters bottom-nav-row">
                 <div class="col px-0 h-100">
-                            <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center<?php echo $bottom_home_active ? ' bottom-nav-active' : ''; ?>">
+                            <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-home">
                         <i class="fas fa-home"></i>
                         <span class="bottom-nav-label">Home</span>
                     </a>
                 </div>
                 <?php foreach ($bottom_quick_links as $link): ?>
                     <div class="col px-0 h-100">
-                                <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center<?php echo $bottom_current === basename($link['url']) ? ' bottom-nav-active' : ''; ?>">
+                                <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-item">
                             <i class="<?php echo $link['icon']; ?>"></i>
                             <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
                         </a>
                     </div>
                 <?php endforeach; ?>
                 <div class="col px-0 h-100">
-                    <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center">
+                    <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-account">
                         <i class="fas fa-user"></i>
                         <span class="bottom-nav-label">Akun</span>
                     </a>
@@ -134,6 +134,84 @@ if (!isset($school_profile)) {
             </div>
         </div>
     </nav>
+
+    <script>
+    (function() {
+        function lastSeg(path) {
+            return decodeURIComponent((String(path).split('/').pop() || '').toLowerCase());
+        }
+        function titleOf(a) {
+            var l = a.querySelector('.bottom-nav-label');
+            return l ? l.textContent.trim() : '';
+        }
+        function setActive(el) {
+            var home = document.querySelector('.bottom-nav-row .bottom-nav-home');
+            var items = document.querySelectorAll('.bottom-nav-row .bottom-nav-item');
+            if (home) home.classList.remove('bottom-nav-active');
+            Array.prototype.forEach.call(items, function(a) { a.classList.remove('bottom-nav-active'); });
+            if (el) el.classList.add('bottom-nav-active');
+        }
+        function updateBottomNavActive() {
+            var home = document.querySelector('.bottom-nav-row .bottom-nav-home');
+            var items = document.querySelectorAll('.bottom-nav-row .bottom-nav-item');
+
+            // 0) Pulihkan pilihan dari klik sebelum navigasi
+            try {
+                var saved = JSON.parse(sessionStorage.getItem('bnav_sel') || 'null');
+                if (saved && Date.now() - saved.ts < 5000) {
+                    var cand = null;
+                    Array.prototype.forEach.call(items, function(it) {
+                        if (!cand && titleOf(it) === saved.t) cand = it;
+                    });
+                    if (!cand && home && saved.t === 'Home') cand = home;
+                    if (cand) { setActive(cand); sessionStorage.removeItem('bnav_sel'); return; }
+                } else if (saved) {
+                    sessionStorage.removeItem('bnav_sel');
+                }
+            } catch (err) {}
+
+            var page = lastSeg(location.pathname);
+            var hash = location.hash || '';
+
+            // Tanpa anchor: Home adalah default aktif
+            if (!hash) {
+                setActive(home);
+                return;
+            }
+
+            // 1) Cocokkan anchor persis
+            var matched = null;
+            Array.prototype.forEach.call(items, function(a) {
+                try {
+                    var u = new URL(a.getAttribute('href'), location.href);
+                    if (u.hash === hash && lastSeg(u.pathname) === page) matched = a;
+                } catch (e) {}
+            });
+
+            // 2) Jaring pengaman: anchor tak cocok -> item dengan halaman sama
+            if (!matched) {
+                Array.prototype.forEach.call(items, function(a) {
+                    try {
+                        var u = new URL(a.getAttribute('href'), location.href);
+                        if (!matched && lastSeg(u.pathname) === page) matched = a;
+                    } catch (e) {}
+                });
+            }
+
+            // 3) Jaring pengaman terakhir: tetap Home
+            setActive(matched || home);
+        }
+        // Aktivasi instan saat menu diklik + simpan pilihan untuk dimuat ulang
+        document.addEventListener('click', function(e) {
+            var a = e.target.closest ? e.target.closest('.bottom-nav-row .bottom-nav-home, .bottom-nav-row .bottom-nav-item') : null;
+            if (!a) return;
+            try { sessionStorage.setItem('bnav_sel', JSON.stringify({ t: titleOf(a), ts: Date.now() })); } catch (err) {}
+            setActive(a);
+        });
+        document.addEventListener('DOMContentLoaded', updateBottomNavActive);
+        window.addEventListener('hashchange', updateBottomNavActive);
+    })();
+    </script>
 
     <!-- Mobile User Menu Modal -->
     <div class="modal fade" id="mobileUserMenu" tabindex="-1" role="dialog" aria-labelledby="mobileUserMenuLabel" aria-hidden="true">
