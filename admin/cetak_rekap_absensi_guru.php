@@ -216,9 +216,9 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
 
 // Build title per filter type
 if ($filter_type == 'daily') {
-    $title = 'Rekap Kehadiran Guru - Harian (' . date('d F Y', strtotime($selected_date)) . ')';
-    $title_sub = '';
-    $doc_title = $title;
+    $title = 'REKAP KEHADIRAN GURU';
+    $title_sub = date('d F Y', strtotime($selected_date));
+    $doc_title = 'Rekap Kehadiran Guru - Harian (' . date('d F Y', strtotime($selected_date)) . ')';
 } elseif ($filter_type == 'monthly') {
     $title = 'REKAP KEHADIRAN GURU';
     $title_sub = 'Bulan ' . $month_names[(int)$month] . ' ' . $year;
