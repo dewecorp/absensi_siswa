@@ -723,22 +723,9 @@ include '../templates/sidebar.php';
                     XLSX.writeFile(wb, fileName + '.xlsx');
                 });
                 
-                // PDF Export via hidden iframe (no popup, parent page stays responsive)
+                // PDF Export in new tab; noopener fully detaches it from this page
                 $('#exportPdfBtn').click(function() {
-                    var url = 'cetak_rekap_absensi_guru.php' + window.location.search;
-                    var frame = document.getElementById('printFrame');
-                    if (!frame) {
-                        frame = document.createElement('iframe');
-                        frame.id = 'printFrame';
-                        frame.style.position = 'fixed';
-                        frame.style.right = '0';
-                        frame.style.bottom = '0';
-                        frame.style.width = '0';
-                        frame.style.height = '0';
-                        frame.style.border = '0';
-                        document.body.appendChild(frame);
-                    }
-                    frame.src = url;
+                    window.open('cetak_rekap_absensi_guru.php' + window.location.search, '_blank', 'noopener');
                 });
             });
             </script>

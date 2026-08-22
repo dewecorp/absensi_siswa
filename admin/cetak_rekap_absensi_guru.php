@@ -217,21 +217,31 @@ if ($filter_type == 'daily' && !empty($selected_date)) {
 // Build title per filter type
 if ($filter_type == 'daily') {
     $title = 'Rekap Kehadiran Guru - Harian (' . date('d F Y', strtotime($selected_date)) . ')';
+    $title_sub = '';
+    $doc_title = $title;
 } elseif ($filter_type == 'monthly') {
-    $title = 'Rekap Kehadiran Guru - Bulanan (' . $month_names[(int)$month] . ' ' . $year . ')';
+    $title = 'REKAP KEHADIRAN GURU';
+    $title_sub = 'Bulan ' . $month_names[(int)$month] . ' ' . $year;
+    $doc_title = 'Rekap Kehadiran Guru - Bulan ' . $month_names[(int)$month] . ' ' . $year;
 } elseif ($filter_type == 'semester') {
-    $title = 'Rekap Kehadiran Guru - ' . $active_semester . ' (' . ($school_profile['tahun_ajaran'] ?? '') . ')';
+    $title = 'REKAP KEHADIRAN GURU';
+    $title_sub = strtoupper($active_semester);
+    $doc_title = 'Rekap Kehadiran Guru - ' . $active_semester;
 } elseif ($filter_type == 'teacher') {
     $title = 'Rekap Kehadiran Guru - Per Guru' . (!empty($teacher_info['nama_guru']) ? ' (' . $teacher_info['nama_guru'] . ')' : '');
+    $title_sub = '';
+    $doc_title = $title;
 } else {
-    $title = 'Rekap Kehadiran Guru';
+    $title = 'REKAP KEHADIRAN GURU';
+    $title_sub = '';
+    $doc_title = 'Rekap Kehadiran Guru';
 }
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title><?php echo htmlspecialchars($title); ?></title>
+<title><?php echo htmlspecialchars($doc_title); ?></title>
 <style>
 @page { size: 330mm 215mm; margin: 10mm; } /* F4 Landscape */
 @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }
@@ -263,6 +273,9 @@ tr:nth-child(even) { background-color: #f2f2f2; }
 
 <div class="header">
     <h2><?php echo htmlspecialchars($title); ?></h2>
+    <?php if (!empty($title_sub)): ?>
+    <p style="font-size: 16px;"><strong><?php echo htmlspecialchars($title_sub); ?></strong></p>
+    <?php endif; ?>
     <p><?php echo htmlspecialchars($school_name); ?></p>
     <p>Tahun Ajaran: <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?><?php if ($filter_type != 'semester'): ?> | <?php echo htmlspecialchars($active_semester); ?><?php endif; ?></p>
     <p>Dicetak pada: <?php echo date('d-m-Y H:i:s'); ?></p>
