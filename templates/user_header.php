@@ -161,6 +161,34 @@ if (!isLoggedIn()) {
             color: #fff;
             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28);
         }
+        /* Tombol status kehadiran: teks selalu satu baris agar konsisten */
+        @media (max-width: 575.98px) {
+            #attendanceFormReg .btn,
+            #attendanceForm .btn {
+                white-space: nowrap;
+                padding-left: 2px !important;
+                padding-right: 2px !important;
+            }
+            #attendanceFormReg .btn span,
+            #attendanceForm .btn span {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                white-space: nowrap;
+            }
+            .selectgroup-button {
+                white-space: nowrap;
+            }
+            .selectgroup-button i {
+                margin-right: 4px;
+            }
+        }
+        @media (max-width: 374.98px) {
+            #attendanceFormReg .btn span,
+            #attendanceForm .btn span {
+                font-size: .72rem;
+            }
+        }
         /* Dekorasi dashboard ala mobile app */
         @media (max-width: 991.98px) {
             .main-content { position: relative; }
