@@ -199,10 +199,14 @@ if (!isLoggedIn()) {
                 margin-bottom: 14px;
             }
             .hero .row .col-auto > div:last-child {
-                word-break: break-all;
-                overflow-wrap: anywhere;
+                word-break: normal;
+                overflow-wrap: break-word;
                 font-size: .9rem;
                 line-height: 1.35;
+            }
+            /* Angka panjang (NUPTK) tetap boleh pecah per huruf */
+            .hero .row .col-auto:first-child > div:last-child {
+                word-break: break-all;
             }
         }
         /* Dekorasi dashboard ala mobile app */
