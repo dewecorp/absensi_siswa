@@ -102,6 +102,8 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
         /* Base responsive settings */
         html {
             font-size: 16px;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
 
         body {
@@ -140,11 +142,14 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
             font-size: 10.5px;
             line-height: 1.3;
             text-align: center;
-            width: 100%;
-            max-width: 84px;
-            margin: 0 auto;
+            width: auto;
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0 2px;
             white-space: normal;
             word-break: break-word;
+            overflow-wrap: anywhere;
             font-weight: 500;
             color: #334155;
         }
