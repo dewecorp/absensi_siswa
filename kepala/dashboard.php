@@ -547,8 +547,7 @@ include_once '../templates/sidebar.php';
                                             <div class="mb-1 text-white" style="font-size: 0.95rem;">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Kepala Madrasah')); ?></span></div>
                                             <div class="text-white" style="font-size: 0.95rem;">Selamat datang di Sistem Informasi Madrasah</div>
                                             <div class="mt-1">
-                                                <span class="wb-chip wb-chip-glass"><i class="far fa-calendar-alt"></i> <span id="wb-date">-</span></span>
-                                                <span class="wb-chip wb-chip-glass"><i class="far fa-clock"></i> <span id="wb-time">--:--:--</span></span>
+                                            <span class="wb-chip wb-chip-glass"><i class="far fa-calendar-alt"></i> <span id="wb-date">-</span></span>
                                                 <span class="wb-chip wb-chip-glass"><i class="fas fa-graduation-cap"></i> <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
                                                 <span class="wb-chip wb-chip-glass"><i class="fas fa-calendar-check"></i> <?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
                                             </div>

@@ -259,17 +259,20 @@ if (!isLoggedIn()) {
 
         /* Menu grid gaya mobile app */
         .menu-grid-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 18px;
+            width: 62px;
+            height: 62px;
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 8px;
             color: #fff;
-            font-size: 1.4rem;
-            box-shadow: 0 6px 14px rgba(15, 23, 42, .14);
+            font-size: 30px;
+            box-shadow: 0 6px 14px rgba(15, 23, 42, .16);
             transition: transform .15s ease, box-shadow .2s ease;
+        }
+        .menu-grid-icon i {
+            font-size: inherit !important;
         }
         a:active .menu-grid-icon {
             transform: scale(.9);

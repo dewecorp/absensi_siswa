@@ -626,7 +626,7 @@ include_once '../templates/sidebar.php';
                                         <div class="col-md-9">
                                             <h2>Assalamualaikum, <?php echo htmlspecialchars($teacher_name); ?></h2>
                                             <p class="lead">Anda login sebagai Wali Kelas <b><?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '-'; ?></b>.</p>
-                                            <div class="d-lg-none" style="font-size: .95rem;"><i class="far fa-calendar-alt mr-1"></i><span id="wb-date">-</span> &bull; <span id="wb-time">--:--:--</span></div>
+                                            <div class="d-lg-none" style="font-size: .95rem;"><i class="far fa-calendar-alt mr-1"></i><span id="wb-date">-</span></div>
                                             <div class="mt-2 d-lg-none">
                                                 <span class="wb-chip wb-chip-glass"><i class="fas fa-graduation-cap"></i> <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
                                                 <span class="wb-chip wb-chip-glass"><i class="fas fa-calendar-check"></i> <?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
