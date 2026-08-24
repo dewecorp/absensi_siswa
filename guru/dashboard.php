@@ -684,7 +684,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php 
                         $holiday = isSchoolHoliday($pdo, $today);
                         // Box les selalu muncul untuk guru kelas 6, cek apakah ada jadwal hari ini
-                        $show_les_box = $is_grade_6_guru; // Selalu tampilkan untuk kelas 6
+                        $show_les_box = $is_grade_6_guru && $has_les_schedule_guru; // Hanya tampilkan jika ada jadwal les hari ini
                         $col_class = $show_les_box ? 'col-12 col-md-6' : 'col-12';
                         
                         if (!$holiday['is_holiday']): 

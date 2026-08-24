@@ -705,7 +705,7 @@ include_once '../templates/sidebar.php';
                     <div class="row">
                         <?php
                         // Box les selalu muncul untuk kelas 6, cek apakah ada jadwal hari ini
-                        $show_les_box_wali = $is_grade_6_wali; // Selalu tampilkan untuk kelas 6
+                        $show_les_box_wali = $is_grade_6_wali && $has_les_schedule; // Hanya tampilkan jika ada jadwal les hari ini
                         $col_class_wali = $show_les_box_wali ? 'col-12 col-md-6' : 'col-12';
                         
                         if (!$holiday['is_holiday']):
