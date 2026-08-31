@@ -2521,7 +2521,6 @@ function renderDashboardAgendaBulanBerjalan(PDO $pdo, ?string $date = null): str
                                 <i class="fas fa-calendar-check"></i>
                             </div>
                             <h2 class="mt-3">Belum ada agenda bulan ini</h2>
-                            <p class="lead mb-0">Kegiatan akan tampil otomatis dari Kalender Pendidikan.</p>
                         </div>
                     <?php else: ?>
                         <?php
