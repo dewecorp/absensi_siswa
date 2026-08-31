@@ -138,10 +138,14 @@ $js_page[] = "
     initDataTable();
     
     // Initialize Select2 for the main page
-    if (\$('.select2').length > 0) {
-        \$('.select2').select2({
-            placeholder: 'Pilih Wali Kelas',
-            allowClear: true
+    if (\$('.main-content select.select2').length > 0) {
+        \$('.main-content select.select2').each(function() {
+            if (!\$(this).data('select2')) {
+                \$(this).select2({
+                    placeholder: 'Pilih Wali Kelas',
+                    allowClear: true
+                });
+            }
         });
     }
     
@@ -178,20 +182,25 @@ $js_page[] = "
 
 // Initialize Select2 when modals are shown
 $(document).on('shown.bs.modal', function(e) {
+    if (typeof $.fn.select2 === 'undefined') { return; }
+    var modal = $(e.target);
     // Small delay to ensure modal is fully rendered
     setTimeout(function() {
-        var modal = $(e.target).find('.select2');
-        if (modal.length > 0) {
-            // Destroy if already initialized
-            if (modal.data('select2')) {
-                modal.select2('destroy');
+        var \$sel = modal.find('select.select2');
+        if (\$sel.length > 0) {
+            try {
+                if (\$sel.data('select2')) {
+                    \$sel.select2('destroy');
+                    \$sel.removeData('select2');
+                }
+            } catch (err) {
+                \$sel.removeData('select2');
             }
-            
             // Re-initialize with proper settings for modals
-            modal.select2({
+            \$sel.select2({
                 placeholder: 'Pilih Wali Kelas',
                 allowClear: true,
-                dropdownParent: $(e.target) // Important: attach dropdown to modal
+                dropdownParent: modal // Important: attach dropdown to modal
             });
         }
     }, 100);
@@ -199,9 +208,13 @@ $(document).on('shown.bs.modal', function(e) {
 
 // Clean up Select2 when modals are hidden
 $(document).on('hidden.bs.modal', function(e) {
-    var modal = $(e.target).find('.select2');
-    if (modal.length > 0 && modal.data('select2')) {
-        modal.select2('destroy');
+    if (typeof $.fn.select2 === 'undefined') { return; }
+    var \$sel = $(e.target).find('select.select2');
+    if (\$sel.length > 0 && \$sel.data('select2')) {
+        try {
+            \$sel.select2('destroy');
+        } catch (err) {}
+        \$sel.removeData('select2');
     }
 });
 ";
@@ -266,47 +279,6 @@ include '../templates/sidebar.php';
                                                 <a href="#" class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $class['id_kelas']; ?>" data-name="<?php echo htmlspecialchars($class['nama_kelas']); ?>" data-action="delete_kelas"><i class="fas fa-trash"></i></a>
                                             </td>
                                         </tr>
-                                        
-                                        <!-- Edit Modal -->
-                                        <div class="modal fade edit-modal" id="editModal<?php echo $class['id_kelas']; ?>" tabindex="-1" role="dialog" aria-labelledby="editModalLabel<?php echo $class['id_kelas']; ?>" aria-hidden="true">
-                                            <div class="modal-dialog" role="document">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="editModalLabel<?php echo $class['id_kelas']; ?>">Edit Data Kelas</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                            <span aria-hidden="true">&times;</span>
-                                                        </button>
-                                                    </div>
-                                                    <form method="POST" action="">
-                                                        <div class="modal-body">
-                                                            <input type="hidden" name="id_kelas" value="<?php echo $class['id_kelas']; ?>">
-                                                            <input type="hidden" name="update_kelas" value="1">
-                                                            <div class="form-group">
-                                                                <label>Nama Kelas</label>
-                                                                <input type="text" class="form-control" name="nama_kelas" value="<?php echo htmlspecialchars($class['nama_kelas']); ?>" required>
-                                                            </div>
-                                                            <div class="form-group">
-                                                                <label>Wali Kelas</label>
-                                                                <select class="form-control select2" name="wali_kelas">
-                                                                    <option value="">Pilih Wali Kelas</option>
-                                                                    <?php foreach ($teachers as $teacher): ?>
-                                                                    <option value="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" <?php echo ($teacher['nama_guru'] == $class['wali_kelas']) ? 'selected' : ''; ?>>
-                                                                        <?php echo htmlspecialchars($teacher['nama_guru']); ?>
-                                                                    </option>
-                                                                    <?php endforeach; ?>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer bg-whitesmoke br">
-                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-                                                            <button type="submit" class="btn btn-primary">Simpan</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
@@ -318,6 +290,47 @@ include '../templates/sidebar.php';
         </div>
     </section>
 </div>
+
+<?php foreach ($classes as $index => $class): ?>
+<!-- Edit Modal -->
+<div class="modal fade edit-modal" id="editModal<?php echo $class['id_kelas']; ?>" tabindex="-1" role="dialog" aria-labelledby="editModalLabel<?php echo $class['id_kelas']; ?>" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel<?php echo $class['id_kelas']; ?>">Edit Data Kelas</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="">
+                <div class="modal-body">
+                    <input type="hidden" name="id_kelas" value="<?php echo $class['id_kelas']; ?>">
+                    <input type="hidden" name="update_kelas" value="1">
+                    <div class="form-group">
+                        <label>Nama Kelas</label>
+                        <input type="text" class="form-control" name="nama_kelas" value="<?php echo htmlspecialchars($class['nama_kelas']); ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Wali Kelas</label>
+                        <select class="form-control select2" name="wali_kelas">
+                            <option value="">Pilih Wali Kelas</option>
+                            <?php foreach ($teachers as $teacher): ?>
+                            <option value="<?php echo htmlspecialchars($teacher['nama_guru']); ?>" <?php echo ($teacher['nama_guru'] == $class['wali_kelas']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($teacher['nama_guru']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-whitesmoke br">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endforeach; ?>
 
 <!-- Add Modal -->
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
