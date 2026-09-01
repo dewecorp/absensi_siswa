@@ -529,6 +529,8 @@
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
+                var pre = document.getElementById('pagePreloader');
+                if (pre && !pre.classList.contains('show')) pre.classList.add('show');
                 window.location.href = logoutUrl;
             }
         });
@@ -538,6 +540,118 @@
     function confirmLogoutInline(logoutUrl) {
         confirmLogout(logoutUrl);
     }
+    </script>
+
+    <!-- Page Navigation Preloader -->
+    <?php $preloader_logo = !empty($favicon_logo) ? $favicon_logo : 'logo.png'; ?>
+    <div id="pagePreloader" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.88);backdrop-filter:blur(2px);">
+        <div class="page-loader">
+            <img src="../assets/img/<?php echo htmlspecialchars($preloader_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version ?? '1', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="page-loader-logo">
+            <span class="page-loader-ring"></span>
+        </div>
+        <div class="page-loader-text">Memuat halaman...</div>
+    </div>
+    <style>
+    #pagePreloader { display:none; }
+    #pagePreloader.show { display:block; }
+    .page-loader {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -58%);
+    }
+    .page-loader-logo {
+        display: block;
+        width: 86px;
+        height: 86px;
+        object-fit: contain;
+    }
+    .page-loader-ring {
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        width: calc(100% + 20px);
+        height: calc(100% + 20px);
+        border-radius: 50%;
+        border: 5px solid rgba(47, 110, 240, .15);
+        border-top-color: #2f6ef0;
+        animation: pageRingSpin .8s linear infinite;
+    }
+    .page-loader-text {
+        position: absolute;
+        top: calc(100% + 26px);
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        font-size: .95rem;
+        font-weight: 600;
+        color: #475569;
+        white-space: nowrap;
+    }
+    @keyframes pageRingSpin { to { transform: rotate(360deg); } }
+    @media (max-width: 575.98px) {
+        .page-loader-logo { width: 68px; height: 68px; }
+        .page-loader-ring { top: -8px; left: -8px; width: calc(100% + 16px); height: calc(100% + 16px); border-width: 4px; }
+        .page-loader-text { font-size: .88rem; }
+    }
+    </style>
+    <script>
+    (function() {
+        var overlay = document.getElementById('pagePreloader');
+        if (!overlay) return;
+        var hideTimer = null;
+
+        function hidePreloader() {
+            if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+            overlay.classList.remove('show');
+        }
+        function showPreloader() {
+            overlay.classList.add('show');
+            // Fallback: pastikan overlay hilang walau event load/pageshow tak memicu
+            if (hideTimer) clearTimeout(hideTimer);
+            hideTimer = setTimeout(hidePreloader, 5000);
+        }
+        function isInternal(href) {
+            if (!href) return false;
+            var a = document.createElement('a');
+            a.href = href;
+            return a.origin === location.origin;
+        }
+
+        // Show on internal link navigation (not reload)
+        document.addEventListener('click', function(e) {
+            var el = e.target.closest('a');
+            if (!el) return;
+            if (el.target === '_blank') return;
+            if (el.hasAttribute('download')) return;
+            if (el.classList.contains('no-preloader')) return;
+            if (el.getAttribute('data-toggle') === 'modal') return;
+            var href = el.getAttribute('href');
+            if (!href || href === '#' || href.indexOf('#') === 0) return;
+            if (href.indexOf('javascript:') === 0) return;
+            if (!isInternal(href)) return;
+            // Skip links handled by JS that stop default (forms, modals, tabs)
+            if (el.getAttribute('data-dismiss') !== null) return;
+            showPreloader();
+        }, true);
+
+        // Show on form submission
+        document.addEventListener('submit', function(e) {
+            var form = e.target;
+            if (!form || form.getAttribute('data-no-preloader') !== null) return;
+            showPreloader();
+        }, true);
+
+        // Hide once page fully loaded
+        window.addEventListener('load', function() {
+            hidePreloader();
+        });
+
+        // Hide saat halaman dikembalikan dari cache (bfcache, mis. back/forward di mobile)
+        window.addEventListener('pageshow', function() {
+            hidePreloader();
+        });
+    })();
     </script>
     
 </body>
