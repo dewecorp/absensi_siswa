@@ -83,6 +83,7 @@ if (!empty($teacher['mengajar'])) {
 // Get students with attendance status for each class
 $class_students = [];
 $today = date('Y-m-d');
+$holiday = isSchoolHoliday($pdo, $today);
 
 // Check if teacher teaches Grade 6 and if there's a tutoring schedule today
 $is_grade_6_guru = false;
@@ -652,7 +653,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <!-- KBM Info -->
-                    <?php if (isset($holiday) && !$holiday['is_holiday']): ?>
+                    <?php if (!$holiday['is_holiday']): ?>
                     <div class="row">
                         <div class="col-12 mb-4">
                             <div class="card border-left-primary shadow-sm">
@@ -682,7 +683,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <!-- Attendance Box for Teacher -->
                     <div class="row">
                         <?php 
-                        $holiday = isSchoolHoliday($pdo, $today);
                         // Box les selalu muncul untuk guru kelas 6, cek apakah ada jadwal hari ini
                         $show_les_box = $is_grade_6_guru && $has_les_schedule_guru; // Hanya tampilkan jika ada jadwal les hari ini
                         $col_class = $show_les_box ? 'col-12 col-md-6' : 'col-12';
