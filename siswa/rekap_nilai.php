@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -31,7 +31,7 @@ $school_name = $school_profile['nama_madrasah'] ?? 'Madrasah';
 $madrasah_head_name = $school_profile['kepala_madrasah'] ?? 'Kepala Madrasah';
 $madrasah_head_signature = $school_profile['ttd_kepala'] ?? '';
 
-// Parameters — Harian/Kokurikuler: asli kolom nilai; PTS/PAS/PAT: MAX(asli, remidi); bukan nilai_jadi
+// Parameters â€” Harian/Kokurikuler: asli kolom nilai; PTS/PAS/PAT: MAX(asli, remidi); bukan nilai_jadi
 // Pra/Ujian madrasah tidak di sini (ada menu khusus kelas 6)
 $rekap_jenis_allowed = ['Harian', 'PTS', 'PAS', 'PAT', 'Kokurikuler'];
 $selected_jenis = isset($_GET['jenis']) ? (string)$_GET['jenis'] : 'Harian';
@@ -86,7 +86,7 @@ foreach ($subjects as $mapel) {
             $nilai = (float)$row['rerata_asli'];
         }
     } else {
-        // PTS, PAS, PAT — siswa: MAX(nilai_asli, nilai_remidi); bukan nilai_jadi
+        // PTS, PAS, PAT â€” siswa: MAX(nilai_asli, nilai_remidi); bukan nilai_jadi
         $exam_type_map = [
             'PTS' => 'UTS',
             'PAS' => 'UAS',
@@ -256,7 +256,7 @@ var jenisPenilaian = '<?php echo addslashes($selected_jenis); ?>';
 function exportToExcel() {
     var container = document.createElement('div');
     var headerDiv = document.createElement('div');
-    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1782822263.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3>' + schoolName + '</h3>';
     headerDiv.innerHTML += '<h4>Rekap Nilai: ' + studentName + ' (' + studentKelas + ')</h4>';
     headerDiv.innerHTML += '<h4>Jenis: ' + jenisPenilaian + ' | Tahun: ' + tahunAjaran + ' | Semester: ' + semesterAktif + '</h4></div><br style="clear: both;">';
@@ -299,7 +299,7 @@ function exportToPDF() {
     printWindow.document.write('</style></head><body>');
     printWindow.document.write('<button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
-    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
+    printWindow.document.write('<img src="../assets/img/logo_1782822263.png" alt="Logo" class="logo">');
     printWindow.document.write('<h2>Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3>' + schoolName + '</h3>');
     printWindow.document.write('<h4>Rekap Nilai Siswa: ' + studentName + ' (' + studentKelas + ')</h4>');

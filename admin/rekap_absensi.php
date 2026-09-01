@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
@@ -396,7 +396,7 @@ include '../templates/sidebar.php';
             <div class="main-content">
                 <section class="section">
                     <div class="section-header">
-                        <h1>Rekap Kehadiran</h1>
+                        <h1>Rekap Kehadiran<?php if ($filter_type == 'monthly') { echo ' Bulanan - ' . ($js_month_name_safe . ' ' . $js_month_year_safe); } elseif ($filter_type == 'semester') { echo ' ' . htmlspecialchars($active_semester, ENT_QUOTES, 'UTF-8'); } ?></h1>
                         <?php echo render_breadcrumb(); ?>
                     </div>
 
@@ -993,7 +993,7 @@ function exportToExcel() {
     
     // Add application name and school info
     var headerDiv = document.createElement('div');
-    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1782822263.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>';
     headerDiv.innerHTML += '<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>';
     headerDiv.innerHTML += '<h4>Rekap Kehadiran Bulanan - <?php echo htmlspecialchars($js_month_name_safe . " " . $js_month_year_safe, ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
@@ -1098,7 +1098,7 @@ function fallbackSemesterPrintPDF() {
     printWindow.document.write('</head><body>');
     printWindow.document.write('<button class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>');
     printWindow.document.write('<div class="header">');
-    printWindow.document.write('<img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">');
+    printWindow.document.write('<img src="../assets/img/logo_1782822263.png" alt="Logo" class="logo">');
     printWindow.document.write('<div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>');
     printWindow.document.write('<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>');
     printWindow.document.write('<h4>Tahun Ajaran: ' + academicYear + ' | Semester: ' + activeSemester + '</h4>');
@@ -1155,7 +1155,7 @@ function exportSemesterToExcel() {
     
     // Add application name and school info
     var headerDiv = document.createElement('div');
-    headerDiv.innerHTML = '<img src="../assets/img/logo_1768301957.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
+    headerDiv.innerHTML = '<img src="../assets/img/logo_1782822263.png" alt="Logo" style="max-width: 100px; float: left; margin-right: 20px;"><div style="display: inline-block;"><h2>Sistem Informasi Madrasah</h2>';
     headerDiv.innerHTML += '<h3><?php echo htmlspecialchars($school_profile["nama_madrasah"] ?? "", ENT_QUOTES, "UTF-8"); ?></h3>';
     headerDiv.innerHTML += '<h4>Rekap Kehadiran <?php echo htmlspecialchars($active_semester, ENT_QUOTES, "UTF-8"); ?> - Tahun <?php echo htmlspecialchars(date("Y"), ENT_QUOTES, "UTF-8"); ?></h4></div><br style="clear: both;">';
     

@@ -272,9 +272,12 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
             $target_file = $target_dir . $new_logo_name;
             
             if (move_uploaded_file($_FILES['logo']['tmp_name'], $target_file)) {
-                // Delete old logo if it's not the default
-                if ($school_profile['logo'] != 'logo.png' && file_exists($target_dir . $school_profile['logo'])) {
-                    unlink($target_dir . $school_profile['logo']);
+                // Hapus semua file logo lama (logo_*) agar direktori tidak menumpuk,
+                // termasuk file lama yang masih tercatat di DB.
+                foreach (glob($target_dir . 'logo_*') as $old_logo_file) {
+                    if (basename($old_logo_file) !== $new_logo_name) {
+                        @unlink($old_logo_file);
+                    }
                 }
                 $logo = $new_logo_name;
             } else {
@@ -297,9 +300,11 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
             $target_file = $target_dir . $new_hero_name;
             
             if (move_uploaded_file($_FILES['hero_image']['tmp_name'], $target_file)) {
-                // Delete old hero image if it exists
-                if (!empty($school_profile['dashboard_hero_image']) && file_exists($target_dir . $school_profile['dashboard_hero_image'])) {
-                    unlink($target_dir . $school_profile['dashboard_hero_image']);
+                // Hapus semua file hero lama (hero_*) agar direktori tidak menumpuk
+                foreach (glob($target_dir . 'hero_*') as $old_hero_file) {
+                    if (basename($old_hero_file) !== $new_hero_name) {
+                        @unlink($old_hero_file);
+                    }
                 }
                 $hero_image = $new_hero_name;
             } else {

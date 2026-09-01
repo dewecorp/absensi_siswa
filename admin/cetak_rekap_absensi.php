@@ -185,7 +185,7 @@ if ($filter_type == 'daily') {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Cetak Rekap Kehadiran</title>
+    <title><?= htmlspecialchars($title) ?></title>
     <style>
         @page { size: legal landscape; margin: 0cm 0.5cm 0.5cm 0.5cm; }
         body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 10px; }
@@ -209,7 +209,7 @@ if ($filter_type == 'daily') {
 </head>
 <body>
     <div class="header">
-        <img src="../assets/img/logo_1768301957.png" alt="Logo" class="logo">
+        <img src="../assets/img/logo_1782822263.png" alt="Logo" class="logo">
         <h2>Sistem Informasi Madrasah</h2>
         <h3><?= htmlspecialchars($school_name) ?></h3>
         <h4><?= htmlspecialchars($title) ?></h4>
