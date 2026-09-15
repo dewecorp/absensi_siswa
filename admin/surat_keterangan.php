@@ -13,6 +13,83 @@ if (!isAuthorized(['admin', 'tata_usaha'])) {
     redirect('../login.php');
 }
 
+// Aksi batalkan kelulusan: kembali ke tingkat sebelumnya + kosongkan SKU lama
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['suket_ajax'] ?? '') === '1' && ($_POST['action'] ?? '') === 'batalkan') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $id_p = (int)($_POST['id_peserta_didik_barung'] ?? 0);
+        if ($id_p <= 0) {
+            echo json_encode(['ok' => false, 'msg' => 'ID peserta tidak valid.']);
+            exit;
+        }
+        $st = $pdo->prepare("SELECT id_peserta_didik_barung, nama_peserta_didik, id_tingkat_barung, promoted_from_tingkat_id, promoted_at, sku_kecakapan_lulus_at FROM tb_peserta_didik_barung WHERE id_peserta_didik_barung = ? LIMIT 1");
+        $st->execute([$id_p]);
+        $cur = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$cur) {
+            echo json_encode(['ok' => false, 'msg' => 'Data peserta tidak ditemukan.']);
+            exit;
+        }
+        $cur_tingkat = (int)($cur['id_tingkat_barung'] ?? 0);
+
+        // Tentukan tingkat asal: prioritas promoted_from, fallback tingkat sebelumnya di urutan
+        $asal_tingkat = (int)($cur['promoted_from_tingkat_id'] ?? 0);
+        $ordered = $pdo->query("
+            SELECT id_tingkat_barung FROM tb_tingkat_barung
+            ORDER BY
+                CASE
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('pramula', 'pra-mula') OR LOWER(nama_tingkat) = 'pra mula' THEN 0
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 1
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 2
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 3
+                    WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 4
+                    ELSE 99
+                END,
+                nama_tingkat ASC
+        ")->fetchAll(PDO::FETCH_COLUMN, 0);
+        $ids = array_values(array_map('intval', is_array($ordered) ? $ordered : []));
+        $pos = array_search($cur_tingkat, $ids, true);
+        if ($asal_tingkat <= 0 && $pos !== false && $pos > 0) {
+            $asal_tingkat = (int)($ids[$pos - 1] ?? 0);
+        }
+        if ($asal_tingkat <= 0) {
+            echo json_encode(['ok' => false, 'msg' => 'Tingkat sebelumnya tidak ditemukan.']);
+            exit;
+        }
+
+        // Kembalikan ke tingkat asal + reset penanda lulus/naik
+        $pdo->prepare("
+            UPDATE tb_peserta_didik_barung
+            SET id_tingkat_barung = ?,
+                promoted_from_tingkat_id = NULL,
+                promoted_at = NULL,
+                sku_kecakapan_lulus_at = NULL
+            WHERE id_peserta_didik_barung = ?
+            LIMIT 1
+        ")->execute([$asal_tingkat, $id_p]);
+
+        // Kosongkan centang SKU di tingkat asal (SKU sebelumnya menjadi kosong)
+        try {
+            $pdo->prepare("
+                DELETE n FROM tb_sku_kecakapan_nilai n
+                INNER JOIN tb_sku_kecakapan_butir b ON b.id_butir = n.id_butir AND b.id_tingkat_barung = ?
+                WHERE n.id_peserta_didik_barung = ?
+            ")->execute([$asal_tingkat, $id_p]);
+        } catch (Exception $e) {
+            // tabel nilai mungkin belum ada — abaikan, penanda sudah direset
+        }
+
+        $nm = $pdo->prepare("SELECT nama_tingkat FROM tb_tingkat_barung WHERE id_tingkat_barung = ? LIMIT 1");
+        $nm->execute([$asal_tingkat]);
+        $nama_asal = (string)($nm->fetchColumn() ?: ('ID ' . $asal_tingkat));
+        logActivity($pdo, (string)($_SESSION['username'] ?? 'admin'), 'Batalkan Suket', 'Membatalkan kelulusan ' . ($cur['nama_peserta_didik'] ?? '') . ' kembali ke tingkat ' . $nama_asal);
+        echo json_encode(['ok' => true, 'msg' => 'Dibatalkan. Kembali ke tingkat ' . $nama_asal . ' dan SKU dikosongkan.', 'tingkat_asal' => $nama_asal]);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(['ok' => false, 'msg' => 'Gagal membatalkan: ' . $e->getMessage()]);
+        exit;
+    }
+}
+
 // Ensure kolom kelulusan SKU ada (sumber data surat)
 try {
     $required_cols = [
@@ -296,6 +373,53 @@ $(document).on('click', '.btn-print-single', function (e) {
 
   printSingleLetter(id, nama, nta);
 });
+
+// Batalkan kelulusan: konfirmasi + info akibat, kembalikan tingkat + kosongkan SKU
+$(document).on('click', '.btn-cancel-single', function (e) {
+  e.preventDefault();
+  const id = $(this).data('id');
+  const nama = $(this).data('nama') || '-';
+  if (!id) {
+    Swal.fire('Error', 'ID peserta didik tidak valid.', 'error');
+    return;
+  }
+  Swal.fire({
+    title: 'Batalkan kelulusan?',
+    html: 'Batalkan kelulusan <strong>' + $('<div>').text(nama).html() + '</strong>?<br><br>'
+      + '<div style="text-align:left">Akibat pembatalan:<ul style="margin:6px 0 0 18px;padding:0">'
+      + '<li>Siswa kembali ke <strong>tingkat sebelumnya</strong>.</li>'
+      + '<li>Centang <strong>SKU sebelumnya dikosongkan</strong> dan harus diisi ulang.</li>'
+      + '<li>Surat keterangan tingkat ini <strong>tidak berlaku lagi</strong>.</li>'
+      + '</ul></div>',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Ya, Batalkan',
+    cancelButtonText: 'Tidak'
+  }).then((result) => {
+    if (!result.isConfirmed) return;
+    const btn = $(this);
+    btn.prop('disabled', true);
+    $.ajax({
+      url: 'surat_keterangan.php',
+      type: 'POST',
+      data: { suket_ajax: '1', action: 'batalkan', id_peserta_didik_barung: id },
+      dataType: 'json'
+    }).done(function (res) {
+      if (res && res.ok) {
+        Swal.fire({ title: 'Dibatalkan', text: res.msg || 'Kelulusan dibatalkan.', icon: 'success', timer: 1800, timerProgressBar: true, showConfirmButton: false, allowOutsideClick: false }).then(() => location.reload(), () => location.reload());
+        setTimeout(() => location.reload(), 1900);
+      } else {
+        Swal.fire('Gagal', (res && res.msg) || 'Gagal membatalkan.', 'error');
+        btn.prop('disabled', false);
+      }
+    }).fail(function () {
+      Swal.fire('Error', 'Terjadi kesalahan server.', 'error');
+      btn.prop('disabled', false);
+    });
+  });
+});
 JS;
 
 $js_page = [$js_print_letters];
@@ -416,9 +540,14 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($participant['tempat_lahir'] ?? '-') ?></td>
                                         <td><?= formatDateDMY($participant['tanggal_lahir'] ?? null) ?></td>
                                         <td>
-                                            <button class="btn btn-sm btn-success btn-print-single" data-id="<?= htmlspecialchars($participant['id_peserta_didik_barung'] ?? $participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>" data-nta="<?= htmlspecialchars($participant['nta'] ?? '') ?>">
-                                                <i class="fas fa-print"></i> Cetak Surat
-                                            </button>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-success btn-print-single" title="Cetak Surat" data-id="<?= htmlspecialchars($participant['id_peserta_didik_barung'] ?? $participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>" data-nta="<?= htmlspecialchars($participant['nta'] ?? '') ?>">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-danger btn-cancel-single" title="Batalkan kelulusan" data-id="<?= htmlspecialchars($participant['id_peserta_didik_barung'] ?? $participant['id_peserta_didik'] ?? '') ?>" data-nama="<?= htmlspecialchars($participant['nama_peserta_didik'] ?? '') ?>">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
