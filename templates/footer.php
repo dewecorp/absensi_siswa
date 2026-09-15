@@ -529,8 +529,6 @@
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                var pre = document.getElementById('pagePreloader');
-                if (pre) pre.hidden = false;
                 window.location.href = logoutUrl;
             }
         });
@@ -542,9 +540,9 @@
     }
     </script>
 
-    <!-- Page Navigation Preloader -->
+    <!-- Page Navigation Preloader: satu loader per laman, tutup tepat di batas putaran -->
     <?php $preloader_logo = !empty($favicon_logo) ? $favicon_logo : 'logo.png'; ?>
-    <div id="pagePreloader" hidden style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.88);backdrop-filter:blur(2px);">
+    <div id="pagePreloader" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.88);backdrop-filter:blur(2px);">
         <div class="page-loader">
             <img src="../assets/img/<?php echo htmlspecialchars($preloader_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version ?? '1', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="page-loader-logo">
             <span class="page-loader-ring"></span>
@@ -587,6 +585,8 @@
         white-space: nowrap;
     }
     @keyframes pageRingSpin { to { transform: rotate(360deg); } }
+    #pagePreloader{transition:opacity .35s ease;}
+    #pagePreloader.pre-hide{opacity:0;pointer-events:none;}
     @media (max-width: 575.98px) {
         .page-loader-logo { width: 68px; height: 68px; }
         .page-loader-ring { top: -8px; left: -8px; width: calc(100% + 16px); height: calc(100% + 16px); border-width: 4px; }
@@ -597,51 +597,24 @@
     (function() {
         var overlay = document.getElementById('pagePreloader');
         if (!overlay) return;
-        var hideTimer = null;
-
-        function hidePreloader() {
-            if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-            overlay.hidden = true;
+        var ring = overlay.querySelector('.page-loader-ring');
+        var done = false;
+        function doHide() {
+            if (done) return;
+            done = true;
+            overlay.classList.add('pre-hide');
+            setTimeout(function() {
+                overlay.hidden = true;
+            }, 250);
         }
-        function showPreloader() {
-            overlay.hidden = false;
-            // Fallback: pastikan overlay hilang walau event load/pageshow tak memicu
-            if (hideTimer) clearTimeout(hideTimer);
-            hideTimer = setTimeout(hidePreloader, 5000);
+        // Tutup tepat 1 putaran penuh: pakai batas animasi CSS, bukan timer.
+        if (ring) {
+            ring.addEventListener('animationiteration', doHide, { once: true });
         }
-        function isInternal(href) {
-            if (!href) return false;
-            var a = document.createElement('a');
-            a.href = href;
-            return a.origin === location.origin;
-        }
-
-        // Show on internal link navigation (not reload)
-        document.addEventListener('click', function(e) {
-            var el = e.target.closest('a');
-            if (!el) return;
-            if (el.target === '_blank') return;
-            if (el.hasAttribute('download')) return;
-            if (el.classList.contains('no-preloader')) return;
-            if (el.getAttribute('data-toggle') === 'modal') return;
-            var href = el.getAttribute('href');
-            if (!href || href === '#' || href.indexOf('#') === 0) return;
-            if (href.indexOf('javascript:') === 0) return;
-            if (!isInternal(href)) return;
-            // Skip links handled by JS that stop default (forms, modals, tabs)
-            if (el.getAttribute('data-dismiss') !== null) return;
-            showPreloader();
-        }, true);
-
-        // Hide once page fully loaded
-        window.addEventListener('load', function() {
-            hidePreloader();
-        });
-
-        // Hide saat halaman dikembalikan dari cache (bfcache, mis. back/forward di mobile)
-        window.addEventListener('pageshow', function() {
-            hidePreloader();
-        });
+        // Pengaman kalau event tak jalan
+        setTimeout(doHide, 2000);
+        // Klik pindah laman: JANGAN tampilkan loader di laman lama.
+        // Loader hanya muncul sekali di laman baru agar tidak dobel.
     })();
     </script>
     

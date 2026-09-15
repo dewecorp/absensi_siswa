@@ -440,7 +440,7 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
         <div class="page-loader-bar"><span></span></div>
     </div>
     <script>
-    (function(){var o=document.getElementById('pagePreloader');if(!o)return;var t0=Date.now(),min=2500,done=false;function h(){if(done)return;done=true;o.classList.add('hide');setTimeout(function(){o.style.display='none';},700);}function hl(){setTimeout(h,Math.max(0,min-(Date.now()-t0)));}window.addEventListener('load',hl);setTimeout(hl,100);setTimeout(h,6000);})();
+    (function(){var o=document.getElementById('pagePreloader');if(!o)return;var t0=Date.now(),min=800,SPIN=800,done=false;function doHide(){if(done)return;done=true;o.classList.add('hide');setTimeout(function(){o.style.display='none';},400);}function h(){var el=Date.now()-t0,rem=el%SPIN;setTimeout(doHide,rem===0?0:SPIN-rem);}function hl(){setTimeout(h,Math.max(0,min-(Date.now()-t0)));}window.addEventListener('load',hl);setTimeout(hl,100);setTimeout(doHide,4000);})();
     </script>
     <?php endif; ?>
     <style>
@@ -450,8 +450,8 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
     .page-loader-text{position:absolute;top:calc(100% + 26px);left:50%;transform:translateX(-50%);text-align:center;font-size:.95rem;font-weight:600;color:#475569;white-space:nowrap;}
     .page-loader-brand{position:absolute;top:calc(100% + 48px);left:50%;transform:translateX(-50%);font-size:.75rem;font-weight:700;letter-spacing:.3px;color:#2f6ef0;white-space:nowrap;}
     .page-loader-bar{position:absolute;top:calc(100% + 70px);left:50%;transform:translateX(-50%);width:160px;height:4px;border-radius:999px;background:rgba(47,110,240,.15);overflow:hidden;}
-    .page-loader-bar span{display:block;height:100%;width:0;border-radius:999px;background:#2f6ef0;animation:loadFill 2.4s ease forwards;}
-    @keyframes loadFill{0%{width:0}55%{width:62%}80%{width:86%}100%{width:100%;}}
+    .page-loader-bar span{display:block;height:100%;width:0;border-radius:999px;background:#2f6ef0;animation:loadFill .8s ease forwards;}
+    @keyframes loadFill{0%{width:0}100%{width:100%;}}
     @keyframes loaderPop{from{opacity:0;transform:translate(-50%,-54%) scale(.94);}to{opacity:1;transform:translate(-50%,-58%) scale(1);}}
     @keyframes pageRingSpin{to{transform:rotate(360deg);}}
     @media (max-width:575.98px){.page-loader-logo{width:68px;height:68px;}.page-loader-ring{top:-8px;left:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border-width:4px;}.page-loader-text{font-size:.88rem;}.page-loader-bar{width:130px;}}
