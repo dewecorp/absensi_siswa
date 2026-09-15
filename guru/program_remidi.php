@@ -27,6 +27,7 @@ $stmt = $pdo->prepare("
     FROM tb_mata_pelajaran mp
     JOIN tb_jadwal_pelajaran jp ON mp.id_mapel = jp.mapel_id
     WHERE jp.guru_id = ?
+    AND jp.jenis = 'Reguler'
     AND mp.nama_mapel NOT LIKE '%Asmaul Husna%'
     AND mp.nama_mapel NOT LIKE '%Upacara%'
     AND mp.nama_mapel NOT LIKE '%Istirahat%'
