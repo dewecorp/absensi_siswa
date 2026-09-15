@@ -92,7 +92,10 @@ $tempat_pelantikan = trim((string)($print_settings_data['tempat_pelantikan'] ?? 
 $ketua_gudep = $print_settings_data['ketua_gudep'] ?: '........................';
 $nta_ketua_gudep = $print_settings_data['nta_ketua_gudep'] ?: '';
 $logo_pramuka = $print_settings_data['logo_pramuka'] ? ('../uploads/' . $print_settings_data['logo_pramuka']) : '';
-$bingkai = '../assets/img/template_surat_keterangan.png';
+$bingkai_siaga = '../assets/img/template_surat_keterangan.png';
+$bingkai_penggalang = '../assets/img/template_surat_keterangan_penggalang.jpg';
+$bingkai = $bingkai_siaga;
+$tingkat_golongan = 'Siaga';
 $asset_ver = (string)time();
 $school_profile = getSchoolProfile($pdo);
 
@@ -173,7 +176,7 @@ $tingkat_id = (int)($_GET['tingkat'] ?? 0);
 if ($mode === 'all' || $mode === 'data') {
     if ($tingkat_id > 0) {
         $tingkat_stmt = $pdo->prepare("
-            SELECT id_tingkat_barung, nama_tingkat
+            SELECT id_tingkat_barung, nama_tingkat, golongan
             FROM tb_tingkat_barung
             WHERE id_tingkat_barung = ?
             LIMIT 1
@@ -181,6 +184,7 @@ if ($mode === 'all' || $mode === 'data') {
         $tingkat_stmt->execute([$tingkat_id]);
         $tingkat_row = $tingkat_stmt->fetch(PDO::FETCH_ASSOC);
         $tingkat_name = $tingkat_row['nama_tingkat'] ?? '';
+        $tingkat_golongan = strtoupper(trim((string)($tingkat_row['golongan'] ?? 'Siaga'))) === 'PENGGALANG' ? 'Penggalang' : 'Siaga';
 
         $ordered_tingkat = $pdo->query("
             SELECT id_tingkat_barung, nama_tingkat
@@ -286,7 +290,7 @@ if ($mode === 'all' || $mode === 'data') {
                      END
                    ) AS tanggal_lahir,
                    p.sku_kecakapan_lulus_at, p.promoted_at, p.promoted_from_tingkat_id,
-                   p.status, p.tanggal_masuk, p.tanggal_keluar, t.nama_tingkat
+                    p.status, p.tanggal_masuk, p.tanggal_keluar, t.nama_tingkat, t.golongan
             FROM tb_peserta_didik_barung p
             LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = p.id_tingkat_barung
             LEFT JOIN tb_siswa s ON (
@@ -346,6 +350,7 @@ if ($mode === 'all' || $mode === 'data') {
                         break;
                     }
                 }
+                $tingkat_golongan = strtoupper(trim((string)($row['golongan'] ?? ''))) === 'PENGGALANG' ? 'Penggalang' : 'Siaga';
             }
         }
         if ($row) {
@@ -592,6 +597,27 @@ foreach ($participants as $idx => $row) {
     }
 }
 
+// Bingkai + istilah ikut golongan tingkat (Siaga / Penggalang)
+$is_penggalang = strtoupper(trim((string)$tingkat_golongan)) === 'PENGGALANG';
+$golongan_label = $is_penggalang ? 'Penggalang' : 'Siaga';
+$sumpah_label = $is_penggalang ? 'Tri Satya dan Dasa Darma' : 'Dwi Satya dan Dwi Darma';
+$frame_candidates = $is_penggalang
+    ? [$bingkai_penggalang, $bingkai_siaga]
+    : [$bingkai_siaga];
+$bingkai = $bingkai_siaga;
+foreach ($frame_candidates as $cand) {
+    if ($cand !== '' && is_file(__DIR__ . '/' . $cand)) {
+        $bingkai = $cand;
+        break;
+    }
+    // $cand sudah berbentuk ../assets/..., __DIR__ = admin/
+    $alt = __DIR__ . '/../' . ltrim(preg_replace('#^\.\./#', '', $cand), '/');
+    if (is_file($alt)) {
+        $bingkai = $cand;
+        break;
+    }
+}
+
 /** @param mixed $v */
 function h($v): string {
     $v = (string)($v ?? '');
@@ -732,7 +758,7 @@ function h($v): string {
             </tr>
             <tr>
               <td class="label">Golongan Pramuka</td><td class="colon">:</td>
-              <td><?= h('SIAGA') ?></td>
+              <td><?= h($golongan_label) ?></td>
             </tr>
           </table>
 
@@ -750,14 +776,14 @@ function h($v): string {
           ?>
 
           <div class="para">
-            Telah menyelesaikan SKU Pramuka Golongan Siaga <strong><?= h($tingkat_upper ?: '........') ?></strong> pada hari ini
+            Telah menyelesaikan SKU Pramuka Golongan <?= h($golongan_label) ?> <strong><?= h($tingkat_upper ?: '........') ?></strong> pada hari ini
             <strong><?= h($hari ?: '........') ?></strong>, tanggal <strong><?= h($tgl_kegiatan ?: '........') ?></strong>,
             bertempat di <strong><?= h($tempat_pelantikan ?: '........') ?></strong>,
             dan diberikan hak memakai Tanda Kecakapan Umum.
           </div>
 
           <div class="para">
-            Dengan harapan senantiasa meningkatkan keterampilan dan pengetahuannya berdasarkan Dwi Satya dan Dwi Darma Pramuka.
+            Dengan harapan senantiasa meningkatkan keterampilan dan pengetahuannya berdasarkan <?= h($sumpah_label) ?> Pramuka.
           </div>
 
           <div class="sign">
