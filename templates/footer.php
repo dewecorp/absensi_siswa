@@ -530,7 +530,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 var pre = document.getElementById('pagePreloader');
-                if (pre && !pre.classList.contains('show')) pre.classList.add('show');
+                if (pre) pre.hidden = false;
                 window.location.href = logoutUrl;
             }
         });
@@ -544,7 +544,7 @@
 
     <!-- Page Navigation Preloader -->
     <?php $preloader_logo = !empty($favicon_logo) ? $favicon_logo : 'logo.png'; ?>
-    <div id="pagePreloader" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.88);backdrop-filter:blur(2px);">
+    <div id="pagePreloader" hidden style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.88);backdrop-filter:blur(2px);">
         <div class="page-loader">
             <img src="../assets/img/<?php echo htmlspecialchars($preloader_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version ?? '1', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="page-loader-logo">
             <span class="page-loader-ring"></span>
@@ -552,8 +552,6 @@
         <div class="page-loader-text">Memuat halaman...</div>
     </div>
     <style>
-    #pagePreloader { display:none; }
-    #pagePreloader.show { display:block; }
     .page-loader {
         position: absolute;
         top: 50%;
@@ -603,10 +601,10 @@
 
         function hidePreloader() {
             if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-            overlay.classList.remove('show');
+            overlay.hidden = true;
         }
         function showPreloader() {
-            overlay.classList.add('show');
+            overlay.hidden = false;
             // Fallback: pastikan overlay hilang walau event load/pageshow tak memicu
             if (hideTimer) clearTimeout(hideTimer);
             hideTimer = setTimeout(hidePreloader, 5000);
@@ -632,13 +630,6 @@
             if (!isInternal(href)) return;
             // Skip links handled by JS that stop default (forms, modals, tabs)
             if (el.getAttribute('data-dismiss') !== null) return;
-            showPreloader();
-        }, true);
-
-        // Show on form submission
-        document.addEventListener('submit', function(e) {
-            var form = e.target;
-            if (!form || form.getAttribute('data-no-preloader') !== null) return;
             showPreloader();
         }, true);
 

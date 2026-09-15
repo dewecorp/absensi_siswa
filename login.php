@@ -428,6 +428,36 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
 </head>
 
 <body style="height: 100vh; margin: 0; overflow: hidden;">
+    <!-- Splash awal: hanya GET buka awal, bukan reload hasil POST -->
+    <?php if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'): ?>
+    <div id="pagePreloader" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:100000;background:#fff;">
+        <div class="page-loader">
+            <img src="assets/img/<?php echo htmlspecialchars($school_profile['logo'] ?: 'logo.png', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="page-loader-logo">
+            <span class="page-loader-ring"></span>
+        </div>
+        <div class="page-loader-text">Memuat aplikasi...</div>
+        <div class="page-loader-brand"><?php echo strtoupper($school_profile['nama_madrasah'] ?? ''); ?></div>
+        <div class="page-loader-bar"><span></span></div>
+    </div>
+    <script>
+    (function(){var o=document.getElementById('pagePreloader');if(!o)return;var t0=Date.now(),min=2500,done=false;function h(){if(done)return;done=true;o.classList.add('hide');setTimeout(function(){o.style.display='none';},700);}function hl(){setTimeout(h,Math.max(0,min-(Date.now()-t0)));}window.addEventListener('load',hl);setTimeout(hl,100);setTimeout(h,6000);})();
+    </script>
+    <?php endif; ?>
+    <style>
+    .page-loader{position:absolute;top:50%;left:50%;transform:translate(-50%,-58%);animation:loaderPop .55s ease;}
+    .page-loader-logo{display:block;width:86px;height:86px;object-fit:contain;}
+    .page-loader-ring{position:absolute;top:-10px;left:-10px;width:calc(100% + 20px);height:calc(100% + 20px);border-radius:50%;border:5px solid rgba(47,110,240,.15);border-top-color:#2f6ef0;animation:pageRingSpin .8s linear infinite;}
+    .page-loader-text{position:absolute;top:calc(100% + 26px);left:50%;transform:translateX(-50%);text-align:center;font-size:.95rem;font-weight:600;color:#475569;white-space:nowrap;}
+    .page-loader-brand{position:absolute;top:calc(100% + 48px);left:50%;transform:translateX(-50%);font-size:.75rem;font-weight:700;letter-spacing:.3px;color:#2f6ef0;white-space:nowrap;}
+    .page-loader-bar{position:absolute;top:calc(100% + 70px);left:50%;transform:translateX(-50%);width:160px;height:4px;border-radius:999px;background:rgba(47,110,240,.15);overflow:hidden;}
+    .page-loader-bar span{display:block;height:100%;width:0;border-radius:999px;background:#2f6ef0;animation:loadFill 2.4s ease forwards;}
+    @keyframes loadFill{0%{width:0}55%{width:62%}80%{width:86%}100%{width:100%;}}
+    @keyframes loaderPop{from{opacity:0;transform:translate(-50%,-54%) scale(.94);}to{opacity:1;transform:translate(-50%,-58%) scale(1);}}
+    @keyframes pageRingSpin{to{transform:rotate(360deg);}}
+    @media (max-width:575.98px){.page-loader-logo{width:68px;height:68px;}.page-loader-ring{top:-8px;left:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border-width:4px;}.page-loader-text{font-size:.88rem;}.page-loader-bar{width:130px;}}
+    #pagePreloader{transition:opacity .6s ease,visibility .6s;}
+    #pagePreloader.hide{opacity:0;visibility:hidden;pointer-events:none;}
+    </style>
     <div id="app">
         <section class="section d-flex align-items-center justify-content-center" style="min-height: 100vh; padding: 0;">
                 <div class="col-12 col-sm-8 col-md-6 col-lg-4">
@@ -479,75 +509,25 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
         </section>
     </div>
 
-    <!-- Overlay loading saat memproses login -->
-    <div id="loginLoading" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.55);backdrop-filter:blur(2px);">
-        <div class="login-loader">
-            <img src="assets/img/<?php echo htmlspecialchars($school_profile['logo'] ?: 'logo.png', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="login-loader-logo">
-            <span class="login-loader-ring"></span>
+    <!-- Overlay loading saat memproses login: gaya sama dengan pagePreloader -->
+    <div id="loginLoading" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.88);backdrop-filter:blur(2px);">
+        <div class="page-loader">
+            <img src="assets/img/<?php echo htmlspecialchars($school_profile['logo'] ?: 'logo.png', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="page-loader-logo">
+            <span class="page-loader-ring"></span>
         </div>
-        <div class="login-loader-text">Memproses login...</div>
+        <div class="page-loader-text">Memproses login...</div>
     </div>
-    <style>
-    .login-loader {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -58%);
-    }
-    .login-loader-logo {
-        display: block;
-        width: 86px;
-        height: 86px;
-        object-fit: contain;
-    }
-    .login-loader-ring {
-        position: absolute;
-        top: -10px;
-        left: -10px;
-        width: calc(100% + 20px);
-        height: calc(100% + 20px);
-        border-radius: 50%;
-        border: 5px solid rgba(47, 110, 240, .15);
-        border-top-color: #2f6ef0;
-        animation: ringSpin .8s linear infinite;
-    }
-    .login-loader-text {
-        position: absolute;
-        top: calc(100% + 26px);
-        left: 50%;
-        transform: translateX(-50%);
-        text-align: center;
-        font-size: .95rem;
-        font-weight: 600;
-        color: #475569;
-        white-space: nowrap;
-    }
-    @keyframes ringSpin { to { transform: rotate(360deg); } }
-    @media (max-width: 575.98px) {
-        .login-loader-logo { width: 68px; height: 68px; }
-        .login-loader-ring { top: -8px; left: -8px; width: calc(100% + 16px); height: calc(100% + 16px); border-width: 4px; }
-        .login-loader-text { font-size: .88rem; }
-    }
-    </style>
     <script>
     (function() {
         var form = document.getElementById('loginForm');
         if (!form) return;
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', function() {
             if (form.dataset.submitting === '1') return;
-            e.preventDefault();
+            form.dataset.submitting = '1';
+            var splash = document.getElementById('pagePreloader');
+            if (splash) splash.style.display = 'none';
             var overlay = document.getElementById('loginLoading');
-            var btn = form.querySelector('button[type="submit"]');
             if (overlay) overlay.style.display = 'block';
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span> Memproses...';
-            }
-            // Tahan overlay minimal 1.5 detik sebelum kirim
-            setTimeout(function() {
-                form.dataset.submitting = '1';
-                form.submit();
-            }, 1500);
         });
     })();
     </script>
