@@ -597,39 +597,8 @@
     (function() {
         var overlay = document.getElementById('pagePreloader');
         if (!overlay) return;
-        // Tampil hanya jika laman sebelumnya tandai pindah via klik link.
-        // Reload / simpan form / buka langsung: flag tak ada, loader tetap sembunyi.
-        var flag = null;
-        try { flag = sessionStorage.getItem('showPreloader'); } catch (e) {}
-        if (flag !== '1') {
-            overlay.hidden = true;
-            overlay.style.display = 'none';
-            overlay.remove();
-        } else {
-            try { sessionStorage.removeItem('showPreloader'); } catch (e) {}
-            overlay.hidden = false;
-            overlay.style.display = 'block';
-            overlay.classList.remove('pre-hide');
-            var ring = overlay.querySelector('.page-loader-ring');
-            var done = false;
-            function doHide() {
-                if (done) return;
-                done = true;
-                overlay.classList.add('pre-hide');
-                setTimeout(function() {
-                    overlay.hidden = true;
-                    overlay.style.display = 'none';
-                }, 250);
-            }
-            // Tutup tepat 1 putaran penuh: pakai batas animasi CSS, bukan timer.
-            if (ring) {
-                ring.addEventListener('animationiteration', doHide, { once: true });
-            }
-            // Pengaman kalau event tak jalan
-            setTimeout(doHide, 2000);
-            return;
-        }
         // Tandai pindah laman via klik link internal. Simpan form tak tandai.
+        // Wajib pasang duluan agar tiap laman bisa tandai klik berikutnya.
         document.addEventListener('click', function(e) {
             var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
             if (!a) return;
@@ -645,6 +614,37 @@
             } catch (err) { return; }
             try { sessionStorage.setItem('showPreloader', '1'); } catch (err) {}
         }, true);
+        // Tampil hanya jika laman sebelumnya tandai pindah via klik link.
+        // Reload / simpan form / buka langsung: flag tak ada, loader tetap sembunyi.
+        var flag = null;
+        try { flag = sessionStorage.getItem('showPreloader'); } catch (e) {}
+        if (flag !== '1') {
+            overlay.hidden = true;
+            overlay.style.display = 'none';
+            overlay.remove();
+            return;
+        }
+        try { sessionStorage.removeItem('showPreloader'); } catch (e) {}
+        overlay.hidden = false;
+        overlay.style.display = 'block';
+        overlay.classList.remove('pre-hide');
+        var ring = overlay.querySelector('.page-loader-ring');
+        var done = false;
+        function doHide() {
+            if (done) return;
+            done = true;
+            overlay.classList.add('pre-hide');
+            setTimeout(function() {
+                overlay.hidden = true;
+                overlay.style.display = 'none';
+            }, 250);
+        }
+        // Tutup tepat 1 putaran penuh: pakai batas animasi CSS, bukan timer.
+        if (ring) {
+            ring.addEventListener('animationiteration', doHide, { once: true });
+        }
+        // Pengaman kalau event tak jalan
+        setTimeout(doHide, 2000);
     })();
     </script>
     
