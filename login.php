@@ -430,7 +430,7 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
 <body style="height: 100vh; margin: 0; overflow: hidden;">
     <!-- Splash awal: hanya GET buka awal, bukan reload hasil POST -->
     <?php if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'): ?>
-    <div id="pagePreloader" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:100000;background:#fff;">
+    <div id="pagePreloader" hidden style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:100000;background:#fff;">
         <div class="page-loader">
             <img src="assets/img/<?php echo htmlspecialchars($school_profile['logo'] ?: 'logo.png', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="page-loader-logo">
             <span class="page-loader-ring"></span>
@@ -440,7 +440,7 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
         <div class="page-loader-bar"><span></span></div>
     </div>
     <script>
-    (function(){var o=document.getElementById('pagePreloader');if(!o)return;var t0=Date.now(),min=800,SPIN=800,done=false;function doHide(){if(done)return;done=true;o.classList.add('hide');setTimeout(function(){o.style.display='none';},400);}function h(){var el=Date.now()-t0,rem=el%SPIN;setTimeout(doHide,rem===0?0:SPIN-rem);}function hl(){setTimeout(h,Math.max(0,min-(Date.now()-t0)));}window.addEventListener('load',hl);setTimeout(hl,100);setTimeout(doHide,4000);})();
+    (function(){var o=document.getElementById('pagePreloader');if(!o)return;function isReload(){try{var n=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];if(n&&n.type)return n.type==='reload';}catch(e){}try{if(performance.navigation&&typeof performance.navigation.type!=='undefined'){return performance.navigation.type===performance.navigation.TYPE_RELOAD;}}catch(e){}return false;}if(isReload()){o.hidden=true;o.style.display='none';o.remove();return;}o.hidden=false;o.style.display='block';var t0=Date.now(),min=800,SPIN=800,done=false;function doHide(){if(done)return;done=true;o.classList.add('hide');setTimeout(function(){o.hidden=true;o.style.display='none';},400);}function h(){var el=Date.now()-t0,rem=el%SPIN;setTimeout(doHide,rem===0?0:SPIN-rem);}function hl(){setTimeout(h,Math.max(0,min-(Date.now()-t0)));}window.addEventListener('load',hl);setTimeout(hl,100);setTimeout(doHide,4000);})();
     </script>
     <?php endif; ?>
     <style>

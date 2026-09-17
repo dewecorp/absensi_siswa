@@ -317,9 +317,9 @@ if (!isset($school_profile)) {
     });
     </script>
 
-    <!-- Page Navigation Preloader -->
+    <!-- Page Navigation Preloader: hanya login & pindah laman, bukan reload -->
     <?php $preloader_logo = !empty($favicon_logo) ? $favicon_logo : 'logo.png'; ?>
-    <div id="pagePreloader" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.88);backdrop-filter:blur(2px);">
+    <div id="pagePreloader" hidden style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(255,255,255,.88);backdrop-filter:blur(2px);">
         <div class="page-loader">
             <img src="../assets/img/<?php echo htmlspecialchars($preloader_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version ?? '1', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="page-loader-logo">
             <span class="page-loader-ring"></span>
@@ -374,24 +374,54 @@ if (!isset($school_profile)) {
     (function() {
         var overlay = document.getElementById('pagePreloader');
         if (!overlay) return;
-        var ring = overlay.querySelector('.page-loader-ring');
-        var done = false;
-        function doHide() {
-            if (done) return;
-            done = true;
-            overlay.classList.add('pre-hide');
-            setTimeout(function() {
-                overlay.hidden = true;
-            }, 250);
+        // Tampil hanya jika laman sebelumnya tandai pindah via klik link.
+        // Reload / simpan form / buka langsung: flag tak ada, loader tetap sembunyi.
+        var flag = null;
+        try { flag = sessionStorage.getItem('showPreloader'); } catch (e) {}
+        if (flag !== '1') {
+            overlay.hidden = true;
+            overlay.style.display = 'none';
+            overlay.remove();
+        } else {
+            try { sessionStorage.removeItem('showPreloader'); } catch (e) {}
+            overlay.hidden = false;
+            overlay.style.display = 'block';
+            overlay.classList.remove('pre-hide');
+            var ring = overlay.querySelector('.page-loader-ring');
+            var done = false;
+            function doHide() {
+                if (done) return;
+                done = true;
+                overlay.classList.add('pre-hide');
+                setTimeout(function() {
+                    overlay.hidden = true;
+                    overlay.style.display = 'none';
+                }, 250);
+            }
+            // Tutup tepat 1 putaran penuh: pakai batas animasi CSS, bukan timer.
+            if (ring) {
+                ring.addEventListener('animationiteration', doHide, { once: true });
+            }
+            // Pengaman kalau event tak jalan
+            setTimeout(doHide, 2000);
+            return;
         }
-        // Tutup tepat 1 putaran penuh: pakai batas animasi CSS, bukan timer.
-        if (ring) {
-            ring.addEventListener('animationiteration', doHide, { once: true });
-        }
-        // Pengaman kalau event tak jalan
-        setTimeout(doHide, 2000);
-        // Klik pindah laman: JANGAN tampilkan loader di laman lama.
-        // Loader hanya muncul sekali di laman baru agar tidak dobel.
+        // Tandai pindah laman via klik link internal. Simpan form tak tandai.
+        document.addEventListener('click', function(e) {
+            var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+            if (!a) return;
+            var href = a.getAttribute('href') || '';
+            if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+            if (a.target === '_blank' || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+            if (a.hasAttribute('data-no-loader')) return;
+            try {
+                var url = new URL(a.getAttribute('href'), window.location.href);
+                if (url.origin !== window.location.origin) return;
+                // Link ke laman sama persis: anggap bukan pindah, jangan tandai.
+                if (url.href === window.location.href) return;
+            } catch (err) { return; }
+            try { sessionStorage.setItem('showPreloader', '1'); } catch (err) {}
+        }, true);
     })();
     </script>
 
