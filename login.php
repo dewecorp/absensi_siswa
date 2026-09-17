@@ -548,22 +548,10 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
 
     <?php if (isset($show_swal) && $show_swal): ?>
     <script>
-        // Alert sukses hanya di desktop; mobile langsung masuk dashboard
-        if (window.matchMedia('(min-width: 992px)').matches) {
-            Swal.fire({
-                title: 'Login Berhasil!',
-                text: '<?php echo $_SESSION['login_success_msg']; ?>',
-                icon: 'success',
-                timer: 2000,
-                timerProgressBar: true,
-                showConfirmButton: false,
-                allowOutsideClick: false
-            }).then(() => {
-                window.location.href = '<?php echo $redirect_url; ?>';
-            });
-        } else {
-            window.location.href = '<?php echo $redirect_url; ?>';
-        }
+        // Login sukses: loader saja yang tampil, tanpa alert. Tandai agar
+        // preloader dashboard ikut tampil, lalu redirect langsung.
+        try { sessionStorage.setItem('showPreloader', '1'); } catch (e) {}
+        window.location.href = '<?php echo $redirect_url; ?>';
     </script>
     <?php unset($_SESSION['login_success_msg']); ?>
     <?php endif; ?>
