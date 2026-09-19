@@ -398,62 +398,6 @@ include '../templates/sidebar.php';
                                                         <?php endif; ?>
                                                     </td>
                                                 </tr>
-                                                
-                                                <!-- Edit Modal -->
-                                                <div class="modal fade edit-modal" id="editModal<?php echo $user['id_pengguna']; ?>" tabindex="-1" role="dialog" aria-labelledby="editModalLabel<?php echo $user['id_pengguna']; ?>" aria-hidden="true">
-                                                    <div class="modal-dialog" role="document">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" id="editModalLabel<?php echo $user['id_pengguna']; ?>">Edit Data Pengguna</h5>
-                                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                                    <span aria-hidden="true">&times;</span>
-                                                                </button>
-                                                            </div>
-                                                            <form method="POST" action="" enctype="multipart/form-data">
-                                                                <div class="modal-body">
-                                                                    <input type="hidden" name="id_pengguna" value="<?php echo $user['id_pengguna']; ?>">
-                                                                    <input type="hidden" name="update_user" value="1">
-                                                                    <div class="form-group">
-                                                                        <label>Nama Lengkap</label>
-                                                                        <input type="text" class="form-control" name="nama" value="<?php echo htmlspecialchars($user['nama']); ?>" required>
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label>Username</label>
-                                                                        <input type="text" class="form-control" name="username" value="<?php echo htmlspecialchars($user['username']); ?>" required>
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label>Password (kosongkan jika tidak ingin diubah)</label>
-                                                                        <input type="password" class="form-control" name="password">
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label>Level</label>
-                                                                        <select class="form-control" name="level" required>
-                                                                            <option value="admin" <?php echo $user['level'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
-                                                                            <option value="guru" <?php echo $user['level'] === 'guru' ? 'selected' : ''; ?>>Guru</option>
-                                                                            <option value="wali" <?php echo $user['level'] === 'wali' ? 'selected' : ''; ?>>Wali</option>
-                                                                            <option value="kepala_madrasah" <?php echo $user['level'] === 'kepala_madrasah' ? 'selected' : ''; ?>>Kepala Madrasah</option>
-                                                                            <option value="tata_usaha" <?php echo $user['level'] === 'tata_usaha' ? 'selected' : ''; ?>>Tata Usaha</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label>Foto Saat Ini</label><br>
-                                                                        <?php echo getUserAvatarImage($user, 100); ?>
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label>Upload Foto Baru (opsional)</label>
-                                                                        <input type="file" class="form-control" name="foto" accept="image/*">
-                                                                        <small class="form-text text-muted">Format: JPG, JPEG, PNG, GIF. Kosongkan jika tidak ingin mengganti foto.</small>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="modal-footer bg-whitesmoke br">
-                                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-                                                                    <button type="submit" class="btn btn-primary">Simpan</button>
-                                                                </div>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
                                                 <?php endforeach; ?>
                                             </tbody>
                                         </table>
@@ -514,6 +458,62 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
+
+            <?php foreach ($users as $user): ?>
+            <div class="modal fade edit-modal" id="editModal<?php echo $user['id_pengguna']; ?>" tabindex="-1" role="dialog" aria-labelledby="editModalLabel<?php echo $user['id_pengguna']; ?>" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editModalLabel<?php echo $user['id_pengguna']; ?>">Edit Data Pengguna</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form method="POST" action="" enctype="multipart/form-data">
+                            <div class="modal-body">
+                                <input type="hidden" name="id_pengguna" value="<?php echo $user['id_pengguna']; ?>">
+                                <input type="hidden" name="update_user" value="1">
+                                <div class="form-group">
+                                    <label>Nama Lengkap</label>
+                                    <input type="text" class="form-control" name="nama" value="<?php echo htmlspecialchars($user['nama']); ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" class="form-control" name="username" value="<?php echo htmlspecialchars($user['username']); ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Password (kosongkan jika tidak ingin diubah)</label>
+                                    <input type="password" class="form-control" name="password">
+                                </div>
+                                <div class="form-group">
+                                    <label>Level</label>
+                                    <select class="form-control" name="level" required>
+                                        <option value="admin" <?php echo $user['level'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
+                                        <option value="guru" <?php echo $user['level'] === 'guru' ? 'selected' : ''; ?>>Guru</option>
+                                        <option value="wali" <?php echo $user['level'] === 'wali' ? 'selected' : ''; ?>>Wali</option>
+                                        <option value="kepala_madrasah" <?php echo $user['level'] === 'kepala_madrasah' ? 'selected' : ''; ?>>Kepala Madrasah</option>
+                                        <option value="tata_usaha" <?php echo $user['level'] === 'tata_usaha' ? 'selected' : ''; ?>>Tata Usaha</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Foto Saat Ini</label><br>
+                                    <?php echo getUserAvatarImage($user, 100); ?>
+                                </div>
+                                <div class="form-group">
+                                    <label>Upload Foto Baru (opsional)</label>
+                                    <input type="file" class="form-control" name="foto" accept="image/*">
+                                    <small class="form-text text-muted">Format: JPG, JPEG, PNG, GIF. Kosongkan jika tidak ingin mengganti foto.</small>
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-whitesmoke br">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                                <button type="submit" class="btn btn-primary">Simpan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
             
 <?php
 include '../templates/footer.php';

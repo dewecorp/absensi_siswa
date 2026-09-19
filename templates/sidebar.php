@@ -483,6 +483,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['struktur_kelas.php', 'mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
             ],
             [
+                'title' => 'Program Kerja',
+                'icon' => 'fas fa-tasks',
+                'url' => '../kepala/program_kerja.php',
+                'active' => $current_page === 'program_kerja.php'
+            ],
+            [
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_kepala,
