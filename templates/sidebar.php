@@ -274,6 +274,24 @@ if (!function_exists('sort_all_menu_items')) {
 
 switch ($user_level) {
     case 'admin':
+        $supervisi_submenu_admin = [
+            ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php?session_type=admin', 'active' => $current_page === 'dashboard_supervisi.php'],
+            ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php?session_type=admin', 'active' => $current_page === 'program_supervisi.php'],
+            ['title' => 'Sasaran Supervisi', 'url' => '../kepala/sasaran_supervisi.php?session_type=admin', 'active' => $current_page === 'sasaran_supervisi.php'],
+            ['title' => 'Jadwal Supervisi', 'url' => '../kepala/jadwal_supervisi.php?session_type=admin', 'active' => $current_page === 'jadwal_supervisi.php'],
+            ['title' => 'Daftar Instrumen', 'url' => '../kepala/instrumen_supervisi.php?session_type=admin', 'active' => $current_page === 'instrumen_supervisi.php'],
+            ['title' => 'Komponen Instrumen', 'url' => '../kepala/komponen_instrumen.php?session_type=admin', 'active' => $current_page === 'komponen_instrumen.php'],
+            ['title' => 'Indikator Penilaian', 'url' => '../kepala/indikator_instrumen.php?session_type=admin', 'active' => $current_page === 'indikator_instrumen.php'],
+            ['title' => 'Supervisi Administrasi', 'url' => '../kepala/supervisi_administrasi.php?session_type=admin', 'active' => $current_page === 'supervisi_administrasi.php'],
+            ['title' => 'Supervisi Akademik', 'url' => '../kepala/supervisi_akademik.php?session_type=admin', 'active' => $current_page === 'supervisi_akademik.php'],
+            ['title' => 'Supervisi Manajerial', 'url' => '../kepala/supervisi_manajerial.php?session_type=admin', 'active' => $current_page === 'supervisi_manajerial.php'],
+            ['title' => 'Hasil Supervisi', 'url' => '../kepala/hasil_supervisi.php?session_type=admin', 'active' => $current_page === 'hasil_supervisi.php'],
+            ['title' => 'Tindak Lanjut', 'url' => '../kepala/tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'tindak_lanjut.php'],
+            ['title' => 'Monitoring Tindak Lanjut', 'url' => '../kepala/monitoring_tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'monitoring_tindak_lanjut.php'],
+            ['title' => 'Rekapitulasi Supervisi', 'url' => '../kepala/rekapitulasi_supervisi.php?session_type=admin', 'active' => $current_page === 'rekapitulasi_supervisi.php'],
+            ['title' => 'Laporan Supervisi', 'url' => '../kepala/laporan_supervisi.php?session_type=admin', 'active' => $current_page === 'laporan_supervisi.php'],
+            ['title' => 'Arsip/Bukti Supervisi', 'url' => '../kepala/arsip_supervisi.php?session_type=admin', 'active' => $current_page === 'arsip_supervisi.php'],
+        ];
         $absensi_submenu_admin = [
             ['title' => 'Scan Kehadiran', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
             ['title' => 'Kehadiran Guru', 'url' => '../admin/absensi_guru.php', 'active' => $current_page === 'absensi_guru.php'],
@@ -418,6 +436,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
             ],
             [
+                'title' => 'Supervisi',
+                'icon' => 'fas fa-clipboard-check',
+                'submenu' => $supervisi_submenu_admin,
+                'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php'])
+            ],
+            [
                 'title' => 'Pengaturan',
                 'icon' => 'fas fa-school',
                 'url' => '../admin/profil_madrasah.php',
@@ -557,6 +581,29 @@ switch ($user_level) {
                     ['title' => 'Data Inventaris Sarpras', 'url' => '../admin/data_inventaris.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_inventaris.php']
                 ],
                 'active' => $current_page === 'data_inventaris.php'
+            ],
+            [
+                'title' => 'Supervisi',
+                'icon' => 'fas fa-clipboard-check',
+                'submenu' => [
+                    ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php', 'active' => $current_page === 'dashboard_supervisi.php'],
+                    ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php', 'active' => $current_page === 'program_supervisi.php'],
+                    ['title' => 'Sasaran Supervisi', 'url' => '../kepala/sasaran_supervisi.php', 'active' => $current_page === 'sasaran_supervisi.php'],
+                    ['title' => 'Jadwal Supervisi', 'url' => '../kepala/jadwal_supervisi.php', 'active' => $current_page === 'jadwal_supervisi.php'],
+                    ['title' => 'Daftar Instrumen', 'url' => '../kepala/instrumen_supervisi.php', 'active' => $current_page === 'instrumen_supervisi.php'],
+                    ['title' => 'Komponen Instrumen', 'url' => '../kepala/komponen_instrumen.php', 'active' => $current_page === 'komponen_instrumen.php'],
+                    ['title' => 'Indikator Penilaian', 'url' => '../kepala/indikator_instrumen.php', 'active' => $current_page === 'indikator_instrumen.php'],
+                    ['title' => 'Supervisi Administrasi', 'url' => '../kepala/supervisi_administrasi.php', 'active' => $current_page === 'supervisi_administrasi.php'],
+                    ['title' => 'Supervisi Akademik', 'url' => '../kepala/supervisi_akademik.php', 'active' => $current_page === 'supervisi_akademik.php'],
+                    ['title' => 'Supervisi Manajerial', 'url' => '../kepala/supervisi_manajerial.php', 'active' => $current_page === 'supervisi_manajerial.php'],
+                    ['title' => 'Hasil Supervisi', 'url' => '../kepala/hasil_supervisi.php', 'active' => $current_page === 'hasil_supervisi.php'],
+                    ['title' => 'Tindak Lanjut', 'url' => '../kepala/tindak_lanjut.php', 'active' => $current_page === 'tindak_lanjut.php'],
+                    ['title' => 'Monitoring Tindak Lanjut', 'url' => '../kepala/monitoring_tindak_lanjut.php', 'active' => $current_page === 'monitoring_tindak_lanjut.php'],
+                    ['title' => 'Rekapitulasi Supervisi', 'url' => '../kepala/rekapitulasi_supervisi.php', 'active' => $current_page === 'rekapitulasi_supervisi.php'],
+                    ['title' => 'Laporan Supervisi', 'url' => '../kepala/laporan_supervisi.php', 'active' => $current_page === 'laporan_supervisi.php'],
+                    ['title' => 'Arsip/Bukti Supervisi', 'url' => '../kepala/arsip_supervisi.php', 'active' => $current_page === 'arsip_supervisi.php'],
+                ],
+                'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php'])
             ],
             [
                 'title' => 'Logout',

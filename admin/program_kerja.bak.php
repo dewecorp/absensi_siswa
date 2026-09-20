@@ -683,14 +683,7 @@ include '../templates/sidebar.php';
 
 <?php include '../templates/footer.php'; ?>
 <script>
-var matriks=<?=json_encode($matriks ?? [], JSON_UNESCAPED_UNICODE|JSON_HEX_APOS|JSON_HEX_QUOT)?>;
-if(!matriks || typeof matriks!=='object' || !Object.keys(matriks).length){
-  var _pm=<?=json_encode($program_by_komponen ?? [], JSON_UNESCAPED_UNICODE|JSON_HEX_APOS|JSON_HEX_QUOT)?>;
-  var _km=<?=json_encode($kegiatan_by_komponen ?? [], JSON_UNESCAPED_UNICODE|JSON_HEX_APOS|JSON_HEX_QUOT)?>;
-  var _tm=<?=json_encode($tujuan_by_komponen ?? [], JSON_UNESCAPED_UNICODE|JSON_HEX_APOS|JSON_HEX_QUOT)?>;
-  var _im=<?=json_encode($indikator_by_komponen ?? [], JSON_UNESCAPED_UNICODE|JSON_HEX_APOS|JSON_HEX_QUOT)?>;
-  if(_pm && Object.keys(_pm).length){ matriks={}; Object.keys(_pm).forEach(function(k){ (_pm[k]||[]).forEach(function(p,i){ if(!matriks[k]) matriks[k]=[]; var ind=_im[k]&&_im[k][i]?_im[k][i]:{t:'',target:''}; matriks[k].push({program:p, kegiatan:(_km[k]||[])[i]||'', tujuan:(_tm[k]||[])[i]||(_tm[k]||[])[0]||'', indikator:ind.t||ind.indikator||'', target:ind.target||'', evaluasi:'', tindak:''}); }); }); }
-}
+var matriks=<?=json_encode($matriks ?? [], JSON_UNESCAPED_UNICODE)?>;
 function idxByProgram(k, prog){ var list=matriks[k]||matriks[String(k)]||[]; for(var i=0;i<list.length;i++) if((list[i].program||'').trim()===String(prog).trim()) return i; return -1; }
 function syncMatriksAdd(){
  var k=$('#addModal select[name="komponen"]').val(); var prog=$('#add_program_sel').val();
