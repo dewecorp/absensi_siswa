@@ -276,7 +276,7 @@ switch ($user_level) {
     case 'admin':
         $supervisi_submenu_admin = [
             ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php?session_type=admin', 'active' => $current_page === 'dashboard_supervisi.php'],
-            ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php?session_type=admin', 'active' => $current_page === 'program_supervisi.php'],
+            ['title' => 'Data Program Supervisi', 'url' => '../kepala/program_supervisi.php?session_type=admin', 'active' => $current_page === 'program_supervisi.php'],
             ['title' => 'Sasaran Supervisi', 'url' => '../kepala/sasaran_supervisi.php?session_type=admin', 'active' => $current_page === 'sasaran_supervisi.php'],
             ['title' => 'Jadwal Supervisi', 'url' => '../kepala/jadwal_supervisi.php?session_type=admin', 'active' => $current_page === 'jadwal_supervisi.php'],
             ['title' => 'Daftar Instrumen', 'url' => '../kepala/instrumen_supervisi.php?session_type=admin', 'active' => $current_page === 'instrumen_supervisi.php'],
@@ -594,7 +594,7 @@ switch ($user_level) {
                 'icon' => 'fas fa-clipboard-check',
                 'submenu' => [
                     ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php', 'active' => $current_page === 'dashboard_supervisi.php'],
-                    ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php', 'active' => $current_page === 'program_supervisi.php'],
+                    ['title' => 'Data Program Supervisi', 'url' => '../kepala/program_supervisi.php', 'active' => $current_page === 'program_supervisi.php'],
                     ['title' => 'Sasaran Supervisi', 'url' => '../kepala/sasaran_supervisi.php', 'active' => $current_page === 'sasaran_supervisi.php'],
                     ['title' => 'Jadwal Supervisi', 'url' => '../kepala/jadwal_supervisi.php', 'active' => $current_page === 'jadwal_supervisi.php'],
                     ['title' => 'Daftar Instrumen', 'url' => '../kepala/instrumen_supervisi.php', 'active' => $current_page === 'instrumen_supervisi.php'],

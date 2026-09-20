@@ -774,6 +774,31 @@ if (!function_exists('sv_tahun_ajaran_options')) {
     }
 }
 
+if (!function_exists('sv_rentang_tahun_ajaran')) {
+    function sv_rentang_tahun_ajaran(string $tahunAjaran): ?array
+    {
+        return getRentangTanggalTahunAjaran($tahunAjaran);
+    }
+}
+
+if (!function_exists('sv_prev_tahun_ajaran')) {
+    function sv_prev_tahun_ajaran(string $tahunAjaran): string
+    {
+        if (!isTahunAjaranFormatValid($tahunAjaran)) return '';
+        $y = (int)explode('/', trim($tahunAjaran))[0];
+        return ($y - 1) . '/' . $y;
+    }
+}
+
+if (!function_exists('sv_next_tahun_ajaran')) {
+    function sv_next_tahun_ajaran(string $tahunAjaran): string
+    {
+        if (!isTahunAjaranFormatValid($tahunAjaran)) return '';
+        $y = (int)explode('/', trim($tahunAjaran))[0];
+        return ($y + 1) . '/' . ($y + 2);
+    }
+}
+
 if (!function_exists('sv_hitung_statistik')) {
     function sv_hitung_statistik(PDO $pdo, array $filter = []): array
     {

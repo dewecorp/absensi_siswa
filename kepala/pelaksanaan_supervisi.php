@@ -55,6 +55,7 @@ foreach ($programAll as $pr) {
     $programByInstrumen[$jenisPr][] = $pr;
 }
 $instrumen_list = sv_instrumen_options($pdo, $sv_jenis);
+$jabatan_list = getJabatanList($pdo);
 $mapel_by_guru = sv_mapel_guru($pdo);
 $mapel_by_guru_json = json_encode($mapel_by_guru, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
 
@@ -123,7 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $mapel_di_supervisi = '';
             }
             $tanggal = trim((string)($_POST['tanggal'] ?? '')) ?: null;
-            $supervisor = trim((string)($_POST['supervisor'] ?? sv_current_user_name($pdo)));
+            $supervisor = trim((string)($_POST['supervisor'] ?? ''));
+            if ($supervisor === '') $supervisor = sv_current_user_name($pdo);
             $status = trim((string)($_POST['status'] ?? 'Draft'));
 
             $nilai = null;
@@ -292,6 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     redirect(basename(__FILE__) . '?jenis=' . urlencode($sv_jenis));
 }
 
+$filter_ta = trim((string)($_GET['tahun_ajaran'] ?? $periode['tahun_ajaran']));
 $filter_guru = trim((string)($_GET['guru'] ?? ''));
 $filter_status = trim((string)($_GET['status'] ?? ''));
 $filter_dari = trim((string)($_GET['tanggal_dari'] ?? ''));
@@ -299,6 +302,14 @@ $filter_sampai = trim((string)($_GET['tanggal_sampai'] ?? ''));
 
 $where = ['p.jenis_supervisi = ?'];
 $params = [$sv_jenis];
+if ($filter_ta !== '' && isTahunAjaranFormatValid($filter_ta)) {
+    $rta = getRentangTanggalTahunAjaran($filter_ta);
+    if ($rta) {
+        $where[] = 'p.tanggal BETWEEN ? AND ?';
+        $params[] = $rta['mulai'];
+        $params[] = $rta['sampai'];
+    }
+}
 if ($filter_guru !== '') {
     $where[] = 'p.id_guru = ?';
     $params[] = (int)$filter_guru;
@@ -334,10 +345,12 @@ $flash = sv_render_flash_js();
 if ($flash !== '') {
     $js_page[] = $flash;
 }
+$initial_id_jadwal = (int)($_GET['id_jadwal'] ?? 0);
 $js_page[] = 'var svInstrumenData = ' . json_encode($instrumen_data) . ';';
 $js_page[] = 'var svIsManajerial = ' . ($is_manajerial ? 'true' : 'false') . ';';
 $js_page[] = 'var svMapelByGuru = ' . $mapel_by_guru_json . ';';
 $js_page[] = 'var svJadwalList = ' . $jadwal_json . ';';
+$js_page[] = 'var svInitialJadwalId = ' . $initial_id_jadwal . ';';
 $js_page[] = <<<'JS'
 var svEditPenilaian = {};
 var svPredikat = function (n) {
@@ -371,6 +384,7 @@ function svPopulateMapel(guruId, keepValue) {
 function svApplyJadwal(jadwalId, keepMapel) {
     var row = svJadwalList.find(function (r) { return String(r.id_jadwal) === String(jadwalId); });
     if (!row) return;
+    if (row.tanggal) { $('#form-pelaksanaan [name=tanggal]').val(row.tanggal); }
     if (!svIsManajerial && row.id_guru) {
         $('#sv-guru-select').val(String(row.id_guru));
         svPopulateMapel(row.id_guru, keepMapel);
@@ -491,9 +505,27 @@ $(document).ready(function () {
         $('#modal-pelaksanaan .modal-title').text('Tambah Pelaksanaan Supervisi');
         $('#modal-pelaksanaan').modal('show');
     });
+    if (svInitialJadwalId) {
+        $('#btn-tambah').trigger('click');
+        setTimeout(function () {
+            var $jd = $('#form-pelaksanaan [name=id_jadwal]');
+            $jd.val(String(svInitialJadwalId));
+            svApplyJadwal(String(svInitialJadwalId), false);
+        }, 150);
+    }
 
+    function svEnsurePelaksanaanOption(name, val, label) {
+        if (!val) return;
+        val = String(val);
+        var $sel = $('#form-pelaksanaan [name="' + name + '"]');
+        if (!$sel.length || !$sel.is('select')) return;
+        if ($sel.find('option').filter(function(){ return String($(this).val()) === val; }).length === 0) {
+            $sel.append('<option value="' + $('<div>').text(val).html() + '">' + $('<div>').text(label || val).html() + ' (lama)</option>');
+        }
+    }
     $(document).on('click', '.btn-edit', function () {
         var d = $(this).data('row');
+        if (d.supervisor) svEnsurePelaksanaanOption('supervisor', d.supervisor, d.supervisor);
         svEditPenilaian = {};
         if (d.id_pelaksanaan) {
             $.ajax({
@@ -579,7 +611,13 @@ include '../templates/sidebar.php';
                 <div class="card-body">
                     <form method="GET" class="form-row align-items-end">
                         <input type="hidden" name="jenis" value="<?= htmlspecialchars($sv_jenis, ENT_QUOTES) ?>">
-                        <div class="form-group col-md-3 mb-2">
+                        <div class="form-group col-md-2 mb-2">
+                            <label class="small font-weight-bold">Tahun Ajaran</label>
+                            <select class="form-control" name="tahun_ajaran">
+                                <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-2 mb-2">
                             <label class="small font-weight-bold">Guru/PTK</label>
                             <select class="form-control" name="guru">
                                 <option value="">Semua</option>
@@ -630,7 +668,6 @@ include '../templates/sidebar.php';
                                     <th>Instrumen</th>
                                     <th>Nilai</th>
                                     <th>Predikat</th>
-                                    <th>Temuan</th>
                                     <th>Rekomendasi</th>
                                     <th>Status</th>
                                     <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
@@ -648,7 +685,6 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars((string)$r['nama_instrumen']) ?></td>
                                         <td><?= $r['nilai'] !== null ? htmlspecialchars(number_format((float)$r['nilai'], 2)) : '-' ?></td>
                                         <td><?= htmlspecialchars((string)$r['predikat']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['temuan']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
                                         <td><span class="badge badge-<?= $r['status'] === 'Selesai' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($r['status']) ?></span></td>
                                         <?php if ($can_manage): ?>
@@ -737,7 +773,7 @@ include '../templates/sidebar.php';
 
                     <div class="form-row">
                         <div class="form-group col-md-4"><label>Tanggal</label><input type="date" class="form-control" name="tanggal" required></div>
-                        <div class="form-group col-md-4"><label>Supervisor</label><input type="text" class="form-control" name="supervisor" value="<?= htmlspecialchars(sv_current_user_name($pdo), ENT_QUOTES) ?>"></div>
+                        <div class="form-group col-md-4"><label>Supervisor</label><select class="form-control" name="supervisor" required><option value="">-- Pilih Jabatan --</option><?php foreach ($jabatan_list as $jb): ?><option value="<?= htmlspecialchars($jb['nama_jabatan'], ENT_QUOTES) ?>"><?= htmlspecialchars($jb['nama_jabatan']) ?></option><?php endforeach; ?></select></div>
                         <div class="form-group col-md-4">
                             <label>Status</label>
                             <select class="form-control" name="status"><option value="Draft">Draft</option><option value="Selesai">Selesai</option></select>
@@ -778,8 +814,7 @@ include '../templates/sidebar.php';
                     <div class="form-row">
                         <div class="form-group col-md-6"><label>Kekuatan</label><textarea class="form-control" name="kekuatan" rows="2"></textarea></div>
                         <div class="form-group col-md-6"><label>Kelemahan</label><textarea class="form-control" name="kelemahan" rows="2"></textarea></div>
-                        <div class="form-group col-md-6"><label>Temuan</label><textarea class="form-control" name="temuan" rows="2"></textarea></div>
-                        <div class="form-group col-md-6"><label>Rekomendasi</label><textarea class="form-control" name="rekomendasi" rows="2"></textarea></div>
+                        <div class="form-group col-md-12"><label>Rekomendasi</label><textarea class="form-control" name="rekomendasi" rows="2"></textarea></div>
                         <div class="form-group col-md-6"><label>Prioritas Perbaikan</label><input type="text" class="form-control" name="prioritas_perbaikan"></div>
                         <div class="form-group col-md-6"><label>Keterangan</label><input type="text" class="form-control" name="keterangan"></div>
                     </div>

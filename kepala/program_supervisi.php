@@ -317,6 +317,14 @@ $(document).ready(function () {
         var d = $(this).data('row');
         $('#form-program')[0].reset();
         $('#form-program [name=aksi]').val('edit');
+        if (d.penanggung_jawab) {
+            var pjSel = $('#form-program [name="penanggung_jawab"]');
+            var pjVal = String(d.penanggung_jawab);
+            var esc = pjVal.replace(/"/g, '&quot;');
+            if (pjSel.find('option').filter(function(){ return $(this).val() === pjVal; }).length === 0) {
+                pjSel.append('<option value="' + $('<div>').text(pjVal).html() + '">' + $('<div>').text(pjVal).html() + ' (lama)</option>');
+            }
+        }
         Object.keys(d).forEach(function (k) {
             var el = $('#form-program [name="' + k + '"]');
             if (el.length) { el.val(d[k]); }
@@ -538,7 +546,10 @@ include '../templates/sidebar.php';
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label>Penanggung Jawab</label>
-                            <input type="text" class="form-control" name="penanggung_jawab" value="<?= htmlspecialchars(sv_current_user_name($pdo), ENT_QUOTES) ?>">
+                            <select class="form-control" name="penanggung_jawab" required>
+                                <option value="">-- Pilih Jabatan --</option>
+                                <?php foreach (getJabatanList($pdo) as $jb): ?><option value="<?= htmlspecialchars($jb['nama_jabatan'], ENT_QUOTES) ?>"><?= htmlspecialchars($jb['nama_jabatan']) ?></option><?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="form-group col-md-6">
                             <label>Status</label>

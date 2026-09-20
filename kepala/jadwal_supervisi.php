@@ -29,6 +29,7 @@ $js_libs = [
 $guru_list = sv_guru_list($pdo);
 $program_list = sv_program_options($pdo);
 $instrumen_list = sv_instrumen_options($pdo);
+$jabatan_list = getJabatanList($pdo);
 $instrumen_json = json_encode($instrumen_list, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $program_json = json_encode($program_list, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 
@@ -44,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                     break;
                 }
             }
+            $supervisor = trim((string)($_POST['supervisor'] ?? ''));
+            if ($supervisor === '') $supervisor = sv_current_user_name($pdo);
             $data = [
                 (int)($_POST['id_program'] ?? 0) ?: null,
                 (int)($_POST['id_sasaran'] ?? 0) ?: null,
@@ -51,12 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $idGuru ?: null,
                 $namaGuru,
                 trim((string)($_POST['jenis_supervisi'] ?? 'Akademik')),
-                trim((string)($_POST['supervisor'] ?? sv_current_user_name($pdo))),
+                $supervisor,
                 trim((string)($_POST['tanggal'] ?? '')) ?: null,
                 trim((string)($_POST['jam_mulai'] ?? '')) ?: null,
                 trim((string)($_POST['jam_selesai'] ?? '')) ?: null,
                 trim((string)($_POST['tempat'] ?? '')),
-                trim((string)($_POST['fokus'] ?? '')),
+                '',
                 trim((string)($_POST['status'] ?? 'Terjadwal')),
                 trim((string)($_POST['keterangan'] ?? '')),
             ];
@@ -173,32 +176,39 @@ $js_page[] = 'var svEvents = ' . json_encode($calendar_events) . ';';
 $js_page[] = 'var svInstrumenList = ' . $instrumen_json . ';';
 $js_page[] = 'var svProgramList = ' . $program_json . ';';
 $js_page[] = <<<'JS'
+function svEnsureOption($sel, val, label) {
+    if (!val) return;
+    val = String(val);
+    if ($sel.find('option').filter(function(){ return String($(this).val()) === val; }).length === 0) {
+        $sel.append('<option value="' + $('<div>').text(val).html() + '">' + $('<div>').text(label || val).html() + ' (lama)</option>');
+    }
+}
 function svFilterModalByJenis(jenis, keepVal) {
-    var vInst = keepVal ? $('#form-jadwal [name=id_instrumen]').val() : '';
-    var vProg = keepVal ? $('#form-jadwal [name=id_program]').val() : '';
     var $p = $('#form-jadwal [name=id_program]');
     var $i = $('#form-jadwal [name=id_instrumen]');
-    var prevInst = $i.val();
-    var prevProg = $p.val();
+    var prevInst = keepVal ? String($i.val() || '') : '';
+    var prevProg = keepVal ? String($p.val() || '') : '';
     $p.find('option').each(function () {
-        var val = $(this).val();
+        var val = String($(this).val() || '');
         if (!val) return;
-        var row = svProgramList.find(function (r) { return String(r.id_program) === String(val); });
+        var row = svProgramList.find(function (r) { return String(r.id_program) === val; });
         var show = !row || !jenis || String(row.jenis_supervisi) === String(jenis);
+        if (keepVal && (val === prevProg)) show = true;
         $(this).toggle(show);
+        $(this).prop('disabled', !show);
     });
     $i.find('option').each(function () {
-        var val = $(this).val();
+        var val = String($(this).val() || '');
         if (!val) return;
-        var row = svInstrumenList.find(function (r) { return String(r.id_instrumen) === String(val); });
+        var row = svInstrumenList.find(function (r) { return String(r.id_instrumen) === val; });
         var show = !row || !jenis || String(row.jenis_supervisi) === String(jenis);
+        if (keepVal && (val === prevInst)) show = true;
         $(this).toggle(show);
+        $(this).prop('disabled', !show);
     });
     if (keepVal) {
-        if ($i.find('option[value="' + prevInst + '"]').is(':hidden')) { $i.val(''); }
-        else { $i.val(prevInst); }
-        if ($p.find('option[value="' + prevProg + '"]').is(':hidden')) { $p.val(''); }
-        else { $p.val(prevProg); }
+        $i.val(prevInst);
+        $p.val(prevProg);
     } else {
         $i.val('');
         $p.val('');
@@ -223,11 +233,17 @@ $(document).ready(function () {
         var d = $(this).data('row');
         $('#form-jadwal')[0].reset();
         $('#form-jadwal [name=aksi]').val('edit');
+        if (d.supervisor) svEnsureOption($('#form-jadwal [name=supervisor]'), d.supervisor, d.supervisor);
+        if (d.id_program) svEnsureOption($('#form-jadwal [name=id_program]'), d.id_program, d.nama_program || ('Program #' + d.id_program));
+        if (d.id_instrumen) svEnsureOption($('#form-jadwal [name=id_instrumen]'), d.id_instrumen, d.nama_instrumen || ('Instrumen #' + d.id_instrumen));
         Object.keys(d).forEach(function (k) {
             var el = $('#form-jadwal [name="' + k + '"]');
             if (el.length) { el.val(d[k]); }
         });
         svFilterModalByJenis(d.jenis_supervisi || $('#form-jadwal [name=jenis_supervisi]').val(), true);
+        if (d.id_program) $('#form-jadwal [name=id_program]').val(String(d.id_program));
+        if (d.id_instrumen) $('#form-jadwal [name=id_instrumen]').val(String(d.id_instrumen));
+        if (d.supervisor) $('#form-jadwal [name=supervisor]').val(String(d.supervisor));
         $('#modal-jadwal .modal-title').text('Edit Jadwal Supervisi');
         $('#modal-jadwal').modal('show');
     });
@@ -351,7 +367,6 @@ include '../templates/sidebar.php';
                                     <th>Jam Mulai</th>
                                     <th>Jam Selesai</th>
                                     <th>Tempat</th>
-                                    <th>Fokus</th>
                                     <th>Status</th>
                                     <th>Keterangan</th>
                                     <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
@@ -376,7 +391,6 @@ include '../templates/sidebar.php';
                                         <td><?= $r['jam_mulai'] ? substr($r['jam_mulai'], 0, 5) : '-' ?></td>
                                         <td><?= $r['jam_selesai'] ? substr($r['jam_selesai'], 0, 5) : '-' ?></td>
                                         <td><?= htmlspecialchars((string)$r['tempat']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['fokus']) ?></td>
                                         <td><span class="badge badge-<?= $badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
                                         <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
                                         <?php if ($can_manage): ?>
@@ -443,7 +457,10 @@ include '../templates/sidebar.php';
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label>Supervisor</label>
-                            <input type="text" class="form-control" name="supervisor" value="<?= htmlspecialchars(sv_current_user_name($pdo), ENT_QUOTES) ?>">
+                            <select class="form-control" name="supervisor" required>
+                                <option value="">-- Pilih Jabatan --</option>
+                                <?php foreach ($jabatan_list as $jb): ?><option value="<?= htmlspecialchars($jb['nama_jabatan'], ENT_QUOTES) ?>"><?= htmlspecialchars($jb['nama_jabatan']) ?></option><?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="form-group col-md-6">
                             <label>Status</label>
@@ -458,7 +475,6 @@ include '../templates/sidebar.php';
                         <div class="form-group col-md-4"><label>Jam Selesai</label><input type="time" class="form-control" name="jam_selesai"></div>
                     </div>
                     <div class="form-group"><label>Tempat</label><input type="text" class="form-control" name="tempat"></div>
-                    <div class="form-group"><label>Fokus</label><textarea class="form-control" name="fokus" rows="2"></textarea></div>
                     <div class="form-group"><label>Keterangan</label><textarea class="form-control" name="keterangan" rows="2"></textarea></div>
                 </div>
                 <div class="modal-footer">

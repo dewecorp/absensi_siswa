@@ -20,12 +20,21 @@ $js_libs = [
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
 
+$filter_ta = trim((string)($_GET['tahun_ajaran'] ?? $periode['tahun_ajaran']));
 $filter_jenis = trim((string)($_GET['jenis'] ?? ''));
 $filter_status = trim((string)($_GET['status'] ?? ''));
 $filter_guru = trim((string)($_GET['guru'] ?? ''));
 
 $where = [];
 $params = [];
+if ($filter_ta !== '' && isTahunAjaranFormatValid($filter_ta)) {
+    $rta = getRentangTanggalTahunAjaran($filter_ta);
+    if ($rta) {
+        $where[] = 'p.tanggal BETWEEN ? AND ?';
+        $params[] = $rta['mulai'];
+        $params[] = $rta['sampai'];
+    }
+}
 if ($filter_jenis !== '') {
     $where[] = 'p.jenis_supervisi = ?';
     $params[] = $filter_jenis;
@@ -88,7 +97,13 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-body">
                     <form method="GET" class="form-row align-items-end">
-                        <div class="form-group col-md-3 mb-2">
+                        <div class="form-group col-md-2 mb-2">
+                            <label class="small font-weight-bold">Tahun Ajaran</label>
+                            <select class="form-control" name="tahun_ajaran">
+                                <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-2 mb-2">
                             <label class="small font-weight-bold">Guru/PTK</label>
                             <select class="form-control" name="guru">
                                 <option value="">Semua</option>

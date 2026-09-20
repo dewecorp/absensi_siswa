@@ -19,8 +19,16 @@ $user_level = function_exists('getUserLevel') ? getUserLevel() : null;
 
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
-$favicon_logo = !empty($school_profile['logo']) ? basename((string)$school_profile['logo']) : 'logo.png';
+$raw_logo = trim((string)($school_profile['logo'] ?? ''));
+$favicon_logo = $raw_logo !== '' ? basename($raw_logo) : 'logo.png';
 $favicon_path = __DIR__ . '/../assets/img/' . $favicon_logo;
+if (!is_readable($favicon_path)) {
+    $candidates = glob(__DIR__ . '/../assets/img/logo_*.png') ?: [];
+    $candidates = array_merge($candidates, glob(__DIR__ . '/../assets/img/user_*_LOGO.png') ?: []);
+    $candidates = array_merge($candidates, glob(__DIR__ . '/../assets/img/hero_*.png') ?: []);
+    foreach ($candidates as $c) { if (is_readable($c)) { $favicon_logo = basename($c); $favicon_path = $c; break; } }
+    if (!is_readable($favicon_path) && is_readable(__DIR__ . '/../assets/img/favicon.svg')) { $favicon_logo = 'favicon.svg'; $favicon_path = __DIR__ . '/../assets/img/favicon.svg'; }
+}
 $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path) : '1';
 
 // Check if user is logged in
@@ -56,7 +64,11 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="icon" type="image/png" href="/simad/assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="shortcut icon" href="/simad/favicon.ico?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="shortcut icon" href="../favicon.ico?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="apple-touch-icon" href="../assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="apple-touch-icon" href="/simad/assets/img/<?php echo htmlspecialchars($favicon_logo, ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version, ENT_QUOTES, 'UTF-8'); ?>">
 
     <!-- General CSS Files -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">

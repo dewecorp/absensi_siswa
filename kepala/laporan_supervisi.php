@@ -12,6 +12,11 @@ $can_manage = sv_is_supervisor($pdo);
 
 $school_profile = getSchoolProfile($pdo);
 $periode = sv_periode($pdo);
+$filter_ta_laporan = trim((string)($_GET['tahun_ajaran'] ?? sv_prev_tahun_ajaran($periode['tahun_ajaran'])));
+if ($filter_ta_laporan === '' || !isTahunAjaranFormatValid($filter_ta_laporan)) {
+    $filter_ta_laporan = sv_prev_tahun_ajaran($periode['tahun_ajaran']);
+    if ($filter_ta_laporan === '' || !isTahunAjaranFormatValid($filter_ta_laporan)) $filter_ta_laporan = $periode['tahun_ajaran'];
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     $aksi = (string)($_POST['aksi'] ?? '');
@@ -113,13 +118,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     }
 }
 
+$rta = getRentangTanggalTahunAjaran($filter_ta_laporan);
 $rows = [];
 try {
-    $rows = $pdo->query("SELECT p.id_pelaksanaan, p.tanggal, p.nama_guru, p.unit_bagian, p.jenis_supervisi, p.id_program, p.id_guru, p.mapel_di_supervisi, p.nilai, p.predikat, p.temuan, p.rekomendasi, p.status, p.id_instrumen, pr.nama_program, pr.tahun_ajaran, pr.semester, i.nama_instrumen
-        FROM tb_sv_pelaksanaan p
-        LEFT JOIN tb_sv_program pr ON pr.id_program = p.id_program
-        LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen
-        ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC")->fetchAll(PDO::FETCH_ASSOC);
+    if ($rta) {
+        $stmt = $pdo->prepare("SELECT p.id_pelaksanaan, p.tanggal, p.nama_guru, p.unit_bagian, p.jenis_supervisi, p.id_program, p.id_guru, p.mapel_di_supervisi, p.nilai, p.predikat, p.temuan, p.rekomendasi, p.status, p.id_instrumen, pr.nama_program, pr.tahun_ajaran, pr.semester, i.nama_instrumen
+            FROM tb_sv_pelaksanaan p
+            LEFT JOIN tb_sv_program pr ON pr.id_program = p.id_program
+            LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen
+            WHERE p.tanggal BETWEEN ? AND ?
+            ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC");
+        $stmt->execute([$rta['mulai'], $rta['sampai']]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $rows = $pdo->query("SELECT p.id_pelaksanaan, p.tanggal, p.nama_guru, p.unit_bagian, p.jenis_supervisi, p.id_program, p.id_guru, p.mapel_di_supervisi, p.nilai, p.predikat, p.temuan, p.rekomendasi, p.status, p.id_instrumen, pr.nama_program, pr.tahun_ajaran, pr.semester, i.nama_instrumen
+            FROM tb_sv_pelaksanaan p
+            LEFT JOIN tb_sv_program pr ON pr.id_program = p.id_program
+            LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen
+            ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC")->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (Throwable $e) {}
 
 $js_libs = [
@@ -134,6 +151,7 @@ $flash = sv_render_flash_js();
 if ($flash !== '') $js_page[] = $flash;
 $js_page[] = <<<'JS'
 $(document).ready(function () {
+    SV.autoSubmitFilters('form');
     SV.initDataTable('#table-laporan');
 });
 JS;
@@ -150,8 +168,25 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <input type="hidden" id="svSchoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH', ENT_QUOTES) ?>">
             <input type="hidden" id="svSchoolLogo" value="<?= !empty($school_profile['logo']) ? '../assets/img/' . htmlspecialchars($school_profile['logo'], ENT_QUOTES) : '' ?>">
-            <input type="hidden" id="svAcademicYear" value="<?= htmlspecialchars($periode['tahun_ajaran'], ENT_QUOTES) ?>">
+            <input type="hidden" id="svAcademicYear" value="<?= htmlspecialchars($filter_ta_laporan, ENT_QUOTES) ?>">
             <input type="hidden" id="svSemester" value="<?= htmlspecialchars($periode['semester'], ENT_QUOTES) ?>">
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="form-row align-items-end">
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Tahun Ajaran Laporan</label>
+                            <select class="form-control" name="tahun_ajaran">
+                                <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta_laporan ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-9 mb-2">
+                            <small class="text-muted d-block">Default TA sebelumnya (<?= htmlspecialchars($filter_ta_laporan) ?>) — laporan mencatat TA berjalan dan ditampilkan/dilaporkan di TA depan. Ganti filter untuk lihat TA lain (auto submit).</small>
+                            <span class="badge badge-light border">TA berjalan: <?= htmlspecialchars($periode['tahun_ajaran']) ?></span>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
             <div class="card">
                 <div class="card-body">
