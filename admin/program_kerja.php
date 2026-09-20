@@ -31,6 +31,7 @@ $komponen_list = [
 ];
 
 
+
 $program_by_komponen=[
 1=>['Perencanaan dan pengelolaan madrasah','Tata kelola madrasah','Koordinasi','Monitoring','Evaluasi manajemen'],
 2=>['Pengembangan kurikulum','Perencanaan pembelajaran','Pelaksanaan pembelajaran','Asesmen','Pembelajaran inovatif','KBC dan karakter'],
@@ -225,6 +226,116 @@ $tindak_lanjut_by_komponen=[
 13=>['Pengembangan sistem','Perbaikan fitur','Sinkronisasi data','Penjadwalan backup otomatis','Penguatan keamanan'],
 14=>['Menindaklanjuti calon mitra','Perpanjangan/pengembangan','Pengembangan program','Penguatan kerja sama','Pengembangan kemitraan'],
 15=>['Menetapkan mitigasi','Perbaikan fasilitas','Pembinaan ulang','Penyempurnaan SOP','Pendampingan dan pencegahan','Penguatan sistem keamanan'],
+];
+$matriks = [
+1=>[
+ ['program'=>'Perencanaan dan pengelolaan madrasah','kegiatan'=>'Menyusun program kerja kepala madrasah','tujuan'=>'Menjadi pedoman pelaksanaan seluruh program madrasah','indikator'=>'Program kerja tersusun, disahkan, dan tersosialisasi','target'=>'100%','evaluasi'=>'Membandingkan rencana dengan pelaksanaan','tindak'=>'Revisi program yang belum sesuai'],
+ ['program'=>'Tata kelola madrasah','kegiatan'=>'Penataan struktur organisasi dan pembagian tugas','tujuan'=>'Mewujudkan pembagian tugas yang jelas','indikator'=>'Seluruh PTK memiliki tugas dan tanggung jawab','target'=>'100%','evaluasi'=>'Mengevaluasi kesesuaian tugas dan pelaksanaan','tindak'=>'Penyesuaian pembagian tugas'],
+ ['program'=>'Koordinasi','kegiatan'=>'Rapat koordinasi rutin','tujuan'=>'Meningkatkan koordinasi antarbidang','indikator'=>'Rapat terlaksana sesuai jadwal dan menghasilkan keputusan','target'=>'≥90%','evaluasi'=>'Memeriksa notulen dan tindak lanjut','tindak'=>'Menindaklanjuti keputusan rapat'],
+ ['program'=>'Monitoring','kegiatan'=>'Monitoring program kerja','tujuan'=>'Mengetahui perkembangan pelaksanaan program','indikator'=>'Program terpantau secara berkala','target'=>'≥90%','evaluasi'=>'Membandingkan target dan realisasi','tindak'=>'Pendampingan terhadap program yang tertinggal'],
+ ['program'=>'Evaluasi manajemen','kegiatan'=>'Evaluasi kinerja madrasah','tujuan'=>'Mengetahui efektivitas pengelolaan madrasah','indikator'=>'Evaluasi terlaksana dan menghasilkan rekomendasi','target'=>'100%','evaluasi'=>'Analisis capaian program','tindak'=>'Menetapkan program perbaikan'],
+],
+2=>[
+ ['program'=>'Pengembangan kurikulum','kegiatan'=>'Review dan pengembangan kurikulum madrasah','tujuan'=>'Menyesuaikan kurikulum dengan kebutuhan madrasah dan peserta didik','indikator'=>'Dokumen kurikulum tersedia dan diperbarui','target'=>'100%','evaluasi'=>'Menelaah kesesuaian dokumen dan pelaksanaan','tindak'=>'Penyempurnaan dokumen'],
+ ['program'=>'Perencanaan pembelajaran','kegiatan'=>'Pemeriksaan perangkat pembelajaran','tujuan'=>'Menjamin kesiapan guru dalam melaksanakan pembelajaran','indikator'=>'Perangkat pembelajaran tersedia dan sesuai','target'=>'100%','evaluasi'=>'Pemeriksaan administrasi guru','tindak'=>'Pendampingan guru yang belum lengkap'],
+ ['program'=>'Pelaksanaan pembelajaran','kegiatan'=>'Supervisi dan observasi pembelajaran','tujuan'=>'Meningkatkan kualitas proses pembelajaran','indikator'=>'Guru melaksanakan pembelajaran sesuai perencanaan','target'=>'≥90%','evaluasi'=>'Observasi kelas menggunakan instrumen','tindak'=>'Pembinaan dan supervisi ulang'],
+ ['program'=>'Asesmen','kegiatan'=>'Pelaksanaan dan analisis asesmen','tujuan'=>'Mengetahui pencapaian kompetensi siswa','indikator'=>'Asesmen terlaksana dan hasilnya dianalisis','target'=>'100%','evaluasi'=>'Analisis hasil belajar','tindak'=>'Remedial, pengayaan, dan perbaikan pembelajaran'],
+ ['program'=>'Pembelajaran inovatif','kegiatan'=>'Pengembangan media dan metode pembelajaran','tujuan'=>'Meningkatkan keterlibatan siswa','indikator'=>'Guru menggunakan metode/media yang sesuai','target'=>'≥90%','evaluasi'=>'Observasi dan refleksi pembelajaran','tindak'=>'Workshop dan pendampingan'],
+ ['program'=>'KBC dan karakter','kegiatan'=>'Integrasi Kurikulum Berbasis Cinta dan karakter','tujuan'=>'Membentuk pembelajaran yang menumbuhkan karakter dan nilai keislaman','indikator'=>'Nilai karakter terintegrasi dalam pembelajaran','target'=>'≥90%','evaluasi'=>'Observasi perangkat dan praktik pembelajaran','tindak'=>'Penguatan praktik pembelajaran'],
+],
+3=>[
+ ['program'=>'Penerimaan siswa','kegiatan'=>'Pelaksanaan PPDB','tujuan'=>'Mendapatkan peserta didik sesuai ketentuan','indikator'=>'PPDB terlaksana tertib dan terdokumentasi','target'=>'100%','evaluasi'=>'Evaluasi proses dan hasil PPDB','tindak'=>'Perbaikan mekanisme PPDB'],
+ ['program'=>'Administrasi siswa','kegiatan'=>'Pemutakhiran data siswa','tujuan'=>'Menjamin data siswa akurat','indikator'=>'Data siswa diperbarui secara berkala','target'=>'100%','evaluasi'=>'Pemeriksaan database','tindak'=>'Perbaikan data'],
+ ['program'=>'Kedisiplinan','kegiatan'=>'Pembinaan tata tertib siswa','tujuan'=>'Meningkatkan kedisiplinan','indikator'=>'Pelanggaran siswa menurun','target'=>'≥90%','evaluasi'=>'Rekap pelanggaran','tindak'=>'Pembinaan individual/kelompok'],
+ ['program'=>'Karakter','kegiatan'=>'Pembinaan karakter siswa','tujuan'=>'Membentuk siswa berakhlak dan bertanggung jawab','indikator'=>'Program pembinaan terlaksana','target'=>'≥90%','evaluasi'=>'Observasi dan catatan perkembangan','tindak'=>'Program pembinaan lanjutan'],
+ ['program'=>'Prestasi','kegiatan'=>'Pembinaan siswa berprestasi','tujuan'=>'Mengembangkan potensi siswa','indikator'=>'Siswa mengikuti dan memperoleh prestasi','target'=>'100%','evaluasi'=>'Rekap prestasi','tindak'=>'Pembinaan intensif'],
+ ['program'=>'Perlindungan siswa','kegiatan'=>'Penanganan masalah siswa','tujuan'=>'Memberikan layanan terhadap permasalahan siswa','indikator'=>'Kasus ditangani dan terdokumentasi','target'=>'100%','evaluasi'=>'Evaluasi penyelesaian kasus','tindak'=>'Pendampingan dan koordinasi dengan wali'],
+],
+4=>[
+ ['program'=>'Pembagian tugas','kegiatan'=>'Penyusunan pembagian tugas PTK','tujuan'=>'Menjamin tugas sesuai kebutuhan dan kompetensi','indikator'=>'Seluruh PTK memiliki tugas jelas','target'=>'100%','evaluasi'=>'Evaluasi beban dan pelaksanaan tugas','tindak'=>'Penyesuaian tugas'],
+ ['program'=>'Kedisiplinan','kegiatan'=>'Monitoring kehadiran dan kedisiplinan','tujuan'=>'Meningkatkan kedisiplinan PTK','indikator'=>'Kehadiran dan ketepatan waktu meningkat','target'=>'≥90%','evaluasi'=>'Analisis absensi','tindak'=>'Pembinaan bagi yang membutuhkan'],
+ ['program'=>'Kinerja','kegiatan'=>'Penilaian kinerja guru','tujuan'=>'Mengetahui capaian kinerja','indikator'=>'Penilaian seluruh guru terlaksana','target'=>'100%','evaluasi'=>'Analisis hasil penilaian','tindak'=>'Pembinaan dan pengembangan'],
+ ['program'=>'Kompetensi','kegiatan'=>'Pelatihan/workshop','tujuan'=>'Meningkatkan kompetensi PTK','indikator'=>'PTK mengikuti kegiatan pengembangan','target'=>'≥90%','evaluasi'=>'Evaluasi hasil pelatihan','tindak'=>'Pendampingan penerapan hasil pelatihan'],
+ ['program'=>'Profesionalisme','kegiatan'=>'Coaching dan pembinaan','tujuan'=>'Meningkatkan profesionalitas','indikator'=>'Guru menunjukkan perbaikan kinerja','target'=>'≥90%','evaluasi'=>'Evaluasi hasil coaching','tindak'=>'Coaching lanjutan/supervisi ulang'],
+],
+5=>[
+ ['program'=>'Perencanaan anggaran','kegiatan'=>'Penyusunan RKAM','tujuan'=>'Menetapkan kebutuhan dan prioritas anggaran','indikator'=>'RKAM tersusun sesuai kebutuhan','target'=>'100%','evaluasi'=>'Membandingkan rencana dengan kebutuhan','tindak'=>'Revisi prioritas bila diperlukan'],
+ ['program'=>'Pengelolaan keuangan','kegiatan'=>'Pencatatan pemasukan dan pengeluaran','tujuan'=>'Mewujudkan administrasi keuangan tertib','indikator'=>'Seluruh transaksi tercatat','target'=>'100%','evaluasi'=>'Pemeriksaan pembukuan','tindak'=>'Perbaikan administrasi'],
+ ['program'=>'Pengendalian anggaran','kegiatan'=>'Monitoring realisasi anggaran','tujuan'=>'Mengendalikan penggunaan dana','indikator'=>'Realisasi sesuai rencana','target'=>'≥90%','evaluasi'=>'Membandingkan anggaran dan realisasi','tindak'=>'Pengendalian/pengalihan sesuai ketentuan'],
+ ['program'=>'Pelaporan','kegiatan'=>'Laporan keuangan berkala','tujuan'=>'Mewujudkan transparansi dan akuntabilitas','indikator'=>'Laporan tersedia tepat waktu','target'=>'100%','evaluasi'=>'Pemeriksaan laporan dan bukti','tindak'=>'Koreksi dan penyempurnaan'],
+ ['program'=>'Efisiensi','kegiatan'=>'Evaluasi penggunaan anggaran','tujuan'=>'Memastikan dana digunakan sesuai prioritas','indikator'=>'Penggunaan dana efektif dan efisien','target'=>'≥90%','evaluasi'=>'Analisis realisasi','tindak'=>'Penyesuaian prioritas anggaran'],
+],
+6=>[
+ ['program'=>'Inventarisasi','kegiatan'=>'Pendataan sarpras','tujuan'=>'Mengetahui kondisi dan jumlah sarpras','indikator'=>'Data inventaris lengkap','target'=>'100%','evaluasi'=>'Pemeriksaan fisik dan data','tindak'=>'Pembaruan inventaris'],
+ ['program'=>'Kebutuhan sarpras','kegiatan'=>'Analisis kebutuhan','tujuan'=>'Menentukan prioritas pengadaan','indikator'=>'Daftar kebutuhan tersusun berdasarkan prioritas','target'=>'100%','evaluasi'=>'Membandingkan kebutuhan dan ketersediaan','tindak'=>'Menetapkan prioritas'],
+ ['program'=>'Pengadaan','kegiatan'=>'Pengadaan sarpras prioritas','tujuan'=>'Memenuhi kebutuhan pembelajaran','indikator'=>'Sarpras prioritas tersedia','target'=>'≥90%','evaluasi'=>'Evaluasi pemanfaatan','tindak'=>'Pengadaan bertahap'],
+ ['program'=>'Pemeliharaan','kegiatan'=>'Perawatan sarpras','tujuan'=>'Menjaga kelayakan sarpras','indikator'=>'Sarpras terawat dan dapat digunakan','target'=>'≥90%','evaluasi'=>'Pemeriksaan berkala','tindak'=>'Perbaikan/pemeliharaan'],
+ ['program'=>'Lingkungan','kegiatan'=>'Penataan lingkungan madrasah','tujuan'=>'Mewujudkan lingkungan aman, bersih dan nyaman','indikator'=>'Lingkungan tertata','target'=>'≥90%','evaluasi'=>'Observasi kondisi lingkungan','tindak'=>'Penataan lanjutan'],
+],
+7=>[
+ ['program'=>'Persuratan','kegiatan'=>'Pengelolaan surat masuk/keluar','tujuan'=>'Menjamin administrasi persuratan tertib','indikator'=>'Seluruh surat tercatat dan terarsip','target'=>'100%','evaluasi'=>'Pemeriksaan buku agenda/arsip','tindak'=>'Penataan arsip'],
+ ['program'=>'Kearsipan','kegiatan'=>'Penataan arsip','tujuan'=>'Memudahkan pencarian dokumen','indikator'=>'Dokumen tertata dan mudah ditemukan','target'=>'100%','evaluasi'=>'Pemeriksaan arsip','tindak'=>'Digitalisasi/penataan ulang'],
+ ['program'=>'Administrasi PTK','kegiatan'=>'Pengelolaan dokumen kepegawaian','tujuan'=>'Menjamin data PTK lengkap','indikator'=>'Dokumen PTK lengkap','target'=>'100%','evaluasi'=>'Audit administrasi','tindak'=>'Melengkapi dokumen'],
+ ['program'=>'Administrasi siswa','kegiatan'=>'Pengelolaan dokumen siswa','tujuan'=>'Menjamin data siswa akurat','indikator'=>'Dokumen siswa lengkap','target'=>'100%','evaluasi'=>'Pemeriksaan dokumen','tindak'=>'Pemutakhiran data'],
+ ['program'=>'Digitalisasi','kegiatan'=>'Digitalisasi dokumen','tujuan'=>'Meningkatkan efisiensi administrasi','indikator'=>'Dokumen prioritas tersedia dalam bentuk digital','target'=>'≥80%','evaluasi'=>'Pemeriksaan database','tindak'=>'Backup dan pembaruan'],
+],
+8=>[
+ ['program'=>'Budaya religius','kegiatan'=>'Pembiasaan doa dan membaca Al-Qur\'an','tujuan'=>'Membentuk budaya religius','indikator'=>'Pembiasaan terlaksana rutin','target'=>'≥90%','evaluasi'=>'Observasi','tindak'=>'Penguatan pembiasaan'],
+ ['program'=>'Ibadah','kegiatan'=>'Pembiasaan ibadah berjamaah','tujuan'=>'Membentuk kedisiplinan beribadah','indikator'=>'Siswa mengikuti kegiatan secara konsisten','target'=>'≥90%','evaluasi'=>'Rekap dan observasi','tindak'=>'Pembinaan siswa'],
+ ['program'=>'Akhlak','kegiatan'=>'Pembinaan akhlakul karimah','tujuan'=>'Membentuk perilaku terpuji','indikator'=>'Perilaku positif meningkat','target'=>'≥90%','evaluasi'=>'Observasi dan catatan pembinaan','tindak'=>'Pendampingan'],
+ ['program'=>'Karakter','kegiatan'=>'Pembinaan disiplin dan tanggung jawab','tujuan'=>'Membentuk karakter siswa','indikator'=>'Kedisiplinan meningkat','target'=>'≥90%','evaluasi'=>'Analisis pelanggaran','tindak'=>'Pembinaan lanjutan'],
+ ['program'=>'Keagamaan','kegiatan'=>'PHBI dan kegiatan keislaman','tujuan'=>'Meningkatkan pemahaman dan pengalaman keagamaan','indikator'=>'Kegiatan terlaksana','target'=>'100%','evaluasi'=>'Evaluasi kegiatan','tindak'=>'Penyempurnaan program'],
+],
+9=>[
+ ['program'=>'Komunikasi wali','kegiatan'=>'Pertemuan dengan wali siswa','tujuan'=>'Meningkatkan komunikasi','indikator'=>'Pertemuan terlaksana dan informasi tersampaikan','target'=>'≥90%','evaluasi'=>'Evaluasi partisipasi dan masukan','tindak'=>'Menindaklanjuti masukan'],
+ ['program'=>'Komite','kegiatan'=>'Koordinasi dengan komite','tujuan'=>'Membangun sinergi','indikator'=>'Koordinasi terlaksana','target'=>'≥90%','evaluasi'=>'Evaluasi hasil koordinasi','tindak'=>'Pelaksanaan kesepakatan'],
+ ['program'=>'Yayasan','kegiatan'=>'Koordinasi dengan yayasan','tujuan'=>'Menyelaraskan kebijakan madrasah dan yayasan','indikator'=>'Koordinasi terdokumentasi','target'=>'100%','evaluasi'=>'Evaluasi hasil rapat','tindak'=>'Tindak lanjut keputusan'],
+ ['program'=>'Publikasi','kegiatan'=>'Pengelolaan website/media sosial','tujuan'=>'Menyampaikan informasi madrasah','indikator'=>'Informasi kegiatan dipublikasikan','target'=>'≥90%','evaluasi'=>'Evaluasi konten dan jangkauan','tindak'=>'Peningkatan publikasi'],
+ ['program'=>'Pengaduan','kegiatan'=>'Pengelolaan aspirasi','tujuan'=>'Meningkatkan kualitas pelayanan','indikator'=>'Aspirasi ditangani','target'=>'100%','evaluasi'=>'Evaluasi penyelesaian','tindak'=>'Perbaikan pelayanan'],
+],
+10=>[
+ ['program'=>'Pemetaan mutu','kegiatan'=>'Evaluasi kondisi madrasah','tujuan'=>'Mengetahui kekuatan dan kelemahan','indikator'=>'Pemetaan tersedia','target'=>'100%','evaluasi'=>'Analisis data','tindak'=>'Menentukan prioritas'],
+ ['program'=>'Target mutu','kegiatan'=>'Penetapan indikator mutu','tujuan'=>'Menentukan arah peningkatan mutu','indikator'=>'Target mutu terukur','target'=>'100%','evaluasi'=>'Membandingkan target dan capaian','tindak'=>'Revisi target/program'],
+ ['program'=>'Peningkatan mutu','kegiatan'=>'Pelaksanaan program peningkatan mutu','tujuan'=>'Meningkatkan kualitas madrasah','indikator'=>'Target prioritas tercapai','target'=>'≥90%','evaluasi'=>'Evaluasi capaian','tindak'=>'Program perbaikan'],
+ ['program'=>'Inovasi','kegiatan'=>'Pengembangan program unggulan madrasah','tujuan'=>'Meningkatkan keunggulan madrasah','indikator'=>'Program unggulan terlaksana','target'=>'≥80%','evaluasi'=>'Evaluasi dampak','tindak'=>'Pengembangan berkelanjutan'],
+ ['program'=>'Evaluasi','kegiatan'=>'Evaluasi mutu tahunan','tujuan'=>'Mengetahui perkembangan mutu','indikator'=>'Laporan mutu tersedia','target'=>'100%','evaluasi'=>'Analisis capaian tahunan','tindak'=>'Menetapkan program tahun berikutnya'],
+],
+11=>[
+ ['program'=>'Perencanaan supervisi','kegiatan'=>'Penyusunan program supervisi','tujuan'=>'Menjamin supervisi terlaksana sistematis','indikator'=>'Program dan jadwal tersedia','target'=>'100%','evaluasi'=>'Evaluasi kesesuaian jadwal','tindak'=>'Penyesuaian jadwal'],
+ ['program'=>'Supervisi administrasi','kegiatan'=>'Pemeriksaan perangkat pembelajaran','tujuan'=>'Meningkatkan kelengkapan administrasi guru','indikator'=>'Administrasi guru memenuhi target','target'=>'100%','evaluasi'=>'Analisis instrumen','tindak'=>'Pendampingan'],
+ ['program'=>'Supervisi akademik','kegiatan'=>'Observasi pembelajaran','tujuan'=>'Meningkatkan kualitas pembelajaran','indikator'=>'Guru mencapai standar yang ditetapkan madrasah','target'=>'≥90%','evaluasi'=>'Analisis hasil observasi','tindak'=>'Coaching/pembinaan'],
+ ['program'=>'Tindak lanjut','kegiatan'=>'Pembinaan guru','tujuan'=>'Memperbaiki temuan supervisi','indikator'=>'Temuan ditindaklanjuti','target'=>'≥90%','evaluasi'=>'Monitoring tindak lanjut','tindak'=>'Supervisi ulang'],
+ ['program'=>'Evaluasi','kegiatan'=>'Analisis hasil supervisi','tujuan'=>'Mengetahui perkembangan guru','indikator'=>'Tersedia rekap hasil supervisi','target'=>'100%','evaluasi'=>'Membandingkan hasil antarperiode','tindak'=>'Program pengembangan kompetensi'],
+],
+12=>[
+ ['program'=>'Pengembangan bakat','kegiatan'=>'Pemetaan minat dan bakat','tujuan'=>'Mengetahui potensi siswa','indikator'=>'Data minat/bakat tersedia','target'=>'100%','evaluasi'=>'Analisis pemetaan','tindak'=>'Penempatan kegiatan sesuai potensi'],
+ ['program'=>'Ekstrakurikuler','kegiatan'=>'Pelaksanaan kegiatan ekstrakurikuler','tujuan'=>'Mengembangkan potensi siswa','indikator'=>'Kegiatan terlaksana sesuai jadwal','target'=>'≥90%','evaluasi'=>'Evaluasi kehadiran dan kegiatan','tindak'=>'Perbaikan program'],
+ ['program'=>'Pramuka','kegiatan'=>'Pembinaan kepramukaan','tujuan'=>'Membentuk karakter dan keterampilan','indikator'=>'Kegiatan berjalan','target'=>'≥90%','evaluasi'=>'Evaluasi kegiatan','tindak'=>'Penguatan pembinaan'],
+ ['program'=>'Kompetisi','kegiatan'=>'Pembinaan lomba/olimpiade','tujuan'=>'Meningkatkan prestasi siswa','indikator'=>'Siswa mengikuti kompetisi','target'=>'≥90%','evaluasi'=>'Evaluasi hasil kompetisi','tindak'=>'Pembinaan lanjutan'],
+ ['program'=>'Apresiasi','kegiatan'=>'Penghargaan prestasi','tujuan'=>'Meningkatkan motivasi siswa','indikator'=>'Prestasi terdokumentasi dan diapresiasi','target'=>'100%','evaluasi'=>'Evaluasi pencapaian','tindak'=>'Pengembangan pembinaan'],
+],
+13=>[
+ ['program'=>'Administrasi digital','kegiatan'=>'Digitalisasi administrasi','tujuan'=>'Meningkatkan efisiensi kerja','indikator'=>'Administrasi prioritas terdigitalisasi','target'=>'≥90%','evaluasi'=>'Evaluasi penggunaan','tindak'=>'Pengembangan sistem'],
+ ['program'=>'Sistem informasi','kegiatan'=>'Pengembangan aplikasi madrasah','tujuan'=>'Mempermudah pengelolaan data','indikator'=>'Sistem dapat digunakan','target'=>'≥90%','evaluasi'=>'Evaluasi fungsi sistem','tindak'=>'Perbaikan fitur'],
+ ['program'=>'Database','kegiatan'=>'Pengelolaan database madrasah','tujuan'=>'Menjamin data terpusat dan akurat','indikator'=>'Database terbarui','target'=>'100%','evaluasi'=>'Pemeriksaan data','tindak'=>'Sinkronisasi data'],
+ ['program'=>'Backup','kegiatan'=>'Pencadangan data','tujuan'=>'Mencegah kehilangan data','indikator'=>'Backup dilakukan berkala','target'=>'100%','evaluasi'=>'Pemeriksaan backup','tindak'=>'Penjadwalan backup otomatis'],
+ ['program'=>'Keamanan','kegiatan'=>'Pengamanan akun dan data','tujuan'=>'Melindungi data madrasah','indikator'=>'Akses data terkendali','target'=>'100%','evaluasi'=>'Audit akses','tindak'=>'Penguatan keamanan'],
+],
+14=>[
+ ['program'=>'Pemetaan mitra','kegiatan'=>'Identifikasi calon mitra','tujuan'=>'Menemukan pihak yang dapat mendukung madrasah','indikator'=>'Database calon mitra tersedia','target'=>'100%','evaluasi'=>'Evaluasi relevansi mitra','tindak'=>'Menindaklanjuti calon mitra'],
+ ['program'=>'Kerja sama','kegiatan'=>'Penyusunan kerja sama','tujuan'=>'Meningkatkan dukungan terhadap program madrasah','indikator'=>'Kerja sama terdokumentasi','target'=>'100%','evaluasi'=>'Evaluasi pelaksanaan','tindak'=>'Perpanjangan/pengembangan'],
+ ['program'=>'Pengembangan','kegiatan'=>'Program inovasi madrasah','tujuan'=>'Menghasilkan inovasi sesuai kebutuhan','indikator'=>'Program inovasi terlaksana','target'=>'≥80%','evaluasi'=>'Evaluasi hasil','tindak'=>'Pengembangan program'],
+ ['program'=>'Kemitraan pendidikan','kegiatan'=>'Kerja sama dengan lembaga pendidikan','tujuan'=>'Meningkatkan kualitas pendidikan','indikator'=>'Program kerja sama terlaksana','target'=>'≥90%','evaluasi'=>'Evaluasi manfaat','tindak'=>'Penguatan kerja sama'],
+ ['program'=>'Pengembangan sumber daya','kegiatan'=>'Pemanfaatan dukungan mitra','tujuan'=>'Meningkatkan sumber daya madrasah','indikator'=>'Dukungan digunakan sesuai tujuan','target'=>'≥90%','evaluasi'=>'Evaluasi manfaat','tindak'=>'Pengembangan kemitraan'],
+],
+15=>[
+ ['program'=>'Pemetaan risiko','kegiatan'=>'Identifikasi risiko madrasah','tujuan'=>'Mengetahui potensi risiko','indikator'=>'Daftar risiko tersedia','target'=>'100%','evaluasi'=>'Analisis tingkat risiko','tindak'=>'Menetapkan mitigasi'],
+ ['program'=>'Keamanan','kegiatan'=>'Pemeriksaan lingkungan madrasah','tujuan'=>'Menciptakan lingkungan aman','indikator'=>'Risiko keamanan teridentifikasi dan ditangani','target'=>'100%','evaluasi'=>'Pemeriksaan berkala','tindak'=>'Perbaikan fasilitas'],
+ ['program'=>'Keselamatan','kegiatan'=>'Pembinaan keselamatan siswa','tujuan'=>'Mengurangi risiko kecelakaan','indikator'=>'Siswa memahami prosedur keselamatan','target'=>'≥90%','evaluasi'=>'Observasi/simulasi','tindak'=>'Pembinaan ulang'],
+ ['program'=>'Kedaruratan','kegiatan'=>'Penyusunan SOP keadaan darurat','tujuan'=>'Menjamin kesiapan menghadapi keadaan darurat','indikator'=>'SOP tersedia dan dipahami','target'=>'100%','evaluasi'=>'Simulasi/evaluasi','tindak'=>'Penyempurnaan SOP'],
+ ['program'=>'Perlindungan siswa','kegiatan'=>'Pencegahan dan penanganan perundungan','tujuan'=>'Mewujudkan lingkungan aman bagi siswa','indikator'=>'Kasus dicegah/ditangani sesuai prosedur','target'=>'100%','evaluasi'=>'Evaluasi kasus','tindak'=>'Pendampingan dan pencegahan'],
+ ['program'=>'Keamanan data','kegiatan'=>'Backup dan perlindungan data','tujuan'=>'Mencegah kehilangan/penyalahgunaan data','indikator'=>'Backup dan pengamanan berjalan','target'=>'100%','evaluasi'=>'Audit data','tindak'=>'Penguatan sistem keamanan'],
+],
 ];
 $status_opts=['belum_terlaksana'=>'Belum Terlaksana','proses'=>'Proses','terlaksana'=>'Terlaksana'];
 $status_badge=['belum_terlaksana'=>'badge-secondary','proses'=>'badge-warning','terlaksana'=>'badge-success'];
@@ -461,7 +572,7 @@ include '../templates/sidebar.php';
 <?php if($is_editable):?>
 <td class="text-center">
 <div class="btn-group">
-<button class="btn btn-warning btn-sm btn-edit" data-row='<?=htmlspecialchars(json_encode($r),ENT_QUOTES)?>' title="Edit"><i class="fas fa-edit"></i></button>
+<button class="btn btn-warning btn-sm btn-edit" data-row='<?=htmlspecialchars(json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE),ENT_QUOTES,'UTF-8')?>' title="Edit"><i class="fas fa-edit"></i></button>
 <button class="btn btn-info btn-sm btn-status-cycle" data-id="<?=$r['id']?>" data-status="<?=$sv?>" title="Ubah Status"><i class="fas <?=$ic?>"></i></button>
 <button class="btn btn-danger btn-sm btn-del" data-id="<?=$r['id']?>" data-prog="<?=htmlspecialchars($r['program'])?>" title="Hapus"><i class="fas fa-trash"></i></button>
 </div>
@@ -506,22 +617,22 @@ include '../templates/sidebar.php';
 <div class="col-md-3"><div class="form-group"><label>Waktu Mulai</label><input type="date" name="waktu_mulai" class="form-control"></div></div>
 <div class="col-md-3"><div class="form-group"><label>Waktu Selesai</label><input type="date" name="waktu_selesai" class="form-control"></div></div>
 </div>
-<div class="form-group"><label>Kegiatan *</label><select name="kegiatan" id="add_kegiatan" class="form-control" required><option value="">-- Pilih Kegiatan --</option></select></div>
+<div class="form-group"><label>Kegiatan *</label><input type="text" id="add_kegiatan" name="kegiatan" class="form-control" readonly required placeholder="Pilih Program dulu"></div>
 <div class="row">
-<div class="col-md-6"><div class="form-group"><label>Tujuan</label><select name="tujuan" id="add_tujuan" class="form-control"></select><small class="text-muted">Pilih komponen dulu</small></div></div>
-<div class="col-md-6"><div class="form-group"><label>Indikator Keberhasilan</label><select name="indikator" id="add_indikator" class="form-control"></select><small class="text-muted">Target auto-terisi</small></div></div>
+<div class="col-md-6"><div class="form-group"><label>Tujuan</label><input type="text" id="add_tujuan" name="tujuan" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-6"><div class="form-group"><label>Indikator Keberhasilan</label><div class="input-group"><input type="text" id="add_indikator" name="indikator" class="form-control" readonly placeholder="Auto"><div class="input-group-append"><span class="input-group-text" id="add_target_badge"></span></div></div></div></div>
 </div>
+<input type="hidden" name="target" id="add_target">
 <div class="row">
-<div class="col-md-4"><div class="form-group"><label>Target</label><input type="text" name="target" id="add_target" class="form-control" placeholder="100% / ≥90%"></div></div>
-<div class="col-md-2"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" class="form-control" placeholder="Nama / jabatan"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" class="form-control" placeholder="Nama / jabatan"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Anggaran (Rp)</label><input type="text" name="anggaran" class="form-control uang" placeholder="0"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Sumber Dana</label><input type="text" name="sumber_dana" class="form-control" placeholder="BOS / BOP / Komite"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Status</label><select name="status" class="form-control"><?php foreach($status_opts as $sv=>$sl):?><option value="<?=$sv?>"><?=htmlspecialchars($sl)?></option><?php endforeach;?></select></div></div>
 </div>
 <div class="row">
 <div class="col-md-6"><div class="form-group"><label>Bukti / Dokumen (pdf/jpg/doc/xls max 5MB)</label><input type="file" name="bukti" class="form-control"></div></div>
-<div class="col-md-3"><div class="form-group"><label>Evaluasi</label><select name="evaluasi" id="add_evaluasi" class="form-control"></select></div></div>
-<div class="col-md-3"><div class="form-group"><label>Tindak Lanjut</label><select name="tindak_lanjut" id="add_tindak" class="form-control"></select></div></div>
+<div class="col-md-3"><div class="form-group"><label>Evaluasi</label><input type="text" id="add_evaluasi" name="evaluasi" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Tindak Lanjut</label><input type="text" id="add_tindak" name="tindak_lanjut" class="form-control" readonly placeholder="Auto"></div></div>
 </div>
 </div>
 <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button><button type="submit" name="add_program" class="btn btn-primary">Simpan</button></div>
@@ -543,13 +654,13 @@ include '../templates/sidebar.php';
 <div class="col-md-3"><div class="form-group"><label>Waktu Mulai</label><input type="date" name="waktu_mulai" id="edit_waktu_mulai" class="form-control"></div></div>
 <div class="col-md-3"><div class="form-group"><label>Waktu Selesai</label><input type="date" name="waktu_selesai" id="edit_waktu_selesai" class="form-control"></div></div>
 </div>
-<div class="form-group"><label>Kegiatan *</label><select name="kegiatan" id="edit_kegiatan" class="form-control" required><option value="">-- Pilih Kegiatan --</option></select></div>
+<div class="form-group"><label>Kegiatan *</label><input type="text" id="edit_kegiatan" name="kegiatan" class="form-control" readonly required placeholder="Pilih Program dulu"></div>
 <div class="row">
-<div class="col-md-6"><div class="form-group"><label>Tujuan</label><select name="tujuan" id="edit_tujuan" class="form-control"></select></div></div>
-<div class="col-md-6"><div class="form-group"><label>Indikator Keberhasilan</label><select name="indikator" id="edit_indikator" class="form-control"></select></div></div>
+<div class="col-md-6"><div class="form-group"><label>Tujuan</label><input type="text" id="edit_tujuan" name="tujuan" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-6"><div class="form-group"><label>Indikator Keberhasilan</label><div class="input-group"><input type="text" id="edit_indikator" name="indikator" class="form-control" readonly placeholder="Auto"><input type="hidden" id="edit_target_h"><div class="input-group-append"><span class="input-group-text" id="edit_target_badge"></span></div></div></div></div>
 </div>
+<input type="hidden" name="target" id="edit_target">
 <div class="row">
-<div class="col-md-3"><div class="form-group"><label>Target</label><input type="text" name="target" id="edit_target" class="form-control"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" id="edit_pj" class="form-control"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Anggaran (Rp)</label><input type="text" name="anggaran" id="edit_anggaran" class="form-control"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Sumber Dana</label><input type="text" name="sumber_dana" id="edit_sumber" class="form-control"></div></div>
@@ -557,8 +668,8 @@ include '../templates/sidebar.php';
 </div>
 <div class="row">
 <div class="col-md-6"><div class="form-group"><label>Bukti / Dokumen (kosongkan jika tidak ganti)</label><input type="file" name="bukti" class="form-control"><small id="edit_bukti_old" class="text-muted"></small></div></div>
-<div class="col-md-3"><div class="form-group"><label>Evaluasi</label><select name="evaluasi" id="edit_evaluasi" class="form-control"></select></div></div>
-<div class="col-md-3"><div class="form-group"><label>Tindak Lanjut</label><select name="tindak_lanjut" id="edit_tl" class="form-control"></select></div></div>
+<div class="col-md-3"><div class="form-group"><label>Evaluasi</label><input type="text" id="edit_evaluasi" name="evaluasi" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Tindak Lanjut</label><input type="text" id="edit_tl" name="tindak_lanjut" class="form-control" readonly placeholder="Auto"></div></div>
 </div>
 </div>
 <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button><button type="submit" name="update_program" class="btn btn-primary">Update</button></div>
@@ -572,26 +683,43 @@ include '../templates/sidebar.php';
 
 <?php include '../templates/footer.php'; ?>
 <script>
-var programMap=<?=json_encode($program_by_komponen, JSON_UNESCAPED_UNICODE)?>;
-var kegiatanMap=<?=json_encode($kegiatan_by_komponen, JSON_UNESCAPED_UNICODE)?>;
-var indikatorMap=<?=json_encode($indikator_by_komponen, JSON_UNESCAPED_UNICODE)?>;
-var evaluasiMap=<?=json_encode($evaluasi_by_komponen, JSON_UNESCAPED_UNICODE)?>;
-var tindakMap=<?=json_encode($tindak_lanjut_by_komponen, JSON_UNESCAPED_UNICODE)?>;
-var tujuanMap=<?=json_encode($tujuan_by_komponen, JSON_UNESCAPED_UNICODE)?>;
-function fillProgram(k, selId, cur){ var $s=$(selId); $s.empty().append('<option value="">-- Pilih Program --</option>'); (programMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillKegiatan(k, cur){ var $s=$('#add_kegiatan'); $s.empty().append('<option value="">-- Pilih Kegiatan --</option>'); (kegiatanMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillKegiatanEdit(k, cur){ var $s=$('#edit_kegiatan'); $s.empty().append('<option value="">-- Pilih Kegiatan --</option>'); (kegiatanMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillIndikator(k, selId, targetId, cur){ var $s=$(selId); $s.empty().append('<option value="">-- Pilih Indikator --</option>'); (indikatorMap[k]||[]).forEach(function(it){ $s.append($('<option>').val(it.t).attr('data-target',it.target).text(it.t+' ('+it.target+')')); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillEval(k, cur){ var $s=$('#add_evaluasi'); $s.empty().append('<option value="">-- Pilih Evaluasi --</option>'); (evaluasiMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillTindak(k, cur){ var $s=$('#add_tindak'); $s.empty().append('<option value="">-- Pilih Tindak Lanjut --</option>'); (tindakMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillEvalEdit(k, cur){ var $s=$('#edit_evaluasi'); $s.empty().append('<option value="">-- Pilih Evaluasi --</option>'); (evaluasiMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillTindakEdit(k, cur){ var $s=$('#edit_tl'); $s.empty().append('<option value="">-- Pilih Tindak Lanjut --</option>'); (tindakMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillTujuan(k, cur){ var $s=$('#add_tujuan'); $s.empty().append('<option value="">-- Pilih Tujuan --</option>'); (tujuanMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-function fillTujuanEdit(k, cur){ var $s=$('#edit_tujuan'); $s.empty().append('<option value="">-- Pilih Tujuan --</option>'); (tujuanMap[k]||[]).forEach(function(v){ $s.append($('<option>').val(v).text(v)); }); if(cur){ if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur)); $s.val(cur); } }
-$(document).on('change','#addModal select[name="komponen"]',function(){ var k=$(this).val(); fillProgram(k,'#add_program_sel',''); fillKegiatan(k,''); fillIndikator(k,'#add_indikator','#add_target',''); fillEval(k,''); fillTindak(k,''); fillTujuan(k,''); });
-$(document).on('change','#edit_komponen',function(){ var k=$(this).val(); fillProgram(k,'#edit_program_sel',''); fillKegiatanEdit(k,''); fillIndikator(k,'#edit_indikator','#edit_target',''); fillEvalEdit(k,''); fillTindakEdit(k,''); fillTujuanEdit(k,''); });
-$(document).on('change','#add_indikator',function(){ var tg=$(this).find('option:selected').data('target'); if(tg) $('#add_target').val(tg); });
-$(document).on('change','#edit_indikator',function(){ var tg=$(this).find('option:selected').data('target'); if(tg) $('#edit_target').val(tg); });
+var matriks=<?=json_encode($matriks ?? [], JSON_UNESCAPED_UNICODE)?>;
+function idxByProgram(k, prog){ var list=matriks[k]||matriks[String(k)]||[]; for(var i=0;i<list.length;i++) if((list[i].program||'').trim()===String(prog).trim()) return i; return -1; }
+function syncMatriksAdd(){
+ var k=$('#addModal select[name="komponen"]').val(); var prog=$('#add_program_sel').val();
+ if(!k || !prog){ $('#add_kegiatan,#add_tujuan,#add_indikator,#add_target').val(''); $('#add_target_badge').text(''); $('#add_evaluasi,#add_tindak').val(''); return; }
+ var idx=idxByProgram(k,prog); if(idx<0) return;
+ var m=matriks[k][idx]||matriks[String(k)][idx];
+ $('#add_kegiatan').val(m.kegiatan||'');
+ $('#add_tujuan').val(m.tujuan||'');
+ $('#add_indikator').val(m.indikator||''); $('#add_target').val(m.target||''); $('#add_target_badge').text(m.target||'');
+ $('#add_evaluasi').val(m.evaluasi||'');
+ $('#add_tindak').val(m.tindak||'');
+}
+function syncMatriksEdit(){
+ var k=$('#edit_komponen').val(); var prog=$('#edit_program_sel').val();
+ if(!k || !prog){ $('#edit_kegiatan,#edit_tujuan,#edit_indikator,#edit_target').val(''); $('#edit_target_badge').text(''); $('#edit_evaluasi,#edit_tl').val(''); return; }
+ var idx=idxByProgram(k,prog); if(idx<0) return;
+ var m=matriks[k][idx]||matriks[String(k)][idx];
+ $('#edit_kegiatan').val(m.kegiatan||'');
+ $('#edit_tujuan').val(m.tujuan||'');
+ $('#edit_indikator').val(m.indikator||''); $('#edit_target').val(m.target||''); $('#edit_target_badge').text(m.target||'');
+ $('#edit_evaluasi').val(m.evaluasi||'');
+ $('#edit_tl').val(m.tindak||'');
+}
+function fillProgram(k, selId, cur){
+ var $s=$(selId); $s.empty().append('<option value="">-- Pilih Program --</option>');
+ var list=matriks[k]||matriks[String(k)]||[];
+ list.forEach(function(r){ $s.append($('<option>').val(r.program).text(r.program)); });
+ if(cur){
+  if($s.find('option').filter(function(){return $(this).val()===cur;}).length===0) $s.append($('<option>').val(cur).text(cur));
+  $s.val(cur);
+ }
+}
+$(document).on('change','#addModal select[name="komponen"]',function(){ var k=$(this).val(); fillProgram(k,'#add_program_sel',''); $('#add_kegiatan,#add_tujuan,#add_indikator,#add_target,#add_evaluasi,#add_tindak').val(''); $('#add_target_badge').text(''); });
+$(document).on('change','#edit_komponen',function(){ var k=$(this).val(); fillProgram(k,'#edit_program_sel',''); $('#edit_kegiatan,#edit_tujuan,#edit_indikator,#edit_target,#edit_evaluasi,#edit_tl').val(''); $('#edit_target_badge').text(''); });
+$(document).on('change','#add_program_sel',syncMatriksAdd);
+$(document).on('change','#edit_program_sel',syncMatriksEdit);
 function fmtRupiah(v){
  var s=(v+'').trim();
  if(/^\d+\.\d{1,2}$/.test(s)) s=s.split('.')[0];
@@ -606,10 +734,9 @@ $(document).ready(function(){
  <?php if($message):?>Swal.fire({icon:'<?= $message['type']=='success'?'success':'error'?>',title:'<?= addslashes($message['text'])?>', timer:2000, showConfirmButton:false});<?php endif;?>
  $(document).on('click','.btn-edit',function(){
   var r=$(this).data('row'); if(typeof r==='string') try{r=JSON.parse(r)}catch(e){r=$(this).attr('data-row'); r=JSON.parse(r)}
-  $('#edit_id').val(r.id); $('#edit_komponen').val(r.komponen); fillProgram(r.komponen,'#edit_program_sel',r.program); fillKegiatanEdit(r.komponen,r.kegiatan);
-  fillIndikator(r.komponen,'#edit_indikator','#edit_target',r.indikator);
-  fillEvalEdit(r.komponen,r.evaluasi); fillTindakEdit(r.komponen,r.tindak_lanjut); fillTujuanEdit(r.komponen,r.tujuan);
-  $('#edit_target').val(r.target); $('#edit_waktu_mulai').val(r.waktu_mulai||r.waktu||''); $('#edit_waktu_selesai').val(r.waktu_selesai||'');
+  $('#edit_id').val(r.id); $('#edit_komponen').val(r.komponen); fillProgram(r.komponen,'#edit_program_sel',r.program);
+  syncMatriksEdit();
+  $('#edit_waktu_mulai').val(r.waktu_mulai||r.waktu||''); $('#edit_waktu_selesai').val(r.waktu_selesai||'');
   $('#edit_pj').val(r.penanggung_jawab); $('#edit_anggaran').val(fmtRupiah(r.anggaran)); $('#edit_sumber').val(r.sumber_dana); $('#edit_status').val(r.status||'belum_terlaksana');
   $('#edit_bukti_old').text(r.bukti ? 'File saat ini: '+r.bukti : 'Belum ada file');
   $('#editModal').modal('show');
