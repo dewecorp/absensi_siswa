@@ -121,11 +121,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     redirect('program_supervisi.php');
 }
 
-$rows = [];
+$filter_ta = trim((string)($_GET['tahun_ajaran'] ?? $periode['tahun_ajaran']));
 try {
-    $rows = $pdo->query("SELECT * FROM tb_sv_program ORDER BY jenis_supervisi ASC, kode_program ASC, nama_program ASC")
-        ->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("SELECT * FROM tb_sv_program WHERE tahun_ajaran = ? ORDER BY jenis_supervisi ASC, kode_program ASC, nama_program ASC");
+    $stmt->execute([$filter_ta]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
+    $rows = [];
+    try {
+        $rows = $pdo->query("SELECT * FROM tb_sv_program ORDER BY jenis_supervisi ASC, kode_program ASC, nama_program ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $ex) {}
 }
 foreach ($rows as &$row) {
     $row['_fokus_arr'] = sv_parse_fokus($row['fokus_supervisi'] ?? '');
@@ -259,6 +264,7 @@ function svApplyTemplate(kode) {
 
 $(document).ready(function () {
     SV.initDataTable('#table-program');
+    $('#sv-filter-ta').on('change', function () { var v = $(this).val(); if (v) window.location.href = 'program_supervisi.php?tahun_ajaran=' + encodeURIComponent(v); });
     SV.autoGrowTextareas();
 
     $('#modal-program').on('shown.bs.modal', function () {
@@ -371,6 +377,9 @@ include '../templates/sidebar.php';
                         <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
                         <?php if ($can_manage): ?>
                         <button class="btn btn-info" id="btn-seed" type="button"><i class="fas fa-magic"></i> Muat Template</button>
+                         <select class="form-control form-control-sm ml-2" id="sv-filter-ta" style="width:140px;display:inline-block;">
+                            <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
+                        </select>
                         <button class="btn btn-primary" id="btn-tambah" type="button"><i class="fas fa-plus"></i> Tambah</button>
                         <?php endif; ?>
                     </div>

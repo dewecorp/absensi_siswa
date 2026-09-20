@@ -323,6 +323,7 @@ switch ($user_level) {
 
         $master_data_submenu = [
             ['title' => 'Data Guru', 'url' => '../admin/data_guru.php', 'active' => $current_page === 'data_guru.php'],
+            ['title' => 'Data Jabatan', 'url' => '../admin/data_jabatan.php', 'active' => $current_page === 'data_jabatan.php'],
             ['title' => 'Data Kelas', 'url' => '../admin/data_kelas.php', 'active' => $current_page === 'data_kelas.php'],
             ['title' => 'Data Siswa', 'url' => '../admin/data_siswa.php', 'active' => $current_page === 'data_siswa.php'],
             ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php', 'active' => $current_page === 'data_peserta_ujian.php'],
@@ -440,6 +441,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-clipboard-check',
                 'submenu' => $supervisi_submenu_admin,
                 'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php'])
+            ],
+            [
+                'title' => 'Program Kerja',
+                'icon' => 'fas fa-tasks',
+                'url' => '../kepala/program_kerja.php?session_type=admin',
+                'active' => $current_page === 'program_kerja.php'
             ],
             [
                 'title' => 'Pengaturan',

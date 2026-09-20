@@ -14,6 +14,8 @@ if (!isAuthorized(['admin'])) {
 
 ensureTbGuruPendidikanColumn($pdo);
 ensureTbGuruTmtColumn($pdo);
+ensureTbJabatanMaster($pdo);
+ensureTbGuruJabatanColumn($pdo);
 ensureGuruDefaultPasswords($pdo);
 
 // Set page title
@@ -64,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
     $password = $_POST['password'] ?? '';
     $mengajar = isset($_POST['mengajar']) ? json_encode($_POST['mengajar']) : null;
     $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
+    $jabatan = isset($_POST['jabatan']) ? (is_array($_POST['jabatan']) ? implode(', ', array_filter(array_map(fn($v) => sanitizeInput((string)$v), $_POST['jabatan']))) : sanitizeInput((string)$_POST['jabatan'])) : '';
     
     $error_message = null;
     $foto = null;
@@ -145,8 +148,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && isse
         }
     }
     
-    $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar];
-    $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, tmt=?, mengajar=?";
+    $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar, $jabatan];
+    $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, tmt=?, mengajar=?, jabatan=?";
     
     // Add password to update if provided
     if (!empty($password)) {
@@ -432,6 +435,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
     $password = $_POST['password'];
     $mengajar = isset($_POST['mengajar']) ? json_encode($_POST['mengajar']) : null;
     $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
+    $jabatan = isset($_POST['jabatan']) ? (is_array($_POST['jabatan']) ? implode(', ', array_filter(array_map(fn($v) => sanitizeInput((string)$v), $_POST['jabatan']))) : sanitizeInput((string)$_POST['jabatan'])) : '';
     
     // Handle photo upload
     $foto = null;
@@ -492,8 +496,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_guru'])) {
                 $hashed_password = hashPassword($password_to_use);
                 $password_plain = $password_to_use; // Store plain text password
                 
-                $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, kode_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, pendidikan, tmt, mengajar, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                if ($stmt->execute([$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar, $hashed_password, $password_plain, $foto])) {
+                $stmt = $pdo->prepare("INSERT INTO tb_guru (nama_guru, kode_guru, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, pendidikan, tmt, mengajar, jabatan, password, password_plain, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                if ($stmt->execute([$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar, $jabatan, $hashed_password, $password_plain, $foto])) {
                     $message = ['type' => 'success', 'text' => 'Data guru berhasil ditambahkan!'];
                     
                     // Log activity - ensure session is available
@@ -527,6 +531,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !iss
     $password = $_POST['password'];
     $mengajar = isset($_POST['mengajar']) ? json_encode($_POST['mengajar']) : null;
     $tmt = !empty($_POST['tmt']) ? $_POST['tmt'] : null;
+    $jabatan = isset($_POST['jabatan']) ? (is_array($_POST['jabatan']) ? implode(', ', array_filter(array_map(fn($v) => sanitizeInput((string)$v), $_POST['jabatan']))) : sanitizeInput((string)$_POST['jabatan'])) : '';
     
     // Handle photo upload
     $foto = null;
@@ -586,8 +591,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_guru']) && !iss
         if ($check_stmt->rowCount() > 0) {
             $message = ['type' => 'danger', 'text' => 'NUPTK sudah terdaftar oleh guru lain!'];
         } else {
-            $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar];
-            $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, tmt=?, mengajar=?";
+            $params = [$nama_guru, $kode_guru, $nuptk, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $pendidikan, $tmt, $mengajar, $jabatan];
+            $sql = "UPDATE tb_guru SET nama_guru=?, kode_guru=?, nuptk=?, tempat_lahir=?, tanggal_lahir=?, jenis_kelamin=?, pendidikan=?, tmt=?, mengajar=?, jabatan=?";
             
             // Add password to update if provided
             if (!empty($password)) {
@@ -1277,7 +1282,8 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                     <th>Pendidikan</th>
                                                     <th>TMT</th>
                                                     <th>Masa Bakti</th>
-                                                    <th>Mengajar</th>
+                                                     <th>Mengajar</th>
+                                                    <th>Jabatan</th>
                                                     <th>Wali Kelas</th>
                                                     <th>Password</th>
                                                     <th>Aksi</th>
@@ -1339,7 +1345,8 @@ echo "<!-- DEBUG: After template inclusion -->\n";
                                                     <td><?php echo !empty($teacher['pendidikan']) ? htmlspecialchars($teacher['pendidikan']) : '-'; ?></td>
                                                     <td><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></td>
                                                     <td><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></td>
-                                                    <td><?php echo htmlspecialchars($mengajar_display ?: '-'); ?></td>
+                                                     <td><?php echo htmlspecialchars($mengajar_display ?: '-'); ?></td>
+                                                    <td><?php echo !empty($teacher['jabatan']) ? htmlspecialchars($teacher['jabatan']) : '-'; ?></td>
                                                     <td><?php echo htmlspecialchars($teacher['kelas_wali'] ?? '-'); ?></td>
                                                     <td><?php echo !empty($teacher['password_plain']) ? htmlspecialchars($teacher['password_plain']) : ($teacher['password'] ? '***' : 'Belum Diatur'); ?></td>
                                                     <td>
@@ -1497,6 +1504,13 @@ function setImportType(type) {
                                     </select>
                                 </div>
                                 <div class="form-group">
+                                    <label>Jabatan</label>
+                                    <select class="form-control select2" name="jabatan[]" multiple="multiple" data-placeholder="Pilih jabatan" style="width: 100%;">
+                                        '; foreach (getJabatanList($pdo) as $j) { echo '<option value="' . htmlspecialchars($j['nama_jabatan'], ENT_QUOTES) . '">' . htmlspecialchars($j['nama_jabatan']) . '</option>'; } echo '
+                                    </select>
+                                    <small class="text-muted">Bisa pilih lebih dari satu.</small>
+                                </div>
+                                <div class="form-group">
                                     <label>Password</label>
                                     <input type="password" class="form-control" name="password" placeholder="Kosongkan jika tidak ingin diubah">
                                     <small class="form-text text-muted">Kosongkan jika tidak ingin mengatur password</small>
@@ -1626,6 +1640,13 @@ function setImportType(type) {
                                         } 
                                         echo '
                                         </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Jabatan</label>
+                                        <select class="form-control select2" name="jabatan[]" multiple="multiple" data-placeholder="Pilih jabatan" style="width: 100%;">
+                                            '; $curJ = isset($teacher['jabatan']) ? array_map('trim', explode(',', (string)$teacher['jabatan'])) : []; foreach (getJabatanList($pdo) as $j) { $sel = in_array($j['nama_jabatan'], $curJ, true) ? ' selected' : ''; echo '<option value="' . htmlspecialchars($j['nama_jabatan'], ENT_QUOTES) . '"' . $sel . '>' . htmlspecialchars($j['nama_jabatan']) . '</option>'; } echo '
+                                        </select>
+                                        <small class="text-muted">Bisa pilih lebih dari satu.</small>
                                     </div>
                                     <div class="form-group">
                                         <label>Password</label>

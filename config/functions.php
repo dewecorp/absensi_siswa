@@ -2065,6 +2065,66 @@ function ensureTbGuruTmtColumn(PDO $pdo): bool {
     }
 }
 
+function ensureTbJabatanMaster(PDO $pdo): bool
+{
+    static $checked = false;
+    if ($checked) {
+        return true;
+    }
+    $checked = true;
+    try {
+        $exists = (bool)$pdo->query("SHOW TABLES LIKE 'tb_jabatan'")->fetch(PDO::FETCH_NUM);
+        if (!$exists) {
+            $pdo->exec("CREATE TABLE tb_jabatan (
+                id_jabatan INT AUTO_INCREMENT PRIMARY KEY,
+                nama_jabatan VARCHAR(120) NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+        $cnt = (int)$pdo->query("SELECT COUNT(*) FROM tb_jabatan")->fetchColumn();
+        if ($cnt === 0) {
+            $defaults = ['Guru Kelas', 'Guru Mapel', 'Wali Kelas', 'Kepala Madrasah', 'Wakamad Kurikulum', 'Wakamad Kesiswaan', 'Wakamad Sarpras', 'Guru BK', 'Tenaga Kependidikan', 'Tata Usaha'];
+            $stmt = $pdo->prepare("INSERT IGNORE INTO tb_jabatan (nama_jabatan) VALUES (?)");
+            foreach ($defaults as $nm) {
+                $stmt->execute([$nm]);
+            }
+        }
+        return true;
+    } catch (PDOException $e) {
+        error_log('ensureTbJabatanMaster: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function ensureTbGuruJabatanColumn(PDO $pdo): bool
+{
+    static $checked = false;
+    if ($checked) {
+        return true;
+    }
+    $checked = true;
+    try {
+        $row = $pdo->query("SHOW COLUMNS FROM tb_guru LIKE 'jabatan'")->fetch();
+        if (!$row) {
+            $pdo->exec("ALTER TABLE tb_guru ADD COLUMN jabatan VARCHAR(120) DEFAULT NULL AFTER mengajar");
+        }
+        return true;
+    } catch (PDOException $e) {
+        error_log('ensureTbGuruJabatanColumn: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function getJabatanList(PDO $pdo): array
+{
+    try {
+        return $pdo->query("SELECT id_jabatan, nama_jabatan FROM tb_jabatan ORDER BY nama_jabatan ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
 /**
  * Generate kode guru selanjutnya secara urut abjad.
  * Contoh: A, B, ..., Z, AA, AB, ...

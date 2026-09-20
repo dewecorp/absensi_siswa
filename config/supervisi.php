@@ -479,32 +479,42 @@ if (!function_exists('sv_ensure_schema')) {
             error_log("Supervisi migrate sas TEXT: " . $e->getMessage());
         }
         // Hapus mapel non-akademik yang terlanjur tersimpan di tb_sv_sasaran.
+        // Jangan timpa pilihan tunggal kepala (mis. Akidah Akhlak) menjadi semua mapel guru.
         try {
             if (dbTableExists($pdo, 'tb_sv_sasaran')) {
                 $non = $pdo->query("SELECT nama_mapel FROM tb_mata_pelajaran WHERE jenis_mapel <> 'Akademik'")->fetchAll(PDO::FETCH_COLUMN);
                 if ($non) {
-                    $akademikOnly = sv_mapel_guru($pdo);
-                    $rows = $pdo->query("SELECT id_sasaran, id_guru, mata_pelajaran FROM tb_sv_sasaran")->fetchAll(PDO::FETCH_ASSOC);
+                    $nonLower = array_map(function ($v) { return mb_strtolower(trim((string)$v)); }, $non);
+                    $rows = $pdo->query("SELECT id_sasaran, mata_pelajaran FROM tb_sv_sasaran")->fetchAll(PDO::FETCH_ASSOC);
                     foreach ($rows as $s) {
-                        $id = (int)$s['id_sasaran'];
-                        $gid = (int)$s['id_guru'];
-                        if (isset($akademikOnly[$gid])) {
-                            $cleaned = $akademikOnly[$gid];
-                            $pd = $pdo->prepare("UPDATE tb_sv_sasaran SET mata_pelajaran = ? WHERE id_sasaran = ?");
-                            $pd->execute([implode(', ', $cleaned), $id]);
-                        } else {
-                            $migrated = (string)$s['mata_pelajaran'];
-                            foreach ($non as $nm) {
-                                $migrated = str_ireplace($nm, '', $migrated);
-                            }
-                            $migrated = trim(preg_replace('/\s*,\s*,+/', ', ', $migrated), " ,\t\n\r\0\x0B");
-                            $migrated = trim(preg_replace('/\s{2,}/', ' ', $migrated));
-                            if ($migrated === '' && (string)$s['mata_pelajaran'] !== '') {
-                                $migrated = '-';
-                            }
-                            $pd = $pdo->prepare("UPDATE tb_sv_sasaran SET mata_pelajaran = ? WHERE id_sasaran = ?");
-                            $pd->execute([$migrated, $id]);
+                        $raw = (string)($s['mata_pelajaran'] ?? '');
+                        if (trim($raw) === '' || trim($raw) === '-') {
+                            continue;
                         }
+                        $parts = array_map('trim', explode(',', $raw));
+                        $filtered = [];
+                        $changed = false;
+                        foreach ($parts as $p) {
+                            if ($p === '') {
+                                $changed = true;
+                                continue;
+                            }
+                            if (in_array(mb_strtolower($p), $nonLower, true)) {
+                                $changed = true;
+                                continue;
+                            }
+                            $filtered[] = $p;
+                        }
+                        if (!$changed) {
+                            continue;
+                        }
+                        $migrated = implode(', ', $filtered);
+                        $migrated = trim(preg_replace('/\s*,\s*,+/', ', ', $migrated), " ,\t\n\r\0\x0B");
+                        if ($migrated === '') {
+                            $migrated = '-';
+                        }
+                        $pd = $pdo->prepare("UPDATE tb_sv_sasaran SET mata_pelajaran = ? WHERE id_sasaran = ?");
+                        $pd->execute([$migrated, (int)$s['id_sasaran']]);
                     }
                 }
             }

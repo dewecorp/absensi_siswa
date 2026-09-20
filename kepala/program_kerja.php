@@ -11,6 +11,7 @@ $page_title = 'Program Kerja Madrasah';
 
 $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran = $school_profile['tahun_ajaran'] ?? date('Y').'/'.(date('Y')+1);
+ensureTbJabatanMaster($pdo);
 
 $komponen_list = [
  1=>['nama'=>'Manajemen dan Kepemimpinan','ruang'=>'Visi-misi, tujuan madrasah, kebijakan, pembagian tugas, koordinasi, rapat, pengambilan keputusan'],
@@ -624,7 +625,7 @@ include '../templates/sidebar.php';
 </div>
 <input type="hidden" name="target" id="add_target">
 <div class="row">
-<div class="col-md-3"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" class="form-control" placeholder="Nama / jabatan"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Penanggung Jawab</label><select name="penanggung_jawab" class="form-control"><option value="">-- Pilih Jabatan --</option><?php foreach(getJabatanList($pdo) as $j):?><option value="<?=htmlspecialchars($j['nama_jabatan'])?>"><?=htmlspecialchars($j['nama_jabatan'])?></option><?php endforeach;?></select></div></div>
 <div class="col-md-2"><div class="form-group"><label>Anggaran (Rp)</label><input type="text" name="anggaran" class="form-control uang" placeholder="0"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Sumber Dana</label><input type="text" name="sumber_dana" class="form-control" placeholder="BOS / BOP / Komite"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Status</label><select name="status" class="form-control"><?php foreach($status_opts as $sv=>$sl):?><option value="<?=$sv?>"><?=htmlspecialchars($sl)?></option><?php endforeach;?></select></div></div>
@@ -661,7 +662,7 @@ include '../templates/sidebar.php';
 </div>
 <input type="hidden" name="target" id="edit_target">
 <div class="row">
-<div class="col-md-2"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" id="edit_pj" class="form-control"></div></div>
+<div class="col-md-2"><div class="form-group"><label>Penanggung Jawab</label><select name="penanggung_jawab" id="edit_pj" class="form-control"><option value="">-- Pilih Jabatan --</option><?php foreach(getJabatanList($pdo) as $j):?><option value="<?=htmlspecialchars($j['nama_jabatan'])?>"><?=htmlspecialchars($j['nama_jabatan'])?></option><?php endforeach;?></select></div></div>
 <div class="col-md-2"><div class="form-group"><label>Anggaran (Rp)</label><input type="text" name="anggaran" id="edit_anggaran" class="form-control"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Sumber Dana</label><input type="text" name="sumber_dana" id="edit_sumber" class="form-control"></div></div>
 <div class="col-md-2"><div class="form-group"><label>Status</label><select name="status" id="edit_status" class="form-control"><?php foreach($status_opts as $sv=>$sl):?><option value="<?=$sv?>"><?=htmlspecialchars($sl)?></option><?php endforeach;?></select></div></div>

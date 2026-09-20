@@ -26,20 +26,41 @@ $guru_map = sv_guru_map($pdo);
 $mapel_guru = sv_mapel_guru($pdo);
 $kelas_guru = sv_kelas_guru($pdo);
 $program_list = sv_program_options($pdo);
+$mapel_akademik_list = [];
+try {
+    $mapel_akademik_list = $pdo->query("SELECT nama_mapel FROM tb_mata_pelajaran WHERE jenis_mapel = 'Akademik' ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_COLUMN);
+} catch (Throwable $e) { $mapel_akademik_list = array_values(array_unique(array_merge(...array_values($mapel_guru ?: [[]])))); }
+$mapel_akademik_list = array_values(array_unique(array_filter(array_map('trim', $mapel_akademik_list))));
+sort($mapel_akademik_list);
+
+$mapel_by_guru_json = json_encode($mapel_guru, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
+$kelas_by_guru_json = json_encode($kelas_guru, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     $aksi = (string)($_POST['aksi'] ?? '');
     try {
         if ($aksi === 'tambah_massal') {
-            $ids = $_POST['id_guru'] ?? [];
+            $rawIds = $_POST['id_guru'] ?? [];
+            $ids = is_array($rawIds) ? $rawIds : ($rawIds !== '' && $rawIds !== null ? [(string)$rawIds] : []);
             $id_program = (int)($_POST['id_program'] ?? 0);
             $jenis = trim((string)($_POST['jenis_supervisi'] ?? 'Akademik'));
             $ta = trim((string)($_POST['tahun_ajaran'] ?? $periode['tahun_ajaran']));
             $sem = trim((string)($_POST['semester'] ?? $periode['semester']));
             $jabatan = trim((string)($_POST['jabatan'] ?? 'Guru'));
+            $rawMp = $_POST['mapel_selected'] ?? '';
+            $rawKl = $_POST['kelas_selected'] ?? '';
+            $mapel_single = trim((string)$rawMp);
+            $kelas_single = trim((string)$rawKl);
             $inserted = 0;
 
             if (is_array($ids) && $ids) {
+                $progJenis = null;
+                if ($id_program) {
+                    try { $st = $pdo->prepare("SELECT jenis_supervisi FROM tb_sv_program WHERE id_program = ? LIMIT 1"); $st->execute([$id_program]); $progJenis = trim((string)$st->fetchColumn()); } catch (Throwable $e) {}
+                }
+                if ($progJenis !== null && $progJenis !== '' && strcasecmp($progJenis, $jenis) !== 0) {
+                    throw new RuntimeException('Program tidak sesuai dengan Jenis Supervisi.');
+                }
                 $stmt = $pdo->prepare("INSERT INTO tb_sv_sasaran
                     (id_program, id_guru, nama_guru, nip_npk, jabatan, mata_pelajaran, kelas, jenis_supervisi, tahun_ajaran, semester, status_supervisi)
                     VALUES (?,?,?,?,?,?,?,?,?,?, 'Belum Disupervisi')");
@@ -49,14 +70,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                         continue;
                     }
                     $g = $guru_map[$idGuru];
+                    $allowedMp = $mapel_guru[$idGuru] ?? [];
+                    $allowedKl = $kelas_guru[$idGuru] ?? [];
+                    $mapel_val = '';
+                    if ($mapel_single !== '') {
+                        $mapel_val = ($allowedMp && !in_array($mapel_single, $allowedMp, true)) ? implode(', ', $allowedMp) : $mapel_single;
+                    } else {
+                        $mapel_val = implode(', ', $allowedMp);
+                    }
+                    $kelas_val = '';
+                    if ($kelas_single !== '') {
+                        $kelas_val = ($allowedKl && !in_array($kelas_single, $allowedKl, true)) ? implode(', ', $allowedKl) : $kelas_single;
+                    } else {
+                        $kelas_val = implode(', ', $allowedKl);
+                    }
                     $stmt->execute([
                         $id_program ?: null,
                         $idGuru,
                         $g['nama_guru'],
                         $g['nuptk'] ?? '',
                         $jabatan,
-                        implode(', ', $mapel_guru[$idGuru] ?? []),
-                        implode(', ', $kelas_guru[$idGuru] ?? []),
+                        $mapel_val,
+                        $kelas_val,
                         $jenis,
                         $ta,
                         $sem,
@@ -68,14 +103,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             sv_flash('success', $inserted . ' sasaran supervisi berhasil ditambahkan.');
         } elseif ($aksi === 'edit') {
             $id = (int)($_POST['id_sasaran'] ?? 0);
+            $mp = trim((string)($_POST['mata_pelajaran'] ?? ''));
+            $kl = trim((string)($_POST['kelas'] ?? ''));
+            if ($mp !== '' || $kl !== '') {
+                $sid = (int)($_POST['id_sasaran'] ?? 0);
+                try {
+                    $st = $pdo->prepare("SELECT id_guru FROM tb_sv_sasaran WHERE id_sasaran = ? LIMIT 1");
+                    $st->execute([$sid]);
+                    $gid = (int)($st->fetchColumn() ?: 0);
+                    if ($gid) {
+                        if ($mp !== '') {
+                            $allow = $mapel_guru[$gid] ?? [];
+                            if ($allow && !in_array($mp, $allow, true)) {
+                                $mp = $allow[0];
+                            }
+                        }
+                        if ($kl !== '') {
+                            $allowK = $kelas_guru[$gid] ?? [];
+                            if ($allowK && !in_array($kl, $allowK, true)) {
+                                $kl = $allowK[0];
+                            }
+                        }
+                    }
+                } catch (Throwable $e) {}
+            }
             $stmt = $pdo->prepare("UPDATE tb_sv_sasaran SET id_program=?, jenis_supervisi=?, jabatan=?, mata_pelajaran=?, kelas=?,
                 tahun_ajaran=?, semester=?, status_supervisi=?, keterangan=? WHERE id_sasaran=?");
             $stmt->execute([
                 (int)($_POST['id_program'] ?? 0) ?: null,
                 trim((string)($_POST['jenis_supervisi'] ?? 'Akademik')),
                 trim((string)($_POST['jabatan'] ?? '')),
-                trim((string)($_POST['mata_pelajaran'] ?? '')),
-                trim((string)($_POST['kelas'] ?? '')),
+                $mp,
+                $kl,
                 trim((string)($_POST['tahun_ajaran'] ?? $periode['tahun_ajaran'])),
                 trim((string)($_POST['semester'] ?? $periode['semester'])),
                 trim((string)($_POST['status_supervisi'] ?? 'Belum Disupervisi')),
@@ -112,43 +171,56 @@ $flash = sv_render_flash_js();
 if ($flash !== '') {
     $js_page[] = $flash;
 }
+$js_page[] = 'var svMapelByGuru = ' . $mapel_by_guru_json . ';';
+$js_page[] = 'var svKelasByGuru = ' . $kelas_by_guru_json . ';';
 $js_page[] = <<<'JS'
 $(document).ready(function () {
     SV.initDataTable('#table-sasaran');
-    function svUpdateLabel() {
-        var n = $('.sv-guru-cb:checked').length;
-        var label = n ? n + ' guru dipilih' : 'Pilih guru...';
-        $('#sv-guru-label').text(label).toggleClass('text-muted', !n);
-        $('#sv-guru-count').text(n ? '(' + n + ' terpilih)' : '');
+    function escapeHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function svBuildAddDropdowns() {
+        var gid = $('#sv-guru-select').val();
+        var mpKeys = (svMapelByGuru[gid] || svMapelByGuru[String(gid)] || []);
+        var klKeys = (svKelasByGuru[gid] || svKelasByGuru[String(gid)] || []);
+        var $mp = $('#sv-add-mapel-select'); var prevMp = $mp.val();
+        $mp.empty();
+        if (!gid) $mp.append('<option value="">Pilih Guru dulu</option>');
+        else {
+            $mp.append('<option value="">Semua mapel guru</option>');
+            mpKeys.forEach(function(mp){ $mp.append('<option value="' + escapeHtml(mp) + '">' + escapeHtml(mp) + '</option>'); });
+            if (prevMp && (mpKeys.indexOf(prevMp) !== -1 || prevMp === '')) $mp.val(prevMp);
+        }
+        var $kl = $('#sv-add-kelas-select'); var prevKl = $kl.val();
+        $kl.empty();
+        if (!gid) $kl.append('<option value="">Pilih Guru dulu</option>');
+        else {
+            $kl.append('<option value="">Semua kelas guru</option>');
+            klKeys.forEach(function(kl){ $kl.append('<option value="' + escapeHtml(kl) + '">' + escapeHtml(kl) + '</option>'); });
+            if (prevKl && (klKeys.indexOf(prevKl) !== -1 || prevKl === '')) $kl.val(prevKl);
+        }
     }
-    $('#sv-guru-toggle').on('click', function (e) { e.stopPropagation(); $('#sv-guru-panel').toggle(); });
-    $(document).on('click', function (e) { if (!$(e.target).closest('#sv-guru-dropdown').length) { $('#sv-guru-panel').hide(); } });
-    $('#sv-guru-search').on('input', function () {
-        var q = $(this).val().toLowerCase();
-        $('.sv-guru-item').each(function () { $(this).toggle($(this).data('name').indexOf(q) !== -1); });
-    });
-    $('#sv-guru-all').on('click', function () {
-        $('.sv-guru-item:visible .sv-guru-cb').prop('checked', true);
-        svUpdateLabel();
-    });
-    $('#sv-guru-clear').on('click', function () {
-        $('.sv-guru-cb').prop('checked', false);
-        svUpdateLabel();
-    });
-    $(document).on('change', '.sv-guru-cb', svUpdateLabel);
+    function svFilterProgram() {
+        var jenis = $('#sv-jenis-select').val();
+        $('#sv-program-select option').each(function () {
+            var dj = $(this).data('jenis');
+            if (!dj) return;
+            $(this).toggle(!jenis || String(dj) === String(jenis));
+        });
+        if ($('#sv-program-select option:selected').is(':hidden')) { $('#sv-program-select').val(''); }
+    }
+    $('#sv-guru-select').on('change', function () { svBuildAddDropdowns(); });
+    $('#sv-jenis-select').on('change', function () { svFilterProgram(); });
     $('#form-sasaran-massal').on('submit', function (e) {
-        if ($('.sv-guru-cb:checked').length === 0) {
+        if (!$('#sv-guru-select').val()) {
             e.preventDefault();
-            Swal.fire({ icon: 'warning', title: 'Pilih Guru', text: 'Pilih minimal 1 guru/PTK.' });
-            $('#sv-guru-panel').show();
+            Swal.fire({ icon: 'warning', title: 'Pilih Guru', text: 'Pilih 1 guru/PTK.' });
             return false;
         }
     });
     $('#btn-tambah').on('click', function () {
         $('#form-sasaran-massal')[0].reset();
-        $('.sv-guru-cb').prop('checked', false);
-        svUpdateLabel();
-        $('#sv-guru-search').val('').trigger('input');
+        svBuildAddDropdowns();
+        $('#sv-program-select').val('');
+        svFilterProgram();
         $('#modal-sasaran .modal-title').text('Tambah Sasaran Supervisi');
         $('#modal-sasaran').modal('show');
     });
@@ -157,8 +229,20 @@ $(document).ready(function () {
         $('#form-sasaran-edit')[0].reset();
         Object.keys(d).forEach(function (k) {
             var el = $('#form-sasaran-edit [name="' + k + '"]');
-            if (el.length) { el.val(d[k]); }
+            if (el.length && k !== 'mata_pelajaran' && k !== 'kelas') { el.val(d[k]); }
         });
+        $('#sv-edit-nama-guru').val(d.nama_guru || '');
+        var tid = d.id_guru;
+        var mpOpts = tid ? (svMapelByGuru[tid] || svMapelByGuru[String(tid)] || []) : [];
+        var klOpts = tid ? (svKelasByGuru[tid] || svKelasByGuru[String(tid)] || []) : [];
+        var $em = $('#sv-edit-mapel-select'); $em.empty().append('<option value="">Semua mapel</option>');
+        mpOpts.forEach(function(mp){ $em.append('<option value="' + escapeHtml(mp) + '">' + escapeHtml(mp) + '</option>'); });
+        var curMp = String(d.mata_pelajaran || '').split(',').map(function(s){return s.trim();}).filter(Boolean)[0] || '';
+        if (curMp && mpOpts.indexOf(curMp) !== -1) $em.val(curMp);
+        var $ek = $('#sv-edit-kelas-select'); $ek.empty().append('<option value="">Semua kelas</option>');
+        klOpts.forEach(function(kl){ $ek.append('<option value="' + escapeHtml(kl) + '">' + escapeHtml(kl) + '</option>'); });
+        var curKl = String(d.kelas || '').split(',').map(function(s){return s.trim();}).filter(Boolean)[0] || '';
+        if (curKl && klOpts.indexOf(curKl) !== -1) $ek.val(curKl);
         $('#modal-sasaran-edit').modal('show');
     });
     $(document).on('click', '.btn-hapus', function () {
@@ -207,7 +291,7 @@ include '../templates/sidebar.php';
                                 <tr>
                                     <th width="5%">No</th>
                                     <th>Guru/PTK</th>
-                                    <th>NIP/NPK</th>
+                                    <th>NUPTK</th>
                                     <th>Jabatan</th>
                                     <th>Mata Pelajaran</th>
                                     <th>Kelas</th>
@@ -272,47 +356,28 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>Pilih Guru/PTK <span class="text-danger">*</span> <small class="text-muted" id="sv-guru-count"></small></label>
-                        <div class="sv-guru-dropdown position-relative" id="sv-guru-dropdown">
-                            <button type="button" class="form-control text-left d-flex justify-content-between align-items-center" id="sv-guru-toggle">
-                                <span id="sv-guru-label" class="text-muted">Pilih guru...</span>
-                                <i class="fas fa-chevron-down ml-2"></i>
-                            </button>
-                            <div class="sv-guru-panel border rounded bg-white shadow position-absolute w-100" id="sv-guru-panel" style="display:none; top:100%; left:0; z-index:1055; max-height:340px; overflow:auto;">
-                                <div class="p-2 border-bottom sticky-top bg-white" style="top:0;">
-                                    <input type="text" class="form-control form-control-sm mb-2" id="sv-guru-search" placeholder="Cari nama / NUPTK...">
-                                    <div class="d-flex">
-                                        <button type="button" class="btn btn-sm btn-outline-primary mr-2" id="sv-guru-all">Pilih Semua</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="sv-guru-clear">Batalkan Semua</button>
-                                    </div>
-                                </div>
-                                <div class="p-2" id="sv-guru-list">
-                                    <?php foreach ($guru_list as $g): ?>
-                                        <div class="custom-control custom-checkbox mb-1 sv-guru-item" data-name="<?= htmlspecialchars(strtolower($g['nama_guru'] . ' ' . ($g['nuptk'] ?? '')), ENT_QUOTES) ?>">
-                                            <input type="checkbox" class="custom-control-input sv-guru-cb" id="guru-<?= (int)$g['id_guru'] ?>" name="id_guru[]" value="<?= (int)$g['id_guru'] ?>">
-                                            <label class="custom-control-label" for="guru-<?= (int)$g['id_guru'] ?>">
-                                                <?= htmlspecialchars($g['nama_guru']) ?><?= !empty($g['nuptk']) ? ' <small class="text-muted">- ' . htmlspecialchars($g['nuptk']) . '</small>' : '' ?>
-                                            </label>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        </div>
+                        <label>Pilih Guru/PTK <span class="text-danger">*</span></label>
+                        <select class="form-control" name="id_guru" id="sv-guru-select" required>
+                            <option value="">Pilih Guru</option>
+                            <?php foreach ($guru_list as $g): ?>
+                                <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars($g['nama_guru']) ?><?= !empty($g['nuptk']) ? ' - ' . htmlspecialchars($g['nuptk']) : '' ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
-                            <label>Program Supervisi</label>
-                            <select class="form-control" name="id_program">
-                                <option value="">- Tanpa Program -</option>
-                                <?php foreach ($program_list as $p): ?>
-                                    <option value="<?= (int)$p['id_program'] ?>"><?= htmlspecialchars($p['nama_program']) ?> (<?= htmlspecialchars($p['jenis_supervisi']) ?>)</option>
-                                <?php endforeach; ?>
+                            <label>Jenis Supervisi</label>
+                            <select class="form-control" name="jenis_supervisi" id="sv-jenis-select">
+                                <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>"><?= $j ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-6">
-                            <label>Jenis Supervisi</label>
-                            <select class="form-control" name="jenis_supervisi">
-                                <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>"><?= $j ?></option><?php endforeach; ?>
+                            <label>Program Supervisi</label>
+                            <select class="form-control" name="id_program" id="sv-program-select">
+                                <option value="">- Tanpa Program -</option>
+                                <?php foreach ($program_list as $p): ?>
+                                    <option value="<?= (int)$p['id_program'] ?>" data-jenis="<?= htmlspecialchars($p['jenis_supervisi'], ENT_QUOTES) ?>"><?= htmlspecialchars($p['nama_program']) ?> (<?= htmlspecialchars($p['jenis_supervisi']) ?>)</option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
@@ -333,6 +398,22 @@ include '../templates/sidebar.php';
                     <div class="form-group">
                         <label>Jabatan</label>
                         <input type="text" class="form-control" name="jabatan" value="Guru">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Mata Pelajaran yang Disupervisi</label>
+                            <select class="form-control" name="mapel_selected" id="sv-add-mapel-select">
+                                <option value="">Pilih Guru dulu</option>
+                            </select>
+                            <small class="text-muted">Kosong = semua mapel guru terpilih.</small>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Kelas yang Disupervisi</label>
+                            <select class="form-control" name="kelas_selected" id="sv-add-kelas-select">
+                                <option value="">Pilih Guru dulu</option>
+                            </select>
+                            <small class="text-muted">Kosong = semua kelas guru terpilih.</small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -355,6 +436,7 @@ include '../templates/sidebar.php';
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
+                    <div class="form-group"><label>Nama Guru</label><input type="text" class="form-control" id="sv-edit-nama-guru" value="" readonly><small class="text-muted">Tidak dapat diubah.</small></div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label>Program Supervisi</label>
@@ -372,19 +454,17 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                     </div>
+                    <div class="form-group"><label>Jabatan</label><input type="text" class="form-control" name="jabatan"></div>
                     <div class="form-row">
-                        <div class="form-group col-md-6"><label>Jabatan</label><input type="text" class="form-control" name="jabatan"></div>
-                        <div class="form-group col-md-6"><label>Mata Pelajaran</label><input type="text" class="form-control" name="mata_pelajaran"></div>
+                        <div class="form-group col-md-6"><label>Mata Pelajaran yang Disupervisi</label><select class="form-control" name="mata_pelajaran" id="sv-edit-mapel-select"><option value="">Semua mapel</option></select></div>
+                        <div class="form-group col-md-6"><label>Kelas yang Disupervisi</label><select class="form-control" name="kelas" id="sv-edit-kelas-select"><option value="">Semua kelas</option></select></div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group col-md-6"><label>Kelas</label><input type="text" class="form-control" name="kelas"></div>
-                        <div class="form-group col-md-6">
-                            <label>Status Supervisi</label>
-                            <select class="form-control" name="status_supervisi">
-                                <option value="Belum Disupervisi">Belum Disupervisi</option>
-                                <option value="Sudah Disupervisi">Sudah Disupervisi</option>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label>Status Supervisi</label>
+                        <select class="form-control" name="status_supervisi">
+                            <option value="Belum Disupervisi">Belum Disupervisi</option>
+                            <option value="Sudah Disupervisi">Sudah Disupervisi</option>
+                        </select>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-6"><label>Tahun Ajaran</label><input type="text" class="form-control" name="tahun_ajaran"></div>
