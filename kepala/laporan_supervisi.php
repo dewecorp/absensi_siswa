@@ -140,7 +140,7 @@ try {
 } catch (Throwable $e) {}
 
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -151,8 +151,8 @@ $flash = sv_render_flash_js();
 if ($flash !== '') $js_page[] = $flash;
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    SV.autoSubmitFilters('form');
-    SV.initDataTable('#table-laporan');
+    document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
+    var dttablelaporan=$('#table-laporan').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablelaporan.on('order.dt search.dt draw.dt',function(){var info=dttablelaporan.page.info();dttablelaporan.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
 });
 JS;
 

@@ -18,7 +18,6 @@ $css_libs = [
     'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css',
 ];
 $js_libs = [
-    'assets/js/supervisi.js',
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -215,8 +214,8 @@ function svFilterModalByJenis(jenis, keepVal) {
     }
 }
 $(document).ready(function () {
-    SV.autoSubmitFilters('form');
-    SV.initDataTable('#table-jadwal');
+    document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
+    var dttablejadwal=$('#table-jadwal').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablejadwal.on('order.dt search.dt draw.dt',function(){var info=dttablejadwal.page.info();dttablejadwal.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#form-jadwal [name=jenis_supervisi]').on('change', function () {
         svFilterModalByJenis($(this).val(), false);
     });
@@ -249,10 +248,10 @@ $(document).ready(function () {
     });
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
-        SV.confirmDelete({ text: 'Jadwal supervisi akan dihapus.', onConfirm: function () { SV.submitPost('jadwal_supervisi.php', { aksi: 'hapus', id_jadwal: id }); } });
+        Swal.fire({title:'Konfirmasi Hapus',text:'Jadwal supervisi akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='jadwal_supervisi.php';var fields={aksi: 'hapus', id_jadwal: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
-    $('#btn-excel').on('click', function () { SV.exportExcel('table-jadwal', 'Jadwal Supervisi', 'jadwal_supervisi', true); });
-    $('#btn-pdf').on('click', function () { SV.printPdf('table-jadwal', 'Jadwal Supervisi', true); });
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-jadwal');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'jadwal_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='jadwal_supervisi.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=jadwal&' + q, '_blank'); });
 
     var calEl = document.getElementById('svCalendar');
     if (calEl && typeof FullCalendar !== 'undefined') {

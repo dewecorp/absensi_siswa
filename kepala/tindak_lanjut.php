@@ -15,7 +15,7 @@ $periode = sv_periode($pdo);
 
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -188,8 +188,8 @@ if ($flash !== '') {
 }
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    SV.autoSubmitFilters('form');
-    SV.initDataTable('#table-tl');
+    document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
+    var dttabletl=$('#table-tl').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttabletl.on('order.dt search.dt draw.dt',function(){var info=dttabletl.page.info();dttabletl.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#btn-tambah').on('click', function () {
         $('#form-tl')[0].reset();
         $('#form-tl [name=aksi]').val('tambah');
@@ -218,14 +218,14 @@ $(document).ready(function () {
     $('#modal-tl').on('hidden.bs.modal', function () { $('#sv-bukti-current').hide(); });
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
-        SV.confirmDelete({ text: 'Tindak lanjut dan monitoringnya akan dihapus.', onConfirm: function () { SV.submitPost('tindak_lanjut.php', { aksi: 'hapus', id_tindak_lanjut: id }); } });
+        Swal.fire({title:'Konfirmasi Hapus',text:'Tindak lanjut dan monitoringnya akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='tindak_lanjut.php';var fields={aksi: 'hapus', id_tindak_lanjut: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
     $(document).on('click', '.btn-ulang', function () {
         var id = $(this).data('id');
-        SV.confirmDelete({ title: 'Jadwalkan Supervisi Ulang', text: 'Buat jadwal supervisi ulang untuk tindak lanjut ini?', onConfirm: function () { SV.submitPost('tindak_lanjut.php', { aksi: 'jadwalkan_ulang', id_tindak_lanjut: id }); } });
+        Swal.fire({title:'Jadwalkan Supervisi Ulang',text:'Buat jadwal supervisi ulang untuk tindak lanjut ini?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='tindak_lanjut.php';var fields={aksi: 'jadwalkan_ulang', id_tindak_lanjut: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
-    $('#btn-excel').on('click', function () { SV.exportExcel('table-tl', 'Tindak Lanjut Supervisi', 'tindak_lanjut', true); });
-    $('#btn-pdf').on('click', function () { SV.printPdf('table-tl', 'Tindak Lanjut Supervisi', true); });
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-tl');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'tindak_lanjut.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='tindak_lanjut.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=tindak_lanjut&' + q, '_blank'); });
 });
 JS;
 
@@ -285,7 +285,6 @@ include '../templates/sidebar.php';
                                     <th width="5%">No</th>
                                     <th>ID Supervisi</th>
                                     <th>Guru/Unit</th>
-                                    <th>Temuan</th>
                                     <th>Rekomendasi</th>
                                     <th>Bentuk</th>
                                     <th>Rencana Tindakan</th>
@@ -311,7 +310,6 @@ include '../templates/sidebar.php';
                                         <td class="text-center"></td>
                                         <td>#<?= (int)$r['id_pelaksanaan'] ?></td>
                                         <td><?= htmlspecialchars($r['nama_guru'] ?: ($r['unit_bagian'] ?: '-')) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['temuan']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['bentuk_tindak_lanjut']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['rencana_tindakan']) ?></td>
@@ -367,7 +365,6 @@ include '../templates/sidebar.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group"><label>Temuan</label><textarea class="form-control" name="temuan" rows="2"></textarea></div>
                     <div class="form-group"><label>Rekomendasi</label><textarea class="form-control" name="rekomendasi" rows="2"></textarea></div>
                     <div class="form-row">
                         <div class="form-group col-md-6">

@@ -23,7 +23,7 @@ $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
 ];
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -129,7 +129,7 @@ $js_page[] = "var svChart = {
 };";
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    SV.autoSubmitFilters('form');
+    document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
     if (typeof Chart === 'undefined') { return; }
     var palette = ['#6777ef', '#47c363', '#ffa426', '#fc544b', '#3abaf4', '#63ed7a', '#ffc107', '#a55eea'];
 

@@ -16,7 +16,7 @@ $instrumen_templates = sv_instrumen_templates();
 
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -180,7 +180,7 @@ function svApplyInstrumenTpl(kode) {
     if (!kode || kode === '__custom__') {
         $('#kode-display').text('');
         $('#form-instrumen [name=kode_instrumen]').val('');
-        if (typeof SV !== 'undefined' && SV.autoGrowTextareas) { SV.autoGrowTextareas(); }
+        
         return;
     }
     var t = svTplByKode(kode);
@@ -190,12 +190,12 @@ function svApplyInstrumenTpl(kode) {
     $('#form-instrumen [name=tujuan]').val(t.tujuan);
     $('#form-instrumen [name=sasaran]').val(t.sasaran);
     $('#form-instrumen [name=skala_penilaian]').val(t.skala);
-    if (typeof SV !== 'undefined' && SV.autoGrowTextareas) { SV.autoGrowTextareas(); }
+    
 }
 $(document).ready(function () {
-    SV.initDataTable('#table-instrumen');
-    if (typeof SV !== 'undefined' && SV.autoGrowTextareas) { SV.autoGrowTextareas(); }
-    $('#modal-instrumen').on('shown.bs.modal', function () { if (typeof SV !== 'undefined' && SV.autoGrowTextareas) { SV.autoGrowTextareas(); } });
+    var dttableinstrumen=$('#table-instrumen').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttableinstrumen.on('order.dt search.dt draw.dt',function(){var info=dttableinstrumen.page.info();dttableinstrumen.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    
+    $('#modal-instrumen').on('shown.bs.modal', function () {  });
     $('#btn-tambah').on('click', function () {
         $('#form-instrumen')[0].reset();
         $('#form-instrumen [name=aksi]').val('tambah');
@@ -203,7 +203,7 @@ $(document).ready(function () {
         var jenis = $('#form-instrumen [name=jenis_supervisi]').val();
         svPopulateNamaInstrumen(jenis);
         $('#kode-display').text('');
-        if (typeof SV !== 'undefined' && SV.autoGrowTextareas) { SV.autoGrowTextareas(); }
+        
         $('#modal-instrumen .modal-title').text('Tambah Instrumen');
         $('#modal-instrumen').modal('show');
     });
@@ -271,23 +271,23 @@ $(document).ready(function () {
         $('#form-instrumen [name=kode_instrumen]').val(d.kode_instrumen || '');
         $('#modal-instrumen .modal-title').text('Edit Instrumen');
         $('#modal-instrumen').modal('show');
-        setTimeout(function () { if (typeof SV !== 'undefined' && SV.autoGrowTextareas) { SV.autoGrowTextareas(); } }, 120);
+        setTimeout(function () {  }, 120);
     });
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
-        SV.confirmDelete({ text: 'Instrumen beserta komponen & indikatornya akan dihapus.', onConfirm: function () { SV.submitPost('instrumen_supervisi.php', { aksi: 'hapus', id_instrumen: id }); } });
+        Swal.fire({title:'Konfirmasi Hapus',text:'Instrumen beserta komponen & indikatornya akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='instrumen_supervisi.php';var fields={aksi: 'hapus', id_instrumen: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
     $(document).on('click', '.btn-nonaktif', function () {
-        SV.submitPost('instrumen_supervisi.php', { aksi: 'nonaktif', id_instrumen: $(this).data('id') });
+        var f=document.createElement('form');f.method='POST';f.action='instrumen_supervisi.php';var fields={aksi: 'nonaktif', id_instrumen: $(this).data('id')};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit()
     });
     $(document).on('click', '.btn-aktifkan', function () {
-        SV.submitPost('instrumen_supervisi.php', { aksi: 'aktifkan', id_instrumen: $(this).data('id') });
+        var f=document.createElement('form');f.method='POST';f.action='instrumen_supervisi.php';var fields={aksi: 'aktifkan', id_instrumen: $(this).data('id')};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit()
     });
     $(document).on('click', '.btn-duplikat', function () {
-        SV.submitPost('instrumen_supervisi.php', { aksi: 'duplikat', id_instrumen: $(this).data('id') });
+        var f=document.createElement('form');f.method='POST';f.action='instrumen_supervisi.php';var fields={aksi: 'duplikat', id_instrumen: $(this).data('id')};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit()
     });
-    $('#btn-excel').on('click', function () { SV.exportExcel('table-instrumen', 'Daftar Instrumen Supervisi', 'instrumen_supervisi', true); });
-    $('#btn-pdf').on('click', function () { SV.printPdf('table-instrumen', 'Daftar Instrumen Supervisi', true); });
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-instrumen');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'instrumen_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='instrumen_supervisi.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { window.open('cetak_supervisi.php?page=instrumen', '_blank'); });
 });
 JS;
 

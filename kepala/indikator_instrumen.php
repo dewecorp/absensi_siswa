@@ -15,7 +15,7 @@ $periode = sv_periode($pdo);
 
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -152,7 +152,7 @@ if ($flash !== '') {
 }
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    SV.initDataTable('#table-indikator');
+    var dttableindikator=$('#table-indikator').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttableindikator.on('order.dt search.dt draw.dt',function(){var info=dttableindikator.page.info();dttableindikator.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#filter-instrumen').on('change', function () {
         var v = $(this).val();
         if (v) window.location.href = 'indikator_instrumen.php?id_instrumen=' + v;
@@ -193,10 +193,10 @@ $(document).ready(function () {
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
         var kid = $(this).data('kid');
-        SV.confirmDelete({ text: 'Indikator akan dihapus.', onConfirm: function () { SV.submitPost(location.href, { aksi: 'hapus', id_indikator: id, id_komponen: kid }); } });
+        Swal.fire({title:'Konfirmasi Hapus',text:'Indikator akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action=location.href;var fields={aksi: 'hapus', id_indikator: id, id_komponen: kid};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
-    $('#btn-excel').on('click', function () { SV.exportExcel('table-indikator', 'Indikator Penilaian', 'indikator_instrumen', true); });
-    $('#btn-pdf').on('click', function () { SV.printPdf('table-indikator', 'Indikator Penilaian', true); });
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-indikator');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'indikator_instrumen.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='indikator_instrumen.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { var ki = $('#filter-komponen').val() || ''; var ii = $('#filter-instrumen').val() || ''; window.open('cetak_supervisi.php?page=indikator' + (ki ? '&id_komponen=' + encodeURIComponent(ki) : (ii ? '&id_instrumen=' + encodeURIComponent(ii) : '')), '_blank'); });
 });
 JS;
 

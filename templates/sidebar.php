@@ -277,7 +277,6 @@ switch ($user_level) {
     case 'admin':
         $supervisi_submenu_admin = [
             ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php?session_type=admin', 'active' => $current_page === 'dashboard_supervisi.php'],
-            ['title' => 'Data Program Supervisi', 'url' => '../kepala/data_program_supervisi.php?session_type=admin', 'active' => $current_page === 'data_program_supervisi.php'],
             ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php?session_type=admin', 'active' => $current_page === 'program_supervisi.php'],
             ['title' => 'Sasaran Supervisi', 'url' => '../kepala/sasaran_supervisi.php?session_type=admin', 'active' => $current_page === 'sasaran_supervisi.php'],
             ['title' => 'Jadwal Supervisi', 'url' => '../kepala/jadwal_supervisi.php?session_type=admin', 'active' => $current_page === 'jadwal_supervisi.php'],
@@ -293,6 +292,7 @@ switch ($user_level) {
             ['title' => 'Rekapitulasi Supervisi', 'url' => '../kepala/rekapitulasi_supervisi.php?session_type=admin', 'active' => $current_page === 'rekapitulasi_supervisi.php'],
             ['title' => 'Laporan Supervisi', 'url' => '../kepala/laporan_supervisi.php?session_type=admin', 'active' => $current_page === 'laporan_supervisi.php'],
             ['title' => 'Arsip/Bukti Supervisi', 'url' => '../kepala/arsip_supervisi.php?session_type=admin', 'active' => $current_page === 'arsip_supervisi.php'],
+            ['title' => 'Master Supervisi', 'url' => '../admin/master_supervisi.php', 'active' => $current_page === 'master_supervisi.php'],
         ];
         $absensi_submenu_admin = [
             ['title' => 'Scan Kehadiran', 'url' => '../admin/scan_qr.php', 'active' => $current_page === 'scan_qr.php'],
@@ -442,7 +442,7 @@ switch ($user_level) {
                 'title' => 'Supervisi',
                 'icon' => 'fas fa-clipboard-check',
                 'submenu' => $supervisi_submenu_admin,
-                'active' => in_array($current_page, ['dashboard_supervisi.php', 'data_program_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php'])
+                'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php', 'master_supervisi.php'])
             ],
             [
                 'title' => 'Program Kerja',
@@ -596,7 +596,6 @@ switch ($user_level) {
                 'icon' => 'fas fa-clipboard-check',
                 'submenu' => [
                     ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php', 'active' => $current_page === 'dashboard_supervisi.php'],
-                    ['title' => 'Data Program Supervisi', 'url' => '../kepala/data_program_supervisi.php', 'active' => $current_page === 'data_program_supervisi.php'],
                     ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php', 'active' => $current_page === 'program_supervisi.php'],
                     ['title' => 'Sasaran Supervisi', 'url' => '../kepala/sasaran_supervisi.php', 'active' => $current_page === 'sasaran_supervisi.php'],
                     ['title' => 'Jadwal Supervisi', 'url' => '../kepala/jadwal_supervisi.php', 'active' => $current_page === 'jadwal_supervisi.php'],

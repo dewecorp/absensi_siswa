@@ -44,7 +44,7 @@ if (!$is_manajerial) {
 }
 
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
 $js_page = [];
@@ -135,7 +135,6 @@ include '../templates/sidebar.php';
                         <div class="card-body">
                             <p><strong>Kekuatan:</strong><br><?= nl2br(htmlspecialchars((string)$data['kekuatan'])) ?: '-' ?></p>
                             <p><strong>Kelemahan:</strong><br><?= nl2br(htmlspecialchars((string)$data['kelemahan'])) ?: '-' ?></p>
-                            <p><strong>Temuan:</strong><br><?= nl2br(htmlspecialchars((string)$data['temuan'])) ?: '-' ?></p>
                             <p><strong>Rekomendasi:</strong><br><?= nl2br(htmlspecialchars((string)$data['rekomendasi'])) ?: '-' ?></p>
                             <p class="mb-0"><strong>Prioritas Perbaikan:</strong> <?= htmlspecialchars((string)$data['prioritas_perbaikan']) ?: '-' ?></p>
                         </div>

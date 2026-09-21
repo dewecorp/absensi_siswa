@@ -418,6 +418,17 @@ if (!function_exists('sv_ensure_schema')) {
             INDEX idx_sv_monitoring_tl (id_tindak_lanjut)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
+        $sql['tb_sv_hasil_master'] = "CREATE TABLE IF NOT EXISTS tb_sv_hasil_master (
+            id_master INT AUTO_INCREMENT PRIMARY KEY,
+            kategori VARCHAR(30) NOT NULL,
+            teks TEXT NOT NULL,
+            urutan INT NOT NULL DEFAULT 0,
+            is_aktif TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_sv_hasil_kategori (kategori)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
         $sql['tb_sv_arsip'] = "CREATE TABLE IF NOT EXISTS tb_sv_arsip (
             id_arsip INT AUTO_INCREMENT PRIMARY KEY,
             id_pelaksanaan INT NULL,
@@ -527,6 +538,15 @@ if (!function_exists('sv_ensure_schema')) {
             }
         } catch (Throwable $e) {
             error_log("Supervisi migrate program target TEXT: " . $e->getMessage());
+        }
+        try {
+            if (dbTableExists($pdo, 'tb_sv_hasil_master')) {
+                $cnt = (int)$pdo->query("SELECT COUNT(*) FROM tb_sv_hasil_master")->fetchColumn();
+                if ($cnt === 0) {
+                    sv_seed_hasil_master($pdo);
+                }
+            }
+        } catch (Throwable $e) {
         }
     }
 }
@@ -2780,9 +2800,6 @@ if (!function_exists('sv_laporan_data')) {
 }
 
 if (!function_exists('sv_filter_where')) {
-    /**
-     * Bangun klausa WHERE sederhana dari filter aman (whitelist kolom).
-     */
     function sv_filter_where(array $filters, array $allowed): array
     {
         $where = [];
@@ -2799,5 +2816,97 @@ if (!function_exists('sv_filter_where')) {
             $params[] = $val;
         }
         return [$where ? (' WHERE ' . implode(' AND ', $where)) : '', $params];
+    }
+}
+
+if (!function_exists('sv_hasil_kategori_list')) {
+    function sv_hasil_kategori_list(): array
+    {
+        return ['kekuatan' => 'Kekuatan', 'kelemahan' => 'Kelemahan', 'rekomendasi' => 'Rekomendasi', 'prioritas' => 'Prioritas Perbaikan'];
+    }
+}
+
+if (!function_exists('sv_seed_hasil_master')) {
+    function sv_seed_hasil_master(PDO $pdo): void
+    {
+        $data = [
+            'kekuatan' => [
+                'Penguasaan materi pembelajaran sangat baik dan sistematis',
+                'Pengelolaan kelas efektif, kondusif dan menyenangkan',
+                'Penggunaan media pembelajaran variatif dan relevan',
+                'Interaksi dengan peserta didik sangat baik dan komunikatif',
+                'Perencanaan pembelajaran lengkap dan sesuai tujuan',
+                'Motivasi dan apersepsi dilakukan dengan baik',
+                'Asesmen dilaksanakan sesuai tujuan pembelajaran',
+                'Integrasi nilai karakter dan KBC berjalan baik',
+            ],
+            'kelemahan' => [
+                'Pemanfaatan media pembelajaran masih terbatas',
+                'Pengelolaan waktu pembelajaran belum optimal',
+                'Apersepsi kurang mengaitkan materi sebelumnya',
+                'Variasi metode pembelajaran masih minim',
+                'Asesmen belum mencakup sikap, pengetahuan dan keterampilan',
+                'Umpan balik terhadap hasil belajar belum maksimal',
+                'Pengelolaan kelas perlu ditingkatkan',
+                'Dokumentasi pembelajaran belum tertib',
+            ],
+            'rekomendasi' => [
+                'Tingkatkan variasi metode pembelajaran yang aktif dan menyenangkan',
+                'Optimalkan penggunaan media berbasis teknologi',
+                'Lakukan refleksi pembelajaran secara rutin bersama peserta didik',
+                'Ikuti workshop dan pendampingan peningkatan kompetensi',
+                'Susun asesmen yang bervariasi sesuai karakteristik peserta didik',
+                'Tingkatkan pengelolaan waktu dan pengelolaan kelas',
+                'Perkuat integrasi penguatan karakter dan KBC',
+                'Lengkapi dan tertibkan dokumentasi pembelajaran',
+            ],
+            'prioritas' => [
+                'Perbaikan RPP / Modul Ajar',
+                'Penguatan Pengelolaan Kelas',
+                'Peningkatan Asesmen Pembelajaran',
+                'Pengembangan Media Pembelajaran',
+                'Penguatan Karakter Peserta Didik',
+                'Integrasi Kurikulum Berbasis Cinta (KBC)',
+                'Optimalisasi Waktu Pembelajaran',
+                'Pendampingan dan Pembinaan Berkelanjutan',
+            ],
+        ];
+        foreach ($data as $kategori => $list) {
+            $urut = 1;
+            foreach ($list as $teks) {
+                try {
+                    $chk = $pdo->prepare("SELECT id_master FROM tb_sv_hasil_master WHERE kategori = ? AND teks = ? LIMIT 1");
+                    $chk->execute([$kategori, $teks]);
+                    if ($chk->fetch()) continue;
+                    $ins = $pdo->prepare("INSERT INTO tb_sv_hasil_master (kategori, teks, urutan, is_aktif) VALUES (?,?,?,1)");
+                    $ins->execute([$kategori, $teks, $urut]);
+                } catch (Throwable $e) {}
+                $urut++;
+            }
+        }
+    }
+}
+
+if (!function_exists('sv_hasil_options')) {
+    function sv_hasil_options(PDO $pdo, string $kategori): array
+    {
+        try {
+            $stmt = $pdo->prepare("SELECT teks FROM tb_sv_hasil_master WHERE kategori = ? AND is_aktif = 1 ORDER BY urutan ASC, teks ASC");
+            $stmt->execute([$kategori]);
+            return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+}
+
+if (!function_exists('sv_hasil_master_rows')) {
+    function sv_hasil_master_rows(PDO $pdo): array
+    {
+        try {
+            return $pdo->query("SELECT * FROM tb_sv_hasil_master ORDER BY kategori ASC, urutan ASC, teks ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
     }
 }

@@ -14,7 +14,7 @@ $periode = sv_periode($pdo);
 
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -184,10 +184,10 @@ ksort($kelompok);
 $js_page = [];
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    SV.autoSubmitFilters('form');
-    SV.initDataTable('#table-rekap');
-    $('#btn-excel').on('click', function () { SV.exportExcel('table-rekap', 'Rekapitulasi Supervisi', 'rekapitulasi_supervisi', true); });
-    $('#btn-pdf').on('click', function () { SV.printPdf('table-rekap', 'Rekapitulasi Supervisi', true); });
+    document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
+    var dttablerekap=$('#table-rekap').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablerekap.on('order.dt search.dt draw.dt',function(){var info=dttablerekap.page.info();dttablerekap.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-rekap');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'rekapitulasi_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='rekapitulasi_supervisi.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=rekapitulasi&' + q, '_blank'); });
 });
 JS;
 

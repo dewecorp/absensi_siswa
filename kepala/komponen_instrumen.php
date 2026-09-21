@@ -15,7 +15,7 @@ $periode = sv_periode($pdo);
 
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -108,7 +108,7 @@ if ($flash !== '') {
 }
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    SV.initDataTable('#table-komponen');
+    var dttablekomponen=$('#table-komponen').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablekomponen.on('order.dt search.dt draw.dt',function(){var info=dttablekomponen.page.info();dttablekomponen.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#filter-instrumen').on('change', function () {
         var v = $(this).val();
         if (v) { window.location.href = 'komponen_instrumen.php?id_instrumen=' + v; }
@@ -138,10 +138,10 @@ $(document).ready(function () {
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
         var iid = $(this).data('iid');
-        SV.confirmDelete({ text: 'Komponen dan indikator di dalamnya akan dihapus.', onConfirm: function () { SV.submitPost(location.href, { aksi: 'hapus', id_komponen: id, id_instrumen: iid }); } });
+        Swal.fire({title:'Konfirmasi Hapus',text:'Komponen dan indikator di dalamnya akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action=location.href;var fields={aksi: 'hapus', id_komponen: id, id_instrumen: iid};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
-    $('#btn-excel').on('click', function () { SV.exportExcel('table-komponen', 'Komponen Instrumen', 'komponen_instrumen', false); });
-    $('#btn-pdf').on('click', function () { SV.printPdf('table-komponen', 'Komponen Instrumen', false); });
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-komponen');if(!table) return;if(typeof XLSX!=='undefined'){var wb=XLSX.utils.table_to_book(table,{sheet:"Sheet1"});XLSX.writeFile(wb,'komponen_instrumen.xlsx');}else{var html='<table border="1">'+table.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='komponen_instrumen.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { var v = $('#filter-instrumen').val() || ''; window.open('cetak_supervisi.php?page=komponen' + (v ? '&id_instrumen=' + encodeURIComponent(v) : ''), '_blank'); });
 });
 JS;
 

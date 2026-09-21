@@ -26,7 +26,7 @@ $periode = sv_periode($pdo);
 
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -97,6 +97,11 @@ foreach ($instrumen_list as $ins) {
         'komponen' => $komponenRows,
     ];
 }
+
+$kekuatan_list = sv_hasil_options($pdo, 'kekuatan');
+$kelemahan_list = sv_hasil_options($pdo, 'kelemahan');
+$rekomendasi_list = sv_hasil_options($pdo, 'rekomendasi');
+$prioritas_list = sv_hasil_options($pdo, 'prioritas');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     $aksi = (string)($_POST['aksi'] ?? '');
@@ -192,6 +197,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $predikat = sv_predikat($nilai);
             }
 
+            $kekuatan_val = trim((string)($_POST['kekuatan'] ?? ''));
+            if ($kekuatan_val === '__manual__') $kekuatan_val = trim((string)($_POST['kekuatan_manual'] ?? ''));
+            $kelemahan_val = trim((string)($_POST['kelemahan'] ?? ''));
+            if ($kelemahan_val === '__manual__') $kelemahan_val = trim((string)($_POST['kelemahan_manual'] ?? ''));
+            $rekomendasi_val = trim((string)($_POST['rekomendasi'] ?? ''));
+            if ($rekomendasi_val === '__manual__') $rekomendasi_val = trim((string)($_POST['rekomendasi_manual'] ?? ''));
+            $prioritas_val = trim((string)($_POST['prioritas_perbaikan'] ?? ''));
+            if ($prioritas_val === '__manual__') $prioritas_val = trim((string)($_POST['prioritas_perbaikan_manual'] ?? ''));
             $data = [
                 (int)($_POST['id_jadwal'] ?? 0) ?: null,
                 (int)($_POST['id_program'] ?? 0) ?: null,
@@ -206,11 +219,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $supervisor,
                 $nilai,
                 $predikat,
-                trim((string)($_POST['kekuatan'] ?? '')),
-                trim((string)($_POST['kelemahan'] ?? '')),
+                $kekuatan_val,
+                $kelemahan_val,
                 trim((string)($_POST['temuan'] ?? '')),
-                trim((string)($_POST['rekomendasi'] ?? '')),
-                trim((string)($_POST['prioritas_perbaikan'] ?? '')),
+                $rekomendasi_val,
+                $prioritas_val,
                 $status,
                 trim((string)($_POST['keterangan'] ?? '')),
             ];
@@ -346,6 +359,7 @@ if ($flash !== '') {
     $js_page[] = $flash;
 }
 $initial_id_jadwal = (int)($_GET['id_jadwal'] ?? 0);
+$js_page[] = 'var svMasterKekuatan=' . json_encode($kekuatan_list) . ';var svMasterKelemahan=' . json_encode($kelemahan_list) . ';var svMasterRekomendasi=' . json_encode($rekomendasi_list) . ';var svMasterPrioritas=' . json_encode($prioritas_list) . ';';
 $js_page[] = 'var svInstrumenData = ' . json_encode($instrumen_data) . ';';
 $js_page[] = 'var svIsManajerial = ' . ($is_manajerial ? 'true' : 'false') . ';';
 $js_page[] = 'var svMapelByGuru = ' . $mapel_by_guru_json . ';';
@@ -463,8 +477,8 @@ function svHitungNilai() {
 }
 
 $(document).ready(function () {
-    SV.autoSubmitFilters('form');
-    SV.initDataTable('#table-pelaksanaan');
+    document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
+    var dttablepelaksanaan=$('#table-pelaksanaan').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablepelaksanaan.on('order.dt search.dt draw.dt',function(){var info=dttablepelaksanaan.page.info();dttablepelaksanaan.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     var programJenis = {};
     $('#sv-program-select option').each(function () { var v = $(this).val(); if (v) programJenis[v] = $(this).data('jenis'); });
     var instrumenJenis = {};
@@ -492,6 +506,8 @@ $(document).ready(function () {
     $('#form-pelaksanaan [name=id_jadwal]').on('change', function () {
         svApplyJadwal($(this).val(), false);
     });
+    function svBindMaster(name){var s=$('#form-pelaksanaan [name='+name+']'),m=$('#'+name+'-manual');if(name==='prioritas_perbaikan') m=$('#prioritas-manual');s.on('change',function(){if($(this).val()==='__manual__'){m.removeClass('d-none').focus();}else{m.addClass('d-none');}});m.on('input',function(){var v=$(this).val();s.find('option.sv-manual-opt').remove();if(v) s.append('<option class="sv-manual-opt" value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>');});}
+    svBindMaster('kekuatan');svBindMaster('kelemahan');svBindMaster('rekomendasi');svBindMaster('prioritas_perbaikan');
     $('#form-pelaksanaan [name=id_instrumen]').on('change', svRenderPenilaian);
     $(document).on('input', '.sv-skor', svHitungNilai);
 
@@ -546,7 +562,10 @@ $(document).ready(function () {
         $('#form-pelaksanaan [name=aksi]').val('simpan');
         Object.keys(d).forEach(function (k) {
             var el = $('#form-pelaksanaan [name="' + k + '"]');
-            if (el.length) { el.val(d[k]); }
+            if (el.length) {
+                if(['kekuatan','kelemahan','rekomendasi','prioritas_perbaikan'].indexOf(k)!==-1 && d[k]) svEnsurePelaksanaanOption(k, d[k], d[k]);
+                el.val(d[k]);
+            }
         });
         if (!svIsManajerial) {
             svPopulateMapel(d.id_guru || $('#sv-guru-select').val(), false);
@@ -559,10 +578,10 @@ $(document).ready(function () {
 
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
-        SV.confirmDelete({ text: 'Data pelaksanaan supervisi akan dihapus.', onConfirm: function () { SV.submitPost(location.href, { aksi: 'hapus', id_pelaksanaan: id }); } });
+        Swal.fire({title:'Konfirmasi Hapus',text:'Data pelaksanaan supervisi akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action=location.href;var fields={aksi: 'hapus', id_pelaksanaan: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
-    $('#btn-excel').on('click', function () { SV.exportExcel('table-pelaksanaan', 'Supervisi <?= $sv_jenis ?>', 'supervisi_<?= strtolower($sv_jenis) ?>', true); });
-    $('#btn-pdf').on('click', function () { SV.printPdf('table-pelaksanaan', 'Supervisi <?= $sv_jenis ?>', true); });
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-pelaksanaan');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'supervisi_<?= strtolower($sv_jenis) ?>.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='supervisi_<?= strtolower($sv_jenis) ?>.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=pelaksanaan&sv_jenis=<?= urlencode($sv_jenis) ?>&' + q, '_blank'); });
 
     if (svIsManajerial) {
         $('#btn-tambah-detail').on('click', function () {
@@ -654,7 +673,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <style>#table-pelaksanaan{font-size:13px}#table-pelaksanaan th{font-size:13px;white-space:nowrap}#table-pelaksanaan td{vertical-align:middle}#table-pelaksanaan th:last-child,#table-pelaksanaan td:last-child{white-space:nowrap;text-align:center;min-width:92px}#table-pelaksanaan td:last-child .btn{margin:1px}</style>
+                    <style>#table-pelaksanaan{font-size:13px}#table-pelaksanaan th{font-size:13px;white-space:nowrap}#table-pelaksanaan td{vertical-align:middle}#table-pelaksanaan th:last-child,#table-pelaksanaan td:last-child{white-space:nowrap;text-align:center;min-width:120px}#table-pelaksanaan td:last-child .btn{margin:2px;display:inline-block;vertical-align:middle}</style>
                     <div class="table-responsive">
                         <table class="table table-striped" id="table-pelaksanaan">
                             <thead>
@@ -812,10 +831,10 @@ include '../templates/sidebar.php';
 
                     <hr>
                     <div class="form-row">
-                        <div class="form-group col-md-6"><label>Kekuatan</label><textarea class="form-control" name="kekuatan" rows="2"></textarea></div>
-                        <div class="form-group col-md-6"><label>Kelemahan</label><textarea class="form-control" name="kelemahan" rows="2"></textarea></div>
-                        <div class="form-group col-md-12"><label>Rekomendasi</label><textarea class="form-control" name="rekomendasi" rows="2"></textarea></div>
-                        <div class="form-group col-md-6"><label>Prioritas Perbaikan</label><input type="text" class="form-control" name="prioritas_perbaikan"></div>
+                        <div class="form-group col-md-6"><label>Kekuatan</label><select class="form-control" name="kekuatan"><option value="">-- Pilih Kekuatan --</option><?php foreach ($kekuatan_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="kekuatan_manual" id="kekuatan-manual" placeholder="Isi kekuatan manual"></div>
+                        <div class="form-group col-md-6"><label>Kelemahan</label><select class="form-control" name="kelemahan"><option value="">-- Pilih Kelemahan --</option><?php foreach ($kelemahan_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="kelemahan_manual" id="kelemahan-manual" placeholder="Isi kelemahan manual"></div>
+                        <div class="form-group col-md-12"><label>Rekomendasi</label><select class="form-control" name="rekomendasi"><option value="">-- Pilih Rekomendasi --</option><?php foreach ($rekomendasi_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="rekomendasi_manual" id="rekomendasi-manual" placeholder="Isi rekomendasi manual"></div>
+                        <div class="form-group col-md-6"><label>Prioritas Perbaikan</label><select class="form-control" name="prioritas_perbaikan"><option value="">-- Pilih Prioritas --</option><?php foreach ($prioritas_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="prioritas_perbaikan_manual" id="prioritas-manual" placeholder="Isi prioritas manual"></div>
                         <div class="form-group col-md-6"><label>Keterangan</label><input type="text" class="form-control" name="keterangan"></div>
                     </div>
                 </div>

@@ -15,7 +15,7 @@ $periode = sv_periode($pdo);
 
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = [
-    'assets/js/supervisi.js',
+
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -37,13 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             $id_guru = null;
             $nama_guru = '';
             $unit_bagian = '';
-            $temuan_awal = '';
             foreach ($tl_list as $tl) {
                 if ((int)$tl['id_tindak_lanjut'] === $id_tl) {
                     $id_guru = (int)$tl['id_guru'] ?: null;
                     $nama_guru = (string)$tl['nama_guru'];
                     $unit_bagian = (string)$tl['unit_bagian'];
-                    $temuan_awal = (string)$tl['temuan'];
                     break;
                 }
             }
@@ -52,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $id_guru,
                 $nama_guru,
                 $unit_bagian,
-                trim((string)($_POST['temuan_awal'] ?? $temuan_awal)),
+                '',
                 trim((string)($_POST['tindakan'] ?? '')),
                 trim((string)($_POST['target_perbaikan'] ?? '')),
                 trim((string)($_POST['tanggal_monitoring'] ?? '')) ?: null,
@@ -133,7 +131,7 @@ if ($flash !== '') {
 }
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    SV.initDataTable('#table-monitoring');
+    var dttablemonitoring=$('#table-monitoring').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablemonitoring.on('order.dt search.dt draw.dt',function(){var info=dttablemonitoring.page.info();dttablemonitoring.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#btn-tambah').on('click', function () {
         $('#form-monitoring')[0].reset();
         $('#form-monitoring [name=aksi]').val('tambah');
@@ -154,14 +152,14 @@ $(document).ready(function () {
     });
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
-        SV.confirmDelete({ text: 'Data monitoring akan dihapus.', onConfirm: function () { SV.submitPost('monitoring_tindak_lanjut.php', { aksi: 'hapus', id_monitoring: id }); } });
+        Swal.fire({title:'Konfirmasi Hapus',text:'Data monitoring akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='monitoring_tindak_lanjut.php';var fields={aksi: 'hapus', id_monitoring: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
     $(document).on('click', '.btn-ulang', function () {
         var id = $(this).data('id');
-        SV.confirmDelete({ title: 'Jadwalkan Supervisi Ulang', text: 'Buat jadwal supervisi ulang untuk tindak lanjut ini?', onConfirm: function () { SV.submitPost('monitoring_tindak_lanjut.php', { aksi: 'supervisi_ulang', id_tindak_lanjut: id }); } });
+        Swal.fire({title:'Jadwalkan Supervisi Ulang',text:'Buat jadwal supervisi ulang untuk tindak lanjut ini?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='monitoring_tindak_lanjut.php';var fields={aksi: 'supervisi_ulang', id_tindak_lanjut: id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}})
     });
-    $('#btn-excel').on('click', function () { SV.exportExcel('table-monitoring', 'Monitoring Tindak Lanjut', 'monitoring_tindak_lanjut', true); });
-    $('#btn-pdf').on('click', function () { SV.printPdf('table-monitoring', 'Monitoring Tindak Lanjut', true); });
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-monitoring');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'monitoring_tindak_lanjut.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='monitoring_tindak_lanjut.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { window.open('cetak_supervisi.php?page=monitoring', '_blank'); });
 });
 JS;
 
@@ -203,7 +201,6 @@ include '../templates/sidebar.php';
                                     <th width="5%">No</th>
                                     <th>Tindak Lanjut</th>
                                     <th>Guru/Unit</th>
-                                    <th>Temuan Awal</th>
                                     <th>Tindakan</th>
                                     <th>Target Perbaikan</th>
                                     <th>Tanggal</th>
@@ -224,7 +221,6 @@ include '../templates/sidebar.php';
                                         <td class="text-center"></td>
                                         <td>#<?= (int)$r['id_tindak_lanjut'] ?> - <?= htmlspecialchars((string)$r['bentuk_tindak_lanjut']) ?></td>
                                         <td><?= htmlspecialchars($r['nama_guru'] ?: ($r['unit_bagian'] ?: '-')) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['temuan_awal']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['tindakan']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['target_perbaikan']) ?></td>
                                         <td><?= $r['tanggal_monitoring'] ? date('d/m/Y', strtotime($r['tanggal_monitoring'])) : '-' ?></td>
@@ -277,7 +273,6 @@ include '../templates/sidebar.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group"><label>Temuan Awal</label><textarea class="form-control" name="temuan_awal" rows="2"></textarea></div>
                     <div class="form-group"><label>Tindakan</label><textarea class="form-control" name="tindakan" rows="2"></textarea></div>
                     <div class="form-group"><label>Target Perbaikan</label><input type="text" class="form-control" name="target_perbaikan"></div>
                     <div class="form-row">
