@@ -430,6 +430,12 @@ if (!function_exists('sv_ensure_schema')) {
             INDEX idx_sv_hasil_kategori (kategori)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
+        $sql['tb_sv_pengaturan'] = "CREATE TABLE IF NOT EXISTS tb_sv_pengaturan (
+            kunci VARCHAR(80) PRIMARY KEY,
+            nilai TEXT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
         $sql['tb_sv_arsip'] = "CREATE TABLE IF NOT EXISTS tb_sv_arsip (
             id_arsip INT AUTO_INCREMENT PRIMARY KEY,
             id_pelaksanaan INT NULL,
@@ -2910,5 +2916,46 @@ if (!function_exists('sv_hasil_master_rows')) {
         } catch (Throwable $e) {
             return [];
         }
+    }
+}
+
+if (!function_exists('sv_pengaturan_get')) {
+    function sv_pengaturan_get(PDO $pdo, string $kunci, ?string $default = null): ?string
+    {
+        try {
+            $stmt = $pdo->prepare("SELECT nilai FROM tb_sv_pengaturan WHERE kunci = ? LIMIT 1");
+            $stmt->execute([$kunci]);
+            $val = $stmt->fetchColumn();
+            if ($val === false) return $default;
+            $val = trim((string)$val);
+            return $val !== '' ? $val : $default;
+        } catch (Throwable $e) {
+            return $default;
+        }
+    }
+}
+
+if (!function_exists('sv_pengaturan_set')) {
+    function sv_pengaturan_set(PDO $pdo, string $kunci, string $nilai): void
+    {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO tb_sv_pengaturan (kunci, nilai) VALUES (?,?) ON DUPLICATE KEY UPDATE nilai = VALUES(nilai)");
+            $stmt->execute([$kunci, $nilai]);
+        } catch (Throwable $e) {
+        }
+    }
+}
+
+if (!function_exists('sv_tanggal_cetak')) {
+    function sv_tanggal_cetak(PDO $pdo, string $jenis = 'detail'): string
+    {
+        $map = ['detail' => 'tanggal_cetak_detail', 'hasil' => 'tanggal_cetak_hasil'];
+        $kunci = $map[$jenis] ?? 'tanggal_cetak_detail';
+        $val = sv_pengaturan_get($pdo, $kunci, '');
+        $val = trim((string)$val);
+        if ($val !== '' && strtotime($val) !== false) {
+            return date('Y-m-d', strtotime($val));
+        }
+        return date('Y-m-d');
     }
 }

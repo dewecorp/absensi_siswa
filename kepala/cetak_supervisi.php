@@ -204,13 +204,13 @@ try {
             if ($filter_status !== '') { $where[] = 'p.status = ?'; $params[] = $filter_status; }
             if ($filter_guru !== '') { $where[] = 'p.id_guru = ?'; $params[] = (int)$filter_guru; }
             $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
-            $headers = ['Guru/Unit', 'Mata Pelajaran', 'Jenis', 'Tanggal', 'Supervisor', 'Nilai', 'Predikat', 'Kekuatan', 'Kelemahan', 'Rekomendasi', 'Prioritas', 'Keterangan'];
+            $headers = ['Guru', 'Mapel yang Disupervisi', 'Jenis', 'Tanggal', 'Supervisor', 'Nilai', 'Predikat', 'Kekuatan', 'Kelemahan', 'Rekomendasi', 'Prioritas', 'Keterangan'];
             $stmt = $pdo->prepare("SELECT p.*, i.nama_instrumen FROM tb_sv_pelaksanaan p
                 LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen {$whereSql}
                 ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC");
             $stmt->execute($params);
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                $nama = $r['jenis_supervisi'] === 'Manajerial' ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-');
+                $nama = $r['nama_guru'] ?: '-';
                 $body[] = [
                     h($nama), h($r['mapel_di_supervisi']), h($r['jenis_supervisi']),
                     $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-',
@@ -236,7 +236,7 @@ try {
             if ($filter_status !== '') { $where[] = 'p.status = ?'; $params[] = $filter_status; }
             if ($filter_guru !== '') { $where[] = 'p.id_guru = ?'; $params[] = (int)$filter_guru; }
             $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
-            $headers = ['Guru/Unit', 'Mata Pelajaran', 'Program', 'Tanggal', 'Supervisor', 'Instrumen', 'Nilai', 'Predikat', 'Rekomendasi', 'Status'];
+            $headers = ['Guru/Unit', 'Mapel yang Disupervisi', 'Program', 'Tanggal', 'Supervisor', 'Instrumen', 'Nilai', 'Predikat', 'Rekomendasi', 'Status'];
             $stmt = $pdo->prepare("SELECT p.*, pr.nama_program, i.nama_instrumen FROM tb_sv_pelaksanaan p
                 LEFT JOIN tb_sv_program pr ON pr.id_program = p.id_program
                 LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen
@@ -333,7 +333,7 @@ $total_cols = count($headers) + 1;
 <style>
 @page { size: 330mm 215mm; margin: 8mm 10mm; } /* F4 Landscape */
 @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none !important; } }
-body { font-family: Arial, sans-serif; font-size: 9px; margin: 15px; }
+body { font-family: Arial, sans-serif; font-size: 10pt; margin: 15px; line-height: 1.45; }
 .header { display: flex; align-items: center; justify-content: center; position: relative; padding-bottom: 6px; border-bottom: 2px solid #000; margin-bottom: 12px; }
 .header img { position: absolute; left: 0; top: 0; height: 60px; }
 .header-text { text-align: center; width: 100%; }
@@ -343,7 +343,7 @@ body { font-family: Arial, sans-serif; font-size: 9px; margin: 15px; }
 .title { text-align: center; font-weight: bold; font-size: 13px; text-decoration: underline; margin: 8px 0 4px; }
 .subtitle { text-align: center; margin: 0 0 8px; }
 table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-th, td { border: 1px solid #000; padding: 3px 4px; vertical-align: top; font-size: 8px; }
+th, td { border: 1px solid #000; padding: 3px 4px; vertical-align: top; font-size: 9pt; }
 th { background: #f0f0f0; text-align: center; font-weight: bold; }
 .text-center { text-align: center; }
 .bold { font-weight: bold; }

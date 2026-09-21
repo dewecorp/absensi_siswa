@@ -39,10 +39,13 @@ $program_list = array_values(array_filter($program_all_raw, function ($p) use ($
 }));
 $jadwal_list = [];
 try {
-    $stmt = $pdo->prepare("SELECT id_jadwal, id_guru, id_program, id_instrumen, nama_guru, jenis_supervisi, tanggal FROM tb_sv_jadwal WHERE jenis_supervisi = ? ORDER BY tanggal DESC LIMIT 200");
+    $stmt = $pdo->prepare("SELECT id_jadwal, id_guru, id_program, id_instrumen, nama_guru, jenis_supervisi, tanggal, fokus FROM tb_sv_jadwal WHERE jenis_supervisi = ? ORDER BY tanggal DESC LIMIT 200");
     $stmt->execute([$sv_jenis]);
     $jadwal_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
+}
+if (!$jadwal_list) {
+    try { $jadwal_list = $pdo->query("SELECT id_jadwal, id_guru, id_program, id_instrumen, nama_guru, jenis_supervisi, tanggal, fokus FROM tb_sv_jadwal ORDER BY tanggal DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC); } catch (Throwable $e) {}
 }
 $jadwal_json = json_encode($jadwal_list, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
 
@@ -237,6 +240,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $fokus_val = implode(', ', array_unique($fokusRaw));
             } else {
                 $fokus_val = trim((string)$fokusRaw);
+            }
+            if ($fokus_val === '' && !empty($_POST['id_jadwal'])) {
+                try { $stFj = $pdo->prepare("SELECT fokus FROM tb_sv_jadwal WHERE id_jadwal = ? LIMIT 1"); $stFj->execute([(int)$_POST['id_jadwal']]); $fokus_val = trim((string)($stFj->fetchColumn() ?: '')); } catch (Throwable $e) {}
             }
             if ($fokus_val === '' && !empty($_POST['id_program'])) {
                 try { $stF = $pdo->prepare("SELECT fokus_supervisi FROM tb_sv_program WHERE id_program = ? LIMIT 1"); $stF->execute([(int)$_POST['id_program']]); $fokus_val = trim((string)($stF->fetchColumn() ?: '')); } catch (Throwable $e) {}
@@ -465,7 +471,13 @@ function svApplyJadwal(jadwalId, keepMapel) {
         svEditPenilaian = {};
         svRenderPenilaian();
     }
-    svFillFokusPelaksanaan($('#sv-program-select').val() || row.id_program || '', $('#sv-instrumen-select').val() || row.id_instrumen || '', false);
+    if(row.fokus){
+        var selJ=svParseFokusPelaksanaan(row.fokus);
+        svRefreshFokusPelaksanaan(row.id_program||'', row.id_instrumen||'', selJ);
+        selJ.forEach(function(v){ var $s=$('#sv-fokus-pelaksanaan'); if($s.find('option').filter(function(){return $(this).val()===v;}).length===0) $s.append('<option value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>'); });
+    } else {
+        svFillFokusPelaksanaan($('#sv-program-select').val() || row.id_program || '', $('#sv-instrumen-select').val() || row.id_instrumen || '', false);
+    }
 }
 
 function svRenderPenilaian() {
@@ -556,7 +568,7 @@ $(document).ready(function () {
     });
     function svParseFokusPelaksanaan(s){ if(!s) return []; var parts=String(s).split(','); var out=[],seen={}; parts.forEach(function(p){ p=String(p).trim(); if(p && !seen[p]){ seen[p]=1; out.push(p); }}); return out; }
     function svGetFokusListPelaksanaan(pid,iid){ if(pid && svProgramFokusPelaksanaan[String(pid)]) return svParseFokusPelaksanaan(svProgramFokusPelaksanaan[String(pid)]); if(iid && svInstrumenFokusPelaksanaan[String(iid)]) return svParseFokusPelaksanaan(svInstrumenFokusPelaksanaan[String(iid)]); return []; }
-    function svRefreshFokusPelaksanaan(pid,iid,selected){ var list=svGetFokusListPelaksanaan(pid,iid); var $sel=$('#sv-fokus-pelaksanaan'); if(!$sel.length) return; $sel.empty(); if(!list.length){ $sel.append('<option value="" disabled>Pilih Program/Instrumen dulu</option>'); $sel.trigger('change'); return; } list.forEach(function(f){ var sel=(selected && selected.indexOf(f)!==-1)?' selected':''; var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>'); }); $sel.trigger('change'); }
+    function svRefreshFokusPelaksanaan(pid,iid,selected){ var list=svGetFokusListPelaksanaan(pid,iid); var $sel=$('#sv-fokus-pelaksanaan'); if(!$sel.length) return; $sel.empty(); if(!list.length){ $sel.append('<option value="" disabled>Pilih Program/Instrumen dulu</option>'); $sel.trigger('change'); return; } var auto = !selected; list.forEach(function(f){ var sel=''; if(selected){ sel=(selected.indexOf(f)!==-1)?' selected':''; } else { sel=' selected'; } var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>'); }); $sel.trigger('change'); }
     function svFillFokusPelaksanaan(pid,iid,keepManual){ var $sel=$('#sv-fokus-pelaksanaan'); if(!$sel.length) return; if(keepManual && $sel.find('option:selected').length) return; svRefreshFokusPelaksanaan(pid,iid,null); }
     function svInitFokusPelaksanaanSelect2(){ if(!$.fn.select2) return; var $s=$('#sv-fokus-pelaksanaan'); if($s.hasClass('select2-hidden-accessible')) $s.select2('destroy'); $s.select2({ placeholder:'Pilih Fokus', width:'100%', dropdownParent: $('#modal-pelaksanaan'), closeOnSelect:false }); }
     function svBindMaster(name){var s=$('#form-pelaksanaan [name='+name+']'),m=$('#'+name+'-manual');if(name==='prioritas_perbaikan') m=$('#prioritas-manual');s.on('change',function(){if($(this).val()==='__manual__'){m.removeClass('d-none').focus();}else{m.addClass('d-none');}});m.on('input',function(){var v=$(this).val();s.find('option.sv-manual-opt').remove();if(v) s.append('<option class="sv-manual-opt" value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>');});}
@@ -569,9 +581,15 @@ $(document).ready(function () {
         svPopulateMapel('', false);
         $('#form-pelaksanaan [name=aksi]').val('simpan');
         $('#form-pelaksanaan [name=id_pelaksanaan]').val('');
+        $('#sv-fokus-pelaksanaan').empty();
         $('#sv-penilaian-box').html('<div class="alert alert-light border mb-0">Pilih instrumen untuk menampilkan indikator penilaian.</div>');
         $('#sv-nilai-preview').text('0.00');
         $('#modal-pelaksanaan .modal-title').text('Tambah Pelaksanaan Supervisi');
+        if(!$('#sv-program-select').val()){
+            var firstP = $('#sv-program-select option').filter(function(){ return String($(this).val()||'')!==''; }).first().val();
+            if(firstP){ $('#sv-program-select').val(String(firstP)); var mp = svProgramInstrumenPelaksanaan[String(firstP)]||''; if(mp) $('#sv-instrumen-select').val(String(mp)); }
+        }
+        svFillFokusPelaksanaan($('#sv-program-select').val()||'', $('#sv-instrumen-select').val()||'', false);
         $('#modal-pelaksanaan').modal('show');
     });
     if (svInitialJadwalId) {

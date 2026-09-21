@@ -64,8 +64,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['seed_master'])) {
         sv_seed_hasil_master($pdo);
         $message = ['type' => 'success', 'text' => 'Data template berhasil dimuat.'];
+    } elseif (isset($_POST['simpan_tanggal'])) {
+        $tDetail = trim((string)($_POST['tanggal_cetak_detail'] ?? ''));
+        $tHasil = trim((string)($_POST['tanggal_cetak_hasil'] ?? ''));
+        if ($tDetail !== '' && strtotime($tDetail) === false) $tDetail = '';
+        if ($tHasil !== '' && strtotime($tHasil) === false) $tHasil = '';
+        sv_pengaturan_set($pdo, 'tanggal_cetak_detail', $tDetail);
+        sv_pengaturan_set($pdo, 'tanggal_cetak_hasil', $tHasil);
+        $message = ['type' => 'success', 'text' => 'Pengaturan tanggal cetak disimpan.' . ($tDetail === '' && $tHasil === '' ? ' (kosong = tanggal saat cetak)' : '')];
     }
 }
+$tglDetail = sv_pengaturan_get($pdo, 'tanggal_cetak_detail', '');
+$tglHasil = sv_pengaturan_get($pdo, 'tanggal_cetak_hasil', '');
 $rows = sv_hasil_master_rows($pdo);
 $kategori_list = sv_hasil_kategori_list();
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
@@ -113,6 +123,19 @@ include '../templates/sidebar.php';
             <?php echo render_breadcrumb(); ?>
         </div>
         <div class="section-body">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Pengaturan Tanggal Cetak</h4>
+                    <div class="card-header-action"><small class="text-muted">Kosong = tanggal saat cetak</small></div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="form-row">
+                        <div class="form-group col-md-5"><label>Tanggal Cetak Detail Hasil <small class="text-muted">(cetak_detail_hasil)</small></label><input type="date" class="form-control" name="tanggal_cetak_detail" value="<?= htmlspecialchars($tglDetail ?? '', ENT_QUOTES) ?>"></div>
+                        <div class="form-group col-md-5"><label>Tanggal Cetak Hasil <small class="text-muted">(cetak_hasil)</small></label><input type="date" class="form-control" name="tanggal_cetak_hasil" value="<?= htmlspecialchars($tglHasil ?? '', ENT_QUOTES) ?>"></div>
+                        <div class="form-group col-md-2 d-flex align-items-end"><button type="submit" name="simpan_tanggal" value="1" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Simpan</button></div>
+                    </form>
+                </div>
+            </div>
             <div class="card">
                 <div class="card-header">
                     <h4>Data Kekuatan / Kelemahan / Rekomendasi / Prioritas</h4>

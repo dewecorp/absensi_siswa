@@ -72,6 +72,7 @@ $(document).ready(function () {
     var dttablehasil=$('#table-hasil').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablehasil.on('order.dt search.dt draw.dt',function(){var info=dttablehasil.page.info();dttablehasil.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#btn-excel').on('click', function () { var table=document.getElementById('table-hasil');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'hasil_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='hasil_supervisi.xls';a.click();}; });
     $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=hasil&' + q, '_blank'); });
+    $('#table-hasil').on('click', '.btn-cetak-perguru', function(e){ e.preventDefault(); var id=$(this).data('id'); if(id) window.open('cetak_detail_hasil_supervisi.php?id='+id, '_blank'); });
 });
 JS;
 
@@ -148,7 +149,7 @@ include '../templates/sidebar.php';
                                 <tr>
                                     <th width="5%">No</th>
                                     <th>Guru/Unit</th>
-                                    <th>Mata Pelajaran</th>
+                                    <th>Mapel yang Disupervisi</th>
                                     <th>Jenis</th>
                                     <th>Tanggal</th>
                                     <th>Supervisor</th>

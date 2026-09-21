@@ -12,10 +12,9 @@ $can_manage = sv_is_supervisor($pdo);
 
 $school_profile = getSchoolProfile($pdo);
 $periode = sv_periode($pdo);
-$filter_ta_laporan = trim((string)($_GET['tahun_ajaran'] ?? sv_prev_tahun_ajaran($periode['tahun_ajaran'])));
+$filter_ta_laporan = trim((string)($_GET['tahun_ajaran'] ?? $periode['tahun_ajaran']));
 if ($filter_ta_laporan === '' || !isTahunAjaranFormatValid($filter_ta_laporan)) {
-    $filter_ta_laporan = sv_prev_tahun_ajaran($periode['tahun_ajaran']);
-    if ($filter_ta_laporan === '' || !isTahunAjaranFormatValid($filter_ta_laporan)) $filter_ta_laporan = $periode['tahun_ajaran'];
+    $filter_ta_laporan = $periode['tahun_ajaran'];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
@@ -51,12 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
         $sasaranRow = null;
         if (!$isMan && !empty($row['id_guru'])) {
             try {
-                $st = $pdo->prepare("SELECT jabatan, mata_pelajaran, kelas FROM tb_sv_sasaran WHERE id_guru = ? ORDER BY id_sasaran DESC LIMIT 1");
+                $st = $pdo->prepare("SELECT jabatan, kelas FROM tb_sv_sasaran WHERE id_guru = ? ORDER BY id_sasaran DESC LIMIT 1");
                 $st->execute([(int)$row['id_guru']]);
                 $sasaranRow = $st->fetch(PDO::FETCH_ASSOC) ?: null;
             } catch (Throwable $e) {}
         }
-        $jabatanMapel = trim(($sasaranRow['jabatan'] ?? '') . ' / ' . ($row['mapel_di_supervisi'] ?? $sasaranRow['mata_pelajaran'] ?? '') . ' / ' . ($sasaranRow['kelas'] ?? ''), ' /');
+        $jabatanMapel = trim(($sasaranRow['jabatan'] ?? '') . ' / ' . ($row['mapel_di_supervisi'] ?? '') . ' / ' . ($sasaranRow['kelas'] ?? ''), ' /');
         if ($jabatanMapel === '') $jabatanMapel = '-';
         $logoPath = !empty($school_profile['logo']) ? __DIR__ . '/../assets/img/' . basename((string)$school_profile['logo']) : '';
         $logoData = '';
@@ -181,7 +180,7 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="form-group col-md-9 mb-2">
-                            <small class="text-muted d-block">Default TA sebelumnya (<?= htmlspecialchars($filter_ta_laporan) ?>) — laporan mencatat TA berjalan dan ditampilkan/dilaporkan di TA depan. Ganti filter untuk lihat TA lain (auto submit).</small>
+                            <small class="text-muted d-block">Default TA berjalan (<?= htmlspecialchars($periode['tahun_ajaran']) ?>) — penilaian &amp; hasil tidak dikosongkan saat ganti TA. Ganti filter untuk lihat TA sebelumnya (auto submit).</small>
                             <span class="badge badge-light border">TA berjalan: <?= htmlspecialchars($periode['tahun_ajaran']) ?></span>
                         </div>
                     </form>
@@ -229,8 +228,8 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars(mb_strimwidth((string)($r['temuan'] ?? '-'), 0, 70, '...')) ?></td>
                                         <td><span class="badge badge-<?= $badge ?>"><?= htmlspecialchars($tlStatus) ?></span></td>
                                         <td>
-                                            <a class="btn btn-sm btn-outline-primary" href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>" title="Detail"><i class="fas fa-eye"></i></a>
-                                            <a class="btn btn-sm btn-outline-secondary" href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>" target="_blank" title="Cetak"><i class="fas fa-print"></i></a>
+                                            <a class="btn btn-sm btn-outline-primary" href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>&from=laporan" title="Detail"><i class="fas fa-eye"></i></a>
+                                            <a class="btn btn-sm btn-outline-secondary" href="cetak_detail_hasil_supervisi.php?id=<?= (int)$r['id_pelaksanaan'] ?>" target="_blank" title="Cetak"><i class="fas fa-print"></i></a>
                                             <form method="POST" action="laporan_supervisi.php" class="d-inline">
                                                 <input type="hidden" name="aksi" value="pdf">
                                                 <input type="hidden" name="id_pelaksanaan" value="<?= (int)$r['id_pelaksanaan'] ?>">

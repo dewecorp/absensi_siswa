@@ -13,6 +13,7 @@ if (!$data) {
     redirect('hasil_supervisi.php');
 }
 
+$from = trim((string)($_GET['from'] ?? ''));
 $page_title = 'Detail Hasil Supervisi';
 $current_page = basename(__FILE__);
 
@@ -37,44 +38,31 @@ if (!$is_manajerial && !empty($data['id_guru'])) {
 $sasaranRow = null;
 if (!$is_manajerial) {
     try {
-        $st = $pdo->prepare("SELECT jabatan, mata_pelajaran, kelas FROM tb_sv_sasaran WHERE id_guru = ? ORDER BY id_sasaran DESC LIMIT 1");
+        $st = $pdo->prepare("SELECT jabatan, kelas FROM tb_sv_sasaran WHERE id_guru = ? ORDER BY id_sasaran DESC LIMIT 1");
         $st->execute([(int)($data['id_guru'] ?? 0)]);
         $sasaranRow = $st->fetch(PDO::FETCH_ASSOC) ?: null;
     } catch (Throwable $e) { $sasaranRow = null; }
 }
+$tempatCetak = trim((string)($school_profile['tempat_jadwal'] ?? 'Padang'));
+if ($tempatCetak === '') $tempatCetak = 'Padang';
+$monthsId = ['January'=>'Januari','February'=>'Februari','March'=>'Maret','April'=>'April','May'=>'Mei','June'=>'Juni','July'=>'Juli','August'=>'Agustus','September'=>'September','October'=>'Oktober','November'=>'November','December'=>'Desember'];
+$tglCetak = date('d') . ' ' . ($monthsId[date('F')] ?? date('F')) . ' ' . date('Y');
+$tempatTanggalCetak = $tempatCetak . ', ' . $tglCetak;
+$namaKepala = trim((string)($school_profile['nama_kepala'] ?? '-'));
+$nipKepala = trim((string)($school_profile['nip_kepala'] ?? '-'));
+$qrGuruUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode('Ditandatangani oleh: ' . $nama . ' | ' . $tempatTanggalCetak);
+$qrKepalaUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode('Ditandatangani oleh: ' . $namaKepala . ' | Kepala Madrasah | ' . $tempatTanggalCetak);
 
 $js_libs = [
 
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
 $js_page = [];
+$detailId = $id;
+$js_page[] = 'var svDetailId=' . (int)$detailId . ';';
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    function cetakDetail() {
-        var t = document.getElementById('table-detail');
-        var ident = document.getElementById('sv-identitas-print');
-        if (!t) return;
-        var logo = document.getElementById('svSchoolLogo') ? document.getElementById('svSchoolLogo').value : '';
-        var school = document.getElementById('svSchoolName') ? document.getElementById('svSchoolName').value : 'MADRASAH';
-        var ta = document.getElementById('svAcademicYear') ? document.getElementById('svAcademicYear').value : '-';
-        var sem = document.getElementById('svSemester') ? document.getElementById('svSemester').value : '-';
-        var guruNama = ident ? (ident.querySelector('tr td') ? ident.querySelector('tr td').innerText : '') : '';
-        var w = window.open('', '_blank');
-        if (!w) return;
-        w.document.write('<html><head><meta charset="utf-8"><title>Detail Hasil Supervisi - ' + (guruNama || '') + '</title><style>table{border-collapse:collapse;width:100%}th,td{border:1px solid #000;padding:6px;text-align:left}th{background:#eee}h2,h3{text-align:center;margin:4px 0}h4{margin:10px 0 6px}</style></head><body>');
-        if (logo) { w.document.write('<div style="text-align:center"><img src="' + logo + '" style="height:64px"></div>'); }
-        w.document.write('<h2>' + school.toUpperCase() + '</h2><h3>DETAIL HASIL SUPERVISI</h3>');
-        w.document.write('<p style="text-align:center">' + ta + ' - ' + sem + ' &middot; Guru: ' + (guruNama || '-') + '</p>');
-        if (ident) {
-            w.document.write('<h4>Identitas Guru yang Disupervisi</h4>');
-            w.document.write(ident.outerHTML);
-        }
-        w.document.write('<h4>Seluruh Indikator</h4>');
-        w.document.write(t.outerHTML);
-        w.document.write('<script>window.onload=function(){setTimeout(function(){window.print();},400)}<\/script></body></html>');
-        w.document.close();
-    }
-    $('#btn-pdf').on('click', cetakDetail);
+    $('#btn-pdf').on('click', function(){ window.open('cetak_detail_hasil_supervisi.php?id='+svDetailId, '_blank'); });
 });
 JS;
 
@@ -98,7 +86,11 @@ include '../templates/sidebar.php';
             <input type="hidden" id="svPrintDate" value="<?= date('d F Y') ?>">
 
             <div class="mb-3">
+                <?php if ($from === 'laporan'): ?>
+                <a href="laporan_supervisi.php" class="btn btn-light"><i class="fas fa-arrow-left"></i> Kembali ke Laporan</a>
+                <?php else: ?>
                 <a href="hasil_supervisi.php" class="btn btn-light"><i class="fas fa-arrow-left"></i> Kembali</a>
+                <?php endif; ?>
                 <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> Cetak / PDF</button>
             </div>
 
@@ -111,7 +103,6 @@ include '../templates/sidebar.php';
                                 <tr><th width="42%">Nama Guru</th><td><?= htmlspecialchars($nama) ?></td></tr>
                                 <tr><th>NIP/NPK</th><td><?= htmlspecialchars((string)($guruInfo['nuptk'] ?? $data['nama_guru'] ?? '-') ?: '-') ?></td></tr>
                                 <tr><th>Jabatan</th><td><?= htmlspecialchars((string)($sasaranRow['jabatan'] ?? '-')) ?></td></tr>
-                                <tr><th>Mata Pelajaran</th><td><?= htmlspecialchars((string)($sasaranRow['mata_pelajaran'] ?? '-')) ?></td></tr>
                                 <tr><th>Mapel yang Disupervisi</th><td><?= htmlspecialchars((string)($data['mapel_di_supervisi'] ?? '-')) ?></td></tr>
                                 <tr><th>Kelas</th><td><?= htmlspecialchars((string)($sasaranRow['kelas'] ?? '-')) ?></td></tr>
                                 <?php if ($is_manajerial): ?>
@@ -242,6 +233,25 @@ include '../templates/sidebar.php';
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            <div class="card">
+                <div class="card-body text-right">
+                    <p class="mb-1"><?= htmlspecialchars($tempatTanggalCetak) ?></p>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <p class="mb-1">Yang Disupervisi,</p>
+                            <img src="<?= htmlspecialchars($qrGuruUrl) ?>" style="width:90px;height:90px" alt="QR Guru">
+                            <p class="mb-0 mt-1"><strong><?= htmlspecialchars($nama) ?></strong></p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1">Kepala Madrasah,</p>
+                            <img src="<?= htmlspecialchars($qrKepalaUrl) ?>" style="width:90px;height:90px" alt="QR Kepala">
+                            <p class="mb-0 mt-1"><strong><?= htmlspecialchars($namaKepala) ?></strong></p>
+                            <small>NIP. <?= htmlspecialchars($nipKepala) ?></small>
                         </div>
                     </div>
                 </div>
