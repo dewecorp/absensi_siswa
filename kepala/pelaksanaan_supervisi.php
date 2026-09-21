@@ -24,12 +24,12 @@ $can_manage = sv_is_supervisor($pdo);
 $school_profile = getSchoolProfile($pdo);
 $periode = sv_periode($pdo);
 
-$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
+$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css','https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'];
 $js_libs = [
-
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
 ];
 
 $guru_list = sv_guru_list($pdo);
@@ -58,6 +58,40 @@ $instrumen_list = sv_instrumen_options($pdo, $sv_jenis);
 $jabatan_list = getJabatanList($pdo);
 $mapel_by_guru = sv_mapel_guru($pdo);
 $mapel_by_guru_json = json_encode($mapel_by_guru, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
+$program_fokus_map = [];
+$instrumen_fokus_map = [];
+try {
+    $tmp = $pdo->query("SELECT id_program, fokus_supervisi FROM tb_sv_program")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($tmp as $row) { $program_fokus_map[(string)$row['id_program']] = (string)($row['fokus_supervisi'] ?? ''); }
+} catch (Throwable $e) {}
+try {
+    $tmp2 = $pdo->query("SELECT i.id_instrumen, GROUP_CONCAT(DISTINCT k.nama_komponen SEPARATOR ', ') AS fokus FROM tb_sv_instrumen i LEFT JOIN tb_sv_komponen k ON k.id_instrumen = i.id_instrumen GROUP BY i.id_instrumen")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($tmp2 as $row) { $instrumen_fokus_map[(string)$row['id_instrumen']] = (string)($row['fokus'] ?? ''); }
+} catch (Throwable $e) {}
+$program_fokus_json = json_encode($program_fokus_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+$instrumen_fokus_json = json_encode($instrumen_fokus_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+$program_instrumen_map_pel = [];
+try {
+    $progRows = $pdo->query("SELECT id_program, kode_program, jenis_supervisi FROM tb_sv_program")->fetchAll(PDO::FETCH_ASSOC);
+    $insRows = $pdo->query("SELECT id_instrumen, kode_instrumen, jenis_supervisi FROM tb_sv_instrumen")->fetchAll(PDO::FETCH_ASSOC);
+    $insByKode = [];
+    foreach ($insRows as $ir) { $ck = strtoupper(trim((string)$ir['kode_instrumen'])); $ck = preg_replace('/^INS-/', '', $ck); if ($ck !== '') $insByKode[$ck] = (string)$ir['id_instrumen']; }
+    $insByJenis = []; foreach ($insRows as $ir) { $insByJenis[$ir['jenis_supervisi']][] = $ir; }
+    foreach ($insByJenis as $j => &$lst) { usort($lst, function($a,$b){ return strcmp((string)$a['kode_instrumen'], (string)$b['kode_instrumen']); }); } unset($lst);
+    $progByJenis = []; foreach ($progRows as $pr) { $progByJenis[$pr['jenis_supervisi']][] = $pr; }
+    foreach ($progByJenis as $j => &$lst) { usort($lst, function($a,$b){ return strcmp((string)$a['kode_program'], (string)$b['kode_program']); }); } unset($lst);
+    foreach ($progRows as $pr) {
+        $k = strtoupper(trim((string)$pr['kode_program']));
+        $pid = (string)$pr['id_program'];
+        if ($k !== '' && isset($insByKode[$k])) { $program_instrumen_map_pel[$pid] = $insByKode[$k]; continue; }
+        $jenis = $pr['jenis_supervisi'];
+        $pList = $progByJenis[$jenis] ?? [];
+        $iList = $insByJenis[$jenis] ?? [];
+        $idx = array_search($pr['id_program'], array_column($pList, 'id_program'));
+        if ($idx !== false && isset($iList[$idx])) $program_instrumen_map_pel[$pid] = (string)$iList[$idx]['id_instrumen'];
+    }
+} catch (Throwable $e) {}
+$program_instrumen_json_pel = json_encode($program_instrumen_map_pel, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 
 // Bangun data instrumen (komponen + indikator) untuk form penilaian dinamis.
 $instrumen_data = [];
@@ -197,6 +231,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $predikat = sv_predikat($nilai);
             }
 
+            $fokusRaw = $_POST['fokus'] ?? '';
+            if (is_array($fokusRaw)) {
+                $fokusRaw = array_values(array_filter(array_map('trim', $fokusRaw), function ($v) { return $v !== '' && $v !== '__placeholder__'; }));
+                $fokus_val = implode(', ', array_unique($fokusRaw));
+            } else {
+                $fokus_val = trim((string)$fokusRaw);
+            }
+            if ($fokus_val === '' && !empty($_POST['id_program'])) {
+                try { $stF = $pdo->prepare("SELECT fokus_supervisi FROM tb_sv_program WHERE id_program = ? LIMIT 1"); $stF->execute([(int)$_POST['id_program']]); $fokus_val = trim((string)($stF->fetchColumn() ?: '')); } catch (Throwable $e) {}
+            }
             $kekuatan_val = trim((string)($_POST['kekuatan'] ?? ''));
             if ($kekuatan_val === '__manual__') $kekuatan_val = trim((string)($_POST['kekuatan_manual'] ?? ''));
             $kelemahan_val = trim((string)($_POST['kelemahan'] ?? ''));
@@ -219,6 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $supervisor,
                 $nilai,
                 $predikat,
+                $fokus_val,
                 $kekuatan_val,
                 $kelemahan_val,
                 trim((string)($_POST['temuan'] ?? '')),
@@ -231,14 +276,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             if ($id > 0) {
                 $stmt = $pdo->prepare("UPDATE tb_sv_pelaksanaan SET id_jadwal=?, id_program=?, id_instrumen=?, id_guru=?, nama_guru=?,
                     unit_bagian=?, penanggung_jawab=?, mapel_di_supervisi=?, jenis_supervisi=?, tanggal=?, supervisor=?, nilai=?, predikat=?,
-                    kekuatan=?, kelemahan=?, temuan=?, rekomendasi=?, prioritas_perbaikan=?, status=?, keterangan=?
+                    fokus=?, kekuatan=?, kelemahan=?, temuan=?, rekomendasi=?, prioritas_perbaikan=?, status=?, keterangan=?
                     WHERE id_pelaksanaan=?");
                 $stmt->execute(array_merge($data, [$id]));
             } else {
                 $stmt = $pdo->prepare("INSERT INTO tb_sv_pelaksanaan
                     (id_jadwal, id_program, id_instrumen, id_guru, nama_guru, unit_bagian, penanggung_jawab, mapel_di_supervisi, jenis_supervisi,
-                     tanggal, supervisor, nilai, predikat, kekuatan, kelemahan, temuan, rekomendasi, prioritas_perbaikan, status, keterangan)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                     tanggal, supervisor, nilai, predikat, fokus, kekuatan, kelemahan, temuan, rekomendasi, prioritas_perbaikan, status, keterangan)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
                 $stmt->execute($data);
                 $id = (int)$pdo->lastInsertId();
             }
@@ -359,6 +404,9 @@ if ($flash !== '') {
     $js_page[] = $flash;
 }
 $initial_id_jadwal = (int)($_GET['id_jadwal'] ?? 0);
+$js_page[] = 'var svProgramInstrumenPelaksanaan = ' . $program_instrumen_json_pel . ';';
+$js_page[] = 'var svProgramFokusPelaksanaan = ' . $program_fokus_json . ';';
+$js_page[] = 'var svInstrumenFokusPelaksanaan = ' . $instrumen_fokus_json . ';';
 $js_page[] = 'var svMasterKekuatan=' . json_encode($kekuatan_list) . ';var svMasterKelemahan=' . json_encode($kelemahan_list) . ';var svMasterRekomendasi=' . json_encode($rekomendasi_list) . ';var svMasterPrioritas=' . json_encode($prioritas_list) . ';';
 $js_page[] = 'var svInstrumenData = ' . json_encode($instrumen_data) . ';';
 $js_page[] = 'var svIsManajerial = ' . ($is_manajerial ? 'true' : 'false') . ';';
@@ -417,6 +465,7 @@ function svApplyJadwal(jadwalId, keepMapel) {
         svEditPenilaian = {};
         svRenderPenilaian();
     }
+    svFillFokusPelaksanaan($('#sv-program-select').val() || row.id_program || '', $('#sv-instrumen-select').val() || row.id_instrumen || '', false);
 }
 
 function svRenderPenilaian() {
@@ -483,29 +532,33 @@ $(document).ready(function () {
     $('#sv-program-select option').each(function () { var v = $(this).val(); if (v) programJenis[v] = $(this).data('jenis'); });
     var instrumenJenis = {};
     $('#sv-instrumen-select option').each(function () { var v = $(this).val(); if (v) instrumenJenis[v] = $(this).data('jenis'); });
-    var programToInstrumen = {};
-    $('#sv-program-select option').each(function () {
-        var pid = $(this).val();
-        if (!pid) return;
-        var pj = programJenis[pid];
-        $('#sv-instrumen-select option').each(function () {
-            if ($(this).data('jenis') === pj && !programToInstrumen[pid]) programToInstrumen[pid] = $(this).val();
-        });
-    });
+    var programToInstrumen = svProgramInstrumenPelaksanaan || {};
     $('#sv-program-select').on('change', function () {
         var pid = $(this).val();
-        if (pid && programToInstrumen[pid]) {
-            $('#sv-instrumen-select').val(programToInstrumen[pid]);
+        var mapped = svProgramInstrumenPelaksanaan[String(pid)] || programToInstrumen[String(pid)] || '';
+        if (pid && mapped) {
+            $('#sv-instrumen-select').val(String(mapped));
             svEditPenilaian = {};
             svRenderPenilaian();
         }
+        svFillFokusPelaksanaan(pid, $('#sv-instrumen-select').val(), false);
+    });
+    $('#sv-instrumen-select').on('change', function () {
+        svFillFokusPelaksanaan($('#sv-program-select').val(), $(this).val(), false);
+        svRenderPenilaian();
     });
     $('#sv-guru-select').on('change', function () {
         if (!svIsManajerial) svPopulateMapel($(this).val(), false);
     });
+    $('#modal-pelaksanaan').on('shown.bs.modal', function(){ svInitFokusPelaksanaanSelect2(); });
     $('#form-pelaksanaan [name=id_jadwal]').on('change', function () {
         svApplyJadwal($(this).val(), false);
     });
+    function svParseFokusPelaksanaan(s){ if(!s) return []; var parts=String(s).split(','); var out=[],seen={}; parts.forEach(function(p){ p=String(p).trim(); if(p && !seen[p]){ seen[p]=1; out.push(p); }}); return out; }
+    function svGetFokusListPelaksanaan(pid,iid){ if(pid && svProgramFokusPelaksanaan[String(pid)]) return svParseFokusPelaksanaan(svProgramFokusPelaksanaan[String(pid)]); if(iid && svInstrumenFokusPelaksanaan[String(iid)]) return svParseFokusPelaksanaan(svInstrumenFokusPelaksanaan[String(iid)]); return []; }
+    function svRefreshFokusPelaksanaan(pid,iid,selected){ var list=svGetFokusListPelaksanaan(pid,iid); var $sel=$('#sv-fokus-pelaksanaan'); if(!$sel.length) return; $sel.empty(); if(!list.length){ $sel.append('<option value="" disabled>Pilih Program/Instrumen dulu</option>'); $sel.trigger('change'); return; } list.forEach(function(f){ var sel=(selected && selected.indexOf(f)!==-1)?' selected':''; var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>'); }); $sel.trigger('change'); }
+    function svFillFokusPelaksanaan(pid,iid,keepManual){ var $sel=$('#sv-fokus-pelaksanaan'); if(!$sel.length) return; if(keepManual && $sel.find('option:selected').length) return; svRefreshFokusPelaksanaan(pid,iid,null); }
+    function svInitFokusPelaksanaanSelect2(){ if(!$.fn.select2) return; var $s=$('#sv-fokus-pelaksanaan'); if($s.hasClass('select2-hidden-accessible')) $s.select2('destroy'); $s.select2({ placeholder:'Pilih Fokus', width:'100%', dropdownParent: $('#modal-pelaksanaan'), closeOnSelect:false }); }
     function svBindMaster(name){var s=$('#form-pelaksanaan [name='+name+']'),m=$('#'+name+'-manual');if(name==='prioritas_perbaikan') m=$('#prioritas-manual');s.on('change',function(){if($(this).val()==='__manual__'){m.removeClass('d-none').focus();}else{m.addClass('d-none');}});m.on('input',function(){var v=$(this).val();s.find('option.sv-manual-opt').remove();if(v) s.append('<option class="sv-manual-opt" value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>');});}
     svBindMaster('kekuatan');svBindMaster('kelemahan');svBindMaster('rekomendasi');svBindMaster('prioritas_perbaikan');
     $('#form-pelaksanaan [name=id_instrumen]').on('change', svRenderPenilaian);
@@ -567,6 +620,11 @@ $(document).ready(function () {
                 el.val(d[k]);
             }
         });
+        if (d.fokus) {
+            var selPel=svParseFokusPelaksanaan(d.fokus);
+            svRefreshFokusPelaksanaan(d.id_program||'', d.id_instrumen||'', selPel);
+            selPel.forEach(function(v){ var $s=$('#sv-fokus-pelaksanaan'); if($s.find('option').filter(function(){return $(this).val()===v;}).length===0) $s.append('<option value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+' (lama)</option>'); });
+        } else if (d.id_program || d.id_instrumen) { svFillFokusPelaksanaan(d.id_program || $('#sv-program-select').val(), d.id_instrumen || $('#sv-instrumen-select').val(), true); }
         if (!svIsManajerial) {
             svPopulateMapel(d.id_guru || $('#sv-guru-select').val(), false);
             if (d.mapel_di_supervisi) { $('#sv-mapel-select').val(d.mapel_di_supervisi); }
@@ -829,6 +887,7 @@ include '../templates/sidebar.php';
                         <div id="sv-penilaian-box"><div class="alert alert-light border mb-0">Pilih instrumen untuk menampilkan indikator penilaian.</div></div>
                     <?php endif; ?>
 
+                    <div class="form-group"><label>Fokus <small class="text-muted">auto dari Program / Instrumen, bisa pilih lebih dari satu</small></label><select class="form-control" name="fokus[]" id="sv-fokus-pelaksanaan" multiple></select></div>
                     <hr>
                     <div class="form-row">
                         <div class="form-group col-md-6"><label>Kekuatan</label><select class="form-control" name="kekuatan"><option value="">-- Pilih Kekuatan --</option><?php foreach ($kekuatan_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="kekuatan_manual" id="kekuatan-manual" placeholder="Isi kekuatan manual"></div>

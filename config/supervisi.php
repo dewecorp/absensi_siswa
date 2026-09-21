@@ -322,6 +322,7 @@ if (!function_exists('sv_ensure_schema')) {
             supervisor VARCHAR(150) NULL,
             nilai DECIMAL(6,2) NULL,
             predikat VARCHAR(50) NULL,
+            fokus TEXT NULL,
             kekuatan TEXT NULL,
             kelemahan TEXT NULL,
             temuan TEXT NULL,
@@ -460,6 +461,7 @@ if (!function_exists('sv_ensure_schema')) {
             ],
             'tb_sv_pelaksanaan' => [
                 'mapel_di_supervisi' => "VARCHAR(150) NULL AFTER penanggung_jawab",
+                'fokus' => "TEXT NULL AFTER predikat",
             ],
             'tb_sv_arsip' => [
                 'tautan_dokumen' => "VARCHAR(500) NULL AFTER file",

@@ -16,6 +16,7 @@ $periode = sv_periode($pdo);
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
 ];
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
@@ -23,6 +24,7 @@ $js_libs = [
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
     'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js',
     'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales-all.min.js',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
 ];
 
 $guru_list = sv_guru_list($pdo);
@@ -31,6 +33,34 @@ $instrumen_list = sv_instrumen_options($pdo);
 $jabatan_list = getJabatanList($pdo);
 $instrumen_json = json_encode($instrumen_list, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $program_json = json_encode($program_list, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+$program_fokus_map = [];
+try {
+    $tmp = $pdo->query("SELECT id_program, fokus_supervisi FROM tb_sv_program")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($tmp as $row) { $program_fokus_map[(string)$row['id_program']] = (string)($row['fokus_supervisi'] ?? ''); }
+} catch (Throwable $e) {}
+$program_fokus_json = json_encode($program_fokus_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+$program_instrumen_map = [];
+try {
+    $progRows = $pdo->query("SELECT id_program, kode_program, jenis_supervisi FROM tb_sv_program")->fetchAll(PDO::FETCH_ASSOC);
+    $insRows = $pdo->query("SELECT id_instrumen, kode_instrumen, jenis_supervisi FROM tb_sv_instrumen")->fetchAll(PDO::FETCH_ASSOC);
+    $insByKode = [];
+    foreach ($insRows as $ir) { $ck = strtoupper(trim((string)$ir['kode_instrumen'])); $ck = preg_replace('/^INS-/', '', $ck); if ($ck !== '') $insByKode[$ck] = (string)$ir['id_instrumen']; }
+    $insByJenis = []; foreach ($insRows as $ir) { $insByJenis[$ir['jenis_supervisi']][] = $ir; }
+    foreach ($insByJenis as $j => &$lst) { usort($lst, function($a,$b){ return strcmp((string)$a['kode_instrumen'], (string)$b['kode_instrumen']); }); } unset($lst);
+    $progByJenis = []; foreach ($progRows as $pr) { $progByJenis[$pr['jenis_supervisi']][] = $pr; }
+    foreach ($progByJenis as $j => &$lst) { usort($lst, function($a,$b){ return strcmp((string)$a['kode_program'], (string)$b['kode_program']); }); } unset($lst);
+    foreach ($progRows as $pr) {
+        $k = strtoupper(trim((string)$pr['kode_program']));
+        $pid = (string)$pr['id_program'];
+        if ($k !== '' && isset($insByKode[$k])) { $program_instrumen_map[$pid] = $insByKode[$k]; continue; }
+        $jenis = $pr['jenis_supervisi'];
+        $pList = $progByJenis[$jenis] ?? [];
+        $iList = $insByJenis[$jenis] ?? [];
+        $idx = array_search($pr['id_program'], array_column($pList, 'id_program'));
+        if ($idx !== false && isset($iList[$idx])) $program_instrumen_map[$pid] = (string)$iList[$idx]['id_instrumen'];
+    }
+} catch (Throwable $e) {}
+$program_instrumen_json = json_encode($program_instrumen_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     $aksi = (string)($_POST['aksi'] ?? '');
@@ -46,6 +76,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             }
             $supervisor = trim((string)($_POST['supervisor'] ?? ''));
             if ($supervisor === '') $supervisor = sv_current_user_name($pdo);
+            $jenisSip = trim((string)($_POST['jenis_supervisi'] ?? 'Akademik'));
+            if (!in_array($jenisSip, sv_jenis_list(), true)) $jenisSip = 'Akademik';
+            if (!empty($_POST['id_program'])) {
+                try { $stC = $pdo->prepare("SELECT jenis_supervisi FROM tb_sv_program WHERE id_program = ? LIMIT 1"); $stC->execute([(int)$_POST['id_program']]); $pj = trim((string)($stC->fetchColumn() ?: '')); if ($pj !== '' && strcasecmp($pj, $jenisSip) !== 0) throw new RuntimeException('Program tidak sesuai dengan Jenis Supervisi.'); } catch (RuntimeException $e) { throw $e; } catch (Throwable $e) {}
+            }
+            if (!empty($_POST['id_instrumen'])) {
+                try { $stC2 = $pdo->prepare("SELECT jenis_supervisi FROM tb_sv_instrumen WHERE id_instrumen = ? LIMIT 1"); $stC2->execute([(int)$_POST['id_instrumen']]); $ij = trim((string)($stC2->fetchColumn() ?: '')); if ($ij !== '' && strcasecmp($ij, $jenisSip) !== 0) throw new RuntimeException('Instrumen tidak sesuai dengan Jenis Supervisi.'); } catch (RuntimeException $e) { throw $e; } catch (Throwable $e) {}
+            }
+            $fokusRaw = $_POST['fokus'] ?? '';
+            if (is_array($fokusRaw)) {
+                $fokusRaw = array_values(array_filter(array_map('trim', $fokusRaw), function ($v) { return $v !== '' && $v !== '__placeholder__'; }));
+                $fokus = implode(', ', array_unique($fokusRaw));
+            } else {
+                $fokus = trim((string)$fokusRaw);
+            }
+            if ($fokus === '' && !empty($_POST['id_program'])) {
+                try { $stF = $pdo->prepare("SELECT fokus_supervisi FROM tb_sv_program WHERE id_program = ? LIMIT 1"); $stF->execute([(int)$_POST['id_program']]); $fokus = trim((string)($stF->fetchColumn() ?: '')); } catch (Throwable $e) {}
+            }
             $data = [
                 (int)($_POST['id_program'] ?? 0) ?: null,
                 (int)($_POST['id_sasaran'] ?? 0) ?: null,
@@ -58,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 trim((string)($_POST['jam_mulai'] ?? '')) ?: null,
                 trim((string)($_POST['jam_selesai'] ?? '')) ?: null,
                 trim((string)($_POST['tempat'] ?? '')),
-                '',
+                $fokus,
                 trim((string)($_POST['status'] ?? 'Terjadwal')),
                 trim((string)($_POST['keterangan'] ?? '')),
             ];
@@ -174,6 +222,8 @@ if ($flash !== '') {
 $js_page[] = 'var svEvents = ' . json_encode($calendar_events) . ';';
 $js_page[] = 'var svInstrumenList = ' . $instrumen_json . ';';
 $js_page[] = 'var svProgramList = ' . $program_json . ';';
+$js_page[] = 'var svProgramFokus = ' . $program_fokus_json . ';';
+$js_page[] = 'var svProgramInstrumen = ' . $program_instrumen_json . ';';
 $js_page[] = <<<'JS'
 function svEnsureOption($sel, val, label) {
     if (!val) return;
@@ -182,42 +232,48 @@ function svEnsureOption($sel, val, label) {
         $sel.append('<option value="' + $('<div>').text(val).html() + '">' + $('<div>').text(label || val).html() + ' (lama)</option>');
     }
 }
+function svParseFokusList(s){ if(!s) return []; var parts=String(s).split(','); var out=[],seen={}; parts.forEach(function(p){ p=String(p).trim(); if(p && !seen[p]){ seen[p]=1; out.push(p); }}); return out; }
+function svRefreshFokusJadwal(pid, selected){ var list=svParseFokusList(pid ? (svProgramFokus[String(pid)]||'') : ''); var $sel=$('#sv-fokus-jadwal'); if(!$sel.length) return; $sel.empty(); if(!list.length){ $sel.append('<option value="" disabled>Pilih Program dulu</option>'); $sel.trigger('change'); return; } list.forEach(function(f){ var sel=(selected && selected.indexOf(f)!==-1)?' selected':''; var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>'); }); $sel.trigger('change'); }
+function svFillFokusJadwal(pid, keepManual){ var $sel=$('#sv-fokus-jadwal'); if(!$sel.length) return; if(keepManual && $sel.find('option:selected').length) return; svRefreshFokusJadwal(pid, null); }
+function svInitFokusJadwalSelect2(){ if(!$.fn.select2) return; var $s=$('#sv-fokus-jadwal'); if($s.hasClass('select2-hidden-accessible')) $s.select2('destroy'); $s.select2({ placeholder:'Pilih Fokus', width:'100%', dropdownParent: $('#modal-jadwal'), closeOnSelect:false }); }
 function svFilterModalByJenis(jenis, keepVal) {
     var $p = $('#form-jadwal [name=id_program]');
     var $i = $('#form-jadwal [name=id_instrumen]');
-    var prevInst = keepVal ? String($i.val() || '') : '';
-    var prevProg = keepVal ? String($p.val() || '') : '';
-    $p.find('option').each(function () {
-        var val = String($(this).val() || '');
-        if (!val) return;
-        var row = svProgramList.find(function (r) { return String(r.id_program) === val; });
-        var show = !row || !jenis || String(row.jenis_supervisi) === String(jenis);
-        if (keepVal && (val === prevProg)) show = true;
-        $(this).toggle(show);
-        $(this).prop('disabled', !show);
+    var prevProg = keepVal ? String($p.val()||'') : '';
+    var prevInst = keepVal ? String($i.val()||'') : '';
+    $p.empty().append('<option value="">- Pilih Program -</option>');
+    $i.empty().append('<option value="">- Pilih Instrumen -</option>');
+    svProgramList.forEach(function(r){
+        if(!jenis || String(r.jenis_supervisi)===String(jenis)){
+            $p.append('<option value="'+String(r.id_program)+'">'+$('<div>').text(r.nama_program).html()+' ('+String(r.jenis_supervisi)+')</option>');
+        }
     });
-    $i.find('option').each(function () {
-        var val = String($(this).val() || '');
-        if (!val) return;
-        var row = svInstrumenList.find(function (r) { return String(r.id_instrumen) === val; });
-        var show = !row || !jenis || String(row.jenis_supervisi) === String(jenis);
-        if (keepVal && (val === prevInst)) show = true;
-        $(this).toggle(show);
-        $(this).prop('disabled', !show);
+    svInstrumenList.forEach(function(r){
+        if(!jenis || String(r.jenis_supervisi)===String(jenis)){
+            $i.append('<option value="'+String(r.id_instrumen)+'">'+$('<div>').text(r.nama_instrumen).html()+' ('+String(r.jenis_supervisi)+')</option>');
+        }
     });
-    if (keepVal) {
-        $i.val(prevInst);
-        $p.val(prevProg);
+    if(keepVal){
+        if(prevProg) { svEnsureOption($p, prevProg, 'Program #'+prevProg); $p.val(prevProg); }
+        if(prevInst) { svEnsureOption($i, prevInst, 'Instrumen #'+prevInst); $i.val(prevInst); }
+        svFillFokusJadwal($p.val()||prevProg||'', false);
     } else {
-        $i.val('');
-        $p.val('');
+        var firstProg2='';
+        if($p.find('option').length>1){ $p.prop('selectedIndex', 1); firstProg2=$p.val(); }
+        var mapped2 = firstProg2 ? (svProgramInstrumen[String(firstProg2)]||'') : '';
+        if(mapped2 && $i.find('option[value="'+mapped2+'"]').length){ $i.val(mapped2); } else if($i.find('option').length>1){ $i.prop('selectedIndex', 1); }
+        svFillFokusJadwal(firstProg2||'', false);
     }
 }
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
     var dttablejadwal=$('#table-jadwal').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablejadwal.on('order.dt search.dt draw.dt',function(){var info=dttablejadwal.page.info();dttablejadwal.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    $('#modal-jadwal').on('shown.bs.modal', function(){ svInitFokusJadwalSelect2(); });
+    function svAutoInstrumenByProgram(pid){ var iid = svProgramInstrumen[String(pid)] || ''; if(iid){ var $i=$('#form-jadwal [name=id_instrumen]'); if($i.find('option[value="'+iid+'"]').length) $i.val(iid); else { svEnsureOption($i, iid, 'Instrumen #'+iid); $i.val(iid); } } svFillFokusJadwal(pid || '', false); }
+    $('#form-jadwal [name=id_program]').on('change', function(){ svAutoInstrumenByProgram($(this).val()); });
     $('#form-jadwal [name=jenis_supervisi]').on('change', function () {
         svFilterModalByJenis($(this).val(), false);
+        svFillFokusJadwal('', false);
     });
     $('#btn-tambah').on('click', function () {
         $('#form-jadwal')[0].reset();
@@ -243,6 +299,11 @@ $(document).ready(function () {
         if (d.id_program) $('#form-jadwal [name=id_program]').val(String(d.id_program));
         if (d.id_instrumen) $('#form-jadwal [name=id_instrumen]').val(String(d.id_instrumen));
         if (d.supervisor) $('#form-jadwal [name=supervisor]').val(String(d.supervisor));
+        if (d.fokus) {
+            var selFokus=svParseFokusList(d.fokus);
+            svRefreshFokusJadwal(d.id_program||'', selFokus);
+            selFokus.forEach(function(v){ var $s=$('#sv-fokus-jadwal'); if($s.find('option').filter(function(){return $(this).val()===v;}).length===0) $s.append('<option value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+' (lama)</option>'); });
+        } else if (d.id_program) { svFillFokusJadwal(d.id_program, true); }
         $('#modal-jadwal .modal-title').text('Edit Jadwal Supervisi');
         $('#modal-jadwal').modal('show');
     });
@@ -422,14 +483,29 @@ include '../templates/sidebar.php';
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
+                    <div class="form-group">
+                        <label>Jenis Supervisi <span class="text-danger">*</span> <small class="text-muted">— pilih dulu, Program & Instrumen otomatis tersaring</small></label>
+                        <select class="form-control" name="jenis_supervisi" required>
+                            <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>"><?= $j ?></option><?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
-                            <label>Program</label>
+                            <label>Program <small class="text-muted">sesuai Jenis</small></label>
                             <select class="form-control" name="id_program">
-                                <option value="">- Tanpa Program -</option>
-                                <?php foreach ($program_list as $p): ?><option value="<?= (int)$p['id_program'] ?>"><?= htmlspecialchars($p['nama_program']) ?></option><?php endforeach; ?>
+                                <option value="">- Pilih Program -</option>
+                                <?php foreach ($program_list as $p): ?><option value="<?= (int)$p['id_program'] ?>" data-jenis="<?= htmlspecialchars($p['jenis_supervisi'] ?? '', ENT_QUOTES) ?>"><?= htmlspecialchars($p['nama_program']) ?> (<?= htmlspecialchars($p['jenis_supervisi'] ?? '') ?>)</option><?php endforeach; ?>
                             </select>
                         </div>
+                        <div class="form-group col-md-6">
+                            <label>Instrumen <small class="text-muted">sesuai Jenis</small></label>
+                            <select class="form-control" name="id_instrumen">
+                                <option value="">- Pilih Instrumen -</option>
+                                <?php foreach ($instrumen_list as $i): ?><option value="<?= (int)$i['id_instrumen'] ?>" data-jenis="<?= htmlspecialchars($i['jenis_supervisi'] ?? '', ENT_QUOTES) ?>"><?= htmlspecialchars($i['nama_instrumen']) ?> (<?= htmlspecialchars($i['jenis_supervisi']) ?>)</option><?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group col-md-6">
                             <label>Guru/PTK</label>
                             <select class="form-control" name="id_guru" required>
@@ -437,23 +513,6 @@ include '../templates/sidebar.php';
                                 <?php foreach ($guru_list as $g): ?><option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars($g['nama_guru']) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label>Jenis Supervisi</label>
-                            <select class="form-control" name="jenis_supervisi">
-                                <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>"><?= $j ?></option><?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label>Instrumen</label>
-                            <select class="form-control" name="id_instrumen">
-                                <option value="">- Tanpa Instrumen -</option>
-                                <?php foreach ($instrumen_list as $i): ?><option value="<?= (int)$i['id_instrumen'] ?>"><?= htmlspecialchars($i['nama_instrumen']) ?> (<?= htmlspecialchars($i['jenis_supervisi']) ?>)</option><?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
                         <div class="form-group col-md-6">
                             <label>Supervisor</label>
                             <select class="form-control" name="supervisor" required>
@@ -461,18 +520,19 @@ include '../templates/sidebar.php';
                                 <?php foreach ($jabatan_list as $jb): ?><option value="<?= htmlspecialchars($jb['nama_jabatan'], ENT_QUOTES) ?>"><?= htmlspecialchars($jb['nama_jabatan']) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-6">
-                            <label>Status</label>
-                            <select class="form-control" name="status">
-                                <?php foreach (sv_status_jadwal_list() as $st): ?><option value="<?= $st ?>"><?= $st ?></option><?php endforeach; ?>
-                            </select>
-                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select class="form-control" name="status">
+                            <?php foreach (sv_status_jadwal_list() as $st): ?><option value="<?= $st ?>"><?= $st ?></option><?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-4"><label>Tanggal</label><input type="date" class="form-control" name="tanggal" required></div>
                         <div class="form-group col-md-4"><label>Jam Mulai</label><input type="time" class="form-control" name="jam_mulai"></div>
                         <div class="form-group col-md-4"><label>Jam Selesai</label><input type="time" class="form-control" name="jam_selesai"></div>
                     </div>
+                    <div class="form-group"><label>Fokus <small class="text-muted">auto dari Program, bisa pilih lebih dari satu</small></label><select class="form-control" name="fokus[]" id="sv-fokus-jadwal" multiple></select></div>
                     <div class="form-group"><label>Tempat</label><input type="text" class="form-control" name="tempat"></div>
                     <div class="form-group"><label>Keterangan</label><textarea class="form-control" name="keterangan" rows="2"></textarea></div>
                 </div>
