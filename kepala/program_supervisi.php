@@ -238,9 +238,18 @@ function svCurrentIndikatorMap() {
 function svPopulateTemplateSelect(jenis) {
     var sel = $('#sv-template-select');
     sel.empty().append('<option value="">- Pilih Template Program -</option>');
-    (svProgramTemplates[jenis] || []).forEach(function (t) {
-        sel.append('<option value="' + t.kode + '">' + t.kode + ' - ' + $('<div>').text(t.nama).html() + '</option>');
+    jenis = (jenis||'').toString().trim();
+    if (!jenis) { sel.append('<option value="" disabled>Pilih Jenis Supervisi dulu</option>'); sel.prop('disabled', true); return; }
+    sel.prop('disabled', false);
+    var list = svProgramTemplates[jenis];
+    if (!list) {
+        for (var k in svProgramTemplates) { if (k.toLowerCase() === jenis.toLowerCase()) { list = svProgramTemplates[k]; break; } }
+    }
+    if (!list || !list.length) { sel.append('<option value="" disabled>Tidak ada template untuk ' + $('<div>').text(jenis).html() + '</option>'); sel.prop('disabled', true); return; }
+    list.forEach(function (t) {
+        sel.append('<option value="' + String(t.kode) + '">' + String(t.kode) + ' - ' + $('<div>').text(t.nama).html() + '</option>');
     });
+    sel.prop('disabled', false);
 }
 
 function svApplyTemplate(kode) {
@@ -279,11 +288,17 @@ $(document).ready(function () {
             return false;
         }
     });
-    $('#form-program [name=jenis_supervisi]').on('change', function () {
-        var jenis = $(this).val();
+    $(document).on('change', '#form-program [name=jenis_supervisi]', function () {
+        var jenis = $.trim($(this).val() || '');
+        $('#sv-template-select').val('');
+        $('#form-program [name=kode_program]').val('');
+        $('#form-program [name=nama_program]').val('');
+        $('#form-program [name=tujuan]').val('');
+        $('#form-program [name=sasaran]').val('');
+        $('#form-program [name=target]').val('');
         svPopulateTemplateSelect(jenis);
-        svRenderFokus(jenis, svSelectedFokus());
-        svRenderIndikator(jenis, svSelectedFokus(), svCurrentIndikatorMap());
+        svRenderFokus(jenis, []);
+        svRenderIndikator(jenis, [], {});
     });
     $('#sv-template-select').on('change', function () { svApplyTemplate($(this).val()); });
 
@@ -338,10 +353,11 @@ $(document).ready(function () {
         $('#form-program')[0].reset();
         $('#form-program [name=aksi]').val('tambah');
         $('#form-program [name=id_program]').val('');
-        var jenis = $('#form-program [name=jenis_supervisi]').val() || 'Akademik';
-        svPopulateTemplateSelect(jenis);
-        svRenderFokus(jenis, []);
-        svRenderIndikator(jenis, [], {});
+        $('#form-program [name=jenis_supervisi]').val($('#form-program [name=jenis_supervisi] option').filter(function(){return $.trim($(this).val())==='';}).length? '' : ($('#form-program [name=jenis_supervisi]').val()||''));
+        var j0 = $.trim($('#form-program [name=jenis_supervisi]').val()||'');
+        svPopulateTemplateSelect(j0);
+        svRenderFokus(j0, []);
+        svRenderIndikator(j0, [], {});
         $('#modal-program .modal-title').text('Tambah Program Supervisi');
         $('#modal-program').modal('show');
     });
@@ -470,13 +486,14 @@ include '../templates/sidebar.php';
                 <div class="modal-body">
                     <div class="form-row">
                         <div class="form-group col-md-4">
-                            <label>Jenis Supervisi</label>
-                            <select class="form-control" name="jenis_supervisi">
+                            <label>Jenis Supervisi <span class="text-danger">*</span></label>
+                            <select class="form-control" name="jenis_supervisi" required>
+                                <option value="">-- Pilih Jenis Supervisi --</option>
                                 <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>"><?= $j ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-8">
-                            <label>Template Program (otomatis mengisi data, tetap dapat diedit)</label>
+                            <label>Template Program <small class="text-muted">pilih Jenis dulu</small></label>
                             <select class="form-control" id="sv-template-select">
                                 <option value="">- Pilih Template Program -</option>
                             </select>
@@ -506,7 +523,7 @@ include '../templates/sidebar.php';
                     </div>
                     <div class="form-group">
                         <label>Tujuan</label>
-                        <textarea class="form-control sv-autogrow" name="tujuan" rows="4"></textarea>
+                        <textarea class="form-control sv-autogrow" name="tujuan" rows="6" style="min-height:140px"></textarea>
                     </div>
                     <div class="form-group">
                         <label>Sasaran</label>
@@ -522,7 +539,7 @@ include '../templates/sidebar.php';
                     </div>
                     <div class="form-group">
                         <label>Target</label>
-                        <textarea class="form-control sv-autogrow" name="target" rows="3" placeholder="cth: Seluruh guru memperoleh supervisi akademik sesuai jadwal..."></textarea>
+                        <textarea class="form-control sv-autogrow" name="target" rows="6" style="min-height:140px" placeholder="cth: Seluruh guru memperoleh supervisi akademik sesuai jadwal..."></textarea>
                     </div>
                     <div class="form-group">
                         <label>Indikator Penilaian (mengikuti fokus terpilih)</label>

@@ -15,15 +15,12 @@ $periode = sv_periode($pdo);
 
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-    'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css',
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
 ];
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-    'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js',
-    'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales-all.min.js',
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
 ];
 
@@ -35,8 +32,25 @@ $instrumen_json = json_encode($instrumen_list, JSON_HEX_TAG | JSON_HEX_APOS | JS
 $program_json = json_encode($program_list, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $program_fokus_map = [];
 try {
-    $tmp = $pdo->query("SELECT id_program, fokus_supervisi FROM tb_sv_program")->fetchAll(PDO::FETCH_ASSOC);
+    $tmp = $pdo->query("SELECT id_program, fokus_supervisi, jenis_supervisi, kode_program FROM tb_sv_program")->fetchAll(PDO::FETCH_ASSOC);
     foreach ($tmp as $row) { $program_fokus_map[(string)$row['id_program']] = (string)($row['fokus_supervisi'] ?? ''); }
+    $templates = sv_program_templates();
+    foreach ($tmp as $row) {
+        $pid = (string)$row['id_program'];
+        if (trim((string)($program_fokus_map[$pid] ?? '')) !== '') continue;
+        $jenis = (string)($row['jenis_supervisi'] ?? '');
+        $kode = (string)($row['kode_program'] ?? '');
+        $fokusStr = '';
+        if ($jenis !== '' && $kode !== '') {
+            foreach ($templates[$jenis] ?? [] as $tpl) { if (strcasecmp($tpl['kode'], $kode) === 0) { $fokusStr = implode(', ', array_keys($tpl['fokus'] ?? [])); break; } }
+        }
+        if ($fokusStr === '' && $jenis !== '' && isset($templates[$jenis])) {
+            $set = []; $seen = [];
+            foreach ($templates[$jenis] as $tpl) { foreach (array_keys($tpl['fokus'] ?? []) as $fk) { if (!isset($seen[$fk])) { $seen[$fk] = true; $set[] = $fk; } } }
+            $fokusStr = implode(', ', $set);
+        }
+        if ($fokusStr !== '') $program_fokus_map[$pid] = $fokusStr;
+    }
 } catch (Throwable $e) {}
 $program_fokus_json = json_encode($program_fokus_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $program_instrumen_map = [];
@@ -219,7 +233,6 @@ $flash = sv_render_flash_js();
 if ($flash !== '') {
     $js_page[] = $flash;
 }
-$js_page[] = 'var svEvents = ' . json_encode($calendar_events) . ';';
 $js_page[] = 'var svInstrumenList = ' . $instrumen_json . ';';
 $js_page[] = 'var svProgramList = ' . $program_json . ';';
 $js_page[] = 'var svProgramFokus = ' . $program_fokus_json . ';';
@@ -233,8 +246,10 @@ function svEnsureOption($sel, val, label) {
     }
 }
 function svParseFokusList(s){ if(!s) return []; var parts=String(s).split(','); var out=[],seen={}; parts.forEach(function(p){ p=String(p).trim(); if(p && !seen[p]){ seen[p]=1; out.push(p); }}); return out; }
-function svRefreshFokusJadwal(pid, selected){ var list=svParseFokusList(pid ? (svProgramFokus[String(pid)]||'') : ''); var $sel=$('#sv-fokus-jadwal'); if(!$sel.length) return; $sel.empty(); if(!list.length){ $sel.append('<option value="" disabled>Pilih Program dulu</option>'); $sel.trigger('change'); return; } var auto = !selected; list.forEach(function(f){ var sel=''; if(selected){ sel=(selected.indexOf(f)!==-1)?' selected':''; } else { sel=' selected'; } var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>'); }); $sel.trigger('change'); }
+function svRefreshFokusJadwal(pid, selected){ var list=svParseFokusList(pid ? (svProgramFokus[String(pid)]||'') : ''); var $sel=$('#sv-fokus-jadwal'); if(!$sel.length) return; $sel.empty(); if(!list.length){ $sel.append('<option value="" disabled>Pilih Fokus (pilih Program dulu)</option>'); $sel.trigger('change'); return; } if(!selected){ list.forEach(function(f){ var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'">'+esc+'</option>'); }); $sel.val(null).trigger('change'); return; } list.forEach(function(f){ var sel=(selected.indexOf(f)!==-1)?' selected':''; var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>'); }); $sel.trigger('change'); }
 function svFillFokusJadwal(pid, keepManual){ var $sel=$('#sv-fokus-jadwal'); if(!$sel.length) return; if(keepManual && $sel.find('option:selected').length) return; svRefreshFokusJadwal(pid, null); }
+function svIsFokusVisibleJadwal(jenis){ return true; }
+function svToggleFokusJadwalField(jenis){ var $wrap=$('#sv-fokus-jadwal-wrap'); if($wrap.length) $wrap.show(); }
 function svInitFokusJadwalSelect2(){ if(!$.fn.select2) return; var $s=$('#sv-fokus-jadwal'); if($s.hasClass('select2-hidden-accessible')) $s.select2('destroy'); $s.select2({ placeholder:'Pilih Fokus', width:'100%', dropdownParent: $('#modal-jadwal'), closeOnSelect:false }); }
 function svFilterModalByJenis(jenis, keepVal) {
     var $p = $('#form-jadwal [name=id_program]');
@@ -264,6 +279,7 @@ function svFilterModalByJenis(jenis, keepVal) {
         if(mapped2 && $i.find('option[value="'+mapped2+'"]').length){ $i.val(mapped2); } else if($i.find('option').length>1){ $i.prop('selectedIndex', 1); }
         svFillFokusJadwal(firstProg2||'', false);
     }
+    svToggleFokusJadwalField(jenis);
 }
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
@@ -313,24 +329,6 @@ $(document).ready(function () {
     });
     $('#btn-excel').on('click', function () { var table=document.getElementById('table-jadwal');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'jadwal_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='jadwal_supervisi.xls';a.click();}; });
     $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=jadwal&' + q, '_blank'); });
-
-    var calEl = document.getElementById('svCalendar');
-    if (calEl && typeof FullCalendar !== 'undefined') {
-        var calendar = new FullCalendar.Calendar(calEl, {
-            initialView: 'dayGridMonth',
-            locale: 'id',
-            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' },
-            events: svEvents,
-            eventClick: function (info) {
-                if (info.event.url) {
-                    info.jsEvent.preventDefault();
-                    window.location.href = info.event.url;
-                }
-            },
-            height: 620
-        });
-        calendar.render();
-    }
 });
 JS;
 
@@ -394,11 +392,6 @@ include '../templates/sidebar.php';
                         </div>
                     </form>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header"><h4>Tampilan Kalender</h4></div>
-                <div class="card-body"><div id="svCalendar"></div></div>
             </div>
 
             <div class="card">
@@ -532,7 +525,7 @@ include '../templates/sidebar.php';
                         <div class="form-group col-md-4"><label>Jam Mulai</label><input type="time" class="form-control" name="jam_mulai"></div>
                         <div class="form-group col-md-4"><label>Jam Selesai</label><input type="time" class="form-control" name="jam_selesai"></div>
                     </div>
-                    <div class="form-group"><label>Fokus <small class="text-muted">auto dari Program, bisa pilih lebih dari satu</small></label><select class="form-control" name="fokus[]" id="sv-fokus-jadwal" multiple></select></div>
+                    <div class="form-group" id="sv-fokus-jadwal-wrap"><label>Fokus <small class="text-muted">auto dari Program — pilih sendiri</small></label><select class="form-control" name="fokus[]" id="sv-fokus-jadwal" multiple></select></div>
                     <div class="form-group"><label>Tempat</label><input type="text" class="form-control" name="tempat"></div>
                     <div class="form-group"><label>Keterangan</label><textarea class="form-control" name="keterangan" rows="2"></textarea></div>
                 </div>
