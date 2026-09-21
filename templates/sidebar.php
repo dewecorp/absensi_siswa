@@ -26,10 +26,11 @@ if (!function_exists('get_dynamic_breadcrumb')) {
             return $breadcrumb;
         }
 
+        $match = function($url, $page){ $p = parse_url($url, PHP_URL_PATH); return basename((string)$p) === $page; };
         // Search through menu items
         foreach ($menu_items as $menu) {
             // Check if this menu is the direct match (no submenu)
-            if (isset($menu['url']) && strpos($menu['url'], $current_page) !== false) {
+            if (isset($menu['url']) && $match($menu['url'], $current_page)) {
                 $breadcrumb[] = [
                     'title' => $menu['title'],
                     'url' => $menu['url'],
@@ -41,7 +42,7 @@ if (!function_exists('get_dynamic_breadcrumb')) {
             // Check submenu
             if (isset($menu['submenu']) && is_array($menu['submenu'])) {
                 foreach ($menu['submenu'] as $submenu) {
-                    if (isset($submenu['url']) && strpos($submenu['url'], $current_page) !== false) {
+                    if (isset($submenu['url']) && $match($submenu['url'], $current_page)) {
                         $breadcrumb[] = [
                             'title' => $menu['title'],
                             'url' => null,
@@ -276,7 +277,8 @@ switch ($user_level) {
     case 'admin':
         $supervisi_submenu_admin = [
             ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php?session_type=admin', 'active' => $current_page === 'dashboard_supervisi.php'],
-            ['title' => 'Data Program Supervisi', 'url' => '../kepala/program_supervisi.php?session_type=admin', 'active' => $current_page === 'program_supervisi.php'],
+            ['title' => 'Data Program Supervisi', 'url' => '../kepala/data_program_supervisi.php?session_type=admin', 'active' => $current_page === 'data_program_supervisi.php'],
+            ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php?session_type=admin', 'active' => $current_page === 'program_supervisi.php'],
             ['title' => 'Sasaran Supervisi', 'url' => '../kepala/sasaran_supervisi.php?session_type=admin', 'active' => $current_page === 'sasaran_supervisi.php'],
             ['title' => 'Jadwal Supervisi', 'url' => '../kepala/jadwal_supervisi.php?session_type=admin', 'active' => $current_page === 'jadwal_supervisi.php'],
             ['title' => 'Daftar Instrumen', 'url' => '../kepala/instrumen_supervisi.php?session_type=admin', 'active' => $current_page === 'instrumen_supervisi.php'],
@@ -440,7 +442,7 @@ switch ($user_level) {
                 'title' => 'Supervisi',
                 'icon' => 'fas fa-clipboard-check',
                 'submenu' => $supervisi_submenu_admin,
-                'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php'])
+                'active' => in_array($current_page, ['dashboard_supervisi.php', 'data_program_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php'])
             ],
             [
                 'title' => 'Program Kerja',
@@ -594,7 +596,8 @@ switch ($user_level) {
                 'icon' => 'fas fa-clipboard-check',
                 'submenu' => [
                     ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php', 'active' => $current_page === 'dashboard_supervisi.php'],
-                    ['title' => 'Data Program Supervisi', 'url' => '../kepala/program_supervisi.php', 'active' => $current_page === 'program_supervisi.php'],
+                    ['title' => 'Data Program Supervisi', 'url' => '../kepala/data_program_supervisi.php', 'active' => $current_page === 'data_program_supervisi.php'],
+                    ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php', 'active' => $current_page === 'program_supervisi.php'],
                     ['title' => 'Sasaran Supervisi', 'url' => '../kepala/sasaran_supervisi.php', 'active' => $current_page === 'sasaran_supervisi.php'],
                     ['title' => 'Jadwal Supervisi', 'url' => '../kepala/jadwal_supervisi.php', 'active' => $current_page === 'jadwal_supervisi.php'],
                     ['title' => 'Daftar Instrumen', 'url' => '../kepala/instrumen_supervisi.php', 'active' => $current_page === 'instrumen_supervisi.php'],
