@@ -285,14 +285,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             if ($fokus_val === '') {
                 if (isset($jenis_fokus_map_pel[$sv_jenis])) $fokus_val = trim((string)$jenis_fokus_map_pel[$sv_jenis]);
             }
-            $kekuatan_val = trim((string)($_POST['kekuatan'] ?? ''));
-            if ($kekuatan_val === '__manual__') $kekuatan_val = trim((string)($_POST['kekuatan_manual'] ?? ''));
-            $kelemahan_val = trim((string)($_POST['kelemahan'] ?? ''));
-            if ($kelemahan_val === '__manual__') $kelemahan_val = trim((string)($_POST['kelemahan_manual'] ?? ''));
-            $rekomendasi_val = trim((string)($_POST['rekomendasi'] ?? ''));
-            if ($rekomendasi_val === '__manual__') $rekomendasi_val = trim((string)($_POST['rekomendasi_manual'] ?? ''));
-            $prioritas_val = trim((string)($_POST['prioritas_perbaikan'] ?? ''));
-            if ($prioritas_val === '__manual__') $prioritas_val = trim((string)($_POST['prioritas_perbaikan_manual'] ?? ''));
+            // Gabungkan nilai multi-select; '__manual__' diganti isian manual
+            $joinMultiple = function($arr, $manualField) {
+                $arr = is_array($arr) ? $arr : [$arr];
+                $manual = trim((string)($_POST[$manualField] ?? ''));
+                $keep = [];
+                foreach ($arr as $v) {
+                    $v = trim((string)$v);
+                    if ($v === '') continue;
+                    if ($v === '__manual__') { if ($manual !== '') $keep[] = $manual; continue; }
+                    $keep[] = $v;
+                }
+                return implode(', ', array_values(array_unique($keep)));
+            };
+            $kekuatan_val = $joinMultiple($_POST['kekuatan'] ?? [], 'kekuatan_manual');
+            $kelemahan_val = $joinMultiple($_POST['kelemahan'] ?? [], 'kelemahan_manual');
+            $rekomendasi_val = $joinMultiple($_POST['rekomendasi'] ?? [], 'rekomendasi_manual');
+            $prioritas_val = $joinMultiple($_POST['prioritas_perbaikan'] ?? [], 'prioritas_perbaikan_manual');
             $data = [
                 (int)($_POST['id_jadwal'] ?? 0) ?: null,
                 (int)($_POST['id_program'] ?? 0) ?: null,
@@ -650,8 +659,15 @@ $(document).ready(function () {
         svRefreshFokusPelaksanaan(pid,iid,null,jenis || svJenisSupervisi);
     }
     function svInitFokusPelaksanaanSelect2(){ if(!$.fn.select2) return; var $s=$('#sv-fokus-pelaksanaan'); if($s.hasClass('select2-hidden-accessible')) $s.select2('destroy'); $s.select2({ placeholder:'Pilih Fokus', width:'100%', dropdownParent: $('#modal-pelaksanaan'), closeOnSelect:false }); }
-    function svBindMaster(name){var s=$('#form-pelaksanaan [name='+name+']'),m=$('#'+name+'-manual');if(name==='prioritas_perbaikan') m=$('#prioritas-manual');s.on('change',function(){if($(this).val()==='__manual__'){m.removeClass('d-none').focus();}else{m.addClass('d-none');}});m.on('input',function(){var v=$(this).val();s.find('option.sv-manual-opt').remove();if(v) s.append('<option class="sv-manual-opt" value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>');});}
+    function svBindMaster(name){var s=$('#form-pelaksanaan [name="'+name+'[]"]'),m=$('#'+name+'-manual');if(name==='prioritas_perbaikan') m=$('#prioritas-manual');if(s.length){ var selHandler=function(){ var v=$(this).val(); var isManual=(Array.isArray(v)?v.indexOf('__manual__')!==-1:v==='__manual__'); if(isManual){ m.removeClass('d-none'); }else{ m.addClass('d-none'); } }; $(document).on('change', 'select[name="'+name+'[]"]', selHandler); } m.on('input',function(){var v=$(this).val();s.find('option.sv-manual-opt').remove();if(v) s.append('<option class="sv-manual-opt" value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>');}); }
     svBindMaster('kekuatan');svBindMaster('kelemahan');svBindMaster('rekomendasi');svBindMaster('prioritas_perbaikan');
+    // Init Select2 agar multi-select mudah dipakai (samakan dgn field Fokus)
+    if($.fn.select2){
+        $('#kekuatan').select2({ placeholder:'Pilih Kekuatan', width:'100%', dropdownParent:'#modal-pelaksanaan', allowClear:true, closeOnSelect:false });
+        $('#kelemahan').select2({ placeholder:'Pilih Kelemahan', width:'100%', dropdownParent:'#modal-pelaksanaan', allowClear:true, closeOnSelect:false });
+        $('#rekomendasi').select2({ placeholder:'Pilih Rekomendasi', width:'100%', dropdownParent:'#modal-pelaksanaan', allowClear:true, closeOnSelect:false });
+        $('#prioritas_perbaikan').select2({ placeholder:'Pilih Prioritas Perbaikan', width:'100%', dropdownParent:'#modal-pelaksanaan', allowClear:true, closeOnSelect:false });
+    }
     $('#form-pelaksanaan [name=id_instrumen]').on('change', svRenderPenilaian);
     $(document).on('input', '.sv-skor', svHitungNilai);
 
@@ -680,15 +696,30 @@ $(document).ready(function () {
         }, 150);
     }
 
-    function svEnsurePelaksanaanOption(name, val, label) {
-        if (!val) return;
-        val = String(val);
-        var $sel = $('#form-pelaksanaan [name="' + name + '"]');
-        if (!$sel.length || !$sel.is('select')) return;
-        if ($sel.find('option').filter(function(){ return String($(this).val()) === val; }).length === 0) {
-            $sel.append('<option value="' + $('<div>').text(val).html() + '">' + $('<div>').text(label || val).html() + ' (lama)</option>');
+    // Helper: handle multi-select populate (kekuatan, kelemahan, rekomendasi, prioritas)
+    function svEnsurePelaksanaanOption(name, currentVals){
+        var s=$('#form-pelaksanaan select[name="'+name+'[]"]'); if(!s.length) return;
+        if (!currentVals || (typeof currentVals !== 'string' && !Array.isArray(currentVals))) return;
+        var vals = [];
+        if (typeof currentVals === 'string') {
+            vals = currentVals.split(',').map(function(v){ return v.trim(); }).filter(Boolean);
+        } else if (Array.isArray(currentVals)) {
+            vals = currentVals.filter(Boolean);
         }
+        // Destroy existing Select2, add options, re-init
+        try { if(s.hasClass('select2-hidden-accessible')) s.select2('destroy'); } catch(e){}
+        vals.forEach(function(v){
+            if ($('<div>').html(v).text() !== $('<div>').html(v).text()) v = $('<div>').html(v).text();
+            var exists = s.find('option').filter(function(){ return $(this).val() === v; });
+            if (exists.length) { exists.prop('selected', true); }
+            else { var opt = $('<option class="sv-temp-opt" value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>'); opt.appendTo(s); }
+        });
+        // Re-initialize Select2 with selected values
+        setTimeout(function(){
+            s.select2({ placeholder:'Pilih...', width:'100%', dropdownParent:'#modal-pelaksanaan', allowClear:true, closeOnSelect:false });
+        }, 50);
     }
+    
     $(document).on('click', '.btn-edit', function () {
         var d = $(this).data('row');
         if (d.supervisor) svEnsurePelaksanaanOption('supervisor', d.supervisor, d.supervisor);
@@ -711,10 +742,24 @@ $(document).ready(function () {
         $('#form-pelaksanaan')[0].reset();
         $('#form-pelaksanaan [name=aksi]').val('simpan');
         Object.keys(d).forEach(function (k) {
-            var el = $('#form-pelaksanaan [name="' + k + '"]');
-            if (el.length) {
-                if(['kekuatan','kelemahan','rekomendasi','prioritas_perbaikan'].indexOf(k)!==-1 && d[k]) svEnsurePelaksanaanOption(k, d[k], d[k]);
+            var el = $('#form-pelaksanaan [name="'+k+'[]"]'); // try array name first
+            if (!el.length) el = $('#form-pelaksanaan [name="'+k+'"]'); // fallback single
+            if (el.length && k !== 'kekuatan' && k !== 'kelemahan' && k !== 'rekomendasi' && k !== 'prioritas_perbaikan') {
                 el.val(d[k]);
+            } else if (['kekuatan','kelemahan','rekomendasi','prioritas_perbaikan'].indexOf(k)!==-1 && d[k] && typeof svEnsurePelaksanaanOption==='function') {
+                svEnsurePelaksanaanOption(k, d[k], null);
+            }
+        });
+        // Handle multi-select fields: kekuatan, kelemahan, rekomendasi, prioritas_perbaikan
+        ['kekuatan','kelemahan','rekomendasi','prioritas_perbaikan'].forEach(function(k){
+            if (d[k] && typeof svEnsurePelaksanaanOption === 'function') {
+                setTimeout(function(){ 
+                    var s = $('#form-pelaksanaan select[name="'+k+'[]"]');
+                    if (s.length) {
+                        svEnsurePelaksanaanOption(k, d[k]);
+                        s.trigger('change.select2');
+                    }
+                }, 150);
             }
         });
         if (d.fokus) {
@@ -726,10 +771,22 @@ $(document).ready(function () {
             svPopulateMapel(d.id_guru || $('#sv-guru-select').val(), false);
             if (d.mapel_di_supervisi) { $('#sv-mapel-select').val(d.mapel_di_supervisi); }
         }
-        svRenderPenilaian();
+            svRenderPenilaian();
         $('#modal-pelaksanaan .modal-title').text('Edit Pelaksanaan Supervisi');
         $('#modal-pelaksanaan').modal('show');
     });
+    
+    // Helper: pilih/append opsi multi-select (kekuatan, kelemahan, rekomendasi, prioritas)
+    function svEnsurePelaksanaanOption(name, currentVals){
+        var s=$('#form-pelaksanaan select[name="'+name+'[]"]'); if(!s.length) return;
+        var vals = (typeof currentVals === 'string') ? currentVals.split(',') : (Array.isArray(currentVals) ? currentVals : []);
+        vals = vals.map(function(v){ return String(v).trim(); }).filter(Boolean);
+        vals.forEach(function(v){
+            var exists = s.find('option').filter(function(){ return $(this).val() === v; });
+            if (exists.length) { exists.prop('selected', true); }
+            else { s.append('<option value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+' (lama)</option>'); }
+        });
+    }
 
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
@@ -842,7 +899,11 @@ include '../templates/sidebar.php';
                                     <th>Instrumen</th>
                                     <th>Nilai</th>
                                     <th>Predikat</th>
+                                    <th style="width:180px">Kekuatan</th>
+                                    <th style="width:180px">Kelemahan</th>
+                                    <th style="width:180px">Fokus</th>
                                     <th>Rekomendasi</th>
+                                    <th style="min-width:120px">Prioritas</th>
                                     <th>Status</th>
                                     <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
                                 </tr>
@@ -859,7 +920,11 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars((string)$r['nama_instrumen']) ?></td>
                                         <td><?= $r['nilai'] !== null ? htmlspecialchars(number_format((float)$r['nilai'], 2)) : '-' ?></td>
                                         <td><?= htmlspecialchars((string)$r['predikat']) ?></td>
+                                        <td style="max-width:180px;white-space:normal"><?= nl2br(htmlspecialchars((string)$r['kekuatan'])) ?></td>
+                                        <td style="max-width:180px;white-space:normal"><?= nl2br(htmlspecialchars((string)$r['kelemahan'])) ?></td>
+                                        <td style="max-width:180px;white-space:normal"><?= nl2br(htmlspecialchars((string)$r['fokus'])) ?></td>
                                         <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
+                                        <td><?= htmlspecialchars((string)$r['prioritas_perbaikan']) ?></td>
                                         <td><span class="badge badge-<?= $r['status'] === 'Selesai' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($r['status']) ?></span></td>
                                         <?php if ($can_manage): ?>
                                         <td>
@@ -987,10 +1052,38 @@ include '../templates/sidebar.php';
                     <div class="form-group"><label>Fokus <small class="text-muted">auto dari Program / Instrumen, bisa pilih lebih dari satu</small></label><select class="form-control" name="fokus[]" id="sv-fokus-pelaksanaan" multiple></select></div>
                     <hr>
                     <div class="form-row">
-                        <div class="form-group col-md-6"><label>Kekuatan</label><select class="form-control" name="kekuatan"><option value="">-- Pilih Kekuatan --</option><?php foreach ($kekuatan_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="kekuatan_manual" id="kekuatan-manual" placeholder="Isi kekuatan manual"></div>
-                        <div class="form-group col-md-6"><label>Kelemahan</label><select class="form-control" name="kelemahan"><option value="">-- Pilih Kelemahan --</option><?php foreach ($kelemahan_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="kelemahan_manual" id="kelemahan-manual" placeholder="Isi kelemahan manual"></div>
-                        <div class="form-group col-md-12"><label>Rekomendasi</label><select class="form-control" name="rekomendasi"><option value="">-- Pilih Rekomendasi --</option><?php foreach ($rekomendasi_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="rekomendasi_manual" id="rekomendasi-manual" placeholder="Isi rekomendasi manual"></div>
-                        <div class="form-group col-md-6"><label>Prioritas Perbaikan</label><select class="form-control" name="prioritas_perbaikan"><option value="">-- Pilih Prioritas --</option><?php foreach ($prioritas_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?><option value="__manual__">Lainnya (isi manual)</option></select><input type="text" class="form-control mt-1 d-none" name="prioritas_perbaikan_manual" id="prioritas-manual" placeholder="Isi prioritas manual"></div>
+                            <div class="form-group col-md-6">
+                                <label>Kekuatan (Ctrl+Klik untuk pilih beberapa)</label>
+                                <select class="form-control" name="kekuatan[]" id="kekuatan" multiple size="4">
+                                <?php foreach ($kekuatan_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?>
+                                <option value="__manual__">Lainnya (isi manual)</option>
+                            </select>
+                            <input type="text" class="form-control mt-1 d-none" name="kekuatan_manual" id="kekuatan-manual" placeholder="Isi kekuatan manual">
+                        </div>
+                            <div class="form-group col-md-6">
+                                <label>Kelemahan (Ctrl+Klik untuk pilih beberapa)</label>
+                                <select class="form-control" name="kelemahan[]" id="kelemahan" multiple size="4">
+                                <?php foreach ($kelemahan_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?>
+                                <option value="__manual__">Lainnya (isi manual)</option>
+                            </select>
+                            <input type="text" class="form-control mt-1 d-none" name="kelemahan_manual" id="kelemahan-manual" placeholder="Isi kelemahan manual">
+                        </div>
+                            <div class="form-group col-md-12">
+                                <label>Rekomendasi (pilih beberapa)</label>
+                                <select class="form-control" name="rekomendasi[]" id="rekomendasi" multiple size="5">
+                                <?php foreach ($rekomendasi_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?>
+                                <option value="__manual__">Lainnya (isi manual)</option>
+                            </select>
+                            <input type="text" class="form-control mt-1 d-none" name="rekomendasi_manual" id="rekomendasi-manual" placeholder="Isi rekomendasi manual">
+                        </div>
+                            <div class="form-group col-md-6">
+                                <label>Prioritas Perbaikan (pilih beberapa)</label>
+                                <select class="form-control" name="prioritas_perbaikan[]" id="prioritas_perbaikan" multiple size="3">
+                                <?php foreach ($prioritas_list as $v): ?><option value="<?= htmlspecialchars($v, ENT_QUOTES) ?>"><?= htmlspecialchars($v) ?></option><?php endforeach; ?>
+                                <option value="__manual__">Lainnya (isi manual)</option>
+                            </select>
+                            <input type="text" class="form-control mt-1 d-none" name="prioritas_perbaikan_manual" id="prioritas-manual" placeholder="Isi prioritas manual">
+                        </div>
                         <div class="form-group col-md-6"><label>Keterangan</label><input type="text" class="form-control" name="keterangan"></div>
                     </div>
                 </div>

@@ -186,14 +186,43 @@ $flash = sv_render_flash_js();
 if ($flash !== '') {
     $js_page[] = $flash;
 }
+$tl_pelaksanaan_js = [];
+foreach ($pelaksanaan_list as $pl) {
+    $tl_pelaksanaan_js[(int)$pl['id_pelaksanaan']] = [
+        'label' => '#' . (int)$pl['id_pelaksanaan'] . ' - ' . ($pl['nama_guru'] ?: ($pl['unit_bagian'] ?: '-')) . ' (' . $pl['jenis_supervisi'] . ', ' . ($pl['tanggal'] ? date('d/m/Y', strtotime($pl['tanggal'])) : '-') . ')',
+        'rekomendasi' => (string)($pl['rekomendasi'] ?? ''),
+    ];
+}
+$js_page[] = 'var tlPelaksanaan = ' . json_encode($tl_pelaksanaan_js, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) . ';';
 $js_page[] = <<<'JS'
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
     var dttabletl=$('#table-tl').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttabletl.on('order.dt search.dt draw.dt',function(){var info=dttabletl.page.info();dttabletl.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    var tlSel = document.getElementById('tl_id_pelaksanaan');
+    function tlFillOptions(keep) {
+        if (!tlSel) return;
+        var cur = keep || tlSel.value;
+        tlSel.innerHTML = '<option value="">Pilih Supervisi</option>';
+        Object.keys(tlPelaksanaan).forEach(function (id) {
+            var o = document.createElement('option');
+            o.value = id; o.textContent = tlPelaksanaan[id].label;
+            tlSel.appendChild(o);
+        });
+        if (cur) tlSel.value = cur;
+    }
+    function tlSyncRek() {
+        var id = tlSel ? tlSel.value : '';
+        var el = document.getElementById('tl_rekomendasi');
+        if (el) el.value = (id && tlPelaksanaan[id]) ? (tlPelaksanaan[id].rekomendasi || '') : '';
+    }
+    tlFillOptions();
+    $(document).on('change', '#tl_id_pelaksanaan', tlSyncRek);
     $('#btn-tambah').on('click', function () {
         $('#form-tl')[0].reset();
         $('#form-tl [name=aksi]').val('tambah');
         $('#form-tl [name=id_tindak_lanjut]').val('');
+        tlFillOptions('');
+        tlSyncRek();
         $('#sv-bukti-current').hide();
         $('#modal-tl .modal-title').text('Tambah Tindak Lanjut');
         $('#modal-tl').modal('show');
@@ -202,10 +231,12 @@ $(document).ready(function () {
         var d = $(this).data('row');
         $('#form-tl')[0].reset();
         $('#form-tl [name=aksi]').val('edit');
+        tlFillOptions(d.id_pelaksanaan);
         Object.keys(d).forEach(function (k) {
             var el = $('#form-tl [name="' + k + '"]');
             if (el.length) { el.val(d[k]); }
         });
+        tlSyncRek();
         if (d.bukti_file) {
             $('#sv-bukti-file').text(d.bukti_file);
             $('#sv-bukti-current').show();
@@ -354,18 +385,8 @@ include '../templates/sidebar.php';
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label>ID Supervisi (Pelaksanaan)</label>
-                        <select class="form-control" name="id_pelaksanaan" required>
-                            <option value="">Pilih Supervisi</option>
-                            <?php foreach ($pelaksanaan_list as $pl): ?>
-                                <option value="<?= (int)$pl['id_pelaksanaan'] ?>">
-                                    #<?= (int)$pl['id_pelaksanaan'] ?> - <?= htmlspecialchars($pl['nama_guru'] ?: ($pl['unit_bagian'] ?: '-')) ?> (<?= htmlspecialchars($pl['jenis_supervisi']) ?>, <?= $pl['tanggal'] ? date('d/m/Y', strtotime($pl['tanggal'])) : '-' ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Rekomendasi</label><textarea class="form-control" name="rekomendasi" rows="2"></textarea></div>
+                    <div class="form-group"><label>ID Supervisi (Pelaksanaan)</label><select class="form-control" name="id_pelaksanaan" id="tl_id_pelaksanaan" required></select></div>
+                    <div class="form-group"><label>Rekomendasi</label><textarea class="form-control" name="rekomendasi" id="tl_rekomendasi" rows="2"></textarea></div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label>Bentuk Tindak Lanjut</label>
@@ -382,7 +403,13 @@ include '../templates/sidebar.php';
                     </div>
                     <div class="form-group"><label>Rencana Tindakan</label><textarea class="form-control" name="rencana_tindakan" rows="2"></textarea></div>
                     <div class="form-row">
-                        <div class="form-group col-md-6"><label>Penanggung Jawab</label><input type="text" class="form-control" name="penanggung_jawab"></div>
+                        <div class="form-group col-md-6">
+                            <label>Penanggung Jawab</label>
+                            <select class="form-control" name="penanggung_jawab">
+                                <option value="">-- Pilih Jabatan --</option>
+                                <?php foreach (getJabatanList($pdo) as $j): ?><option value="<?= htmlspecialchars($j['nama_jabatan']) ?>"> <?= htmlspecialchars($j['nama_jabatan']) ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
                         <div class="form-group col-md-6"><label>Target Selesai</label><input type="date" class="form-control" name="target_selesai"></div>
                     </div>
                     <div class="form-row">
