@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/program_kerja_master.php';
 if (!isAuthorized(['admin','kepala_madrasah'])) die('Unauthorized');
 $school_profile=getSchoolProfile($pdo);
 $school_name=strtoupper($school_profile['nama_madrasah']??'Sistem Informasi Madrasah');
@@ -8,13 +9,11 @@ $foundation_name=strtoupper($school_profile['nama_yayasan']??'');
 $school_address=$school_profile['alamat']??'';
 $tahun_ajaran=$school_profile['tahun_ajaran']?? date('Y').'/'.(date('Y')+1);
 $filename_tahun=str_replace('/','-',$tahun_ajaran);
-$komponen_list=[
-1=>'Manajemen & Kepemimpinan',2=>'Kurikulum & Pembelajaran',3=>'Kesiswaan',4=>'Pendidik & Tenaga Kependidikan',5=>'Keuangan & Penganggaran',6=>'Sarana & Prasarana',7=>'Administrasi & Tata Usaha',8=>'Hubungan Masyarakat',9=>'Pengembangan Mutu Madrasah',10=>'Supervisi & Evaluasi',11=>'Keagamaan & Karakter',12=>'Ekstrakurikuler & Prestasi',13=>'Digitalisasi Madrasah',14=>'Kemitraan & Pengembangan',15=>'Manajemen Risiko & Keamanan',
-];
+$komponen_list=prokerGetKomponenNama($pdo);
 $status_opts=['belum_terlaksana'=>'Belum Terlaksana','proses'=>'Proses','terlaksana'=>'Terlaksana'];
 $komp=(int)($_GET['komponen']??0); $st=trim($_GET['status']??''); if(!isset($status_opts[$st])) $st='';
 $where=[]; $params=[];
-if($komp>=1&&$komp<=15){$where[]="komponen=?"; $params[]=$komp;}
+if($komp>=1){$where[]="komponen=?"; $params[]=$komp;}
 if($st!==''){ $where[]="status=?"; $params[]=$st; }
 if($where){$stmt=$pdo->prepare("SELECT * FROM tb_program_kerja WHERE ".implode(' AND ',$where)." ORDER BY komponen ASC, id ASC"); $stmt->execute($params); $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);} else {$rows=$pdo->query("SELECT * FROM tb_program_kerja ORDER BY komponen ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);}
 header("Content-Type: application/vnd.ms-excel");
@@ -29,7 +28,7 @@ header("Pragma: no-cache"); header("Expires: 0");
 <tr><td colspan="16" class="header-text bold">TAHUN AJARAN <?=$tahun_ajaran?></td></tr>
 <tr><td colspan="16" class="no-border"></td></tr>
 <tr><td colspan="16" class="header-title" style="text-decoration:underline">PROGRAM KERJA MADRASAH</td></tr>
-<?php if($komp||$st):?><tr><td colspan="16" class="header-text">Filter: <?= $komp? 'Komponen: '.$komponen_list[$komp].' | ':''?><?= $st? 'Status: '.$status_opts[$st]:''?></td></tr><?php endif;?>
+<?php if($komp||$st):?><tr><td colspan="16" class="header-text">Filter: <?= $komp? 'Komponen: '.($komponen_list[$komp]??'-').' | ':''?><?= $st? 'Status: '.$status_opts[$st]:''?></td></tr><?php endif;?>
 <tr><td colspan="16" class="no-border"></td></tr>
 <tr><th>No</th><th>Komponen</th><th>Program</th><th>Kegiatan</th><th>Tujuan</th><th>Indikator Keberhasilan</th><th>Target</th><th>Waktu Mulai</th><th>Waktu Selesai</th><th>Penanggung Jawab</th><th>Anggaran</th><th>Sumber Dana</th><th>Bukti</th><th>Evaluasi</th><th>Tindak Lanjut</th><th>Status</th></tr>
 <?php $no=1; foreach($rows as $r):?>

@@ -1084,7 +1084,26 @@ if (!function_exists('sv_upload_dir')) {
 if (!function_exists('sv_upload_url')) {
     function sv_upload_url(string $file): string
     {
-        return '../uploads/supervisi/' . rawurlencode($file);
+        $file = str_replace('\\', '/', (string)$file);
+        $parts = array_map('rawurlencode', explode('/', $file));
+        return '../uploads/supervisi/' . implode('/', $parts);
+    }
+}
+
+if (!function_exists('sv_folder_name')) {
+    /**
+     * Nama folder aman dari nama guru / unit, untuk merapikan file dokumentasi.
+     */
+    function sv_folder_name(string $name): string
+    {
+        $name = trim($name);
+        $name = preg_replace('/[^A-Za-z0-9 _-]+/', '', $name);
+        $name = preg_replace('/\s+/', '_', (string)$name);
+        $name = trim((string)$name, '_');
+        if ($name === '') {
+            $name = 'umum';
+        }
+        return substr($name, 0, 60);
     }
 }
 
@@ -1093,7 +1112,7 @@ if (!function_exists('sv_handle_upload')) {
      * Validasi & simpan file arsip supervisi.
      * @return array{ok:bool,file?:string,error?:string}
      */
-    function sv_handle_upload(array $file, string $prefix = 'sv'): array
+    function sv_handle_upload(array $file, string $prefix = 'sv', string $subdir = ''): array
     {
         if (!isset($file['error']) || is_array($file['error'])) {
             return ['ok' => false, 'error' => 'Parameter file tidak valid.'];
@@ -1139,7 +1158,11 @@ if (!function_exists('sv_handle_upload')) {
             }
         }
 
+        $subdir = trim(str_replace('\\', '/', $subdir), '/');
         $dir = sv_upload_dir();
+        if ($subdir !== '') {
+            $dir .= '/' . $subdir;
+        }
         if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
             return ['ok' => false, 'error' => 'Folder penyimpanan tidak dapat dibuat.'];
         }
@@ -1157,7 +1180,7 @@ if (!function_exists('sv_handle_upload')) {
         }
         @chmod($dir . '/' . $newName, 0644);
 
-        return ['ok' => true, 'file' => $newName];
+        return ['ok' => true, 'file' => ($subdir !== '' ? $subdir . '/' . $newName : $newName)];
     }
 }
 

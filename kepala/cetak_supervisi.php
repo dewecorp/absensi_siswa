@@ -178,13 +178,14 @@ try {
 
         case 'arsip':
             $title = 'Arsip / Bukti Supervisi';
-            $headers = ['ID Supervisi', 'Jenis Dokumen', 'Nama Dokumen', 'File', 'Tautan Dokumen', 'Tanggal Upload', 'Pengunggah', 'Keterangan'];
+            $headers = ['Guru yang Disupervisi', 'Jenis Dokumen', 'Nama Dokumen', 'File', 'Tautan Dokumen', 'Tanggal Upload', 'Pengunggah', 'Keterangan'];
             $rows = $pdo->query("SELECT a.*, p.nama_guru, p.unit_bagian, p.jenis_supervisi
                 FROM tb_sv_arsip a LEFT JOIN tb_sv_pelaksanaan p ON p.id_pelaksanaan = a.id_pelaksanaan
                 ORDER BY a.tanggal_upload DESC, a.id_arsip DESC")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($rows as $r) {
+                $namaSup = ($r['jenis_supervisi'] === 'Manajerial') ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-');
                 $body[] = [
-                    '#' . (int)$r['id_pelaksanaan'], h($r['jenis_dokumen']), h($r['nama_dokumen']),
+                    h($namaSup), h($r['jenis_dokumen']), h($r['nama_dokumen']),
                     h($r['file']), h($r['tautan_dokumen']),
                     $r['tanggal_upload'] ? date('d/m/Y H:i', strtotime($r['tanggal_upload'])) : '-',
                     h($r['pengunggah']), h($r['keterangan']),
@@ -193,7 +194,9 @@ try {
             break;
 
         case 'hasil':
-            $title = 'Hasil Supervisi';
+        case 'laporan':
+            $title = ($jenis === 'laporan') ? 'Laporan Supervisi' : 'Hasil Supervisi';
+            if ($jenis === 'laporan') { $subtitle = 'Tahun Ajaran ' . $filter_ta; }
             $where = [];
             $params = [];
             if ($filter_ta !== '' && isTahunAjaranFormatValid($filter_ta)) {

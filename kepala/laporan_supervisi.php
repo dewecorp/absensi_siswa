@@ -8,14 +8,10 @@ sv_require_access($pdo);
 
 $page_title = 'Laporan Supervisi';
 $current_page = basename(__FILE__);
-$can_manage = sv_is_supervisor($pdo);
 
 $school_profile = getSchoolProfile($pdo);
 $periode = sv_periode($pdo);
-$filter_ta_laporan = trim((string)($_GET['tahun_ajaran'] ?? $periode['tahun_ajaran']));
-if ($filter_ta_laporan === '' || !isTahunAjaranFormatValid($filter_ta_laporan)) {
-    $filter_ta_laporan = $periode['tahun_ajaran'];
-}
+$can_manage = sv_is_supervisor($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     $aksi = (string)($_POST['aksi'] ?? '');
@@ -95,8 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             foreach ($tindak as $t) $html .= '<tr><td>' . $h($t['bentuk_tindak_lanjut']) . '</td><td>' . $h($t['rencana_tindakan']) . '</td><td>' . $h($t['target_selesai'] ? date('d/m/Y', strtotime($t['target_selesai'])) : '-') . '</td><td>' . $h($t['status']) . '</td></tr>';
             $html .= '</tbody></table>';
             if ($monitoring) {
-                $html .= '<p><strong>Hasil monitoring:</strong></p><table><thead><tr><th>Tanggal</th><th>Ke</th><th>Hasil</th><th>Nilai Sebelum → Sesudah</th></tr></thead><tbody>';
-                foreach ($monitoring as $m) $html .= '<tr><td>' . $h($m['tanggal_monitoring'] ? date('d/m/Y', strtotime($m['tanggal_monitoring'])) : '-') . '</td><td>' . $h($m['monitoring_ke']) . '</td><td>' . $h($m['hasil_monitoring']) . '</td><td>' . $h(($m['nilai_sebelum'] ?? '-') . ' → ' . ($m['nilai_sesudah'] ?? '-')) . '</td></tr>';
+                $html .= '<p><strong>Hasil monitoring:</strong></p><table><thead><tr><th>Tanggal</th><th>Ke</th><th>Hasil</th><th>Nilai Sebelum / Sesudah</th></tr></thead><tbody>';
+                foreach ($monitoring as $m) $html .= '<tr><td>' . $h($m['tanggal_monitoring'] ? date('d/m/Y', strtotime($m['tanggal_monitoring'])) : '-') . '</td><td>' . $h($m['monitoring_ke']) . '</td><td>' . $h($m['hasil_monitoring']) . '</td><td>' . $h(($m['nilai_sebelum'] ?? '-') . ' / ' . ($m['nilai_sesudah'] ?? '-')) . '</td></tr>';
                 $html .= '</tbody></table>';
             }
         } else $html .= '<p>Tindak lanjut: -</p>';
@@ -117,41 +113,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     }
 }
 
-$rta = getRentangTanggalTahunAjaran($filter_ta_laporan);
-$rows = [];
-try {
-    if ($rta) {
-        $stmt = $pdo->prepare("SELECT p.id_pelaksanaan, p.tanggal, p.nama_guru, p.unit_bagian, p.jenis_supervisi, p.id_program, p.id_guru, p.mapel_di_supervisi, p.nilai, p.predikat, p.temuan, p.rekomendasi, p.status, p.id_instrumen, pr.nama_program, pr.tahun_ajaran, pr.semester, i.nama_instrumen
-            FROM tb_sv_pelaksanaan p
-            LEFT JOIN tb_sv_program pr ON pr.id_program = p.id_program
-            LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen
-            WHERE p.tanggal BETWEEN ? AND ?
-            ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC");
-        $stmt->execute([$rta['mulai'], $rta['sampai']]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $rows = $pdo->query("SELECT p.id_pelaksanaan, p.tanggal, p.nama_guru, p.unit_bagian, p.jenis_supervisi, p.id_program, p.id_guru, p.mapel_di_supervisi, p.nilai, p.predikat, p.temuan, p.rekomendasi, p.status, p.id_instrumen, pr.nama_program, pr.tahun_ajaran, pr.semester, i.nama_instrumen
-            FROM tb_sv_pelaksanaan p
-            LEFT JOIN tb_sv_program pr ON pr.id_program = p.id_program
-            LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen
-            ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC")->fetchAll(PDO::FETCH_ASSOC);
-    }
-} catch (Throwable $e) {}
-
+$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = [
 
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 ];
-$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
+
+$filter_ta = trim((string)($_GET['tahun_ajaran'] ?? $periode['tahun_ajaran']));
+$filter_jenis = trim((string)($_GET['jenis'] ?? ''));
+$filter_status = trim((string)($_GET['status'] ?? ''));
+$filter_guru = trim((string)($_GET['guru'] ?? ''));
+
+$where = [];
+$params = [];
+if ($filter_ta !== '' && isTahunAjaranFormatValid($filter_ta)) {
+    $rta = getRentangTanggalTahunAjaran($filter_ta);
+    if ($rta) {
+        $where[] = 'p.tanggal BETWEEN ? AND ?';
+        $params[] = $rta['mulai'];
+        $params[] = $rta['sampai'];
+    }
+}
+if ($filter_jenis !== '') {
+    $where[] = 'p.jenis_supervisi = ?';
+    $params[] = $filter_jenis;
+}
+if ($filter_status !== '') {
+    $where[] = 'p.status = ?';
+    $params[] = $filter_status;
+}
+if ($filter_guru !== '') {
+    $where[] = 'p.id_guru = ?';
+    $params[] = (int)$filter_guru;
+}
+$whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+
+$rows = [];
+try {
+    $stmt = $pdo->prepare("SELECT p.*, i.nama_instrumen,
+            (SELECT COUNT(*) FROM tb_sv_tindak_lanjut t WHERE t.id_pelaksanaan = p.id_pelaksanaan) AS jml_tl,
+            (SELECT COUNT(*) FROM tb_sv_tindak_lanjut t WHERE t.id_pelaksanaan = p.id_pelaksanaan AND t.status = 'Selesai') AS jml_tl_selesai
+        FROM tb_sv_pelaksanaan p
+        LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen
+        {$whereSql}
+        ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC");
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+}
+
+$guru_list = sv_guru_list($pdo);
+
 $js_page = [];
-$flash = sv_render_flash_js();
-if ($flash !== '') $js_page[] = $flash;
 $js_page[] = <<<'JS'
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
     var dttablelaporan=$('#table-laporan').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablelaporan.on('order.dt search.dt draw.dt',function(){var info=dttablelaporan.page.info();dttablelaporan.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    $('#btn-excel').on('click', function () { var table=document.getElementById('table-laporan');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'laporan_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='laporan_supervisi.xls';a.click();}; });
+    $('#btn-pdf').on('click', function () { var q = $('form[method=GET]').serialize(); window.open('cetak_supervisi.php?page=laporan&' + q, '_blank'); });
+    $('#table-laporan').on('click', '.btn-cetak-perguru', function(e){ e.preventDefault(); var id=$(this).data('id'); if(id) window.open('cetak_detail_hasil_supervisi.php?id='+id, '_blank'); });
 });
 JS;
 
@@ -159,6 +181,10 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 <div class="main-content">
+    <style>
+    #table-laporan th:last-child,#table-laporan td:last-child{white-space:nowrap;text-align:center}
+    #table-laporan td:last-child .btn{margin:1px 2px}
+    </style>
     <section class="section">
         <div class="section-header">
             <h1>Laporan Supervisi</h1>
@@ -167,81 +193,131 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <input type="hidden" id="svSchoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH', ENT_QUOTES) ?>">
             <input type="hidden" id="svSchoolLogo" value="<?= !empty($school_profile['logo']) ? '../assets/img/' . htmlspecialchars($school_profile['logo'], ENT_QUOTES) : '' ?>">
-            <input type="hidden" id="svAcademicYear" value="<?= htmlspecialchars($filter_ta_laporan, ENT_QUOTES) ?>">
+            <input type="hidden" id="svAcademicYear" value="<?= htmlspecialchars($periode['tahun_ajaran'], ENT_QUOTES) ?>">
             <input type="hidden" id="svSemester" value="<?= htmlspecialchars($periode['semester'], ENT_QUOTES) ?>">
+            <input type="hidden" id="svHeadName" value="<?= htmlspecialchars($school_profile['nama_kepala'] ?? '-', ENT_QUOTES) ?>">
+            <input type="hidden" id="svHeadNip" value="<?= htmlspecialchars($school_profile['nip_kepala'] ?? '-', ENT_QUOTES) ?>">
+            <input type="hidden" id="svPrintPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang', ENT_QUOTES) ?>">
+            <input type="hidden" id="svPrintDate" value="<?= date('d F Y') ?>">
 
             <div class="card">
                 <div class="card-body">
                     <form method="GET" class="form-row align-items-end">
-                        <div class="form-group col-md-3 mb-2">
-                            <label class="small font-weight-bold">Tahun Ajaran Laporan</label>
+                        <div class="form-group col-md-2 mb-2">
+                            <label class="small font-weight-bold">Tahun Ajaran</label>
                             <select class="form-control" name="tahun_ajaran">
-                                <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta_laporan ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
+                                <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-9 mb-2">
-                            <small class="text-muted d-block">Default TA berjalan (<?= htmlspecialchars($periode['tahun_ajaran']) ?>) — penilaian &amp; hasil tidak dikosongkan saat ganti TA. Ganti filter untuk lihat TA sebelumnya (auto submit).</small>
-                            <span class="badge badge-light border">TA berjalan: <?= htmlspecialchars($periode['tahun_ajaran']) ?></span>
+                        <div class="form-group col-md-2 mb-2">
+                            <label class="small font-weight-bold">Guru/PTK</label>
+                            <select class="form-control" name="guru">
+                                <option value="">Semua</option>
+                                <?php foreach ($guru_list as $g): ?><option value="<?= (int)$g['id_guru'] ?>" <?= (string)$g['id_guru'] === $filter_guru ? 'selected' : '' ?>><?= htmlspecialchars($g['nama_guru']) ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Jenis</label>
+                            <select class="form-control" name="jenis">
+                                <option value="">Semua</option>
+                                <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>" <?= $j === $filter_jenis ? 'selected' : '' ?>><?= $j ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Status</label>
+                            <select class="form-control" name="status">
+                                <option value="">Semua</option>
+                                <option value="Selesai" <?= $filter_status === 'Selesai' ? 'selected' : '' ?>>Selesai</option>
+                                <option value="Draft" <?= $filter_status === 'Draft' ? 'selected' : '' ?>>Draft</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3 mb-2">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+                            <a href="laporan_supervisi.php" class="btn btn-light">Reset</a>
                         </div>
                     </form>
                 </div>
             </div>
 
             <div class="card">
+                <div class="card-header">
+                    <h4>Daftar Laporan Supervisi</h4>
+                    <div class="card-header-action">
+                        <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
+                    </div>
+                </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-striped" id="table-laporan">
                             <thead>
                                 <tr>
-                                    <th>No</th>
-                                    <th>Tanggal</th>
-                                    <th>Nama</th>
+                                    <th width="5%">No</th>
+                                    <th>Guru/Unit</th>
+                                    <th>Mapel yang Disupervisi</th>
                                     <th>Jenis</th>
-                                    <th>Program</th>
+                                    <th>Tanggal</th>
+                                    <th>Supervisor</th>
                                     <th>Nilai</th>
                                     <th>Predikat</th>
-                                    <th>Temuan</th>
-                                    <th>Status TL</th>
+                                    <th>Kekuatan</th>
+                                    <th>Kelemahan</th>
+                                    <th>Rekomendasi</th>
+                                    <th>Prioritas</th>
+                                    <th>Status Tindak Lanjut</th>
+                                    <th>Keterangan</th>
                                     <th width="12%">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($rows as $i => $r):
-                                    $isMan = $r['jenis_supervisi'] === 'Manajerial';
-                                    $nama = $isMan ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-');
-                                    $tlStatus = '-';
-                                    try {
-                                        $st = $pdo->prepare("SELECT status FROM tb_sv_tindak_lanjut WHERE id_pelaksanaan = ? ORDER BY id_tindak_lanjut DESC LIMIT 1");
-                                        $st->execute([(int)$r['id_pelaksanaan']]);
-                                        $tlStatus = $st->fetchColumn() ?: '-';
-                                    } catch (Throwable $e) {}
-                                    $badge = $tlStatus === 'Selesai' ? 'success' : ($tlStatus === '-' ? 'secondary' : 'warning');
-                                ?>
+                                <?php foreach ($rows as $r): ?>
+                                    <?php
+                                    $tlLabel = 'Belum Ada';
+                                    $tlBadge = 'secondary';
+                                    if ((int)$r['jml_tl'] > 0) {
+                                        if ((int)$r['jml_tl_selesai'] >= (int)$r['jml_tl']) {
+                                            $tlLabel = 'Selesai';
+                                            $tlBadge = 'success';
+                                        } else {
+                                            $tlLabel = 'Dalam Proses';
+                                            $tlBadge = 'warning';
+                                        }
+                                    }
+                                    $nama = $r['jenis_supervisi'] === 'Manajerial' ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-');
+                                    ?>
                                     <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?></td>
+                                        <td class="text-center"></td>
                                         <td><?= htmlspecialchars($nama) ?></td>
+                                        <td><?= htmlspecialchars((string)($r['mapel_di_supervisi'] ?? '')) ?></td>
                                         <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_supervisi']) ?></span></td>
-                                        <td><?= htmlspecialchars((string)($r['nama_program'] ?? '-')) ?></td>
+                                        <td><?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?></td>
+                                        <td><?= htmlspecialchars((string)$r['supervisor']) ?></td>
                                         <td><?= $r['nilai'] !== null ? htmlspecialchars(number_format((float)$r['nilai'], 2)) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)($r['predikat'] ?? '-')) ?></td>
-                                        <td><?= htmlspecialchars(mb_strimwidth((string)($r['temuan'] ?? '-'), 0, 70, '...')) ?></td>
-                                        <td><span class="badge badge-<?= $badge ?>"><?= htmlspecialchars($tlStatus) ?></span></td>
-                                        <td>
-                                            <a class="btn btn-sm btn-outline-primary" href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>&from=laporan" title="Detail"><i class="fas fa-eye"></i></a>
-                                            <a class="btn btn-sm btn-outline-secondary" href="cetak_detail_hasil_supervisi.php?id=<?= (int)$r['id_pelaksanaan'] ?>" target="_blank" title="Cetak"><i class="fas fa-print"></i></a>
-                                            <form method="POST" action="laporan_supervisi.php" class="d-inline">
+                                        <td><?= htmlspecialchars((string)$r['predikat']) ?></td>
+                                        <td><?= htmlspecialchars((string)$r['kekuatan']) ?></td>
+                                        <td><?= htmlspecialchars((string)$r['kelemahan']) ?></td>
+                                        <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
+                                        <td><?= htmlspecialchars((string)$r['prioritas_perbaikan']) ?></td>
+                                        <td><span class="badge badge-<?= $tlBadge ?>"><?= $tlLabel ?></span></td>
+                                        <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
+                                        <td style="white-space:nowrap">
+                                            <div class="d-inline-flex align-items-center">
+                                            <a class="btn btn-sm btn-outline-primary mr-1" href="hasil_supervisi_detail.php?id=<?= (int)$r['id_pelaksanaan'] ?>&from=laporan" title="Detail"><i class="fas fa-eye"></i></a>
+                                            <a class="btn btn-sm btn-outline-secondary mr-1" href="cetak_detail_hasil_supervisi.php?id=<?= (int)$r['id_pelaksanaan'] ?>" target="_blank" title="Cetak"><i class="fas fa-print"></i></a>
+                                            <?php if ($can_manage): ?>
+                                            <form method="POST" action="laporan_supervisi.php" class="d-inline m-0">
                                                 <input type="hidden" name="aksi" value="pdf">
                                                 <input type="hidden" name="id_pelaksanaan" value="<?= (int)$r['id_pelaksanaan'] ?>">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="PDF"><i class="fas fa-file-pdf"></i></button>
                                             </form>
+                                            <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
-                    <small class="text-muted">Kolom lengkap (Tahun Ajaran, Semester, Jabatan/Kelas/Mapel, Instrumen, Rekomendasi, Tindak Lanjut, Bukti) tampil di Detail. Cetak buka Detail; PDF unduh dokumen formal A–F dengan pengesahan.</small>
                 </div>
             </div>
         </div>

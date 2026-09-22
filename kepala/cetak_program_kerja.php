@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/program_kerja_master.php';
 if (!isAuthorized(['admin','kepala_madrasah'])) die('Unauthorized');
 $school_profile=getSchoolProfile($pdo);
 $school_name=strtoupper($school_profile['nama_madrasah']??'Sistem Informasi Madrasah');
@@ -15,11 +16,11 @@ $tempat=$school_profile['tempat_jadwal']??'Tempat';
 $tanggal=$tempat.', '.date('d').' '.$months[date('F')].' '.date('Y');
 $qr_content="Ditandatangani secara elektronik oleh:\n".$kepala_madrasah."\nKepala Madrasah\nTanggal: ".date('d F Y');
 $qr_url="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=".urlencode($qr_content);
-$komponen_list=[1=>'Manajemen & Kepemimpinan',2=>'Kurikulum & Pembelajaran',3=>'Kesiswaan',4=>'Pendidik & Tenaga Kependidikan',5=>'Keuangan & Penganggaran',6=>'Sarana & Prasarana',7=>'Administrasi & Tata Usaha',8=>'Hubungan Masyarakat',9=>'Pengembangan Mutu Madrasah',10=>'Supervisi & Evaluasi',11=>'Keagamaan & Karakter',12=>'Ekstrakurikuler & Prestasi',13=>'Digitalisasi Madrasah',14=>'Kemitraan & Pengembangan',15=>'Manajemen Risiko & Keamanan',];
+$komponen_list=prokerGetKomponenNama($pdo);
 $status_opts=['belum_terlaksana'=>'Belum Terlaksana','proses'=>'Proses','terlaksana'=>'Terlaksana'];
 $komp=(int)($_GET['komponen']??0); $st=trim($_GET['status']??''); if(!isset($status_opts[$st])) $st='';
 $where=[]; $params=[];
-if($komp>=1&&$komp<=15){$where[]="komponen=?"; $params[]=$komp;}
+if($komp>=1){$where[]="komponen=?"; $params[]=$komp;}
 if($st!==''){ $where[]="status=?"; $params[]=$st; }
 if($where){$stmt=$pdo->prepare("SELECT * FROM tb_program_kerja WHERE ".implode(' AND ',$where)." ORDER BY komponen ASC, id ASC"); $stmt->execute($params); $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);} else {$rows=$pdo->query("SELECT * FROM tb_program_kerja ORDER BY komponen ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);}
 $filename_tahun=str_replace('/','-', $tahun_ajaran);
@@ -54,7 +55,7 @@ th{background:#f0f0f0;text-align:center;font-weight:bold}
 </div>
 </div>
 <div class="title">PROGRAM KERJA MADRASAH</div>
-<?php if($komp||$st):?><p class="text-center" style="font-size:10px">Filter: <?= $komp?'Komponen: '.htmlspecialchars($komponen_list[$komp]).' | ':''?><?= $st?'Status: '.htmlspecialchars($status_opts[$st]):''?></p><?php endif;?>
+<?php if($komp||$st):?><p class="text-center" style="font-size:10px">Filter: <?= $komp?'Komponen: '.htmlspecialchars($komponen_list[$komp]??'-').' | ':''?><?= $st?'Status: '.htmlspecialchars($status_opts[$st]):''?></p><?php endif;?>
 <table>
 <thead><tr><th>No</th><th>Komponen</th><th>Program</th><th>Kegiatan</th><th>Tujuan</th><th>Indikator</th><th>Target</th><th>Waktu</th><th>PJ</th><th>Anggaran</th><th>Sumber Dana</th><th>Bukti</th><th>Evaluasi</th><th>Tindak Lanjut</th><th>Status</th></tr></thead>
 <tbody>

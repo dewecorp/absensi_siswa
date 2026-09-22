@@ -27,6 +27,23 @@ try {
 } catch (Throwable $e) {
 }
 
+if (!function_exists('sv_normalize_files')) {
+    function sv_normalize_files($f): array
+    {
+        $out = [];
+        if (!is_array($f) || !isset($f['name'])) return $out;
+        if (is_array($f['name'])) {
+            foreach ($f['name'] as $i => $name) {
+                if ($name === '' || (int)($f['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) continue;
+                $out[] = ['name' => $name, 'type' => $f['type'][$i] ?? '', 'tmp_name' => $f['tmp_name'][$i] ?? '', 'error' => $f['error'][$i] ?? UPLOAD_ERR_NO_FILE, 'size' => $f['size'][$i] ?? 0];
+            }
+        } else {
+            if ($f['name'] !== '' && (int)$f['error'] !== UPLOAD_ERR_NO_FILE) $out[] = $f;
+        }
+        return $out;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     $aksi = (string)($_POST['aksi'] ?? '');
     try {
@@ -39,89 +56,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             if ($tautan_dokumen !== '' && !preg_match('#^https?://#i', $tautan_dokumen)) {
                 $tautan_dokumen = 'https://' . ltrim($tautan_dokumen, '/');
             }
-            $hasFile = !empty($_FILES['file']['name']);
-            if (!$hasFile && $tautan_dokumen === '') {
-                sv_flash('warning', 'Isi file atau tautan dokumen.');
+            $files = sv_normalize_files($_FILES['file'] ?? null);
+            $folder = 'umum';
+            if ($id_pelaksanaan) {
+                try {
+                    $pq = $pdo->prepare("SELECT nama_guru, unit_bagian, jenis_supervisi FROM tb_sv_pelaksanaan WHERE id_pelaksanaan = ? LIMIT 1");
+                    $pq->execute([$id_pelaksanaan]);
+                    $pl = $pq->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $nmGuru = (($pl['jenis_supervisi'] ?? '') === 'Manajerial') ? ($pl['unit_bagian'] ?? '') : ($pl['nama_guru'] ?? '');
+                    $folder = sv_folder_name((string)$nmGuru);
+                } catch (Throwable $e) {}
+            }
+            $stmtArsip = $pdo->prepare("INSERT INTO tb_sv_arsip (id_pelaksanaan, jenis_dokumen, nama_dokumen, file, tautan_dokumen, tanggal_upload, pengunggah, keterangan) VALUES (?,?,?,?,?,NOW(),?,?)");
+            $pengunggah = sv_current_user_name($pdo);
+            $sukses = 0;
+            $errors = [];
+            foreach ($files as $f) {
+                $hasil = sv_handle_upload($f, 'supervisi', $folder);
+                if (!$hasil['ok']) { $errors[] = $hasil['error']; continue; }
+                // Nama hanya berdasarkan nama file asli, biar beda tiap file
+                $nm = pathinfo((string)$f['name'], PATHINFO_FILENAME);
+                $stmtArsip->execute([$id_pelaksanaan ?: null, $jenis_dokumen, $nm, $hasil['file'], $tautan_dokumen !== '' ? $tautan_dokumen : null, $pengunggah, $keterangan]);
+                $sukses++;
+            }
+            if (!$files && $tautan_dokumen !== '') {
+                $nm = $nama_dokumen !== '' ? $nama_dokumen : 'Tautan Dokumen';
+                $stmtArsip->execute([$id_pelaksanaan ?: null, $jenis_dokumen, $nm, null, $tautan_dokumen, $pengunggah, $keterangan]);
+                $sukses++;
+            }
+            if ($sukses > 0) {
+                sv_log($pdo, 'Upload Arsip', $sukses . ' dokumen');
+                sv_flash('success', $sukses . ' dokumen berhasil diunggah.');
+                if ($errors) { sv_flash('warning', implode(' ', array_unique($errors))); }
+            } elseif ($errors) {
+                sv_flash('danger', implode(' ', array_unique($errors)));
             } else {
-                $fileName = null;
-                if ($hasFile) {
-                    $hasil = sv_handle_upload($_FILES['file'], 'supervisi');
-                    if (!$hasil['ok']) {
-                        sv_flash('danger', $hasil['error']);
-                        $fileName = false;
-                    } else {
-                        $fileName = $hasil['file'];
-                        if ($nama_dokumen === '') {
-                            $nama_dokumen = pathinfo((string)$_FILES['file']['name'], PATHINFO_FILENAME);
-                        }
-                    }
-                } elseif ($nama_dokumen === '' && $tautan_dokumen !== '') {
-                    $nama_dokumen = 'Tautan Dokumen';
-                }
-                if ($fileName !== false) {
-                    $stmt = $pdo->prepare("INSERT INTO tb_sv_arsip (id_pelaksanaan, jenis_dokumen, nama_dokumen, file, tautan_dokumen, tanggal_upload, pengunggah, keterangan) VALUES (?,?,?,?,?,NOW(),?,?)");
-                    $stmt->execute([
-                        $id_pelaksanaan ?: null,
-                        $jenis_dokumen,
-                        $nama_dokumen,
-                        $fileName,
-                        $tautan_dokumen !== '' ? $tautan_dokumen : null,
-                        sv_current_user_name($pdo),
-                        $keterangan,
-                    ]);
-                    sv_log($pdo, 'Upload Arsip', $nama_dokumen);
-                    sv_flash('success', 'Dokumen berhasil diunggah.');
-                }
+                sv_flash('warning', 'Isi file atau tautan dokumen.');
             }
         } elseif ($aksi === 'edit') {
             $id = (int)($_POST['id_arsip'] ?? 0);
+            $idPel = (int)($_POST['id_pelaksanaan'] ?? 0) ?: null;
+            $jenis = trim((string)($_POST['jenis_dokumen'] ?? ''));
+            $nama = trim((string)($_POST['nama_dokumen'] ?? ''));
+            $keterangan = trim((string)($_POST['keterangan'] ?? ''));
             $tautan_dokumen = trim((string)($_POST['tautan_dokumen'] ?? ''));
             if ($tautan_dokumen !== '' && !preg_match('#^https?://#i', $tautan_dokumen)) {
                 $tautan_dokumen = 'https://' . ltrim($tautan_dokumen, '/');
             }
-            $fileName = null;
-            $keepFile = true;
-            if (!empty($_FILES['file']['name'])) {
-                $hasil = sv_handle_upload($_FILES['file'], 'supervisi');
-                if (!$hasil['ok']) {
-                    sv_flash('danger', $hasil['error']);
-                    $keepFile = false;
-                } else {
-                    $fileName = $hasil['file'];
-                    try {
-                        $old = $pdo->prepare("SELECT file FROM tb_sv_arsip WHERE id_arsip = ? LIMIT 1");
-                        $old->execute([$id]);
-                        $oldFile = (string)($old->fetchColumn() ?: '');
-                        if ($oldFile !== '' && is_file(sv_upload_dir() . '/' . $oldFile)) { @unlink(sv_upload_dir() . '/' . $oldFile); }
-                    } catch (Throwable $e) {}
-                }
+            $files = sv_normalize_files($_FILES['file'] ?? null);
+            $folder = 'umum';
+            if ($idPel) {
+                try {
+                    $pq = $pdo->prepare("SELECT nama_guru, unit_bagian, jenis_supervisi FROM tb_sv_pelaksanaan WHERE id_pelaksanaan = ? LIMIT 1");
+                    $pq->execute([$idPel]);
+                    $pl = $pq->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $nmGuru = (($pl['jenis_supervisi'] ?? '') === 'Manajerial') ? ($pl['unit_bagian'] ?? '') : ($pl['nama_guru'] ?? '');
+                    $folder = sv_folder_name((string)$nmGuru);
+                } catch (Throwable $e) {}
             }
-            if ($keepFile) {
-                if ($fileName !== null) {
-                    $stmt = $pdo->prepare("UPDATE tb_sv_arsip SET id_pelaksanaan=?, jenis_dokumen=?, nama_dokumen=?, file=?, tautan_dokumen=?, keterangan=? WHERE id_arsip=?");
-                    $stmt->execute([
-                        (int)($_POST['id_pelaksanaan'] ?? 0) ?: null,
-                        trim((string)($_POST['jenis_dokumen'] ?? '')),
-                        trim((string)($_POST['nama_dokumen'] ?? '')),
-                        $fileName,
-                        $tautan_dokumen !== '' ? $tautan_dokumen : null,
-                        trim((string)($_POST['keterangan'] ?? '')),
-                        $id,
-                    ]);
-                } else {
-                    $stmt = $pdo->prepare("UPDATE tb_sv_arsip SET id_pelaksanaan=?, jenis_dokumen=?, nama_dokumen=?, tautan_dokumen=?, keterangan=? WHERE id_arsip=?");
-                    $stmt->execute([
-                        (int)($_POST['id_pelaksanaan'] ?? 0) ?: null,
-                        trim((string)($_POST['jenis_dokumen'] ?? '')),
-                        trim((string)($_POST['nama_dokumen'] ?? '')),
-                        $tautan_dokumen !== '' ? $tautan_dokumen : null,
-                        trim((string)($_POST['keterangan'] ?? '')),
-                        $id,
-                    ]);
+            $pengunggah = sv_current_user_name($pdo);
+            if ($files) {
+                // Simpan semua file baru (multi)
+                foreach ($files as $f) {
+                    $hasil = sv_handle_upload($f, 'supervisi', $folder);
+                    if (!$hasil['ok']) {
+                        sv_flash('danger', $hasil['error']);
+                    } else {
+                        $nm = pathinfo((string)$f['name'], PATHINFO_FILENAME);
+                        $stmtArsip->execute([$idPel, $jenis, $nm, $hasil['file'], $tautan_dokumen !== '' ? $tautan_dokumen : null, $pengunggah, $keterangan]);
+                    }
                 }
-                sv_log($pdo, 'Edit Arsip', 'ID ' . $id);
-                sv_flash('success', 'Data arsip berhasil diperbarui.');
+                // Hapus file lama
+                try {
+                    $old = $pdo->prepare("SELECT file FROM tb_sv_arsip WHERE id_arsip = ? LIMIT 1");
+                    $old->execute([$id]);
+                    $oldFile = (string)($old->fetchColumn() ?: '');
+                    if ($oldFile !== '' && is_file(sv_upload_dir() . '/' . $oldFile)) { @unlink(sv_upload_dir() . '/' . $oldFile); }
+                } catch (Throwable $e) {}
+            } else {
+                // Hanya update tanpa upload file
+                $stmt = $pdo->prepare("UPDATE tb_sv_arsip SET id_pelaksanaan=?, jenis_dokumen=?, nama_dokumen=?, tautan_dokumen=?, keterangan=? WHERE id_arsip=?");
+                $stmt->execute([$idPel, $jenis, $nama, $tautan_dokumen !== '' ? $tautan_dokumen : null, $keterangan, $id]);
             }
+            sv_log($pdo, 'Edit Arsip', 'ID ' . $id);
+            sv_flash('success', 'Data arsip berhasil diperbarui.');
         } elseif ($aksi === 'hapus') {
             $id = (int)($_POST['id_arsip'] ?? 0);
             $stmt = $pdo->prepare("SELECT file FROM tb_sv_arsip WHERE id_arsip = ? LIMIT 1");
@@ -173,19 +191,89 @@ $(document).ready(function () {
     var dttablearsip=$('#table-arsip').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablearsip.on('order.dt search.dt draw.dt',function(){var info=dttablearsip.page.info();dttablearsip.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#btn-tambah').on('click', function () {
         $('#form-arsip')[0].reset();
+        $('#sv-file-preview').empty();
         $('#form-arsip [name=aksi]').val('upload');
         $('#modal-arsip .modal-title').text('Upload Dokumen Supervisi');
         $('#modal-arsip').modal('show');
     });
+    $(document).on('change', '#sv-file-input', function () {
+        var wrap = document.getElementById('sv-file-preview');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        Array.prototype.forEach.call(this.files, function (file) {
+            var a = document.createElement('a');
+            a.href = 'javascript:void(0)';
+            a.className = 'mr-2 mb-2';
+            if (file.type && file.type.indexOf('image/') === 0) {
+                var img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.width = '90px'; img.style.height = '90px'; img.style.objectFit = 'cover';
+                img.className = 'border rounded';
+                img.title = file.name;
+                a.appendChild(img);
+            } else {
+                var ic = document.createElement('div');
+                ic.className = 'border rounded d-flex align-items-center justify-content-center text-secondary';
+                ic.style.width = '90px'; ic.style.height = '90px';
+                ic.innerHTML = '<i class="fas fa-file fa-2x"></i>';
+                ic.title = file.name;
+                a.appendChild(ic);
+            }
+            wrap.appendChild(a);
+        });
+    });
+    function svFilePreviewHtml(url, isImg, name) {
+        if (isImg) return '<a href="' + url + '" target="_blank"><img src="' + url + '" class="border rounded" style="max-width:160px;max-height:160px"></a>';
+        return '<a href="' + url + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-file"></i> ' + (name || 'Lihat Dokumen') + '</a>';
+    }
     $(document).on('click', '.btn-edit', function () {
         var d = $(this).data('row');
-        $('#form-arsip-edit')[0].reset();
+        if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
+        if (!d || typeof d !== 'object') { d = {}; }
+        var form = document.getElementById('form-arsip-edit');
+        if (form) { form.reset(); }
         Object.keys(d).forEach(function (k) {
             var el = $('#form-arsip-edit [name="' + k + '"]');
-            if (el.length) { el.val(d[k]); }
+            if (el.length && k !== 'file') { el.val(d[k]); }
         });
-        if (d.file) { $('#sv-edit-file-info').text(d.file).parent().show(); } else { $('#sv-edit-file-info').parent().hide(); }
+        var prev = document.getElementById('sv-edit-file-preview');
+        if (prev) prev.innerHTML = '';
+        if (d.file) {
+            $('#sv-edit-file-info').text(d.file).parent().show();
+            var ext = (String(d.file).split('.').pop() || '').toLowerCase();
+            var isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].indexOf(ext) >= 0;
+            var segs = String(d.file).split('/').map(encodeURIComponent).join('/');
+            if (prev) prev.innerHTML = svFilePreviewHtml('../uploads/supervisi/' + segs, isImg, '');
+        } else {
+            $('#sv-edit-file-info').parent().hide();
+        }
         $('#modal-arsip-edit').modal('show');
+    });
+    $(document).on('change', '#sv-edit-file-input', function () {
+        var prev = document.getElementById('sv-edit-file-preview');
+        if (!prev) return;
+        prev.innerHTML = '';
+        Array.prototype.forEach.call(this.files, function (f) {
+            var a = document.createElement('a');
+            a.href = 'javascript:void(0)';
+            a.className = 'mr-2 mb-2';
+            if (f.type && f.type.indexOf('image/') === 0) {
+                var img = document.createElement('img');
+                img.src = URL.createObjectURL(f);
+                img.style.width = '90px'; img.style.height = '90px'; img.style.objectFit = 'cover';
+                img.className = 'border rounded';
+                img.title = f.name;
+                a.appendChild(img);
+            } else {
+                var ic = document.createElement('div');
+                ic.className = 'border rounded d-flex align-items-center justify-content-center text-secondary';
+                ic.style.width = '90px'; ic.style.height = '90px';
+                ic.innerHTML = '<i class="fas fa-file fa-2x"></i>';
+                ic.title = f.name;
+                a.appendChild(ic);
+            }
+            prev.appendChild(a);
+        });
     });
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');
@@ -200,6 +288,10 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 <div class="main-content">
+    <style>
+    #table-arsip th:last-child,#table-arsip td:last-child{white-space:nowrap;text-align:center}
+    #table-arsip td:last-child .btn{margin:1px 2px}
+    </style>
     <section class="section">
         <div class="section-header">
             <h1>Arsip / Bukti Supervisi</h1>
@@ -214,10 +306,6 @@ include '../templates/sidebar.php';
             <input type="hidden" id="svHeadNip" value="<?= htmlspecialchars($school_profile['nip_kepala'] ?? '-', ENT_QUOTES) ?>">
             <input type="hidden" id="svPrintPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang', ENT_QUOTES) ?>">
             <input type="hidden" id="svPrintDate" value="<?= date('d F Y') ?>">
-
-            <div class="alert alert-info">
-                Format diizinkan: pdf, jpg, jpeg, png, gif, doc, docx, xls, xlsx. Maksimal 5MB. Isi file atau tautan dokumen. File disimpan di folder aman <code>uploads/supervisi</code> (tanpa eksekusi script).
-            </div>
 
             <div class="card">
                 <div class="card-body">
@@ -254,7 +342,7 @@ include '../templates/sidebar.php';
                             <thead>
                                 <tr>
                                     <th width="5%">No</th>
-                                    <th>ID Supervisi</th>
+                                    <th>Guru yang Disupervisi</th>
                                     <th>Jenis Dokumen</th>
                                     <th>Nama Dokumen</th>
                                     <th>File</th>
@@ -266,21 +354,32 @@ include '../templates/sidebar.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($rows as $r): ?>
+                                <?php foreach ($rows as $r): $namaSup = ($r['jenis_supervisi'] === 'Manajerial') ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-'); ?>
                                     <tr>
                                         <td class="text-center"></td>
-                                        <td>#<?= (int)$r['id_pelaksanaan'] ?></td>
+                                        <td><?= htmlspecialchars((string)$namaSup) ?></td>
                                         <td><?= htmlspecialchars((string)$r['jenis_dokumen']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['nama_dokumen']) ?></td>
-                                        <td><?php if (!empty($r['file'])): ?><a href="<?= htmlspecialchars(sv_upload_url($r['file']), ENT_QUOTES) ?>" target="_blank"><i class="fas fa-paperclip"></i> <?= htmlspecialchars((string)$r['file']) ?></a><?php else: ?>-<?php endif; ?></td>
+                                        <td class="text-center"><?php if (!empty($r['file'])):
+                                            $ext = strtolower(pathinfo((string)$r['file'], PATHINFO_EXTENSION));
+                                            $isImg = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'], true);
+                                            $url = sv_upload_url($r['file']);
+                                            if ($isImg): ?>
+                                                <a href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" target="_blank" title="Lihat foto"><img src="<?= htmlspecialchars($url, ENT_QUOTES) ?>" class="border rounded" style="width:56px;height:56px;object-fit:cover"></a>
+                                            <?php else: ?>
+                                                <a class="btn btn-sm btn-outline-primary" href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" target="_blank" title="Lihat dokumen"><i class="fas fa-eye"></i></a>
+                                            <?php endif; ?>
+                                        <?php else: ?>-<?php endif; ?></td>
                                         <td><?php if (!empty($r['tautan_dokumen'])): ?><a href="<?= htmlspecialchars($r['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank"><i class="fas fa-link"></i> <?= htmlspecialchars($r['tautan_dokumen']) ?></a><?php else: ?>-<?php endif; ?></td>
                                         <td><?= $r['tanggal_upload'] ? date('d/m/Y H:i', strtotime($r['tanggal_upload'])) : '-' ?></td>
                                         <td><?= htmlspecialchars((string)$r['pengunggah']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
                                         <?php if ($can_manage): ?>
-                                        <td>
-                                            <button class="btn btn-warning btn-sm btn-edit" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
+                                        <td style="white-space:nowrap">
+                                            <div class="d-inline-flex align-items-center">
+                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_arsip'] ?>"><i class="fas fa-trash"></i></button>
+                                            </div>
                                         </td>
                                         <?php endif; ?>
                                     </tr>
@@ -321,7 +420,12 @@ include '../templates/sidebar.php';
                         </select>
                     </div>
                     <div class="form-group"><label>Nama Dokumen</label><input type="text" class="form-control" name="nama_dokumen"></div>
-                    <div class="form-group"><label>File</label><input type="file" class="form-control-file" name="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx"><small class="text-muted">Kosongkan jika hanya pakai tautan.</small></div>
+                    <div class="form-group">
+                        <label>File <small class="text-muted">(bisa pilih beberapa sekaligus)</small></label>
+                        <input type="file" class="form-control-file" name="file[]" id="sv-file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx">
+                        <small class="text-muted">Kosongkan jika hanya pakai tautan. Maks 5MB/file.</small>
+                        <div id="sv-file-preview" class="d-flex flex-wrap mt-2"></div>
+                    </div>
                     <div class="form-group"><label>Tautan Dokumen</label><input type="url" class="form-control" name="tautan_dokumen" placeholder="https://drive.google.com/... atau https://..."><small class="text-muted">Isi file atau tautan, salah satu wajib.</small></div>
                     <div class="form-group"><label>Keterangan</label><textarea class="form-control" name="keterangan" rows="2"></textarea></div>
                 </div>
@@ -361,7 +465,13 @@ include '../templates/sidebar.php';
                         </select>
                     </div>
                     <div class="form-group"><label>Nama Dokumen</label><input type="text" class="form-control" name="nama_dokumen"></div>
-                    <div class="form-group"><label>File Saat Ini</label><p class="mb-1"><small class="text-muted" id="sv-edit-file-info"></small></p><input type="file" class="form-control-file" name="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx"><small class="text-muted">Kosongkan jika tidak ganti file.</small></div>
+                    <div class="form-group">
+                        <label>File <small class="text-muted">(pilih beberapa untuk menambah foto baru)</small></label>
+                        <p class="mb-1"><small class="text-muted" id="sv-edit-file-info"></small></p>
+                        <div id="sv-edit-file-preview" class="d-flex flex-wrap mb-2"></div>
+                        <input type="file" class="form-control-file" name="file[]" id="sv-edit-file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx">
+                        <small class="text-muted">File pertama mengganti file lama, sisanya ditambahkan. Kosongkan jika tidak ganti.</small>
+                    </div>
                     <div class="form-group"><label>Tautan Dokumen</label><input type="url" class="form-control" name="tautan_dokumen" placeholder="https://..."></div>
                     <div class="form-group"><label>Keterangan</label><textarea class="form-control" name="keterangan" rows="2"></textarea></div>
                 </div>
