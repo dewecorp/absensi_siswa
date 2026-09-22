@@ -115,31 +115,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 } catch (Throwable $e) {}
             }
             $pengunggah = sv_current_user_name($pdo);
+            // Update metadata baris yang diedit (file lama tidak dihapus)
+            $stmt = $pdo->prepare("UPDATE tb_sv_arsip SET id_pelaksanaan=?, jenis_dokumen=?, nama_dokumen=?, tautan_dokumen=?, keterangan=? WHERE id_arsip=?");
+            $stmt->execute([$idPel, $jenis, $nama, $tautan_dokumen !== '' ? $tautan_dokumen : null, $keterangan, $id]);
+            $inserted = 0;
+            $errors = [];
             if ($files) {
-                // Simpan semua file baru (multi)
+                $ins = $pdo->prepare("INSERT INTO tb_sv_arsip (id_pelaksanaan, jenis_dokumen, nama_dokumen, file, tautan_dokumen, tanggal_upload, pengunggah, keterangan) VALUES (?,?,?,?,?,NOW(),?,?)");
                 foreach ($files as $f) {
                     $hasil = sv_handle_upload($f, 'supervisi', $folder);
-                    if (!$hasil['ok']) {
-                        sv_flash('danger', $hasil['error']);
-                    } else {
-                        $nm = pathinfo((string)$f['name'], PATHINFO_FILENAME);
-                        $stmtArsip->execute([$idPel, $jenis, $nm, $hasil['file'], $tautan_dokumen !== '' ? $tautan_dokumen : null, $pengunggah, $keterangan]);
-                    }
+                    if (!$hasil['ok']) { $errors[] = $hasil['error']; continue; }
+                    $nm = pathinfo((string)$f['name'], PATHINFO_FILENAME);
+                    $ins->execute([$idPel, $jenis, $nm, $hasil['file'], $tautan_dokumen !== '' ? $tautan_dokumen : null, $pengunggah, $keterangan]);
+                    $inserted++;
                 }
-                // Hapus file lama
-                try {
-                    $old = $pdo->prepare("SELECT file FROM tb_sv_arsip WHERE id_arsip = ? LIMIT 1");
-                    $old->execute([$id]);
-                    $oldFile = (string)($old->fetchColumn() ?: '');
-                    if ($oldFile !== '' && is_file(sv_upload_dir() . '/' . $oldFile)) { @unlink(sv_upload_dir() . '/' . $oldFile); }
-                } catch (Throwable $e) {}
-            } else {
-                // Hanya update tanpa upload file
-                $stmt = $pdo->prepare("UPDATE tb_sv_arsip SET id_pelaksanaan=?, jenis_dokumen=?, nama_dokumen=?, tautan_dokumen=?, keterangan=? WHERE id_arsip=?");
-                $stmt->execute([$idPel, $jenis, $nama, $tautan_dokumen !== '' ? $tautan_dokumen : null, $keterangan, $id]);
             }
             sv_log($pdo, 'Edit Arsip', 'ID ' . $id);
-            sv_flash('success', 'Data arsip berhasil diperbarui.');
+            if ($inserted > 0) {
+                sv_flash('success', $inserted . ' foto berhasil ditambahkan.');
+            } elseif ($errors) {
+                sv_flash('danger', implode(' ', array_unique($errors)));
+            } else {
+                sv_flash('success', 'Data arsip berhasil diperbarui.');
+            }
         } elseif ($aksi === 'hapus') {
             $id = (int)($_POST['id_arsip'] ?? 0);
             $stmt = $pdo->prepare("SELECT file FROM tb_sv_arsip WHERE id_arsip = ? LIMIT 1");
@@ -345,7 +343,7 @@ include '../templates/sidebar.php';
                                     <th>Guru yang Disupervisi</th>
                                     <th>Jenis Dokumen</th>
                                     <th>Nama Dokumen</th>
-                                    <th>File</th>
+                                    <th style="min-width:200px">File</th>
                                     <th>Tautan Dokumen</th>
                                     <th>Tanggal Upload</th>
                                     <th>Pengunggah</th>
@@ -353,38 +351,51 @@ include '../templates/sidebar.php';
                                     <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <?php foreach ($rows as $r): $namaSup = ($r['jenis_supervisi'] === 'Manajerial') ? ($r['unit_bagian'] ?: '-') : ($r['nama_guru'] ?: '-'); ?>
+                                <tbody>
+                                    <?php 
+                                    // Grup foto berdasarkan id_pelaksanaan menjadi 1 baris per supervisi
+                                    $groups = [];
+                                    foreach ($rows as $r) {
+                                        $k = $r['id_pelaksanaan'] ?: 'umum';
+                                        if (!isset($groups[$k])) {
+                                            $groups[$k] = ['info' => $r, 'files' => []];
+                                        }
+                                        $groups[$k]['files'][] = $r;
+                                    }
+                                    $seq = 0;
+                                    foreach ($groups as $k => $g): $row =& $g['info']; $namaSup = ($row['jenis_supervisi'] === 'Manajerial') ? ($row['unit_bagian'] ?? '-') : ($row['nama_guru'] ?? '-');
+                                    ?>
                                     <tr>
-                                        <td class="text-center"></td>
+                                        <td class="text-center"><?= ++$seq ?></td>
                                         <td><?= htmlspecialchars((string)$namaSup) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['jenis_dokumen']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['nama_dokumen']) ?></td>
-                                        <td class="text-center"><?php if (!empty($r['file'])):
-                                            $ext = strtolower(pathinfo((string)$r['file'], PATHINFO_EXTENSION));
-                                            $isImg = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'], true);
-                                            $url = sv_upload_url($r['file']);
-                                            if ($isImg): ?>
-                                                <a href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" target="_blank" title="Lihat foto"><img src="<?= htmlspecialchars($url, ENT_QUOTES) ?>" class="border rounded" style="width:56px;height:56px;object-fit:cover"></a>
-                                            <?php else: ?>
-                                                <a class="btn btn-sm btn-outline-primary" href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" target="_blank" title="Lihat dokumen"><i class="fas fa-eye"></i></a>
-                                            <?php endif; ?>
-                                        <?php else: ?>-<?php endif; ?></td>
-                                        <td><?php if (!empty($r['tautan_dokumen'])): ?><a href="<?= htmlspecialchars($r['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank"><i class="fas fa-link"></i> <?= htmlspecialchars($r['tautan_dokumen']) ?></a><?php else: ?>-<?php endif; ?></td>
-                                        <td><?= $r['tanggal_upload'] ? date('d/m/Y H:i', strtotime($r['tanggal_upload'])) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$r['pengunggah']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
+                                        <td><?= htmlspecialchars((string)$row['jenis_dokumen']) ?></td>
+                                        <td><?= htmlspecialchars((string)$row['nama_dokumen']) ?></td>
+                                        <td>
+                                            <?php foreach ($g['files'] as $i => $fr):
+                                                $ext = strtolower(pathinfo((string)$fr['file'], PATHINFO_EXTENSION));
+                                                $isImg = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'], true);
+                                                $url = sv_upload_url($fr['file']);
+                                            ?>
+                                                <a class="btn btn-sm mr-1 mb-1 btn-outline-<?= $isImg ? 'primary' : 'secondary' ?>" href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" target="_blank" title="Lihat <?= $isImg ? 'foto' : 'dokumen' ?>">
+                                                    <i class="fas <?= $isImg ? 'fa-image' : 'fa-file' ?>"></i> <?= $i + 1 ?>
+                                                </a>
+                                            <?php endforeach; ?>
+                                        </td>
+                                        <td><?php if (!empty($row['tautan_dokumen'])): ?><a href="<?= htmlspecialchars($row['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank"><i class="fas fa-link"></i> <?= htmlspecialchars($row['tautan_dokumen']) ?></a><?php else: ?>-<?php endif; ?></td>
+                                        <td><?= $row['tanggal_upload'] ? date('d/m/Y H:i', strtotime($row['tanggal_upload'])) : '-' ?></td>
+                                        <td><?= htmlspecialchars((string)$row['pengunggah']) ?></td>
+                                        <td><?= htmlspecialchars((string)$row['keterangan']) ?></td>
                                         <?php if ($can_manage): ?>
                                         <td style="white-space:nowrap">
                                             <div class="d-inline-flex align-items-center">
-                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_arsip'] ?>"><i class="fas fa-trash"></i></button>
+                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode(['id_pelaksanaan'=>$row['id_pelaksanaan'],'jenis_dokumen'=>$row['jenis_dokumen'],'nama_dokumen'=>$row['nama_dokumen'],'tautan_dokumen'=>$row['tautan_dokumen'],'keterangan'=>$row['keterangan']], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$row['id_arsip'] ?>"><i class="fas fa-trash"></i></button>
                                             </div>
                                         </td>
                                         <?php endif; ?>
                                     </tr>
                                 <?php endforeach; ?>
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
