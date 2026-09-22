@@ -40,6 +40,12 @@ if (empty($students)) {
 // Get school profile for header
 $school_profile = getSchoolProfile($pdo);
 $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
+$logo_file = basename((string)($school_profile['logo'] ?? ''));
+$logo_ver = '';
+if ($logo_file !== '' && is_file(__DIR__ . '/../assets/img/' . $logo_file)) {
+    $logo_ver = '?v=' . filemtime(__DIR__ . '/../assets/img/' . $logo_file);
+}
+$logo_url = ($logo_file !== '') ? '../assets/img/' . rawurlencode($logo_file) . $logo_ver : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -88,7 +94,7 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
         .qr-code {
             width: 3.5cm;
             height: 3.5cm;
-            margin: 1.0cm auto 10px auto;
+            margin: 10px auto 6px auto;
             object-fit: contain;
         }
         .student-name {
@@ -106,14 +112,25 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
             margin-bottom: 0;
         }
         .school-name {
-            font-size: 8pt;
+            font-size: 11pt;
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 5px;
+            margin-bottom: 0;
             color: #333;
-            padding-bottom: 5px;
+            padding-bottom: 0;
             width: 100%;
             line-height: 1.2;
+            text-align: center;
+        }
+        .school-logo {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 0 auto;
+        }
+        .school-name-text {
+            vertical-align: middle;
         }
         
         @media print {
@@ -154,15 +171,15 @@ $school_name = strtoupper($school_profile['nama_madrasah'] ?? 'SEKOLAH');
 
     <div class="container py-4">
         <div id="print-controls" class="mb-4 text-center no-print d-print-none">
-            <button onclick="window.print()" class="btn btn-primary btn-lg"><i class="fas fa-print"></i> Cetak QR Code</button>
-            <button onclick="window.close()" class="btn btn-secondary btn-lg ml-2">Tutup</button>
+            <button onclick="window.print()" class="btn btn-icon icon-left btn-primary"><i class="fas fa-print"></i> Cetak QR Code</button>
+            <button onclick="window.close()" class="btn btn-icon icon-left btn-secondary ml-2"><i class="fas fa-times"></i> Tutup</button>
         </div>
 
         <div class="qr-grid">
             <?php foreach ($students as $student): ?>
             <div class="qr-col">
                 <div class="qr-card">
-                    <div class="school-name"><?php echo htmlspecialchars($school_name); ?></div>
+                    <div class="school-name"><?php if ($logo_url !== ''): ?><img src="<?php echo htmlspecialchars($logo_url); ?>" alt="Logo" class="school-logo" onerror="this.style.display='none'"><?php endif; ?><span class="school-name-text"><?php echo htmlspecialchars($school_name); ?></span></div>
                     
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?php echo $student['nisn']; ?>" alt="QR Code" class="qr-code">
                     
