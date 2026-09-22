@@ -480,6 +480,23 @@ switch ($user_level) {
                 'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
             ]
         ];
+        $tail_order_admin = ['Pengaturan', 'Pengguna', 'Backup & Restore', 'Logout'];
+        $menu_head_admin = [];
+        $menu_mid_admin = [];
+        $menu_tail_admin = [];
+        foreach ($menu_items as $m) {
+            $t = $m['title'] ?? '';
+            if (in_array($t, ['Dashboard', 'Master Data', 'Kehadiran'], true)) $menu_head_admin[] = $m;
+            elseif (in_array($t, $tail_order_admin, true)) $menu_tail_admin[] = $m;
+            else $menu_mid_admin[] = $m;
+        }
+        usort($menu_mid_admin, function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
+        usort($menu_tail_admin, function ($a, $b) use ($tail_order_admin) {
+            $pa = array_search($a['title'] ?? '', $tail_order_admin, true);
+            $pb = array_search($b['title'] ?? '', $tail_order_admin, true);
+            return ($pa === false ? 99 : $pa) <=> ($pb === false ? 99 : $pb);
+        });
+        $menu_items = array_merge($menu_head_admin, $menu_mid_admin, $menu_tail_admin);
         break;
 
     case 'kepala_madrasah':
@@ -630,6 +647,11 @@ switch ($user_level) {
                 'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
             ]
         ];
+        $menu_top_kepala = array_slice($menu_items, 0, 2);
+        $menu_bottom_kepala = array_slice($menu_items, -1);
+        $menu_mid_kepala = array_slice($menu_items, 2, -1);
+        usort($menu_mid_kepala, function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
+        $menu_items = array_merge($menu_top_kepala, $menu_mid_kepala, $menu_bottom_kepala);
         break;
         
     case 'tata_usaha':
