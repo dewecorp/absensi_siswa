@@ -58,18 +58,6 @@ try {
 $upload_dir = __DIR__ . '/../assets/dokumen/program_kerja/';
 if(!is_dir($upload_dir)) @mkdir($upload_dir,0755,true);
 
-function handleUploadProker($field){
- global $upload_dir;
- if(!isset($_FILES[$field])||$_FILES[$field]['error']!=0) return null;
- $allowed=['pdf','jpg','jpeg','png','doc','docx','xls','xlsx'];
- $ext=strtolower(pathinfo($_FILES[$field]['name'],PATHINFO_EXTENSION));
- if(!in_array($ext,$allowed)) return ['error'=>'Format tidak didukung (pdf/jpg/png/doc/xls)'];
- if($_FILES[$field]['size']>5*1024*1024) return ['error'=>'Ukuran maksimal 5MB'];
- $fn='proker_'.time().'_'.uniqid().'.'.$ext;
- if(!move_uploaded_file($_FILES[$field]['tmp_name'],$upload_dir.$fn)) return ['error'=>'Gagal upload'];
- return ['file'=>$fn];
-}
-
 $message='';
 if(isset($_SESSION['flash_message'])){ $message=$_SESSION['flash_message']; unset($_SESSION['flash_message']); }
 
@@ -84,12 +72,9 @@ if($_SERVER['REQUEST_METHOD']=='POST' && $is_editable){
   } else {
    $anggaran=(float)preg_replace('/[^0-9]/','',$_POST['anggaran']??'0');
    $wm=!empty($_POST['waktu_mulai'])?$_POST['waktu_mulai']:null; $ws=!empty($_POST['waktu_selesai'])?$_POST['waktu_selesai']:null;
-   $st=trim($_POST['status']??'belum_terlaksana'); if(!isset($status_opts[$st])) $st='belum_terlaksana';
-   $up=handleUploadProker('bukti');
-   if(isset($up['error'])){ $_SESSION['flash_message']=['type'=>'danger','text'=>$up['error']]; header("Location: $redirect"); exit; }
-   $bukti=$up['file']??null;
+   $st='belum_terlaksana';
     $stmt=$pdo->prepare("INSERT INTO tb_program_kerja (komponen,program,kegiatan,tujuan,indikator,target,waktu_mulai,waktu_selesai,penanggung_jawab,anggaran,sumber_dana,bukti,evaluasi,tindak_lanjut,status,tahun_ajaran) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-   $ok=$stmt->execute([$komponen,$program,$kegiatan,trim($_POST['tujuan']??''),trim($_POST['indikator']??''),trim($_POST['target']??''),$wm,$ws,trim($_POST['penanggung_jawab']??''),$anggaran,trim($_POST['sumber_dana']??''),$bukti,trim($_POST['evaluasi']??''),trim($_POST['tindak_lanjut']??''),$st,$tahun_ajaran]);
+   $ok=$stmt->execute([$komponen,$program,$kegiatan,trim($_POST['tujuan']??''),trim($_POST['indikator']??''),trim($_POST['target']??''),$wm,$ws,trim($_POST['penanggung_jawab']??''),$anggaran,trim($_POST['sumber_dana']??''),null,'','',$st,$tahun_ajaran]);
    $_SESSION['flash_message']=$ok?['type'=>'success','text'=>'Program kerja ditambahkan!']:['type'=>'danger','text'=>'Gagal menambah!'];
    if($ok) logActivity($pdo,$_SESSION['username']??'system','Tambah Program Kerja',"$program - komp $komponen");
   }
@@ -104,17 +89,12 @@ if($_SERVER['REQUEST_METHOD']=='POST' && $is_editable){
   } else {
    $anggaran=(float)preg_replace('/[^0-9]/','',$_POST['anggaran']??'0');
    $wm=!empty($_POST['waktu_mulai'])?$_POST['waktu_mulai']:null; $ws=!empty($_POST['waktu_selesai'])?$_POST['waktu_selesai']:null;
-   $st=trim($_POST['status']??'belum_terlaksana'); if(!isset($status_opts[$st])) $st='belum_terlaksana';
-   $cur=$pdo->prepare("SELECT bukti FROM tb_program_kerja WHERE id=?"); $cur->execute([$id]); $old=$cur->fetchColumn();
-   $bukti=$old;
-   if(isset($_FILES['bukti'])&&$_FILES['bukti']['error']==0){
-    $up=handleUploadProker('bukti');
-    if(isset($up['error'])){ $_SESSION['flash_message']=['type'=>'danger','text'=>$up['error']]; header("Location: $redirect"); exit; }
-    if($old && file_exists($upload_dir.$old)) @unlink($upload_dir.$old);
-    $bukti=$up['file'];
-   }
+   $cur=$pdo->prepare("SELECT bukti,status,evaluasi,tindak_lanjut FROM tb_program_kerja WHERE id=?"); $cur->execute([$id]); $curRow=$cur->fetch(PDO::FETCH_ASSOC)?:[];
+   $old=$curRow['bukti']??null; $bukti=$old;
+   $st=$curRow['status']??'belum_terlaksana'; if(!isset($status_opts[$st])) $st='belum_terlaksana';
+   $ev=$curRow['evaluasi']??''; $tl=$curRow['tindak_lanjut']??'';
      $stmt=$pdo->prepare("UPDATE tb_program_kerja SET komponen=?,program=?,kegiatan=?,tujuan=?,indikator=?,target=?,waktu_mulai=?,waktu_selesai=?,penanggung_jawab=?,anggaran=?,sumber_dana=?,bukti=?,evaluasi=?,tindak_lanjut=?,status=? WHERE id=?");
-   $ok=$stmt->execute([$komponen,$program,$kegiatan,trim($_POST['tujuan']??''),trim($_POST['indikator']??''),trim($_POST['target']??''),$wm,$ws,trim($_POST['penanggung_jawab']??''),$anggaran,trim($_POST['sumber_dana']??''),$bukti,trim($_POST['evaluasi']??''),trim($_POST['tindak_lanjut']??''),$st,$id]);
+   $ok=$stmt->execute([$komponen,$program,$kegiatan,trim($_POST['tujuan']??''),trim($_POST['indikator']??''),trim($_POST['target']??''),$wm,$ws,trim($_POST['penanggung_jawab']??''),$anggaran,trim($_POST['sumber_dana']??''),$bukti,$ev,$tl,$st,$id]);
    $_SESSION['flash_message']=$ok?['type'=>'success','text'=>'Program kerja diupdate!']:['type'=>'danger','text'=>'Gagal update!'];
    if($ok) logActivity($pdo,$_SESSION['username']??'system','Update Program Kerja',"ID $id");
   }
@@ -159,7 +139,6 @@ include '../templates/sidebar.php';
 <style>
 #table-proker th{white-space:nowrap;font-size:.78rem}
 #table-proker td{font-size:.8rem;vertical-align:top}
-.bukti-link{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
 </style>
 <div class="main-content">
 <section class="section">
@@ -178,33 +157,19 @@ include '../templates/sidebar.php';
 <?php endforeach;?>
 </select>
 </div>
-<div class="col-md-3">
-<label class="font-weight-bold">Filter Status</label>
-<select id="filter-status" class="form-control">
-<option value="">Semua Status</option>
-<?php foreach($status_opts as $sv=>$sl):?>
-<option value="<?=$sv?>" <?=$filter_status===$sv?'selected':''?>><?=htmlspecialchars($sl)?></option>
-<?php endforeach;?>
-</select>
-</div>
-<div class="col-md-6 text-right d-flex align-items-end justify-content-end">
+<div class="col-md-9 text-right d-flex align-items-end justify-content-end">
 <?php if($is_editable):?>
 <button class="btn btn-primary" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah Program</button>
 <?php endif;?>
 </div>
-</div>
-<div class="mb-2">
-<?php foreach($status_opts as $sv=>$sl): $c=(int)($cnt_st[$sv]??0); $bc=$status_badge[$sv]; $ic=$status_icon[$sv];?>
-<span class="badge <?=$bc?>" style="font-size:.82rem;padding:6px 10px;margin-right:6px"><i class="fas <?=$ic?>"></i> <?=htmlspecialchars($sl)?>: <?=$c?></span>
-<?php endforeach;?>
 </div>
 
 <div class="card">
 <div class="card-header"><h4>Tabel Program Kerja</h4><div class="card-header-action d-flex align-items-center">
 <span class="badge badge-info mr-2"><?=count($rows)?> data</span>
 <?php $q=http_build_query(array_filter(['komponen'=>$filter_komponen?:null,'status'=>$filter_status?:null])); $qs=$q?'?'.$q:''; ?>
-<a href="export_program_kerja_excel.php<?=$qs?>" class="btn btn-success btn-sm mr-1"><i class="fas fa-file-excel"></i> Excel</a>
-<a href="cetak_program_kerja.php<?=$qs?>" target="_blank" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
+<a href="export_progja_excel.php<?=$qs?>" class="btn btn-success btn-sm mr-1"><i class="fas fa-file-excel"></i> Excel</a>
+<a href="cetak_progja.php<?=$qs?>" target="_blank" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
 </div></div>
 <div class="card-body">
 <div class="table-responsive">
@@ -223,10 +188,6 @@ include '../templates/sidebar.php';
 <th style="min-width:130px">Penanggung Jawab</th>
 <th style="min-width:110px">Anggaran</th>
 <th style="min-width:110px">Sumber Dana</th>
-<th style="min-width:120px">Bukti / Dokumen</th>
-<th style="min-width:140px">Evaluasi</th>
-<th style="min-width:140px">Tindak Lanjut</th>
-<th class="text-center" style="min-width:120px">Status</th>
 <?php if($is_editable):?><th class="text-center" style="min-width:130px">Aksi</th><?php endif;?>
 </tr>
 </thead>
@@ -245,15 +206,10 @@ include '../templates/sidebar.php';
 <td><?=htmlspecialchars($r['penanggung_jawab']??'-')?></td>
 <td class="text-right"><?= $r['anggaran']>0?'Rp '.number_format($r['anggaran'],0,',','.'):'-' ?></td>
 <td><?=htmlspecialchars($r['sumber_dana']??'-')?></td>
-<td class="text-center"><?php if(!empty($r['bukti'])): ?><a href="../assets/dokumen/program_kerja/<?=htmlspecialchars($r['bukti'])?>" target="_blank" class="bukti-link btn btn-sm btn-outline-primary"><i class="fas fa-file"></i> <?=htmlspecialchars($r['bukti'])?></a><?php else: ?>-<?php endif;?></td>
-<td><?=nl2br(htmlspecialchars($r['evaluasi']??'-'))?></td>
-<td><?=nl2br(htmlspecialchars($r['tindak_lanjut']??'-'))?></td>
-<td class="text-center"><?php $sv=$r['status']??'belum_terlaksana'; if(!isset($status_opts[$sv])) $sv='belum_terlaksana'; $bc=$status_badge[$sv]; $ic=$status_icon[$sv]; $sl=$status_opts[$sv];?><span class="badge <?=$bc?>"><i class="fas <?=$ic?>"></i> <?=htmlspecialchars($sl)?></span></td>
 <?php if($is_editable):?>
 <td class="text-center">
 <div class="btn-group">
 <button class="btn btn-warning btn-sm btn-edit" data-row='<?=htmlspecialchars(json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE),ENT_QUOTES,'UTF-8')?>' title="Edit"><i class="fas fa-edit"></i></button>
-<button class="btn btn-info btn-sm btn-status-cycle" data-id="<?=$r['id']?>" data-status="<?=$sv?>" title="Ubah Status"><i class="fas <?=$ic?>"></i></button>
 <button class="btn btn-danger btn-sm btn-del" data-id="<?=$r['id']?>" data-prog="<?=htmlspecialchars($r['program'])?>" title="Hapus"><i class="fas fa-trash"></i></button>
 </div>
 </td>
@@ -297,22 +253,17 @@ include '../templates/sidebar.php';
 <div class="col-md-3"><div class="form-group"><label>Waktu Mulai</label><input type="date" name="waktu_mulai" class="form-control"></div></div>
 <div class="col-md-3"><div class="form-group"><label>Waktu Selesai</label><input type="date" name="waktu_selesai" class="form-control"></div></div>
 </div>
-<div class="form-group"><label>Kegiatan *</label><input type="text" id="add_kegiatan" name="kegiatan" class="form-control" readonly required placeholder="Pilih Program dulu"></div>
 <div class="row">
-<div class="col-md-6"><div class="form-group"><label>Tujuan</label><input type="text" id="add_tujuan" name="tujuan" class="form-control" readonly placeholder="Auto"></div></div>
-<div class="col-md-4"><div class="form-group"><label>Indikator Keberhasilan</label><input type="text" id="add_indikator" name="indikator" class="form-control" readonly placeholder="Auto"></div></div><div class="col-md-2"><div class="form-group"><label>Target</label><input type="text" id="add_target" name="target" class="form-control" placeholder="Opsional"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Kegiatan *</label><textarea id="add_kegiatan" name="kegiatan" class="form-control" rows="3" readonly required placeholder="Pilih Program dulu"></textarea></div></div>
+<div class="col-md-3"><div class="form-group"><label>Tujuan</label><input type="text" id="add_tujuan" name="tujuan" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Indikator Keberhasilan</label><input type="text" id="add_indikator" name="indikator" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Target</label><input type="text" id="add_target" name="target" class="form-control" placeholder="cth: 100%, 90%, selesai tepat waktu"></div></div>
 </div>
 
 <div class="row">
-<div class="col-md-3"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" class="form-control" placeholder="Nama / jabatan"></div></div>
-<div class="col-md-2"><div class="form-group"><label>Anggaran (Rp)</label><input type="text" name="anggaran" class="form-control uang" placeholder="0"></div></div>
-<div class="col-md-2"><div class="form-group"><label>Sumber Dana</label><input type="text" name="sumber_dana" class="form-control" placeholder="BOS / BOP / Komite"></div></div>
-<div class="col-md-2"><div class="form-group"><label>Status</label><select name="status" class="form-control"><?php foreach($status_opts as $sv=>$sl):?><option value="<?=$sv?>"><?=htmlspecialchars($sl)?></option><?php endforeach;?></select></div></div>
-</div>
-<div class="row">
-<div class="col-md-6"><div class="form-group"><label>Bukti / Dokumen (pdf/jpg/doc/xls max 5MB)</label><input type="file" name="bukti" class="form-control"></div></div>
-<div class="col-md-3"><div class="form-group"><label>Evaluasi</label><input type="text" id="add_evaluasi" name="evaluasi" class="form-control" readonly placeholder="Auto"></div></div>
-<div class="col-md-3"><div class="form-group"><label>Tindak Lanjut</label><input type="text" id="add_tindak" name="tindak_lanjut" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" class="form-control" placeholder="Nama / jabatan"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Anggaran (Rp)</label><input type="text" name="anggaran" class="form-control uang" placeholder="0"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Sumber Dana</label><input type="text" name="sumber_dana" class="form-control" placeholder="BOS / BOP / Komite"></div></div>
 </div>
 </div>
 <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button><button type="submit" name="add_program" class="btn btn-primary">Simpan</button></div>
@@ -334,22 +285,17 @@ include '../templates/sidebar.php';
 <div class="col-md-3"><div class="form-group"><label>Waktu Mulai</label><input type="date" name="waktu_mulai" id="edit_waktu_mulai" class="form-control"></div></div>
 <div class="col-md-3"><div class="form-group"><label>Waktu Selesai</label><input type="date" name="waktu_selesai" id="edit_waktu_selesai" class="form-control"></div></div>
 </div>
-<div class="form-group"><label>Kegiatan *</label><input type="text" id="edit_kegiatan" name="kegiatan" class="form-control" readonly required placeholder="Pilih Program dulu"></div>
 <div class="row">
-<div class="col-md-6"><div class="form-group"><label>Tujuan</label><input type="text" id="edit_tujuan" name="tujuan" class="form-control" readonly placeholder="Auto"></div></div>
-<div class="col-md-4"><div class="form-group"><label>Indikator Keberhasilan</label><input type="text" id="edit_indikator" name="indikator" class="form-control" readonly placeholder="Auto"></div></div><div class="col-md-2"><div class="form-group"><label>Target</label><input type="text" name="target" id="edit_target" class="form-control" placeholder="Opsional"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Kegiatan *</label><textarea id="edit_kegiatan" name="kegiatan" class="form-control" rows="3" readonly required placeholder="Pilih Program dulu"></textarea></div></div>
+<div class="col-md-3"><div class="form-group"><label>Tujuan</label><input type="text" id="edit_tujuan" name="tujuan" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Indikator Keberhasilan</label><input type="text" id="edit_indikator" name="indikator" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Target</label><input type="text" name="target" id="edit_target" class="form-control" placeholder="cth: 100%, 90%, selesai tepat waktu"></div></div>
 </div>
 
 <div class="row">
-<div class="col-md-2"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" id="edit_pj" class="form-control"></div></div>
-<div class="col-md-2"><div class="form-group"><label>Anggaran (Rp)</label><input type="text" name="anggaran" id="edit_anggaran" class="form-control"></div></div>
-<div class="col-md-2"><div class="form-group"><label>Sumber Dana</label><input type="text" name="sumber_dana" id="edit_sumber" class="form-control"></div></div>
-<div class="col-md-2"><div class="form-group"><label>Status</label><select name="status" id="edit_status" class="form-control"><?php foreach($status_opts as $sv=>$sl):?><option value="<?=$sv?>"><?=htmlspecialchars($sl)?></option><?php endforeach;?></select></div></div>
-</div>
-<div class="row">
-<div class="col-md-6"><div class="form-group"><label>Bukti / Dokumen (kosongkan jika tidak ganti)</label><input type="file" name="bukti" class="form-control"><small id="edit_bukti_old" class="text-muted"></small></div></div>
-<div class="col-md-3"><div class="form-group"><label>Evaluasi</label><input type="text" id="edit_evaluasi" name="evaluasi" class="form-control" readonly placeholder="Auto"></div></div>
-<div class="col-md-3"><div class="form-group"><label>Tindak Lanjut</label><input type="text" id="edit_tl" name="tindak_lanjut" class="form-control" readonly placeholder="Auto"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Penanggung Jawab</label><input type="text" name="penanggung_jawab" id="edit_pj" class="form-control"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Anggaran (Rp)</label><input type="text" name="anggaran" id="edit_anggaran" class="form-control"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Sumber Dana</label><input type="text" name="sumber_dana" id="edit_sumber" class="form-control"></div></div>
 </div>
 </div>
 <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button><button type="submit" name="update_program" class="btn btn-primary">Update</button></div>
@@ -368,25 +314,21 @@ var matriks=<?=json_encode($matriks ?? [], JSON_UNESCAPED_UNICODE|JSON_HEX_APOS|
 function idxByProgram(k, prog){ var list=matriks[k]||matriks[String(k)]||[]; for(var i=0;i<list.length;i++) if((list[i].program||'').trim()===String(prog).trim()) return i; return -1; }
 function syncMatriksAdd(){
  var k=$('#addModal select[name="komponen"]').val(); var prog=$('#add_program_sel').val();
- if(!k || !prog){ $('#add_kegiatan,#add_tujuan,#add_indikator,#add_target').val('');  $('#add_evaluasi,#add_tindak').val(''); return; }
+ if(!k || !prog){ $('#add_kegiatan,#add_tujuan,#add_indikator,#add_target').val('');  return; }
  var idx=idxByProgram(k,prog); if(idx<0) return;
  var m=matriks[k][idx]||matriks[String(k)][idx];
  $('#add_kegiatan').val(m.kegiatan||'');
  $('#add_tujuan').val(m.tujuan||'');
  $('#add_indikator').val(m.indikator||''); if(!$('#add_target').val()) $('#add_target').val(m.target||'');
- $('#add_evaluasi').val(m.evaluasi||'');
- $('#add_tindak').val(m.tindak||'');
 }
 function syncMatriksEdit(){
  var k=$('#edit_komponen').val(); var prog=$('#edit_program_sel').val();
- if(!k || !prog){ $('#edit_kegiatan,#edit_tujuan,#edit_indikator,#edit_target').val('');  $('#edit_evaluasi,#edit_tl').val(''); return; }
+ if(!k || !prog){ $('#edit_kegiatan,#edit_tujuan,#edit_indikator,#edit_target').val('');  return; }
  var idx=idxByProgram(k,prog); if(idx<0) return;
  var m=matriks[k][idx]||matriks[String(k)][idx];
  $('#edit_kegiatan').val(m.kegiatan||'');
  $('#edit_tujuan').val(m.tujuan||'');
  $('#edit_indikator').val(m.indikator||''); $('#edit_target').val(m.target||'');
- $('#edit_evaluasi').val(m.evaluasi||'');
- $('#edit_tl').val(m.tindak||'');
 }
 function fillProgram(k, selId, cur){
  var $s=$(selId); $s.empty().append('<option value="">-- Pilih Program --</option>');
@@ -397,8 +339,8 @@ function fillProgram(k, selId, cur){
   $s.val(cur);
  }
 }
-$(document).on('change','#addModal select[name="komponen"]',function(){ var k=$(this).val(); fillProgram(k,'#add_program_sel',''); $('#add_kegiatan,#add_tujuan,#add_indikator,#add_target,#add_evaluasi,#add_tindak').val('');  });
-$(document).on('change','#edit_komponen',function(){ var k=$(this).val(); fillProgram(k,'#edit_program_sel',''); $('#edit_kegiatan,#edit_tujuan,#edit_indikator,#edit_target,#edit_evaluasi,#edit_tl').val('');  });
+ $(document).on('change','#addModal select[name="komponen"]',function(){ var k=$(this).val(); fillProgram(k,'#add_program_sel',''); $('#add_kegiatan,#add_tujuan,#add_indikator,#add_target').val('');  });
+ $(document).on('change','#edit_komponen',function(){ var k=$(this).val(); fillProgram(k,'#edit_program_sel',''); $('#edit_kegiatan,#edit_tujuan,#edit_indikator,#edit_target').val('');  });
 $(document).on('change','#add_program_sel',syncMatriksAdd);
 $(document).on('change','#edit_program_sel',syncMatriksEdit);
 function fmtRupiah(v){
@@ -418,20 +360,14 @@ $(document).ready(function(){
   $('#edit_id').val(r.id); $('#edit_komponen').val(r.komponen); fillProgram(r.komponen,'#edit_program_sel',r.program);
   syncMatriksEdit();
   $('#edit_waktu_mulai').val(r.waktu_mulai||r.waktu||''); $('#edit_waktu_selesai').val(r.waktu_selesai||'');
-  $('#edit_pj').val(r.penanggung_jawab); $('#edit_anggaran').val(fmtRupiah(r.anggaran)); $('#edit_sumber').val(r.sumber_dana); $('#edit_status').val(r.status||'belum_terlaksana');
-  $('#edit_bukti_old').text(r.bukti ? 'File saat ini: '+r.bukti : 'Belum ada file');
+  $('#edit_pj').val(r.penanggung_jawab); $('#edit_anggaran').val(fmtRupiah(r.anggaran)); $('#edit_sumber').val(r.sumber_dana);
   $('#editModal').modal('show');
  });
   $(document).on('click','.btn-del',function(){
   var id=$(this).data('id'), prog=$(this).data('prog');
   Swal.fire({title:'Hapus?',text:'Hapus program "'+prog+'"?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Ya, Hapus'}).then(function(res){ if(res.isConfirmed){ $('#del_id').val(id); $('#delForm').submit(); }});
  });
- function buildUrl(k,s){ var p=[]; if(k&&k!='0') p.push('komponen='+k); if(s) p.push('status='+encodeURIComponent(s)); return p.length?'?'+p.join('&'):location.pathname; }
- $('#filter-komponen,#filter-status').on('change',function(){ location.href=buildUrl($('#filter-komponen').val(), $('#filter-status').val()); });
- $(document).on('click','.btn-status-cycle',function(){
-  var id=$(this).data('id'), cur=$(this).data('status');
-  var order=['belum_terlaksana','proses','terlaksana'], idx=order.indexOf(cur); var nxt=order[(idx+1)%3];
-  $.post('',{update_status:1,id:id,status:nxt},function(r){ if(r&&r.success) location.reload(); },'json');
- });
+  function buildUrl(k){ var p=[]; if(k&&k!='0') p.push('komponen='+k); return p.length?'?'+p.join('&'):location.pathname; }
+ $('#filter-komponen').on('change',function(){ location.href=buildUrl($('#filter-komponen').val()); });
 });
 </script>

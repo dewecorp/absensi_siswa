@@ -217,8 +217,7 @@ include '../templates/sidebar.php';
 <div class="section-header-breadcrumb"><div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div><div class="breadcrumb-item">Program Kerja</div><div class="breadcrumb-item">Komponen Program Kerja</div></div>
 </div>
 <div class="section-body">
-<div class="mb-3 d-flex justify-content-between align-items-center flex-wrap">
-<a href="program_kerja.php" class="btn btn-outline-primary btn-sm"><i class="fas fa-arrow-left"></i> Kelola Program Kerja</a>
+<div class="mb-3 d-flex justify-content-end align-items-center flex-wrap">
 <div>
 <a href="export_komponen_program_kerja_excel.php" class="btn btn-success btn-sm mr-1"><i class="fas fa-file-excel"></i> Excel</a>
 <a href="cetak_komponen_program_kerja.php" target="_blank" rel="noopener" class="btn btn-danger btn-sm mr-1"><i class="fas fa-file-pdf"></i> PDF</a>

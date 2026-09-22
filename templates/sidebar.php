@@ -448,10 +448,11 @@ switch ($user_level) {
                 'title' => 'Program Kerja',
                 'icon' => 'fas fa-tasks',
                 'submenu' => [
-                    ['title' => 'Program Kerja Kepala', 'url' => '../kepala/program_kerja.php?session_type=admin', 'active' => $current_page === 'program_kerja.php'],
                     ['title' => 'Komponen Program Kerja', 'url' => '../kepala/komponen_program_kerja.php?session_type=admin', 'active' => $current_page === 'komponen_program_kerja.php'],
+                    ['title' => 'Program Kerja Kepala', 'url' => '../kepala/program_kerja.php?session_type=admin', 'active' => $current_page === 'program_kerja.php'],
+                    ['title' => 'Laporan Program Kerja', 'url' => '../kepala/laporan_program_kerja.php?session_type=admin', 'active' => $current_page === 'laporan_program_kerja.php'],
                 ],
-                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php'])
+                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php'])
             ],
             [
                 'title' => 'Pengaturan',
@@ -522,10 +523,11 @@ switch ($user_level) {
                 'title' => 'Program Kerja',
                 'icon' => 'fas fa-tasks',
                 'submenu' => [
-                    ['title' => 'Program Kerja Kepala', 'url' => '../kepala/program_kerja.php', 'active' => $current_page === 'program_kerja.php'],
                     ['title' => 'Komponen Program Kerja', 'url' => '../kepala/komponen_program_kerja.php', 'active' => $current_page === 'komponen_program_kerja.php'],
+                    ['title' => 'Program Kerja Kepala', 'url' => '../kepala/program_kerja.php', 'active' => $current_page === 'program_kerja.php'],
+                    ['title' => 'Laporan Program Kerja', 'url' => '../kepala/laporan_program_kerja.php', 'active' => $current_page === 'laporan_program_kerja.php'],
                 ],
-                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php'])
+                'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php'])
             ],
             [
                 'title' => 'Ekstrakurikuler',
