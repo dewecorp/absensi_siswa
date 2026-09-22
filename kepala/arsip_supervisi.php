@@ -74,8 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             foreach ($files as $f) {
                 $hasil = sv_handle_upload($f, 'supervisi', $folder);
                 if (!$hasil['ok']) { $errors[] = $hasil['error']; continue; }
-                // Nama hanya berdasarkan nama file asli, biar beda tiap file
-                $nm = pathinfo((string)$f['name'], PATHINFO_FILENAME);
+                // Nama dokumen ikut field input, fallback ke nama file
+                $nm = ($nama_dokumen !== '') ? $nama_dokumen : pathinfo((string)$f['name'], PATHINFO_FILENAME);
                 $stmtArsip->execute([$id_pelaksanaan ?: null, $jenis_dokumen, $nm, $hasil['file'], $tautan_dokumen !== '' ? $tautan_dokumen : null, $pengunggah, $keterangan]);
                 $sukses++;
             }
@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             $pengunggah = sv_current_user_name($pdo);
             // Update metadata baris yang diedit (file lama tidak dihapus)
             $stmt = $pdo->prepare("UPDATE tb_sv_arsip SET id_pelaksanaan=?, jenis_dokumen=?, nama_dokumen=?, tautan_dokumen=?, keterangan=? WHERE id_arsip=?");
-            $stmt->execute([$idPel, $jenis, $nama, $tautan_dokumen !== '' ? $tautan_dokumen : null, $keterangan, $id]);
+            $stmt->execute([$idPel ?: null, $jenis, $nama, $tautan_dokumen !== '' ? $tautan_dokumen : null, $keterangan, $id]);
             $inserted = 0;
             $errors = [];
             if ($files) {
@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 foreach ($files as $f) {
                     $hasil = sv_handle_upload($f, 'supervisi', $folder);
                     if (!$hasil['ok']) { $errors[] = $hasil['error']; continue; }
-                    $nm = pathinfo((string)$f['name'], PATHINFO_FILENAME);
+                    $nm = ($nama !== '') ? $nama : pathinfo((string)$f['name'], PATHINFO_FILENAME);
                     $ins->execute([$idPel, $jenis, $nm, $hasil['file'], $tautan_dokumen !== '' ? $tautan_dokumen : null, $pengunggah, $keterangan]);
                     $inserted++;
                 }
@@ -236,12 +236,28 @@ $(document).ready(function () {
         });
         var prev = document.getElementById('sv-edit-file-preview');
         if (prev) prev.innerHTML = '';
-        if (d.file) {
-            $('#sv-edit-file-info').text(d.file).parent().show();
-            var ext = (String(d.file).split('.').pop() || '').toLowerCase();
-            var isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].indexOf(ext) >= 0;
-            var segs = String(d.file).split('/').map(encodeURIComponent).join('/');
-            if (prev) prev.innerHTML = svFilePreviewHtml('../uploads/supervisi/' + segs, isImg, '');
+        var list = (d.files && d.files.length) ? d.files : (d.file ? [d.file] : []);
+        if (list.length) {
+            $('#sv-edit-file-info').text(list.length + ' foto/dokumen tersimpan').parent().show();
+            list.forEach(function (fp) {
+                var ext = (String(fp).split('.').pop() || '').toLowerCase();
+                var isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].indexOf(ext) >= 0;
+                var url = '../uploads/supervisi/' + String(fp).split('/').map(encodeURIComponent).join('/');
+                var a = document.createElement('a');
+                a.href = url; a.target = '_blank'; a.className = 'mr-2 mb-1';
+                if (isImg) {
+                    var img = document.createElement('img');
+                    img.src = url; img.className = 'border rounded';
+                    img.style.width = '60px'; img.style.height = '60px'; img.style.objectFit = 'cover';
+                    a.appendChild(img);
+                } else {
+                    var ic = document.createElement('span');
+                    ic.className = 'btn btn-sm btn-outline-secondary';
+                    ic.innerHTML = '<i class="fas fa-file"></i>';
+                    a.appendChild(ic);
+                }
+                if (prev) prev.appendChild(a);
+            });
         } else {
             $('#sv-edit-file-info').parent().hide();
         }
@@ -347,7 +363,6 @@ include '../templates/sidebar.php';
                                     <th>Tautan Dokumen</th>
                                     <th>Tanggal Upload</th>
                                     <th>Pengunggah</th>
-                                    <th>Keterangan</th>
                                     <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
@@ -363,7 +378,7 @@ include '../templates/sidebar.php';
                                         $groups[$k]['files'][] = $r;
                                     }
                                     $seq = 0;
-                                    foreach ($groups as $k => $g): $row =& $g['info']; $namaSup = ($row['jenis_supervisi'] === 'Manajerial') ? ($row['unit_bagian'] ?? '-') : ($row['nama_guru'] ?? '-');
+                                    foreach ($groups as $k => $g): $row =& $g['info']; $namaSup = ($row['jenis_supervisi'] === 'Manajerial') ? ($row['unit_bagian'] ?? '-') : ($row['nama_guru'] ?? '-'); $fileList = []; foreach ($g['files'] as $fr) { if (!empty($fr['file'])) $fileList[] = $fr['file']; }
                                     ?>
                                     <tr>
                                         <td class="text-center"><?= ++$seq ?></td>
@@ -384,11 +399,10 @@ include '../templates/sidebar.php';
                                         <td><?php if (!empty($row['tautan_dokumen'])): ?><a href="<?= htmlspecialchars($row['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank"><i class="fas fa-link"></i> <?= htmlspecialchars($row['tautan_dokumen']) ?></a><?php else: ?>-<?php endif; ?></td>
                                         <td><?= $row['tanggal_upload'] ? date('d/m/Y H:i', strtotime($row['tanggal_upload'])) : '-' ?></td>
                                         <td><?= htmlspecialchars((string)$row['pengunggah']) ?></td>
-                                        <td><?= htmlspecialchars((string)$row['keterangan']) ?></td>
                                         <?php if ($can_manage): ?>
                                         <td style="white-space:nowrap">
                                             <div class="d-inline-flex align-items-center">
-                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode(['id_pelaksanaan'=>$row['id_pelaksanaan'],'jenis_dokumen'=>$row['jenis_dokumen'],'nama_dokumen'=>$row['nama_dokumen'],'tautan_dokumen'=>$row['tautan_dokumen'],'keterangan'=>$row['keterangan']], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode(['id_arsip'=>$row['id_arsip'],'id_pelaksanaan'=>$row['id_pelaksanaan'],'jenis_dokumen'=>$row['jenis_dokumen'],'nama_dokumen'=>$row['nama_dokumen'],'file'=>$row['file'],'files'=>$fileList,'tautan_dokumen'=>$row['tautan_dokumen'],'keterangan'=>$row['keterangan']], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$row['id_arsip'] ?>"><i class="fas fa-trash"></i></button>
                                             </div>
                                         </td>
@@ -438,7 +452,6 @@ include '../templates/sidebar.php';
                         <div id="sv-file-preview" class="d-flex flex-wrap mt-2"></div>
                     </div>
                     <div class="form-group"><label>Tautan Dokumen</label><input type="url" class="form-control" name="tautan_dokumen" placeholder="https://drive.google.com/... atau https://..."><small class="text-muted">Isi file atau tautan, salah satu wajib.</small></div>
-                    <div class="form-group"><label>Keterangan</label><textarea class="form-control" name="keterangan" rows="2"></textarea></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -484,7 +497,6 @@ include '../templates/sidebar.php';
                         <small class="text-muted">File pertama mengganti file lama, sisanya ditambahkan. Kosongkan jika tidak ganti.</small>
                     </div>
                     <div class="form-group"><label>Tautan Dokumen</label><input type="url" class="form-control" name="tautan_dokumen" placeholder="https://..."></div>
-                    <div class="form-group"><label>Keterangan</label><textarea class="form-control" name="keterangan" rows="2"></textarea></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>

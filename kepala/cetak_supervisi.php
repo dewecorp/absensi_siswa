@@ -178,7 +178,7 @@ try {
 
         case 'arsip':
             $title = 'Arsip / Bukti Supervisi';
-            $headers = ['Guru yang Disupervisi', 'Jenis Dokumen', 'Nama Dokumen', 'File', 'Tautan Dokumen', 'Tanggal Upload', 'Pengunggah', 'Keterangan'];
+            $headers = ['Guru yang Disupervisi', 'Jenis Dokumen', 'Nama Dokumen', 'File', 'Tautan Dokumen', 'Tanggal Upload', 'Pengunggah'];
             $rows = $pdo->query("SELECT a.*, p.nama_guru, p.unit_bagian, p.jenis_supervisi
                 FROM tb_sv_arsip a LEFT JOIN tb_sv_pelaksanaan p ON p.id_pelaksanaan = a.id_pelaksanaan
                 ORDER BY a.tanggal_upload DESC, a.id_arsip DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -188,7 +188,7 @@ try {
                     h($namaSup), h($r['jenis_dokumen']), h($r['nama_dokumen']),
                     h($r['file']), h($r['tautan_dokumen']),
                     $r['tanggal_upload'] ? date('d/m/Y H:i', strtotime($r['tanggal_upload'])) : '-',
-                    h($r['pengunggah']), h($r['keterangan']),
+                    h($r['pengunggah']),
                 ];
             }
             break;
