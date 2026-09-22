@@ -48,8 +48,26 @@ $page_title = 'Profil Madrasah';
 // Get school profile
 $school_profile = getSchoolProfile($pdo);
 
-// Get list of teachers for kepala and bendahara dropdown
-$teachers = $pdo->query("SELECT id_guru, nama_guru FROM tb_guru ORDER BY nama_guru ASC")->fetchAll(PDO::FETCH_ASSOC);
+// Get kepala madrasah (guru dengan jabatan Kepala Madrasah)
+$kepalaMadrasah = null;
+try {
+    $stmt = $pdo->query("SELECT id_guru, nama_guru, nuptk FROM tb_guru WHERE jabatan = 'Kepala Madrasah' ORDER BY id_guru LIMIT 1");
+    $kepalaMadrasah = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log('Error fetching kepala madrasah: ' . $e->getMessage());
+}
+
+// Get bendahara (guru dengan jabatan Bendahara)
+$bendahara = null;
+try {
+    $stmt = $pdo->query("SELECT id_guru, nama_guru, nuptk FROM tb_guru WHERE jabatan = 'Bendahara' ORDER BY id_guru LIMIT 1");
+    $bendahara = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log('Error fetching bendahara: ' . $e->getMessage());
+}
+
+// Get all teachers for fallback dropdown if needed (with NIP and NUPTK)
+$teachers = $pdo->query("SELECT id_guru, nama_guru, nuptk FROM tb_guru WHERE nama_guru IS NOT NULL AND nama_guru != '' ORDER BY nama_guru ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Tahun ajaran yang pernah dipakai di data nilai (untuk hapus nilai + opsi dropdown)
 $years = [];
@@ -214,39 +232,50 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
             }
         }
         
-        // Handle Update Profile
-        elseif (isset($_POST['nama_yayasan'])) {
-            $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
-            $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
-            $alamat = sanitizeInput($_POST['alamat'] ?? '');
-            $email_plain = trim(stripslashes($_POST['email_madrasah'] ?? ''));
-            if ($email_plain !== '' && !filter_var($email_plain, FILTER_VALIDATE_EMAIL)) {
-                $message = ['type' => 'danger', 'text' => 'Format email madrasah tidak valid.'];
-            }
-            $email_madrasah = sanitizeInput($_POST['email_madrasah'] ?? '');
-            $website_madrasah = '';
-            $website_plain = trim(stripslashes($_POST['website_madrasah'] ?? ''));
-            if (empty($message) && $website_plain !== '') {
-                $normalized = preg_match('#^https?://#i', $website_plain) ? $website_plain : 'https://' . $website_plain;
-                if (!filter_var($normalized, FILTER_VALIDATE_URL)) {
-                    $message = ['type' => 'danger', 'text' => 'Format website madrasah tidak valid (contoh: https://domain.com).'];
-                } else {
-                    $website_madrasah = mb_substr($normalized, 0, 512);
-                }
-            }
-            $id_kepala = !empty($_POST['id_kepala']) ? (int)$_POST['id_kepala'] : null;
-            // Get nama from tb_guru based on id_kepala for backward compatibility
-            $kepala_madrasah = '';
-            if ($id_kepala) {
-                $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
-                $stmt->execute([$id_kepala]);
-                $guru = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($guru) {
-                    $kepala_madrasah = $guru['nama_guru'];
-                }
-            }
-            $nip_kepala = sanitizeInput($_POST['nip_kepala']);
-            $id_bendahara = !empty($_POST['id_bendahara']) ? (int)$_POST['id_bendahara'] : null;
+         // Handle Update Profile
+         elseif (isset($_POST['nama_yayasan'])) {
+             $nama_yayasan = sanitizeInput($_POST['nama_yayasan']);
+             $nama_madrasah = sanitizeInput($_POST['nama_madrasah']);
+             $alamat = sanitizeInput($_POST['alamat'] ?? '');
+             $email_plain = trim(stripslashes($_POST['email_madrasah'] ?? ''));
+             if ($email_plain !== '' && !filter_var($email_plain, FILTER_VALIDATE_EMAIL)) {
+                 $message = ['type' => 'danger', 'text' => 'Format email madrasah tidak valid.'];
+             }
+             $email_madrasah = sanitizeInput($_POST['email_madrasah'] ?? '');
+             $website_madrasah = '';
+             $website_plain = trim(stripslashes($_POST['website_madrasah'] ?? ''));
+             if (empty($message) && $website_plain !== '') {
+                 $normalized = preg_match('#^https?://#i', $website_plain) ? $website_plain : 'https://' . $website_plain;
+                 if (!filter_var($normalized, FILTER_VALIDATE_URL)) {
+                     $message = ['type' => 'danger', 'text' => 'Format website madrasah tidak valid (contoh: https://domain.com).'];
+                 } else {
+                     $website_madrasah = mb_substr($normalized, 0, 512);
+                 }
+             }
+             
+             // Auto-fill id_kepala from auto-detected kepala madrasah if not manually set
+             $id_kepala = !empty($_POST['id_kepala']) ? (int)$_POST['id_kepala'] : null;
+             if (empty($id_kepala) && isset($kepalaMadrasah['id_guru'])) {
+                 $id_kepala = $kepalaMadrasah['id_guru'];
+             }
+             
+             // Get nama from tb_guru based on id_kepala for backward compatibility
+             $kepala_madrasah = '';
+             if ($id_kepala) {
+                 $stmt = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
+                 $stmt->execute([$id_kepala]);
+                 $guru = $stmt->fetch(PDO::FETCH_ASSOC);
+                 if ($guru) {
+                     $kepala_madrasah = $guru['nama_guru'];
+                 }
+             }
+             $nip_kepala = sanitizeInput($_POST['nip_kepala']);
+             
+             // Auto-fill id_bendahara from auto-detected bendahara if not manually set
+             $id_bendahara = !empty($_POST['id_bendahara']) ? (int)$_POST['id_bendahara'] : null;
+             if (empty($id_bendahara) && isset($bendahara['id_guru'])) {
+                 $id_bendahara = $bendahara['id_guru'];
+             }
             $tahun_ajaran = sanitizeInput($_POST['tahun_ajaran']);
             $tahun_ajaran_allowed = buildTahunAjaranProfilOptions($school_profile['tahun_ajaran'] ?? null, $tahun_untuk_opsi_profil);
             if (empty($message) && !in_array($tahun_ajaran, $tahun_ajaran_allowed, true)) {
@@ -413,23 +442,23 @@ include '../templates/sidebar.php';
                                                     <label>Alamat Madrasah</label>
                                                     <textarea class="form-control" name="alamat" rows="3" placeholder="Alamat lengkap madrasah"><?php echo htmlspecialchars($school_profile['alamat'] ?? ''); ?></textarea>
                                                 </div>
-                                                <div class="form-group">
-                                                    <label>Kepala Madrasah</label>
-                                                    <select class="form-control" name="id_kepala" id="id_kepala" required>
-                                                        <option value="">Pilih Kepala Madrasah</option>
-                                                        <?php foreach ($teachers as $teacher): ?>
-                                                            <option value="<?= $teacher['id_guru'] ?>" data-nama="<?= htmlspecialchars($teacher['nama_guru']) ?>" <?= (isset($school_profile['id_kepala']) && $school_profile['id_kepala'] == $teacher['id_guru']) ? 'selected' : '' ?>>
-                                                                <?= htmlspecialchars($teacher['nama_guru']) ?>
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>NIP Kepala Madrasah</label>
-                                                    <input type="text" class="form-control" name="nip_kepala" id="nip_kepala" value="<?php echo htmlspecialchars($school_profile['nip_kepala'] ?? ''); ?>" placeholder="NIP (Kosongkan jika tidak ada)">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Logo Madrasah</label>
+                                                  <div class="form-group">
+                                                      <label>Kepala Madrasah</label>
+                                                      <input type="text" class="form-control" value="<?= htmlspecialchars($kepalaMadrasah['nama_guru'] ?? '-') ?>" readonly>
+                                                      <input type="hidden" name="id_kepala" id="id_kepala" value="<?= htmlspecialchars((string)($kepalaMadrasah['id_guru'] ?? '')) ?>">
+                                                      <input type="hidden" name="kepala_madrasah_name" id="kepala_madrasah_name" value="<?= htmlspecialchars($kepalaMadrasah['nama_guru'] ?? '') ?>">
+                                                      <?php if (!empty($kepalaMadrasah['nama_guru'])): ?>
+                                                          <small class="text-muted">Jabatan: Kepala Madrasah</small>
+                                                      <?php else: ?>
+                                                          <small class="text-muted">Belum ada guru dengan jabatan "Kepala Madrasah". <a href="data_jabatan.php">Atur di Data Jabatan</a>.</small>
+                                                      <?php endif; ?>
+                                                  </div>
+                                                 <div class="form-group">
+                                                     <label>NIP Kepala Madrasah</label>
+                                                     <input type="text" class="form-control" name="nip_kepala" id="nip_kepala" value="<?php echo htmlspecialchars($school_profile['nip_kepala'] ?? ''); ?>" placeholder="NIP (Kosongkan jika tidak ada)">
+                                                 </div>
+                                                 <div class="form-group">
+                                                     <label>Logo Madrasah</label>
                                                     <div class="mb-2">
                                                         <?php if ($school_profile['logo']): ?>
                                                         <img src="../assets/img/<?php echo $school_profile['logo']; ?>" alt="Logo Madrasah" width="80" height="80" class="img-thumbnail">
@@ -450,19 +479,19 @@ include '../templates/sidebar.php';
                                                     <label>Website Madrasah</label>
                                                     <input type="text" class="form-control" name="website_madrasah" value="<?php echo htmlspecialchars($school_profile['website_madrasah'] ?? ''); ?>" placeholder="Contoh: https://madrasah.sch.id">
                                                 </div>
-                                                <div class="form-group">
-                                                    <label>Bendahara</label>
-                                                    <select class="form-control" name="id_bendahara">
-                                                        <option value="">Pilih Bendahara</option>
-                                                        <?php foreach ($teachers as $teacher): ?>
-                                                            <option value="<?= $teacher['id_guru'] ?>" <?= (isset($school_profile['id_bendahara']) && $school_profile['id_bendahara'] == $teacher['id_guru']) ? 'selected' : '' ?>>
-                                                                <?= htmlspecialchars($teacher['nama_guru']) ?>
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Hari libur mingguan</label>
+                                                   <div class="form-group">
+                                                       <label>Bendahara</label>
+                                                       <input type="text" class="form-control" value="<?= htmlspecialchars($bendahara['nama_guru'] ?? '-') ?>" readonly>
+                                                       <input type="hidden" name="id_bendahara" id="id_bendahara" value="<?= htmlspecialchars((string)($bendahara['id_guru'] ?? '')) ?>">
+                                                       <input type="hidden" name="bendahara_name" id="bendahara_name" value="<?= htmlspecialchars($bendahara['nama_guru'] ?? '') ?>">
+                                                       <?php if (!empty($bendahara['nama_guru'])): ?>
+                                                           <small class="text-muted">Jabatan: Bendahara</small>
+                                                       <?php else: ?>
+                                                           <small class="text-muted">Belum ada guru dengan jabatan "Bendahara". <a href="data_jabatan.php">Atur di Data Jabatan</a>.</small>
+                                                       <?php endif; ?>
+                                                   </div>
+                                                 <div class="form-group">
+                                                     <label>Hari libur mingguan</label>
                                                     <select class="form-control" name="hari_libur_mingguan" id="hari_libur_mingguan">
                                                         <?php
                                                         $hlm = strtolower(trim((string)($school_profile['hari_libur_mingguan'] ?? 'jumat')));
