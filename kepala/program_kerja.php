@@ -138,6 +138,13 @@ include '../templates/sidebar.php';
 <style>
 #table-proker th{white-space:nowrap;font-size:.78rem}
 #table-proker td{font-size:.8rem;vertical-align:top}
+@media (max-width:767.98px){
+.proja-toolbar .btn-tambah-wrap{margin-top:.5rem}
+.proja-toolbar .btn-tambah-wrap .btn{width:100%}
+.proja-card-header{flex-wrap:wrap}
+.proja-card-header .card-header-action{width:100%;margin-top:.5rem;justify-content:flex-start!important;flex-wrap:wrap}
+.proja-card-header .card-header-action .btn{margin-bottom:.25rem}
+}
 #addModal textarea,#editModal textarea{min-height:90px;resize:vertical;overflow:hidden}
 </style>
 <div class="main-content">
@@ -147,8 +154,8 @@ include '../templates/sidebar.php';
 <div class="section-header-breadcrumb"><div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div><div class="breadcrumb-item">Program Kerja</div><div class="breadcrumb-item">Program Kerja Kepala</div></div>
 </div>
 <div class="section-body">
-<div class="row mb-3">
-<div class="col-md-3">
+<div class="row mb-3 align-items-end proja-toolbar">
+<div class="col-12 col-md-3 mb-2 mb-md-0">
 <label class="font-weight-bold">Filter Komponen</label>
 <select id="filter-komponen" class="form-control">
 <option value="0">Semua Komponen (<?=count($komponen_list)?>)</option>
@@ -157,15 +164,15 @@ include '../templates/sidebar.php';
 <?php endforeach;?>
 </select>
 </div>
-<div class="col-md-9 text-right d-flex align-items-end justify-content-end">
 <?php if($is_editable):?>
+<div class="col-12 col-md-9 btn-tambah-wrap text-md-right">
 <button class="btn btn-primary" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah Program</button>
-<?php endif;?>
 </div>
+<?php endif;?>
 </div>
 
 <div class="card">
-<div class="card-header"><h4>Tabel Program Kerja</h4><div class="card-header-action d-flex align-items-center">
+<div class="card-header proja-card-header"><h4>Tabel Program Kerja</h4><div class="card-header-action d-flex align-items-center">
 <span class="badge badge-info mr-2"><?=count($rows)?> data</span>
 <?php $q=http_build_query(array_filter(['komponen'=>$filter_komponen?:null,'status'=>$filter_status?:null])); $qs=$q?'?'.$q:''; ?>
 <a href="export_progja_excel.php<?=$qs?>" class="btn btn-success btn-sm mr-1"><i class="fas fa-file-excel"></i> Excel</a>

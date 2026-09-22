@@ -114,6 +114,8 @@ include '../templates/sidebar.php';
 <style>
 #table-laporan th{white-space:nowrap;font-size:.78rem}
 #table-laporan td{font-size:.8rem;vertical-align:top}
+#table-laporan th:last-child,#table-laporan td:last-child{white-space:nowrap;text-align:center}
+#table-laporan td:last-child .btn{margin:1px 2px}
 .bukti-link{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
 .swal2-select{border:1px solid #e3e6f0 !important;border-radius:.5rem !important;box-shadow:0 .15rem 1.75rem 0 rgba(58,59,69,.15) !important;padding:.5rem .75rem !important;font-size:.9rem;color:#5a5c69;background-color:#fff}
 .swal2-select:focus{border-color:#bac8f3 !important;outline:0;box-shadow:0 0 0 .2rem rgba(78,115,223,.25) !important}
@@ -179,7 +181,7 @@ include '../templates/sidebar.php';
 <th style="min-width:140px">Evaluasi</th>
 <th style="min-width:140px">Tindak Lanjut</th>
 <th class="text-center" style="min-width:150px">Status</th>
-<?php if($is_editable):?><th class="text-center" style="min-width:130px">Ubah Status</th><th class="text-center" style="min-width:90px">Aksi</th><?php endif;?>
+<?php if($is_editable):?><th class="text-center" style="min-width:160px">Aksi</th><?php endif;?>
 </tr>
 </thead>
 <tbody>
@@ -202,14 +204,12 @@ include '../templates/sidebar.php';
 <td><?=nl2br(htmlspecialchars($r['tindak_lanjut']??'-'))?></td>
 <td class="text-center"><?php $sv=$r['status']??'belum_terlaksana'; if(!isset($status_opts[$sv])) $sv='belum_terlaksana'; $bc=$status_badge[$sv]; $ic=$status_icon[$sv]; $sl=$status_opts[$sv];?><span class="badge <?=$bc?>"><i class="fas <?=$ic?>"></i> <?=htmlspecialchars($sl)?></span></td>
 <?php if($is_editable):?>
-<td class="text-center">
-<div class="btn-group-vertical" role="group">
-<button class="btn btn-info btn-sm btn-status-cycle mb-1" data-id="<?=$r['id']?>" data-status="<?=$sv?>" title="Ubah Status (siklus)"><i class="fas <?=$ic?>"></i> Ubah</button>
-<button class="btn btn-outline-secondary btn-sm btn-status-pick mb-1" data-id="<?=$r['id']?>" title="Pilih Status"><i class="fas fa-list"></i> Pilih</button>
-</div>
-</td>
-<td class="text-center">
+<td class="text-center" style="white-space:nowrap">
+<div class="d-inline-flex align-items-center">
+<button class="btn btn-info btn-sm btn-status-cycle mr-1" data-id="<?=$r['id']?>" data-status="<?=$sv?>" title="Ubah Status (siklus)"><i class="fas <?=$ic?>"></i></button>
+<button class="btn btn-outline-secondary btn-sm btn-status-pick mr-1" data-id="<?=$r['id']?>" data-status="<?=$sv?>" title="Pilih Status"><i class="fas fa-list"></i></button>
 <button class="btn btn-warning btn-sm btn-edit-laporan" data-id="<?=$r['id']?>" data-bukti="<?=htmlspecialchars($r['bukti']??'',ENT_QUOTES,'UTF-8')?>" data-evaluasi="<?=htmlspecialchars($r['evaluasi']??'',ENT_QUOTES,'UTF-8')?>" data-tindak="<?=htmlspecialchars($r['tindak_lanjut']??'',ENT_QUOTES,'UTF-8')?>" data-info="<?=$r['komponen']?>. <?=htmlspecialchars($kom['nama'],ENT_QUOTES,'UTF-8')?> - <?=htmlspecialchars($r['program'],ENT_QUOTES,'UTF-8')?>" title="Edit Bukti / Evaluasi / Tindak Lanjut"><i class="fas fa-edit"></i></button>
+</div>
 </td>
 <?php endif;?>
 </tr>
@@ -266,12 +266,12 @@ $(document).ready(function(){
   $('#modalEditLaporan').modal('show');
  });
  $(document).on('click','.btn-status-pick',function(){
-  var id=$(this).data('id');
+  var id=$(this).data('id'), cur=$(this).data('status')||'belum_terlaksana';
   Swal.fire({
    title:'Ubah Status',
    input:'select',
+   inputValue:cur,
    inputOptions:{belum_terlaksana:'Belum Terlaksana',proses:'Proses',terlaksana:'Terlaksana'},
-   inputPlaceholder:'Pilih status',
    showCancelButton:true,
    confirmButtonText:'Simpan',
    cancelButtonText:'Batal'

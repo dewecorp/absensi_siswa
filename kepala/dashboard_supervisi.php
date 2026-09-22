@@ -57,19 +57,6 @@ try {
 } catch (Throwable $e) {
 }
 
-// Temuan per jenis
-$temuan_jenis = ['Akademik' => 0, 'Administrasi' => 0, 'Manajerial' => 0];
-try {
-    $stmt = $pdo->prepare("SELECT jenis_supervisi, COUNT(*) AS jml FROM tb_sv_pelaksanaan
-                           WHERE temuan IS NOT NULL AND TRIM(temuan) <> '' AND tanggal BETWEEN ? AND ?
-                           GROUP BY jenis_supervisi");
-    $stmt->execute([$ta_start, $ta_end]);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $temuan_jenis[$r['jenis_supervisi']] = (int)$r['jml'];
-    }
-} catch (Throwable $e) {
-}
-
 // Status tindak lanjut
 $tl_status = [];
 try {
@@ -107,23 +94,11 @@ try {
 } catch (Throwable $e) {
 }
 
-// Tindak lanjut jatuh tempo
-$tl_jatuh_tempo = [];
-try {
-    $stmt = $pdo->query("SELECT * FROM tb_sv_tindak_lanjut
-                         WHERE status <> 'Selesai' AND target_selesai IS NOT NULL
-                           AND target_selesai <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
-                         ORDER BY target_selesai ASC LIMIT 5");
-    $tl_jatuh_tempo = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Throwable $e) {
-}
-
 $js_page = [];
 $js_page[] = "var svChart = {
     progres: {sudah: " . (int)$stats['sudah_diperiksa'] . ", belum: " . (int)$stats['belum_diperiksa'] . "},
     nilaiGuru: {labels: " . json_encode(array_column($nilai_per_guru, 'nama_guru')) . ", data: " . json_encode(array_map(function ($r) { return round((float)$r['rata'], 2); }, $nilai_per_guru)) . "},
     perJenis: {labels: " . json_encode(array_keys($per_jenis)) . ", data: " . json_encode(array_values($per_jenis)) . "},
-    temuan: {labels: " . json_encode(array_keys($temuan_jenis)) . ", data: " . json_encode(array_values($temuan_jenis)) . "},
     tlStatus: {labels: " . json_encode(array_keys($tl_status)) . ", data: " . json_encode(array_values($tl_status)) . "},
     perBulan: {labels: " . json_encode($bulan_labels) . ", data: " . json_encode($bulan_data) . "}
 };";
@@ -164,7 +139,6 @@ $(document).ready(function () {
     makeDoughnut('chartProgres', ['Sudah Disupervisi', 'Belum Disupervisi'], [svChart.progres.sudah, svChart.progres.belum]);
     makeBar('chartNilaiGuru', svChart.nilaiGuru.labels, svChart.nilaiGuru.data, true);
     makeDoughnut('chartPerJenis', svChart.perJenis.labels, svChart.perJenis.data);
-    makeBar('chartTemuan', svChart.temuan.labels, svChart.temuan.data, false);
     makeDoughnut('chartTlStatus', svChart.tlStatus.labels, svChart.tlStatus.data);
     makeLine('chartPerBulan', svChart.perBulan.labels, svChart.perBulan.data);
 });
@@ -267,27 +241,18 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="col-lg-6">
                     <div class="card">
-                        <div class="card-header"><h4>Temuan Supervisi</h4></div>
-                        <div class="card-body"><div style="height:280px;"><canvas id="chartTemuan"></canvas></div></div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="card">
                         <div class="card-header"><h4>Status Tindak Lanjut</h4></div>
                         <div class="card-body"><div style="height:280px;"><canvas id="chartTlStatus"></canvas></div></div>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="card">
+                <div class="col-lg-6 d-flex">
+                    <div class="card flex-fill">
                         <div class="card-header"><h4>Progres Supervisi per Bulan</h4></div>
                         <div class="card-body"><div style="height:280px;"><canvas id="chartPerBulan"></canvas></div></div>
                     </div>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-lg-6">
-                    <div class="card">
+                <div class="col-lg-6 d-flex">
+                    <div class="card flex-fill">
                         <div class="card-header">
                             <h4>Jadwal Supervisi Terdekat</h4>
                             <div class="card-header-action"><a href="jadwal_supervisi.php" class="btn btn-sm btn-primary">Lihat Semua</a></div>
@@ -306,33 +271,6 @@ include '../templates/sidebar.php';
                                         </tr>
                                     <?php endforeach; else: ?>
                                         <tr><td colspan="4" class="text-center text-muted">Belum ada jadwal terdekat.</td></tr>
-                                    <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Tindak Lanjut yang Jatuh Tempo</h4>
-                            <div class="card-header-action"><a href="tindak_lanjut.php" class="btn btn-sm btn-warning">Kelola</a></div>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-striped mb-0">
-                                    <thead><tr><th>Guru/Unit</th><th>Bentuk</th><th>Target</th><th>Status</th></tr></thead>
-                                    <tbody>
-                                    <?php if ($tl_jatuh_tempo): foreach ($tl_jatuh_tempo as $tl): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($tl['nama_guru'] ?: ($tl['unit_bagian'] ?: '-')) ?></td>
-                                            <td><?= htmlspecialchars($tl['bentuk_tindak_lanjut'] ?? '-') ?></td>
-                                            <td><?= $tl['target_selesai'] ? date('d/m/Y', strtotime($tl['target_selesai'])) : '-' ?></td>
-                                            <td><span class="badge badge-warning"><?= htmlspecialchars($tl['status']) ?></span></td>
-                                        </tr>
-                                    <?php endforeach; else: ?>
-                                        <tr><td colspan="4" class="text-center text-muted">Tidak ada tindak lanjut jatuh tempo.</td></tr>
                                     <?php endif; ?>
                                     </tbody>
                                 </table>
