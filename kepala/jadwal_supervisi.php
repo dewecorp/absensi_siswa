@@ -76,6 +76,70 @@ try {
 } catch (Throwable $e) {}
 $program_instrumen_json = json_encode($program_instrumen_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 
+$jenis_fokus_map = [];
+try {
+    $templates = sv_program_templates();
+    foreach ($templates as $jenis => $progs) {
+        $set = [];
+        $seen = [];
+        foreach ($progs as $tpl) {
+            foreach (array_keys($tpl['fokus'] ?? []) as $fk) {
+                if (!isset($seen[$fk])) {
+                    $seen[$fk] = true;
+                    $set[] = $fk;
+                }
+            }
+        }
+        if (!empty($set)) {
+            $jenis_fokus_map[(string)$jenis] = implode(', ', $set);
+        }
+    }
+} catch (Throwable $e) {}
+$jenis_fokus_json = json_encode($jenis_fokus_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+
+$instrumen_fokus_map = [];
+try {
+    $stmt = $pdo->query("SELECT i.id_instrumen, i.jenis_supervisi, k.nama_komponen
+                         FROM tb_sv_instrumen i
+                         LEFT JOIN tb_sv_komponen k ON k.id_instrumen = i.id_instrumen
+                         WHERE i.status = 'Aktif'
+                         ORDER BY i.id_instrumen, k.urutan, k.id_komponen");
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $byIns = [];
+    foreach ($rows as $r) {
+        $iid = (string)$r['id_instrumen'];
+        $nk = trim((string)($r['nama_komponen'] ?? ''));
+        if ($nk === '') continue;
+        if (!isset($byIns[$iid])) $byIns[$iid] = [];
+        if (!in_array($nk, $byIns[$iid], true)) $byIns[$iid][] = $nk;
+    }
+    foreach ($byIns as $iid => $arr) {
+        $instrumen_fokus_map[$iid] = implode(', ', $arr);
+    }
+    $insTpl = sv_instrumen_templates();
+    foreach ($insTpl as $jenis => $daftar) {
+        foreach ($daftar as $tpl) {
+            $kode = trim((string)($tpl['kode'] ?? ''));
+            $fromDb = null;
+            foreach ($instrumen_list as $ii) {
+                if (strcasecmp(trim((string)($ii['kode_instrumen'] ?? '')), $kode) === 0) {
+                    $fromDb = (string)$ii['id_instrumen'];
+                    break;
+                }
+            }
+            if ($fromDb === null) continue;
+            if (trim((string)($instrumen_fokus_map[$fromDb] ?? '')) !== '') continue;
+            $set = [];
+            foreach ($tpl['komponen'] ?? [] as $k) {
+                $nk = trim((string)($k['nama'] ?? ''));
+                if ($nk !== '' && !in_array($nk, $set, true)) $set[] = $nk;
+            }
+            if (!empty($set)) $instrumen_fokus_map[$fromDb] = implode(', ', $set);
+        }
+    }
+} catch (Throwable $e) {}
+$instrumen_fokus_json = json_encode($instrumen_fokus_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     $aksi = (string)($_POST['aksi'] ?? '');
     try {
@@ -107,6 +171,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             }
             if ($fokus === '' && !empty($_POST['id_program'])) {
                 try { $stF = $pdo->prepare("SELECT fokus_supervisi FROM tb_sv_program WHERE id_program = ? LIMIT 1"); $stF->execute([(int)$_POST['id_program']]); $fokus = trim((string)($stF->fetchColumn() ?: '')); } catch (Throwable $e) {}
+            }
+            if ($fokus === '' && !empty($_POST['id_instrumen'])) {
+                $iidStr = (string)$_POST['id_instrumen'];
+                if (isset($instrumen_fokus_map[$iidStr])) $fokus = trim((string)$instrumen_fokus_map[$iidStr]);
+            }
+            if ($fokus === '' && !empty($_POST['jenis_supervisi'])) {
+                $jStr = (string)$_POST['jenis_supervisi'];
+                if (isset($jenis_fokus_map[$jStr])) $fokus = trim((string)$jenis_fokus_map[$jStr]);
             }
             $data = [
                 (int)($_POST['id_program'] ?? 0) ?: null,
@@ -237,6 +309,8 @@ $js_page[] = 'var svInstrumenList = ' . $instrumen_json . ';';
 $js_page[] = 'var svProgramList = ' . $program_json . ';';
 $js_page[] = 'var svProgramFokus = ' . $program_fokus_json . ';';
 $js_page[] = 'var svProgramInstrumen = ' . $program_instrumen_json . ';';
+$js_page[] = 'var svJenisFokus = ' . $jenis_fokus_json . ';';
+$js_page[] = 'var svInstrumenFokus = ' . $instrumen_fokus_json . ';';
 $js_page[] = <<<'JS'
 function svEnsureOption($sel, val, label) {
     if (!val) return;
@@ -246,8 +320,55 @@ function svEnsureOption($sel, val, label) {
     }
 }
 function svParseFokusList(s){ if(!s) return []; var parts=String(s).split(','); var out=[],seen={}; parts.forEach(function(p){ p=String(p).trim(); if(p && !seen[p]){ seen[p]=1; out.push(p); }}); return out; }
-function svRefreshFokusJadwal(pid, selected){ var list=svParseFokusList(pid ? (svProgramFokus[String(pid)]||'') : ''); var $sel=$('#sv-fokus-jadwal'); if(!$sel.length) return; $sel.empty(); if(!list.length){ $sel.append('<option value="" disabled>Pilih Fokus (pilih Program dulu)</option>'); $sel.trigger('change'); return; } if(!selected){ list.forEach(function(f){ var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'">'+esc+'</option>'); }); $sel.val(null).trigger('change'); return; } list.forEach(function(f){ var sel=(selected.indexOf(f)!==-1)?' selected':''; var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>'); }); $sel.trigger('change'); }
-function svFillFokusJadwal(pid, keepManual){ var $sel=$('#sv-fokus-jadwal'); if(!$sel.length) return; if(keepManual && $sel.find('option:selected').length) return; svRefreshFokusJadwal(pid, null); }
+function svResolveFokusJadwal(pid, iid, jenis){
+    var list = [];
+    if (pid) {
+        list = svParseFokusList(svProgramFokus[String(pid)] || '');
+        if (list.length) return list;
+    }
+    if (iid) {
+        list = svParseFokusList(svInstrumenFokus[String(iid)] || '');
+        if (list.length) return list;
+    }
+    if (jenis) {
+        list = svParseFokusList(svJenisFokus[String(jenis)] || '');
+        if (list.length) return list;
+    }
+    return [];
+}
+function svRefreshFokusJadwal(pid, selected, iid, jenis){
+    var list = svResolveFokusJadwal(pid || '', iid || '', jenis || '');
+    var $sel = $('#sv-fokus-jadwal');
+    if (!$sel.length) return;
+    $sel.empty();
+    if (!list.length) {
+        $sel.append('<option value="" disabled>Pilih Fokus (pilih Program / Instrumen / Jenis dulu)</option>');
+        $sel.trigger('change');
+        return;
+    }
+    if (!selected) {
+        list.forEach(function(f){
+            var esc = $('<div>').text(f).html();
+            $sel.append('<option value="'+esc+'">'+esc+'</option>');
+        });
+        $sel.val(null).trigger('change');
+        return;
+    }
+    list.forEach(function(f){
+        var sel = (selected.indexOf(f) !== -1) ? ' selected' : '';
+        var esc = $('<div>').text(f).html();
+        $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>');
+    });
+    $sel.trigger('change');
+}
+function svFillFokusJadwal(pid, keepManual){
+    var $sel = $('#sv-fokus-jadwal');
+    if (!$sel.length) return;
+    if (keepManual && $sel.find('option:selected').length) return;
+    var iid = $('#form-jadwal [name=id_instrumen]').val() || '';
+    var jenis = $('#form-jadwal [name=jenis_supervisi]').val() || '';
+    svRefreshFokusJadwal(pid || '', null, iid, jenis);
+}
 function svIsFokusVisibleJadwal(jenis){ return true; }
 function svToggleFokusJadwalField(jenis){ var $wrap=$('#sv-fokus-jadwal-wrap'); if($wrap.length) $wrap.show(); }
 function svInitFokusJadwalSelect2(){ if(!$.fn.select2) return; var $s=$('#sv-fokus-jadwal'); if($s.hasClass('select2-hidden-accessible')) $s.select2('destroy'); $s.select2({ placeholder:'Pilih Fokus', width:'100%', dropdownParent: $('#modal-jadwal'), closeOnSelect:false }); }
@@ -273,11 +394,12 @@ function svFilterModalByJenis(jenis, keepVal) {
         if(prevInst) { svEnsureOption($i, prevInst, 'Instrumen #'+prevInst); $i.val(prevInst); }
         svFillFokusJadwal($p.val()||prevProg||'', false);
     } else {
-        var firstProg2='';
-        if($p.find('option').length>1){ $p.prop('selectedIndex', 1); firstProg2=$p.val(); }
-        var mapped2 = firstProg2 ? (svProgramInstrumen[String(firstProg2)]||'') : '';
-        if(mapped2 && $i.find('option[value="'+mapped2+'"]').length){ $i.val(mapped2); } else if($i.find('option').length>1){ $i.prop('selectedIndex', 1); }
-        svFillFokusJadwal(firstProg2||'', false);
+        var firstProg2 = '';
+        if($p.find('option').length > 1){ $p.prop('selectedIndex', 1); firstProg2 = $p.val(); }
+        var mapped2 = firstProg2 ? (svProgramInstrumen[String(firstProg2)] || '') : '';
+        if(mapped2 && $i.find('option[value="'+mapped2+'"]').length){ $i.val(mapped2); } else if($i.find('option').length > 1){ $i.prop('selectedIndex', 1); }
+        var firstIid2 = $i.val() || '';
+        svRefreshFokusJadwal(firstProg2 || '', null, firstIid2 || '', jenis || '');
     }
     svToggleFokusJadwalField(jenis);
 }
@@ -285,11 +407,33 @@ $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
     var dttablejadwal=$('#table-jadwal').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablejadwal.on('order.dt search.dt draw.dt',function(){var info=dttablejadwal.page.info();dttablejadwal.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#modal-jadwal').on('shown.bs.modal', function(){ svInitFokusJadwalSelect2(); });
-    function svAutoInstrumenByProgram(pid){ var iid = svProgramInstrumen[String(pid)] || ''; if(iid){ var $i=$('#form-jadwal [name=id_instrumen]'); if($i.find('option[value="'+iid+'"]').length) $i.val(iid); else { svEnsureOption($i, iid, 'Instrumen #'+iid); $i.val(iid); } } svFillFokusJadwal(pid || '', false); }
+    function svAutoInstrumenByProgram(pid){
+        var iid = svProgramInstrumen[String(pid)] || '';
+        if(iid){
+            var $i = $('#form-jadwal [name=id_instrumen]');
+            if($i.find('option[value="'+iid+'"]').length) {
+                $i.val(iid);
+            } else {
+                svEnsureOption($i, iid, 'Instrumen #'+iid);
+                $i.val(iid);
+            }
+        }
+        var jenis = $('#form-jadwal [name=jenis_supervisi]').val() || '';
+        svRefreshFokusJadwal(pid || '', null, iid || $('#form-jadwal [name=id_instrumen]').val() || '', jenis);
+    }
     $('#form-jadwal [name=id_program]').on('change', function(){ svAutoInstrumenByProgram($(this).val()); });
+    $('#form-jadwal [name=id_instrumen]').on('change', function(){
+        var pid = $('#form-jadwal [name=id_program]').val() || '';
+        var iid = $(this).val() || '';
+        var jenis = $('#form-jadwal [name=jenis_supervisi]').val() || '';
+        svRefreshFokusJadwal(pid, null, iid, jenis);
+    });
     $('#form-jadwal [name=jenis_supervisi]').on('change', function () {
-        svFilterModalByJenis($(this).val(), false);
-        svFillFokusJadwal('', false);
+        var jenis = $(this).val() || '';
+        svFilterModalByJenis(jenis, false);
+        var iid = $('#form-jadwal [name=id_instrumen]').val() || '';
+        var pid = $('#form-jadwal [name=id_program]').val() || '';
+        svRefreshFokusJadwal(pid, null, iid, jenis);
     });
     $('#btn-tambah').on('click', function () {
         $('#form-jadwal')[0].reset();
@@ -311,15 +455,23 @@ $(document).ready(function () {
             var el = $('#form-jadwal [name="' + k + '"]');
             if (el.length) { el.val(d[k]); }
         });
-        svFilterModalByJenis(d.jenis_supervisi || $('#form-jadwal [name=jenis_supervisi]').val(), true);
+        var jenisVal = d.jenis_supervisi || $('#form-jadwal [name=jenis_supervisi]').val();
+        svFilterModalByJenis(jenisVal, true);
         if (d.id_program) $('#form-jadwal [name=id_program]').val(String(d.id_program));
         if (d.id_instrumen) $('#form-jadwal [name=id_instrumen]').val(String(d.id_instrumen));
         if (d.supervisor) $('#form-jadwal [name=supervisor]').val(String(d.supervisor));
         if (d.fokus) {
-            var selFokus=svParseFokusList(d.fokus);
-            svRefreshFokusJadwal(d.id_program||'', selFokus);
-            selFokus.forEach(function(v){ var $s=$('#sv-fokus-jadwal'); if($s.find('option').filter(function(){return $(this).val()===v;}).length===0) $s.append('<option value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+' (lama)</option>'); });
-        } else if (d.id_program) { svFillFokusJadwal(d.id_program, true); }
+            var selFokus = svParseFokusList(d.fokus);
+            svRefreshFokusJadwal(d.id_program || '', selFokus, d.id_instrumen || '', jenisVal || '');
+            selFokus.forEach(function(v){
+                var $s = $('#sv-fokus-jadwal');
+                if($s.find('option').filter(function(){return $(this).val()===v;}).length === 0) {
+                    $s.append('<option value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+' (lama)</option>');
+                }
+            });
+        } else {
+            svFillFokusJadwal(d.id_program || '', true);
+        }
         $('#modal-jadwal .modal-title').text('Edit Jadwal Supervisi');
         $('#modal-jadwal').modal('show');
     });

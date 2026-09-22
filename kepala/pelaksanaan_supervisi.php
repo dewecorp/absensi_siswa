@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Pelaksanaan Supervisi (Administrasi / Akademik / Manajerial).
  * Wrapper menetapkan $sv_jenis sebelum meng-include file ini:
@@ -84,6 +84,26 @@ try {
 } catch (Throwable $e) {}
 $program_fokus_json = json_encode($program_fokus_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $instrumen_fokus_json = json_encode($instrumen_fokus_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+$jenis_fokus_map_pel = [];
+try {
+    $templates = sv_program_templates();
+    foreach ($templates as $jenis => $progs) {
+        $set = [];
+        $seen = [];
+        foreach ($progs as $tpl) {
+            foreach (array_keys($tpl['fokus'] ?? []) as $fk) {
+                if (!isset($seen[$fk])) {
+                    $seen[$fk] = true;
+                    $set[] = $fk;
+                }
+            }
+        }
+        if (!empty($set)) {
+            $jenis_fokus_map_pel[(string)$jenis] = implode(', ', $set);
+        }
+    }
+} catch (Throwable $e) {}
+$jenis_fokus_json_pel = json_encode($jenis_fokus_map_pel, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $program_instrumen_map_pel = [];
 try {
     $progRows = $pdo->query("SELECT id_program, kode_program, jenis_supervisi FROM tb_sv_program")->fetchAll(PDO::FETCH_ASSOC);
@@ -258,6 +278,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             if ($fokus_val === '' && !empty($_POST['id_program'])) {
                 try { $stF = $pdo->prepare("SELECT fokus_supervisi FROM tb_sv_program WHERE id_program = ? LIMIT 1"); $stF->execute([(int)$_POST['id_program']]); $fokus_val = trim((string)($stF->fetchColumn() ?: '')); } catch (Throwable $e) {}
             }
+            if ($fokus_val === '' && !empty($_POST['id_instrumen'])) {
+                $iidStr = (string)$_POST['id_instrumen'];
+                if (isset($instrumen_fokus_map[$iidStr])) $fokus_val = trim((string)$instrumen_fokus_map[$iidStr]);
+            }
+            if ($fokus_val === '') {
+                if (isset($jenis_fokus_map_pel[$sv_jenis])) $fokus_val = trim((string)$jenis_fokus_map_pel[$sv_jenis]);
+            }
             $kekuatan_val = trim((string)($_POST['kekuatan'] ?? ''));
             if ($kekuatan_val === '__manual__') $kekuatan_val = trim((string)($_POST['kekuatan_manual'] ?? ''));
             $kelemahan_val = trim((string)($_POST['kelemahan'] ?? ''));
@@ -424,6 +451,8 @@ $initial_id_jadwal = (int)($_GET['id_jadwal'] ?? 0);
 $js_page[] = 'var svProgramInstrumenPelaksanaan = ' . $program_instrumen_json_pel . ';';
 $js_page[] = 'var svProgramFokusPelaksanaan = ' . $program_fokus_json . ';';
 $js_page[] = 'var svInstrumenFokusPelaksanaan = ' . $instrumen_fokus_json . ';';
+$js_page[] = 'var svJenisFokusPelaksanaan = ' . $jenis_fokus_json_pel . ';';
+$js_page[] = 'var svJenisSupervisi = ' . json_encode($sv_jenis, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) . ';';
 $js_page[] = 'var svMasterKekuatan=' . json_encode($kekuatan_list) . ';var svMasterKelemahan=' . json_encode($kelemahan_list) . ';var svMasterRekomendasi=' . json_encode($rekomendasi_list) . ';var svMasterPrioritas=' . json_encode($prioritas_list) . ';';
 $js_page[] = 'var svInstrumenData = ' . json_encode($instrumen_data) . ';';
 $js_page[] = 'var svIsManajerial = ' . ($is_manajerial ? 'true' : 'false') . ';';
@@ -578,9 +607,48 @@ $(document).ready(function () {
         svApplyJadwal($(this).val(), false);
     });
     function svParseFokusPelaksanaan(s){ if(!s) return []; var parts=String(s).split(','); var out=[],seen={}; parts.forEach(function(p){ p=String(p).trim(); if(p && !seen[p]){ seen[p]=1; out.push(p); }}); return out; }
-    function svGetFokusListPelaksanaan(pid,iid){ if(pid && svProgramFokusPelaksanaan[String(pid)]) return svParseFokusPelaksanaan(svProgramFokusPelaksanaan[String(pid)]); if(iid && svInstrumenFokusPelaksanaan[String(iid)]) return svParseFokusPelaksanaan(svInstrumenFokusPelaksanaan[String(iid)]); return []; }
-    function svRefreshFokusPelaksanaan(pid,iid,selected){ var list=svGetFokusListPelaksanaan(pid,iid); var $sel=$('#sv-fokus-pelaksanaan'); if(!$sel.length) return; $sel.empty(); if(!list.length){ if(pid || iid){ $sel.append('<option value="" disabled>No results found</option>'); } else { $sel.append('<option value="" disabled>Pilih Program/Instrumen dulu</option>'); } $sel.trigger('change'); return; } var auto = !selected; list.forEach(function(f){ var sel=''; if(selected){ sel=(selected.indexOf(f)!==-1)?' selected':''; } else { sel=' selected'; } var esc=$('<div>').text(f).html(); $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>'); }); $sel.trigger('change'); }
-    function svFillFokusPelaksanaan(pid,iid,keepManual){ var $sel=$('#sv-fokus-pelaksanaan'); if(!$sel.length) return; if(keepManual && $sel.find('option:selected').length) return; svRefreshFokusPelaksanaan(pid,iid,null); }
+    function svGetFokusListPelaksanaan(pid,iid,jenis){
+        if(pid && svProgramFokusPelaksanaan[String(pid)]) {
+            var r1 = svParseFokusPelaksanaan(svProgramFokusPelaksanaan[String(pid)]);
+            if(r1.length) return r1;
+        }
+        if(iid && svInstrumenFokusPelaksanaan[String(iid)]) {
+            var r2 = svParseFokusPelaksanaan(svInstrumenFokusPelaksanaan[String(iid)]);
+            if(r2.length) return r2;
+        }
+        var j = jenis || svJenisSupervisi || '';
+        if(j && svJenisFokusPelaksanaan[String(j)]) {
+            return svParseFokusPelaksanaan(svJenisFokusPelaksanaan[String(j)]);
+        }
+        return [];
+    }
+    function svRefreshFokusPelaksanaan(pid,iid,selected,jenis){
+        var list=svGetFokusListPelaksanaan(pid,iid,jenis);
+        var $sel=$('#sv-fokus-pelaksanaan');
+        if(!$sel.length) return;
+        $sel.empty();
+        if(!list.length){
+            if(pid || iid || (jenis || svJenisSupervisi)){ $sel.append('<option value="" disabled>Pilih Fokus (tidak ada data)</option>'); }
+            else { $sel.append('<option value="" disabled>Pilih Program/Instrumen dulu</option>'); }
+            $sel.trigger('change');
+            return;
+        }
+        var auto = !selected;
+        list.forEach(function(f){
+            var sel='';
+            if(selected){ sel=(selected.indexOf(f)!==-1)?' selected':''; }
+            else { sel=' selected'; }
+            var esc=$('<div>').text(f).html();
+            $sel.append('<option value="'+esc+'"'+sel+'>'+esc+'</option>');
+        });
+        $sel.trigger('change');
+    }
+    function svFillFokusPelaksanaan(pid,iid,keepManual,jenis){
+        var $sel=$('#sv-fokus-pelaksanaan');
+        if(!$sel.length) return;
+        if(keepManual && $sel.find('option:selected').length) return;
+        svRefreshFokusPelaksanaan(pid,iid,null,jenis || svJenisSupervisi);
+    }
     function svInitFokusPelaksanaanSelect2(){ if(!$.fn.select2) return; var $s=$('#sv-fokus-pelaksanaan'); if($s.hasClass('select2-hidden-accessible')) $s.select2('destroy'); $s.select2({ placeholder:'Pilih Fokus', width:'100%', dropdownParent: $('#modal-pelaksanaan'), closeOnSelect:false }); }
     function svBindMaster(name){var s=$('#form-pelaksanaan [name='+name+']'),m=$('#'+name+'-manual');if(name==='prioritas_perbaikan') m=$('#prioritas-manual');s.on('change',function(){if($(this).val()==='__manual__'){m.removeClass('d-none').focus();}else{m.addClass('d-none');}});m.on('input',function(){var v=$(this).val();s.find('option.sv-manual-opt').remove();if(v) s.append('<option class="sv-manual-opt" value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>');});}
     svBindMaster('kekuatan');svBindMaster('kelemahan');svBindMaster('rekomendasi');svBindMaster('prioritas_perbaikan');

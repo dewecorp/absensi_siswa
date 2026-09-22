@@ -7,7 +7,7 @@ if (!isAuthorized(['admin','kepala_madrasah'])) redirect('../login.php');
 
 $user_level = getUserLevel();
 $is_editable = in_array($user_level, ['admin','kepala_madrasah']);
-$page_title = 'Program Kerja Madrasah';
+$page_title = 'Program Kerja Kepala';
 
 $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran = $school_profile['tahun_ajaran'] ?? date('Y').'/'.(date('Y')+1);
@@ -485,8 +485,8 @@ include '../templates/sidebar.php';
 <div class="main-content">
 <section class="section">
 <div class="section-header">
-<h1>Program Kerja <small style="font-size:55%;font-weight:700;margin-left:8px;vertical-align:middle;color:#5f6fb4;background:#eef1ff;border:1px solid #d6dcff;border-radius:999px;padding:4px 10px;">TA: <?=htmlspecialchars($tahun_ajaran)?></small></h1>
-<div class="section-header-breadcrumb"><div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div><div class="breadcrumb-item">Program Kerja</div></div>
+<h1>Program Kerja Kepala <small style="font-size:55%;font-weight:700;margin-left:8px;vertical-align:middle;color:#5f6fb4;background:#eef1ff;border:1px solid #d6dcff;border-radius:999px;padding:4px 10px;">TA: <?=htmlspecialchars($tahun_ajaran)?></small></h1>
+<div class="section-header-breadcrumb"><div class="breadcrumb-item active"><a href="dashboard.php">Dashboard</a></div><div class="breadcrumb-item">Program Kerja</div><div class="breadcrumb-item">Program Kerja Kepala</div></div>
 </div>
 <div class="section-body">
 <div class="row mb-3">
@@ -581,20 +581,6 @@ include '../templates/sidebar.php';
 <?php endif;?>
 </tr>
 <?php endforeach;?>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-
-<div class="card">
-<div class="card-header"><h4>Daftar Komponen (15)</h4></div>
-<div class="card-body p-0">
-<div class="table-responsive">
-<table class="table table-sm table-bordered mb-0">
-<thead><tr><th>No</th><th>Komponen</th><th>Ruang Lingkup</th></tr></thead>
-<tbody>
-<?php foreach($komponen_list as $k=>$v):?><tr><td class="text-center"><?=$k?></td><td><strong><?=htmlspecialchars($v['nama'])?></strong></td><td><?=htmlspecialchars($v['ruang'])?></td></tr><?php endforeach;?>
 </tbody>
 </table>
 </div>
