@@ -432,6 +432,38 @@ include '../templates/sidebar.php';
 <input type="hidden" name="komponen" id="delKomponenId" value="0">
 </form>
 
+<div class="modal fade" id="modalTambahKomponen" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal-dialog" role="document">
+<div class="modal-content">
+<div class="modal-header"><h5 class="modal-title">Tambah Komponen</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+<form method="POST">
+<div class="modal-body">
+<div class="form-group"><label>Nomor <span class="text-danger">*</span></label><input type="number" min="1" class="form-control" name="nomor" required placeholder="cth: 16"></div>
+<div class="form-group"><label>Nama Komponen <span class="text-danger">*</span></label><input type="text" class="form-control" name="nama" required placeholder="cth: Manajemen Risiko Lanjutan"></div>
+<div class="form-group"><label>Ruang Lingkup</label><textarea class="form-control" name="ruang" rows="3" placeholder="Ruang lingkup komponen"></textarea></div>
+</div>
+<div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button><button type="submit" name="add_master_komponen" value="1" class="btn btn-primary">Simpan</button></div>
+</form>
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="modalEditMasterKomponen" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal-dialog" role="document">
+<div class="modal-content">
+<div class="modal-header"><h5 class="modal-title">Edit Komponen</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+<form method="POST">
+<div class="modal-body">
+<div class="form-group"><label>Nomor <span class="text-danger">*</span></label><input type="number" min="1" class="form-control" name="nomor" id="edit_master_nomor" required readonly><small class="text-muted">Nomor sebagai kunci komponen</small></div>
+<div class="form-group"><label>Nama Komponen <span class="text-danger">*</span></label><input type="text" class="form-control" name="nama" id="edit_master_nama" required></div>
+<div class="form-group"><label>Ruang Lingkup</label><textarea class="form-control" name="ruang" id="edit_master_ruang" rows="3"></textarea></div>
+</div>
+<div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button><button type="submit" name="update_master_komponen" value="1" class="btn btn-primary">Update</button></div>
+</form>
+</div>
+</div>
+</div>
+
 <?php include '../templates/footer.php'; ?>
 <script>
 $(document).ready(function(){
@@ -451,8 +483,13 @@ $(document).ready(function(){
      else { $(card).addClass('collapsed'); }
    },50);
  });
- $(document).on('click','.btn-del-komponen',function(){
-   var k=$(this).data('komponen');
+  $(document).on('click','.btn-edit-master',function(){
+    var n=$(this).data('nomor'), nm=$(this).data('nama'), rg=$(this).data('ruang');
+    $('#edit_master_nomor').val(n); $('#edit_master_nama').val(nm); $('#edit_master_ruang').val(rg);
+    $('#modalEditMasterKomponen').modal('show');
+  });
+  $(document).on('click','.btn-del-komponen',function(){
+    var k=$(this).data('komponen');
    var nama=$(this).data('nama')||('Komponen '+k);
    var total=parseInt($(this).data('total')||'0',10);
    var txt='Hapus SEMUA program kerja pada komponen "'+nama+'"?';
