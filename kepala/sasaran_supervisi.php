@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             $jenis = trim((string)($_POST['jenis_supervisi'] ?? 'Akademik'));
             $ta = trim((string)($_POST['tahun_ajaran'] ?? $periode['tahun_ajaran']));
             $sem = trim((string)($_POST['semester'] ?? $periode['semester']));
-            $jabatan = trim((string)($_POST['jabatan'] ?? 'Guru'));
+            $jabatan = trim((string)($_POST['jabatan'] ?? 'Guru Kelas'));
             $rawMp = $_POST['mapel_selected'] ?? '';
             $rawKl = $_POST['kelas_selected'] ?? '';
             $mapel_single = trim((string)$rawMp);
@@ -175,7 +175,7 @@ $js_page[] = 'var svKelasByGuru = ' . $kelas_by_guru_json . ';';
 $js_page[] = <<<'JS'
 $(document).ready(function () {
     var dtSasaran=$('#table-sasaran').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});
-    dtSasaran.on('order.dt search.dt draw.dt',function(){var info=dtSasaran.page.info();dtSasaran.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    dtSasaran.on('order.dt search.dt draw.dt',function(){var info=dtSasaran.page.info();dtSasaran.column(0,{search:'applied',order:'applied',page:'current'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.start+i+1;});}).draw();
     function escapeHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
     function svBuildAddDropdowns() {
         var gid = $('#sv-guru-select').val();
@@ -275,7 +275,7 @@ include '../templates/sidebar.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h4>Daftar Sasaran Supervisi</h4>
+                    <h4>Daftar Sasaran Supervisi <small class="text-muted">TA <?= htmlspecialchars($periode['tahun_ajaran'], ENT_QUOTES) ?> &bull; <?= htmlspecialchars($periode['semester'], ENT_QUOTES) ?></small></h4>
                     <div class="card-header-action">
                         <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
                         <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -297,12 +297,10 @@ include '../templates/sidebar.php';
                                     <th>Kelas</th>
                                     <th>Program</th>
                                     <th>Jenis</th>
-                                    <th>Tahun Ajaran</th>
                                     <th>Semester</th>
                                     <th>Status</th>
                                     <th>Supervisi Terakhir</th>
                                     <th>Nilai Terakhir</th>
-                                    <th>Keterangan</th>
                                     <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
@@ -317,7 +315,6 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars((string)$r['kelas']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['nama_program']) ?></td>
                                         <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_supervisi']) ?></span></td>
-                                        <td><?= htmlspecialchars($r['tahun_ajaran']) ?></td>
                                         <td><?= htmlspecialchars($r['semester']) ?></td>
                                         <td>
                                             <?php $isDone = $r['status_supervisi'] === 'Sudah Disupervisi'; ?>
@@ -325,12 +322,13 @@ include '../templates/sidebar.php';
                                         </td>
                                         <td><?= $r['supervisi_terakhir'] ? date('d/m/Y', strtotime($r['supervisi_terakhir'])) : '-' ?></td>
                                         <td><?= $r['nilai_terakhir'] !== null ? htmlspecialchars(number_format((float)$r['nilai_terakhir'], 2)) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
                                         <?php if ($can_manage): ?>
-                                        <td>
-                                            <button class="btn btn-warning btn-sm btn-edit" type="button"
+                                        <td style="white-space:nowrap">
+                                            <div class="d-inline-flex align-items-center">
+                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button"
                                                 data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_sasaran'] ?>"><i class="fas fa-trash"></i></button>
+                                            </div>
                                         </td>
                                         <?php endif; ?>
                                     </tr>
@@ -397,7 +395,10 @@ include '../templates/sidebar.php';
                     </div>
                     <div class="form-group">
                         <label>Jabatan</label>
-                        <input type="text" class="form-control" name="jabatan" value="Guru">
+                        <select class="form-control" name="jabatan">
+                            <option value="Guru Kelas">Guru Kelas</option>
+                            <option value="Guru Mapel">Guru Mapel</option>
+                        </select>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
@@ -454,7 +455,13 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                     </div>
-                    <div class="form-group"><label>Jabatan</label><input type="text" class="form-control" name="jabatan"></div>
+                    <div class="form-group">
+                        <label>Jabatan</label>
+                        <select class="form-control" name="jabatan">
+                            <option value="Guru Kelas">Guru Kelas</option>
+                            <option value="Guru Mapel">Guru Mapel</option>
+                        </select>
+                    </div>
                     <div class="form-row">
                         <div class="form-group col-md-6"><label>Mata Pelajaran yang Disupervisi</label><select class="form-control" name="mata_pelajaran" id="sv-edit-mapel-select"><option value="">Semua mapel</option></select></div>
                         <div class="form-group col-md-6"><label>Kelas yang Disupervisi</label><select class="form-control" name="kelas" id="sv-edit-kelas-select"><option value="">Semua kelas</option></select></div>

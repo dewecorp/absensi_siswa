@@ -71,7 +71,8 @@ try {
 
         case 'sasaran':
             $title = 'Sasaran Supervisi';
-            $headers = ['Guru/PTK', 'NUPTK', 'Jabatan', 'Mata Pelajaran', 'Kelas', 'Program', 'Jenis', 'Tahun Ajaran', 'Semester', 'Status', 'Supervisi Terakhir', 'Nilai Terakhir', 'Keterangan'];
+            $subtitle = 'Tahun Ajaran ' . $periode['tahun_ajaran'] . ' - ' . $periode['semester'];
+            $headers = ['Guru/PTK', 'NUPTK', 'Jabatan', 'Mata Pelajaran', 'Kelas', 'Program', 'Jenis', 'Semester', 'Status', 'Supervisi Terakhir', 'Nilai Terakhir'];
             $rows = $pdo->query("SELECT s.*, p.nama_program,
                     (SELECT MAX(pk.tanggal) FROM tb_sv_pelaksanaan pk WHERE pk.id_guru = s.id_guru AND pk.status = 'Selesai') AS supervisi_terakhir,
                     (SELECT pk.nilai FROM tb_sv_pelaksanaan pk WHERE pk.id_guru = s.id_guru AND pk.status = 'Selesai' ORDER BY pk.tanggal DESC, pk.id_pelaksanaan DESC LIMIT 1) AS nilai_terakhir
@@ -81,17 +82,18 @@ try {
             foreach ($rows as $r) {
                 $body[] = [
                     h($r['nama_guru']), h($r['nip_npk']), h($r['jabatan']), h($r['mata_pelajaran']), h($r['kelas']),
-                    h($r['nama_program']), h($r['jenis_supervisi']), h($r['tahun_ajaran']), h($r['semester']),
+                    h($r['nama_program']), h($r['jenis_supervisi']), h($r['semester']),
                     h($r['status_supervisi']),
                     $r['supervisi_terakhir'] ? date('d/m/Y', strtotime($r['supervisi_terakhir'])) : '-',
                     $r['nilai_terakhir'] !== null ? number_format((float)$r['nilai_terakhir'], 2) : '-',
-                    h($r['keterangan']),
                 ];
             }
             break;
 
         case 'jadwal':
             $title = 'Jadwal Supervisi';
+            $filter_sem = trim((string)($_GET['semester'] ?? $periode['semester']));
+            $subtitle = 'Tahun Ajaran ' . $filter_ta . ($filter_sem !== '' ? ' - ' . $filter_sem : '');
             $where = [];
             $params = [];
             if ($filter_ta !== '' && isTahunAjaranFormatValid($filter_ta)) {

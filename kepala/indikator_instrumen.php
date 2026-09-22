@@ -284,9 +284,11 @@ include '../templates/sidebar.php';
                                         <td><?= (int)$r['skor_maksimal'] ?></td>
                                         <td><?= (int)$r['urutan'] ?></td>
                                         <?php if ($can_manage): ?>
-                                        <td>
-                                            <button class="btn btn-warning btn-sm btn-edit" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
+                                        <td style="white-space:nowrap">
+                                            <div class="d-inline-flex align-items-center">
+                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_indikator'] ?>" data-kid="<?= (int)$r['id_komponen'] ?>"><i class="fas fa-trash"></i></button>
+                                            </div>
                                         </td>
                                         <?php endif; ?>
                                     </tr>

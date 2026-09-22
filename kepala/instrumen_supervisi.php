@@ -355,16 +355,18 @@ include '../templates/sidebar.php';
                                         <td><span class="badge badge-<?= $r['status'] === 'Aktif' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($r['status']) ?></span></td>
                                         <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
                                         <?php if ($can_manage): ?>
-                                        <td>
-                                            <a class="btn btn-sm btn-outline-primary" href="komponen_instrumen.php?id_instrumen=<?= (int)$r['id_instrumen'] ?>" title="Komponen"><i class="fas fa-list"></i></a>
-                                            <button class="btn btn-warning btn-sm btn-edit" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-info btn-sm btn-duplikat" type="button" data-id="<?= (int)$r['id_instrumen'] ?>" title="Duplikat"><i class="fas fa-copy"></i></button>
+                                        <td style="white-space:nowrap">
+                                            <div class="d-inline-flex align-items-center">
+                                            <a class="btn btn-sm btn-outline-primary mr-1" href="komponen_instrumen.php?id_instrumen=<?= (int)$r['id_instrumen'] ?>" title="Komponen"><i class="fas fa-list"></i></a>
+                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button" data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-info btn-sm btn-duplikat mr-1" type="button" data-id="<?= (int)$r['id_instrumen'] ?>" title="Duplikat"><i class="fas fa-copy"></i></button>
                                             <?php if ($r['status'] === 'Aktif'): ?>
-                                                <button class="btn btn-secondary btn-sm btn-nonaktif" type="button" data-id="<?= (int)$r['id_instrumen'] ?>" title="Nonaktifkan"><i class="fas fa-ban"></i></button>
+                                                <button class="btn btn-secondary btn-sm btn-nonaktif mr-1" type="button" data-id="<?= (int)$r['id_instrumen'] ?>" title="Nonaktifkan"><i class="fas fa-ban"></i></button>
                                             <?php else: ?>
-                                                <button class="btn btn-success btn-sm btn-aktifkan" type="button" data-id="<?= (int)$r['id_instrumen'] ?>" title="Aktifkan"><i class="fas fa-check"></i></button>
+                                                <button class="btn btn-success btn-sm btn-aktifkan mr-1" type="button" data-id="<?= (int)$r['id_instrumen'] ?>" title="Aktifkan"><i class="fas fa-check"></i></button>
                                             <?php endif; ?>
                                             <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_instrumen'] ?>"><i class="fas fa-trash"></i></button>
+                                            </div>
                                         </td>
                                         <?php endif; ?>
                                     </tr>
