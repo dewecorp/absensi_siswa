@@ -69,18 +69,17 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
     <style>
         * {
             box-sizing: border-box;
-            margin: 0;
-            padding: 0;
         }
         @page {
-            size: 215mm 330mm; /* Format Kertas F4 / Folio */
-            margin: 15mm;
+            size: 215mm 330mm;
+            size: portrait;
+            margin: 12mm 15mm;
         }
         @media print {
             html, body {
                 width: 100% !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 0 4px !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -97,7 +96,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
             background: #fff;
         }
         body {
-            padding: 12mm;
+            padding: 10mm 4px;
         }
         table.kop-header {
             width: 100%;
@@ -154,12 +153,12 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
             width: 100% !important;
             max-width: 100% !important;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             table-layout: fixed;
         }
         table.info-table th, table.info-table td {
             border: 1px solid #333 !important;
-            padding: 6px 10px;
+            padding: 5px 8px;
             vertical-align: top;
             font-size: 9.5pt;
             word-wrap: break-word !important;
@@ -173,15 +172,15 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         }
         .section-title {
             font-weight: bold;
-            font-size: 10.5pt;
-            margin: 12px 0 6px;
+            font-size: 10pt;
+            margin: 10px 0 4px;
             border-bottom: 1px solid #888;
-            padding-bottom: 3px;
+            padding-bottom: 2px;
         }
         .agenda-content {
-            font-size: 10pt;
-            line-height: 1.5;
-            margin-bottom: 12px;
+            font-size: 9.5pt;
+            line-height: 1.45;
+            margin-bottom: 8px;
             word-wrap: break-word !important;
             overflow-wrap: anywhere !important;
             word-break: break-word !important;
@@ -192,19 +191,19 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
             word-break: break-word !important;
         }
         .agenda-content p {
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.3rem;
         }
         .agenda-content ul {
             list-style-type: disc !important;
-            padding-left: 22px !important;
+            padding-left: 20px !important;
             margin-top: 0;
-            margin-bottom: 0.5rem !important;
+            margin-bottom: 0.4rem !important;
         }
         .agenda-content ol {
             list-style-type: decimal !important;
-            padding-left: 22px !important;
+            padding-left: 20px !important;
             margin-top: 0;
-            margin-bottom: 0.5rem !important;
+            margin-bottom: 0.4rem !important;
         }
         .agenda-content li {
             display: list-item !important;
@@ -212,21 +211,21 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         .notulen-box {
             border: 1px dashed #666;
             border-radius: 4px;
-            padding: 10px 14px;
-            margin-top: 12px;
-            margin-bottom: 15px;
-            min-height: 380px;
+            padding: 8px 12px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+            min-height: 275px;
         }
         .notulen-title {
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 8.5pt;
             color: #444;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .ttd-wrap {
             page-break-inside: avoid;
             break-inside: avoid;
-            margin-top: 15px;
+            margin-top: 10px;
         }
         .ttd-table {
             width: 100%;
@@ -330,7 +329,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         </div>
     <?php else: ?>
         <div class="notulen-title">Catatan / Notulensi Manual:</div>
-        <div style="height: 350px;"></div>
+        <div style="height: 245px;"></div>
     <?php endif; ?>
 </div>
 
@@ -351,11 +350,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 </div>
 
 <script>
-    window.onload = function() {
-        setTimeout(function() {
-            window.print();
-        }, 500);
-    };
+    // User klik tombol "Cetak / Simpan PDF" untuk mencetak
 </script>
 
 </body>

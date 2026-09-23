@@ -63,18 +63,17 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
     <style>
         * {
             box-sizing: border-box;
-            margin: 0;
-            padding: 0;
         }
         @page {
-            size: 215mm 330mm; /* Format Kertas F4 / Folio */
-            margin: 15mm;
+            size: 330mm 215mm;
+            size: landscape;
+            margin: 12mm 15mm;
         }
         @media print {
             html, body {
                 width: 100% !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 0 4px !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -91,7 +90,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
             background: #fff;
         }
         body {
-            padding: 12mm;
+            padding: 10mm 4px;
         }
         table.kop-header {
             width: 100%;
@@ -319,11 +318,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 </div>
 
 <script>
-    window.onload = function() {
-        setTimeout(function() {
-            window.print();
-        }, 500);
-    };
+    // User klik tombol "Cetak / Simpan PDF" untuk mencetak
 </script>
 
 </body>
