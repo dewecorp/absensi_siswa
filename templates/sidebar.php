@@ -645,9 +645,10 @@ switch ($user_level) {
                 'submenu' => [
                     ['title' => 'Data Agenda', 'url' => '../kepala/data_agenda.php', 'active' => $current_page === 'data_agenda.php'],
                     ['title' => 'Agenda Kepala', 'url' => '../kepala/agenda_kepala.php', 'active' => $current_page === 'agenda_kepala.php'],
+                    ['title' => 'Jenis Rapat', 'url' => '../kepala/jenis_rapat.php', 'active' => $current_page === 'jenis_rapat.php'],
                     ['title' => 'Rapat', 'url' => '../kepala/rapat.php', 'active' => $current_page === 'rapat.php'],
                 ],
-                'active' => in_array($current_page, ['data_agenda.php', 'agenda_kepala.php', 'rapat.php'])
+                'active' => in_array($current_page, ['data_agenda.php', 'agenda_kepala.php', 'jenis_rapat.php', 'rapat.php'])
             ],
             [
                 'title' => 'Logout',

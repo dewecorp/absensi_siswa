@@ -80,6 +80,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     }
 }
 
+// Fetch list jenis rapat for dropdown
+$jenis_rapat_list = [];
+try {
+    $jenis_rapat_list = $pdo->query("SELECT * FROM tb_rapat_jenis ORDER BY jenis_rapat ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $jenis_rapat_list = [];
+}
+
 // Fetch all rapat rows
 $rows = [];
 try {
@@ -153,6 +161,7 @@ $(document).ready(function () {
         }
         if (row) {
             $('#detail_nama_rapat').text(row.nama_rapat || '-');
+            $('#detail_jenis_rapat').text(row.jenis_rapat || '-');
             $('#detail_hari_tanggal').text(row.hari_tanggal_indo || row.hari_tanggal || '-');
             $('#detail_waktu').text(row.waktu || '-');
             $('#detail_pemimpin').text(row.pemimpin_rapat || '-');
@@ -171,7 +180,15 @@ $(document).ready(function () {
         }
         if (row) {
             $('#edit_id_rapat').val(row.id_rapat);
-            $('#edit_nama_rapat').val(row.nama_rapat);
+            var $editNamaSelect = $('#edit_nama_rapat');
+            $editNamaSelect.val(row.nama_rapat);
+            if (row.nama_rapat && $editNamaSelect.val() !== row.nama_rapat) {
+                $editNamaSelect.append($('<option>', {
+                    value: row.nama_rapat,
+                    text: row.nama_rapat,
+                    selected: true
+                }));
+            }
             $('#edit_hari_tanggal').val(row.hari_tanggal);
             $('#edit_waktu').val(row.waktu || '');
             $('#edit_pemimpin_rapat').val(row.pemimpin_rapat || '');
@@ -318,7 +335,12 @@ include '../templates/sidebar.php';
                                 ?>
                                     <tr>
                                         <td class="text-center"></td>
-                                        <td><strong><?= htmlspecialchars($r['nama_rapat']) ?></strong></td>
+                                        <td>
+                                            <strong><?= htmlspecialchars($r['nama_rapat']) ?></strong>
+                                            <?php if (!empty($r['jenis_rapat'])): ?>
+                                                <small class="d-block text-muted"><i class="fas fa-tag mr-1"></i><?= htmlspecialchars($r['jenis_rapat']) ?></small>
+                                            <?php endif; ?>
+                                        </td>
                                         <td><?= htmlspecialchars($r['hari_tanggal_indo']) ?></td>
                                         <td><?= htmlspecialchars($r['waktu'] ?: '-') ?></td>
                                         <td>
@@ -460,9 +482,23 @@ include '../templates/sidebar.php';
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label>Nama Rapat <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="nama_rapat" required placeholder="Contoh: Rapat Evaluasi Pembelajaran Semester 1">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Nama Rapat <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="nama_rapat" required placeholder="Contoh: Rapat Evaluasi Pembelajaran Semester 1">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Jenis Rapat</label>
+                            <select class="form-control" name="id_jenis">
+                                <option value="">Pilih Jenis Rapat</option>
+                                <?php foreach ($jenis_rapat_list as $j): ?>
+                                    <option value="<?= (int)$j['id_jenis'] ?>"><?= htmlspecialchars($j['jenis_rapat']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php if (empty($jenis_rapat_list)): ?>
+                                <small class="text-danger">Belum ada Jenis Rapat. <a href="jenis_rapat.php">Atur di Jenis Rapat</a>.</small>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
@@ -514,9 +550,20 @@ include '../templates/sidebar.php';
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label>Nama Rapat <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="nama_rapat" id="edit_nama_rapat" required>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Nama Rapat <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="nama_rapat" id="edit_nama_rapat" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Jenis Rapat</label>
+                            <select class="form-control" name="id_jenis" id="edit_id_jenis">
+                                <option value="">Pilih Jenis Rapat</option>
+                                <?php foreach ($jenis_rapat_list as $j): ?>
+                                    <option value="<?= (int)$j['id_jenis'] ?>"><?= htmlspecialchars($j['jenis_rapat']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-6">

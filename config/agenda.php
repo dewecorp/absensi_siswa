@@ -56,6 +56,7 @@ function ensureAgendaTables(PDO $pdo): bool {
         $pdo->exec("CREATE TABLE IF NOT EXISTS tb_agenda_rapat (
             id_rapat INT AUTO_INCREMENT PRIMARY KEY,
             nama_rapat VARCHAR(255) NOT NULL,
+            id_jenis INT DEFAULT NULL,
             hari_tanggal DATE NOT NULL,
             waktu VARCHAR(100) DEFAULT NULL,
             agenda_rapat LONGTEXT DEFAULT NULL,
@@ -69,6 +70,28 @@ function ensureAgendaTables(PDO $pdo): bool {
         $checkCol = $pdo->query("SHOW COLUMNS FROM tb_agenda_rapat LIKE 'notulensi'")->fetch();
         if (!$checkCol) {
             $pdo->exec("ALTER TABLE tb_agenda_rapat ADD COLUMN notulensi LONGTEXT DEFAULT NULL AFTER agenda_rapat");
+        }
+
+        // Ensure column id_jenis exists in tb_agenda_rapat for existing installations
+        $checkColRapatJenis = $pdo->query("SHOW COLUMNS FROM tb_agenda_rapat LIKE 'id_jenis'")->fetch();
+        if (!$checkColRapatJenis) {
+            $pdo->exec("ALTER TABLE tb_agenda_rapat ADD COLUMN id_jenis INT DEFAULT NULL AFTER nama_rapat");
+        }
+
+        // 4. Table Jenis Rapat
+        $pdo->exec("CREATE TABLE IF NOT EXISTS tb_rapat_jenis (
+            id_jenis INT AUTO_INCREMENT PRIMARY KEY,
+            jenis_rapat VARCHAR(100) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+        $cntRapatJenis = (int)$pdo->query("SELECT COUNT(*) FROM tb_rapat_jenis")->fetchColumn();
+        if ($cntRapatJenis === 0) {
+            $defaultsRapat = ['Rapat Dinas', 'Rapat Koordinasi', 'Rapat Pleno', 'Rapat Evaluasi', 'Rapat Panitia'];
+            $stmtR = $pdo->prepare("INSERT IGNORE INTO tb_rapat_jenis (jenis_rapat) VALUES (?)");
+            foreach ($defaultsRapat as $dr) {
+                $stmtR->execute([$dr]);
+            }
         }
 
         return true;
