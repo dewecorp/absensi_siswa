@@ -640,6 +640,16 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php'])
             ],
             [
+                'title' => 'Agenda',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => [
+                    ['title' => 'Data Agenda', 'url' => '../kepala/data_agenda.php', 'active' => $current_page === 'data_agenda.php'],
+                    ['title' => 'Agenda Kepala', 'url' => '../kepala/agenda_kepala.php', 'active' => $current_page === 'agenda_kepala.php'],
+                    ['title' => 'Rapat', 'url' => '../kepala/rapat.php', 'active' => $current_page === 'rapat.php'],
+                ],
+                'active' => in_array($current_page, ['data_agenda.php', 'agenda_kepala.php', 'rapat.php'])
+            ],
+            [
                 'title' => 'Logout',
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
