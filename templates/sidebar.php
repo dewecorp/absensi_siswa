@@ -275,6 +275,12 @@ if (!function_exists('sort_all_menu_items')) {
 
 switch ($user_level) {
     case 'admin':
+        $agenda_submenu_admin = [
+            ['title' => 'Data Agenda', 'url' => '../kepala/data_agenda.php?session_type=admin', 'active' => $current_page === 'data_agenda.php'],
+            ['title' => 'Agenda Kepala', 'url' => '../kepala/agenda_kepala.php?session_type=admin', 'active' => $current_page === 'agenda_kepala.php'],
+            ['title' => 'Jenis Rapat', 'url' => '../kepala/jenis_rapat.php?session_type=admin', 'active' => $current_page === 'jenis_rapat.php'],
+            ['title' => 'Rapat', 'url' => '../kepala/rapat.php?session_type=admin', 'active' => $current_page === 'rapat.php'],
+        ];
         $supervisi_submenu_admin = [
             ['title' => 'Dashboard Supervisi', 'url' => '../kepala/dashboard_supervisi.php?session_type=admin', 'active' => $current_page === 'dashboard_supervisi.php'],
             ['title' => 'Program Supervisi', 'url' => '../kepala/program_supervisi.php?session_type=admin', 'active' => $current_page === 'program_supervisi.php'],
@@ -443,6 +449,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-clipboard-check',
                 'submenu' => $supervisi_submenu_admin,
                 'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php', 'master_supervisi.php'])
+            ],
+            [
+                'title' => 'Agenda',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => $agenda_submenu_admin,
+                'active' => in_array($current_page, ['data_agenda.php', 'agenda_kepala.php', 'jenis_rapat.php', 'rapat.php'])
             ],
             [
                 'title' => 'Program Kerja',
