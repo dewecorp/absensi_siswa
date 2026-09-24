@@ -196,6 +196,7 @@ $(document).ready(function () {
             $('#detail_tempat').text(row.tempat || '-');
             $('#detail_keterangan').text(row.keterangan || '-');
             $('#detail_uraian_content').html(row.uraian_kegiatan || '<em class="text-muted">Tidak ada uraian kegiatan.</em>');
+            $('#btn-cetak-detail').attr('href', 'cetak_detail_agenda_kepala.php?id=' + row.id_agenda);
             $('#modal-detail').modal('show');
         }
     });
@@ -413,6 +414,9 @@ include '../templates/sidebar.php';
                                                     title="Lihat Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
+                                                <a class="btn btn-secondary btn-sm mr-1" href="cetak_detail_agenda_kepala.php?id=<?= (int)$r['id_agenda'] ?>" target="_blank" title="Cetak Agenda">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
                                                 <button class="btn btn-warning btn-sm btn-edit mr-1" type="button"
                                                     data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'
                                                     title="Edit">
@@ -497,6 +501,9 @@ include '../templates/sidebar.php';
                 </div>
             </div>
             <div class="modal-footer bg-whitesmoke br">
+                <a id="btn-cetak-detail" href="#" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-print mr-1"></i> Cetak Agenda
+                </a>
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
             </div>
         </div>
