@@ -52,6 +52,7 @@ $print_settings_data = [
     'tempat_surat' => '',
     'tanggal_surat' => date('d F Y'),
     'logo_pramuka' => '',
+    'logo_wosm' => '',
     'bingkai_surat' => '',
     'tempat_pelantikan' => '',
     'tanda_tangan_ketua_gudep' => '',
@@ -69,6 +70,7 @@ try {
             'tempat_surat' => $settings['tempat_surat'] ?? '',
             'tanggal_surat' => $settings['tanggal_surat'] ?? date('d F Y'),
             'logo_pramuka' => $settings['logo_pramuka'] ?? '',
+            'logo_wosm' => $settings['logo_wosm'] ?? '',
             'bingkai_surat' => $settings['bingkai_surat'] ?? '',
             'tempat_pelantikan' => $settings['tempat_pelantikan'] ?? '',
             'tanda_tangan_ketua_gudep' => $settings['tanda_tangan_ketua_gudep'] ?? '',
@@ -417,9 +419,27 @@ $tingkat_name_for_file = trim($tingkat_name_for_file, '_');
 $doc_base_name = 'Data_Surat_Keterangan_' . $tingkat_name_for_file;
 
 if ($mode === 'data' && $format === 'print') {
-    $school_name = (string)($school_profile['nama_madrasah'] ?? $school_profile['nama_sekolah'] ?? 'Sistem Informasi Madrasah');
+    $foundation_name = strtoupper((string)($school_profile['nama_yayasan'] ?? ''));
+    $school_name = strtoupper((string)($school_profile['nama_madrasah'] ?? $school_profile['nama_sekolah'] ?? 'MADRASAH'));
+    $school_address = (string)($school_profile['alamat'] ?? '');
+    $email = (string)($school_profile['email_madrasah'] ?? '');
+    $website = (string)($school_profile['website_madrasah'] ?? '');
     $school_year = (string)($selected_tahun_ajaran ?: ($school_profile['tahun_ajaran'] ?? '-'));
-    $school_logo = !empty($school_profile['logo']) ? ('../assets/img/' . $school_profile['logo']) : '';
+
+    $logo_pramuka_val = trim((string)($print_settings_data['logo_pramuka'] ?? ''));
+    $logo_pramuka_url = $logo_pramuka_val !== '' && is_file(__DIR__ . '/../uploads/' . basename($logo_pramuka_val)) ? ('../uploads/' . basename($logo_pramuka_val)) : '';
+
+    $logo_wosm_val = trim((string)($print_settings_data['logo_wosm'] ?? ''));
+    $logo_wosm_url = $logo_wosm_val !== '' && is_file(__DIR__ . '/../uploads/' . basename($logo_wosm_val)) ? ('../uploads/' . basename($logo_wosm_val)) : '';
+
+    $golongan_str = strtoupper(trim((string)($tingkat_golongan ?? 'SIAGA')));
+    $tingkat_str = strtoupper(trim((string)($tingkat_name ?? '')));
+
+    $golongan_tingkat_sub = 'GOLONGAN ' . $golongan_str;
+    if ($tingkat_str !== '') {
+        $golongan_tingkat_sub .= ' TINGKAT ' . $tingkat_str;
+    }
+
     // Use locked tanggal_surat for past years, settings for current year
     $print_date = $is_current_ta
         ? $formatTanggalIndo($print_settings_data['tanggal_surat'] ?? date('Y-m-d'))
@@ -434,11 +454,11 @@ if ($mode === 'data' && $format === 'print') {
         $tempat_lahir = h($p['tempat_lahir'] ?? '-');
         $tanggal_lahir = formatDateDMY($p['tanggal_lahir'] ?? null);
         $rows_html .= '<tr>'
-            . '<td>' . ($idx + 1) . '</td>'
+            . '<td style="text-align:center;">' . ($idx + 1) . '</td>'
             . '<td>' . $nama . '</td>'
-            . '<td>' . $nta . '</td>'
+            . '<td style="text-align:center;">' . $nta . '</td>'
             . '<td>' . $tempat_lahir . '</td>'
-            . '<td>' . h($tanggal_lahir) . '</td>'
+            . '<td style="text-align:center;">' . h($tanggal_lahir) . '</td>'
             . '</tr>';
     }
     ?>
@@ -449,21 +469,33 @@ if ($mode === 'data' && $format === 'print') {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= h($doc_base_name) ?>.pdf</title>
   <style>
-    @media print { @page { size: 215mm 330mm; margin: 12mm; } }
-    body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; }
+    @media print {
+      @page { size: 215mm 330mm; margin: 12mm; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+    }
+    body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f3f4f6; }
     .wrap { max-width: 980px; margin: 10px auto; background: #fff; }
     .content { padding: 12mm; }
-    .header { display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 10px; }
-    .header-logo { width: 56px; height: 56px; object-fit: contain; }
-    .header-title h2 { margin: 0; font-size: 20px; }
-    .header-title .meta { margin-top: 3px; color: #444; font-size: 13px; }
-    h3 { margin: 10px 0 6px 0; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #555; padding: 6px 8px; text-align: left; }
-    th { background: #f3f3f3; }
+    table.kop-header-pramuka { width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }
+    table.kop-header-pramuka td { border: none !important; padding: 0 !important; vertical-align: middle; }
+    td.kop-logo-left { width: 80px; text-align: left; }
+    td.kop-logo-left img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
+    td.kop-logo-right { width: 80px; text-align: right; }
+    td.kop-logo-right img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
+    td.kop-text { text-align: center; }
+    td.kop-text h2 { margin: 0; font-size: 12pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }
+    td.kop-text h1 { margin: 2px 0; font-size: 13.5pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }
+    td.kop-text p.alamat { margin: 2px 0; font-size: 9.5pt; color: #000; }
+    td.kop-text p.kontak { margin: 2px 0 0; font-size: 9pt; color: #000; }
+    .title { text-align: center; font-weight: bold; font-size: 13pt; text-decoration: underline; margin: 14px 0 2px; text-transform: uppercase; }
+    .subtitle-golongan { text-align: center; font-weight: bold; font-size: 11pt; color: #111; margin-bottom: 2px; text-transform: uppercase; }
+    .subtitle { text-align: center; font-size: 10pt; color: #333; margin-bottom: 15px; }
+    table.data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    table.data-table th, table.data-table td { border: 1px solid #555; padding: 6px 8px; font-size: 9.5pt; }
+    table.data-table th { background: #f2f2f2; text-align: center !important; font-weight: bold; }
     .signature-wrap { margin-top: 10mm; display: flex; justify-content: flex-end; }
     .signature-box { width: 270px; text-align: center; }
-    .signature-meta { text-align: left; margin-bottom: 8px; }
     .signature-name { font-weight: 700; text-decoration: underline; margin-top: 6px; }
     .signature-nta { margin-top: 2px; }
     .signature-qr { width: 90px; height: 90px; margin: 4px auto; display: block; }
@@ -472,26 +504,49 @@ if ($mode === 'data' && $format === 'print') {
 <body>
   <div class="wrap">
     <div class="content">
-      <div class="header">
-        <?php if ($school_logo): ?>
-          <img class="header-logo" src="<?= h($school_logo) ?>?v=<?= h($asset_ver) ?>" alt="Logo Sekolah">
-        <?php endif; ?>
-        <div class="header-title">
-          <h2><?= h($school_name) ?></h2>
-          <div class="meta">Tahun Ajaran: <strong><?= h($school_year) ?></strong></div>
-        </div>
-      </div>
+      <table class="kop-header-pramuka">
+        <tr>
+          <td class="kop-logo-left">
+            <?php if (!empty($logo_pramuka_url)): ?>
+              <img src="<?= h($logo_pramuka_url) ?>" alt="Logo Pramuka">
+            <?php endif; ?>
+          </td>
+          <td class="kop-text">
+            <h2>GERAKAN PRAMUKA GUGUS DEPAN <?= h(strtoupper($gugus_depan)) ?></h2>
+            <h1>BERPANGKALAN PADA <?= h(strtoupper($school_name)) ?></h1>
+            <?php if ($school_address !== ''): ?>
+              <p class="alamat"><?= h($school_address) ?></p>
+            <?php endif; ?>
+            <?php if ($website !== '' || $email !== ''): ?>
+              <p class="kontak">
+                <?= $website !== '' ? 'Website: <span style="color:#00f;text-decoration:underline;">' . h($website) . '</span>' : '' ?>
+                <?= ($website !== '' && $email !== '') ? '&nbsp;&nbsp;&nbsp;&nbsp;' : '' ?>
+                <?= $email !== '' ? 'email: <span style="color:#00f;text-decoration:underline;">' . h($email) . '</span>' : '' ?>
+              </p>
+            <?php endif; ?>
+          </td>
+          <td class="kop-logo-right">
+            <?php if (!empty($logo_wosm_url)): ?>
+              <img src="<?= h($logo_wosm_url) ?>" alt="Logo WOSM">
+            <?php endif; ?>
+          </td>
+        </tr>
+      </table>
 
-      <h3>Data Surat Keterangan</h3>
-      <div style="margin-bottom:8mm;">Tingkat: <strong><?= h($tingkat_name ?: ('ID ' . $tingkat_id)) ?></strong></div>
-      <table>
+      <div class="title">DATA SURAT KETERANGAN</div>
+      <div class="subtitle-golongan"><?= h($golongan_tingkat_sub) ?></div>
+      <?php if ($school_year !== ''): ?>
+        <div class="subtitle">Tahun Ajaran <?= h($school_year) ?></div>
+      <?php endif; ?>
+
+      <table class="data-table">
         <thead>
           <tr>
-            <th style="width:8%;">No</th>
-            <th style="width:34%;">Nama Peserta Didik</th>
-            <th style="width:18%;">NTA</th>
-            <th style="width:22%;">Tempat Lahir</th>
-            <th style="width:18%;">Tanggal Lahir</th>
+            <th style="width:6%; text-align:center;">No</th>
+            <th style="width:36%; text-align:center;">Nama Peserta Didik</th>
+            <th style="width:18%; text-align:center;">NTA</th>
+            <th style="width:22%; text-align:center;">Tempat Lahir</th>
+            <th style="width:18%; text-align:center;">Tanggal Lahir</th>
           </tr>
         </thead>
         <tbody><?= $rows_html ?></tbody>
@@ -510,7 +565,6 @@ if ($mode === 'data' && $format === 'print') {
   <?php if ($autoPrint): ?>
   <script>
     window.addEventListener('load', () => setTimeout(() => window.print(), 250));
-    // Auto-close this window after print dialog finishes (printed or cancelled)
     window.addEventListener('afterprint', () => {
       setTimeout(() => window.close(), 100);
     });
@@ -531,6 +585,21 @@ if ($format === 'pdf' && $mode === 'data') {
     }
     require_once $autoload;
 
+    $foundation_name = strtoupper((string)($school_profile['nama_yayasan'] ?? ''));
+    $school_name = strtoupper((string)($school_profile['nama_madrasah'] ?? $school_profile['nama_sekolah'] ?? 'MADRASAH'));
+    $school_address = (string)($school_profile['alamat'] ?? '');
+    $email = (string)($school_profile['email_madrasah'] ?? '');
+    $website = (string)($school_profile['website_madrasah'] ?? '');
+    $school_year = (string)($selected_tahun_ajaran ?: ($school_profile['tahun_ajaran'] ?? '-'));
+
+    $golongan_str = strtoupper(trim((string)($tingkat_golongan ?? 'SIAGA')));
+    $tingkat_str = strtoupper(trim((string)($tingkat_name ?? '')));
+
+    $golongan_tingkat_sub = 'GOLONGAN ' . $golongan_str;
+    if ($tingkat_str !== '') {
+        $golongan_tingkat_sub .= ' TINGKAT ' . $tingkat_str;
+    }
+
     $rows_html = '';
     foreach ($participants as $idx => $p) {
         $nama = h($p['nama_peserta_didik'] ?? '');
@@ -538,32 +607,33 @@ if ($format === 'pdf' && $mode === 'data') {
         $tempat_lahir = h($p['tempat_lahir'] ?? '-');
         $tanggal_lahir = formatDateDMY($p['tanggal_lahir'] ?? null);
         $rows_html .= '<tr>'
-            . '<td>' . ($idx + 1) . '</td>'
+            . '<td style="text-align:center;">' . ($idx + 1) . '</td>'
             . '<td>' . $nama . '</td>'
-            . '<td>' . $nta . '</td>'
+            . '<td style="text-align:center;">' . $nta . '</td>'
             . '<td>' . $tempat_lahir . '</td>'
-            . '<td>' . h($tanggal_lahir) . '</td>'
+            . '<td style="text-align:center;">' . h($tanggal_lahir) . '</td>'
             . '</tr>';
     }
 
-    $judul_tingkat = h($tingkat_name ?: ('ID ' . $tingkat_id));
     $html = '<!doctype html><html><head><meta charset="utf-8"><style>'
         . '@page { margin: 16mm; size: 215mm 330mm; }'
-        . 'body{font-family:DejaVu Sans,Arial,sans-serif;font-size:11pt;}'
-        . 'h2{margin:0 0 3mm 0;}'
-        . '.meta{margin-bottom:6mm;color:#444;}'
-        . 'table{width:100%;border-collapse:collapse;}'
-        . 'th,td{border:1px solid #555;padding:6px 8px;vertical-align:top;}'
-        . 'th{background:#f3f3f3;text-align:left;}'
+        . 'body{font-family:DejaVu Sans,Arial,sans-serif;font-size:10pt;}'
+        . '.title{text-align:center;font-weight:bold;font-size:13pt;text-decoration:underline;margin:12px 0 2px;text-transform:uppercase;}'
+        . '.subtitle-golongan{text-align:center;font-weight:bold;font-size:11pt;color:#111;margin-bottom:2px;text-transform:uppercase;}'
+        . '.subtitle{text-align:center;font-size:10pt;color:#333;margin-bottom:15px;}'
+        . 'table{width:100%;border-collapse:collapse;margin-top:15px;}'
+        . 'th,td{border:1px solid #555;padding:6px 8px;font-size:9.5pt;}'
+        . 'th{background:#f2f2f2;text-align:center;font-weight:bold;}'
         . '</style></head><body>'
-        . '<h2>Data Surat Keterangan</h2>'
-        . '<div class="meta">Tingkat: <strong>' . $judul_tingkat . '</strong></div>'
+        . '<div class="title">DATA SURAT KETERANGAN</div>'
+        . '<div class="subtitle-golongan">' . h($golongan_tingkat_sub) . '</div>'
+        . '<div class="subtitle">Tahun Ajaran ' . h($school_year) . '</div>'
         . '<table><thead><tr>'
-        . '<th style="width:8%;">No</th>'
-        . '<th style="width:34%;">Nama Peserta Didik</th>'
-        . '<th style="width:18%;">NTA</th>'
-        . '<th style="width:22%;">Tempat Lahir</th>'
-        . '<th style="width:18%;">Tanggal Lahir</th>'
+        . '<th style="width:6%; text-align:center;">No</th>'
+        . '<th style="width:36%; text-align:center;">Nama Peserta Didik</th>'
+        . '<th style="width:18%; text-align:center;">NTA</th>'
+        . '<th style="width:22%; text-align:center;">Tempat Lahir</th>'
+        . '<th style="width:18%; text-align:center;">Tanggal Lahir</th>'
         . '</tr></thead><tbody>' . $rows_html . '</tbody></table>'
         . '</body></html>';
 

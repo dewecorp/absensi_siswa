@@ -25,6 +25,7 @@ $print_settings_data = [
     'tempat_surat' => '',
     'tanggal_surat' => date('d F Y'),
     'logo_pramuka' => '',
+    'logo_wosm' => '',
     'template_surat' => '',
     'tanda_tangan_ketua_gudep' => ''
 ];
@@ -42,6 +43,7 @@ try {
             'tempat_surat' => $settings_tmp['tempat_surat'] ?? '',
             'tanggal_surat' => $settings_tmp['tanggal_surat'] ?? date('d F Y'),
             'logo_pramuka' => $settings_tmp['logo_pramuka'] ?? ($settings_tmp['bingkai_surat'] ?? ''),
+            'logo_wosm' => $settings_tmp['logo_wosm'] ?? '',
             'template_surat' => $settings_tmp['template_surat'] ?? '',
             'tanda_tangan_ketua_gudep' => $settings_tmp['tanda_tangan_ketua_gudep'] ?? ''
         ];
@@ -60,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
     $tempat_surat = $_POST['tempat_surat'] ?? '';
     $tanggal_surat = $_POST['tanggal_surat'] ?? '';
     $logo_pramuka = $print_settings_data['logo_pramuka'] ?? '';
+    $logo_wosm = $print_settings_data['logo_wosm'] ?? '';
     $template_surat = $print_settings_data['template_surat'] ?? '';
     $tanda_tangan_ketua_gudep = $print_settings_data['tanda_tangan_ketua_gudep'] ?? '';
 
@@ -77,6 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
     } catch (Exception $e) { /* ignore */ }
     try {
         $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN logo_pramuka VARCHAR(255) NULL");
+    } catch (Exception $e) { /* ignore */ }
+    try {
+        $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN logo_wosm VARCHAR(255) NULL");
     } catch (Exception $e) { /* ignore */ }
     try {
         $pdo->exec("ALTER TABLE tb_pengaturan_cetak_barung ADD COLUMN template_surat VARCHAR(255) NULL");
@@ -110,6 +116,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
                         }
                     }
                     $logo_pramuka = $new_filename;
+                }
+            }
+        }
+    }
+
+    if (isset($_FILES['logo_wosm_file']) && $_FILES['logo_wosm_file']['error'] == 0) {
+        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+        $filename = $_FILES['logo_wosm_file']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        if (in_array($ext, $allowed)) {
+            $max_size = 2 * 1024 * 1024;
+            if ($_FILES['logo_wosm_file']['size'] <= $max_size) {
+                $new_filename = 'logo_wosm_' . time() . '.' . $ext;
+                $upload_dir = __DIR__ . '/../uploads/';
+
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+
+                if (move_uploaded_file($_FILES['logo_wosm_file']['tmp_name'], $upload_dir . $new_filename)) {
+                    // Remove old wosm logo file to avoid unused files piling up.
+                    $old_wosm = trim((string)($print_settings_data['logo_wosm'] ?? ''));
+                    if ($old_wosm !== '' && $old_wosm !== $new_filename) {
+                        $old_wosm_path = $upload_dir . basename($old_wosm);
+                        if (is_file($old_wosm_path)) {
+                            @unlink($old_wosm_path);
+                        }
+                    }
+                    $logo_wosm = $new_filename;
                 }
             }
         }
@@ -151,15 +187,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_print_settings'])
         if ($check) {
             $stmt = $pdo->prepare("
                 UPDATE tb_pengaturan_cetak_barung
-                SET ketua_gudep = ?, nta_ketua_gudep = ?, nomor_gudep = ?, gugus_depan = ?, nomor_surat = ?, tempat_pelantikan = ?, tempat_surat = ?, tanggal_surat = ?, logo_pramuka = ?, template_surat = ?, tanda_tangan_ketua_gudep = ?
+                SET ketua_gudep = ?, nta_ketua_gudep = ?, nomor_gudep = ?, gugus_depan = ?, nomor_surat = ?, tempat_pelantikan = ?, tempat_surat = ?, tanggal_surat = ?, logo_pramuka = ?, logo_wosm = ?, template_surat = ?, tanda_tangan_ketua_gudep = ?
             ");
-            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat, $tanda_tangan_ketua_gudep]);
+            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $logo_wosm, $template_surat, $tanda_tangan_ketua_gudep]);
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO tb_pengaturan_cetak_barung (ketua_gudep, nta_ketua_gudep, nomor_gudep, gugus_depan, nomor_surat, tempat_pelantikan, tempat_surat, tanggal_surat, logo_pramuka, template_surat, tanda_tangan_ketua_gudep)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tb_pengaturan_cetak_barung (ketua_gudep, nta_ketua_gudep, nomor_gudep, gugus_depan, nomor_surat, tempat_pelantikan, tempat_surat, tanggal_surat, logo_pramuka, logo_wosm, template_surat, tanda_tangan_ketua_gudep)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $template_surat, $tanda_tangan_ketua_gudep]);
+            $stmt->execute([$ketua_gudep, $nta_ketua_gudep, $nomor_gudep, $gugus_depan, $nomor_surat, $tempat_pelantikan, $tempat_surat, $tanggal_surat, $logo_pramuka, $logo_wosm, $template_surat, $tanda_tangan_ketua_gudep]);
         }
 
         // Freeze tanggal_surat and tempat_surat for the current academic year
@@ -199,6 +235,7 @@ try {
             'tempat_surat' => $settings['tempat_surat'] ?? '',
             'tanggal_surat' => $settings['tanggal_surat'] ?? date('d F Y'),
             'logo_pramuka' => $settings['logo_pramuka'] ?? '',
+            'logo_wosm' => $settings['logo_wosm'] ?? '',
             'template_surat' => $settings['template_surat'] ?? '',
             'tanda_tangan_ketua_gudep' => $settings['tanda_tangan_ketua_gudep'] ?? ''
         ];
@@ -276,6 +313,15 @@ include '../templates/sidebar.php';
                                 </div>
 
                                 <div class="form-group">
+                                    <label>Logo WOSM (gambar):</label>
+                                    <div class="custom-file">
+                                        <input type="file" name="logo_wosm_file" class="custom-file-input" id="logoWosmFile" accept="image/*">
+                                        <label class="custom-file-label" for="logoWosmFile">Pilih logo WOSM...</label>
+                                    </div>
+                                    <small class="text-muted">Format: JPG, PNG, maksimal 2MB</small>
+                                </div>
+
+                                <div class="form-group">
                                     <label>Tanda Tangan Ketua Gudep (gambar):</label>
                                     <div class="custom-file">
                                         <input type="file" name="tanda_tangan_ketua_gudep_file" class="custom-file-input" id="tandaTanganKetuaGudepFile" accept="image/*">
@@ -286,31 +332,44 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
 
-                        <?php if (!empty($print_settings_data['logo_pramuka']) || !empty($print_settings_data['tanda_tangan_ketua_gudep'])): ?>
+                        <?php if (!empty($print_settings_data['logo_pramuka']) || !empty($print_settings_data['logo_wosm']) || !empty($print_settings_data['tanda_tangan_ketua_gudep'])): ?>
                         <div class="form-group">
                             <label>Preview:</label>
-                            <div class="row mt-3">
+                            <div class="row mt-3 d-flex align-items-stretch">
                                 <?php if (!empty($print_settings_data['logo_pramuka'])): ?>
-                                <div class="col-md-4 mb-3">
-                                    <div class="card shadow-sm">
-                                        <div class="card-header bg-light text-center font-weight-bold py-2">
+                                <div class="col-md-4 mb-3 d-flex align-items-stretch">
+                                    <div class="card shadow-sm h-100 w-100">
+                                        <div class="card-header bg-light text-center font-weight-bold py-2 justify-content-center">
                                             Logo Pramuka
                                         </div>
-                                        <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 220px;">
-                                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['logo_pramuka']) ?>" alt="Logo Pramuka" class="img-fluid" style="max-width: 100%; max-height: 200px; object-fit: contain;">
+                                        <div class="card-body d-flex align-items-center justify-content-center p-3" style="height: 200px;">
+                                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['logo_pramuka']) ?>" alt="Logo Pramuka" class="img-fluid" style="max-width: 100%; max-height: 170px; object-fit: contain;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($print_settings_data['logo_wosm'])): ?>
+                                <div class="col-md-4 mb-3 d-flex align-items-stretch">
+                                    <div class="card shadow-sm h-100 w-100">
+                                        <div class="card-header bg-light text-center font-weight-bold py-2 justify-content-center">
+                                            Logo WOSM
+                                        </div>
+                                        <div class="card-body d-flex align-items-center justify-content-center p-3" style="height: 200px;">
+                                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['logo_wosm']) ?>" alt="Logo WOSM" class="img-fluid" style="max-width: 100%; max-height: 170px; object-fit: contain;">
                                         </div>
                                     </div>
                                 </div>
                                 <?php endif; ?>
                                 
                                 <?php if (!empty($print_settings_data['tanda_tangan_ketua_gudep'])): ?>
-                                <div class="col-md-6 mb-3">
-                                    <div class="card shadow-sm">
-                                        <div class="card-header bg-light text-center font-weight-bold py-2">
+                                <div class="col-md-4 mb-3 d-flex align-items-stretch">
+                                    <div class="card shadow-sm h-100 w-100">
+                                        <div class="card-header bg-light text-center font-weight-bold py-2 justify-content-center">
                                             Tanda Tangan Ketua Gudep
                                         </div>
-                                        <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 150px;">
-                                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['tanda_tangan_ketua_gudep']) ?>" alt="Tanda Tangan Ketua Gudep" class="img-fluid" style="max-width: 100%; max-height: 130px; object-fit: contain;">
+                                        <div class="card-body d-flex align-items-center justify-content-center p-3" style="height: 200px;">
+                                            <img src="../uploads/<?= htmlspecialchars($print_settings_data['tanda_tangan_ketua_gudep']) ?>" alt="Tanda Tangan Ketua Gudep" class="img-fluid" style="max-width: 100%; max-height: 170px; object-fit: contain;">
                                         </div>
                                     </div>
                                 </div>
@@ -330,6 +389,14 @@ include '../templates/sidebar.php';
 </div>
 
 <?php include '../templates/footer.php'; ?>
+<script type="text/javascript">
+$(document).ready(function() {
+    $('.custom-file-input').on('change', function() {
+        var fileName = $(this).val().split('\\').pop();
+        $(this).siblings('.custom-file-label').addClass('selected').html(fileName);
+    });
+});
+</script>
 <?php if (!empty($message)): ?>
 <script type="text/javascript">
 Swal.fire({

@@ -184,18 +184,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch list
 $rows = [];
 $fetch_error = null;
+$school_profile = getSchoolProfile($pdo);
+$print_settings_data = [
+    'ketua_gudep' => '',
+    'nta_ketua_gudep' => '',
+    'nomor_gudep' => '',
+    'gugus_depan' => '03.016',
+    'tempat_surat' => '',
+    'logo_pramuka' => '',
+    'logo_wosm' => '',
+];
+try {
+    $settings = $pdo->query("SELECT * FROM tb_pengaturan_cetak_barung LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    if ($settings) {
+        $print_settings_data = [
+            'ketua_gudep' => $settings['ketua_gudep'] ?? '',
+            'nta_ketua_gudep' => $settings['nta_ketua_gudep'] ?? '',
+            'nomor_gudep' => $settings['nomor_gudep'] ?? '',
+            'gugus_depan' => $settings['gugus_depan'] ?? '03.016',
+            'tempat_surat' => $settings['tempat_surat'] ?? '',
+            'logo_pramuka' => $settings['logo_pramuka'] ?? '',
+            'logo_wosm' => $settings['logo_wosm'] ?? '',
+        ];
+    }
+} catch (Exception $e) { /* ignore */ }
+
 try {
     $stmt = $pdo->query("
         SELECT id_tingkat_barung, nama_tingkat, golongan
         FROM {$table_name}
         ORDER BY
             CASE
-                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('pramula', 'pra-mula') OR LOWER(nama_tingkat) = 'pra mula' THEN 1
-                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 2
-                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 3
-                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 4
-                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('praramu', 'pra-ramu') OR LOWER(nama_tingkat) = 'pra ramu' THEN 5
-                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('ramu') THEN 6
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('pramula', 'pra-mula') OR LOWER(nama_tingkat) = 'pra mula' THEN 0
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('mula') THEN 1
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('bantu') THEN 2
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('tata') THEN 3
+                WHEN LOWER(REPLACE(nama_tingkat, ' ', '')) IN ('garuda') THEN 4
                 ELSE 99
             END,
             nama_tingkat ASC
@@ -283,6 +307,106 @@ $(document).ready(function() {
             }
         });
     });
+function exportToPDF() {
+    var table = document.getElementById('table-1');
+    if (!table) return;
+
+    var schoolName = $('#schoolName').val() || 'MADRASAH';
+    var schoolAddress = $('#schoolAddress').val() || '';
+    var schoolEmail = $('#schoolEmail').val() || '';
+    var schoolWebsite = $('#schoolWebsite').val() || '';
+    var nomorGudep = $('#nomorGudep').val() || '03.016';
+    var logoPramuka = $('#logoPramuka').val() || '';
+    var logoWosm = $('#logoWosm').val() || '';
+    var academicYear = $('#academicYear').val() || '-';
+    var headName = $('#headName').val() || '-';
+    var headNip = $('#headNip').val() || '-';
+    var printPlace = $('#printPlace').val() || 'Padang';
+    var printDate = $('#printDate').val() || '';
+
+    var qrContent = 'Dokumen Sah: ' + schoolName + ' | Ketua Gudep: ' + headName + ' | NTA: ' + headNip;
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(qrContent);
+
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Data Tingkat Pramuka ' + academicYear + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: 210mm 330mm portrait; margin: 10mm; }');
+    printWindow.document.write('body { font-family: Arial, sans-serif; font-size: 11pt; margin: 0; }');
+    printWindow.document.write('table.kop-header-pramuka { width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }');
+    printWindow.document.write('table.kop-header-pramuka td { border: none !important; padding: 0 !important; vertical-align: middle; }');
+    printWindow.document.write('td.kop-logo-left { width: 80px; text-align: left; }');
+    printWindow.document.write('td.kop-logo-left img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }');
+    printWindow.document.write('td.kop-logo-right { width: 80px; text-align: right; }');
+    printWindow.document.write('td.kop-logo-right img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }');
+    printWindow.document.write('td.kop-text { text-align: center; }');
+    printWindow.document.write('td.kop-text h2 { margin: 0; font-size: 12pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }');
+    printWindow.document.write('td.kop-text h1 { margin: 2px 0; font-size: 13.5pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }');
+    printWindow.document.write('td.kop-text p.alamat { margin: 2px 0; font-size: 9.5pt; color: #000; }');
+    printWindow.document.write('td.kop-text p.kontak { margin: 2px 0 0; font-size: 9pt; color: #000; }');
+    printWindow.document.write('.title { text-align: center; font-weight: bold; font-size: 13pt; text-decoration: underline; margin: 14px 0 2px; text-transform: uppercase; }');
+    printWindow.document.write('.subtitle { text-align: center; font-size: 10pt; color: #333; margin-bottom: 15px; }');
+    printWindow.document.write('table.data-table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 11pt; }');
+    printWindow.document.write('table.data-table th, table.data-table td { border: 1px solid #000; padding: 7px 6px; text-align: left; font-size: 11pt; line-height: 1.35; }');
+    printWindow.document.write('table.data-table th { background-color: #f2f2f2; text-align: center !important; font-weight: bold; }');
+    printWindow.document.write('.signature-wrapper { margin-top: 30px; display: flex; justify-content: flex-end; }');
+    printWindow.document.write('.signature-box { width: 250px; text-align: left; }');
+    printWindow.document.write('.signature-space { padding: 10px 0; }');
+    printWindow.document.write('.qr-code { height: 80px; width: 80px; object-fit: contain; }');
+    printWindow.document.write('.no-print { display: none; }');
+    printWindow.document.write('</style></head><body>');
+
+    printWindow.document.write('<table class=\"kop-header-pramuka\"><tr>');
+    printWindow.document.write('<td class=\"kop-logo-left\">');
+    if (logoPramuka) {
+        printWindow.document.write('<img src=\"' + logoPramuka + '\" alt=\"Logo Pramuka\">');
+    }
+    printWindow.document.write('</td><td class=\"kop-text\">');
+    printWindow.document.write('<h2>GERAKAN PRAMUKA GUGUS DEPAN ' + nomorGudep.toUpperCase() + '</h2>');
+    printWindow.document.write('<h1>BERPANGKALAN PADA ' + schoolName.toUpperCase() + '</h1>');
+    if (schoolAddress) {
+        printWindow.document.write('<p class=\"alamat\">' + schoolAddress + '</p>');
+    }
+    if (schoolWebsite || schoolEmail) {
+        var kontak = '';
+        if (schoolWebsite) kontak += 'Website: <span style=\"color:#00f;text-decoration:underline;\">' + schoolWebsite + '</span>';
+        if (schoolWebsite && schoolEmail) kontak += '&nbsp;&nbsp;&nbsp;&nbsp;';
+        if (schoolEmail) kontak += 'email: <span style=\"color:#00f;text-decoration:underline;\">' + schoolEmail + '</span>';
+        printWindow.document.write('<p class=\"kontak\">' + kontak + '</p>');
+    }
+    printWindow.document.write('</td><td class=\"kop-logo-right\">');
+    if (logoWosm) {
+        printWindow.document.write('<img src=\"' + logoWosm + '\" alt=\"Logo WOSM\">');
+    }
+    printWindow.document.write('</td></tr></table>');
+
+    printWindow.document.write('<div class=\"title\">DATA TINGKAT PRAMUKA</div>');
+    printWindow.document.write('<div class=\"subtitle\">Tahun Ajaran ' + academicYear + '</div>');
+
+    var cleanTable = table.cloneNode(true);
+    cleanTable.className = 'data-table';
+    var rows = cleanTable.rows;
+    for (var i = 0; i < rows.length; i++) {
+        rows[i].deleteCell(-1);
+    }
+
+    printWindow.document.write(cleanTable.outerHTML);
+
+    printWindow.document.write('<div class=\"signature-wrapper\">');
+    printWindow.document.write('<div class=\"signature-box\">');
+    printWindow.document.write('<p>' + printPlace + ', ' + printDate + '</p>');
+    printWindow.document.write('<p>Ketua Gudep,</p>');
+    printWindow.document.write('<div class=\"signature-space\">');
+    printWindow.document.write('<img src=\"' + qrUrl + '\" class=\"qr-code\">');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<p style=\"margin-bottom: 0;\"><strong>' + headName + '</strong></p>');
+    printWindow.document.write('<p style=\"margin-top: 0;\">NTA. ' + headNip + '</p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('</div>');
+
+    printWindow.document.write('<script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); }<\/script>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+}
 });
 ";
 
@@ -302,6 +426,9 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Data Tingkat Pramuka</h4>
                     <div class="card-header-action">
+                        <button type="button" class="btn btn-warning mr-1" onclick="exportToPDF()">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
                         <button class="btn btn-primary" data-toggle="modal" data-target="#addModal" type="button">
                             <i class="fas fa-plus"></i> Tambah
                         </button>
@@ -309,6 +436,18 @@ include '../templates/sidebar.php';
                 </div>
 
                 <div class="card-body">
+                    <input type="hidden" id="schoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH') ?>">
+                    <input type="hidden" id="schoolAddress" value="<?= htmlspecialchars($school_profile['alamat'] ?? '') ?>">
+                    <input type="hidden" id="schoolEmail" value="<?= htmlspecialchars($school_profile['email_madrasah'] ?? '') ?>">
+                    <input type="hidden" id="schoolWebsite" value="<?= htmlspecialchars($school_profile['website_madrasah'] ?? '') ?>">
+                    <input type="hidden" id="academicYear" value="<?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?>">
+                    <input type="hidden" id="headName" value="<?= htmlspecialchars($print_settings_data['ketua_gudep'] ?? $school_profile['nama_kepala'] ?? '-') ?>">
+                    <input type="hidden" id="headNip" value="<?= htmlspecialchars($print_settings_data['nta_ketua_gudep'] ?? $school_profile['nip_kepala'] ?? '-') ?>">
+                    <input type="hidden" id="nomorGudep" value="<?= htmlspecialchars(trim((string)(($print_settings_data['nomor_gudep'] ?? '') ?: ($print_settings_data['gugus_depan'] ?? '03.016')))) ?>">
+                    <input type="hidden" id="logoPramuka" value="<?= !empty($print_settings_data['logo_pramuka']) && is_file(__DIR__ . '/../uploads/' . basename($print_settings_data['logo_pramuka'])) ? '../uploads/' . basename($print_settings_data['logo_pramuka']) : '' ?>">
+                    <input type="hidden" id="logoWosm" value="<?= !empty($print_settings_data['logo_wosm']) && is_file(__DIR__ . '/../uploads/' . basename($print_settings_data['logo_wosm'])) ? '../uploads/' . basename($print_settings_data['logo_wosm']) : '' ?>">
+                    <input type="hidden" id="printPlace" value="<?= htmlspecialchars($print_settings_data['tempat_surat'] ?? $school_profile['tempat_jadwal'] ?? 'Padang') ?>">
+                    <input type="hidden" id="printDate" value="<?= date('d-m-Y') ?>">
                     <?php if ($schema_error || $fetch_error): ?>
                         <div class="alert alert-danger">
                             <strong>Terjadi masalah pada database.</strong><br>

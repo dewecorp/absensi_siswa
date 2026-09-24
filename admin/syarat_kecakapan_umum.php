@@ -834,17 +834,25 @@ $school_profile = getSchoolProfile($pdo);
 $sku_print_settings = [
     'ketua_gudep' => '',
     'nta_ketua_gudep' => '',
+    'nomor_gudep' => '',
+    'gugus_depan' => '03.016',
     'tempat_surat' => '',
     'tanggal_surat' => date('Y-m-d'),
+    'logo_pramuka' => '',
+    'logo_wosm' => '',
 ];
 try {
-    $stSkuPrint = $pdo->query("SELECT ketua_gudep, nta_ketua_gudep, tempat_surat, tanggal_surat FROM tb_pengaturan_cetak_barung LIMIT 1");
+    $stSkuPrint = $pdo->query("SELECT * FROM tb_pengaturan_cetak_barung LIMIT 1");
     $rwSkuPrint = $stSkuPrint ? $stSkuPrint->fetch(PDO::FETCH_ASSOC) : null;
     if (is_array($rwSkuPrint)) {
         $sku_print_settings['ketua_gudep'] = (string)($rwSkuPrint['ketua_gudep'] ?? '');
         $sku_print_settings['nta_ketua_gudep'] = (string)($rwSkuPrint['nta_ketua_gudep'] ?? '');
+        $sku_print_settings['nomor_gudep'] = (string)($rwSkuPrint['nomor_gudep'] ?? '');
+        $sku_print_settings['gugus_depan'] = (string)($rwSkuPrint['gugus_depan'] ?? '03.016');
         $sku_print_settings['tempat_surat'] = (string)($rwSkuPrint['tempat_surat'] ?? '');
         $sku_print_settings['tanggal_surat'] = (string)($rwSkuPrint['tanggal_surat'] ?? date('Y-m-d'));
+        $sku_print_settings['logo_pramuka'] = (string)($rwSkuPrint['logo_pramuka'] ?? '');
+        $sku_print_settings['logo_wosm'] = (string)($rwSkuPrint['logo_wosm'] ?? '');
     }
 } catch (Exception $e) {
     // best effort
@@ -950,8 +958,22 @@ if (isset($_GET['export'])) {
             $print_now = !isset($_GET['autoprint']) || (string)$_GET['autoprint'] !== '0';
             $preview_title = $sku_export_base;
             $school_name_print = (string)($school_profile['nama_madrasah'] ?? $school_profile['nama_sekolah'] ?? 'MADRASAH');
+            $school_address_print = (string)($school_profile['alamat'] ?? '');
+            $email_print = (string)($school_profile['email_madrasah'] ?? '');
+            $website_print = (string)($school_profile['website_madrasah'] ?? '');
             $school_year_print = (string)($school_profile['tahun_ajaran'] ?? '-');
-            $school_logo = !empty($school_profile['logo']) ? ('../assets/img/' . $school_profile['logo']) : '';
+
+            $logo_pramuka_val = trim((string)($sku_print_settings['logo_pramuka'] ?? ''));
+            $logo_pramuka_url = $logo_pramuka_val !== '' && is_file(__DIR__ . '/../uploads/' . basename($logo_pramuka_val)) ? ('../uploads/' . basename($logo_pramuka_val)) : '';
+
+            $logo_wosm_val = trim((string)($sku_print_settings['logo_wosm'] ?? ''));
+            $logo_wosm_url = $logo_wosm_val !== '' && is_file(__DIR__ . '/../uploads/' . basename($logo_wosm_val)) ? ('../uploads/' . basename($logo_wosm_val)) : '';
+
+            $nomor_gudep = trim((string)(($sku_print_settings['nomor_gudep'] ?? '') ?: ($sku_print_settings['gugus_depan'] ?? '03.016')));
+
+            $golongan_str = strtoupper(trim((string)($selected_golongan_name ?? 'SIAGA')));
+            $tingkat_str = strtoupper(trim((string)($selected_tingkat_name ?? '')));
+
             $asset_ver = (string)time();
             $tempat_surat = trim((string)($sku_print_settings['tempat_surat'] ?? '')) ?: '................';
             $tanggal_surat = trim((string)($sku_print_settings['tanggal_surat'] ?? ''));
@@ -985,12 +1007,20 @@ if (isset($_GET['export'])) {
         .hint { font-size: 12px; color: #6b7280; }
         .wrap { max-width: 1600px; margin: 10px auto; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
         .content { padding: 8mm; }
-        .header { display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 10px; }
-        .header-logo { width: 56px; height: 56px; object-fit: contain; }
-        .header-title h2 { margin: 0; font-size: 20px; text-align: left; }
-        .header-title .meta { margin-top: 3px; color: #444; font-size: 13px; text-align: left; }
-        h3 { margin: 10px 0 6px 0; }
-        .meta { margin-bottom: 8px; color: #555; font-size: 12px; text-align: center; }
+        table.kop-header-pramuka { width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }
+        table.kop-header-pramuka td { border: none !important; padding: 0 !important; vertical-align: middle; }
+        td.kop-logo-left { width: 80px; text-align: left; }
+        td.kop-logo-left img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
+        td.kop-logo-right { width: 80px; text-align: right; }
+        td.kop-logo-right img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
+        td.kop-text { text-align: center; }
+        td.kop-text h2 { margin: 0; font-size: 12pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }
+        td.kop-text h1 { margin: 2px 0; font-size: 13.5pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }
+        td.kop-text p.alamat { margin: 2px 0; font-size: 9.5pt; color: #000; }
+        td.kop-text p.kontak { margin: 2px 0 0; font-size: 9pt; color: #000; }
+        .title { text-align: center; font-weight: bold; font-size: 13pt; text-decoration: underline; margin: 14px 0 2px; text-transform: uppercase; }
+        .subtitle-golongan { text-align: center; font-weight: bold; font-size: 11pt; color: #111; margin-bottom: 2px; text-transform: uppercase; }
+        .subtitle { text-align: center; font-size: 10pt; color: #333; margin-bottom: 15px; }
         .tanggal { text-align: right; font-size: 11px; color: #555; margin-bottom: 6px; }
         table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 10px; }
         th, td { border: 1px solid #444; padding: 3px; text-align: center; vertical-align: middle; word-wrap: break-word; }
@@ -1050,17 +1080,40 @@ if (isset($_GET['export'])) {
 <div class="wrap">
     <div class="content">
         <div class="tanggal">Dicetak: <?= htmlspecialchars(date('d/m/Y H:i'), ENT_QUOTES, 'UTF-8') ?></div>
-        <div class="header">
-            <?php if ($school_logo): ?>
-                <img class="header-logo" src="<?= htmlspecialchars($school_logo, ENT_QUOTES, 'UTF-8') ?>?v=<?= htmlspecialchars($asset_ver, ENT_QUOTES, 'UTF-8') ?>" alt="Logo Sekolah">
-            <?php endif; ?>
-            <div class="header-title">
-                <h2><?= htmlspecialchars($school_name_print, ENT_QUOTES, 'UTF-8') ?></h2>
-                <div class="meta">Tahun Ajaran: <strong><?= htmlspecialchars($school_year_print, ENT_QUOTES, 'UTF-8') ?></strong></div>
-            </div>
-        </div>
-        <h3>Rekap Syarat Kecakapan Umum</h3>
-        <div class="meta">Tingkat: <strong><?= htmlspecialchars($selected_tingkat_name !== '' ? $selected_tingkat_name : 'Tingkat', ENT_QUOTES, 'UTF-8') ?></strong></div>
+        <table class="kop-header-pramuka">
+            <tr>
+                <td class="kop-logo-left">
+                    <?php if (!empty($logo_pramuka_url)): ?>
+                        <img src="<?= htmlspecialchars($logo_pramuka_url, ENT_QUOTES, 'UTF-8') ?>" alt="Logo Pramuka">
+                    <?php endif; ?>
+                </td>
+                <td class="kop-text">
+                    <h2>GERAKAN PRAMUKA GUGUS DEPAN <?= htmlspecialchars(strtoupper($nomor_gudep), ENT_QUOTES, 'UTF-8') ?></h2>
+                    <h1>BERPANGKALAN PADA <?= htmlspecialchars(strtoupper($school_name_print), ENT_QUOTES, 'UTF-8') ?></h1>
+                    <?php if ($school_address_print !== ''): ?>
+                        <p class="alamat"><?= htmlspecialchars($school_address_print, ENT_QUOTES, 'UTF-8') ?></p>
+                    <?php endif; ?>
+                    <?php if ($website_print !== '' || $email_print !== ''): ?>
+                        <p class="kontak">
+                            <?= $website_print !== '' ? 'Website: <span style="color:#00f;text-decoration:underline;">' . htmlspecialchars($website_print, ENT_QUOTES, 'UTF-8') . '</span>' : '' ?>
+                            <?= ($website_print !== '' && $email_print !== '') ? '&nbsp;&nbsp;&nbsp;&nbsp;' : '' ?>
+                            <?= $email_print !== '' ? 'email: <span style="color:#00f;text-decoration:underline;">' . htmlspecialchars($email_print, ENT_QUOTES, 'UTF-8') . '</span>' : '' ?>
+                        </p>
+                    <?php endif; ?>
+                </td>
+                <td class="kop-logo-right">
+                    <?php if (!empty($logo_wosm_url)): ?>
+                        <img src="<?= htmlspecialchars($logo_wosm_url, ENT_QUOTES, 'UTF-8') ?>" alt="Logo WOSM">
+                    <?php endif; ?>
+                </td>
+            </tr>
+        </table>
+
+        <div class="title">REKAP SYARAT KECAKAPAN UMUM</div>
+        <div class="subtitle-golongan">GOLONGAN <?= htmlspecialchars($golongan_str, ENT_QUOTES, 'UTF-8') ?><?= $tingkat_str !== '' ? ' TINGKAT ' . htmlspecialchars($tingkat_str, ENT_QUOTES, 'UTF-8') : '' ?></div>
+        <?php if ($school_year_print !== ''): ?>
+            <div class="subtitle">Tahun Ajaran <?= htmlspecialchars($school_year_print, ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
         <table>
             <thead>
             <tr>
