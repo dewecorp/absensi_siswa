@@ -470,13 +470,13 @@ if ($mode === 'data' && $format === 'print') {
   <title><?= h($doc_base_name) ?>.pdf</title>
   <style>
     @media print {
-      @page { size: 215mm 330mm; margin: 12mm; }
+      @page { size: 215mm 330mm; margin: 10mm; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .no-print { display: none !important; }
     }
     body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f3f4f6; }
     .wrap { max-width: 980px; margin: 10px auto; background: #fff; }
-    .content { padding: 12mm; }
+    .content { padding: 10mm; }
     table.kop-header-pramuka { width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }
     table.kop-header-pramuka td { border: none !important; padding: 0 !important; vertical-align: middle; }
     td.kop-logo-left { width: 80px; text-align: left; }
@@ -616,7 +616,7 @@ if ($format === 'pdf' && $mode === 'data') {
     }
 
     $html = '<!doctype html><html><head><meta charset="utf-8"><style>'
-        . '@page { margin: 16mm; size: 215mm 330mm; }'
+        . '@page { margin: 10mm; size: 215mm 330mm; }'
         . 'body{font-family:DejaVu Sans,Arial,sans-serif;font-size:10pt;}'
         . '.title{text-align:center;font-weight:bold;font-size:13pt;text-decoration:underline;margin:12px 0 2px;text-transform:uppercase;}'
         . '.subtitle-golongan{text-align:center;font-weight:bold;font-size:11pt;color:#111;margin-bottom:2px;text-transform:uppercase;}'

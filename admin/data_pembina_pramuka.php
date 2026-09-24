@@ -15,6 +15,31 @@ if (!$can_view_pembina_pramuka) {
 $school_profile = getSchoolProfile($pdo);
 $page_title = 'Data Pembina Pramuka';
 
+// Print signature settings & logos (Ketua Gudep) untuk kop cetak
+$print_settings_data = [
+    'ketua_gudep' => $school_profile['nama_kepala'] ?? '-',
+    'nta_ketua_gudep' => $school_profile['nip_kepala'] ?? '-',
+    'nomor_gudep' => '03.016',
+    'gugus_depan' => '03.016',
+    'tempat_surat' => $school_profile['tempat_jadwal'] ?? 'Padang',
+    'logo_pramuka' => '',
+    'logo_wosm' => '',
+];
+try {
+    $settings = $pdo->query("SELECT * FROM tb_pengaturan_cetak_barung LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    if ($settings) {
+        $print_settings_data['ketua_gudep'] = $settings['ketua_gudep'] ?? $print_settings_data['ketua_gudep'];
+        $print_settings_data['nta_ketua_gudep'] = $settings['nta_ketua_gudep'] ?? $print_settings_data['nta_ketua_gudep'];
+        $print_settings_data['nomor_gudep'] = $settings['nomor_gudep'] ?? $print_settings_data['nomor_gudep'];
+        $print_settings_data['gugus_depan'] = $settings['gugus_depan'] ?? $print_settings_data['gugus_depan'];
+        $print_settings_data['tempat_surat'] = $settings['tempat_surat'] ?? $print_settings_data['tempat_surat'];
+        $print_settings_data['logo_pramuka'] = $settings['logo_pramuka'] ?? '';
+        $print_settings_data['logo_wosm'] = $settings['logo_wosm'] ?? '';
+    }
+} catch (Exception $e) {
+    // ignore: pakai fallback dari profil sekolah
+}
+
 // DataTables
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
