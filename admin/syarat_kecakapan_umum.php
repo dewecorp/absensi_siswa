@@ -1007,11 +1007,11 @@ if (isset($_GET['export'])) {
         .hint { font-size: 12px; color: #6b7280; }
         .wrap { max-width: 1600px; margin: 10px auto; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
         .content { padding: 8mm; }
-        table.kop-header-pramuka { width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }
+        table.kop-header-pramuka { width: 60%; margin-left: auto; margin-right: auto; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }
         table.kop-header-pramuka td { border: none !important; padding: 0 !important; vertical-align: middle; }
-        td.kop-logo-left { width: 80px; text-align: left; }
+        td.kop-logo-left { width: 80px; text-align: center; }
         td.kop-logo-left img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
-        td.kop-logo-right { width: 80px; text-align: right; }
+        td.kop-logo-right { width: 80px; text-align: center; }
         td.kop-logo-right img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
         td.kop-text { text-align: center; }
         td.kop-text h2 { margin: 0; font-size: 12pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }

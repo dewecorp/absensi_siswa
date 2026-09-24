@@ -1,16 +1,12 @@
-﻿<?php
+<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
+if (!isAuthorized(['admin', 'tata_usaha', 'kepala_madrasah', 'wali', 'guru'])) {
     http_response_code(403);
     exit('Unauthorized');
 }
 
-// Baca tingkat dari query string
-$selected_tingkat_id = (int)($_GET['tingkat'] ?? 0);
-
-// School profile
 $school_profile = getSchoolProfile($pdo);
 $schoolName = $school_profile['nama_madrasah'] ?? 'MADRASAH';
 $schoolAddress = $school_profile['alamat'] ?? '';
@@ -19,18 +15,6 @@ $website = $school_profile['website_madrasah'] ?? '';
 $academicYear = $school_profile['tahun_ajaran'] ?? '-';
 $placeFallback = $school_profile['tempat_jadwal'] ?? 'Padang';
 
-// Tingkat name
-$tingkatName = '';
-$tingkatGolongan = 'Siaga';
-if ($selected_tingkat_id > 0) {
-    $stTk = $pdo->prepare("SELECT nama_tingkat, golongan FROM tb_tingkat_barung WHERE id_tingkat_barung = ?");
-    $stTk->execute([$selected_tingkat_id]);
-    $tkRow = $stTk->fetch(PDO::FETCH_ASSOC);
-    $tingkatName = (string)($tkRow['nama_tingkat'] ?? '');
-    $tingkatGolongan = (string)($tkRow['golongan'] ?? 'Siaga');
-}
-
-// Print signature settings & logos
 $ketuaGudep = $school_profile['nama_kepala'] ?? '-';
 $ntaKetuaGudep = $school_profile['nip_kepala'] ?? '-';
 $nomorGudep = '03.016';
@@ -57,83 +41,46 @@ try {
         }
     }
 } catch (Exception $e) {
-    // ignore
 }
-// Tanggal cetak = hari ini (tanggal saat mencetak), bukan tanggal surat
 $printDate = date('d-m-Y');
 
-// Fetch peserta rows (sama seperti data_barung.php)
-$peserta_rows = [];
-if ($selected_tingkat_id > 0) {
-    try {
-        $stmt = $pdo->prepare("
-            SELECT
-                p.nama_peserta_didik,
-                p.nta,
-                COALESCE(NULLIF(TRIM(k.nama_kelas), ''), '-') AS nama_kelas,
-                COALESCE(NULLIF(TRIM(s.tempat_lahir), ''), NULLIF(TRIM(p.tempat_lahir), '')) AS tempat_lahir,
-                COALESCE(s.tanggal_lahir, p.tanggal_lahir) AS tanggal_lahir
-            FROM tb_peserta_didik_barung p
-            LEFT JOIN tb_siswa s ON (
-                s.id_siswa = p.id_siswa
-                OR (
-                    p.id_siswa IS NULL
-                    AND TRIM(IFNULL(p.nta, '')) <> ''
-                    AND CONVERT(TRIM(IFNULL(s.nisn, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
-                        = CONVERT(TRIM(IFNULL(p.nta, '')) USING utf8mb4) COLLATE utf8mb4_unicode_ci
-                )
-            )
-            LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
-            WHERE p.id_tingkat_barung = ?
-              AND IFNULL(p.status, 'aktif') = 'aktif'
-              AND (s.id_kelas IS NOT NULL OR p.id_siswa IS NULL)
-            ORDER BY p.nama_peserta_didik ASC
-        ");
-        $stmt->execute([$selected_tingkat_id]);
-        $peserta_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {
-        $peserta_rows = [];
-    }
-}
-
-function cetakBarungUsia(?string $tanggal_lahir): string
-{
-    $raw = trim((string)$tanggal_lahir);
-    if ($raw === '' || $raw === '0000-00-00') {
-        return '-';
-    }
-    try {
-        $lahir = new DateTime(substr($raw, 0, 10));
-        $hariIni = new DateTime('today');
-        if ($lahir > $hariIni) {
-            return '-';
-        }
-        $diff = $lahir->diff($hariIni);
-        $umurBulan = ($diff->y * 12) + $diff->m;
-        return intdiv($umurBulan, 12) . ' tahun ' . ($umurBulan % 12) . ' bulan';
-    } catch (Exception $e) {
-        return '-';
-    }
+$pembina_rows = [];
+try {
+    $stmt = $pdo->query("
+        SELECT p.nama_pembina, p.jabatan,
+               g.nama_guru,
+               GROUP_CONCAT(t.nama_tingkat SEPARATOR ', ') as nama_tingkat
+        FROM tb_pembina_pramuka p
+        LEFT JOIN tb_guru g ON g.id_guru = p.id_guru
+        LEFT JOIN tb_pembina_tingkat pt ON pt.id_pembina_pramuka = p.id_pembina_pramuka
+        LEFT JOIN tb_tingkat_barung t ON t.id_tingkat_barung = pt.id_tingkat_barung
+        GROUP BY p.id_pembina_pramuka
+        ORDER BY COALESCE(g.nama_guru, p.nama_pembina) ASC
+    ");
+    $pembina_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $pembina_rows = [];
 }
 
 $qrContent = "Dokumen Sah: " . $schoolName . "\nKetua Gudep: " . $ketuaGudep . "\nNTA: " . $ntaKetuaGudep;
 $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" . urlencode($qrContent);
-$title = 'Data Anggota Pramuka-' . $academicYear;
+$title = 'Data Pembina Pramuka-' . $academicYear;
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <title><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <style>
-@page { size: 330mm 210mm; margin: 10mm; }
+@page { size: 210mm 330mm portrait; margin: 10mm 15mm 10mm 10mm; }
+* { box-sizing: border-box; }
+html, body { width: 100%; }
 body { font-family: Arial, sans-serif; font-size: 11pt; margin: 0; padding: 0; }
-table.kop-header-pramuka { width: 60%; margin-left: auto; margin-right: auto; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }
+table.kop-header-pramuka { width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }
 table.kop-header-pramuka td { border: none !important; padding: 0 !important; vertical-align: middle; }
-td.kop-logo-left { width: 80px; text-align: center; }
+td.kop-logo-left { width: 80px; text-align: left; }
 td.kop-logo-left img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
-td.kop-logo-right { width: 80px; text-align: center; }
+td.kop-logo-right { width: 80px; text-align: right; }
 td.kop-logo-right img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
 td.kop-text { text-align: center; }
 td.kop-text h2 { margin: 0; font-size: 12pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }
@@ -141,12 +88,11 @@ td.kop-text h1 { margin: 2px 0; font-size: 13.5pt; font-weight: bold; color: #00
 td.kop-text p.alamat { margin: 2px 0; font-size: 9.5pt; color: #000; }
 td.kop-text p.kontak { margin: 2px 0 0; font-size: 9pt; color: #000; }
 .title { text-align: center; font-weight: bold; font-size: 13pt; text-decoration: underline; margin: 14px 0 2px; text-transform: uppercase; }
-.subtitle-golongan { text-align: center; font-weight: bold; font-size: 11pt; color: #111; margin-bottom: 2px; text-transform: uppercase; }
 .subtitle { text-align: center; font-size: 10pt; color: #333; margin-bottom: 15px; }
-table.data-table { border-collapse: collapse; width: 100%; max-width: 100%; margin-bottom: 20px; font-size: 10pt; table-layout: fixed; }
-table.data-table th, table.data-table td { border: 1px solid #000; padding: 6px 5px; text-align: left; font-size: 10pt; line-height: 1.35; overflow-wrap: break-word; word-break: break-word; white-space: normal; vertical-align: top; }
-table.data-table th { background-color: #f2f2f2; text-align: center !important; font-weight: bold; vertical-align: middle; }
-.signature-container { margin-top: 40px; float: right; text-align: left; width: 280px; page-break-inside: avoid; break-inside: avoid; }
+table.data-table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 11pt; table-layout: fixed; }
+table.data-table th, table.data-table td { border: 1px solid #000; padding: 7px 6px; text-align: left; font-size: 11pt; line-height: 1.35; overflow-wrap: break-word; word-wrap: break-word; }
+table.data-table th { background-color: #f2f2f2; text-align: center !important; font-weight: bold; }
+.signature-container { margin-top: 40px; float: right; text-align: left; width: 280px; page-break-inside: avoid; }
 .signature-header { text-align: left; margin-bottom: 5px; }
 .signature-space { height: 90px; display: flex; align-items: flex-end; justify-content: flex-start; margin-bottom: 5px; }
 .qr-code { height: 80px; width: 80px; margin-right: 10px; }
@@ -157,7 +103,7 @@ table.data-table th { background-color: #f2f2f2; text-align: center !important; 
 </style>
 </head>
 <body>
-<button type="button" class="print-btn no-print" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>
+<button type="button" class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button>
 
 <table class="kop-header-pramuka">
   <tr>
@@ -188,46 +134,37 @@ table.data-table th { background-color: #f2f2f2; text-align: center !important; 
   </tr>
 </table>
 
-<div class="title">DATA ANGGOTA PRAMUKA</div>
-<div class="subtitle-golongan">GOLONGAN <?php echo htmlspecialchars(strtoupper($tingkatGolongan), ENT_QUOTES, 'UTF-8'); ?><?php echo $tingkatName !== '' ? ' TINGKAT ' . htmlspecialchars(strtoupper($tingkatName), ENT_QUOTES, 'UTF-8') : ''; ?></div>
+<div class="title">DATA PEMBINA PRAMUKA</div>
 <?php if ($academicYear !== ''): ?>
 <div class="subtitle">Tahun Ajaran <?php echo htmlspecialchars($academicYear, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 
 <table class="data-table">
     <colgroup>
-        <col style="width:5%;">
-        <col style="width:24%;">
         <col style="width:8%;">
-        <col style="width:15%;">
-        <col style="width:14%;">
-        <col style="width:15%;">
-        <col style="width:19%;">
+        <col style="width:37%;">
+        <col style="width:25%;">
+        <col style="width:30%;">
     </colgroup>
     <thead>
         <tr>
             <th style="text-align:center;">No</th>
-            <th style="text-align:center;">Nama Peserta Didik</th>
-            <th style="text-align:center;">Kelas</th>
-            <th style="text-align:center;">NTA</th>
-            <th style="text-align:center;">Tempat Lahir</th>
-            <th style="text-align:center;">Tanggal Lahir</th>
-            <th style="text-align:center;">Usia</th>
+            <th style="text-align:center;">Nama Pembina</th>
+            <th style="text-align:center;">Jabatan</th>
+            <th style="text-align:center;">Pembina Tingkat</th>
         </tr>
     </thead>
     <tbody>
-        <?php if (empty($peserta_rows)): ?>
-        <tr><td colspan="7" style="text-align:center;">Tidak ada data anggota untuk tingkat ini.</td></tr>
+        <?php if (empty($pembina_rows)): ?>
+        <tr><td colspan="4" style="text-align:center;">Tidak ada data.</td></tr>
         <?php else: ?>
-            <?php foreach ($peserta_rows as $idx => $row): ?>
+            <?php foreach ($pembina_rows as $idx => $row): ?>
+            <?php $nama_tampil = trim((string)($row['nama_guru'] ?? '')) !== '' ? (string)$row['nama_guru'] : (string)($row['nama_pembina'] ?? ''); ?>
             <tr>
                 <td style="text-align:center;"><?php echo (int)($idx + 1); ?></td>
-                <td><?php echo htmlspecialchars((string)($row['nama_peserta_didik'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                <td style="text-align:center;"><?php echo htmlspecialchars((string)($row['nama_kelas'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></td>
-                <td><?php echo htmlspecialchars((string)($row['nta'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                <td><?php echo htmlspecialchars((string)($row['tempat_lahir'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                <td><?php echo !empty($row['tanggal_lahir']) ? htmlspecialchars(date('d-m-Y', strtotime((string)$row['tanggal_lahir'])), ENT_QUOTES, 'UTF-8') : ''; ?></td>
-                <td><?php echo htmlspecialchars(cetakBarungUsia($row['tanggal_lahir'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?php echo htmlspecialchars($nama_tampil, ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?php echo htmlspecialchars((string)($row['jabatan'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?php echo htmlspecialchars((string)($row['nama_tingkat'] ?? '') !== '' ? (string)$row['nama_tingkat'] : '-', ENT_QUOTES, 'UTF-8'); ?></td>
             </tr>
             <?php endforeach; ?>
         <?php endif; ?>

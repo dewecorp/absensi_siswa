@@ -307,6 +307,8 @@ $(document).ready(function() {
             }
         });
     });
+});
+
 function exportToPDF() {
     var table = document.getElementById('table-1');
     if (!table) return;
@@ -330,7 +332,7 @@ function exportToPDF() {
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Data Tingkat Pramuka ' + academicYear + '</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('@page { size: 210mm 330mm portrait; margin: 10mm; }');
+    printWindow.document.write('@page { size: 210mm 330mm portrait; margin: 10mm 15mm 10mm 15mm; }');
     printWindow.document.write('body { font-family: Arial, sans-serif; font-size: 11pt; margin: 0; }');
     printWindow.document.write('table.kop-header-pramuka { width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }');
     printWindow.document.write('table.kop-header-pramuka td { border: none !important; padding: 0 !important; vertical-align: middle; }');
@@ -407,7 +409,6 @@ function exportToPDF() {
     printWindow.document.write('</body></html>');
     printWindow.document.close();
 }
-});
 ";
 
 include '../templates/header.php';
