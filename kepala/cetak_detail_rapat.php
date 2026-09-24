@@ -18,7 +18,10 @@ if ($id <= 0) {
     die('ID Rapat tidak valid.');
 }
 
-$stmt = $pdo->prepare("SELECT * FROM tb_agenda_rapat WHERE id_rapat = ? LIMIT 1");
+$stmt = $pdo->prepare("SELECT r.*, rj.jenis_rapat 
+                       FROM tb_agenda_rapat r 
+                       LEFT JOIN tb_rapat_jenis rj ON rj.id_jenis = r.id_jenis 
+                       WHERE r.id_rapat = ? LIMIT 1");
 $stmt->execute([$id]);
 $rapat = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -292,6 +295,12 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         <th>Nama Rapat</th>
         <td><strong><?= h($rapat['nama_rapat']) ?></strong></td>
     </tr>
+    <?php if (!empty($rapat['jenis_rapat'])): ?>
+    <tr>
+        <th>Jenis Rapat</th>
+        <td><?= h($rapat['jenis_rapat']) ?></td>
+    </tr>
+    <?php endif; ?>
     <tr>
         <th>Hari / Tanggal</th>
         <td><?= h($hari_tanggal_indo) ?></td>

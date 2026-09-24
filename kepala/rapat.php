@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     try {
         if ($aksi === 'tambah') {
             $nama_rapat = sanitizeInput((string)($_POST['nama_rapat'] ?? ''));
+            $id_jenis = (int)($_POST['id_jenis'] ?? 0);
             $hari_tanggal = sanitizeInput((string)($_POST['hari_tanggal'] ?? ''));
             $waktu = sanitizeInput((string)($_POST['waktu'] ?? ''));
             // Note: agenda_rapat & notulensi are HTML content from CKEditor
@@ -35,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             if ($nama_rapat === '' || $hari_tanggal === '') {
                 $message = ['type' => 'danger', 'text' => 'Nama Rapat dan Hari/Tanggal wajib diisi.'];
             } else {
-                $stmt = $pdo->prepare("INSERT INTO tb_agenda_rapat (nama_rapat, hari_tanggal, waktu, agenda_rapat, notulensi, pemimpin_rapat, tempat) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                if ($stmt->execute([$nama_rapat, $hari_tanggal, $waktu, $agenda_rapat, $notulensi, $pemimpin_rapat, $tempat])) {
+                $stmt = $pdo->prepare("INSERT INTO tb_agenda_rapat (nama_rapat, id_jenis, hari_tanggal, waktu, agenda_rapat, notulensi, pemimpin_rapat, tempat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                if ($stmt->execute([$nama_rapat, $id_jenis ?: null, $hari_tanggal, $waktu, $agenda_rapat, $notulensi, $pemimpin_rapat, $tempat])) {
                     $message = ['type' => 'success', 'text' => 'Agenda Rapat berhasil ditambahkan.'];
                 } else {
                     $message = ['type' => 'danger', 'text' => 'Gagal menambahkan Agenda Rapat.'];
@@ -45,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
         } elseif ($aksi === 'edit') {
             $id = (int)($_POST['id_rapat'] ?? 0);
             $nama_rapat = sanitizeInput((string)($_POST['nama_rapat'] ?? ''));
+            $id_jenis = (int)($_POST['id_jenis'] ?? 0);
             $hari_tanggal = sanitizeInput((string)($_POST['hari_tanggal'] ?? ''));
             $waktu = sanitizeInput((string)($_POST['waktu'] ?? ''));
             $agenda_rapat = trim((string)($_POST['agenda_rapat'] ?? ''));
@@ -55,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             if ($id <= 0 || $nama_rapat === '' || $hari_tanggal === '') {
                 $message = ['type' => 'danger', 'text' => 'Data tidak valid atau belum lengkap.'];
             } else {
-                $stmt = $pdo->prepare("UPDATE tb_agenda_rapat SET nama_rapat = ?, hari_tanggal = ?, waktu = ?, agenda_rapat = ?, notulensi = ?, pemimpin_rapat = ?, tempat = ? WHERE id_rapat = ?");
-                if ($stmt->execute([$nama_rapat, $hari_tanggal, $waktu, $agenda_rapat, $notulensi, $pemimpin_rapat, $tempat, $id])) {
+                $stmt = $pdo->prepare("UPDATE tb_agenda_rapat SET nama_rapat = ?, id_jenis = ?, hari_tanggal = ?, waktu = ?, agenda_rapat = ?, notulensi = ?, pemimpin_rapat = ?, tempat = ? WHERE id_rapat = ?");
+                if ($stmt->execute([$nama_rapat, $id_jenis ?: null, $hari_tanggal, $waktu, $agenda_rapat, $notulensi, $pemimpin_rapat, $tempat, $id])) {
                     $message = ['type' => 'success', 'text' => 'Agenda Rapat berhasil diperbarui.'];
                 } else {
                     $message = ['type' => 'danger', 'text' => 'Gagal memperbarui Agenda Rapat.'];
@@ -80,6 +82,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     }
 }
 
+// Filters
+$filter_tahun = trim((string)($_GET['filter_tahun'] ?? ''));
+$filter_jenis = (int)($_GET['filter_jenis'] ?? 0);
+
+$where = [];
+$params = [];
+
+if ($filter_tahun !== '') {
+    $where[] = "YEAR(r.hari_tanggal) = ?";
+    $params[] = (int)$filter_tahun;
+}
+
+if ($filter_jenis > 0) {
+    $where[] = "r.id_jenis = ?";
+    $params[] = $filter_jenis;
+}
+
+$whereClause = $where ? (" WHERE " . implode(" AND ", $where)) : "";
+
+// Fetch distinct years for filter
+$years = [];
+try {
+    $stmtY = $pdo->query("SELECT DISTINCT YEAR(hari_tanggal) AS thn FROM tb_agenda_rapat WHERE hari_tanggal IS NOT NULL AND hari_tanggal != '0000-00-00' ORDER BY thn DESC");
+    $years = $stmtY->fetchAll(PDO::FETCH_COLUMN);
+} catch (Throwable $e) {}
+$currentYear = (int)date('Y');
+if (!in_array($currentYear, $years)) {
+    array_unshift($years, $currentYear);
+}
+
 // Fetch list jenis rapat for dropdown
 $jenis_rapat_list = [];
 try {
@@ -91,7 +123,13 @@ try {
 // Fetch all rapat rows
 $rows = [];
 try {
-    $rows = $pdo->query("SELECT * FROM tb_agenda_rapat ORDER BY hari_tanggal DESC, id_rapat DESC")->fetchAll(PDO::FETCH_ASSOC);
+    $stmtR = $pdo->prepare("SELECT r.*, rj.jenis_rapat 
+                         FROM tb_agenda_rapat r 
+                         LEFT JOIN tb_rapat_jenis rj ON rj.id_jenis = r.id_jenis 
+                         {$whereClause} 
+                         ORDER BY r.hari_tanggal DESC, r.id_rapat DESC");
+    $stmtR->execute($params);
+    $rows = $stmtR->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $rows = [];
 }
@@ -180,15 +218,8 @@ $(document).ready(function () {
         }
         if (row) {
             $('#edit_id_rapat').val(row.id_rapat);
-            var $editNamaSelect = $('#edit_nama_rapat');
-            $editNamaSelect.val(row.nama_rapat);
-            if (row.nama_rapat && $editNamaSelect.val() !== row.nama_rapat) {
-                $editNamaSelect.append($('<option>', {
-                    value: row.nama_rapat,
-                    text: row.nama_rapat,
-                    selected: true
-                }));
-            }
+            $('#edit_nama_rapat').val(row.nama_rapat || '');
+            $('#edit_id_jenis').val(row.id_jenis ? String(row.id_jenis) : '');
             $('#edit_hari_tanggal').val(row.hari_tanggal);
             $('#edit_waktu').val(row.waktu || '');
             $('#edit_pemimpin_rapat').val(row.pemimpin_rapat || '');
@@ -259,7 +290,8 @@ $(document).ready(function () {
     });
 
     $('#btn-pdf').on('click', function () {
-        window.open('cetak_rapat.php', '_blank');
+        var params = $('#form-filter').serialize();
+        window.open('cetak_rapat.php?' + params, '_blank');
     });
 });
 JS;
@@ -314,6 +346,31 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
+                    <form method="GET" action="rapat.php" class="mb-3" id="form-filter">
+                        <div class="form-row align-items-center">
+                            <div class="col-md-3 col-6 my-1">
+                                <select name="filter_tahun" class="form-control" onchange="this.form.submit()">
+                                    <option value="">-- Semua Tahun --</option>
+                                    <?php foreach ($years as $y): ?>
+                                        <option value="<?= $y ?>" <?= (string)$y === $filter_tahun ? 'selected' : '' ?>>Tahun <?= $y ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-6 my-1">
+                                <select name="filter_jenis" class="form-control" onchange="this.form.submit()">
+                                    <option value="">-- Semua Jenis Rapat --</option>
+                                    <?php foreach ($jenis_rapat_list as $j): ?>
+                                        <option value="<?= (int)$j['id_jenis'] ?>" <?= (int)$j['id_jenis'] === $filter_jenis ? 'selected' : '' ?>><?= htmlspecialchars($j['jenis_rapat']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php if ($filter_tahun !== '' || $filter_jenis > 0): ?>
+                            <div class="col-auto my-1">
+                                <a href="rapat.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset Filter</a>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-striped" id="table-rapat">
                             <thead>

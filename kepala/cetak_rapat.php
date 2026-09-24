@@ -43,9 +43,34 @@ $tanggal_cetak = $tempat_cetak . ', ' . date('d') . ' ' . ($months[date('F')] ??
 $qr_content = "Dokumen Daftar Agenda Rapat\n" . $school_name . "\nTanggal: " . date('d F Y') . "\nKepala: " . $kepala_madrasah;
 $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlencode($qr_content);
 
+// Filters
+$filter_tahun = trim((string)($_GET['filter_tahun'] ?? ''));
+$filter_jenis = (int)($_GET['filter_jenis'] ?? 0);
+
+$where = [];
+$params = [];
+
+if ($filter_tahun !== '') {
+    $where[] = "YEAR(r.hari_tanggal) = ?";
+    $params[] = (int)$filter_tahun;
+}
+
+if ($filter_jenis > 0) {
+    $where[] = "r.id_jenis = ?";
+    $params[] = $filter_jenis;
+}
+
+$whereClause = $where ? (" WHERE " . implode(" AND ", $where)) : "";
+
 $rows = [];
 try {
-    $rows = $pdo->query("SELECT * FROM tb_agenda_rapat ORDER BY hari_tanggal DESC, id_rapat DESC")->fetchAll(PDO::FETCH_ASSOC);
+    $stmtR = $pdo->prepare("SELECT r.*, rj.jenis_rapat 
+                         FROM tb_agenda_rapat r 
+                         LEFT JOIN tb_rapat_jenis rj ON rj.id_jenis = r.id_jenis 
+                         {$whereClause} 
+                         ORDER BY r.hari_tanggal DESC, r.id_rapat DESC");
+    $stmtR->execute($params);
+    $rows = $stmtR->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $rows = [];
 }
@@ -275,7 +300,12 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
             <?php foreach ($rows as $i => $r): ?>
                 <tr>
                     <td style="text-align: center;"><?= $i + 1 ?></td>
-                    <td><strong><?= h($r['nama_rapat']) ?></strong></td>
+                    <td>
+                        <strong><?= h($r['nama_rapat']) ?></strong>
+                        <?php if (!empty($r['jenis_rapat'])): ?>
+                            <br><small style="color:#555;"><?= h($r['jenis_rapat']) ?></small>
+                        <?php endif; ?>
+                    </td>
                     <td><?= h(formatHariTanggalIndo($r['hari_tanggal'])) ?></td>
                     <td><?= h($r['waktu'] ?: '-') ?></td>
                     <td><?= h($r['pemimpin_rapat'] ?: '-') ?></td>

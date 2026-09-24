@@ -43,12 +43,34 @@ $tanggal_cetak = $tempat_cetak . ', ' . date('d') . ' ' . ($months[date('F')] ??
 $qr_content = "Dokumen Daftar Agenda Kepala Madrasah\n" . $school_name . "\nTanggal: " . date('d F Y') . "\nKepala: " . $kepala_madrasah;
 $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlencode($qr_content);
 
+// Filters
+$filter_tahun = trim((string)($_GET['filter_tahun'] ?? ''));
+$filter_jenis = (int)($_GET['filter_jenis'] ?? 0);
+
+$where = [];
+$params = [];
+
+if ($filter_tahun !== '') {
+    $where[] = "YEAR(a.hari_tanggal) = ?";
+    $params[] = (int)$filter_tahun;
+}
+
+if ($filter_jenis > 0) {
+    $where[] = "a.id_jenis = ?";
+    $params[] = $filter_jenis;
+}
+
+$whereClause = $where ? (" WHERE " . implode(" AND ", $where)) : "";
+
 $rows = [];
 try {
-    $rows = $pdo->query("SELECT a.*, j.jenis_agenda 
+    $stmtA = $pdo->prepare("SELECT a.*, j.jenis_agenda 
                          FROM tb_agenda_kepala a 
                          LEFT JOIN tb_agenda_jenis j ON j.id_jenis = a.id_jenis 
-                         ORDER BY a.hari_tanggal DESC, a.id_agenda DESC")->fetchAll(PDO::FETCH_ASSOC);
+                         {$whereClause} 
+                         ORDER BY a.hari_tanggal DESC, a.id_agenda DESC");
+    $stmtA->execute($params);
+    $rows = $stmtA->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $rows = [];
 }
