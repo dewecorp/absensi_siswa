@@ -25,8 +25,12 @@ try {
     error_log('api/v1/teachers.php kolom pendidikan: ' . $e->getMessage());
 }
 
-// Gunakan API key yang sama dengan endpoint v1 lain.
-define('API_KEY', 'SIS_CENTRAL_HUB_SECRET_2026');
+// API key diambil dari tb_pengaturan_api (menu Pengaturan Endpoint). Fallback ke key lama bila tabel belum ada.
+$__api_key_row = null;
+try {
+    $__api_key_row = $pdo->query("SELECT api_key FROM tb_pengaturan_api ORDER BY id ASC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) { $__api_key_row = null; }
+define('API_KEY', ($__api_key_row && !empty($__api_key_row['api_key'])) ? (string)$__api_key_row['api_key'] : 'SIS_CENTRAL_HUB_SECRET_2026');
 
 $headers = function_exists('getallheaders') ? getallheaders() : [];
 $provided_key = $_GET['api_key'] ?? ($headers['X-API-KEY'] ?? ($headers['x-api-key'] ?? ''));
