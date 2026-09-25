@@ -121,6 +121,55 @@ if (!function_exists('endpoint_full_url')) {
     }
 }
 
+if (!function_exists('endpoint_fetch_url')) {
+    // Fetch dengan redirect manual agar header (X-API-KEY) tetap terkirim,
+    // sekaligus memperbaiki redirect rusak berisi path Windows (D:/...) dari htaccess sigaji.
+    // Kembalikan [body|false, http_code(int), err(string), final_url(string)]
+    function endpoint_fetch_url(string $url, array $headers = []) {
+        $tries = 0;
+        $code = 0;
+        $err = '';
+        while ($tries < 4) {
+            $tries++;
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_NOBODY => false,
+                CURLOPT_HEADER => true,
+                CURLOPT_FOLLOWLOCATION => false,
+            ]);
+            if ($headers) curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            $resp = curl_exec($ch);
+            $err = (string)curl_error($ch);
+            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $hsize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            curl_close($ch);
+            if ($resp === false) return [false, $code, $err !== '' ? $err : 'connect failed', $url];
+            $body = substr($resp, $hsize);
+            if (!in_array($code, [301, 302, 303, 307, 308], true)) return [$body, $code, '', $url];
+            $hblock = substr($resp, 0, $hsize);
+            if (!preg_match('/^location:\s*(.+)$/mi', $hblock, $m)) return [$body, $code, '', $url];
+            $loc = trim($m[1]);
+            if (preg_match('#[A-Za-z]:/#', $loc)) {
+                if (preg_match('#(/api/.*)$#', $loc, $mm)) {
+                    $parts = parse_url($url);
+                    $loc = ($parts['scheme'] ?? 'http') . '://' . ($parts['host'] ?? '') . $mm[1];
+                } else {
+                    return [$body, $code, 'redirect rusak dari server tujuan', $url];
+                }
+            } elseif (!preg_match('#^https?://#i', $loc)) {
+                $parts = parse_url($url);
+                $loc = ($parts['scheme'] ?? 'http') . '://' . ($parts['host'] ?? '') . '/' . ltrim($loc, '/');
+            }
+            $url = $loc;
+        }
+        return [false, $code, 'terlalu banyak redirect', $url];
+    }
+}
+
 if (!function_exists('endpoint_test_url')) {
     // Tes koneksi endpoint masuk: GET base_url (+ api_key bila ada) + timeout 8 detik, catat status.
     // Kembalikan [ok(bool), http_code(int), note(string), ms(int)]
@@ -156,22 +205,7 @@ if (!function_exists('endpoint_test_url')) {
             $snippet = trim(substr((string)$body, 0, 120));
             return [$ok, $code, $ok ? ("HTTP $code OK {$ms}ms") : ("HTTP $code " . ($snippet !== '' ? $snippet : 'tanpa respon')), $ms];
         }
-        $ch = curl_init($url);
-        $opt = [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 8,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 3,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_NOBODY => false,
-        ];
-        if ($headers) $opt[CURLOPT_HTTPHEADER] = $headers;
-        curl_setopt_array($ch, $opt);
-        $body = curl_exec($ch);
-        $err = curl_error($ch);
-        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        [$body, $code, $err] = endpoint_fetch_url($url, $headers);
         $ms = (int)round((microtime(true) - $t0) * 1000);
         if ($body === false) {
             return [false, $code, 'Gagal konek: ' . $err, $ms];

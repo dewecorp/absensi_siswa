@@ -28,7 +28,21 @@ if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
 
 $guru_id = $teacher['id_guru'];
 
-$api_url = 'https://sigaji.misultanfattah.sch.id/api/v1/salary.php?api_key=SIS_CENTRAL_HUB_SECRET_2026';
+// URL + key sigaji 100% dari Pengaturan Endpoint (tanpa hardcode domain).
+$api_url = '';
+try {
+    $sig_ep = $pdo->prepare("SELECT base_url, api_key FROM tb_endpoint_masuk WHERE nama_aplikasi = 'sigaji' AND aktif = 1 LIMIT 1");
+    $sig_ep->execute();
+    $sig_row = $sig_ep->fetch(PDO::FETCH_ASSOC);
+    $sig_base = trim((string)($sig_row['base_url'] ?? ''));
+    $sig_key = trim((string)($sig_row['api_key'] ?? ''));
+    if ($sig_base !== '') {
+        $api_url = rtrim($sig_base, '/');
+        if ($sig_key !== '') {
+            $api_url .= (strpos($api_url, '?') === false ? '?' : '&') . 'api_key=' . urlencode($sig_key);
+        }
+    }
+} catch (Exception $e) { /* biarkan kosong, ditangani di bawah */ }
 
 $salary_data = null;
 $api_error = null;
@@ -78,29 +92,18 @@ if (isset($_GET['seed']) && $_GET['seed'] === '1') {
     exit;
 }
 
-if (function_exists('curl_init')) {
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $api_url,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false,
-        CURLOPT_USERAGENT => 'SIMadrasah/1.0',
-        CURLOPT_HTTPHEADER => [
-            'Accept: application/json',
-            'Content-Type: application/json'
-        ]
-    ]);
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curl_error = curl_error($ch);
-    curl_close($ch);
+if ($api_url === '') {
+    $api_error = 'Endpoint Sigaji belum dikonfigurasi. Isi base URL + API key di menu Integrasi > Pengaturan Endpoint.';
+} elseif (function_exists('curl_init')) {
+    require_once __DIR__ . '/../config/endpoint_registry.php';
+    $gheaders = ['Accept: application/json', 'Content-Type: application/json'];
+    if (isset($sig_key) && $sig_key !== '') $gheaders[] = 'X-API-KEY: ' . $sig_key;
+    [$response, $http_code, $curl_error] = endpoint_fetch_url($api_url, $gheaders);
 
     if ($response === false) {
         $api_error = 'Gagal terhubung ke server penggajian: ' . $curl_error;
     } elseif ($http_code !== 200) {
-        $api_error = 'Server penggajian merespon dengan kode: ' . $http_code;
+        $api_error = 'Server penggajian merespon dengan kode: ' . $http_code . ' — ' . substr((string)$response, 0, 120);
     } else {
         $decoded = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {

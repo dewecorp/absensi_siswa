@@ -1334,16 +1334,56 @@ function logActivity(PDO $pdo, string $username, string $action, string $descrip
 }
 
 /**
+ * Ambil base_url + api_key aplikasi dari Pengaturan Endpoint (tb_endpoint_masuk).
+ * Kembalikan ['base_url' => path tanpa query, 'api_key' => ...]. Kosong bila belum dikonfigurasi.
+ */
+function getInboundEndpointConfig(string $app): array {
+    $out = ['base_url' => '', 'api_key' => ''];
+    try {
+        $pdo = $GLOBALS['pdo'] ?? null;
+        if ($pdo instanceof PDO) {
+            $st = $pdo->prepare("SELECT base_url, api_key FROM tb_endpoint_masuk WHERE nama_aplikasi = ? AND aktif = 1 LIMIT 1");
+            $st->execute([strtolower(trim($app))]);
+            $row = $st->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $base = trim((string)($row['base_url'] ?? ''));
+                $q = strpos($base, '?');
+                if ($q !== false) $base = substr($base, 0, $q);
+                $out['base_url'] = rtrim($base, '/');
+                $out['api_key'] = trim((string)($row['api_key'] ?? ''));
+            }
+        }
+    } catch (Throwable $e) { /* abaikan, pakai fallback */ }
+    return $out;
+}
+
+function endpoint_referer_headers(string $apiUrl, string $apiKey): array {
+    $host = (string)parse_url($apiUrl, PHP_URL_HOST);
+    $ref = $host !== '' ? ((string)parse_url($apiUrl, PHP_URL_SCHEME) ?: 'http') . '://' . $host . '/' : '';
+    return [
+        'X-API-KEY: ' . $apiKey,
+        'Accept: application/json, text/plain, */*',
+        'Accept-Language: id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Referer: ' . $ref,
+        'Origin: ' . rtrim($ref, '/'),
+        'Connection: keep-alive'
+    ];
+}
+
+/**
  * SIBAYAR SPP - INTEGRATION CLIENT FOR SIMAD
- * Versi: 1.1.0
+ * Versi: 1.2.0 (URL + key dinamis dari Pengaturan Endpoint, tanpa hardcode domain)
  */
 class SibayarClient {
     private string $apiUrl;
     private string $apiKey;
 
-    public function __construct(string $apiKey = 'SPP_SECRET_KEY_2026') {
+    public function __construct(string $apiKey = '', string $apiUrl = '') {
+        $cfg = getInboundEndpointConfig('sibayar');
+        if ($apiUrl === '') $apiUrl = $cfg['base_url'];
+        if ($apiKey === '') $apiKey = $cfg['api_key'] !== '' ? $cfg['api_key'] : 'SPP_SECRET_KEY_2026';
         $this->apiKey = $apiKey;
-        $this->apiUrl = "https://sibayar.misultanfattah.sch.id/api/simad.php";
+        $this->apiUrl = $apiUrl;
     }
 
     private function request(string $action, array $params = []): array {
@@ -1363,14 +1403,7 @@ class SibayarClient {
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
         curl_setopt($ch, CURLOPT_ENCODING, '');
         
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'X-API-KEY: ' . $this->apiKey,
-            'Accept: application/json, text/plain, */*',
-            'Accept-Language: id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Referer: https://sibayar.misultanfattah.sch.id/',
-            'Origin: https://sibayar.misultanfattah.sch.id',
-            'Connection: keep-alive'
-        ]);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, endpoint_referer_headers($this->apiUrl, $this->apiKey));
 
         $response = curl_exec($ch);
         $error = curl_error($ch);
@@ -1505,9 +1538,12 @@ class EtabsClient {
     public $lastUrl = '';
     public $lastRawResponse = '';
 
-    public function __construct(string $apiKey = 'SIMAD_SECRET_KEY_2026') {
+    public function __construct(string $apiKey = '', string $apiUrl = '') {
+        $cfg = getInboundEndpointConfig('etab');
+        if ($apiUrl === '') $apiUrl = $cfg['base_url'];
+        if ($apiKey === '') $apiKey = $cfg['api_key'] !== '' ? $cfg['api_key'] : 'SIMAD_SECRET_KEY_2026';
         $this->apiKey = $apiKey;
-        $this->apiUrl = "https://etabs.misultanfattah.sch.id/api/simad";
+        $this->apiUrl = $apiUrl;
     }
 
     private function request(string $action, array $params = []): array {
@@ -1524,14 +1560,7 @@ class EtabsClient {
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             CURLOPT_ENCODING => '',
-            CURLOPT_HTTPHEADER => [
-                'X-API-KEY: ' . $this->apiKey,
-                'Accept: application/json, text/plain, */*',
-                'Accept-Language: id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-                'Referer: https://etabs.misultanfattah.sch.id/',
-                'Origin: https://etabs.misultanfattah.sch.id',
-                'Connection: keep-alive'
-            ]
+            CURLOPT_HTTPHEADER => endpoint_referer_headers($this->apiUrl, $this->apiKey)
         ]);
         $response = curl_exec($ch);
         $error = curl_error($ch);
@@ -1549,7 +1578,12 @@ class EtabsClient {
     }
 
     private function tryAlternativeUrl(string $action, array $params = []): array {
-        $this->apiUrl = "https://etabs.misultanfattah.sch.id/api/simad.php";
+        // Coba varian .php bila base_url tanpa ekstensi (atau sebaliknya).
+        if (substr($this->apiUrl, -4) === '.php') {
+            $this->apiUrl = substr($this->apiUrl, 0, -4);
+        } else {
+            $this->apiUrl = rtrim($this->apiUrl, '/') . '.php';
+        }
         $queryParams = array_merge(['api_key' => $this->apiKey, 'action' => $action], $params);
         $url = $this->apiUrl . '?' . http_build_query($queryParams);
         $this->lastUrl = $url;
@@ -1563,14 +1597,7 @@ class EtabsClient {
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             CURLOPT_ENCODING => '',
-            CURLOPT_HTTPHEADER => [
-                'X-API-KEY: ' . $this->apiKey,
-                'Accept: application/json, text/plain, */*',
-                'Accept-Language: id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-                'Referer: https://etabs.misultanfattah.sch.id/',
-                'Origin: https://etabs.misultanfattah.sch.id',
-                'Connection: keep-alive'
-            ]
+            CURLOPT_HTTPHEADER => endpoint_referer_headers($this->apiUrl, $this->apiKey)
         ]);
         $response = curl_exec($ch);
         $error = curl_error($ch);
