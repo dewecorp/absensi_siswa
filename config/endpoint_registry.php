@@ -122,9 +122,9 @@ if (!function_exists('endpoint_full_url')) {
 }
 
 if (!function_exists('endpoint_test_url')) {
-    // Tes koneksi endpoint masuk: GET base_url + timeout 8 detik, catat status.
+    // Tes koneksi endpoint masuk: GET base_url (+ api_key bila ada) + timeout 8 detik, catat status.
     // Kembalikan [ok(bool), http_code(int), note(string), ms(int)]
-    function endpoint_test_url(string $base_url): array {
+    function endpoint_test_url(string $base_url, string $api_key = ''): array {
         $t0 = microtime(true);
         $url = trim($base_url);
         if ($url === '') {
@@ -133,8 +133,16 @@ if (!function_exists('endpoint_test_url')) {
         if (!preg_match('#^https?://#i', $url)) {
             $url = 'http://' . $url;
         }
+        // Sertakan api_key seperti pola API SIMAD (query + header) agar tak 401.
+        $headers = [];
+        if ($api_key !== '') {
+            $url .= (strpos($url, '?') === false ? '?' : '&') . 'api_key=' . urlencode($api_key);
+            $headers[] = 'X-API-KEY: ' . $api_key;
+        }
         if (!function_exists('curl_init')) {
-            $ctx = stream_context_create(['http' => ['timeout' => 8, 'ignore_errors' => true, 'method' => 'GET']]);
+            $opts = ['http' => ['timeout' => 8, 'ignore_errors' => true, 'method' => 'GET']];
+            if ($headers) $opts['http']['header'] = implode("\r\n", $headers);
+            $ctx = stream_context_create($opts);
             $body = @file_get_contents($url, false, $ctx);
             $code = 0;
             foreach ((array)($http_response_header ?? []) as $h) {
@@ -145,10 +153,11 @@ if (!function_exists('endpoint_test_url')) {
                 return [false, $code, 'Gagal konek ke ' . $url, $ms];
             }
             $ok = $code >= 200 && $code < 400;
-            return [$ok, $code, $ok ? ("HTTP $code OK {$ms}ms") : ("HTTP $code tanpa respon"), $ms];
+            $snippet = trim(substr((string)$body, 0, 120));
+            return [$ok, $code, $ok ? ("HTTP $code OK {$ms}ms") : ("HTTP $code " . ($snippet !== '' ? $snippet : 'tanpa respon')), $ms];
         }
         $ch = curl_init($url);
-        curl_setopt_array($ch, [
+        $opt = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 8,
             CURLOPT_CONNECTTIMEOUT => 5,
@@ -156,7 +165,9 @@ if (!function_exists('endpoint_test_url')) {
             CURLOPT_MAXREDIRS => 3,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_NOBODY => false,
-        ]);
+        ];
+        if ($headers) $opt[CURLOPT_HTTPHEADER] = $headers;
+        curl_setopt_array($ch, $opt);
         $body = curl_exec($ch);
         $err = curl_error($ch);
         $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -166,7 +177,7 @@ if (!function_exists('endpoint_test_url')) {
             return [false, $code, 'Gagal konek: ' . $err, $ms];
         }
         $ok = $code >= 200 && $code < 400;
-        $snippet = trim(substr((string)$body, 0, 80));
+        $snippet = trim(substr((string)$body, 0, 120));
         return [$ok, $code, $ok ? ("HTTP $code OK {$ms}ms") : ("HTTP $code " . ($snippet !== '' ? $snippet : 'tanpa respon')), $ms];
     }
 }

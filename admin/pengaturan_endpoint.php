@@ -99,11 +99,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_masuk'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_masuk'])) {
     $id = (int)($_POST['id'] ?? 0);
     try {
-        $row = $pdo->prepare("SELECT base_url FROM tb_endpoint_masuk WHERE id = ?");
+        $row = $pdo->prepare("SELECT base_url, api_key FROM tb_endpoint_masuk WHERE id = ?");
         $row->execute([$id]);
-        $base = (string)($row->fetchColumn() ?: '');
-        [$ok, $code, $note] = endpoint_test_url($base);
+        $ep = $row->fetch(PDO::FETCH_ASSOC) ?: [];
+        $base = (string)($ep['base_url'] ?? '');
+        $key = (string)($ep['api_key'] ?? '');
+        // Ganti placeholder {nis} dengan NISN sample agar endpoint berparameter bisa dites.
+        if (stripos($base, '{nis}') !== false) {
+            $sample = '';
+            try {
+                $sample = (string)$pdo->query("SELECT nisn FROM tb_siswa WHERE nisn IS NOT NULL AND TRIM(nisn) <> '' ORDER BY id_siswa ASC LIMIT 1")->fetchColumn();
+            } catch (Exception $e) { /* ignore */ }
+            if ($sample === '') $sample = '12345';
+            $base = str_ireplace('{nis}', $sample, $base);
+        }
+        [$ok, $code, $note] = endpoint_test_url($base, $key);
         $pdo->prepare("UPDATE tb_endpoint_masuk SET last_test_at = NOW(), last_test_status = ?, last_test_note = ?, updated_at = NOW() WHERE id = ?")->execute([$ok ? 'OK' : 'GAGAL', $note, $id]);
+        if (!$ok && $code === 401 && $key === '') {
+            $note .= ' Isi API key lalu Simpan Semua sebelum Tes.';
+        } elseif (!$ok && $code === 401) {
+            $note .= ' Cek API key tersimpan sudah sama dengan key di aplikasi tujuan.';
+        }
         $message = ['type' => $ok ? 'success' : 'danger', 'text' => $ok ? ("Koneksi OK (HTTP $code).") : ("Koneksi gagal: $note")];
     } catch (Exception $e) {
         $message = ['type' => 'danger', 'text' => 'Tes gagal: ' . $e->getMessage()];
