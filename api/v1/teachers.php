@@ -87,12 +87,14 @@ try {
             g.id_guru,
             g.nama_guru,
             g.kode_guru,
+            g.email,
             g.nuptk,
             g.tempat_lahir,
             g.tanggal_lahir,
             g.jenis_kelamin,
             g.pendidikan,
             g.tmt,
+            g.jabatan,
             g.wali_kelas,
             g.mengajar,
             g.foto,
@@ -101,8 +103,8 @@ try {
         LEFT JOIN tb_kelas k ON k.wali_kelas = g.nama_guru
         {$updated_since_sql}
         GROUP BY
-            g.id_guru, g.nama_guru, g.kode_guru, g.nuptk, g.tempat_lahir,
-            g.tanggal_lahir, g.jenis_kelamin, g.pendidikan, g.wali_kelas, g.mengajar, g.foto
+            g.id_guru, g.nama_guru, g.kode_guru, g.email, g.nuptk, g.tempat_lahir,
+            g.tanggal_lahir, g.jenis_kelamin, g.pendidikan, g.jabatan, g.wali_kelas, g.mengajar, g.foto
         ORDER BY g.nama_guru ASC
         {$limit_sql}
     ";
@@ -115,6 +117,12 @@ try {
         $teacher['kelas_wali'] = !empty($teacher['kelas_wali']) ? $teacher['kelas_wali'] : null;
         if (!array_key_exists('pendidikan', $teacher) || $teacher['pendidikan'] === '' || $teacher['pendidikan'] === null) {
             $teacher['pendidikan'] = null;
+        }
+        if (!array_key_exists('jabatan', $teacher) || $teacher['jabatan'] === '' || $teacher['jabatan'] === null) {
+            $teacher['jabatan'] = null;
+        }
+        if (!array_key_exists('email', $teacher) || $teacher['email'] === '' || $teacher['email'] === null) {
+            $teacher['email'] = null;
         }
 
         $mengajar_decoded = null;
