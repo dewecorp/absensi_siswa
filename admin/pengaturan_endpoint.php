@@ -274,7 +274,7 @@ include '../templates/sidebar.php';
                                     </td>
                                     <td>
                                         <div class="d-flex" style="gap:4px;">
-                                            <button type="submit" form="formTestMasuk" name="id" value="<?= (int)$r['id'] ?>" class="btn btn-sm btn-info" title="Tes koneksi"><i class="fas fa-plug"></i> Tes</button>
+                                            <button type="submit" form="formTestMasuk" name="id" value="<?= (int)$r['id'] ?>" class="btn btn-sm btn-info d-inline-flex align-items-center" style="gap:4px;line-height:1;" title="Tes koneksi"><i class="fas fa-plug"></i><span>Tes</span></button>
                                             <button type="submit" form="formDeleteMasuk" name="id" value="<?= (int)$r['id'] ?>" class="btn btn-sm btn-danger" title="Hapus" onclick="return confirm('Hapus endpoint masuk ini?')"><i class="fas fa-trash"></i></button>
                                         </div>
                                     </td>
