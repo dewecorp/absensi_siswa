@@ -12,16 +12,22 @@ if (!$can_view_anggota_ekskul) {
     redirect('../login.php');
 }
 
-$ekskul_type = isset($ekskul_type) ? (string)$ekskul_type : 'pencak_silat';
-$ekskul_title = isset($ekskul_title) ? (string)$ekskul_title : 'Data Anggota';
-$table_name = $ekskul_type === 'rebana' ? 'tb_anggota_rebana' : 'tb_anggota_pencak_silat';
-$other_table_name = $ekskul_type === 'rebana' ? 'tb_anggota_pencak_silat' : 'tb_anggota_rebana';
-$other_ekskul_label = $ekskul_type === 'rebana' ? 'Pencak Silat' : 'Rebana';
-$slug = $ekskul_type === 'rebana' ? 'rebana' : 'pencak_silat';
+// Ekskul dinamis via ?ekskul=id_ekstrakurikuler (selain Pramuka).
+// Wrapper lama (pencak_silat/rebana) tetap didukung lewat $ekskul_type.
+$ekskul_id = (int)($_GET['ekskul'] ?? 0);
+$ekskul_legacy = isset($ekskul_type) ? (string)$ekskul_type : '';
+$table_name = 'tb_anggota_ekskul';
 
-$page_title = $ekskul_title;
+$page_title = 'Data Anggota Ekstrakurikuler';
 $message = null;
 $toast_message = null;
+
+$ekskul_list = [];
+try {
+    $ekskul_list = $pdo->query("SELECT id_ekstrakurikuler, nama_ekstrakurikuler FROM tb_ekstrakurikuler WHERE LOWER(nama_ekstrakurikuler) NOT LIKE '%pramuka%' ORDER BY nama_ekstrakurikuler ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $ekskul_list = [];
+}
 
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
@@ -37,26 +43,90 @@ try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS {$table_name} (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            id_ekstrakurikuler INT NOT NULL DEFAULT 0,
             id_siswa INT NOT NULL,
             status ENUM('aktif','keluar') NOT NULL DEFAULT 'aktif',
             tanggal_masuk DATETIME NULL,
             tanggal_keluar DATETIME NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uniq_id_siswa (id_siswa),
+            UNIQUE KEY uniq_ekskul_siswa (id_ekstrakurikuler, id_siswa),
+            INDEX idx_ekskul (id_ekstrakurikuler),
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
+    // Tambah kolom id_ekstrakurikuler bila tabel sudah ada dari versi lama
+    try {
+        $hasCol = $pdo->query("SHOW COLUMNS FROM {$table_name} LIKE 'id_ekstrakurikuler'")->fetch(PDO::FETCH_ASSOC);
+        if (!$hasCol) {
+            $pdo->exec("ALTER TABLE {$table_name} ADD COLUMN id_ekstrakurikuler INT NOT NULL DEFAULT 0 AFTER id");
+            $pdo->exec("ALTER TABLE {$table_name} DROP INDEX uniq_id_siswa");
+            $pdo->exec("ALTER TABLE {$table_name} ADD UNIQUE KEY uniq_ekskul_siswa (id_ekstrakurikuler, id_siswa)");
+            $pdo->exec("ALTER TABLE {$table_name} ADD INDEX idx_ekskul (id_ekstrakurikuler)");
+        }
+    } catch (Exception $e) { /* abaikan bila index belum ada */ }
+
+    // Migrasi sekali saja dari tabel lama (pencak silat / rebana) ke tabel unifikasi
+    try {
+        $migrated = (int)$pdo->query("SELECT COUNT(*) FROM {$table_name}")->fetchColumn();
+        if ($migrated === 0) {
+            $legacy_map = [];
+            try {
+                $rows = $pdo->query("SELECT id_ekstrakurikuler, nama_ekstrakurikuler FROM tb_ekstrakurikuler")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rows as $r) {
+                    $legacy_map[strtolower(trim((string)$r['nama_ekstrakurikuler']))] = (int)$r['id_ekstrakurikuler'];
+                }
+            } catch (Exception $e) { /* ignore */ }
+            $legacy_sources = [
+                'tb_anggota_pencak_silat' => ($legacy_map['pencak silat'] ?? 0),
+                'tb_anggota_rebana' => ($legacy_map['rebana'] ?? 0),
+            ];
+            foreach ($legacy_sources as $src => $dest_id) {
+                if ($dest_id <= 0) continue;
+                try {
+                    $pdo->exec("INSERT IGNORE INTO {$table_name} (id_ekstrakurikuler, id_siswa, status, tanggal_masuk, tanggal_keluar) SELECT {$dest_id}, id_siswa, status, tanggal_masuk, tanggal_keluar FROM {$src}");
+                } catch (Exception $e) { /* tabel lama mungkin tidak ada */ }
+            }
+        }
+    } catch (Exception $e) { /* ignore */ }
 } catch (Exception $e) {
     $message = ['type' => 'danger', 'text' => 'Gagal menyiapkan tabel anggota: ' . $e->getMessage()];
 }
+
+// Tentukan ekskul aktif: ?ekskul=id, fallback wrapper lama, lalu ekskul pertama
+$ekskul_id = (int)($_GET['ekskul'] ?? $_POST['ekskul'] ?? 0);
+$ekskul_valid_ids = array_map(static function ($e) { return (int)($e['id_ekstrakurikuler'] ?? 0); }, $ekskul_list);
+if ($ekskul_id <= 0 && $ekskul_legacy !== '') {
+    foreach ($ekskul_list as $e) {
+        if (strtolower(trim((string)$e['nama_ekstrakurikuler'])) === str_replace('_', ' ', strtolower($ekskul_legacy))) {
+            $ekskul_id = (int)$e['id_ekstrakurikuler'];
+            break;
+        }
+    }
+}
+if (($ekskul_id <= 0 || !in_array($ekskul_id, $ekskul_valid_ids, true)) && !empty($ekskul_valid_ids)) {
+    $ekskul_id = (int)$ekskul_valid_ids[0];
+}
+$ekskul_name = '';
+foreach ($ekskul_list as $e) {
+    if ((int)$e['id_ekstrakurikuler'] === $ekskul_id) {
+        $ekskul_name = (string)$e['nama_ekstrakurikuler'];
+        break;
+    }
+}
+if ($ekskul_name === '') {
+    $message = ['type' => 'warning', 'text' => 'Belum ada data ekstrakurikuler (selain Pramuka). Tambahkan dulu di menu Data Ekstrakurikuler.'];
+}
+$ekskul_title = $ekskul_name !== '' ? ('Data Anggota ' . $ekskul_name) : 'Data Anggota Ekstrakurikuler';
+$page_title = $ekskul_title;
+$slug = $ekskul_id > 0 ? ('ekskul_' . $ekskul_id) : 'ekskul';
 
 if ($message === null && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['ok'])) {
     $ok = (string)($_GET['ok'] ?? '');
     if ($ok === 'added') {
         $blocked = (int)($_GET['blocked'] ?? 0);
         if ($blocked > 0) {
-            $message = ['type' => 'warning', 'text' => "Sebagian data ditambahkan. {$blocked} siswa tidak ditambahkan karena masih aktif di {$other_ekskul_label}."];
+            $message = ['type' => 'warning', 'text' => "Sebagian data ditambahkan. {$blocked} siswa tidak ditambahkan karena masih aktif di ekstrakurikuler lain."];
         } else {
             $message = ['type' => 'success', 'text' => 'Anggota berhasil ditambahkan.'];
         }
@@ -107,10 +177,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->beginTransaction();
 
                 $check_stmt = $pdo->prepare("SELECT id_kelas FROM tb_siswa WHERE id_siswa = ? LIMIT 1");
-                $check_other_active_stmt = $pdo->prepare("SELECT COUNT(*) FROM {$other_table_name} WHERE id_siswa = ? AND status = 'aktif'");
+                $check_other_active_stmt = $pdo->prepare("SELECT COUNT(*) FROM {$table_name} WHERE id_siswa = ? AND id_ekstrakurikuler <> ? AND status = 'aktif'");
                 $upsert_stmt = $pdo->prepare("
-                    INSERT INTO {$table_name} (id_siswa, status, tanggal_masuk, tanggal_keluar)
-                    VALUES (?, 'aktif', NOW(), NULL)
+                    INSERT INTO {$table_name} (id_ekstrakurikuler, id_siswa, status, tanggal_masuk, tanggal_keluar)
+                    VALUES (?, ?, 'aktif', NOW(), NULL)
                     ON DUPLICATE KEY UPDATE
                         status = 'aktif',
                         tanggal_keluar = NULL,
@@ -125,18 +195,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($kls !== $selected_class_id) {
                         continue;
                     }
-                    $check_other_active_stmt->execute([$id_siswa]);
+                    $check_other_active_stmt->execute([$id_siswa, $ekskul_id]);
                     if ((int)$check_other_active_stmt->fetchColumn() > 0) {
                         $blocked_conflict++;
                         continue;
                     }
-                    $upsert_stmt->execute([$id_siswa]);
+                    $upsert_stmt->execute([$ekskul_id, $id_siswa]);
                     $added++;
                 }
 
                 $pdo->commit();
 
-                header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?kelas=' . $selected_class_id . '&ok=added&blocked=' . $blocked_conflict);
+                header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?ekskul=' . $ekskul_id . '&kelas=' . $selected_class_id . '&ok=added&blocked=' . $blocked_conflict);
                 exit;
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) {
@@ -151,12 +221,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = ['type' => 'warning', 'text' => 'Data anggota tidak valid.'];
         } else {
             try {
-                $stmt = $pdo->prepare("UPDATE {$table_name} SET status = 'keluar', tanggal_keluar = NOW() WHERE id = ? LIMIT 1");
-                $stmt->execute([$id_anggota]);
+                $stmt = $pdo->prepare("UPDATE {$table_name} SET status = 'keluar', tanggal_keluar = NOW() WHERE id = ? AND id_ekstrakurikuler = ? LIMIT 1");
+                $stmt->execute([$id_anggota, $ekskul_id]);
 
                 $kelas_redirect = (int)($_POST['id_kelas'] ?? 0);
                 if ($kelas_redirect > 0) {
-                    header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?kelas=' . $kelas_redirect . '&ok=removed');
+                    header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?ekskul=' . $ekskul_id . '&kelas=' . $kelas_redirect . '&ok=removed');
                     exit;
                 }
                 $toast_message = 'Anggota berhasil dikeluarkan dari daftar.';
@@ -172,33 +242,33 @@ $members = [];
 $available_students = [];
 $total_members_count = 0;
 try {
-    $stmt_total_members = $pdo->query("
-        SELECT COUNT(*) 
+    $stmt_total_members = $pdo->prepare("
+        SELECT COUNT(*)
         FROM {$table_name}
-        WHERE status = 'aktif'
+        WHERE status = 'aktif' AND id_ekstrakurikuler = ?
     ");
+    $stmt_total_members->execute([$ekskul_id]);
     $total_members_count = (int)$stmt_total_members->fetchColumn();
 } catch (Exception $e) {
     $total_members_count = 0;
 }
-if ($selected_class_id > 0) {
+if ($selected_class_id > 0 && $ekskul_id > 0) {
     try {
         $stmt_members = $pdo->prepare("
             SELECT a.id, s.nisn, s.nama_siswa
             FROM {$table_name} a
             INNER JOIN tb_siswa s ON s.id_siswa = a.id_siswa
-            WHERE a.status = 'aktif' AND s.id_kelas = ?
+            WHERE a.status = 'aktif' AND a.id_ekstrakurikuler = ? AND s.id_kelas = ?
             ORDER BY s.nama_siswa ASC
         ");
-        $stmt_members->execute([$selected_class_id]);
+        $stmt_members->execute([$ekskul_id, $selected_class_id]);
         $members = $stmt_members->fetchAll(PDO::FETCH_ASSOC);
 
         $stmt_available = $pdo->prepare("
             SELECT s.id_siswa, s.nisn, s.nama_siswa
             FROM tb_siswa s
-            LEFT JOIN {$table_name} a ON a.id_siswa = s.id_siswa AND a.status = 'aktif'
-            LEFT JOIN {$other_table_name} ao ON ao.id_siswa = s.id_siswa AND ao.status = 'aktif'
-            WHERE s.id_kelas = ? AND a.id IS NULL AND ao.id IS NULL
+            LEFT JOIN {$table_name} ao ON ao.id_siswa = s.id_siswa AND ao.status = 'aktif'
+            WHERE s.id_kelas = ? AND ao.id IS NULL
             ORDER BY s.nama_siswa ASC
         ");
         $stmt_available->execute([$selected_class_id]);
@@ -210,7 +280,7 @@ if ($selected_class_id > 0) {
     }
 }
 
-if ($export_type !== '' && $selected_class_id > 0) {
+if ($export_type !== '' && $selected_class_id > 0 && $ekskul_id > 0) {
     $school_profile = getSchoolProfile($pdo);
     $nama_madrasah = (string)($school_profile['nama_madrasah'] ?? 'Madrasah');
     $tahun_ajaran = (string)($school_profile['tahun_ajaran'] ?? date('Y'));
@@ -218,15 +288,28 @@ if ($export_type !== '' && $selected_class_id > 0) {
     $nip = (string)($school_profile['nip_kepala'] ?? '-');
     $tempat = (string)($school_profile['tempat_jadwal'] ?? 'Padang');
     $tanggal = date('d F Y');
+    $school_address = (string)($school_profile['alamat'] ?? '');
+    $school_email = (string)($school_profile['email_madrasah'] ?? '');
+    $school_website = (string)($school_profile['website_madrasah'] ?? '');
+    $nama_yayasan = (string)($school_profile['nama_yayasan'] ?? '');
 
     if ($export_type === 'excel') {
-        $slug_label = $ekskul_type === 'rebana' ? 'Rebana' : 'Pencak Silat';
+        $slug_label = $ekskul_name !== '' ? $ekskul_name : 'Ekstrakurikuler';
         $excel_filename = 'Data_Anggota_' . str_replace(' ', '_', $slug_label) . '_' . preg_replace('/[^A-Za-z0-9_-]/', '-', str_replace('/', '-', trim($tahun_ajaran)));
         header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
         header('Content-Disposition: attachment; filename="' . $excel_filename . '.xls"');
         echo '<html><head><meta charset="UTF-8"></head><body>';
+        if ($nama_yayasan !== '') {
+            echo '<h3 style="text-align:center;margin:0;">' . htmlspecialchars(strtoupper($nama_yayasan)) . '</h3>';
+        }
         echo '<h2 style="text-align:center;margin-bottom:4px;">' . htmlspecialchars(strtoupper($nama_madrasah)) . '</h2>';
-        echo '<h3 style="text-align:center;margin-top:0;">' . htmlspecialchars($ekskul_title) . '</h3>';
+        if ($school_address !== '') {
+            echo '<p style="text-align:center;margin:0;">' . htmlspecialchars($school_address) . '</p>';
+        }
+        if ($school_website !== '' || $school_email !== '') {
+            echo '<p style="text-align:center;margin:0;">' . htmlspecialchars(trim($school_website . ($school_website !== '' && $school_email !== '' ? ' | ' : '') . $school_email)) . '</p>';
+        }
+        echo '<h3 style="text-align:center;margin-top:6px;">' . htmlspecialchars($ekskul_title) . '</h3>';
         echo '<p style="text-align:center;">Kelas: <strong>' . htmlspecialchars($selected_class_name) . '</strong><br>Tahun Ajaran: <strong>' . htmlspecialchars($tahun_ajaran) . '</strong></p>';
         echo '<p>Tanggal Cetak: ' . htmlspecialchars($tanggal) . '</p>';
         echo '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;">';
@@ -265,8 +348,8 @@ if ($export_type !== '' && $selected_class_id > 0) {
             $rows_html = '<tr><td colspan="3" style="text-align:center;">Tidak ada data.</td></tr>';
         }
 
-        $back_url = htmlspecialchars(basename($_SERVER['SCRIPT_NAME']) . '?kelas=' . $selected_class_id, ENT_QUOTES, 'UTF-8');
-        $doc_title_base = 'Data Anggota ' . ($ekskul_type === 'rebana' ? 'Rebana' : 'Pencak Silat') . ' ' . str_replace('/', '-', trim($tahun_ajaran));
+        $back_url = htmlspecialchars(basename($_SERVER['SCRIPT_NAME']) . '?ekskul=' . $ekskul_id . '&kelas=' . $selected_class_id, ENT_QUOTES, 'UTF-8');
+        $doc_title_base = $ekskul_title . ' ' . str_replace('/', '-', trim($tahun_ajaran));
         $school_logo = !empty($school_profile['logo']) ? ('../assets/img/' . $school_profile['logo']) : '';
         $qr_payload = "Dokumen: {$doc_title_base}\nEkstrakurikuler: {$ekskul_title}\nKelas: {$selected_class_name}\nTanggal: {$tanggal}\nKepala: {$kepala}";
         $qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . rawurlencode($qr_payload);
@@ -296,16 +379,23 @@ if ($export_type !== '' && $selected_class_id > 0) {
     .toolbar button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
     .hint { font-size: 12px; color: #6b7280; }
     .sheet { max-width: 210mm; margin: 6px auto; padding: 8mm; background: #fff; box-shadow: none; }
-    .doc-header { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #333; padding-bottom: 8px; }
-    .header-logo { width: 62px; height: 62px; object-fit: contain; flex-shrink: 0; }
-    .header-text { flex: 1; text-align: center; }
+    table.kop-header { width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 6px; }
+    table.kop-header td { border: none !important; padding: 0 !important; vertical-align: middle; }
+    td.kop-logo { width: 80px; text-align: center; }
+    td.kop-logo img { height: 65px; width: auto; max-width: 80px; object-fit: contain; }
+    td.kop-text { text-align: center; }
+    td.kop-text h2 { margin: 0; font-size: 13.5pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }
+    td.kop-text p.alamat { margin: 2px 0; font-size: 9.5pt; color: #000; }
+    td.kop-text p.kontak { margin: 2px 0 0; font-size: 9pt; color: #000; }
     h2, h3, p.meta { margin: 0; text-align: center; }
     .meta { margin-top: 6px; margin-bottom: 12px; }
     table.data { width: 100%; border-collapse: collapse; margin-top: 8px; }
     table.data th, table.data td { border: 1px solid #555; padding: 6px 8px; }
     table.data th { background: #f2f2f2; }
-    .ttd { margin-top: 12mm; width: 100%; }
-    .ttd-right { width: 40%; margin-left: 60%; text-align: left; }
+    table.data thead { display: table-header-group; }
+    table.data tr { page-break-inside: avoid; break-inside: avoid; }
+    .ttd { margin-top: 12mm; width: 100%; page-break-inside: avoid; break-inside: avoid; }
+    .ttd-right { width: 40%; margin-left: 60%; text-align: left; page-break-inside: avoid; break-inside: avoid; }
     .ttd-qr { width: 85px; height: 85px; margin: 8px 0 4px 0; }
   </style>
 </head>
@@ -319,15 +409,32 @@ if ($export_type !== '' && $selected_class_id > 0) {
     <div class="hint">Tab ini dapat di-reload untuk melihat data terbaru.</div>
   </div>
   <div class="sheet">
-    <div class="doc-header">
-      <?php if ($school_logo !== ''): ?>
-        <img class="header-logo" src="<?= htmlspecialchars($school_logo, ENT_QUOTES, 'UTF-8') ?>" alt="Logo Sekolah">
-      <?php endif; ?>
-      <div class="header-text">
-        <h2><?= htmlspecialchars(strtoupper($nama_madrasah), ENT_QUOTES, 'UTF-8') ?></h2>
-        <h3><?= htmlspecialchars($ekskul_title, ENT_QUOTES, 'UTF-8') ?></h3>
-      </div>
-    </div>
+    <table class="kop-header">
+      <tr>
+        <td class="kop-logo">
+          <?php if ($school_logo !== ''): ?>
+            <img src="<?= htmlspecialchars($school_logo, ENT_QUOTES, 'UTF-8') ?>" alt="Logo Sekolah">
+          <?php endif; ?>
+        </td>
+        <td class="kop-text">
+          <?php if ($nama_yayasan !== ''): ?>
+            <p class="yayasan" style="margin:0;font-size:11pt;font-weight:bold;"><?= htmlspecialchars(strtoupper($nama_yayasan), ENT_QUOTES, 'UTF-8') ?></p>
+          <?php endif; ?>
+          <h2><?= htmlspecialchars(strtoupper($nama_madrasah), ENT_QUOTES, 'UTF-8') ?></h2>
+          <?php if ($school_address !== ''): ?>
+            <p class="alamat"><?= htmlspecialchars($school_address, ENT_QUOTES, 'UTF-8') ?></p>
+          <?php endif; ?>
+          <?php if ($school_website !== '' || $school_email !== ''): ?>
+            <p class="kontak">
+              <?= $school_website !== '' ? 'Website: <span style="color:#00f;text-decoration:underline;">' . htmlspecialchars($school_website, ENT_QUOTES, 'UTF-8') . '</span>' : '' ?>
+              <?= ($school_website !== '' && $school_email !== '') ? '&nbsp;&nbsp;&nbsp;&nbsp;' : '' ?>
+              <?= $school_email !== '' ? 'email: <span style="color:#00f;text-decoration:underline;">' . htmlspecialchars($school_email, ENT_QUOTES, 'UTF-8') . '</span>' : '' ?>
+            </p>
+          <?php endif; ?>
+        </td>
+      </tr>
+    </table>
+    <h3 style="text-align:center;"><?= htmlspecialchars($ekskul_title, ENT_QUOTES, 'UTF-8') ?></h3>
     <p class="meta">Kelas: <strong><?= htmlspecialchars($selected_class_name, ENT_QUOTES, 'UTF-8') ?></strong><br>Tahun Ajaran: <strong><?= htmlspecialchars($tahun_ajaran, ENT_QUOTES, 'UTF-8') ?></strong><br>Tanggal Cetak: <?= htmlspecialchars($tanggal, ENT_QUOTES, 'UTF-8') ?></p>
     <table class="data">
       <thead>
@@ -407,6 +514,17 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="card-body">
                     <form method="GET" class="form-inline" id="formFilterKelasAnggota">
+                        <label class="mr-2" for="selectEkskulAnggota">Ekstrakurikuler:</label>
+                        <select name="ekskul" id="selectEkskulAnggota" class="form-control mr-3" style="min-width: 220px;" onchange="this.form.submit();">
+                            <?php if (empty($ekskul_list)): ?>
+                                <option value="">-- Belum ada ekskul --</option>
+                            <?php endif; ?>
+                            <?php foreach ($ekskul_list as $e): ?>
+                                <option value="<?= (int)$e['id_ekstrakurikuler'] ?>" <?= $ekskul_id === (int)$e['id_ekstrakurikuler'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($e['nama_ekstrakurikuler']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                         <label class="mr-2" for="selectKelasAnggota">Pilih Kelas:</label>
                         <select name="kelas" id="selectKelasAnggota" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
                             <option value="">-- Pilih Kelas --</option>
@@ -433,10 +551,10 @@ include '../templates/sidebar.php';
                             <i class="fas fa-plus"></i> Tambah Anggota
                         </button>
                         <?php endif; ?>
-                        <a href="?kelas=<?= (int)$selected_class_id ?>&export=excel" class="btn btn-info">
+                        <a href="?ekskul=<?= (int)$ekskul_id ?>&kelas=<?= (int)$selected_class_id ?>&export=excel" class="btn btn-info">
                             <i class="fas fa-file-excel"></i> Ekspor Excel
                         </a>
-                        <a href="?kelas=<?= (int)$selected_class_id ?>&export=pdf&amp;auto=1" target="_blank" class="btn btn-danger">
+                        <a href="?ekskul=<?= (int)$ekskul_id ?>&kelas=<?= (int)$selected_class_id ?>&export=pdf&amp;auto=1" target="_blank" class="btn btn-danger">
                             <i class="fas fa-file-pdf"></i> Ekspor PDF
                         </a>
                     </div>
@@ -461,6 +579,7 @@ include '../templates/sidebar.php';
                                             <td><?= htmlspecialchars($m['nama_siswa']) ?></td>
                                             <?php if ($can_manage_anggota_ekskul): ?><td>
                                                 <form method="POST" class="d-inline form-keluarkan-angota">
+                                                    <input type="hidden" name="ekskul" value="<?= (int)$ekskul_id ?>">
                                                     <input type="hidden" name="id_kelas" value="<?= (int)$selected_class_id ?>">
                                                     <input type="hidden" name="action" value="keluarkan">
                                                     <input type="hidden" name="id_anggota" value="<?= (int)$m['id'] ?>">
@@ -499,6 +618,7 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="add_collective">
+                    <input type="hidden" name="ekskul" value="<?= (int)$ekskul_id ?>">
                     <input type="hidden" name="id_kelas" value="<?= (int)$selected_class_id ?>">
 
                     <?php if (!empty($available_students)): ?>

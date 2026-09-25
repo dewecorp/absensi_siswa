@@ -273,6 +273,34 @@ if (!function_exists('sort_all_menu_items')) {
     }
 }
 
+// Menu anggota ekskul dinamis mengikuti tb_ekstrakurikuler (selain Pramuka)
+if (!function_exists('build_ekskul_anggota_menu')) {
+    function build_ekskul_anggota_menu($pdo, string $session_suffix = ''): array {
+        $items = [];
+        $rows = [];
+        try {
+            if ($pdo instanceof PDO) {
+                $rows = $pdo->query("SELECT id_ekstrakurikuler, nama_ekstrakurikuler FROM tb_ekstrakurikuler WHERE LOWER(nama_ekstrakurikuler) NOT LIKE '%pramuka%' ORDER BY nama_ekstrakurikuler ASC")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (Exception $e) {
+            $rows = [];
+        }
+        $cur_page = basename($_SERVER['PHP_SELF'] ?? '');
+        $cur_ekskul = isset($_GET['ekskul']) ? (int)$_GET['ekskul'] : 0;
+        $legacy_page = $cur_page === 'data_anggota_pencak_silat.php' ? 'pencak silat' : ($cur_page === 'data_anggota_rebana.php' ? 'rebana' : '');
+        foreach ((array)$rows as $r) {
+            $eid = (int)($r['id_ekstrakurikuler'] ?? 0);
+            $nm = trim((string)($r['nama_ekstrakurikuler'] ?? ''));
+            if ($nm === '') continue;
+            $active = ($cur_page === 'data_anggota_ekskul.php' && $cur_ekskul === $eid)
+                || ($legacy_page !== '' && strtolower($nm) === $legacy_page);
+            $q = 'ekskul=' . $eid . ($session_suffix !== '' ? '&session_type=' . $session_suffix : '');
+            $items[] = ['title' => 'Data Anggota ' . $nm, 'url' => '../admin/data_anggota_ekskul.php?' . $q, 'active' => $active];
+        }
+        return $items;
+    }
+}
+
 switch ($user_level) {
     case 'admin':
         $agenda_submenu_admin = [
@@ -319,11 +347,10 @@ switch ($user_level) {
         $ekstrakurikuler_submenu_admin = [
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Ekstra', 'url' => '../admin/data_pembina_ekstrakurikuler.php', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
-            ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php', 'active' => $current_page === 'data_tingkat_barung.php'],
+            ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php', 'active' => $current_page === 'data_barung.php'],
-            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
-            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ...build_ekskul_anggota_menu($pdo ?? null),
             ['title' => 'Pengaturan Cetak Suket', 'url' => '../admin/pengaturan_cetak_suket.php', 'active' => $current_page === 'pengaturan_cetak_suket.php'],
             ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php', 'active' => $current_page === 'syarat_kecakapan_umum.php'],
             ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php', 'active' => $current_page === 'surat_keterangan.php'],
@@ -374,7 +401,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_admin,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_tingkat_barung.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_tingkat_barung.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -525,8 +552,7 @@ switch ($user_level) {
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
             ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_tingkat_barung.php'],
-            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
-            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ...build_ekskul_anggota_menu($pdo ?? null, 'kepala_madrasah'),
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_barung.php'],
         ];
 
@@ -562,7 +588,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_kepala,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'data_tingkat_barung.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'data_tingkat_barung.php'])
             ],
             [
                 'title' => 'Rekap Kehadiran',
@@ -696,8 +722,7 @@ switch ($user_level) {
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=tata_usaha', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Tingkat Pramuka', 'url' => '../admin/data_tingkat_barung.php?session_type=tata_usaha', 'active' => $current_page === 'data_tingkat_barung.php'],
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=tata_usaha', 'active' => $current_page === 'data_barung.php'],
-            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=tata_usaha', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
-            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=tata_usaha', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ...build_ekskul_anggota_menu($pdo ?? null, 'tata_usaha'),
             ['title' => 'Pengaturan Cetak Suket', 'url' => '../admin/pengaturan_cetak_suket.php?session_type=tata_usaha', 'active' => $current_page === 'pengaturan_cetak_suket.php'],
             ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=tata_usaha', 'active' => $current_page === 'syarat_kecakapan_umum.php'],
             ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php?session_type=tata_usaha', 'active' => $current_page === 'surat_keterangan.php'],
@@ -734,7 +759,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_tu,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_tingkat_barung.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_tingkat_barung.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -866,8 +891,7 @@ switch ($user_level) {
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=guru', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=guru', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=guru', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
-            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=guru', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
-            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=guru', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ...build_ekskul_anggota_menu($pdo ?? null, 'guru'),
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=guru', 'active' => $current_page === 'data_barung.php'],
         ];
         if ($is_guru_pembina_pramuka) {
@@ -937,7 +961,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_guru,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -1137,8 +1161,7 @@ switch ($user_level) {
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=wali', 'active' => $current_page === 'data_ekstrakurikuler.php'],
             ['title' => 'Data Pembina Pramuka', 'url' => '../admin/data_pembina_pramuka.php?session_type=wali', 'active' => $current_page === 'data_pembina_pramuka.php'],
             ['title' => 'Data Pembina Ekskul', 'url' => '../admin/data_pembina_ekstrakurikuler.php?session_type=wali', 'active' => $current_page === 'data_pembina_ekstrakurikuler.php'],
-            ['title' => 'Data Anggota Pencak Silat', 'url' => '../admin/data_anggota_pencak_silat.php?session_type=wali', 'active' => $current_page === 'data_anggota_pencak_silat.php'],
-            ['title' => 'Data Anggota Rebana', 'url' => '../admin/data_anggota_rebana.php?session_type=wali', 'active' => $current_page === 'data_anggota_rebana.php'],
+            ...build_ekskul_anggota_menu($pdo ?? null, 'wali'),
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=wali', 'active' => $current_page === 'data_barung.php'],
         ];
         if ($is_wali_pembina_pramuka) {
@@ -1168,7 +1191,7 @@ switch ($user_level) {
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_wali,
-                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
+                'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'syarat_kecakapan_umum.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -1441,6 +1464,9 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                 'Pengaturan Cetak Suket' => 'Suket',
             ];
             $display_title = isset($short_map[$title]) ? $short_map[$title] : $title;
+            if (!isset($short_map[$title]) && stripos($title, 'Data Anggota ') === 0) {
+                $display_title = trim(substr($title, strlen('Data Anggota ')));
+            }
 
             // Custom mapping untuk semua level (URL/anchor memakai judul ASLI)
             if ($user_level === 'guru' || $user_level === 'wali') {
