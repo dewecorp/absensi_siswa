@@ -4,6 +4,7 @@
 
 // Determine active menu based on current page
 $current_page = basename($_SERVER['PHP_SELF']);
+require_once __DIR__ . '/../config/sims_surat_helper.php';
 $nilai_ujian_praktik_menu_active = ($current_page === 'nilai_ujian.php' && isset($_GET['nilai_mode']) && $_GET['nilai_mode'] === 'praktik');
 $nilai_ujian_biasa_menu_active = ($current_page === 'nilai_ujian.php' && !$nilai_ujian_praktik_menu_active);
 
@@ -378,6 +379,13 @@ switch ($user_level) {
             return strcasecmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
         });
 
+        $surat_counts_admin = function_exists('get_sims_surat_counts') ? get_sims_surat_counts() : ['masuk' => 0, 'keluar' => 0, 'keputusan' => 0, 'total' => 0];
+        $surat_submenu_admin = [
+            ['title' => 'Surat Masuk', 'url' => '../admin/surat_masuk.php', 'active' => $current_page === 'surat_masuk.php', 'badge' => $surat_counts_admin['masuk'] > 0 ? $surat_counts_admin['masuk'] : null],
+            ['title' => 'Surat Keluar', 'url' => '../admin/surat_keluar.php', 'active' => $current_page === 'surat_keluar.php', 'badge' => $surat_counts_admin['keluar'] > 0 ? $surat_counts_admin['keluar'] : null],
+            ['title' => 'Surat Keputusan', 'url' => '../admin/surat_keputusan.php', 'active' => $current_page === 'surat_keputusan.php', 'badge' => $surat_counts_admin['keputusan'] > 0 ? $surat_counts_admin['keputusan'] : null],
+        ];
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -402,6 +410,13 @@ switch ($user_level) {
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_admin,
                 'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_tingkat_barung.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
+            ],
+            [
+                'title' => 'Surat-Surat',
+                'icon' => 'fas fa-envelope-open-text',
+                'badge' => $surat_counts_admin['total'] > 0 ? $surat_counts_admin['total'] : null,
+                'submenu' => $surat_submenu_admin,
+                'active' => in_array($current_page, ['surat_masuk.php', 'surat_keluar.php', 'surat_keputusan.php'])
             ],
             [
                 'title' => 'Jadwal',
@@ -562,6 +577,13 @@ switch ($user_level) {
             ['title' => 'Data Anggota Pramuka', 'url' => '../admin/data_barung.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_barung.php'],
         ];
 
+        $surat_counts_kepala = function_exists('get_sims_surat_counts') ? get_sims_surat_counts() : ['masuk' => 0, 'keluar' => 0, 'keputusan' => 0, 'total' => 0];
+        $surat_submenu_kepala = [
+            ['title' => 'Surat Masuk', 'url' => '../admin/surat_masuk.php?session_type=kepala_madrasah', 'active' => $current_page === 'surat_masuk.php', 'badge' => $surat_counts_kepala['masuk'] > 0 ? $surat_counts_kepala['masuk'] : null],
+            ['title' => 'Surat Keluar', 'url' => '../admin/surat_keluar.php?session_type=kepala_madrasah', 'active' => $current_page === 'surat_keluar.php', 'badge' => $surat_counts_kepala['keluar'] > 0 ? $surat_counts_kepala['keluar'] : null],
+            ['title' => 'Surat Keputusan', 'url' => '../admin/surat_keputusan.php?session_type=kepala_madrasah', 'active' => $current_page === 'surat_keputusan.php', 'badge' => $surat_counts_kepala['keputusan'] > 0 ? $surat_counts_kepala['keputusan'] : null],
+        ];
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -595,6 +617,13 @@ switch ($user_level) {
                 'icon' => 'fas fa-users',
                 'submenu' => $ekstrakurikuler_submenu_kepala,
                 'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_pembina_ekstrakurikuler.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'data_barung.php', 'data_tingkat_barung.php'])
+            ],
+            [
+                'title' => 'Surat-Surat',
+                'icon' => 'fas fa-envelope-open-text',
+                'badge' => $surat_counts_kepala['total'] > 0 ? $surat_counts_kepala['total'] : null,
+                'submenu' => $surat_submenu_kepala,
+                'active' => in_array($current_page, ['surat_masuk.php', 'surat_keluar.php', 'surat_keputusan.php'])
             ],
             [
                 'title' => 'Rekap Kehadiran',
@@ -1509,6 +1538,48 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 ?>
 
 <div class="main-sidebar">
+    <style>
+        .main-sidebar .sidebar-menu li a {
+            display: flex !important;
+            align-items: center !important;
+            white-space: nowrap !important;
+        }
+        .main-sidebar .sidebar-menu li a span {
+            white-space: nowrap !important;
+        }
+        .main-sidebar .sidebar-menu li.dropdown > a.has-dropdown {
+            padding-right: 35px !important;
+        }
+        .main-sidebar .sidebar-menu .badge-circle {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 22px !important;
+            min-width: 22px !important;
+            height: 22px !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            line-height: 1 !important;
+            margin-left: auto !important;
+            margin-right: 2px !important;
+            flex-shrink: 0 !important;
+            background-color: #6777ef !important;
+            color: #fff !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
+        }
+        .main-sidebar .sidebar-menu ul.dropdown-menu li a {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding-right: 15px !important;
+        }
+        .main-sidebar .sidebar-menu ul.dropdown-menu li a .badge-circle {
+            margin-left: 8px !important;
+            margin-right: 0 !important;
+        }
+    </style>
     <aside id="sidebar-wrapper">
         <div class="sidebar-brand">
             <a href="<?php echo htmlspecialchars(app_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>" style="display: flex; align-items: center; gap: 12px; line-height: 1.2; padding: 12px 20px;">
@@ -1523,10 +1594,10 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             <?php foreach ($menu_items as $item): ?>
                 <?php if (isset($item['submenu'])): ?>
                     <li class="nav-item dropdown <?php echo $item['active'] ? 'active' : ''; ?>">
-                        <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span></a>
+                        <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span><?php if (isset($item['badge']) && $item['badge'] !== null): ?><span class="badge badge-primary badge-circle ml-auto mr-3"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?></a>
                         <ul class="dropdown-menu">
                             <?php foreach ($item['submenu'] as $subitem): ?>
-                                <li><a class="nav-link <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo htmlspecialchars(app_url($subitem['url']), ENT_QUOTES, 'UTF-8'); ?>"><?php echo $subitem['title']; ?></a></li>
+                                <li><a class="nav-link d-flex align-items-center justify-content-between <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo htmlspecialchars(app_url($subitem['url']), ENT_QUOTES, 'UTF-8'); ?>"><span><?php echo $subitem['title']; ?></span><?php if (isset($subitem['badge']) && $subitem['badge'] !== null): ?><span class="badge badge-primary badge-circle ml-2"><?php echo htmlspecialchars((string)$subitem['badge']); ?></span><?php endif; ?></a></li>
                             <?php endforeach; ?>
                         </ul>
                     </li>
