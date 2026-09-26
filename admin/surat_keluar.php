@@ -30,6 +30,11 @@ if ($search !== '') {
     $params['search'] = $search;
 }
 
+$force_refresh = isset($_GET['refresh']) && $_GET['refresh'] === '1';
+if ($force_refresh) {
+    get_sims_surat_counts(true);
+}
+
 $response = fetch_sims_surat('surat-keluar', $params);
 $surat_rows = $response['data'] ?? [];
 $fetch_error = ($response['status'] ?? '') === 'error' ? ($response['message'] ?? 'Gagal mengambil data dari SIMS') : null;
@@ -65,7 +70,13 @@ $(document).ready(function() {
         e.preventDefault();
         var printUrl = $(this).data('print-url');
         var fileUrl = $(this).data('file-url');
-        var targetUrl = fileUrl || printUrl;
+        var title = $(this).data('title') || 'Cetak Surat Keluar';
+        var targetUrl = '';
+        if (fileUrl) {
+            targetUrl = 'view_surat.php?url=' + encodeURIComponent(fileUrl) + '&title=' + encodeURIComponent(title);
+        } else if (printUrl) {
+            targetUrl = printUrl;
+        }
         if (!targetUrl) {
             Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Dokumen surat tidak dapat dicetak.' });
             return;
@@ -101,6 +112,9 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Daftar Surat Keluar (SIMS)</h4>
                     <div class="card-header-action">
+                        <a href="?refresh=1" class="btn btn-outline-primary mr-2" title="Sinkron Ulang Data SIMS">
+                            <i class="fas fa-sync-alt"></i> Sinkron
+                        </a>
                         <span class="badge badge-primary font-weight-bold" style="font-size:14px; padding:6px 12px;">
                             Total: <?= count($surat_rows) ?> Surat
                         </span>
@@ -136,6 +150,7 @@ include '../templates/sidebar.php';
                                             <button type="button" class="btn btn-primary btn-sm btn-cetak-surat"
                                                 data-print-url="<?= htmlspecialchars($print_url, ENT_QUOTES) ?>"
                                                 data-file-url="<?= htmlspecialchars($file_url, ENT_QUOTES) ?>"
+                                                data-title="Surat Keluar: <?= htmlspecialchars($row['no_surat'] ?? '', ENT_QUOTES) ?>"
                                                 title="Cetak Surat">
                                                 <i class="fas fa-print"></i> Cetak
                                             </button>

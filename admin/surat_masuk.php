@@ -30,6 +30,11 @@ if ($search !== '') {
     $params['search'] = $search;
 }
 
+$force_refresh = isset($_GET['refresh']) && $_GET['refresh'] === '1';
+if ($force_refresh) {
+    get_sims_surat_counts(true);
+}
+
 $response = fetch_sims_surat('surat-masuk', $params);
 $surat_rows = $response['data'] ?? [];
 $fetch_error = ($response['status'] ?? '') === 'error' ? ($response['message'] ?? 'Gagal mengambil data dari SIMS') : null;
@@ -61,23 +66,13 @@ $(document).ready(function() {
     $(document).on('click', '.btn-preview-surat', function(e) {
         e.preventDefault();
         var url = $(this).data('file');
-        var title = $(this).data('title') || 'Preview Surat';
+        var title = $(this).data('title') || 'Preview Surat Masuk';
         if (!url) {
             Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'File surat tidak tersedia.' });
             return;
         }
-        $('#modalPreviewTitle').text(title);
-        var ext = url.split('.').pop().toLowerCase();
-        var content = '';
-        if (ext === 'pdf') {
-            content = '<iframe src="' + url + '" style="width:100%; height:550px; border:none;"></iframe>';
-        } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) !== -1) {
-            content = '<div class="text-center"><img src="' + url + '" class="img-fluid rounded" style="max-height:550px;"></div>';
-        } else {
-            content = '<div class="text-center p-4"><p>File tipe <strong>.' + ext + '</strong> tidak dapat dipreview langsung.</p><a href="' + url + '" target="_blank" class="btn btn-primary"><i class="fas fa-download"></i> Unduh File</a></div>';
-        }
-        $('#modalPreviewBody').html(content);
-        $('#modalPreviewSurat').modal('show');
+        var targetUrl = 'view_surat.php?url=' + encodeURIComponent(url) + '&title=' + encodeURIComponent(title);
+        window.open(targetUrl, '_blank');
     });
 });
 JS
@@ -108,6 +103,9 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Daftar Surat Masuk (SIMS)</h4>
                     <div class="card-header-action">
+                        <a href="?refresh=1" class="btn btn-outline-primary mr-2" title="Sinkron Ulang Data SIMS">
+                            <i class="fas fa-sync-alt"></i> Sinkron
+                        </a>
                         <span class="badge badge-primary font-weight-bold" style="font-size:14px; padding:6px 12px;">
                             Total: <?= count($surat_rows) ?> Surat
                         </span>
@@ -138,11 +136,13 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($row['pengirim'] ?? '-') ?></td>
                                         <td class="text-center">
                                             <?php if (!empty($row['file_url'])): ?>
-                                                <button type="button" class="btn btn-info btn-sm btn-preview-surat"
-                                                    data-file="<?= htmlspecialchars($row['file_url'], ENT_QUOTES) ?>"
-                                                    data-title="Surat: <?= htmlspecialchars($row['no_surat'] ?? '', ENT_QUOTES) ?>">
+                                                <a href="view_surat.php?url=<?= urlencode($row['file_url']) ?>&amp;title=<?= urlencode('Surat Masuk: ' . ($row['no_surat'] ?? '')) ?>"
+                                                   target="_blank"
+                                                   class="btn btn-info btn-sm btn-preview-surat"
+                                                   data-file="<?= htmlspecialchars($row['file_url'], ENT_QUOTES) ?>"
+                                                   data-title="Surat Masuk: <?= htmlspecialchars($row['no_surat'] ?? '', ENT_QUOTES) ?>">
                                                     <i class="fas fa-eye"></i> Lihat
-                                                </button>
+                                                </a>
                                             <?php else: ?>
                                                 <span class="badge badge-secondary">Tidak ada file</span>
                                             <?php endif; ?>
@@ -156,22 +156,6 @@ include '../templates/sidebar.php';
             </div>
         </div>
     </section>
-</div>
-
-<!-- Modal Preview Surat -->
-<div class="modal fade" id="modalPreviewSurat" tabindex="-1" role="dialog" aria-labelledby="modalPreviewTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalPreviewTitle">Preview Surat Masuk</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="modalPreviewBody">
-            </div>
-        </div>
-    </div>
 </div>
 
 <?php include '../templates/footer.php'; ?>
