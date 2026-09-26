@@ -494,12 +494,10 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['program_kerja.php', 'komponen_program_kerja.php', 'laporan_program_kerja.php'])
             ],
             [
-                'title' => 'Integrasi',
+                'title' => 'Integrasi API',
                 'icon' => 'fas fa-plug',
-                'submenu' => [
-                    ['title' => 'Pengaturan Endpoint', 'url' => '../admin/pengaturan_endpoint.php', 'active' => $current_page === 'pengaturan_endpoint.php'],
-                ],
-                'active' => in_array($current_page, ['pengaturan_endpoint.php'])
+                'url' => '../admin/pengaturan_endpoint.php',
+                'active' => $current_page === 'pengaturan_endpoint.php'
             ],
             [
                 'title' => 'Pengaturan',

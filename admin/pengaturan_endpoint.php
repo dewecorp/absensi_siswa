@@ -137,6 +137,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_masuk'])) {
     }
 }
 
+// --- Edit endpoint masuk (nama + deskripsi + base_url + key) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_masuk'])) {
+    $id = (int)($_POST['id'] ?? 0);
+    $nama = strtolower(trim((string)($_POST['nama_aplikasi'] ?? '')));
+    $base = trim((string)($_POST['base_url'] ?? ''));
+    $key = trim((string)($_POST['api_key'] ?? ''));
+    $deskripsi = trim((string)($_POST['deskripsi'] ?? ''));
+    if ($id <= 0 || $nama === '') {
+        $message = ['type' => 'warning', 'text' => 'Nama aplikasi wajib diisi.'];
+    } else {
+        try {
+            $pdo->prepare("UPDATE tb_endpoint_masuk SET nama_aplikasi = ?, base_url = ?, api_key = ?, deskripsi = ?, updated_at = NOW() WHERE id = ?")->execute([$nama, $base, $key !== '' ? $key : null, $deskripsi, $id]);
+            $message = ['type' => 'success', 'text' => 'Endpoint masuk diperbarui.'];
+        } catch (Exception $e) {
+            $message = ['type' => 'danger', 'text' => 'Gagal mengedit: ' . $e->getMessage()];
+        }
+    }
+}
+
 // --- Tambah endpoint masuk custom ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_masuk'])) {
     $nama = strtolower(trim((string)($_POST['nama_aplikasi'] ?? '')));
@@ -167,6 +186,67 @@ if ($message) {
     $js_page[] = "Swal.fire({icon:'{$swal_icon}',title:'" . ($message['type'] === 'success' ? 'Berhasil!' : 'Perhatian!') . "',text:" . json_encode($message['text']) . ",timer:2200,showConfirmButton:false});";
 }
 $js_page[] = <<<'JS'
+function confirmDeleteEndpoint(form, text) {
+    Swal.fire({
+        title: 'Hapus endpoint?',
+        text: text || 'Data yang dihapus tidak bisa dikembalikan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, hapus!',
+        cancelButtonText: 'Batal'
+    }).then(function (res) {
+        if (res.isConfirmed) form.submit();
+    });
+}
+document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (f && f.classList && f.classList.contains('form-delete-endpoint')) {
+        e.preventDefault();
+        confirmDeleteEndpoint(f, f.getAttribute('data-text'));
+    }
+});
+document.addEventListener('click', function (e) {
+    var eb = e.target.closest ? e.target.closest('.btn-edit-masuk') : null;
+    if (eb) {
+        document.getElementById('editMasukId').value = eb.getAttribute('data-id') || '';
+        document.getElementById('editMasukNama').value = eb.getAttribute('data-nama') || '';
+        document.getElementById('editMasukBase').value = eb.getAttribute('data-base') || '';
+        document.getElementById('editMasukKey').value = eb.getAttribute('data-key') || '';
+        document.getElementById('editMasukDeskripsi').value = eb.getAttribute('data-deskripsi') || '';
+        $('#editMasukModal').modal('show');
+        return;
+    }
+    var b = e.target.closest ? e.target.closest('.btn-delete-masuk') : null;
+    if (!b) return;
+    e.preventDefault();
+    var id = b.getAttribute('data-id');
+    var text = b.getAttribute('data-text') || 'Hapus endpoint masuk ini?';
+    Swal.fire({
+        title: 'Hapus endpoint?',
+        text: text,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, hapus!',
+        cancelButtonText: 'Batal'
+    }).then(function (res) {
+        if (!res.isConfirmed) return;
+        var hf = document.getElementById('formDeleteMasuk');
+        if (!hf) return;
+        var hid = hf.querySelector('input[name="id"]');
+        if (!hid) {
+            hid = document.createElement('input');
+            hid.type = 'hidden';
+            hid.name = 'id';
+            hf.appendChild(hid);
+        }
+        hid.value = id;
+        hf.submit();
+    });
+});
 function copyEndpoint(btn) {
     var target = document.getElementById(btn.getAttribute('data-target'));
     if (!target) return;
@@ -243,7 +323,7 @@ include '../templates/sidebar.php';
                                             <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
                                             <button class="btn btn-sm btn-warning" title="Aktif/Nonaktif"><i class="fas fa-power-off"></i></button>
                                         </form>
-                                        <form method="POST" class="d-inline" onsubmit="return confirm('Hapus endpoint ini?')">
+                                        <form method="POST" class="d-inline form-delete-endpoint" data-text="Hapus endpoint keluar '<?= htmlspecialchars($r['nama'] ?? '', ENT_QUOTES) ?>'?">
                                             <input type="hidden" name="delete_keluar" value="1">
                                             <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
                                             <button class="btn btn-sm btn-danger" title="Hapus"><i class="fas fa-trash"></i></button>
@@ -291,7 +371,13 @@ include '../templates/sidebar.php';
                                     <td>
                                         <div class="d-flex" style="gap:4px;">
                                             <button type="submit" form="formTestMasuk" name="id" value="<?= (int)$r['id'] ?>" class="btn btn-sm btn-info d-inline-flex align-items-center" style="gap:4px;line-height:1;" title="Tes koneksi"><i class="fas fa-plug"></i><span>Tes</span></button>
-                                            <button type="submit" form="formDeleteMasuk" name="id" value="<?= (int)$r['id'] ?>" class="btn btn-sm btn-danger" title="Hapus" onclick="return confirm('Hapus endpoint masuk ini?')"><i class="fas fa-trash"></i></button>
+                                            <button type="button" class="btn btn-sm btn-warning btn-edit-masuk" title="Edit"
+                                                data-id="<?= (int)$r['id'] ?>"
+                                                data-nama="<?= htmlspecialchars($r['nama_aplikasi'] ?? '', ENT_QUOTES) ?>"
+                                                data-base="<?= htmlspecialchars($r['base_url'] ?? '', ENT_QUOTES) ?>"
+                                                data-key="<?= htmlspecialchars($r['api_key'] ?? '', ENT_QUOTES) ?>"
+                                                data-deskripsi="<?= htmlspecialchars($r['deskripsi'] ?? '', ENT_QUOTES) ?>"><i class="fas fa-edit"></i></button>
+                                            <button type="button" class="btn btn-sm btn-danger btn-delete-masuk" data-id="<?= (int)$r['id'] ?>" data-text="Hapus endpoint masuk '<?= htmlspecialchars($r['nama_aplikasi'] ?? '', ENT_QUOTES) ?>'?" title="Hapus"><i class="fas fa-trash"></i></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -344,6 +430,30 @@ include '../templates/sidebar.php';
                 <div class="modal-body">
                     <input type="hidden" name="add_masuk" value="1">
                     <div class="form-group"><label>Nama aplikasi</label><input type="text" name="nama_aplikasi" class="form-control" required placeholder="cth: sirapor"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editMasukModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="POST">
+                <div class="modal-header"><h5 class="modal-title">Edit Endpoint Masuk</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="edit_masuk" value="1">
+                    <input type="hidden" name="id" id="editMasukId" value="">
+                    <div class="form-group"><label>Nama aplikasi</label><input type="text" name="nama_aplikasi" id="editMasukNama" class="form-control" required></div>
+                    <div class="form-group"><label>Base URL</label><input type="text" name="base_url" id="editMasukBase" class="form-control" placeholder="https://aplikasi.example.com/api/..."></div>
+                    <div class="form-group"><label>API Key</label><input type="text" name="api_key" id="editMasukKey" class="form-control" autocomplete="off"></div>
+                    <div class="form-group mb-0"><label>Deskripsi</label><textarea name="deskripsi" id="editMasukDeskripsi" class="form-control" rows="2"></textarea></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>

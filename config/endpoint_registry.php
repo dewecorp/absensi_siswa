@@ -48,6 +48,7 @@ if (!function_exists('endpoint_seeds')) {
             ['nama' => 'Sinkron Siswa (Sibayar)', 'path' => 'api/v1/sync_siswa.php', 'metode' => 'GET', 'deskripsi' => 'Data siswa + tanggal_masuk untuk penentuan tagihan Sibayar.'],
             ['nama' => 'Data Guru', 'path' => 'api/v1/teachers.php', 'metode' => 'GET', 'deskripsi' => 'Sinkron data guru ke aplikasi eksternal.'],
             ['nama' => 'Data Kelas', 'path' => 'api/v1/classes.php', 'metode' => 'GET', 'deskripsi' => 'Sinkron data kelas ke aplikasi eksternal.'],
+            ['nama' => 'Data Ekstrakurikuler', 'path' => 'api/v1/extracurriculars.php', 'metode' => 'GET', 'deskripsi' => 'Sinkron data ekstrakurikuler + pembina + anggota aktif.'],
         ];
     }
 }
