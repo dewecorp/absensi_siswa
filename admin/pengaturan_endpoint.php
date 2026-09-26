@@ -21,22 +21,6 @@ endpoint_seed_all($pdo);
 
 $api_key = endpoint_api_key($pdo);
 
-// --- Simpan API key global SIMAD ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_api_key'])) {
-    $new_key = trim((string)($_POST['api_key'] ?? ''));
-    if ($new_key === '') {
-        $message = ['type' => 'danger', 'text' => 'API key tidak boleh kosong.'];
-    } else {
-        try {
-            $pdo->prepare("UPDATE tb_pengaturan_api SET api_key = ?, updated_at = NOW() WHERE id = (SELECT id FROM (SELECT MIN(id) AS id FROM tb_pengaturan_api) t)")->execute([$new_key]);
-            $api_key = $new_key;
-            $message = ['type' => 'success', 'text' => 'API key berhasil disimpan. URL endpoint di bawah otomatis memakai key baru.'];
-        } catch (Exception $e) {
-            $message = ['type' => 'danger', 'text' => 'Gagal menyimpan API key: ' . $e->getMessage()];
-        }
-    }
-}
-
 // --- Tambah endpoint keluar ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_keluar'])) {
     $nama = trim((string)($_POST['nama'] ?? ''));
@@ -306,14 +290,13 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             <div class="card">
-                <div class="card-header"><h4>API Key SIMAD (untuk semua endpoint keluar)</h4></div>
+                <div class="card-header"><h4>API Key SIMAD (untuk dipasang di aplikasi lain)</h4></div>
                 <div class="card-body">
-                    <form method="POST" class="form-inline">
-                        <input type="hidden" name="save_api_key" value="1">
-                        <input type="text" name="api_key" class="form-control mr-2" style="min-width:320px;" value="<?= htmlspecialchars($api_key) ?>" placeholder="API key" autocomplete="off">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan Key</button>
-                        <small class="text-muted ml-3">Ganti domain/hosting? URL di bawah otomatis ikut — cukup salin ulang, tanpa bongkar backend.</small>
-                    </form>
+                    <div class="form-inline">
+                        <input type="text" id="simadApiKeyInput" class="form-control mr-2" style="min-width:340px; cursor:pointer;" value="<?= htmlspecialchars($api_key) ?>" readonly title="Klik untuk salin API Key" onclick="copyTextToClipboard(this.value)">
+                        <button type="button" class="btn btn-secondary" onclick="copyTextToClipboard(document.getElementById('simadApiKeyInput').value)"><i class="fas fa-copy"></i> Salin Key</button>
+                        <small class="text-muted ml-3">Salin API key ini untuk disimpan pada aplikasi penerima/lain.</small>
+                    </div>
                 </div>
             </div>
 
