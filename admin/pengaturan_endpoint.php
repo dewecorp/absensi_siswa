@@ -247,17 +247,49 @@ document.addEventListener('click', function (e) {
         hf.submit();
     });
 });
+function copyTextToClipboard(text) {
+    if (!text) return;
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function() {
+            if (typeof toastr !== 'undefined') {
+                toastr.success('URL Endpoint berhasil disalin!', 'Berhasil');
+            } else {
+                Swal.fire({icon:'success',title:'Disalin!',timer:1200,showConfirmButton:false});
+            }
+        }).catch(function() {
+            fallbackCopyText(text);
+        });
+    } else {
+        fallbackCopyText(text);
+    }
+}
+
+function fallbackCopyText(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-999999px';
+    ta.style.top = '-999999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+        document.execCommand('copy');
+        if (typeof toastr !== 'undefined') {
+            toastr.success('URL Endpoint berhasil disalin!', 'Berhasil');
+        } else {
+            Swal.fire({icon:'success',title:'Disalin!',timer:1200,showConfirmButton:false});
+        }
+    } catch (e) {
+        Swal.fire({icon:'error',title:'Gagal menyalin',timer:1500,showConfirmButton:false});
+    }
+    document.body.removeChild(ta);
+}
+
 function copyEndpoint(btn) {
     var target = document.getElementById(btn.getAttribute('data-target'));
     if (!target) return;
-    target.select();
-    target.setSelectionRange(0, 99999);
-    try {
-        document.execCommand('copy');
-        Swal.fire({icon:'success',title:'Disalin!',timer:1200,showConfirmButton:false});
-    } catch (e) {
-        if (navigator.clipboard) { navigator.clipboard.writeText(target.value); Swal.fire({icon:'success',title:'Disalin!',timer:1200,showConfirmButton:false}); }
-    }
+    copyTextToClipboard(target.value);
 }
 JS;
 
@@ -309,9 +341,9 @@ include '../templates/sidebar.php';
                                     <td><span class="badge badge-info"><?= htmlspecialchars($r['metode']) ?></span></td>
                                     <td>
                                         <div class="input-group">
-                                            <input type="text" class="form-control form-control-sm" id="ep<?= (int)$r['id'] ?>" value="<?= htmlspecialchars($full) ?>" readonly>
+                                            <input type="text" class="form-control form-control-sm" id="ep<?= (int)$r['id'] ?>" value="<?= htmlspecialchars($full) ?>" readonly style="cursor:pointer;" title="Klik untuk salin URL otomatis" onclick="copyTextToClipboard(this.value)">
                                             <div class="input-group-append">
-                                                <button type="button" class="btn btn-sm btn-secondary" data-target="ep<?= (int)$r['id'] ?>" onclick="copyEndpoint(this)"><i class="fas fa-copy"></i></button>
+                                                <button type="button" class="btn btn-sm btn-secondary" data-target="ep<?= (int)$r['id'] ?>" onclick="copyEndpoint(this)" title="Salin URL"><i class="fas fa-copy"></i></button>
                                             </div>
                                         </div>
                                     </td>
