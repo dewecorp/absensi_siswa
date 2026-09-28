@@ -36,8 +36,31 @@ if ($force_refresh) {
 }
 
 $response = fetch_sims_surat('surat-keputusan', $params);
-$surat_rows = $response['data'] ?? [];
+$all_surat_rows = $response['data'] ?? [];
 $fetch_error = ($response['status'] ?? '') === 'error' ? ($response['message'] ?? 'Gagal mengambil data dari SIMS') : null;
+
+$selected_tahun = trim((string)($_GET['tahun'] ?? ''));
+
+$tahun_list = [];
+foreach ($all_surat_rows as $r) {
+    $tgl = !empty($r['tgl_surat']) ? $r['tgl_surat'] : ($r['created_at'] ?? '');
+    if ($tgl) {
+        $y = date('Y', strtotime($tgl));
+        if ($y && !in_array($y, $tahun_list, true)) {
+            $tahun_list[] = $y;
+        }
+    }
+}
+rsort($tahun_list);
+
+$surat_rows = $all_surat_rows;
+if ($selected_tahun !== '') {
+    $surat_rows = array_filter($all_surat_rows, static function($r) use ($selected_tahun) {
+        $tgl = !empty($r['tgl_surat']) ? $r['tgl_surat'] : ($r['created_at'] ?? '');
+        $y = $tgl ? date('Y', strtotime($tgl)) : '';
+        return $y === $selected_tahun;
+    });
+}
 
 $cfg = getInboundEndpointConfig('sims');
 $sims_root_url = get_sims_root_url($cfg['base_url'] ?? '');
@@ -121,6 +144,26 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
+                    <form method="GET" class="form-inline mb-3">
+                        <?php if (isset($_GET['session_type'])): ?>
+                            <input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>">
+                        <?php endif; ?>
+                        <div class="form-group mr-3 mb-2">
+                            <label for="filterTahun" class="mr-2 font-weight-bold">Tahun:</label>
+                            <select name="tahun" id="filterTahun" class="form-control form-control-sm" onchange="this.form.submit()">
+                                <option value="">-- Semua Tahun --</option>
+                                <?php foreach ($tahun_list as $y): ?>
+                                    <option value="<?= htmlspecialchars($y) ?>" <?= $selected_tahun === (string)$y ? 'selected' : '' ?>><?= htmlspecialchars($y) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php if ($selected_tahun !== ''): ?>
+                            <a href="surat_keputusan.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode($_GET['session_type']) : '' ?>" class="btn btn-sm btn-secondary mb-2">
+                                <i class="fas fa-undo"></i> Reset Filter
+                            </a>
+                        <?php endif; ?>
+                    </form>
+
                     <div class="table-responsive">
                         <table class="table table-striped" id="table-surat-keputusan">
                             <thead>
