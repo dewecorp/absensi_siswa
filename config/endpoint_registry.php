@@ -154,12 +154,16 @@ if (!function_exists('endpoint_fetch_url')) {
             $hblock = substr($resp, 0, $hsize);
             if (!preg_match('/^location:\s*(.+)$/mi', $hblock, $m)) return [$body, $code, '', $url];
             $loc = trim($m[1]);
-            if (preg_match('#[A-Za-z]:/#', $loc)) {
-                if (preg_match('#(/api/.*)$#', $loc, $mm)) {
-                    $parts = parse_url($url);
-                    $loc = ($parts['scheme'] ?? 'http') . '://' . ($parts['host'] ?? '') . $mm[1];
-                } else {
-                    return [$body, $code, 'redirect rusak dari server tujuan', $url];
+            if (preg_match('#(?:^|/|\\\\)[A-Za-z]:[/\x5C]#', $loc)) {
+                $loc = preg_replace('#/[A-Za-z]:/.*?(?:www|htdocs|public_html|wwwroot)/[^/]+/#i', '/', $loc);
+                $loc = preg_replace('#^[A-Za-z]:/.*?(?:www|htdocs|public_html|wwwroot)/[^/]+/#i', '/', $loc);
+                if (preg_match('#(?:^|/|\\\\)[A-Za-z]:[/\x5C]#', $loc)) {
+                    if (preg_match('#(/api/.*)$#i', $loc, $mm)) {
+                        $parts = parse_url($url);
+                        $loc = ($parts['scheme'] ?? 'http') . '://' . ($parts['host'] ?? '') . (isset($parts['port']) ? ':' . $parts['port'] : '') . $mm[1];
+                    } else {
+                        return [$body, $code, 'redirect rusak dari server tujuan', $url];
+                    }
                 }
             } elseif (!preg_match('#^https?://#i', $loc)) {
                 $parts = parse_url($url);

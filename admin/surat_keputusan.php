@@ -91,20 +91,12 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-cetak-sk', function(e) {
         e.preventDefault();
-        var printUrl = $(this).data('print-url');
-        var fileUrl = $(this).data('file-url');
-        var title = $(this).data('title') || 'Cetak Surat Keputusan';
-        var targetUrl = '';
-        if (fileUrl) {
-            targetUrl = 'view_surat.php?url=' + encodeURIComponent(fileUrl) + '&title=' + encodeURIComponent(title);
-        } else if (printUrl) {
-            targetUrl = printUrl;
-        }
-        if (!targetUrl) {
+        var viewUrl = $(this).data('view-url') || $(this).attr('href');
+        if (!viewUrl) {
             Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Dokumen SK tidak dapat dicetak.' });
             return;
         }
-        window.open(targetUrl, '_blank');
+        window.open(viewUrl, '_blank');
     });
 });
 JS
@@ -182,6 +174,8 @@ include '../templates/sidebar.php';
                                         $id_sk = (int)($row['id'] ?? 0);
                                         $file_url = $row['file_url'] ?? '';
                                         $print_url = $sims_root_url !== '' ? rtrim($sims_root_url, '/') . '/print_surat_keputusan.php?id=' . $id_sk : '';
+                                        $target_sk_url = !empty($print_url) ? $print_url : $file_url;
+                                        $view_url = 'view_surat.php?url=' . urlencode($target_sk_url) . '&title=' . urlencode('Surat Keputusan: ' . ($row['nama_sk'] ?? ''));
                                         $tgl_buat = !empty($row['created_at']) ? formatDateDMY($row['created_at']) : formatDateDMY($row['tgl_surat'] ?? '');
                                     ?>
                                     <tr>
@@ -191,13 +185,12 @@ include '../templates/sidebar.php';
                                         <td><strong><?= htmlspecialchars($row['no_surat'] ?? '-') ?></strong></td>
                                         <td><?= htmlspecialchars($row['nama_sk'] ?? '-') ?></td>
                                         <td class="text-center">
-                                            <button type="button" class="btn btn-primary btn-sm btn-cetak-sk"
-                                                data-print-url="<?= htmlspecialchars($print_url, ENT_QUOTES) ?>"
-                                                data-file-url="<?= htmlspecialchars($file_url, ENT_QUOTES) ?>"
-                                                data-title="Surat Keputusan: <?= htmlspecialchars($row['nama_sk'] ?? '', ENT_QUOTES) ?>"
-                                                title="Cetak Surat Keputusan">
+                                            <a href="<?= htmlspecialchars($view_url, ENT_QUOTES) ?>" target="_blank"
+                                               class="btn btn-primary btn-sm btn-cetak-sk"
+                                               data-view-url="<?= htmlspecialchars($view_url, ENT_QUOTES) ?>"
+                                               title="Cetak Surat Keputusan">
                                                 <i class="fas fa-print"></i> Cetak
-                                            </button>
+                                            </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

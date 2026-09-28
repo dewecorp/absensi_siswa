@@ -105,20 +105,12 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-cetak-surat', function(e) {
         e.preventDefault();
-        var printUrl = $(this).data('print-url');
-        var fileUrl = $(this).data('file-url');
-        var title = $(this).data('title') || 'Cetak Surat Keluar';
-        var targetUrl = '';
-        if (fileUrl) {
-            targetUrl = 'view_surat.php?url=' + encodeURIComponent(fileUrl) + '&title=' + encodeURIComponent(title);
-        } else if (printUrl) {
-            targetUrl = printUrl;
-        }
-        if (!targetUrl) {
+        var viewUrl = $(this).data('view-url') || $(this).attr('href');
+        if (!viewUrl) {
             Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Dokumen surat tidak dapat dicetak.' });
             return;
         }
-        window.open(targetUrl, '_blank');
+        window.open(viewUrl, '_blank');
     });
 });
 JS
@@ -205,6 +197,8 @@ include '../templates/sidebar.php';
                                         $id_surat = (int)($row['id'] ?? 0);
                                         $file_url = $row['file_url'] ?? '';
                                         $print_url = $sims_root_url !== '' ? rtrim($sims_root_url, '/') . '/print_surat_keluar.php?id=' . $id_surat : '';
+                                        $target_surat_url = !empty($file_url) ? $file_url : $print_url;
+                                        $view_url = 'view_surat.php?url=' . urlencode($target_surat_url) . '&title=' . urlencode('Surat Keluar: ' . ($row['no_surat'] ?? ''));
                                     ?>
                                     <tr>
                                         <td class="text-center"><?= $i + 1 ?></td>
@@ -213,13 +207,12 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($row['perihal'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($row['penerima'] ?? '-') ?></td>
                                         <td class="text-center">
-                                            <button type="button" class="btn btn-primary btn-sm btn-cetak-surat"
-                                                data-print-url="<?= htmlspecialchars($print_url, ENT_QUOTES) ?>"
-                                                data-file-url="<?= htmlspecialchars($file_url, ENT_QUOTES) ?>"
-                                                data-title="Surat Keluar: <?= htmlspecialchars($row['no_surat'] ?? '', ENT_QUOTES) ?>"
-                                                title="Cetak Surat">
+                                            <a href="<?= htmlspecialchars($view_url, ENT_QUOTES) ?>" target="_blank"
+                                               class="btn btn-primary btn-sm btn-cetak-surat"
+                                               data-view-url="<?= htmlspecialchars($view_url, ENT_QUOTES) ?>"
+                                               title="Cetak Surat">
                                                 <i class="fas fa-print"></i> Cetak
-                                            </button>
+                                            </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

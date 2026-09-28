@@ -5,6 +5,7 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 require_once '../config/database.php';
 require_once '../config/functions.php';
 require_once '../config/endpoint_registry.php';
+require_once '../config/sims_surat_helper.php';
 
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -21,7 +22,53 @@ if ($file_url === '') {
     exit('URL File Surat tidak ditemukan.');
 }
 
-// Proxy mode: returns JSON with base64 to prevent IDM (Internet Download Manager) from intercepting HTTP PDF responses
+// Check if URL is an HTML print page (e.g., print_surat_keluar.php or print_surat_keputusan.php)
+$clean_path = parse_url($file_url, PHP_URL_PATH) ?? '';
+$ext = strtolower(pathinfo($clean_path, PATHINFO_EXTENSION));
+$is_html_print = ($ext === 'php' || $ext === 'html' || $ext === '' || stripos($clean_path, 'print_surat_') !== false || isset($_GET['type']));
+
+if ($is_html_print) {
+    $cfg = getInboundEndpointConfig('sims');
+    $api_key = trim((string)($cfg['api_key'] ?? ''));
+    $root_url = get_sims_root_url($cfg['base_url'] ?? '');
+    $headers = [];
+    if ($api_key !== '') {
+        $headers[] = 'X-API-KEY: ' . $api_key;
+    }
+
+    $fetch_url = $file_url;
+    if ($api_key !== '' && strpos($fetch_url, 'api_key=') === false) {
+        $fetch_url .= (strpos($fetch_url, '?') === false ? '?' : '&') . 'api_key=' . urlencode($api_key);
+    }
+
+    [$html_body, $code, $err] = endpoint_fetch_url($fetch_url, $headers);
+
+    if ($html_body !== false && $code === 200 && (stripos($html_body, '<html') !== false || stripos($html_body, '<!DOCTYPE') !== false)) {
+        if ($root_url !== '') {
+            $sims_base = rtrim($root_url, '/') . '/';
+            $html_body = preg_replace_callback('#(src|href)=["\'](?!https?://|data:|javascript:|//|\#)([^"\']+)["\']#i', static function($m) use ($sims_base) {
+                $attr = $m[1];
+                $rel = ltrim($m[2], '/');
+                return $attr . '="' . $sims_base . $rel . '"';
+            }, $html_body);
+        }
+
+        if (stripos($html_body, 'window.print()') === false) {
+            $print_script = '<script>window.addEventListener("load", function() { setTimeout(function() { window.print(); }, 400); });</script>';
+            if (stripos($html_body, '</body>') !== false) {
+                $html_body = str_ireplace('</body>', $print_script . '</body>', $html_body);
+            } else {
+                $html_body .= $print_script;
+            }
+        }
+
+        header('Content-Type: text/html; charset=utf-8');
+        echo $html_body;
+        exit;
+    }
+}
+
+// Proxy mode for static files (PDF/Images): returns JSON with base64 to prevent IDM
 if (isset($_GET['proxy']) && $_GET['proxy'] === '1') {
     header('Content-Type: application/json; charset=UTF-8');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -41,8 +88,6 @@ if (isset($_GET['proxy']) && $_GET['proxy'] === '1') {
         exit;
     }
 
-    $clean_path = parse_url($file_url, PHP_URL_PATH) ?? '';
-    $ext = strtolower(pathinfo($clean_path, PATHINFO_EXTENSION));
     $mime = 'application/pdf';
     if (in_array($ext, ['jpg', 'jpeg'], true)) $mime = 'image/jpeg';
     elseif ($ext === 'png') $mime = 'image/png';
@@ -59,6 +104,8 @@ if (isset($_GET['proxy']) && $_GET['proxy'] === '1') {
 }
 
 $proxy_json_url = 'view_surat.php?proxy=1&url=' . urlencode($file_url);
+$is_pdf = ($ext === 'pdf');
+$is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true);
 ?>
 <!DOCTYPE html>
 <html lang="id">
