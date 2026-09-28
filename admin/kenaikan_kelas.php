@@ -384,7 +384,10 @@ if (!function_exists('detectClassLevel')) {
 
 $mode = $_GET['mode'] ?? 'promote';
 $source_id = isset($_GET['source_class']) ? (int)$_GET['source_class'] : null;
-$target_id = isset($_GET['target_class']) ? (int)$_GET['target_class'] : null;
+// Kelas tujuan selalu diturunkan otomatis dari kelas asal; abaikan sisa
+// parameter target_class agar tidak menampilkan kelas terakhir dibuka
+// saat kelas asal belum dipilih.
+$target_id = null;
 
 // Automatic target class selection (always fixed)
 if ($source_id) {
@@ -488,7 +491,6 @@ require_once '../templates/sidebar.php';
                     <div class="card-body">
                         <form method="GET" id="sourceForm">
                             <input type="hidden" name="mode" value="<?= $mode ?>">
-                            <?php if ($target_id): ?><input type="hidden" name="target_class" value="<?= $target_id ?>"><?php endif; ?>
                             <div class="form-group">
                                 <label>Kelas</label>
                                 <select name="source_class" class="form-control" onchange="this.form.submit()">
