@@ -158,6 +158,7 @@ $all_schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $main_schedule = [];
 $used_jam_ke = [];
+$used_jam_per_kelas = [];
 foreach ($all_schedules as $row) {
     // Filter non-academic schedules
     if (!isset($mapel_map[$row['mapel_id']])) {
@@ -179,10 +180,30 @@ $jam_display = array_filter($jam_mengajar, function($jam) use ($used_jam_ke) {
 });
 
 // HTML Content
-// Jadwal Kelas -> Portrait F4; Jadwal Utama (semua kelas) -> Landscape F4
+// Jadwal Kelas -> Portrait F4; Jadwal Utama -> dinamis per jumlah kelas.
+// Bentuk awal (1 tabel): total <=6 kelas ATAU hanya 1 tingkat.
+// Selain itu: pecah 1 tabel per tingkat (potong per 6 bila sangat lebar).
+$utama_layout = ['mode' => 'landscape', 'chunk' => count($classes)];
+$utama_groups = [];
+if (!$kelas_id) {
+    $utama_groups = groupKelasPerTingkat($classes);
+    $max_paralel = 1;
+    foreach ($utama_groups as $g) {
+        $max_paralel = max($max_paralel, count($g['classes']));
+    }
+    if (count($classes) <= 6 || count($utama_groups) <= 1) {
+        // Bentuk awal: sedikit kelas / satu tingkat -> semua kelas satu tabel.
+        $utama_groups = [['label' => '', 'classes' => $classes]];
+        $utama_layout = ['mode' => 'landscape', 'chunk' => count($classes)];
+    } else {
+        $utama_layout = jadwalUtamaLayoutMode($max_paralel, count($days));
+    }
+}
 $page_css = $kelas_id
     ? '@page { size: 210mm 330mm; /* F4 Portrait */ margin: 10mm 15mm 12mm 15mm; }'
-    : '@page { size: 330mm 215mm; /* F4 Landscape */ margin: 5mm 10mm 10mm 10mm; }';
+    : ($utama_layout['mode'] === 'portrait'
+        ? '@page { size: 210mm 330mm; /* F4 Portrait */ margin: 10mm 12mm 12mm 12mm; }'
+        : '@page { size: 330mm 215mm; /* F4 Landscape */ margin: 5mm 10mm 10mm 10mm; }');
 $html = '
 <!DOCTYPE html>
 <html>
@@ -226,6 +247,9 @@ $html = '
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { border: 1px solid black; padding: 3px; text-align: center; font-size: 9pt; word-wrap: break-word; }
         th { background-color: #f0f0f0; }
+        thead { display: table-header-group; page-break-inside: avoid; break-inside: avoid; }
+        tbody tr { page-break-inside: avoid; break-inside: avoid; }
+        h4.jadwal-grup { page-break-after: avoid; break-after: avoid; }
         .signature-table { margin-top: 5mm; border: none; page-break-inside: avoid; break-inside: avoid; page-break-before: auto; }
         .signature-table td { border: none; vertical-align: top; text-align: center; padding: 5px; font-size: 10pt; }
         .special-slot { background-color: #f9f9f9; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
@@ -273,16 +297,7 @@ $html .= '
 
     <h3 style="text-align: center;">' . strtoupper($display_title) . '</h3>';
 
-$single_class_tables_rendered = false;
-if ($kelas_id) {
-    $single_class_tables_rendered = true;
-}
-
-if (!$single_class_tables_rendered) {
-    $html .= '
-    <table>
-        <thead>';
-}
+$single_class_tables_rendered = (bool)$kelas_id;
 
 if ($kelas_id) {
     // --- JADWAL KELAS (Single Class): F4 Portrait, 3 hari atas + 3 hari bawah ---
@@ -357,99 +372,84 @@ if ($kelas_id) {
     }
 
 } else {
-    // --- JADWAL UTAMA (All Classes) ---
-    $html .= '
-            <tr>
-                <th rowspan="3" style="width: 50px;">JAM<br>KE</th>
-                <th rowspan="3" style="width: 100px;">WAKTU</th>';
-    
-    foreach ($days as $day) {
-        $html .= '<th colspan="' . count($classes) . '">' . strtoupper($day) . '</th>';
-    }
-    $html .= '
-            </tr>
-            <tr>';
-            
-    foreach ($days as $day) {
-        foreach ($classes as $c) {
-            $html .= '<th>' . $c['nama_kelas'] . '</th>';
-        }
-    }
-    $html .= '</tr>
-            <tr>';
-    foreach ($days as $day) {
-        foreach ($classes as $c) {
-            // Get teacher code from schedule data (first valid guru for this class on this day)
-            $code = '';
-            if (isset($main_schedule[$day])) {
-                foreach ($main_schedule[$day] as $jam_data) {
-                    if (isset($jam_data[$c['id_kelas']]) && !empty($jam_data[$c['id_kelas']]['guru_id'])) {
-                        $gid = $jam_data[$c['id_kelas']]['guru_id'];
-                        if (isset($guru_codes[$gid])) {
-                            $code = $guru_codes[$gid];
-                            break;
+    // --- JADWAL UTAMA dinamis: satu tabel per tingkat (paralel), potong per chunk bila sangat lebar ---
+    $chunk_size = max(1, (int)($utama_layout['chunk'] ?? count($classes)));
+    foreach ($utama_groups as $grp) {
+        foreach (array_chunk($grp['classes'], $chunk_size) as $ci => $chunk_classes) {
+            $chunk_ids = [];
+            foreach ($chunk_classes as $cc) { $chunk_ids[(int)$cc['id_kelas']] = true; }
+            $jam_chunk = array_filter($jam_mengajar, function ($jam) use ($main_schedule, $chunk_ids) {
+                foreach ((array)$main_schedule as $day_scheds) {
+                    if (isset($day_scheds[$jam['jam_ke']])) {
+                        foreach ($day_scheds[$jam['jam_ke']] as $kid => $s) {
+                            if (isset($chunk_ids[(int)$kid])) return true;
                         }
                     }
                 }
+                return false;
+            });
+            if (empty($jam_chunk)) { continue; }
+            $html .= '<table style="page-break-before: auto; page-break-inside: auto;"><thead>';
+            if (trim((string)($grp['label'] ?? '')) !== '') {
+                $html .= '<tr><th colspan="' . (2 + count($days) * count($chunk_classes)) . '" style="font-size:11pt; background:#e8eaf6;">JADWAL ' . htmlspecialchars(strtoupper($grp['label'])) . '</th></tr>';
             }
-            $html .= '<th style="font-size:8pt;font-weight:bold;color:#555;">' . htmlspecialchars($code) . '</th>';
-        }
-    }
-    $html .= '</tr>';
-}
-
-if (!$single_class_tables_rendered) {
-$html .= '
-        </thead>
-        <tbody>';
-
-foreach ($jam_display as $jam) {
-    $jam_label = $jam['jam_ke'];
-    $is_special = in_array(strtoupper((string)$jam_label), ['A', 'B', 'C', 'D']);
-    $waktu = date('H.i', strtotime($jam['waktu_mulai'])) . '-' . date('H.i', strtotime($jam['waktu_selesai']));
-    
-    $html .= '<tr>';
-    $html .= '<td>' . $jam_label . '</td>';
-    $html .= '<td>' . $waktu . '</td>';
-    
-    foreach ($days as $day) {
-        // Special slot logic
-        $special_text = '';
-        if ($is_special) {
-            if (isset($main_schedule[$day][$jam_label])) {
-                foreach ($main_schedule[$day][$jam_label] as $sched) {
-                    if (isset($mapel_map[$sched['mapel_id']])) {
-                        $special_text = $mapel_map[$sched['mapel_id']]['nama_mapel'];
-                        break;
-                    }
+            $html .= '<tr><th rowspan="3" style="width: 50px;">JAM<br>KE</th><th rowspan="3" style="width: 100px;">WAKTU</th>';
+            foreach ($days as $day) {
+                $html .= '<th colspan="' . count($chunk_classes) . '">' . strtoupper($day) . '</th>';
+            }
+            $html .= '</tr><tr>';
+            foreach ($days as $day) {
+                foreach ($chunk_classes as $c) {
+                    $html .= '<th>' . htmlspecialchars($c['nama_kelas']) . '</th>';
                 }
             }
-        }
-        
-        if ($is_special) {
-            $html .= '<td colspan="' . count($classes) . '" class="special-slot">' . htmlspecialchars($special_text) . '</td>';
-        } else {
-            foreach ($classes as $c) {
-                $content = '';
-                if (isset($main_schedule[$day][$jam_label][$c['id_kelas']])) {
-                    $sched = $main_schedule[$day][$jam_label][$c['id_kelas']];
-                    if (isset($mapel_map[$sched['mapel_id']])) {
-                        $m = $mapel_map[$sched['mapel_id']];
-                        // Use Generated Codes for Jadwal Utama
-                        $m_code = isset($mapel_codes[$sched['mapel_id']]) ? $mapel_codes[$sched['mapel_id']] : '-';
-                        $content = '<b>' . $m_code . '</b>';
+            $html .= '</tr><tr>';
+            foreach ($days as $day) {
+                foreach ($chunk_classes as $c) {
+                    $code = '';
+                    if (isset($main_schedule[$day])) {
+                        foreach ($main_schedule[$day] as $jam_data) {
+                            if (isset($jam_data[$c['id_kelas']]) && !empty($jam_data[$c['id_kelas']]['guru_id'])) {
+                                $gid = $jam_data[$c['id_kelas']]['guru_id'];
+                                if (isset($guru_codes[$gid])) { $code = $guru_codes[$gid]; break; }
+                            }
+                        }
+                    }
+                    $html .= '<th style="font-size:8pt;font-weight:bold;color:#555;">' . htmlspecialchars($code) . '</th>';
+                }
+            }
+            $html .= '</tr></thead><tbody>';
+            foreach ($jam_chunk as $jam) {
+                $jam_label = $jam['jam_ke'];
+                $is_special = in_array(strtoupper((string)$jam_label), ['A', 'B', 'C', 'D']);
+                $waktu = date('H.i', strtotime($jam['waktu_mulai'])) . '-' . date('H.i', strtotime($jam['waktu_selesai']));
+                $html .= '<tr><td>' . $jam_label . '</td><td>' . $waktu . '</td>';
+                foreach ($days as $day) {
+                    $special_text = '';
+                    if ($is_special && isset($main_schedule[$day][$jam_label])) {
+                        foreach ($main_schedule[$day][$jam_label] as $sched) {
+                            if (isset($mapel_map[$sched['mapel_id']])) { $special_text = $mapel_map[$sched['mapel_id']]['nama_mapel']; break; }
+                        }
+                    }
+                    if ($is_special) {
+                        $html .= '<td colspan="' . count($chunk_classes) . '" class="special-slot">' . htmlspecialchars($special_text) . '</td>';
+                    } else {
+                        foreach ($chunk_classes as $c) {
+                            $content = '';
+                            if (isset($main_schedule[$day][$jam_label][$c['id_kelas']]) && isset($mapel_map[$main_schedule[$day][$jam_label][$c['id_kelas']]['mapel_id']])) {
+                                $mid = $main_schedule[$day][$jam_label][$c['id_kelas']]['mapel_id'];
+                                $m_code = isset($mapel_codes[$mid]) ? $mapel_codes[$mid] : '-';
+                                $content = '<b>' . $m_code . '</b>';
+                            }
+                            $html .= '<td>' . $content . '</td>';
+                        }
                     }
                 }
-                $html .= '<td>' . $content . '</td>';
+                $html .= '</tr>';
             }
+            $html .= '</tbody></table>';
         }
     }
-    $html .= '</tr>';
-}
-
-$html .= '
-        </tbody>
-    </table>';
 }
 
 $html .= '

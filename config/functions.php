@@ -1028,6 +1028,62 @@ function getUrutanHariJadwalSekolah(PDO $pdo): array {
 }
 
 /**
+ * Kelompokkan daftar kelas per tingkat untuk ekspor jadwal utama paralel.
+ * Tingkat dikenali dari angka (1-6) atau romawi (I-VI) pada nama kelas;
+ * nama tanpa pola masuk grup 'Lainnya'. Urutan grup: 1-6 lalu Lainnya.
+ *
+ * @param list<array> $classes baris tb_kelas (wajib id_kelas, nama_kelas)
+ * @return list<array{label:string, classes:list<array>}>
+ */
+function groupKelasPerTingkat(array $classes): array {
+    $roman_map = ['VI' => 6, 'V' => 5, 'IV' => 4, 'III' => 3, 'II' => 2, 'I' => 1];
+    $groups = [];
+    foreach ($classes as $c) {
+        $name = strtoupper(trim((string)($c['nama_kelas'] ?? '')));
+        $level = 0;
+        foreach ($roman_map as $roman => $num) {
+            if (preg_match('/\b' . $roman . '\b/', $name) || $name === $roman) { $level = $num; break; }
+        }
+        if ($level === 0 && preg_match('/(\d)/', $name, $m)) {
+            $level = (int)$m[1];
+        }
+        if ($level === 0 && preg_match('/^([IVX]{1,4})/', $name, $m) && isset($roman_map[$m[1]])) {
+            $level = $roman_map[$m[1]];
+        }
+        $label = $level > 0 ? ('Kelas ' . $level) : 'Lainnya';
+        if (!isset($groups[$label])) {
+            $groups[$label] = ['label' => $label, 'order' => $level > 0 ? $level : 99, 'classes' => []];
+        }
+        $groups[$label]['classes'][] = $c;
+    }
+    usort($groups, static function ($a, $b) {
+        if ($a['order'] === $b['order']) {
+            return strcasecmp((string)($a['label'] ?? ''), (string)($b['label'] ?? ''));
+        }
+        return $a['order'] <=> $b['order'];
+    });
+    return array_values($groups);
+}
+
+/**
+ * Orientasi kertas ekspor jadwal utama berdasar lebar kolom paralel.
+ * <=4 paralel: portrait 1 tabel. 5-6 paralel: landscape 1 tabel.
+ * >6 paralel: landscape, potong per 6 kelas.
+ *
+ * @return array{mode:string, chunk:int}
+ */
+function jadwalUtamaLayoutMode(int $class_count, int $day_count = 6): array {
+    unset($day_count);
+    if ($class_count <= 4) {
+        return ['mode' => 'portrait', 'chunk' => $class_count];
+    }
+    if ($class_count <= 6) {
+        return ['mode' => 'landscape', 'chunk' => $class_count];
+    }
+    return ['mode' => 'landscape', 'chunk' => 6];
+}
+
+/**
  * Urutan 7 hari untuk dropdown modal (jadwal imam dhuha, seragam guru/siswa).
  * Hari libur mingguan di urutan terakhir: Jumat atau Ahad.
  *

@@ -163,25 +163,55 @@ header("Expires: 0");
         <h3><?= $page_title ?></h3>
     </div>
 
+    <?php
+    // Jadwal utama dinamis: bentuk awal bila tiap tingkat 1 rombel,
+    // pecah per tingkat bila ada paralel.
+    $excel_groups = [['label' => '', 'classes' => $classes]];
+    if (!$kelas_id) {
+        $g = groupKelasPerTingkat($classes);
+        // Pecah per tingkat bila total >6 kelas dan ada >1 tingkat.
+        if (count($classes) > 6 && count($g) > 1) { $excel_groups = $g; }
+    }
+    ?>
+    <?php foreach ($excel_groups as $eg): ?>
+    <?php
+    $eg_classes = $eg['classes'];
+    $eg_ids = [];
+    foreach ($eg_classes as $cc) { $eg_ids[(int)$cc['id_kelas']] = true; }
+    $eg_jam = array_filter($jam_display, function ($jam) use ($main_schedule, $eg_ids) {
+        foreach ((array)$main_schedule as $day_scheds) {
+            if (isset($day_scheds[$jam['jam_ke']])) {
+                foreach ($day_scheds[$jam['jam_ke']] as $kid => $s) {
+                    if (isset($eg_ids[(int)$kid])) return true;
+                }
+            }
+        }
+        return false;
+    });
+    if (empty($eg_jam)) { continue; }
+    ?>
+    <?php if (trim((string)($eg['label'] ?? '')) !== ''): ?>
+        <h4 style="text-align:center;">JADWAL <?= htmlspecialchars(strtoupper($eg['label'])) ?></h4>
+    <?php endif; ?>
     <table>
         <thead>
             <tr>
                 <th rowspan="3" style="width: 50px;">JAM<br>KE</th>
                 <th rowspan="3" style="width: 100px;">WAKTU</th>
                 <?php foreach ($days as $day): ?>
-                    <th colspan="<?= count($classes) ?>" style="background-color: #e0e0e0;"><?= strtoupper($day) ?></th>
+                    <th colspan="<?= count($eg_classes) ?>" style="background-color: #e0e0e0;"><?= strtoupper($day) ?></th>
                 <?php endforeach; ?>
             </tr>
             <tr>
                 <?php foreach ($days as $day): ?>
-                    <?php foreach ($classes as $c): ?>
+                    <?php foreach ($eg_classes as $c): ?>
                         <th><?= $c['nama_kelas'] ?></th>
                     <?php endforeach; ?>
                 <?php endforeach; ?>
             </tr>
             <tr>
                 <?php foreach ($days as $day): ?>
-                    <?php foreach ($classes as $c): ?>
+                    <?php foreach ($eg_classes as $c): ?>
                         <th style="font-size:9px;">
                         <?php
                         $guru_label = '';
@@ -207,7 +237,7 @@ header("Expires: 0");
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($jam_display as $jam): ?>
+            <?php foreach ($eg_jam as $jam): ?>
                 <?php
                 $jam_label = $jam['jam_ke'];
                 $is_special = in_array(strtoupper((string)$jam_label), ['A', 'B', 'C', 'D']);
@@ -216,7 +246,7 @@ header("Expires: 0");
                 <tr>
                     <td><?= $jam_label ?></td>
                     <td><?= $waktu ?></td>
-                    
+
                     <?php foreach ($days as $day): ?>
                         <?php
                         $special_text = '';
@@ -232,9 +262,9 @@ header("Expires: 0");
                         }
                         ?>
                         <?php if ($is_special): ?>
-                            <td colspan="<?= count($classes) ?>" class="special-slot"><?= htmlspecialchars($special_text) ?></td>
+                            <td colspan="<?= count($eg_classes) ?>" class="special-slot"><?= htmlspecialchars($special_text) ?></td>
                         <?php else: ?>
-                            <?php foreach ($classes as $c): ?>
+                            <?php foreach ($eg_classes as $c): ?>
                                 <?php
                                 $content = '';
                                 if (isset($main_schedule[$day][$jam_label][$c['id_kelas']])) {
@@ -257,6 +287,8 @@ header("Expires: 0");
             <?php endforeach; ?>
         </tbody>
     </table>
+    <br>
+    <?php endforeach; ?>
 
     <br><br>
     <?php
