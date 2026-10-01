@@ -913,6 +913,137 @@ function getTeacherAccessibleClasses(PDO $pdo, ?int $id_guru, bool $only_grade_6
     return $filtered;
 }
 
+/**
+ * Mengambil daftar kelas yang diajar oleh guru yang login
+ * Menggabungkan tb_jadwal_pelajaran (jenis = 'Reguler'), tb_guru.mengajar, dan wali_kelas
+ */
+function getGuruTaughtClasses(PDO $pdo, int $guru_id): array {
+    if ($guru_id <= 0) {
+        return $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    $classes = [];
+    $seen = [];
+
+    // 1. Dari jadwal pelajaran (hanya jenis Reguler)
+    try {
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT k.id_kelas, k.nama_kelas
+            FROM tb_jadwal_pelajaran j
+            JOIN tb_kelas k ON k.id_kelas = j.kelas_id
+            WHERE j.guru_id = ?
+              AND j.jenis = 'Reguler'
+            ORDER BY k.nama_kelas ASC
+        ");
+        $stmt->execute([$guru_id]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $c) {
+            $id = (int)$c['id_kelas'];
+            if (!isset($seen[$id])) {
+                $seen[$id] = true;
+                $classes[] = $c;
+            }
+        }
+    } catch (Throwable $e) {}
+
+    // 2. Dari tb_guru.mengajar & wali kelas
+    try {
+        $stmtG = $pdo->prepare("SELECT nama_guru, mengajar FROM tb_guru WHERE id_guru = ?");
+        $stmtG->execute([$guru_id]);
+        $g = $stmtG->fetch(PDO::FETCH_ASSOC);
+        if ($g && !empty($g['mengajar'])) {
+            $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $list = json_decode((string)$g['mengajar'], true);
+            if (!is_array($list)) {
+                $list = array_map('trim', explode(',', (string)$g['mengajar']));
+            }
+            foreach ($list as $item) {
+                foreach ($all_classes as $k) {
+                    if ((is_numeric($item) && (int)$item === (int)$k['id_kelas']) ||
+                        (string)$k['id_kelas'] === (string)$item ||
+                        strcasecmp((string)$k['nama_kelas'], (string)$item) === 0) {
+                        $id = (int)$k['id_kelas'];
+                        if (!isset($seen[$id])) {
+                            $seen[$id] = true;
+                            $classes[] = $k;
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($g && !empty($g['nama_guru'])) {
+            $stW = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHERE wali_kelas = ?");
+            $stW->execute([$g['nama_guru']]);
+            foreach ($stW->fetchAll(PDO::FETCH_ASSOC) as $w) {
+                $id = (int)$w['id_kelas'];
+                if (!isset($seen[$id])) {
+                    $seen[$id] = true;
+                    $classes[] = $w;
+                }
+            }
+        }
+    } catch (Throwable $e) {}
+
+    if (empty($classes)) {
+        $classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        usort($classes, static function($a, $b) {
+            return strcasecmp((string)($a['nama_kelas'] ?? ''), (string)($b['nama_kelas'] ?? ''));
+        });
+    }
+
+    return $classes;
+}
+
+/**
+ * Mengambil daftar mata pelajaran yang diajar oleh guru yang login
+ * Dari tb_jadwal_pelajaran KHUSUS jadwal Reguler (bukan Ramadhan), disaring mapel non-akademik
+ */
+function getGuruTaughtMapels(PDO $pdo, int $guru_id): array {
+    if ($guru_id <= 0) {
+        return getFilteredSubjects($pdo);
+    }
+
+    $mapels = [];
+    $seen = [];
+
+    // Dari tb_jadwal_pelajaran KHUSUS jenis = 'Reguler'
+    try {
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT m.id_mapel, m.nama_mapel
+            FROM tb_jadwal_pelajaran j
+            JOIN tb_mata_pelajaran m ON m.id_mapel = j.mapel_id
+            WHERE j.guru_id = ?
+              AND j.jenis = 'Reguler'
+              AND m.nama_mapel NOT LIKE '%Asmaul Husna%'
+              AND m.nama_mapel NOT LIKE '%Upacara%'
+              AND m.nama_mapel NOT LIKE '%Istirahat%'
+              AND m.nama_mapel NOT LIKE '%Kepramukaan%'
+              AND m.nama_mapel NOT LIKE '%Ekstrakurikuler%'
+              AND m.nama_mapel NOT LIKE '%Ramadhanku%'
+            ORDER BY m.nama_mapel ASC
+        ");
+        $stmt->execute([$guru_id]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $m) {
+            $id = (int)$m['id_mapel'];
+            if (!isset($seen[$id])) {
+                $seen[$id] = true;
+                $mapels[] = $m;
+            }
+        }
+    } catch (Throwable $e) {}
+
+    if (empty($mapels)) {
+        $mapels = getFilteredSubjects($pdo);
+    } else {
+        usort($mapels, static function($a, $b) {
+            return strcasecmp((string)($a['nama_mapel'] ?? ''), (string)($b['nama_mapel'] ?? ''));
+        });
+    }
+
+    return $mapels;
+}
+
 // Function to format date
 function formatDate(string $date): string {
     $v = trim($date);

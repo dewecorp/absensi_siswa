@@ -63,7 +63,11 @@ Options -Indexes
     # Redirect akses browser ke .php menjadi URL bersih.
     # THE_REQUEST memastikan hanya request asli browser yang diarahkan,
     # bukan hasil rewrite internal dari URL bersih ke file .php.
+    # Abaikan request unduhan/ekspor agar query dan file tidak rusak.
     RewriteCond %{REQUEST_METHOD} GET [NC]
+    RewriteCond %{THE_REQUEST} !download [NC]
+    RewriteCond %{THE_REQUEST} !export [NC]
+    RewriteCond %{QUERY_STRING} !(?:download|export|action) [NC]
     RewriteCond %{THE_REQUEST} \s/+(.+)\.php[?\s] [NC]
     RewriteRule ^(.+)\.php$ /$1 [R=302,L,NE]
 

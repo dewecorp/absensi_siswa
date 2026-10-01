@@ -1450,12 +1450,39 @@ switch ($user_level) {
             $nilai_submenu_siswa[] = ['title' => 'Nilai Ujian Praktik', 'url' => '../siswa/nilai_ujian.php?nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active];
         }
 
+        // Hitung tugas siswa yang belum dikumpulkan
+        $tugas_belum_kumpul = 0;
+        if (!empty($_SESSION['user_id'])) {
+            try {
+                $stKls = $pdo->prepare("SELECT id_kelas FROM tb_siswa WHERE id_siswa = ?");
+                $stKls->execute([(int)$_SESSION['user_id']]);
+                $skls = (int)$stKls->fetchColumn();
+                if ($skls > 0) {
+                    $stCnt = $pdo->prepare("
+                        SELECT COUNT(*)
+                        FROM tb_tugas t
+                        LEFT JOIN tb_tugas_pengumpulan tp ON tp.id_tugas = t.id AND tp.id_siswa = ?
+                        WHERE t.id_kelas = ? AND t.status = 'Aktif' AND tp.id IS NULL
+                    ");
+                    $stCnt->execute([(int)$_SESSION['user_id'], $skls]);
+                    $tugas_belum_kumpul = (int)$stCnt->fetchColumn();
+                }
+            } catch (Throwable $e) {}
+        }
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
                 'icon' => 'fas fa-fire',
                 'url' => '../siswa/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Tugas Siswa',
+                'icon' => 'fas fa-tasks',
+                'badge' => $tugas_belum_kumpul > 0 ? $tugas_belum_kumpul : null,
+                'url' => '../siswa/tugas.php',
+                'active' => $current_page === 'tugas.php'
             ],
             [
                 'title' => 'Kehadiran',

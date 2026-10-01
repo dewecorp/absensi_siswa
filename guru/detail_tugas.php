@@ -20,6 +20,17 @@ if ($id_tugas <= 0) {
     redirect('tugas.php');
 }
 
+// Deteksi kelas wali jika login sebagai wali
+$wali_kelas_id = 0;
+try {
+    $stWali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
+    $stWali->execute([$guru_id, $guru_id]);
+    $wali_kelas_id = (int)$stWali->fetchColumn() ?: 0;
+} catch (Throwable $e) {}
+
+// Guru pengampu tugas atau Wali Kelas target dapat mengakses
+$auth_sql = "t.id = ? AND (t.id_guru = ? " . ($wali_kelas_id > 0 ? "OR t.id_kelas = $wali_kelas_id" : "") . ")";
+
 // Fetch tugas info
 $stmt = $pdo->prepare("
     SELECT t.*, m.nama_mapel, k.nama_kelas, g.nama_guru
@@ -27,7 +38,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN tb_mata_pelajaran m ON m.id_mapel = t.id_mapel
     LEFT JOIN tb_kelas k ON k.id_kelas = t.id_kelas
     LEFT JOIN tb_guru g ON g.id_guru = t.id_guru
-    WHERE t.id = ? AND t.id_guru = ?
+    WHERE $auth_sql
     LIMIT 1
 ");
 $stmt->execute([$id_tugas, $guru_id]);

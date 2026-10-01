@@ -63,6 +63,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $guru_id, $judul, $id_mapel, $id_kelas, $materi_tp, $jenis_tugas,
                         $instruksi, $tgl_mulai, $deadline, $nilai_maksimal, $lampiran, $status
                     ]);
+
+                    // Kirim notifikasi sistem untuk siswa
+                    try {
+                        $stkName = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
+                        $stkName->execute([$id_kelas]);
+                        $kelas_name_notif = $stkName->fetchColumn() ?: '';
+                        createNotification($pdo, "Tugas Baru: {$judul}" . ($kelas_name_notif ? " (Kelas {$kelas_name_notif})" : ""), 'dashboard.php');
+                    } catch (Throwable $e) {}
+
                     $message = ['type' => 'success', 'text' => 'Tugas berhasil dibuat.'];
                 } else {
                     $sql = "
@@ -102,10 +111,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Master lists
-$mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
-$kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+// Master lists (khusus mapel & kelas yang diajar oleh guru login pada jadwal Reguler)
+$mapel_list = getGuruTaughtMapels($pdo, $guru_id);
+$kelas_list = getGuruTaughtClasses($pdo, $guru_id);
 $jenis_tugas_options = ['Individu', 'Kelompok', 'Proyek', 'Praktik', 'Portofolio', 'Kuis'];
+
+// Deteksi kelas wali jika login sebagai wali kelas
+$wali_kelas_id = 0;
+try {
+    $stWali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
+    $stWali->execute([$guru_id, $guru_id]);
+    $wali_kelas_id = (int)$stWali->fetchColumn() ?: 0;
+} catch (Throwable $e) {}
 
 // Filters
 $f_mapel = (int)($_GET['f_mapel'] ?? 0);
@@ -114,8 +131,14 @@ $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 $f_periode = trim((string)($_GET['f_periode'] ?? '')); // 'aktif', 'lewat', 'semua'
 
-$where = ["t.id_guru = ?"];
-$params = [$guru_id];
+if ($wali_kelas_id > 0) {
+    // Wali kelas dapat melihat tugas yang dibuatnya sendiri DAN tugas untuk kelas yang diampunya
+    $where = ["(t.id_guru = ? OR t.id_kelas = ?)"];
+    $params = [$guru_id, $wali_kelas_id];
+} else {
+    $where = ["t.id_guru = ?"];
+    $params = [$guru_id];
+}
 
 if ($f_mapel > 0) {
     $where[] = "t.id_mapel = ?";
@@ -182,11 +205,20 @@ $(document).ready(function() {
         });
     }
 
+    // Auto-submit filter on change
+    $('#formFilterTugas select').on('change', function() {
+        $('#formFilterTugas').submit();
+    });
+
     $('#btnTambahTugas').on('click', function() {
         $('#formTugasAction').val('tambah');
         $('#tugasId').val('');
         $('#modalTugasTitle').text('Tambah Tugas Baru');
         $('#formTugas')[0].reset();
+        var validKelasOpts = $('#inp_kelas option').filter(function() { return this.value !== ''; });
+        if (validKelasOpts.length === 1) {
+            $('#inp_kelas').val(validKelasOpts.val());
+        }
         $('#modalTugas').modal('show');
     });
 
@@ -252,10 +284,10 @@ include '../templates/sidebar.php';
                     <h4><i class="fas fa-filter mr-2"></i>Filter Tugas</h4>
                 </div>
                 <div class="card-body">
-                    <form method="GET" class="row">
+                    <form method="GET" class="row" id="formFilterTugas">
                         <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Mata Pelajaran</label>
-                            <select name="f_mapel" class="form-control form-control-sm">
+                            <select name="f_mapel" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Mapel --</option>
                                 <?php foreach ($mapel_list as $m): ?>
                                     <option value="<?= (int)$m['id_mapel'] ?>" <?= $f_mapel === (int)$m['id_mapel'] ? 'selected' : '' ?>><?= htmlspecialchars($m['nama_mapel']) ?></option>
@@ -264,7 +296,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-2 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
-                            <select name="f_kelas" class="form-control form-control-sm">
+                            <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Kelas --</option>
                                 <?php foreach ($kelas_list as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>" <?= $f_kelas === (int)$k['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
@@ -273,7 +305,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-2 mb-2">
                             <label class="small font-weight-bold">Jenis Tugas</label>
-                            <select name="f_jenis" class="form-control form-control-sm">
+                            <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Jenis --</option>
                                 <?php foreach ($jenis_tugas_options as $jt): ?>
                                     <option value="<?= $jt ?>" <?= $f_jenis === $jt ? 'selected' : '' ?>><?= $jt ?></option>
@@ -282,7 +314,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-2 mb-2">
                             <label class="small font-weight-bold">Status</label>
-                            <select name="f_status" class="form-control form-control-sm">
+                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Status --</option>
                                 <?php foreach (['Aktif', 'Draft', 'Selesai', 'Arsip'] as $st): ?>
                                     <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
@@ -291,16 +323,17 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Periode / Deadline</label>
-                            <select name="f_periode" class="form-control form-control-sm">
+                            <select name="f_periode" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Periode --</option>
                                 <option value="aktif" <?= $f_periode === 'aktif' ? 'selected' : '' ?>>Deadline Masih Aktif</option>
                                 <option value="lewat" <?= $f_periode === 'lewat' ? 'selected' : '' ?>>Deadline Lewat</option>
                             </select>
                         </div>
-                        <div class="col-12 mt-2 d-flex">
-                            <button type="submit" class="btn btn-primary btn-sm mr-2"><i class="fas fa-search"></i> Terapkan Filter</button>
-                            <a href="tugas.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                        <?php if ($f_mapel > 0 || $f_kelas > 0 || $f_jenis !== '' || $f_status !== '' || $f_periode !== ''): ?>
+                        <div class="col-12 mt-1">
+                            <a href="tugas.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo mr-1"></i> Reset Filter</a>
                         </div>
+                        <?php endif; ?>
                     </form>
                 </div>
             </div>
@@ -436,12 +469,18 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label>Kelas Target</label>
-                            <select name="id_kelas" id="inp_kelas" class="form-control">
-                                <option value="">-- Pilih Kelas --</option>
-                                <?php foreach ($kelas_list as $k): ?>
-                                    <option value="<?= (int)$k['id_kelas'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                <?php endforeach; ?>
+                            <label>Kelas Target <?= count($kelas_list) > 1 ? '<span class="text-danger">*</span>' : '' ?></label>
+                            <select name="id_kelas" id="inp_kelas" class="form-control" required>
+                                <?php if (count($kelas_list) > 1): ?>
+                                    <option value="">-- Pilih Kelas --</option>
+                                    <?php foreach ($kelas_list as $k): ?>
+                                        <option value="<?= (int)$k['id_kelas'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                                    <?php endforeach; ?>
+                                <?php elseif (count($kelas_list) === 1): ?>
+                                    <option value="<?= (int)$kelas_list[0]['id_kelas'] ?>" selected><?= htmlspecialchars($kelas_list[0]['nama_kelas']) ?></option>
+                                <?php else: ?>
+                                    <option value="">-- Tidak ada kelas --</option>
+                                <?php endif; ?>
                             </select>
                         </div>
                         <div class="col-md-6 form-group">

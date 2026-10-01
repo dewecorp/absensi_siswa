@@ -198,6 +198,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
+// Ambil pemberitahuan tugas aktif untuk siswa
+$student_class_id = (int)($student['id_kelas'] ?? 0);
+$student_tasks = [];
+$total_tugas_belum = 0;
+if ($student_class_id > 0) {
+    try {
+        $stTugas = $pdo->prepare("
+            SELECT t.*, m.nama_mapel, g.nama_guru,
+                   tp.id AS id_pengumpulan, tp.tgl_kumpul, tp.nilai, tp.status_periksa, tp.feedback
+            FROM tb_tugas t
+            LEFT JOIN tb_mata_pelajaran m ON m.id_mapel = t.id_mapel
+            LEFT JOIN tb_guru g ON g.id_guru = t.id_guru
+            LEFT JOIN tb_tugas_pengumpulan tp ON tp.id_tugas = t.id AND tp.id_siswa = ?
+            WHERE t.id_kelas = ? AND t.status = 'Aktif'
+            ORDER BY (tp.id IS NULL) DESC, t.deadline ASC, t.id DESC
+            LIMIT 5
+        ");
+        $stTugas->execute([$id_siswa, $student_class_id]);
+        $student_tasks = $stTugas->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($student_tasks as $tk) {
+            if (empty($tk['id_pengumpulan'])) {
+                $total_tugas_belum++;
+            }
+        }
+    } catch (Throwable $e) {}
+}
+
 include '../templates/header.php';
 include_once '../templates/sidebar.php';
 ?>
@@ -484,6 +512,99 @@ include_once '../templates/sidebar.php';
                 </div>
             </div>
             <?php endif; ?>
+        </div>
+
+        <!-- Box Pemberitahuan Tugas Siswa -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card card-primary shadow-sm">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0 text-primary">
+                            <i class="fas fa-tasks mr-2"></i>Pemberitahuan Tugas - Kelas <?= htmlspecialchars($student['nama_kelas'] ?? '') ?>
+                        </h4>
+                        <div>
+                            <?php if ($total_tugas_belum > 0): ?>
+                                <span class="badge badge-danger font-weight-bold mr-2" style="font-size:12px; padding:6px 12px;">
+                                    <i class="fas fa-bell mr-1"></i> <?= $total_tugas_belum ?> Tugas Belum Dikumpulkan
+                                </span>
+                            <?php else: ?>
+                                <span class="badge badge-success font-weight-bold mr-2" style="font-size:12px; padding:6px 12px;">
+                                    <i class="fas fa-check-circle mr-1"></i> Semua Tugas Sudah Selesai
+                                </span>
+                            <?php endif; ?>
+                            <a href="tugas.php" class="btn btn-sm btn-primary">
+                                Lihat Semua Tugas <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <?php if (empty($student_tasks)): ?>
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-clipboard-check fa-2x mb-2 text-success"></i>
+                                <p class="mb-0 font-weight-bold">Tidak ada tugas aktif untuk kelas Anda saat ini.</p>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered table-sm mb-0">
+                                    <thead>
+                                        <tr class="bg-light">
+                                            <th width="4%" class="text-center">No</th>
+                                            <th>Judul Tugas</th>
+                                            <th>Mata Pelajaran</th>
+                                            <th>Guru Pengampu</th>
+                                            <th>Batas Waktu (Deadline)</th>
+                                            <th class="text-center">Status</th>
+                                            <th class="text-center">Nilai</th>
+                                            <th class="text-center" width="10%">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($student_tasks as $idx => $t): ?>
+                                            <?php
+                                            $is_submitted = !empty($t['id_pengumpulan']);
+                                            $is_overdue = !empty($t['deadline']) && strtotime($t['deadline']) < time() && !$is_submitted;
+                                            ?>
+                                            <tr>
+                                                <td class="text-center font-weight-bold"><?= $idx + 1 ?></td>
+                                                <td>
+                                                    <strong class="text-dark"><?= htmlspecialchars($t['judul']) ?></strong>
+                                                    <?php if ($is_overdue): ?>
+                                                        <span class="badge badge-danger ml-1" style="font-size:10px;">Lewat Batas</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><span class="badge badge-light border"><?= htmlspecialchars($t['nama_mapel'] ?? '-') ?></span></td>
+                                                <td><small><i class="fas fa-chalkboard-teacher mr-1 text-muted"></i><?= htmlspecialchars($t['nama_guru'] ?? '-') ?></small></td>
+                                                <td>
+                                                    <?php if (!empty($t['deadline'])): ?>
+                                                        <i class="far fa-calendar-alt text-danger mr-1"></i><?= date('d/m/Y H:i', strtotime($t['deadline'])) ?>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">-</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="text-center">
+                                                    <?php if ($is_submitted): ?>
+                                                        <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Sudah Dikumpulkan</span>
+                                                    <?php else: ?>
+                                                        <span class="badge badge-warning"><i class="fas fa-hourglass-half mr-1"></i>Belum Dikumpulkan</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="text-center font-weight-bold">
+                                                    <?= $t['nilai'] !== null ? '<span class="text-primary font-weight-bold">' . (float)$t['nilai'] . '</span>' : '-' ?>
+                                                </td>
+                                                <td class="text-center">
+                                                    <a href="tugas.php" class="btn btn-primary btn-sm py-1 px-2">
+                                                        <i class="fas fa-external-link-alt mr-1"></i> Buka
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row">
