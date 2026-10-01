@@ -970,12 +970,27 @@ switch ($user_level) {
             $absensi_submenu_guru[] = ['title' => 'Rekap Kehadiran Les Guru', 'url' => '../admin/rekap_absensi_les_guru.php?session_type=guru', 'active' => $current_page === 'rekap_absensi_les_guru.php'];
         }
 
+        $pembelajaran_submenu_guru = [
+            ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php', 'active' => $current_page === 'perangkat_pembelajaran.php'],
+            ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
+            ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php', 'active' => $current_page === 'bank_soal.php'],
+            ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php', 'active' => $current_page === 'bahan_ajar.php'],
+            ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php', 'active' => $current_page === 'catatan_perkembangan.php'],
+            ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php', 'active' => $current_page === 'komunikasi_kelas.php'],
+        ];
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
                 'icon' => 'fas fa-fire',
                 'url' => '../guru/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Pembelajaran',
+                'icon' => 'fas fa-chalkboard-teacher',
+                'submenu' => $pembelajaran_submenu_guru,
+                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'komunikasi_kelas.php'])
             ],
             [
                 'title' => 'Data Utama',
@@ -1047,13 +1062,12 @@ switch ($user_level) {
             $jurnal_submenu_guru[] = ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
         }
         
-        // Place Jurnal right after Jadwal (under Kehadiran)
-        array_splice($menu_items, 4, 0, [[
+        $menu_items[] = [
             'title' => 'Jurnal',
             'icon' => 'fas fa-book-open',
             'submenu' => $jurnal_submenu_guru,
             'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-        ]]);
+        ];
 
         if ($is_grade_6_guru) {
             // Add Jadwal Les into Jadwal submenu for Grade 6 Teachers
@@ -1078,6 +1092,41 @@ switch ($user_level) {
             'active' => false,
             'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
         ];
+
+        // Urutkan menu guru: Dashboard -> Data Utama -> [Tengah urut ASC] -> Profil -> Logout
+        $dashboard_guru = null;
+        $data_utama_guru = null;
+        $profil_guru = null;
+        $logout_guru = null;
+        $middle_guru = [];
+
+        foreach ($menu_items as $m) {
+            $t = trim((string)($m['title'] ?? ''));
+            if (strcasecmp($t, 'Dashboard') === 0) {
+                $dashboard_guru = $m;
+            } elseif (strcasecmp($t, 'Data Utama') === 0) {
+                $data_utama_guru = $m;
+            } elseif (strcasecmp($t, 'Profil') === 0 || strcasecmp($t, 'Profil & Pengaturan') === 0) {
+                $profil_guru = $m;
+            } elseif (strcasecmp($t, 'Logout') === 0) {
+                $logout_guru = $m;
+            } else {
+                $middle_guru[] = $m;
+            }
+        }
+
+        usort($middle_guru, static function ($a, $b) {
+            return strcasecmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
+        });
+
+        $menu_items = [];
+        if ($dashboard_guru) $menu_items[] = $dashboard_guru;
+        if ($data_utama_guru) $menu_items[] = $data_utama_guru;
+        foreach ($middle_guru as $mi) {
+            $menu_items[] = $mi;
+        }
+        if ($profil_guru) $menu_items[] = $profil_guru;
+        if ($logout_guru) $menu_items[] = $logout_guru;
         break;
         
     case 'wali':
@@ -1203,12 +1252,44 @@ switch ($user_level) {
             $ekstrakurikuler_submenu_wali[] = ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=wali', 'active' => $current_page === 'syarat_kecakapan_umum.php'];
         }
 
+        $pembelajaran_submenu_wali = [
+            ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=wali', 'active' => $current_page === 'perangkat_pembelajaran.php'],
+            ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=wali', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
+            ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=wali', 'active' => $current_page === 'bank_soal.php'],
+            ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php?session_type=wali', 'active' => $current_page === 'bahan_ajar.php'],
+            ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php?session_type=wali', 'active' => $current_page === 'catatan_perkembangan.php'],
+            ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=wali', 'active' => $current_page === 'komunikasi_kelas.php'],
+        ];
+
+        $pengelolaan_kelas_submenu_wali = [
+            ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php', 'active' => $current_page === 'pembinaan_siswa.php'],
+            ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php', 'active' => $current_page === 'pelanggaran_siswa.php'],
+            ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php', 'active' => $current_page === 'konseling_awal.php'],
+            ['title' => 'Tindak Lanjut', 'url' => '../wali/tindak_lanjut.php', 'active' => $current_page === 'tindak_lanjut.php'],
+            ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php', 'active' => $current_page === 'komunikasi_ortu.php'],
+            ['title' => 'Agenda Kelas', 'url' => '../wali/agenda_kelas.php', 'active' => $current_page === 'agenda_kelas.php'],
+            ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php', 'active' => $current_page === 'jadwal_piket_kelas.php'],
+            ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php', 'active' => $current_page === 'projek_kokurikuler.php'],
+        ];
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
                 'icon' => 'fas fa-fire',
                 'url' => '../wali/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Pengelolaan Kelas',
+                'icon' => 'fas fa-user-graduate',
+                'submenu' => $pengelolaan_kelas_submenu_wali,
+                'active' => in_array($current_page, ['pembinaan_siswa.php', 'pelanggaran_siswa.php', 'konseling_awal.php', 'tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php'])
+            ],
+            [
+                'title' => 'Pembelajaran',
+                'icon' => 'fas fa-chalkboard-teacher',
+                'submenu' => $pembelajaran_submenu_wali,
+                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'komunikasi_kelas.php'])
             ],
             [
                 'title' => 'Data Utama',
@@ -1277,13 +1358,12 @@ switch ($user_level) {
             $jurnal_submenu_wali[] = ['title' => 'Jurnal Les', 'url' => '../wali/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
         }
 
-        // Place Jurnal right after Jadwal (under Kehadiran)
-        array_splice($menu_items, 4, 0, [[
+        $menu_items[] = [
             'title' => 'Jurnal',
             'icon' => 'fas fa-book-open',
             'submenu' => $jurnal_submenu_wali,
             'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-        ]]);
+        ];
 
         if ($is_grade_6) {
             // Add Jadwal Les into Jadwal submenu for Grade 6 Wali
@@ -1308,6 +1388,41 @@ switch ($user_level) {
             'active' => false,
             'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
         ];
+
+        // Urutkan menu wali: Dashboard -> Data Utama -> [Tengah urut ASC] -> Profil & Pengaturan -> Logout
+        $dashboard_wali = null;
+        $data_utama_wali = null;
+        $profil_wali = null;
+        $logout_wali = null;
+        $middle_wali = [];
+
+        foreach ($menu_items as $m) {
+            $t = trim((string)($m['title'] ?? ''));
+            if (strcasecmp($t, 'Dashboard') === 0) {
+                $dashboard_wali = $m;
+            } elseif (strcasecmp($t, 'Data Utama') === 0) {
+                $data_utama_wali = $m;
+            } elseif (strcasecmp($t, 'Profil') === 0 || strcasecmp($t, 'Profil & Pengaturan') === 0) {
+                $profil_wali = $m;
+            } elseif (strcasecmp($t, 'Logout') === 0) {
+                $logout_wali = $m;
+            } else {
+                $middle_wali[] = $m;
+            }
+        }
+
+        usort($middle_wali, static function ($a, $b) {
+            return strcasecmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
+        });
+
+        $menu_items = [];
+        if ($dashboard_wali) $menu_items[] = $dashboard_wali;
+        if ($data_utama_wali) $menu_items[] = $data_utama_wali;
+        foreach ($middle_wali as $mi) {
+            $menu_items[] = $mi;
+        }
+        if ($profil_wali) $menu_items[] = $profil_wali;
+        if ($logout_wali) $menu_items[] = $logout_wali;
         break;
 
     case 'siswa':
