@@ -19,10 +19,7 @@ $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran_aktif = $school_profile['tahun_ajaran'] ?? date('Y') . '/' . (date('Y') + 1);
 $semester_aktif = $school_profile['semester'] ?? 'Semester 1';
 
-$upload_dir = __DIR__ . '/../uploads/perangkat/';
-if (!is_dir($upload_dir)) {
-    @mkdir($upload_dir, 0755, true);
-}
+$upload_dir = guru_upload_dir($pdo, $guru_id, 'perangkat');
 
 // Handler Download Berkas Perangkat
 if (isset($_GET['download']) && (int)$_GET['download'] > 0) {
@@ -32,8 +29,8 @@ if (isset($_GET['download']) && (int)$_GET['download'] > 0) {
     $itemDl = $stmtDl->fetch(PDO::FETCH_ASSOC);
 
     if ($itemDl && !empty($itemDl['file_path'])) {
-        $filePath = $upload_dir . basename($itemDl['file_path']);
-        if (is_file($filePath)) {
+        $filePath = resolve_guru_file_path('perangkat', $itemDl['file_path']);
+        if ($filePath && is_file($filePath)) {
             $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
             $safe_title = preg_replace('/[^A-Za-z0-9_-]+/', '_', trim($itemDl['judul']));
             $download_filename = ($safe_title !== '' ? $safe_title : 'perangkat_pembelajaran') . '.' . $ext;
@@ -85,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (in_array($ext, $allowed, true)) {
                 $filename = 'perangkat_' . time() . '_' . uniqid() . '.' . $ext;
                 if (move_uploaded_file($_FILES['file_perangkat']['tmp_name'], $upload_dir . $filename)) {
-                    $file_path = $filename;
+                    $file_path = guru_folder_name($pdo, $guru_id) . '/' . $filename;
                 }
             }
         }
@@ -151,8 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT file_path FROM tb_perangkat_pembelajaran WHERE id = ? AND id_guru = ?");
             $stmt->execute([$id, $guru_id]);
             $old_file = $stmt->fetchColumn();
-            if ($old_file && is_file($upload_dir . $old_file)) {
+            $old_path = $old_file ? resolve_guru_file_path('perangkat', $old_file) : null;
+            if ($old_path && is_file($old_path)) {
+                @unlink($old_path);
+            } elseif ($old_file && is_file($upload_dir . $old_file)) {
                 @unlink($upload_dir . $old_file);
+            } elseif ($old_file && is_file($upload_dir . basename($old_file))) {
+                @unlink($upload_dir . basename($old_file));
             }
             $del = $pdo->prepare("DELETE FROM tb_perangkat_pembelajaran WHERE id = ? AND id_guru = ?");
             $del->execute([$id, $guru_id]);
@@ -357,9 +359,14 @@ $(document).ready(function() {
             html += '      <div style="font-size: 12px; color: #475569; font-weight: 600;">Format berkas: .' + ext + '</div>';
             html += '    </div>';
             html += '  </div>';
-            html += '  <button type="button" onclick="downloadPerangkat(' + data.id + ')" class="btn btn-sm" style="background: #16a34a; color: #ffffff; font-weight: 700; padding: 7px 16px; border-radius: 6px; border: none; box-shadow: 0 2px 4px rgba(22,163,74,0.3);">';
-            html += '    <i class="fas fa-download mr-1"></i> Unduh File (' + ext + ')';
-            html += '  </button>';
+            html += '  <div style="display: flex; gap: 8px;">';
+            html += '    <a href="preview_perangkat.php?id=' + data.id + '" target="_blank" class="btn btn-sm" style="background: #2563eb; color: #ffffff; font-weight: 700; padding: 7px 14px; border-radius: 6px; text-decoration: none;">';
+            html += '      <i class="fas fa-book-reader mr-1"></i> Baca Dokumen';
+            html += '    </a>';
+            html += '    <button type="button" onclick="downloadPerangkat(' + data.id + ')" class="btn btn-sm" style="background: #16a34a; color: #ffffff; font-weight: 700; padding: 7px 16px; border-radius: 6px; border: none; box-shadow: 0 2px 4px rgba(22,163,74,0.3);">';
+            html += '      <i class="fas fa-download mr-1"></i> Unduh (' + ext + ')';
+            html += '    </button>';
+            html += '  </div>';
             html += '</div>';
         }
 
@@ -598,10 +605,10 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($r['tahun_ajaran'] ?? '-') ?></td>
                                         <td class="text-center">
                                             <?php if (!empty($r['file_path'])): ?>
-                                                <button type="button" class="btn btn-link text-primary font-weight-bold p-0" onclick="downloadPerangkat(<?= (int)$r['id'] ?>)" title="Unduh File (<?= strtoupper(pathinfo($r['file_path'], PATHINFO_EXTENSION)) ?>)">
+                                                <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="text-primary font-weight-bold" title="Baca Dokumen (<?= strtoupper(pathinfo($r['file_path'], PATHINFO_EXTENSION)) ?>)">
                                                     <i class="fas fa-file-alt fa-lg"></i>
                                                     <small class="d-block" style="font-size: 10px;"><?= strtoupper(pathinfo($r['file_path'], PATHINFO_EXTENSION)) ?></small>
-                                                </button>
+                                                </a>
                                             <?php else: ?>
                                                 <span class="text-muted">-</span>
                                             <?php endif; ?>
@@ -622,6 +629,9 @@ include '../templates/sidebar.php';
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <?php if (!empty($r['file_path'])): ?>
+                                                    <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Baca Dokumen (Laman Penuh)">
+                                                        <i class="fas fa-book-reader"></i>
+                                                    </a>
                                                     <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>)" class="btn btn-success btn-sm" title="Unduh Berkas">
                                                         <i class="fas fa-download"></i>
                                                     </button>

@@ -15,10 +15,7 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
 
-$upload_dir = __DIR__ . '/../uploads/tugas/';
-if (!is_dir($upload_dir)) {
-    @mkdir($upload_dir, 0755, true);
-}
+$upload_dir = guru_upload_dir($pdo, $guru_id, 'tugas');
 
 $message = null;
 
@@ -44,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ext = strtolower(pathinfo($_FILES['lampiran_file']['name'], PATHINFO_EXTENSION));
             $filename = 'tugas_' . time() . '_' . uniqid() . '.' . $ext;
             if (move_uploaded_file($_FILES['lampiran_file']['tmp_name'], $upload_dir . $filename)) {
-                $lampiran = $filename;
+                $lampiran = guru_folder_name($pdo, $guru_id) . '/' . $filename;
             }
         }
 
@@ -84,6 +81,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $instruksi, $tgl_mulai, $deadline, $nilai_maksimal, $status
                     ];
                     if ($lampiran !== null) {
+                        try {
+                            $stOld = $pdo->prepare("SELECT lampiran FROM tb_tugas WHERE id = ? AND id_guru = ?");
+                            $stOld->execute([$id, $guru_id]);
+                            $old_lamp = $stOld->fetchColumn();
+                            $old_path = $old_lamp ? resolve_guru_file_path('tugas', $old_lamp) : null;
+                            if ($old_path && is_file($old_path)) {
+                                @unlink($old_path);
+                            }
+                        } catch (Throwable $e) {}
                         $sql .= ", lampiran = ?";
                         $params[] = $lampiran;
                     }
@@ -101,9 +107,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus') {
         $id = (int)($_POST['id'] ?? 0);
         try {
+            $stRows = $pdo->prepare("SELECT lampiran FROM tb_tugas WHERE id = ? AND id_guru = ?");
+            $stRows->execute([$id, $guru_id]);
+            $del_lamp = $stRows->fetchColumn();
+            $stSubs = $pdo->prepare("SELECT file_path FROM tb_tugas_pengumpulan WHERE id_tugas = ?");
+            $stSubs->execute([$id]);
+            $del_subs = $stSubs->fetchAll(PDO::FETCH_COLUMN);
             $stmt = $pdo->prepare("DELETE FROM tb_tugas WHERE id = ? AND id_guru = ?");
             $stmt->execute([$id, $guru_id]);
             $pdo->prepare("DELETE FROM tb_tugas_pengumpulan WHERE id_tugas = ?")->execute([$id]);
+            $garbage = array_merge($del_lamp ? [$del_lamp] : [], (array)$del_subs);
+            foreach ($garbage as $gf) {
+                $gp = $gf ? resolve_guru_file_path('tugas', $gf) : null;
+                if ($gp && is_file($gp)) {
+                    @unlink($gp);
+                }
+            }
             $message = ['type' => 'success', 'text' => 'Tugas berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];

@@ -4,6 +4,7 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/learning_schema.php';
 
 if (!isAuthorized(['guru', 'wali', 'admin', 'tata_usaha', 'kepala_madrasah'])) {
     redirect('../login.php');
@@ -24,8 +25,9 @@ if (!$row || empty($row['file_path'])) {
     exit('Berkas tidak ditemukan.');
 }
 
-$upload_dir = __DIR__ . '/../uploads/perangkat/';
-$file_path = $upload_dir . basename($row['file_path']);
+ensure_learning_schema($pdo);
+
+$file_path = resolve_guru_file_path('perangkat', $row['file_path']);
 
 if (!is_file($file_path)) {
     http_response_code(404);

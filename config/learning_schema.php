@@ -87,10 +87,14 @@ if (!function_exists('ensure_learning_schema')) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 id_guru INT NOT NULL,
                 kode_soal VARCHAR(50) NOT NULL,
-                jenis_soal ENUM('Pilihan Ganda','Uraian','Isian Singkat','Menjodohkan','Benar/Salah') NOT NULL DEFAULT 'Pilihan Ganda',
+                jenis_soal ENUM('Pilihan Ganda','Pilihan Ganda Kompleks','Menjodohkan','Isian Singkat','Uraian') NOT NULL DEFAULT 'Pilihan Ganda',
                 id_mapel INT NULL,
                 id_kelas INT NULL,
+                kurikulum VARCHAR(30) NULL DEFAULT 'PERMENDIKDASMEN_046',
                 materi_tp VARCHAR(255) NULL,
+                cp TEXT NULL,
+                tp TEXT NULL,
+                atp TEXT NULL,
                 indikator TEXT NULL,
                 tingkat_kesulitan ENUM('Mudah','Sedang','Sukar') NOT NULL DEFAULT 'Sedang',
                 bobot DECIMAL(5,2) NOT NULL DEFAULT 1.00,
@@ -106,6 +110,28 @@ if (!function_exists('ensure_learning_schema')) {
                 INDEX idx_kelas (id_kelas)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+
+        // Migrasi bank soal lama -> 5 bentuk + kolom kurikulum/CP/TP/ATP
+        try {
+            $cols = $pdo->query("SHOW COLUMNS FROM tb_bank_soal")->fetchAll(PDO::FETCH_COLUMN, 0);
+            if (in_array('jenis_soal', (array)$cols, true)) {
+                $pdo->exec("ALTER TABLE tb_bank_soal MODIFY COLUMN jenis_soal ENUM('Pilihan Ganda','Pilihan Ganda Kompleks','Menjodohkan','Isian Singkat','Uraian') NOT NULL DEFAULT 'Pilihan Ganda'");
+                $pdo->exec("UPDATE tb_bank_soal SET jenis_soal = 'Isian Singkat' WHERE jenis_soal = 'Benar/Salah'");
+            }
+            foreach ([
+                "kurikulum VARCHAR(30) NULL DEFAULT 'PERMENDIKDASMEN_046'",
+                "cp TEXT NULL",
+                "tp TEXT NULL",
+                "atp TEXT NULL",
+            ] as $colDef) {
+                $colName = explode(' ', trim($colDef), 2)[0];
+                $has = $pdo->query("SHOW COLUMNS FROM tb_bank_soal LIKE '" . addslashes($colName) . "'")->fetch(PDO::FETCH_ASSOC);
+                if (!$has) {
+                    $pdo->exec("ALTER TABLE tb_bank_soal ADD COLUMN {$colDef}");
+                }
+            }
+        } catch (Throwable $e) { /* abaikan bila tabel belum ada */
+        }
 
         // 6. Bahan Ajar
         $pdo->exec("

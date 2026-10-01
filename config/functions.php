@@ -1044,6 +1044,104 @@ function getGuruTaughtMapels(PDO $pdo, int $guru_id): array {
     return $mapels;
 }
 
+/**
+ * Nama folder aman untuk direktori upload per guru.
+ * Contoh: "Budi Santoso, S.Pd" -> "Budi_Santoso_S_Pd".
+ */
+function guru_folder_name(PDO $pdo, int $guru_id): string {
+    $name = '';
+    try {
+        $st = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
+        $st->execute([$guru_id]);
+        $name = trim((string)$st->fetchColumn());
+    } catch (Throwable $e) {}
+    if ($name === '') {
+        $name = 'guru_' . $guru_id;
+    }
+    $slug = preg_replace('/[^A-Za-z0-9]+/', '_', $name);
+    $slug = trim((string)$slug, '_');
+    if ($slug === '') {
+        $slug = 'guru_' . $guru_id;
+    }
+    return $slug;
+}
+
+/**
+ * Direktori upload per guru: uploads/{kategori}/{Nama_Guru}/ (dibuat otomatis).
+ * File lama tanpa folder guru tetap terbaca (fallback ke uploads/{kategori}/).
+ */
+function guru_upload_dir(PDO $pdo, int $guru_id, string $kategori): string {
+    $base = dirname(__DIR__) . '/uploads/' . trim($kategori, '/') . '/';
+    $dir = $base . guru_folder_name($pdo, $guru_id) . '/';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    return $dir;
+}
+
+/**
+ * URL web untuk berkas guru. Terima nilai DB lama (nama file saja)
+ * maupun baru (Nama_Guru/namafile).
+ */
+function guru_file_url(string $kategori, ?string $stored): ?string {
+    $stored = trim((string)$stored);
+    if ($stored === '') {
+        return null;
+    }
+    if (strpos($stored, 'http://') === 0 || strpos($stored, 'https://') === 0) {
+        return $stored;
+    }
+    $rel = ltrim(str_replace('\\', '/', $stored), '/');
+    return '../uploads/' . trim($kategori, '/') . '/' . $rel;
+}
+
+/**
+ * URL siap pakai di atribut href (tiap segmen path di-encode).
+ */
+function guru_file_href(string $kategori, ?string $stored): ?string {
+    $url = guru_file_url($kategori, $stored);
+    if ($url === null) {
+        return null;
+    }
+    $parts = explode('?', $url, 2);
+    $segs = explode('/', $parts[0]);
+    foreach ($segs as $i => $s) {
+        if ($s !== '' && $s !== '.' && $s !== '..') {
+            $segs[$i] = rawurlencode(rawurldecode($s));
+        }
+    }
+    $out = implode('/', $segs);
+    if (isset($parts[1])) {
+        $out .= '?' . $parts[1];
+    }
+    return $out;
+}
+
+/**
+ * Cari path fisik berkas guru: folder guru dulu, lalu folder kategori lama.
+ * Menerima nilai DB lama (nama file saja) maupun baru (Nama_Guru/namafile).
+ */
+function resolve_guru_file_path(string $kategori, ?string $stored): ?string {
+    $stored = trim((string)$stored);
+    if ($stored === '') {
+        return null;
+    }
+    if (strpos($stored, 'http://') === 0 || strpos($stored, 'https://') === 0) {
+        return null;
+    }
+    $base = dirname(__DIR__) . '/uploads/' . trim($kategori, '/') . '/';
+    $rel = ltrim(str_replace('\\', '/', $stored), '/');
+    $cand = $base . $rel;
+    if (is_file($cand)) {
+        return $cand;
+    }
+    $cand = $base . basename($rel);
+    if (is_file($cand)) {
+        return $cand;
+    }
+    return null;
+}
+
 // Function to format date
 function formatDate(string $date): string {
     $v = trim($date);

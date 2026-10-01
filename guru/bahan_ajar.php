@@ -19,10 +19,7 @@ $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran_aktif = $school_profile['tahun_ajaran'] ?? date('Y') . '/' . (date('Y') + 1);
 $semester_aktif = $school_profile['semester'] ?? 'Semester 1';
 
-$upload_dir = __DIR__ . '/../uploads/bahan_ajar/';
-if (!is_dir($upload_dir)) {
-    @mkdir($upload_dir, 0755, true);
-}
+$upload_dir = guru_upload_dir($pdo, $guru_id, 'bahan_ajar');
 
 $message = null;
 
@@ -47,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ext = strtolower(pathinfo($_FILES['file_bahan']['name'], PATHINFO_EXTENSION));
             $filename = 'bahan_' . time() . '_' . uniqid() . '.' . $ext;
             if (move_uploaded_file($_FILES['file_bahan']['tmp_name'], $upload_dir . $filename)) {
-                $file_link = $filename;
+                $file_link = guru_folder_name($pdo, $guru_id) . '/' . $filename;
             }
         }
 
@@ -100,8 +97,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT file_link FROM tb_bahan_ajar WHERE id = ? AND id_guru = ?");
             $stmt->execute([$id, $guru_id]);
             $old = $stmt->fetchColumn();
-            if ($old && is_file($upload_dir . $old)) {
-                @unlink($upload_dir . $old);
+            $old_path = $old ? resolve_guru_file_path('bahan_ajar', $old) : null;
+            if ($old_path && is_file($old_path)) {
+                @unlink($old_path);
             }
             $pdo->prepare("DELETE FROM tb_bahan_ajar WHERE id = ? AND id_guru = ?")->execute([$id, $guru_id]);
             $message = ['type' => 'success', 'text' => 'Bahan ajar berhasil dihapus.'];
@@ -242,7 +240,7 @@ $(document).ready(function() {
                 content = '<div class="text-center p-4"><p>Tautan Eksternal:</p><a href="' + url + '" target="_blank" class="btn btn-primary"><i class="fas fa-external-link-alt mr-1"></i> Buka di Tab Baru</a></div>';
             }
         } else {
-            var fullUrl = '../uploads/bahan_ajar/' + encodeURIComponent(url);
+            var fullUrl = '../uploads/bahan_ajar/' + url.split('/').map(encodeURIComponent).join('/');
             var ext = url.split('.').pop().toLowerCase();
             if (ext === 'pdf') {
                 content = '<iframe src="' + fullUrl + '" style="width:100%; height:550px; border:none;"></iframe>';
@@ -385,7 +383,7 @@ include '../templates/sidebar.php';
                                 <?php foreach ($bahan_rows as $i => $r): ?>
                                     <?php
                                     $is_url = (strpos($r['file_link'], 'http://') === 0 || strpos($r['file_link'], 'https://') === 0);
-                                    $file_dest = $is_url ? $r['file_link'] : ('../uploads/bahan_ajar/' . htmlspecialchars($r['file_link']));
+                                    $file_dest = $is_url ? $r['file_link'] : guru_file_href('bahan_ajar', $r['file_link']);
                                     $st_badge = $r['status'] === 'Aktif' ? 'success' : ($r['status'] === 'Draft' ? 'warning' : 'secondary');
                                     ?>
                                     <tr>

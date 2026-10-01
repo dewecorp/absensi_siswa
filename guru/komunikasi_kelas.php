@@ -15,10 +15,7 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
 
-$upload_dir = __DIR__ . '/../uploads/komunikasi/';
-if (!is_dir($upload_dir)) {
-    @mkdir($upload_dir, 0755, true);
-}
+$upload_dir = guru_upload_dir($pdo, $guru_id, 'komunikasi');
 
 $message = null;
 
@@ -40,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ext = strtolower(pathinfo($_FILES['lampiran_file']['name'], PATHINFO_EXTENSION));
             $filename = 'pesan_' . time() . '_' . uniqid() . '.' . $ext;
             if (move_uploaded_file($_FILES['lampiran_file']['tmp_name'], $upload_dir . $filename)) {
-                $lampiran = $filename;
+                $lampiran = guru_folder_name($pdo, $guru_id) . '/' . $filename;
             }
         }
 
@@ -83,8 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT lampiran FROM tb_komunikasi_kelas WHERE id = ? AND id_guru = ?");
             $stmt->execute([$id, $guru_id]);
             $old = $stmt->fetchColumn();
-            if ($old && is_file($upload_dir . $old)) {
-                @unlink($upload_dir . $old);
+            $old_path = $old ? resolve_guru_file_path('komunikasi', $old) : null;
+            if ($old_path && is_file($old_path)) {
+                @unlink($old_path);
             }
             $pdo->prepare("DELETE FROM tb_komunikasi_kelas WHERE id = ? AND id_guru = ?")->execute([$id, $guru_id]);
             $pdo->prepare("DELETE FROM tb_komunikasi_kelas_read WHERE id_komunikasi = ?")->execute([$id]);
@@ -194,7 +192,7 @@ $(document).ready(function() {
         $('#det_isi').text(data.isi);
 
         if (data.lampiran) {
-            $('#det_lampiran').html('<a href="../uploads/komunikasi/' + encodeURIComponent(data.lampiran) + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-paperclip mr-1"></i>Unduh Lampiran (' + data.lampiran.split('.').pop().toUpperCase() + ')</a>');
+            $('#det_lampiran').html('<a href="../uploads/komunikasi/' + String(data.lampiran).split('/').map(encodeURIComponent).join('/') + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-paperclip mr-1"></i>Unduh Lampiran (' + data.lampiran.split('.').pop().toUpperCase() + ')</a>');
         } else {
             $('#det_lampiran').html('<span class="text-muted">Tidak ada lampiran</span>');
         }
@@ -322,8 +320,9 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
                                         <td><?= $tot_penerima ?> penerima</td>
                                         <td class="text-center">
-                                            <?php if (!empty($r['lampiran'])): ?>
-                                                <a href="../uploads/komunikasi/<?= htmlspecialchars($r['lampiran']) ?>" target="_blank" class="text-primary font-weight-bold" title="Lampiran">
+                                            <?php $lamp_url = guru_file_url('komunikasi', $r['lampiran'] ?? ''); ?>
+                                            <?php if ($lamp_url): ?>
+                                                <a href="<?= htmlspecialchars($lamp_url) ?>" target="_blank" class="text-primary font-weight-bold" title="Lampiran">
                                                     <i class="fas fa-paperclip"></i>
                                                 </a>
                                             <?php else: ?>

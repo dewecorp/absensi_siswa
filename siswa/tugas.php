@@ -22,7 +22,7 @@ if (!$student || empty($student['id_kelas'])) {
 $id_kelas = (int)$student['id_kelas'];
 $nama_kelas = (string)$student['nama_kelas'];
 
-$upload_dir = __DIR__ . '/../uploads/tugas/';
+$upload_dir = dirname(__DIR__) . '/uploads/tugas/';
 if (!is_dir($upload_dir)) {
     @mkdir($upload_dir, 0755, true);
 }
@@ -35,21 +35,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $catatan_siswa = trim((string)($_POST['catatan_siswa'] ?? ''));
 
     // Verify task exists and is for this class
-    $stVer = $pdo->prepare("SELECT id, deadline, status FROM tb_tugas WHERE id = ? AND id_kelas = ? AND status = 'Aktif'");
+    $stVer = $pdo->prepare("SELECT id, id_guru, deadline, status FROM tb_tugas WHERE id = ? AND id_kelas = ? AND status = 'Aktif'");
     $stVer->execute([$id_tugas, $id_kelas]);
     $tugas_ver = $stVer->fetch(PDO::FETCH_ASSOC);
 
     if (!$tugas_ver) {
         $message = ['type' => 'danger', 'text' => 'Tugas tidak ditemukan atau sudah tidak aktif.'];
     } else {
+        $submit_dir = guru_upload_dir($pdo, (int)($tugas_ver['id_guru'] ?? 0), 'tugas');
         $file_path = null;
         if (isset($_FILES['file_tugas']) && $_FILES['file_tugas']['error'] === UPLOAD_ERR_OK) {
             $ext = strtolower(pathinfo($_FILES['file_tugas']['name'], PATHINFO_EXTENSION));
             $allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'zip', 'rar'];
             if (in_array($ext, $allowed, true)) {
                 $filename = 'submit_' . $id_tugas . '_' . $id_siswa . '_' . time() . '.' . $ext;
-                if (move_uploaded_file($_FILES['file_tugas']['tmp_name'], $upload_dir . $filename)) {
-                    $file_path = $filename;
+                if (move_uploaded_file($_FILES['file_tugas']['tmp_name'], $submit_dir . $filename)) {
+                    $file_path = guru_folder_name($pdo, (int)($tugas_ver['id_guru'] ?? 0)) . '/' . $filename;
                 }
             }
         }
@@ -148,7 +149,7 @@ $(document).ready(function() {
         $('#det_instruksi').text(data.instruksi || '-');
 
         if (data.lampiran) {
-            $('#det_lampiran').html('<a href="../uploads/tugas/' + encodeURIComponent(data.lampiran) + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-download mr-1"></i> Unduh Lampiran Guru</a>');
+            $('#det_lampiran').html('<a href="../uploads/tugas/' + String(data.lampiran).split('/').map(encodeURIComponent).join('/') + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-download mr-1"></i> Unduh Lampiran Guru</a>');
         } else {
             $('#det_lampiran').html('<span class="text-muted">Tidak ada berkas lampiran</span>');
         }

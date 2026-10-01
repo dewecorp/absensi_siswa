@@ -1,10 +1,13 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/ai_helper.php';
 
 if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
 }
+
+ai_helper_schema($pdo);
 
 $school_profile = getSchoolProfile($pdo);
 
@@ -100,6 +103,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             $message = ['type' => 'danger', 'text' => 'Gagal menyimpan profil.'];
         }
     }
+}
+
+// Handle konektor AI guru (simpan kunci Gemini/OpenAI milik sendiri)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_konektor_ai'])) {
+    $provider = in_array($_POST['ai_provider'] ?? '', ['gemini', 'openai'], true) ? $_POST['ai_provider'] : 'gemini';
+    $gkey = trim((string)($_POST['ai_gemini_key'] ?? ''));
+    $gmodel = trim((string)($_POST['ai_gemini_model'] ?? 'gemini-2.0-flash')) ?: 'gemini-2.0-flash';
+    $okey = trim((string)($_POST['ai_openai_key'] ?? ''));
+    $omodel = trim((string)($_POST['ai_openai_model'] ?? 'gpt-4o-mini')) ?: 'gpt-4o-mini';
+    try {
+        $stmt = $pdo->prepare("UPDATE tb_guru SET ai_provider=?, ai_gemini_key=?, ai_gemini_model=?, ai_openai_key=?, ai_openai_model=? WHERE id_guru=?");
+        $stmt->execute([$provider, ($gkey !== '' ? $gkey : null), $gmodel, ($okey !== '' ? $okey : null), $omodel, $teacher['id_guru']]);
+        $message = ['type' => 'success', 'text' => 'Konektor AI berhasil disimpan.'];
+        $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+        $stmt->execute([$teacher['id_guru']]);
+        $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $message = ['type' => 'danger', 'text' => 'Gagal menyimpan konektor AI.'];
+    }
+}
+
+// Handle tes koneksi AI guru
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tes_konektor_ai'])) {
+    $provider = in_array($_POST['ai_provider'] ?? '', ['gemini', 'openai'], true) ? $_POST['ai_provider'] : 'gemini';
+    $cfg = ai_guru_config($pdo, (int)$teacher['id_guru']);
+    if ($provider === 'openai') {
+        [$ok, $note] = ai_test_connection('openai', $cfg['openai_key'], $cfg['openai_model']);
+    } else {
+        [$ok, $note] = ai_test_connection('gemini', $cfg['gemini_key'], $cfg['gemini_model']);
+    }
+    $message = ['type' => $ok ? 'success' : 'danger', 'text' => $note];
 }
 
 // Handle password change
@@ -249,6 +283,42 @@ include '../templates/user_header.php';
                                     <input type="password" class="form-control" name="confirm_password" minlength="6" required>
                                 </div>
                                 <button type="submit" name="ubah_password" class="btn btn-primary"><i class="fas fa-key mr-2"></i>Ubah Password</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <?php $ai_cfg = ai_guru_config($pdo, (int)$teacher['id_guru']); ?>
+                    <div class="card shadow-sm mt-4">
+                        <div class="card-header">
+                            <h4><i class="fas fa-robot mr-2"></i>Konektor AI (Akun Guru)</h4>
+                            <div class="card-header-action">
+                                <span class="badge badge-info"><?= htmlspecialchars($ai_cfg['provider'] === 'openai' ? 'ChatGPT' : 'Gemini') ?></span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Setiap guru memakai akun AI sendiri. Pilih penyedia favorit, isi API key, lalu Tes Koneksi.</p>
+                            <form method="POST" action="">
+                                <div class="form-group">
+                                    <label>Penyedia AI</label>
+                                    <select name="ai_provider" class="form-control">
+                                        <option value="gemini" <?= $ai_cfg['provider'] === 'gemini' ? 'selected' : '' ?>>Gemini (Google)</option>
+                                        <option value="openai" <?= $ai_cfg['provider'] === 'openai' ? 'selected' : '' ?>>ChatGPT (OpenAI)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Gemini API Key</label>
+                                    <input type="password" name="ai_gemini_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_key']) ?>" placeholder="AIza...">
+                                    <small class="text-muted">model: <input type="text" name="ai_gemini_model" value="<?= htmlspecialchars($ai_cfg['gemini_model']) ?>" class="form-control form-control-sm mt-1" placeholder="gemini-2.0-flash"></small>
+                                </div>
+                                <div class="form-group">
+                                    <label>OpenAI / ChatGPT API Key</label>
+                                    <input type="password" name="ai_openai_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['openai_key']) ?>" placeholder="sk-...">
+                                    <small class="text-muted">model: <input type="text" name="ai_openai_model" value="<?= htmlspecialchars($ai_cfg['openai_model']) ?>" class="form-control form-control-sm mt-1" placeholder="gpt-4o-mini"></small>
+                                </div>
+                                <div class="d-flex" style="gap:8px;">
+                                    <button type="submit" name="simpan_konektor_ai" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Simpan Konektor</button>
+                                    <button type="submit" name="tes_konektor_ai" class="btn btn-outline-info"><i class="fas fa-plug mr-1"></i>Tes Koneksi</button>
+                                </div>
                             </form>
                         </div>
                     </div>

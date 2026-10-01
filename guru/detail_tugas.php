@@ -163,7 +163,7 @@ $(document).ready(function() {
 
         if (data.file_path) {
             var ext = data.file_path.split('.').pop().toLowerCase();
-            $('#mdl_file_wrap').html('<a href="../uploads/tugas/' + encodeURIComponent(data.file_path) + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-file mr-1"></i>Unduh Berkas Siswa (' + ext.toUpperCase() + ')</a>');
+            $('#mdl_file_wrap').html('<a href="../uploads/tugas/' + String(data.file_path).split('/').map(encodeURIComponent).join('/') + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-file mr-1"></i>Unduh Berkas Siswa (' + ext.toUpperCase() + ')</a>');
         } else {
             $('#mdl_file_wrap').html('<span class="text-muted">Tidak ada berkas yang diunggah siswa</span>');
         }
@@ -219,8 +219,9 @@ include '../templates/sidebar.php';
                                 <tr>
                                     <th>Lampiran Berkas</th>
                                     <td>
-                                        <?php if (!empty($tugas['lampiran'])): ?>
-                                            <a href="../uploads/tugas/<?= htmlspecialchars($tugas['lampiran']) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <?php $lamp_href = guru_file_href('tugas', $tugas['lampiran'] ?? ''); ?>
+                                        <?php if ($lamp_href): ?>
+                                            <a href="<?= htmlspecialchars($lamp_href) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-download mr-1"></i> Unduh Lampiran
                                             </a>
                                         <?php else: ?>
@@ -360,8 +361,9 @@ include '../templates/sidebar.php';
                                                 title="Periksa, Nilai & Feedback">
                                                 <i class="fas fa-check-circle mr-1"></i> Periksa / Nilai
                                             </button>
-                                            <?php if (!empty($s['file_path'])): ?>
-                                                <a href="../uploads/tugas/<?= htmlspecialchars($s['file_path']) ?>" target="_blank" class="btn btn-info btn-sm" title="Lihat / Download File">
+                                            <?php $s_href = guru_file_href('tugas', $s['file_path'] ?? ''); ?>
+                                            <?php if ($s_href): ?>
+                                                <a href="<?= htmlspecialchars($s_href) ?>" target="_blank" class="btn btn-info btn-sm" title="Lihat / Download File">
                                                     <i class="fas fa-file-download"></i>
                                                 </a>
                                             <?php endif; ?>
