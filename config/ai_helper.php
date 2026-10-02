@@ -7,6 +7,7 @@ if (!function_exists('ai_helper_schema')) {
     function ai_helper_schema(PDO $pdo): void {
         foreach ([
             "ai_provider VARCHAR(20) NULL DEFAULT 'gemini'",
+            "ai_gemini_email VARCHAR(255) NULL",
             "ai_gemini_key VARCHAR(255) NULL",
             "ai_gemini_model VARCHAR(100) NULL",
             "ai_openai_email VARCHAR(255) NULL",
@@ -25,25 +26,44 @@ if (!function_exists('ai_helper_schema')) {
     }
 }
 
+if (!function_exists('ai_get_system_gemini_key')) {
+    // Ambil Master Key Gemini tingkat madrasah dari database/env bila guru belum isi
+    function ai_get_system_gemini_key(PDO $pdo): string {
+        $k = trim((string)getenv('GEMINI_API_KEY'));
+        if ($k === '') { $k = trim((string)getenv('GOOGLE_API_KEY')); }
+        if ($k === '') {
+            try {
+                $st = $pdo->prepare("SELECT nilai FROM tb_pengaturan_aplikasi WHERE kunci = 'master_gemini_key' LIMIT 1");
+                $st->execute();
+                $k = trim((string)$st->fetchColumn());
+            } catch (Throwable $e) {}
+        }
+        return $k;
+    }
+}
+
 if (!function_exists('ai_guru_config')) {
-    // Ambil konfigurasi AI milik satu guru. Kembalikan ['provider','gemini_key','gemini_model','openai_email','openai_key','openai_model'].
+    // Ambil konfigurasi AI milik satu guru. Kembalikan ['provider','gemini_email','gemini_key','gemini_model','openai_email','openai_key','openai_model'].
     function ai_guru_config(PDO $pdo, int $guru_id): array {
         $out = [
             'provider' => 'gemini',
+            'gemini_email' => '',
             'gemini_key' => '',
             'gemini_model' => '',
             'openai_email' => '',
             'openai_key' => '',
             'openai_model' => '',
+            'is_system_key' => false,
         ];
         try {
-            $st = $pdo->prepare("SELECT ai_provider, ai_gemini_key, ai_gemini_model, ai_openai_email, ai_openai_key, ai_openai_model FROM tb_guru WHERE id_guru = ? LIMIT 1");
+            $st = $pdo->prepare("SELECT ai_provider, ai_gemini_email, ai_gemini_key, ai_gemini_model, ai_openai_email, ai_openai_key, ai_openai_model FROM tb_guru WHERE id_guru = ? LIMIT 1");
             $st->execute([$guru_id]);
             $row = $st->fetch(PDO::FETCH_ASSOC);
             if ($row) {
                 if (in_array($row['ai_provider'] ?? '', ['gemini', 'openai'], true)) {
                     $out['provider'] = $row['ai_provider'];
                 }
+                $out['gemini_email'] = trim((string)($row['ai_gemini_email'] ?? ''));
                 $out['gemini_key'] = trim((string)($row['ai_gemini_key'] ?? ''));
                 $gm = trim((string)($row['ai_gemini_model'] ?? ''));
                 if ($gm !== '' && function_exists('ai_normalize_gemini_model')) {
@@ -55,6 +75,13 @@ if (!function_exists('ai_guru_config')) {
                 $out['openai_model'] = trim((string)($row['ai_openai_model'] ?? ''));
             }
         } catch (Throwable $e) { /* tabel/kolom belum ada */
+        }
+        if ($out['gemini_key'] === '') {
+            $sys = ai_get_system_gemini_key($pdo);
+            if ($sys !== '') {
+                $out['gemini_key'] = $sys;
+                $out['is_system_key'] = true;
+            }
         }
         return $out;
     }
@@ -190,10 +217,16 @@ if (!function_exists('ai_build_soal_prompt')) {
             }
             $paket = [$b => max(1, (int)($in['jumlah'] ?? 5))];
         }
-        $total = array_sum($paket);
+        $total = 0;
         $rincian = [];
         foreach ($paket as $b => $n) {
-            $rincian[] = '- ' . $n . ' butir ' . $b;
+            if ($b === 'Menjodohkan') {
+                $total += 1;
+                $rincian[] = '- 1 butir Menjodohkan (berisi 1 tabel dengan tepat ' . $n . ' baris pasangan soal no 1-' . $n . ' dan pilihan jawaban huruf A-' . chr(64 + $n) . ')';
+            } else {
+                $total += $n;
+                $rincian[] = '- ' . $n . ' butir ' . $b;
+            }
         }
         $lines = [];
         $lines[] = 'Anda adalah penyusun soal profesional untuk madrasah/sekolah di Indonesia.';
@@ -219,24 +252,27 @@ if (!function_exists('ai_build_soal_prompt')) {
         } else {
             $lines[] = '- Materi detail: tidak diberikan (opsional). Susun soal dari topik/sub-topik di atas sesuai mapel/kelas/semester dan kurikulum.';
         }
+        if (trim((string)($in['instruksi_tambahan'] ?? '')) !== '') {
+            $lines[] = '- Instruksi / Perintah Tambahan Khusus: ' . trim((string)$in['instruksi_tambahan']) . ' (PENTING: Wajib dipatuhi dan diimplementasikan pada pembuatan butir soal/kisi-kisi terkait).';
+        }
         $lines[] = '- Tingkat kesulitan: ACAK dan MERATA untuk tiap bentuk soal (setiap bentuk wajib ada yang Mudah, Sedang, dan Sukar bila jumlah memungkinkan; bila jumlah < 3, variasikan sebisa mungkin). Tandai tiap butir pada field "kesulitan".';
-        $lines[] = 'Level kognitif (WAJIB untuk tiap butir kisi-kisi dan soal, tulis persis L1/L2/L3/L4):';
-        $lines[] = '- L1 = Mengingat (C1).';
-        $lines[] = '- L2 = Memahami (C2).';
-        $lines[] = '- L3 = Mengaplikasikan/Menganalisis (C3-C4).';
-        $lines[] = '- L4 = Mengevaluasi/Mencipta (C5-C6).';
-        $lines[] = 'Sebar level L1 sampai L4 secara wajar sesuai topik dan bentuk soal; cantumkan field "level_kognitif" pada tiap butir kisi-kisi dan soal.';
+        $lines[] = 'Level kognitif (WAJIB untuk tiap butir kisi-kisi dan soal, cantumkan field "level_kognitif" dengan nilai persis C1, C2, C3, atau C4 / L1-L4):';
+        $lines[] = '- Kognitif C1 Knowledge (Mengingat): Pada level ini pelajar perlu mengingat istilah, fakta, & detail tanpa perlu memahami konsep materinya.';
+        $lines[] = '- Kognitif C2 Comprehension (Memahami): Pada level ini pelajar perlu menyusun ringkasan & menjelaskan gagasan utama menggunakan kata-kata serta bahasanya sendiri tanpa menghubungkannya dengan pembahasan lainnya.';
+        $lines[] = '- Kognitif C3 Application (Menerapkan): Pada level ini pelajar perlu mengaplikasikan atau menerapkan hasil belajar ke kehidupan sehari-hari maupun ke masalah dengan konteks berbeda dari contoh yang sudah pernah diberikan.';
+        $lines[] = '- Kognitif C4 Analysis (Menganalisis): Pada level ini pelajar perlu melakukan analisis pemecahan masalah melalui tahap memisahkan bagian-bagian permasalahan, menguraikan pola permasalahan hingga menghubungkan sebab-akibat antara suatu materi terhadap bagian lainnya.';
+        $lines[] = 'Sebarkan level kognitif (C1-C4) secara proporsional sesuai materi dan bentuk soal; tandai pada field "level_kognitif" (contoh: "C1", "C2", "C3", atau "C4").';
         $lines[] = 'Aturan per bentuk:';
         $lines[] = '- Pilihan Ganda: tiap butir tepat 4 opsi berlabel A-D dan satu kunci (A/B/C/D).';
-        $lines[] = '- Pilihan Ganda Kompleks: tiap butir 4-5 opsi, kunci bisa lebih dari satu (contoh "A,C"); siswa memilih semua yang benar.';
-        $lines[] = '- Menjodohkan: tiap butir WAJIB berisi "tabel" berisi 3-5 baris pasangan. Tiap baris WAJIB punya 4 kolom: "no" (1,2,3...), "kiri" (pernyataan/soal), "huruf" (A,B,C...), "kanan" (pilihan jawaban, acak, tidak berurutan dengan kiri). Kunci format "1-B,2-A,3-C" (pasangan nomor-huruf). Contoh tabel: [{"no":1,"kiri":"Sunan Ampel","huruf":"B","kanan":"Moh Limo"},{"no":2,"kiri":"Sunan Giri","huruf":"A","kanan":"Pesantren Giri"}].';
+        $lines[] = '- Pilihan Ganda Kompleks: tiap butir memiliki 4 opsi berlabel A-D, dan kunci jawaban WAJIB TEPAT 2 PILIHAN BENAR SAJA (contoh "A,C" atau "B,D"). Siswa memilih tepat 2 jawaban yang benar.';
+        $lines[] = '- Menjodohkan: Pada bagian "soal", HANYA DIBUAT 1 BUTIR SOAL yang memuat 1 tabel 4 kolom ("no", "kiri", "huruf", "kanan") dengan tepat {N} baris pasangan. TETAPI pada bagian "kisi_kisi", WAJIB DIBUAT TEPAT {N} BARIS KISI-KISI terpisah (masing-masing nomor urut untuk tiap baris pasangan yang dijodohkan dengan indikator spesifik per baris pasangan).';
         $lines[] = '- Isian Singkat: kunci berupa jawaban singkat 1-5 kata.';
         $lines[] = '- Uraian: kunci berupa jawaban uraian 1-3 kalimat sebagai acuan penskoran.';
         $lines[] = 'Kisi-kisi WAJIB memuat kolom: no, materi, cp, tp, indikator, bentuk, level_kognitif (L1-L4), kesulitan, bobot.';
         $lines[] = 'CP = turunkan dari kurikulum: Permendikdasmen CP 046 (fase/kelas terkait) atau KMA 1503+KBC (madrasah). TP = jabaran operasional topik/sub-topik di atas (1-2 kalimat, diawali kata kerja operasional).';
         $lines[] = 'Jawab HANYA dengan JSON valid (tanpa markdown, tanpa penjelasan di luar JSON) memakai skema persis ini:';
-        $lines[] = '{"kisi_kisi":[{"no":1,"materi":"...","cp":"...","tp":"...","indikator":"...","bentuk":"Pilihan Ganda","level_kognitif":"L2","kesulitan":"Sedang","bobot":1}],"soal":[{"no":1,"bentuk":"Pilihan Ganda","pertanyaan":"...","opsi":{"A":"...","B":"...","C":"...","D":"..."},"tabel":[],"kunci":"A","pembahasan":"...","indikator":"...","level_kognitif":"L2","kesulitan":"Sedang","bobot":1}]}';
-        $lines[] = 'Untuk bentuk selain Pilihan Ganda / Pilihan Ganda Kompleks, isi "opsi" dengan {} dan "kunci" dengan jawaban benar sesuai aturan bentuk di atas. Untuk Menjodohkan, "opsi" tetap {} dan "tabel" WAJIB diisi sesuai aturan. Nomor "no" urut 1 sampai ' . $total . ' untuk seluruh paket.';
+        $lines[] = '{"kisi_kisi":[{"no":1,"materi":"...","cp":"...","tp":"...","indikator":"...","bentuk":"Pilihan Ganda","level_kognitif":"L2","kesulitan":"Sedang","bobot":1}],"soal":[{"no":1,"bentuk":"Pilihan Ganda","pertanyaan":"...","opsi":{"A":"...","B":"...","C":"...","D":"..."},"tabel":[],"kunci":"A","pembahasan":"...","cp":"...","tp":"...","indikator":"...","level_kognitif":"L2","kesulitan":"Sedang","bobot":1}]}';
+        $lines[] = 'Untuk bentuk selain Pilihan Ganda / Pilihan Ganda Kompleks, isi "opsi" dengan {} dan "kunci" dengan jawaban benar sesuai aturan bentuk di atas. Untuk Menjodohkan, "opsi" tetap {} dan "tabel" WAJIB diisi sesuai aturan (hanya 1 butir soal Menjodohkan dengan N baris tabel pasangan). Nomor "no" urut 1 sampai ' . $total . ' untuk seluruh paket.';
         return implode("\n", $lines);
     }
 }
@@ -359,9 +395,16 @@ if (!function_exists('ai_openai_pick_model')) {
 
 if (!function_exists('ai_generate_soal')) {
     // Panggil provider AI milik guru. Model kosong = serahkan ke provider (otomatis).
-    function ai_generate_soal(string $provider, string $api_key, string $model, string $prompt): array {
+    function ai_generate_soal(string $provider, string $api_key, string $model, string $prompt, string $email = ''): array {
         if ($api_key === '') {
-            return [false, 'API key belum diisi. Isi di Profil > Konektor AI.'];
+            $sys_key = trim((string)getenv('GEMINI_API_KEY'));
+            if ($sys_key === '') { $sys_key = trim((string)getenv('GOOGLE_API_KEY')); }
+            if ($sys_key !== '') {
+                $api_key = $sys_key;
+            }
+        }
+        if ($api_key === '') {
+            return [false, 'API key belum diisi. Masukkan API key di Profil > Konektor AI (dapatkan gratis di aistudio.google.com).'];
         }
         if ($provider === 'openai') {
             $model = ai_openai_pick_model($api_key, $model);
@@ -386,11 +429,22 @@ if (!function_exists('ai_generate_soal')) {
             return ai_parse_soal_json($text);
         }
         // Default: Gemini — model otomatis bila kosong / pensiun.
+        // Bila guru mengisi email resmi Kemenag / Gemini Pro, prioritaskan Gemini Pro.
         $want = ai_normalize_gemini_model($model);
         $candidates = [];
         if ($want !== '') {
             $candidates[] = $want;
         }
+
+        $is_pro = (trim($email) !== '' || stripos($model, 'pro') !== false);
+        if ($is_pro) {
+            foreach (['gemini-1.5-pro', 'gemini-2.0-pro', 'gemini-pro-latest'] as $pro_m) {
+                if (!in_array($pro_m, $candidates, true)) {
+                    $candidates[] = $pro_m;
+                }
+            }
+        }
+
         foreach (ai_gemini_list_models($api_key) as $m) {
             if (!in_array($m, $candidates, true)) {
                 $candidates[] = $m;
@@ -404,10 +458,21 @@ if (!function_exists('ai_generate_soal')) {
         $last_err = 'Tidak ada model Gemini yang bisa dipakai.';
         foreach ($candidates as $try) {
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($try) . ':generateContent?key=' . urlencode($api_key);
-            [$code, $body] = ai_http_post_json($url, [
+            $payload = [
                 'contents' => [['parts' => [['text' => $prompt]]]],
                 'generationConfig' => ['temperature' => 0.7, 'responseMimeType' => 'application/json'],
-            ]);
+            ];
+            [$code, $body, $cerr] = ai_http_post_json($url, $payload);
+            // HTTP 0 = koneksi putus (timeout/DNS/firewall): retry sekali sebelum menyerah.
+            if ($code === 0) {
+                sleep(2);
+                [$code, $body, $cerr] = ai_http_post_json($url, $payload, [], 150);
+            }
+            // Overload/limit sementara (429/500/502/503): retry sekali, lalu fallback model lain.
+            if (in_array($code, [429, 500, 502, 503], true)) {
+                sleep(3);
+                [$code, $body, $cerr] = ai_http_post_json($url, $payload, [], 150);
+            }
             if ($code >= 200 && $code < 300) {
                 $j = json_decode($body, true);
                 $text = $j['candidates'][0]['content']['parts'][0]['text'] ?? '';
@@ -415,6 +480,15 @@ if (!function_exists('ai_generate_soal')) {
                     return [false, 'Respons Gemini kosong (model: ' . $try . ').'];
                 }
                 return ai_parse_soal_json($text);
+            }
+            if ($code === 0) {
+                $why = $cerr !== '' ? $cerr : 'timeout/DNS/firewall server';
+                $last_err = 'Koneksi ke Gemini gagal (' . $why . '). Coba lagi beberapa saat.';
+                break;
+            }
+            if (in_array($code, [429, 500, 502, 503], true)) {
+                $last_err = 'Gemini sibuk/overload (' . $code . ', model: ' . $try . '). Coba lagi, atau otomatis pindah model lain.';
+                continue;
             }
             $last_err = 'Gemini HTTP ' . $code . ' (model: ' . $try . '): ' . mb_substr($body, 0, 200);
             // Hanya fallback bila model tidak ada / tidak didukung; error lain langsung berhenti.
@@ -466,9 +540,9 @@ if (!function_exists('ai_http_get')) {
 
 if (!function_exists('ai_test_connection')) {
     // Tes koneksi ringan per provider milik guru.
-    function ai_test_connection(string $provider, string $api_key, string $model): array {
+    function ai_test_connection(string $provider, string $api_key, string $model, string $email = ''): array {
         if ($api_key === '') {
-            return [false, 'API key belum diisi.'];
+            return [false, 'API key belum diisi. Masukkan API key di kolom yang tersedia (dapatkan gratis di aistudio.google.com).'];
         }
         if ($provider === 'openai') {
             [$code, $body] = ai_http_get('https://api.openai.com/v1/models', ['Authorization: Bearer ' . $api_key], 30);
@@ -482,6 +556,16 @@ if (!function_exists('ai_test_connection')) {
         if ($want !== '') {
             $candidates[] = $want;
         }
+
+        $is_pro = (trim($email) !== '' || stripos($model, 'pro') !== false);
+        if ($is_pro) {
+            foreach (['gemini-1.5-pro', 'gemini-2.0-pro', 'gemini-pro-latest'] as $pro_m) {
+                if (!in_array($pro_m, $candidates, true)) {
+                    $candidates[] = $pro_m;
+                }
+            }
+        }
+
         foreach (ai_gemini_list_models($api_key) as $m) {
             if (!in_array($m, $candidates, true)) {
                 $candidates[] = $m;
@@ -500,7 +584,8 @@ if (!function_exists('ai_test_connection')) {
                 30
             );
             if ($code === 200) {
-                return [true, 'Koneksi Gemini OK (model: ' . $try . ').'];
+                $akun_info = trim($email) !== '' ? ' (Akun: ' . $email . ')' : '';
+                return [true, 'Koneksi Gemini OK' . $akun_info . ' (model: ' . $try . ').'];
             }
             if ($code !== 404) {
                 return [false, 'Gemini HTTP ' . $code . ' (model: ' . $try . '): ' . mb_substr($body, 0, 150)];

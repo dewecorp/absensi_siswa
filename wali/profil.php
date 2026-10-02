@@ -105,18 +105,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_konektor_ai'])) {
     $provider = in_array($_POST['ai_provider'] ?? '', ['gemini', 'openai'], true) ? $_POST['ai_provider'] : 'gemini';
+    $gemail = trim((string)($_POST['ai_gemini_email'] ?? ''));
     $gkey = trim((string)($_POST['ai_gemini_key'] ?? ''));
     $oemail = trim((string)($_POST['ai_openai_email'] ?? ''));
     $okey = trim((string)($_POST['ai_openai_key'] ?? ''));
     try {
-        $stmt = $pdo->prepare("UPDATE tb_guru SET ai_provider=?, ai_gemini_key=?, ai_gemini_model=NULL, ai_openai_email=?, ai_openai_key=?, ai_openai_model=NULL WHERE id_guru=?");
-        $stmt->execute([$provider, ($gkey !== '' ? $gkey : null), ($oemail !== '' ? $oemail : null), ($okey !== '' ? $okey : null), $teacher['id_guru']]);
+        if ($provider === 'gemini') {
+            $stmt = $pdo->prepare("UPDATE tb_guru SET ai_provider=?, ai_gemini_email=?, ai_gemini_key=?, ai_gemini_model=NULL WHERE id_guru=?");
+            $stmt->execute(['gemini', ($gemail !== '' ? $gemail : null), ($gkey !== '' ? $gkey : null), $teacher['id_guru']]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE tb_guru SET ai_provider=?, ai_openai_email=?, ai_openai_key=?, ai_openai_model=NULL WHERE id_guru=?");
+            $stmt->execute(['openai', ($oemail !== '' ? $oemail : null), ($okey !== '' ? $okey : null), $teacher['id_guru']]);
+        }
         $message = ['type' => 'success', 'text' => 'Konektor AI berhasil disimpan.'];
         $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
         $stmt->execute([$teacher['id_guru']]);
         $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
-        $message = ['type' => 'danger', 'text' => 'Gagal menyimpan konektor AI.'];
+        $message = ['type' => 'danger', 'text' => 'Gagal menyimpan konektor AI: ' . $e->getMessage()];
     }
 }
 
@@ -126,11 +132,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tes_konektor_ai'])) {
     if ($provider === 'openai') {
         $tkey = trim((string)($_POST['ai_openai_key'] ?? ''));
         $tmodel = trim((string)($_POST['ai_openai_model'] ?? ''));
-        [$ok, $note] = ai_test_connection('openai', ($tkey !== '' ? $tkey : $cfg['openai_key']), ($tmodel !== '' ? $tmodel : $cfg['openai_model']));
+        $temail = trim((string)($_POST['ai_openai_email'] ?? ''));
+        [$ok, $note] = ai_test_connection('openai', ($tkey !== '' ? $tkey : $cfg['openai_key']), ($tmodel !== '' ? $tmodel : $cfg['openai_model']), ($temail !== '' ? $temail : $cfg['openai_email']));
     } else {
         $tkey = trim((string)($_POST['ai_gemini_key'] ?? ''));
         $tmodel = trim((string)($_POST['ai_gemini_model'] ?? ''));
-        [$ok, $note] = ai_test_connection('gemini', ($tkey !== '' ? $tkey : $cfg['gemini_key']), ($tmodel !== '' ? $tmodel : $cfg['gemini_model']));
+        $temail = trim((string)($_POST['ai_gemini_email'] ?? ''));
+        [$ok, $note] = ai_test_connection('gemini', ($tkey !== '' ? $tkey : $cfg['gemini_key']), ($tmodel !== '' ? $tmodel : $cfg['gemini_model']), ($temail !== '' ? $temail : $cfg['gemini_email']));
     }
     $message = ['type' => $ok ? 'success' : 'danger', 'text' => $note];
 }
@@ -280,31 +288,71 @@ include '../templates/user_header.php';
                             </div>
                         </div>
                         <div class="card-body">
-                            <p class="text-muted small">Setiap guru/wali memakai akun AI sendiri. Pilih penyedia favorit, isi API key, lalu Tes Koneksi.</p>
+                            <p class="text-muted small">Setiap guru/wali cukup <strong>memilih salah satu penyedia AI</strong> (tidak wajib mengisi keduanya). Guru madrasah direkomendasikan menggunakan <strong>Google Gemini Pro</strong> dengan email resmi Kemenag.</p>
                             <form method="POST" action="">
                                 <div class="row">
-                                    <div class="col-md-4 form-group">
-                                        <label>Penyedia AI</label>
-                                        <select name="ai_provider" class="form-control">
-                                            <option value="gemini" <?= $ai_cfg['provider'] === 'gemini' ? 'selected' : '' ?>>Gemini (Google)</option>
-                                            <option value="openai" <?= $ai_cfg['provider'] === 'openai' ? 'selected' : '' ?>>ChatGPT (OpenAI)</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4 form-group">
-                                        <label>Gemini API Key</label>
-                                        <input type="password" name="ai_gemini_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_key']) ?>" placeholder="AIza...">
-                                        <small class="text-muted d-block">Ambil gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio &raquo;</a></small>
-                                        <small class="text-muted d-block">Model otomatis dipilih provider (tidak perlu diisi).</small>
-                                    </div>
-                                    <div class="col-md-4 form-group">
-                                        <label>Email Akun ChatGPT</label>
-                                        <input type="email" name="ai_openai_email" class="form-control" value="<?= htmlspecialchars($ai_cfg['openai_email']) ?>" placeholder="nama@email.com">
-                                        <small class="text-muted d-block">API Key (wajib untuk generate):</small>
-                                        <input type="password" name="ai_openai_key" class="form-control mt-1" value="<?= htmlspecialchars($ai_cfg['openai_key']) ?>" placeholder="sk-...">
-                                        <small class="text-muted d-block">Lihat di <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com &raquo;</a></small>
-                                        <small class="text-muted d-block">Model otomatis dipilih provider (tidak perlu diisi).</small>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="font-weight-bold d-block">Pilih Penyedia AI yang Ingin Digunakan:</label>
+                                        <div class="custom-control custom-radio custom-control-inline mr-4">
+                                            <input type="radio" id="prov_gemini" name="ai_provider" value="gemini" class="custom-control-input" <?= $ai_cfg['provider'] === 'gemini' ? 'checked' : '' ?>>
+                                            <label class="custom-control-label font-weight-bold text-success" for="prov_gemini">
+                                                <i class="fas fa-check-circle mr-1"></i> Google Gemini Pro (Email Kemenag) <span class="badge badge-success ml-1">Rekomendasi</span>
+                                            </label>
+                                        </div>
+                                        <div class="custom-control custom-radio custom-control-inline">
+                                            <input type="radio" id="prov_openai" name="ai_provider" value="openai" class="custom-control-input" <?= $ai_cfg['provider'] === 'openai' ? 'checked' : '' ?>>
+                                            <label class="custom-control-label font-weight-bold text-primary" for="prov_openai">
+                                                <i class="fas fa-robot mr-1"></i> ChatGPT (OpenAI)
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
+
+                                <!-- Form Gemini Pro -->
+                                <div class="p-3 mb-3 rounded border border-success bg-light" id="wrap_gemini" style="<?= $ai_cfg['provider'] === 'openai' ? 'display:none;' : '' ?>">
+                                    <h6 class="font-weight-bold text-success mb-2"><i class="fas fa-check-circle mr-1"></i> Pengaturan Google Gemini Pro</h6>
+
+                                    <div class="alert alert-warning small mb-3">
+                                        <i class="fas fa-info-circle mr-1 text-danger"></i> <strong>Pemberitahuan Akun Kemenag (@madrasah.kemenag.go.id):</strong><br>
+                                        Google AI Studio menolak akun organisasi Kemenag dengan pesan <em>"you do not have access to AI Studio"</em> karena Google Cloud dinonaktifkan oleh administrator domain pusat Kemenag.<br>
+                                        <strong>Cara Mengambil API Key:</strong><br>
+                                        1. Buka <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="font-weight-bold">Google AI Studio &raquo;</a><br>
+                                        2. Klik <strong>"Sign in with a different account"</strong> dan login menggunakan <strong>akun Gmail pribadi Anda (@gmail.com)</strong>.<br>
+                                        3. Klik <strong>"Create API Key"</strong> lalu salin kunci yang didapat (diawali <code>AIza...</code>).<br>
+                                        4. Tempelkan kunci tersebut pada kolom <strong>Gemini API Key</strong> di bawah ini.
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 form-group">
+                                            <label class="small font-weight-bold mb-1">Email Resmi Kemenag / Google Workspace:</label>
+                                            <input type="email" name="ai_gemini_email" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_email'] ?? '') ?>" placeholder="nama@kemenag.go.id / nama@madrasah.id">
+                                            <small class="text-muted d-block mt-1">Identitas akun guru madrasah terdaftar.</small>
+                                        </div>
+                                        <div class="col-md-6 form-group">
+                                            <label class="small font-weight-bold mb-1">Gemini API Key: <span class="text-danger">*</span></label>
+                                            <input type="password" name="ai_gemini_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_key']) ?>" placeholder="AIzaSy...">
+                                            <small class="text-muted d-block mt-1">Dapatkan gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio &raquo;</a> (login memakai <strong>Gmail pribadi</strong>).</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Form ChatGPT OpenAI -->
+                                <div class="p-3 mb-3 rounded border border-primary bg-light" id="wrap_openai" style="<?= $ai_cfg['provider'] === 'gemini' ? 'display:none;' : '' ?>">
+                                    <h6 class="font-weight-bold text-primary mb-2"><i class="fas fa-robot mr-1"></i> Pengaturan ChatGPT (OpenAI)</h6>
+                                    <div class="row">
+                                        <div class="col-md-6 form-group">
+                                            <label class="small font-weight-bold mb-1">Email Akun ChatGPT:</label>
+                                            <input type="email" name="ai_openai_email" class="form-control" value="<?= htmlspecialchars($ai_cfg['openai_email']) ?>" placeholder="nama@email.com">
+                                            <small class="text-muted d-block mt-1">Email akun OpenAI Anda.</small>
+                                        </div>
+                                        <div class="col-md-6 form-group">
+                                            <label class="small font-weight-bold mb-1">OpenAI API Key: <span class="text-danger">*</span></label>
+                                            <input type="password" name="ai_openai_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['openai_key']) ?>" placeholder="sk-...">
+                                            <small class="text-muted d-block mt-1">Lihat di <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com &raquo;</a></small>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="d-flex" style="gap:8px;">
                                     <button type="submit" name="simpan_konektor_ai" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Simpan Konektor</button>
                                     <button type="submit" name="tes_konektor_ai" class="btn btn-outline-info"><i class="fas fa-plug mr-1"></i>Tes Koneksi</button>
@@ -399,6 +447,18 @@ $(document).ready(function() {
     $('#modalTmt').on('change', function() {
         $('#modalMasaBakti').val(hitungMasaBakti($(this).val()));
     });
+
+    function toggleAiProvider() {
+        var p = $('input[name=\"ai_provider\"]:checked').val() || 'gemini';
+        if (p === 'openai') {
+            $('#wrap_openai').slideDown(200);
+            $('#wrap_gemini').slideUp(200);
+        } else {
+            $('#wrap_gemini').slideDown(200);
+            $('#wrap_openai').slideUp(200);
+        }
+    }
+    $(document).on('change', 'input[name=\"ai_provider\"]', toggleAiProvider);
     $('#editProfileForm').on('submit', function(e) {
         e.preventDefault();
         var btn = $(this).find('button[type=submit]');

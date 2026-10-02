@@ -42,9 +42,11 @@ if (!headers_sent()) {
 }
 
 // Harden session cookie
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Lax');
-ini_set('session.use_strict_mode', '1');
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    @ini_set('session.cookie_httponly', '1');
+    @ini_set('session.cookie_samesite', 'Lax');
+    @ini_set('session.use_strict_mode', '1');
+}
 
 if (!defined('ALLOW_LEGACY_DEFAULT_LOGIN')) {
     define('ALLOW_LEGACY_DEFAULT_LOGIN', false);

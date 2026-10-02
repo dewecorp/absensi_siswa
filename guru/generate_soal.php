@@ -26,6 +26,7 @@ $kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_15
 $asesmen_options = ai_asesmen_list();
 
 $page_title = 'Generate Soal AI';
+$ai_cfg = ai_guru_config($pdo, $guru_id);
 
 $js_page = [<<<'JS'
 var aiLastSoal = [];
@@ -35,7 +36,13 @@ function aiHitungTotal() {
     var total = 0;
     $('#aiPaketWrap .ai-paket-num').each(function() {
         if (!$(this).prop('disabled')) {
-            total += parseInt($(this).val() || '0', 10) || 0;
+            var name = $(this).attr('name') || '';
+            var val = parseInt($(this).val() || '0', 10) || 0;
+            if (name.indexOf('Menjodohkan') !== -1) {
+                if (val > 0) total += 1;
+            } else {
+                total += val;
+            }
         }
     });
     $('#aiTotalPaket').text(total);
@@ -150,6 +157,7 @@ function aiCommonPayload() {
         topik: $('#ai_topik').val(),
         sub_topik: $('#ai_sub_topik').val(),
         materi: $('#ai_materi').val(),
+        instruksi_tambahan: $('#ai_instruksi_tambahan').val(),
         status: $('#ai_status').val(),
         items: aiLastSoal,
         kisi_kisi: aiLastKisi
@@ -207,6 +215,41 @@ function aiUnduh(format) {
 $(document).on('click', '#btnUnduhPdf', function() { aiUnduh('pdf'); });
 $(document).on('click', '#btnUnduhXlsx', function() { aiUnduh('xlsx'); });
 $(document).on('click', '#btnUnduhDocx', function() { aiUnduh('docx'); });
+
+$('#formUploadEdit').on('submit', function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    fd.append('aksi', 'upload');
+    if (!fd.get('id_mapel')) fd.set('id_mapel', $('#ai_mapel').val() || '');
+    if (!fd.get('id_kelas')) fd.set('id_kelas', $('#ai_kelas').val() || '');
+    if (!fd.get('topik')) fd.set('topik', $('#ai_topik').val() || '');
+    if (!fd.get('jenis_asesmen')) fd.set('jenis_asesmen', $('#ai_asesmen').val() || '');
+    if (!fd.get('kurikulum')) fd.set('kurikulum', $('#ai_kurikulum').val() || '');
+    if (!fd.get('semester')) fd.set('semester', $('#ai_semester').val() || '');
+
+    $('#btnProsesUpload').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Mengupload...');
+    $.ajax({
+        url: 'ajax_generate_soal.php',
+        type: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    }).done(function(res) {
+        if (res && res.ok) {
+            Swal.fire({ icon: 'success', title: 'Berhasil', text: res.msg || 'Soal berhasil disimpan ke Bank Soal.' }).then(function() {
+                var q = new URLSearchParams(window.location.search).get('session_type');
+                window.location.href = 'bank_soal.php' + (q ? '?session_type=' + encodeURIComponent(q) : '');
+            });
+        } else {
+            Swal.fire({ icon: 'error', title: 'Gagal', text: (res && res.msg) ? res.msg : 'Gagal mengupload soal.' });
+        }
+    }).fail(function() {
+        Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal mengupload ke server.' });
+    }).always(function() {
+        $('#btnProsesUpload').prop('disabled', false).html('<i class="fas fa-upload mr-1"></i> Upload ke Bank Soal');
+    });
+});
 JS
 ];
 
@@ -223,8 +266,19 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             <div class="card mb-3">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h4><i class="fas fa-sliders-h mr-2"></i>Pengaturan Generate</h4>
+                    <div>
+                        <?php if (!empty($ai_cfg['gemini_email'])): ?>
+                            <span class="badge badge-success" title="Akun resmi Kemenag Gemini Pro"><i class="fas fa-check-circle mr-1"></i>Gemini Pro: <?= htmlspecialchars($ai_cfg['gemini_email']) ?></span>
+                        <?php elseif (!empty($ai_cfg['gemini_key'])): ?>
+                            <span class="badge badge-info"><i class="fas fa-robot mr-1"></i>Gemini AI</span>
+                        <?php elseif (!empty($ai_cfg['openai_key'])): ?>
+                            <span class="badge badge-info"><i class="fas fa-robot mr-1"></i>ChatGPT</span>
+                        <?php else: ?>
+                            <a href="profil.php" class="badge badge-warning text-dark"><i class="fas fa-exclamation-triangle mr-1"></i>Atur Konektor AI (Email Kemenag) &raquo;</a>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="card-body">
                     <form id="formGenerateAI" enctype="multipart/form-data">
@@ -300,7 +354,7 @@ include '../templates/sidebar.php';
                                             <div class="border rounded p-2 d-flex align-items-center">
                                                 <div class="custom-control custom-checkbox mr-2">
                                                     <input type="checkbox" class="custom-control-input ai-paket-check" id="ai_chk_<?= $idx ?>" <?= $def_jml > 0 ? 'checked' : '' ?>>
-                                                    <label class="custom-control-label font-weight-bold small" for="ai_chk_<?= $idx ?>"><?= $js ?></label>
+                                                    <label class="custom-control-label font-weight-bold small" for="ai_chk_<?= $idx ?>"><?= $js ?><?= $js === 'Menjodohkan' ? ' <span class="text-muted font-weight-normal">(baris tabel)</span>' : '' ?></label>
                                                 </div>
                                                 <input type="number" name="paket[<?= $js ?>]" class="form-control form-control-sm ml-auto ai-paket-num" style="width:80px;" value="<?= $def_jml ?>" min="0" <?= $def_jml > 0 ? '' : 'disabled' ?>>
                                             </div>
@@ -309,9 +363,13 @@ include '../templates/sidebar.php';
                                 </div>
                                 <small class="text-muted">Total paket: <b id="aiTotalPaket">7</b> butir.</small>
                             </div>
-                            <div class="col-12 form-group">
-                                <label>Materi Detail <span class="text-muted">(opsional — ketik manual / tempel di sini; kosongkan bila ingin AI menyusun dari mapel/kelas/semester)</span></label>
-                                <textarea name="materi" id="ai_materi" class="form-control" rows="5" placeholder="Opsional: tempel ringkasan materi, teks bab, atau poin-poin penting... (bisa digabung dengan file upload)"></textarea>
+                            <div class="col-md-6 form-group">
+                                <label class="font-weight-bold">Materi Detail <span class="text-muted small font-weight-normal">(opsional — ketik manual / tempel materi)</span></label>
+                                <textarea name="materi" id="ai_materi" class="form-control" rows="10" style="min-height: 220px;" placeholder="Opsional: tempel ringkasan materi, teks bab, atau poin-poin penting... (bisa digabung dengan file upload)"></textarea>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label class="font-weight-bold">Instruksi Tambahan <span class="text-muted small font-weight-normal">(opsional — perintah khusus untuk AI)</span></label>
+                                <textarea name="instruksi_tambahan" id="ai_instruksi_tambahan" class="form-control" rows="10" style="min-height: 220px;" placeholder="Contoh: Tambahkan deskripsi gambar/ilustrasi pada soal yang memerlukan gambar, sertakan studi kasus kontekstual, gunakan kosakata sederhana untuk tingkat dasar, dll."></textarea>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-success" id="btnProsesAI"><i class="fas fa-magic mr-1"></i> Generate Soal</button>
@@ -336,13 +394,37 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="card-body">
                     <div id="aiHasil" class="border rounded p-3" style="max-height:560px;overflow:auto;"></div>
-                    <div class="mt-3 d-flex flex-wrap" style="gap:8px;">
-                        <button type="button" class="btn btn-primary" id="btnSimpanAI"><i class="fas fa-save mr-1"></i> Simpan ke Bank Soal</button>
-                        <button type="button" class="btn btn-outline-danger" id="btnUnduhPdf"><i class="fas fa-file-pdf mr-1"></i> Unduh PDF</button>
-                        <button type="button" class="btn btn-outline-success" id="btnUnduhXlsx"><i class="fas fa-file-excel mr-1"></i> Unduh XLSX</button>
-                        <button type="button" class="btn btn-outline-primary" id="btnUnduhDocx"><i class="fas fa-file-word mr-1"></i> Unduh DOCX</button>
+
+                    <div class="row mt-4">
+                        <!-- Opsi 1: Simpan Langsung -->
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3 h-100 bg-light">
+                                <h6 class="font-weight-bold text-primary"><i class="fas fa-save mr-1"></i> Pilihan 1: Simpan Langsung</h6>
+                                <p class="small text-muted mb-3">Simpan butir soal yang di-generate langsung ke Bank Soal tanpa modifikasi.</p>
+                                <button type="button" class="btn btn-primary" id="btnSimpanAI"><i class="fas fa-save mr-1"></i> Simpan Langsung ke Bank Soal</button>
+                            </div>
+                        </div>
+
+                        <!-- Opsi 2: Unduh, Edit & Upload -->
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3 h-100 bg-light">
+                                <h6 class="font-weight-bold text-success"><i class="fas fa-file-download mr-1"></i> Pilihan 2: Unduh, Edit, lalu Upload</h6>
+                                <p class="small text-muted mb-2">Unduh file, sesuaikan di komputer Anda, lalu upload kembali ke Bank Soal.</p>
+                                <div class="btn-group btn-group-sm mb-3" role="group">
+                                    <button type="button" class="btn btn-outline-danger" id="btnUnduhPdf"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                                    <button type="button" class="btn btn-outline-success" id="btnUnduhXlsx"><i class="fas fa-file-excel mr-1"></i> XLSX</button>
+                                    <button type="button" class="btn btn-outline-primary" id="btnUnduhDocx"><i class="fas fa-file-word mr-1"></i> DOCX</button>
+                                </div>
+                                <form id="formUploadEdit" enctype="multipart/form-data">
+                                    <div class="form-group mb-2">
+                                        <label class="small font-weight-bold">Upload File Hasil Edit (.doc, .docx, .pdf, .xls, .xlsx, .txt)</label>
+                                        <input type="file" name="file_soal" class="form-control-file form-control-sm" accept=".doc,.docx,.pdf,.xls,.xlsx,.txt" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-success btn-sm" id="btnProsesUpload"><i class="fas fa-upload mr-1"></i> Upload ke Bank Soal</button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
-                    <small class="text-muted d-block mt-2">Nama file mengikuti jenis asesmen: SINGKATAN_mapel_kelas_semester_tahun.</small>
                 </div>
             </div>
         </div>

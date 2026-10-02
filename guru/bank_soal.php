@@ -19,97 +19,343 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
 
 $message = null;
 
+// Auto-assign kode_paket untuk soal lepas (tanpa paket)
+try {
+    $stmtLepas = $pdo->prepare("SELECT id, topik, id_mapel, id_kelas, jenis_asesmen FROM tb_bank_soal WHERE id_guru = ? AND (kode_paket IS NULL OR kode_paket = '')");
+    $stmtLepas->execute([$guru_id]);
+    $soalLepas = $stmtLepas->fetchAll(PDO::FETCH_ASSOC);
+    if ($soalLepas) {
+        $groups = [];
+        foreach ($soalLepas as $sl) {
+            $key = ($sl['topik'] ?? 'Lain-lain') . '|' . ($sl['id_mapel'] ?? 0) . '|' . ($sl['id_kelas'] ?? 0) . '|' . ($sl['jenis_asesmen'] ?? '');
+            $groups[$key][] = (int)$sl['id'];
+        }
+        foreach ($groups as $ids) {
+            $kp = 'PKT-' . strtoupper(substr(uniqid('', true), -10));
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $pdo->prepare("UPDATE tb_bank_soal SET kode_paket = ? WHERE id IN ($placeholders) AND id_guru = ?")->execute(array_merge([$kp], $ids, [$guru_id]));
+        }
+    }
+} catch (Exception $e) {}
+
+// Helper: parse teks soal berformat nomor
+function parse_text_lines_to_soal(string $text): array {
+    $lines = preg_split('/\r\n|\r|\n/', $text);
+    $items = [];
+    $current = null;
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '') continue;
+        if (preg_match('/^(?:No\.?\s*)?(\d+)[\.\)]\s*(?:\[(.*?)\])?(?:\[(.*?)\])?\s*(.*)$/i', $line, $m)) {
+            if ($current !== null && !empty($current['pertanyaan'])) {
+                $items[] = $current;
+            }
+            $bentuk = trim($m[2] ?? '');
+            $level = strtoupper(trim($m[3] ?? ''));
+            if (!in_array($level, ['L1', 'L2', 'L3', 'L4'], true)) {
+                $level = 'L2';
+            }
+            $current = [
+                'bentuk' => $bentuk ?: 'Pilihan Ganda',
+                'level' => $level,
+                'pertanyaan' => trim($m[4] ?? ''),
+                'opsi' => ['A' => '', 'B' => '', 'C' => '', 'D' => ''],
+                'kunci' => '',
+                'pembahasan' => '',
+            ];
+        } elseif ($current !== null) {
+            if (preg_match('/^([A-D])[\.\)]\s*(.*)$/i', $line, $om)) {
+                $current['opsi'][strtoupper($om[1])] = trim($om[2]);
+            } elseif (preg_match('/^(?:Kunci(?:\s*Jawaban)?|Jawaban Benar)\s*:\s*(.*)$/i', $line, $km)) {
+                $current['kunci'] = trim($km[1]);
+            } elseif (preg_match('/^Pembahasan\s*:\s*(.*)$/i', $line, $pm)) {
+                $current['pembahasan'] = trim($pm[1]);
+            } else {
+                $current['pertanyaan'] .= "\n" . $line;
+            }
+        }
+    }
+    if ($current !== null && !empty($current['pertanyaan'])) {
+        $items[] = $current;
+    }
+    return $items;
+}
+
+// Helper: baca butir soal dari file yang diupload (.xlsx, .xls, .docx, .doc, .pdf, .txt)
+function parse_uploaded_soal_file(string $tmpPath, string $originalName): array {
+    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    $parsed_items = [];
+
+    if ($ext === 'xlsx' || $ext === 'xls') {
+        require_once '../vendor/autoload.php';
+        if (class_exists('PhpOffice\\PhpSpreadsheet\\IOFactory')) {
+            try {
+                $spreadsheet = PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
+                $sheet = $spreadsheet->getSheetByName('Soal') ?: $spreadsheet->getActiveSheet();
+                $rows = $sheet->toArray();
+                if (count($rows) >= 2) {
+                    $header = array_map(function($h) { return strtolower(trim((string)$h)); }, $rows[0]);
+                    $col_pertanyaan = array_search('pertanyaan', $header);
+                    if ($col_pertanyaan === false) { $col_pertanyaan = 3; }
+                    $col_bentuk = array_search('bentuk', $header);
+                    if ($col_bentuk === false) { $col_bentuk = 1; }
+                    $col_level = -1;
+                    foreach ($header as $idx => $h) {
+                        if (strpos($h, 'level') !== false) { $col_level = $idx; break; }
+                    }
+                    if ($col_level === -1) { $col_level = 2; }
+                    $col_opsi_a = array_search('opsi a', $header);
+                    $col_opsi_b = array_search('opsi b', $header);
+                    $col_opsi_c = array_search('opsi c', $header);
+                    $col_opsi_d = array_search('opsi d', $header);
+                    if ($col_opsi_a === false) { $col_opsi_a = 5; }
+                    if ($col_opsi_b === false) { $col_opsi_b = 6; }
+                    if ($col_opsi_c === false) { $col_opsi_c = 7; }
+                    if ($col_opsi_d === false) { $col_opsi_d = 8; }
+                    $col_kunci = array_search('kunci', $header);
+                    if ($col_kunci === false) { $col_kunci = 9; }
+                    $col_pembahasan = array_search('pembahasan', $header);
+                    if ($col_pembahasan === false) { $col_pembahasan = 10; }
+
+                    for ($i = 1; $i < count($rows); $i++) {
+                        $r = $rows[$i];
+                        $pertanyaan = trim((string)($r[$col_pertanyaan] ?? ''));
+                        if ($pertanyaan === '') { continue; }
+                        $bentuk = trim((string)($r[$col_bentuk] ?? 'Pilihan Ganda'));
+                        $level = strtoupper(trim((string)($r[$col_level] ?? 'L2')));
+                        if (!in_array($level, ['L1', 'L2', 'L3', 'L4'], true)) { $level = 'L2'; }
+                        $opsi = [
+                            'A' => trim((string)($r[$col_opsi_a] ?? '')),
+                            'B' => trim((string)($r[$col_opsi_b] ?? '')),
+                            'C' => trim((string)($r[$col_opsi_c] ?? '')),
+                            'D' => trim((string)($r[$col_opsi_d] ?? '')),
+                        ];
+                        $kunci = trim((string)($r[$col_kunci] ?? ''));
+                        $pembahasan = trim((string)($r[$col_pembahasan] ?? ''));
+                        $parsed_items[] = [
+                            'bentuk' => $bentuk,
+                            'level' => $level,
+                            'pertanyaan' => $pertanyaan,
+                            'opsi' => $opsi,
+                            'kunci' => $kunci,
+                            'pembahasan' => $pembahasan,
+                        ];
+                    }
+                }
+            } catch (Exception $e) {}
+        }
+    } elseif ($ext === 'docx') {
+        if (class_exists('ZipArchive')) {
+            $zip = new ZipArchive();
+            if ($zip->open($tmpPath) === true) {
+                $xml = $zip->getFromName('word/document.xml');
+                $zip->close();
+                if ($xml !== false) {
+                    preg_match_all('/<w:p[^>]*>(.*?)<\/w:p>/is', $xml, $matches);
+                    $lines = [];
+                    foreach ($matches[1] as $p) {
+                        $t = strip_tags($p);
+                        $t = trim(html_entity_decode($t, ENT_QUOTES | ENT_XML1, 'UTF-8'));
+                        if ($t !== '') { $lines[] = $t; }
+                    }
+                    $parsed_items = parse_text_lines_to_soal(implode("\n", $lines));
+                }
+            }
+        }
+    } elseif ($ext === 'pdf') {
+        $content = @file_get_contents($tmpPath);
+        $text = '';
+        if ($content && preg_match_all('/stream[\r\n]+(.*?)[\r\n]+endstream/is', $content, $matches)) {
+            foreach ($matches[1] as $stream) {
+                $unc = @gzuncompress($stream);
+                if ($unc === false) { $unc = @gzinflate($stream); }
+                if ($unc === false) { $unc = $stream; }
+                if (preg_match_all('/\((.*?)\)\s*Tj/is', $unc, $tjs)) {
+                    $text .= implode(" ", $tjs[1]) . "\n";
+                } elseif (preg_match_all('/\[(.*?)\]\s*TJ/is', $unc, $tjs)) {
+                    foreach ($tjs[1] as $tj) {
+                        if (preg_match_all('/\((.*?)\)/is', $tj, $parts)) {
+                            $text .= implode("", $parts[1]);
+                        }
+                    }
+                    $text .= "\n";
+                }
+            }
+        }
+        if (trim($text) === '' && $content) {
+            if (preg_match_all('/\((.*?)\)/', $content, $m)) {
+                $text = implode(" ", $m[1]);
+            }
+        }
+        if (trim($text) !== '') {
+            $parsed_items = parse_text_lines_to_soal($text);
+        }
+    } elseif ($ext === 'txt') {
+        $text = (string)@file_get_contents($tmpPath);
+        if (trim($text) !== '') {
+            $parsed_items = parse_text_lines_to_soal($text);
+        }
+    } elseif ($ext === 'doc') {
+        $content = (string)@file_get_contents($tmpPath);
+        if ($content !== '') {
+            $text = preg_replace('/[^\x20-\x7E\xA0-\xFF\r\n\t]/', '', $content);
+            $parsed_items = parse_text_lines_to_soal($text);
+        }
+    }
+
+    return $parsed_items;
+}
+
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
-        $id = (int)($_POST['id'] ?? 0);
-        $kode_soal = trim((string)($_POST['kode_soal'] ?? ''));
-        $allowed_jenis = ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'];
-        $jenis_soal = trim((string)($_POST['jenis_soal'] ?? 'Pilihan Ganda'));
-        if (!in_array($jenis_soal, $allowed_jenis, true)) {
-            $jenis_soal = 'Pilihan Ganda';
+        $kode_paket = trim((string)($_POST['kode_paket'] ?? ''));
+        $jenis_asesmen = trim((string)($_POST['jenis_asesmen'] ?? ''));
+        if (!in_array($jenis_asesmen, ai_asesmen_list(), true)) {
+            $jenis_asesmen = ai_asesmen_list()[0];
         }
         $id_mapel = (int)($_POST['id_mapel'] ?? 0) ?: null;
         $id_kelas = (int)($_POST['id_kelas'] ?? 0) ?: null;
-        $kurikulum = in_array($_POST['kurikulum'] ?? '', ['PERMENDIKDASMEN_046', 'KMA_1503_KBC'], true) ? $_POST['kurikulum'] : 'PERMENDIKDASMEN_046';
-        $semester = trim((string)($_POST['semester'] ?? ''));
-        if ($semester !== '' && !in_array($semester, ['Semester 1', 'Semester 2'], true)) {
-            $semester = mb_substr($semester, 0, 20);
-        }
-        $jenis_asesmen = trim((string)($_POST['jenis_asesmen'] ?? ''));
-        if (!in_array($jenis_asesmen, ai_asesmen_list(), true)) {
-            $jenis_asesmen = '';
-        }
         $topik = trim((string)($_POST['topik'] ?? ''));
-        $sub_topik = trim((string)($_POST['sub_topik'] ?? ''));
-        $materi_tp = trim((string)($_POST['materi_tp'] ?? ''));
-        $indikator = trim((string)($_POST['indikator'] ?? ''));
-        $level_kognitif = strtoupper(trim((string)($_POST['level_kognitif'] ?? 'L2')));
-        if (!in_array($level_kognitif, ['L1', 'L2', 'L3', 'L4'], true)) {
-            $level_kognitif = 'L2';
+        $jumlah_soal = max(1, min(100, (int)($_POST['jumlah_soal'] ?? 5)));
+        $tanggal_upload = trim((string)($_POST['tanggal_upload'] ?? ''));
+        if ($tanggal_upload === '') {
+            $tanggal_upload = date('Y-m-d');
         }
-        // Tanpa input manual: default Sedang; hasil AI menimpa acak otomatis per bentuk.
-        $tingkat_kesulitan = 'Sedang';
-        $bobot = (float)($_POST['bobot'] ?? 1.00);
-        $pertanyaan = trim((string)($_POST['pertanyaan'] ?? ''));
-        $jawaban_benar = trim((string)($_POST['jawaban_benar'] ?? ''));
-        $pembahasan = trim((string)($_POST['pembahasan'] ?? ''));
-        $status = in_array($_POST['status'] ?? '', ['Draft', 'Aktif', 'Arsip'], true) ? $_POST['status'] : 'Aktif';
+        $created_at = $tanggal_upload . ' ' . date('H:i:s');
 
-        // Pilihan jawaban JSON (PG biasa + PG kompleks)
-        $pilihan_jawaban = null;
-        if ($jenis_soal === 'Pilihan Ganda' || $jenis_soal === 'Pilihan Ganda Kompleks') {
-            $opsi = [
-                'A' => trim((string)($_POST['opsi_a'] ?? '')),
-                'B' => trim((string)($_POST['opsi_b'] ?? '')),
-                'C' => trim((string)($_POST['opsi_c'] ?? '')),
-                'D' => trim((string)($_POST['opsi_d'] ?? '')),
-            ];
-            $pilihan_jawaban = json_encode($opsi);
+        // Cek file upload
+        $has_file = !empty($_FILES['file_soal']) && (int)$_FILES['file_soal']['error'] === UPLOAD_ERR_OK;
+        $file_items = [];
+        if ($has_file) {
+            $file_items = parse_uploaded_soal_file((string)$_FILES['file_soal']['tmp_name'], (string)$_FILES['file_soal']['name']);
         }
 
-        // Auto generate kode soal jika kosong
-        if ($kode_soal === '') {
-            $kode_soal = 'SOAL-' . strtoupper(substr(uniqid(), -6));
-        }
-
-        if ($pertanyaan === '') {
-            $message = ['type' => 'warning', 'text' => 'Pertanyaan soal wajib diisi.'];
-        } elseif ($topik === '') {
-            $message = ['type' => 'warning', 'text' => 'Topik/pokok bahasan wajib diisi.'];
+        if ($topik === '') {
+            $message = ['type' => 'warning', 'text' => 'Materi / Topik soal wajib diisi.'];
         } else {
             try {
                 if ($action === 'tambah') {
-                    $stmt = $pdo->prepare("
+                    $kode_paket_new = 'PKT-' . strtoupper(substr(uniqid('', true), -10));
+                    $stmtIns = $pdo->prepare("
                         INSERT INTO tb_bank_soal (
-                            id_guru, kode_soal, jenis_soal, id_mapel, id_kelas, kurikulum, semester, jenis_asesmen, topik, sub_topik, materi_tp,
-                            indikator, level_kognitif, tingkat_kesulitan, bobot, pertanyaan, pilihan_jawaban,
-                            jawaban_benar, pembahasan, status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            id_guru, kode_soal, kode_paket, jenis_soal, id_mapel, id_kelas,
+                            jenis_asesmen, topik, pertanyaan, pilihan_jawaban, jawaban_benar, pembahasan,
+                            level_kognitif, tingkat_kesulitan, bobot, status, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Sedang', 1.0, 'Aktif', ?)
                     ");
-                    $stmt->execute([
-                        $guru_id, $kode_soal, $jenis_soal, $id_mapel, $id_kelas, $kurikulum, ($semester !== '' ? $semester : null), ($jenis_asesmen !== '' ? $jenis_asesmen : null), $topik, ($sub_topik !== '' ? $sub_topik : null), $materi_tp,
-                        $indikator, $level_kognitif, $tingkat_kesulitan, $bobot, $pertanyaan, $pilihan_jawaban,
-                        $jawaban_benar, $pembahasan, $status
-                    ]);
-                    $message = ['type' => 'success', 'text' => 'Soal berhasil disimpan ke Bank Soal.'];
+
+                    if (!empty($file_items)) {
+                        foreach ($file_items as $item) {
+                            $kode_soal = 'SOAL-' . strtoupper(substr(uniqid(), -6));
+                            $opsi_json = (!empty($item['opsi']['A']) || !empty($item['opsi']['B'])) ? json_encode($item['opsi'], JSON_UNESCAPED_UNICODE) : null;
+                            $stmtIns->execute([
+                                $guru_id, $kode_soal, $kode_paket_new,
+                                $item['bentuk'] ?? 'Pilihan Ganda', $id_mapel, $id_kelas,
+                                $jenis_asesmen, $topik, $item['pertanyaan'],
+                                $opsi_json, ($item['kunci'] !== '' ? $item['kunci'] : null),
+                                ($item['pembahasan'] !== '' ? $item['pembahasan'] : null),
+                                $item['level'] ?? 'L2', $created_at
+                            ]);
+                        }
+                        $total_saved = count($file_items);
+                        $message = ['type' => 'success', 'text' => "Paket soal berhasil ditambahkan dari file ($total_saved butir soal)."];
+                    } else {
+                        for ($i = 1; $i <= $jumlah_soal; $i++) {
+                            $kode_soal = 'SOAL-' . strtoupper(substr(uniqid(), -6));
+                            $pertanyaan = "Butir Soal {$i}: Tuliskan butir pertanyaan di sini...";
+                            $stmtIns->execute([
+                                $guru_id, $kode_soal, $kode_paket_new,
+                                'Pilihan Ganda', $id_mapel, $id_kelas,
+                                $jenis_asesmen, $topik, $pertanyaan,
+                                null, null, null,
+                                'L2', $created_at
+                            ]);
+                        }
+                        $message = ['type' => 'success', 'text' => 'Paket soal berhasil ditambahkan (' . $jumlah_soal . ' butir).'];
+                    }
                 } else {
-                    $stmt = $pdo->prepare("
+                    // Update metadata paket
+                    $stmtUpd = $pdo->prepare("
                         UPDATE tb_bank_soal SET
-                            kode_soal = ?, jenis_soal = ?, id_mapel = ?, id_kelas = ?, kurikulum = ?, semester = ?, jenis_asesmen = ?, topik = ?, sub_topik = ?, materi_tp = ?,
-                            indikator = ?, level_kognitif = ?, tingkat_kesulitan = ?, bobot = ?, pertanyaan = ?,
-                            pilihan_jawaban = ?, jawaban_benar = ?, pembahasan = ?, status = ?
-                        WHERE id = ? AND id_guru = ?
+                            jenis_asesmen = ?,
+                            id_mapel = ?,
+                            id_kelas = ?,
+                            topik = ?,
+                            created_at = ?
+                        WHERE kode_paket = ? AND id_guru = ?
                     ");
-                    $stmt->execute([
-                        $kode_soal, $jenis_soal, $id_mapel, $id_kelas, $kurikulum, ($semester !== '' ? $semester : null), ($jenis_asesmen !== '' ? $jenis_asesmen : null), $topik, ($sub_topik !== '' ? $sub_topik : null), $materi_tp,
-                        $indikator, $level_kognitif, $tingkat_kesulitan, $bobot, $pertanyaan,
-                        $pilihan_jawaban, $jawaban_benar, $pembahasan, $status,
-                        $id, $guru_id
+                    $stmtUpd->execute([
+                        $jenis_asesmen, $id_mapel, $id_kelas, $topik, $created_at,
+                        $kode_paket, $guru_id
                     ]);
-                    $message = ['type' => 'success', 'text' => 'Soal berhasil diperbarui.'];
+
+                    if (!empty($file_items)) {
+                        // Jika ada file baru diupload saat edit, ganti butir soal
+                        $pdo->prepare("DELETE FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ?")->execute([$kode_paket, $guru_id]);
+                        $stmtIns = $pdo->prepare("
+                            INSERT INTO tb_bank_soal (
+                                id_guru, kode_soal, kode_paket, jenis_soal, id_mapel, id_kelas,
+                                jenis_asesmen, topik, pertanyaan, pilihan_jawaban, jawaban_benar, pembahasan,
+                                level_kognitif, tingkat_kesulitan, bobot, status, created_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Sedang', 1.0, 'Aktif', ?)
+                        ");
+                        foreach ($file_items as $item) {
+                            $kode_soal = 'SOAL-' . strtoupper(substr(uniqid(), -6));
+                            $opsi_json = (!empty($item['opsi']['A']) || !empty($item['opsi']['B'])) ? json_encode($item['opsi'], JSON_UNESCAPED_UNICODE) : null;
+                            $stmtIns->execute([
+                                $guru_id, $kode_soal, $kode_paket,
+                                $item['bentuk'] ?? 'Pilihan Ganda', $id_mapel, $id_kelas,
+                                $jenis_asesmen, $topik, $item['pertanyaan'],
+                                $opsi_json, ($item['kunci'] !== '' ? $item['kunci'] : null),
+                                ($item['pembahasan'] !== '' ? $item['pembahasan'] : null),
+                                $item['level'] ?? 'L2', $created_at
+                            ]);
+                        }
+                        $total_saved = count($file_items);
+                        $message = ['type' => 'success', 'text' => "Paket soal berhasil diperbarui dengan file baru ($total_saved butir soal)."];
+                    } else {
+                        // Sesuaikan jumlah butir jika berubah secara manual
+                        $stmtCnt = $pdo->prepare("SELECT COUNT(*) FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ?");
+                        $stmtCnt->execute([$kode_paket, $guru_id]);
+                        $current_count = (int)$stmtCnt->fetchColumn();
+
+                        if ($jumlah_soal > $current_count) {
+                            $stmtIns = $pdo->prepare("
+                                INSERT INTO tb_bank_soal (
+                                    id_guru, kode_soal, kode_paket, jenis_soal, id_mapel, id_kelas,
+                                    jenis_asesmen, topik, pertanyaan, level_kognitif, tingkat_kesulitan,
+                                    bobot, status, created_at
+                                ) VALUES (?, ?, ?, 'Pilihan Ganda', ?, ?, ?, ?, ?, 'L2', 'Sedang', 1.0, 'Aktif', ?)
+                            ");
+                            for ($i = $current_count + 1; $i <= $jumlah_soal; $i++) {
+                                $kode_soal = 'SOAL-' . strtoupper(substr(uniqid(), -6));
+                                $pertanyaan = "Butir Soal {$i}: Tuliskan butir pertanyaan di sini...";
+                                $stmtIns->execute([
+                                    $guru_id, $kode_soal, $kode_paket,
+                                    $id_mapel, $id_kelas,
+                                    $jenis_asesmen, $topik, $pertanyaan,
+                                    $created_at
+                                ]);
+                            }
+                        } elseif ($jumlah_soal < $current_count) {
+                            $hapus_count = $current_count - $jumlah_soal;
+                            $stmtDel = $pdo->prepare("
+                                DELETE FROM tb_bank_soal
+                                WHERE id IN (
+                                    SELECT id FROM (
+                                        SELECT id FROM tb_bank_soal
+                                        WHERE kode_paket = ? AND id_guru = ?
+                                        ORDER BY id DESC LIMIT $hapus_count
+                                    ) tmp
+                                )
+                            ");
+                            $stmtDel->execute([$kode_paket, $guru_id]);
+                        }
+                        $message = ['type' => 'success', 'text' => 'Paket soal berhasil diperbarui.'];
+                    }
                 }
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
@@ -124,11 +370,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
         }
+    } elseif ($action === 'hapus_paket') {
+        $kode_paket_del = trim((string)($_POST['kode_paket'] ?? ''));
+        if ($kode_paket_del !== '') {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ?");
+                $stmt->execute([$kode_paket_del, $guru_id]);
+                $message = ['type' => 'success', 'text' => 'Paket soal berhasil dihapus.'];
+            } catch (Exception $e) {
+                $message = ['type' => 'danger', 'text' => 'Gagal menghapus paket: ' . $e->getMessage()];
+            }
+        }
     }
 }
 
-// Master lists (hanya mapel akademik untuk dropdown; kelas hanya yang diajar guru login)
-$mapel_list = getFilteredSubjects($pdo);
+// Master lists (hanya mapel yang diajar guru login; kelas hanya yang diajar guru login)
+$mapel_list = function_exists('getGuruTaughtMapels') ? getGuruTaughtMapels($pdo, $guru_id) : getFilteredSubjects($pdo);
 $kelas_list = function_exists('getGuruTaughtClasses') ? getGuruTaughtClasses($pdo, $guru_id) : $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 $jenis_soal_options = ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'];
 $kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_1503_KBC' => 'KMA 1503 + KBC'];
@@ -164,16 +421,27 @@ if ($f_asesmen !== '') {
 $where_sql = implode(' AND ', $where);
 
 $stmt = $pdo->prepare("
-    SELECT b.*, m.nama_mapel, k.nama_kelas, g.nama_guru
+    SELECT b.kode_paket,
+           MIN(b.jenis_asesmen) AS jenis_asesmen,
+           MIN(b.id_mapel) AS id_mapel,
+           MIN(b.id_kelas) AS id_kelas,
+           MIN(m.nama_mapel) AS nama_mapel,
+           MIN(k.nama_kelas) AS nama_kelas,
+           MIN(b.topik) AS topik,
+           MIN(b.kurikulum) AS kurikulum,
+           MIN(b.semester) AS semester,
+           MIN(b.status) AS status,
+           COUNT(*) AS jumlah_butir,
+           MAX(b.created_at) AS created_at
     FROM tb_bank_soal b
     LEFT JOIN tb_mata_pelajaran m ON m.id_mapel = b.id_mapel
     LEFT JOIN tb_kelas k ON k.id_kelas = b.id_kelas
-    LEFT JOIN tb_guru g ON g.id_guru = b.id_guru
-    WHERE $where_sql
-    ORDER BY b.id DESC
+    WHERE $where_sql AND b.kode_paket IS NOT NULL AND b.kode_paket != ''
+    GROUP BY b.kode_paket
+    ORDER BY MAX(b.id) DESC
 ");
 $stmt->execute($params);
-$soal_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$paket_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = 'Daftar Bank Soal';
 $css_libs = [
@@ -186,13 +454,13 @@ $js_libs = [
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    if ($('#table-soal').length) {
-        $('#table-soal').DataTable({
-            'order': [[0, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [10] }],
+    if ($('#table-paket').length) {
+        $('#table-paket').DataTable({
+            'order': [[0, 'desc']],
+            'columnDefs': [{ 'sortable': false, 'targets': [8] }],
             'language': {
                 'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada soal ditemukan',
+                'zeroRecords': 'Tidak ada paket ditemukan',
                 'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
                 'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
                 'search': 'Cari:',
@@ -201,119 +469,172 @@ $(document).ready(function() {
         });
     }
 
-    function toggleOpsiPG(jenis) {
-        if (jenis === 'Pilihan Ganda' || jenis === 'Pilihan Ganda Kompleks') {
-            $('#wrapOpsiPG').show();
-            if (jenis === 'Pilihan Ganda Kompleks') {
-                $('#hintOpsiPG').show();
-            } else {
-                $('#hintOpsiPG').hide();
-            }
-        } else {
-            $('#wrapOpsiPG').hide();
-        }
-    }
-
-    $('#inp_jenis').on('change', function() {
-        toggleOpsiPG($(this).val());
+    $(document).on('change', '#filter-soal-form [data-auto-submit]', function() {
+        $('#filter-soal-form').submit();
     });
 
     $('#btnTambahSoal').on('click', function() {
         $('#formSoalAction').val('tambah');
-        $('#soalId').val('');
-        $('#modalSoalTitle').text('Tambah Soal Baru');
+        $('#inp_kode_paket').val('');
+        $('#modalSoalTitle').text('Tambah Soal');
         $('#formSoal')[0].reset();
-        $('#inp_jenis').val('Pilihan Ganda');
-        toggleOpsiPG('Pilihan Ganda');
+        $('#inp_tanggal_upload').val(new Date().toISOString().substring(0, 10));
+        $('#inp_jumlah_soal').val(5);
         $('#modalSoal').modal('show');
     });
 
-    $(document).on('click', '.btn-edit-soal', function() {
+    $(document).on('click', '.btn-edit-paket', function() {
         var data = $(this).data('json');
         $('#formSoalAction').val('edit');
-        $('#soalId').val(data.id);
-        $('#modalSoalTitle').text('Edit Soal');
-        $('#inp_kode').val(data.kode_soal);
-        $('#inp_jenis').val(data.jenis_soal);
-        toggleOpsiPG(data.jenis_soal);
+        $('#inp_kode_paket').val(data.kode_paket);
+        $('#modalSoalTitle').text('Edit Soal — ' + data.kode_paket);
+        $('#inp_asesmen').val(data.jenis_asesmen || '');
         $('#inp_mapel').val(data.id_mapel || '');
         $('#inp_kelas').val(data.id_kelas || '');
-        $('#inp_kurikulum').val(data.kurikulum || 'PERMENDIKDASMEN_046');
-        $('#inp_semester').val(data.semester || '');
-        $('#inp_asesmen').val(data.jenis_asesmen || '');
         $('#inp_topik').val(data.topik || '');
-        $('#inp_sub_topik').val(data.sub_topik || '');
-        $('#inp_materi_tp').val(data.materi_tp || '');
-        $('#inp_indikator').val(data.indikator || '');
-        $('#inp_level').val(data.level_kognitif || 'L2');
-        $('#inp_bobot').val(data.bobot);
-        $('#inp_pertanyaan').val(data.pertanyaan);
-        $('#inp_jawaban_benar').val(data.jawaban_benar || '');
-        $('#inp_pembahasan').val(data.pembahasan || '');
-        $('#inp_status').val(data.status);
-
-        if (data.pilihan_jawaban) {
-            try {
-                var ops = JSON.parse(data.pilihan_jawaban);
-                $('#inp_opsi_a').val(ops.A || '');
-                $('#inp_opsi_b').val(ops.B || '');
-                $('#inp_opsi_c').val(ops.C || '');
-                $('#inp_opsi_d').val(ops.D || '');
-            } catch(e) {}
-        }
+        $('#inp_jumlah_soal').val(data.jumlah_butir || 1);
+        $('#inp_tanggal_upload').val(data.created_at ? data.created_at.substring(0, 10) : new Date().toISOString().substring(0, 10));
         $('#modalSoal').modal('show');
     });
 
-    // Detail Modal
-    $(document).on('click', '.btn-detail-soal', function() {
-        var data = $(this).data('json');
-        $('#det_kode').text(data.kode_soal);
-        $('#det_jenis').text(data.jenis_soal);
-        $('#det_mapel').text(data.nama_mapel || '-');
-        $('#det_kelas').text(data.nama_kelas || '-');
-        $('#det_kurikulum').text(data.kurikulum === 'KMA_1503_KBC' ? 'KMA 1503 + KBC' : 'Permendikdasmen CP 046');
-        $('#det_semester').text(data.semester || '-');
-        $('#det_asesmen').text(data.jenis_asesmen || '-');
-        $('#det_topik').text(data.topik || '-');
-        $('#det_sub_topik').text(data.sub_topik || '-');
-        $('#det_materi').text(data.materi_tp || '-');
-        $('#det_cp').text(data.cp || '-');
-        $('#det_tp').text(data.tp || '-');
-        $('#det_indikator').text(data.indikator || '-');
-        $('#det_level').html('<span class="badge badge-info">' + $('<div>').text(data.level_kognitif || 'L2').html() + '</span>');
-        $('#det_bobot').text(data.bobot);
-        $('#det_pertanyaan').text(data.pertanyaan);
-        $('#det_jawaban_benar').text(data.jawaban_benar || '-');
-        $('#det_pembahasan').text(data.pembahasan || '-');
-        $('#det_pembuat').text(data.nama_guru || '-');
-        $('#det_created').text(data.created_at || '-');
+    var currentPreviewData = null;
 
-        if ((data.jenis_soal === 'Pilihan Ganda' || data.jenis_soal === 'Pilihan Ganda Kompleks') && data.pilihan_jawaban) {
-            try {
-                var ops = JSON.parse(data.pilihan_jawaban);
-                var htmlOps = '<ul class="pl-3 mb-0">';
-                htmlOps += '<li><strong>A.</strong> ' + (ops.A || '-') + '</li>';
-                htmlOps += '<li><strong>B.</strong> ' + (ops.B || '-') + '</li>';
-                htmlOps += '<li><strong>C.</strong> ' + (ops.C || '-') + '</li>';
-                htmlOps += '<li><strong>D.</strong> ' + (ops.D || '-') + '</li>';
-                htmlOps += '</ul>';
-                $('#det_pilihan').html(htmlOps);
-                $('#det_row_pilihan').show();
-            } catch(e) {
-                $('#det_row_pilihan').hide();
+    // Preview Paket
+    $(document).on('click', '.btn-preview-paket', function() {
+        var kode = $(this).data('kode');
+        var $body = $('#paketPreviewBody');
+        $body.html('<tr><td colspan="7" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat...</td></tr>');
+        currentPreviewData = null;
+        $('#modalPaketPreview').modal('show');
+        $.getJSON('ajax_generate_soal.php?aksi=detail_paket&kode_paket=' + encodeURIComponent(kode), function(res) {
+            if (!res.ok) {
+                $body.html('<tr><td colspan="7" class="text-center text-danger">' + (res.msg || 'Gagal memuat.') + '</td></tr>');
+                return;
             }
-        } else {
-            $('#det_row_pilihan').hide();
-        }
-        $('#modalDetailSoal').modal('show');
+            currentPreviewData = res;
+            $('#paketPreviewTitle').text((res.jenis_asesmen || 'Paket') + ' — ' + (res.topik || ''));
+
+            // Tampilkan Kisi-Kisi
+            if (res.kisi_kisi && res.kisi_kisi.length) {
+                var kHtml = '';
+                $.each(res.kisi_kisi, function(i, k) {
+                    kHtml += '<tr>'
+                        + '<td class="text-center">' + (k.no || (i+1)) + '</td>'
+                        + '<td><span class="badge badge-light border">' + $('<span>').text(k.bentuk || '').html() + '</span></td>'
+                        + '<td>' + $('<span>').text(k.materi || '-').html() + '</td>'
+                        + '<td>' + $('<span>').text(k.cp || '-').html() + '</td>'
+                        + '<td>' + $('<span>').text(k.tp || '-').html() + '</td>'
+                        + '<td>' + $('<span>').text(k.indikator || '-').html() + '</td>'
+                        + '<td class="text-center"><span class="badge badge-info">' + $('<span>').text(k.level_kognitif || 'L2').html() + '</span></td>'
+                        + '<td class="text-center">' + $('<span>').text(k.kesulitan || '-').html() + '</td>'
+                        + '<td class="text-center">' + (k.bobot || 1) + '</td>'
+                        + '</tr>';
+                });
+                $('#paketPreviewKisiBody').html(kHtml);
+                $('#wrapModalKisi').show();
+            } else {
+                $('#wrapModalKisi').hide();
+            }
+
+            // Tampilkan Soal
+            var html = '';
+            $.each(res.items, function(i, it) {
+                var opsiTxt = '';
+                if (it.bentuk === 'Menjodohkan' && it.tabel && it.tabel.length) {
+                    var tblHtml = '<div class="table-responsive"><table class="table table-bordered table-sm mb-0 small" style="font-size:11px;"><thead><tr class="bg-light"><th width="8%" class="text-center">No</th><th>Soal</th><th width="10%" class="text-center">Huruf</th><th>Pilihan Jawaban</th></tr></thead><tbody>';
+                    $.each(it.tabel, function(_, tr) {
+                        tblHtml += '<tr><td class="text-center">' + (tr.no || '') + '</td><td>' + $('<span>').text(tr.kiri || '').html() + '</td><td class="text-center font-weight-bold">' + $('<span>').text(tr.huruf || '').html() + '</td><td>' + $('<span>').text(tr.kanan || '').html() + '</td></tr>';
+                    });
+                    tblHtml += '</tbody></table></div>';
+                    opsiTxt = tblHtml;
+                } else if (it.opsi && typeof it.opsi === 'object') {
+                    var parts = [];
+                    $.each(['A','B','C','D'], function(_, k) {
+                        if (it.opsi[k]) parts.push(k + '. ' + it.opsi[k]);
+                    });
+                    opsiTxt = parts.join(' | ');
+                }
+                html += '<tr>'
+                    + '<td class="text-center">' + (i+1) + '</td>'
+                    + '<td><span class="badge badge-light border">' + $('<span>').text(it.bentuk).html() + '</span></td>'
+                    + '<td>' + $('<span>').text(it.level_kognitif).html() + '</td>'
+                    + '<td style="white-space:pre-wrap;max-width:300px;">' + $('<span>').text(it.pertanyaan).html() + '</td>'
+                    + '<td>' + (it.bentuk === 'Menjodohkan' ? opsiTxt : $('<span>').text(opsiTxt).html()) + '</td>'
+                    + '<td><b>' + $('<span>').text(it.kunci || '-').html() + '</b></td>'
+                    + '<td>' + $('<span>').text(it.pembahasan || '-').html() + '</td>'
+                    + '</tr>';
+            });
+            $body.html(html);
+        }).fail(function() {
+            $body.html('<tr><td colspan="7" class="text-center text-danger">Error koneksi.</td></tr>');
+        });
     });
 
-    $(document).on('click', '.btn-hapus-soal', function() {
-        var id = $(this).data('id');
+    function unduhBlobDariModal(format) {
+        if (!currentPreviewData || !currentPreviewData.items || !currentPreviewData.items.length) {
+            Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Data soal belum selesai dimuat.' });
+            return;
+        }
+        var btn = format === 'pdf' ? $('#btnUnduhModalPDF') : (format === 'docx' ? $('#btnUnduhModalDOCX') : $('#btnUnduhModalXLSX'));
+        var origHtml = btn.html();
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Mengunduh...');
+
+        var payload = {
+            aksi: 'unduh',
+            format: format,
+            jenis_asesmen: currentPreviewData.jenis_asesmen || '',
+            kurikulum: currentPreviewData.kurikulum || 'PERMENDIKDASMEN_046',
+            mapel: currentPreviewData.mapel || '',
+            kelas: currentPreviewData.kelas || '',
+            semester: currentPreviewData.semester || '',
+            topik: currentPreviewData.topik || '',
+            kisi_kisi: currentPreviewData.kisi_kisi || [],
+            items: currentPreviewData.items
+        };
+
+        fetch('ajax_generate_soal.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(function(res) {
+            var cType = res.headers.get('content-type') || '';
+            if (cType.indexOf('application/json') !== -1) {
+                return res.json().then(function(j) { throw new Error(j.msg || 'Gagal mengunduh file.'); });
+            }
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var disp = res.headers.get('content-disposition') || '';
+            var m = /filename="?([^";]+)"?/i.exec(disp);
+            var fname = m ? m[1] : ('soal_' + (currentPreviewData.topik || 'paket') + '.' + (format === 'xlsx' ? 'xlsx' : (format === 'docx' ? 'docx' : 'pdf')));
+            return res.blob().then(function(b) { return { blob: b, fname: fname }; });
+        })
+        .then(function(o) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(o.blob);
+            a.download = o.fname;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+        })
+        .catch(function(err) {
+            Swal.fire({ icon: 'error', title: 'Gagal Unduh', text: err.message || 'Terjadi kesalahan saat mengunduh.' });
+        })
+        .finally(function() {
+            btn.prop('disabled', false).html(origHtml);
+        });
+    }
+
+    $(document).on('click', '#btnUnduhModalPDF', function() { unduhBlobDariModal('pdf'); });
+    $(document).on('click', '#btnUnduhModalDOCX', function() { unduhBlobDariModal('docx'); });
+    $(document).on('click', '#btnUnduhModalXLSX', function() { unduhBlobDariModal('xlsx'); });
+
+    // Hapus Paket
+    $(document).on('click', '.btn-hapus-paket', function() {
         var kode = $(this).data('kode');
         Swal.fire({
-            title: 'Hapus Soal?',
-            text: 'Soal ' + kode + ' akan dihapus dari bank soal.',
+            title: 'Hapus Paket?',
+            text: 'Semua butir soal dalam paket ' + kode + ' akan dihapus.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -321,8 +642,8 @@ $(document).ready(function() {
             cancelButtonText: 'Batal'
         }).then(function(res) {
             if (res.isConfirmed) {
-                $('#formHapusId').val(id);
-                $('#formHapus').submit();
+                $('#formHapusPaketKode').val(kode);
+                $('#formHapusPaket').submit();
             }
         });
     });
@@ -354,10 +675,10 @@ include '../templates/sidebar.php';
                     <h4><i class="fas fa-filter mr-2"></i>Filter Soal</h4>
                 </div>
                 <div class="card-body">
-                    <form method="GET" class="row">
+                    <form method="GET" class="row" id="filter-soal-form">
                         <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Mata Pelajaran</label>
-                            <select name="f_mapel" class="form-control form-control-sm">
+                            <select name="f_mapel" class="form-control form-control-sm" data-auto-submit>
                                 <option value="">-- Semua Mapel --</option>
                                 <?php foreach ($mapel_list as $m): ?>
                                     <option value="<?= (int)$m['id_mapel'] ?>" <?= $f_mapel === (int)$m['id_mapel'] ? 'selected' : '' ?>><?= htmlspecialchars($m['nama_mapel']) ?></option>
@@ -366,7 +687,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-2 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
-                            <select name="f_kelas" class="form-control form-control-sm">
+                            <select name="f_kelas" class="form-control form-control-sm" data-auto-submit>
                                 <option value="">-- Semua Kelas --</option>
                                 <?php foreach ($kelas_list as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>" <?= $f_kelas === (int)$k['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
@@ -375,7 +696,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-2 mb-2">
                             <label class="small font-weight-bold">Status</label>
-                            <select name="f_status" class="form-control form-control-sm">
+                            <select name="f_status" class="form-control form-control-sm" data-auto-submit>
                                 <option value="">-- Semua Status --</option>
                                 <?php foreach (['Aktif', 'Draft', 'Arsip'] as $st): ?>
                                     <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
@@ -384,7 +705,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Jenis Asesmen</label>
-                            <select name="f_asesmen" class="form-control form-control-sm">
+                            <select name="f_asesmen" class="form-control form-control-sm" data-auto-submit>
                                 <option value="">-- Semua Asesmen --</option>
                                 <?php foreach ($asesmen_options as $a): ?>
                                     <option value="<?= htmlspecialchars($a) ?>" <?= $f_asesmen === $a ? 'selected' : '' ?>><?= htmlspecialchars($a) ?></option>
@@ -399,73 +720,58 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
-            <!-- Table Card -->
-            <div class="card">
+            <!-- Bank Soal Card -->
+            <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Koleksi Butir Soal</h4>
+                    <h4><i class="fas fa-box mr-2"></i>Bank Soal</h4>
                     <div>
-                        <a href="generate_soal.php<?= $session_q ?>" class="btn btn-success mr-2">
-                            <i class="fas fa-robot mr-1"></i> Generate AI
-                        </a>
                         <button type="button" class="btn btn-primary" id="btnTambahSoal">
                             <i class="fas fa-plus mr-1"></i> Tambah Soal
                         </button>
+                        <a href="generate_soal.php<?= $session_q ?>" class="btn btn-success">
+                            <i class="fas fa-robot mr-1"></i> Generate Soal
+                        </a>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-soal">
+                        <table class="table table-striped table-bordered table-sm" id="table-paket">
                             <thead>
                                 <tr>
                                     <th width="4%">No</th>
-                                    <th>Kode Soal</th>
-                                    <th width="28%">Potongan Pertanyaan</th>
-                                    <th>Jenis Soal</th>
+                                    <th>Kode Paket</th>
+                                    <th>Asesmen</th>
                                     <th>Mata Pelajaran</th>
                                     <th>Kelas</th>
-                                    <th>Asesmen</th>
                                     <th>Topik</th>
-                                    <th>Bobot</th>
-                                    <th>Status</th>
-                                    <th width="12%">Aksi</th>
+                                    <th>Butir</th>
+                                    <th>Tanggal</th>
+                                    <th width="1%" class="text-center text-nowrap">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($soal_rows as $i => $r): ?>
-                                    <?php
-                                    // Potongan teks (maks 60 karakter)
-                                    $raw_pertanyaan = strip_tags($r['pertanyaan']);
-                                    $snippet = mb_strlen($raw_pertanyaan) > 60 ? mb_substr($raw_pertanyaan, 0, 60) . '...' : $raw_pertanyaan;
-
-                                    $st_badge = $r['status'] === 'Aktif' ? 'success' : ($r['status'] === 'Draft' ? 'warning' : 'secondary');
-                                    ?>
+                                <?php foreach ($paket_rows as $i => $p): ?>
                                     <tr>
                                         <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><strong><?= htmlspecialchars($r['kode_soal']) ?></strong></td>
-                                        <td>
-                                            <span title="<?= htmlspecialchars($raw_pertanyaan) ?>">
-                                                "<?= htmlspecialchars($snippet) ?>"
-                                            </span>
-                                        </td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis_soal']) ?></span></td>
-                                        <td><?= htmlspecialchars($r['nama_mapel'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis_asesmen'] ?? '-') ?></span></td>
-                                        <td><?= htmlspecialchars($r['topik'] ?? ($r['materi_tp'] ?? '-')) ?></td>
-                                        <td class="text-center"><?= (float)$r['bobot'] ?></td>
-                                        <td class="text-center">
-                                            <span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span>
-                                        </td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-info btn-sm btn-detail-soal" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail Soal">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-warning btn-sm btn-edit-soal" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm btn-hapus-soal" data-id="<?= (int)$r['id'] ?>" data-kode="<?= htmlspecialchars($r['kode_soal'], ENT_QUOTES) ?>" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                        <td><strong><?= htmlspecialchars($p['kode_paket']) ?></strong></td>
+                                        <td><span class="badge badge-light border"><?= htmlspecialchars($p['jenis_asesmen'] ?? '-') ?></span></td>
+                                        <td><?= htmlspecialchars($p['nama_mapel'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($p['nama_kelas'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($p['topik'] ?? '-') ?></td>
+                                        <td class="text-center"><span class="badge badge-primary"><?= (int)$p['jumlah_butir'] ?></span></td>
+                                        <td><?= htmlspecialchars(substr($p['created_at'] ?? '', 0, 10)) ?></td>
+                                        <td class="text-center text-nowrap" style="white-space: nowrap;">
+                                            <div class="d-inline-flex align-items-center" style="gap: 4px;">
+                                                <button type="button" class="btn btn-info btn-sm btn-preview-paket" data-kode="<?= htmlspecialchars($p['kode_paket'], ENT_QUOTES) ?>" title="Preview & Unduh">
+                                                    <i class="fas fa-eye mr-1"></i> Preview & Unduh
+                                                </button>
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-paket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-paket" data-kode="<?= htmlspecialchars($p['kode_paket'], ENT_QUOTES) ?>" title="Hapus Paket">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -474,6 +780,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
+
         </div>
     </section>
 </div>
@@ -482,206 +789,169 @@ include '../templates/sidebar.php';
 <div class="modal fade" id="modalSoal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <form method="POST" id="formSoal">
+            <form method="POST" id="formSoal" enctype="multipart/form-data">
                 <input type="hidden" name="action" id="formSoalAction" value="tambah">
-                <input type="hidden" name="id" id="soalId" value="">
+                <input type="hidden" name="kode_paket" id="inp_kode_paket" value="">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalSoalTitle">Tambah Soal Baru</h5>
+                    <h5 class="modal-title" id="modalSoalTitle">Tambah Soal</h5>
                     <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-4 form-group">
-                            <label>Kode Soal (Otomatis jika kosong)</label>
-                            <input type="text" name="kode_soal" id="inp_kode" class="form-control" placeholder="SOAL-001">
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Jenis Soal</label>
-                            <select name="jenis_soal" id="inp_jenis" class="form-control">
-                                <?php foreach ($jenis_soal_options as $js): ?>
-                                    <option value="<?= $js ?>"><?= $js ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Level Kognitif</label>
-                            <select name="level_kognitif" id="inp_level" class="form-control">
-                                <option value="L1">L1 (C1)</option>
-                                <option value="L2" selected>L2 (C2)</option>
-                                <option value="L3">L3 (C3-C4)</option>
-                                <option value="L4">L4 (C5-C6)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Mata Pelajaran</label>
-                            <select name="id_mapel" id="inp_mapel" class="form-control">
-                                <option value="">-- Pilih Mapel --</option>
-                                <?php foreach ($mapel_list as $m): ?>
-                                    <option value="<?= (int)$m['id_mapel'] ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Kelas</label>
-                            <select name="id_kelas" id="inp_kelas" class="form-control">
-                                <option value="">-- Pilih Kelas --</option>
-                                <?php foreach ($kelas_list as $k): ?>
-                                    <option value="<?= (int)$k['id_kelas'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-2 form-group">
-                            <label>Bobot Soal</label>
-                            <input type="number" step="0.1" name="bobot" id="inp_bobot" class="form-control" value="1.0">
-                        </div>
-                        <div class="col-md-2 form-group">
-                            <label>Status</label>
-                            <select name="status" id="inp_status" class="form-control">
-                                <option value="Aktif">Aktif</option>
-                                <option value="Draft">Draft</option>
-                                <option value="Arsip">Arsip</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Kurikulum</label>
-                            <select name="kurikulum" id="inp_kurikulum" class="form-control">
-                                <?php foreach ($kurikulum_options as $val => $label): ?>
-                                    <option value="<?= $val ?>"><?= $label ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Semester</label>
-                            <select name="semester" id="inp_semester" class="form-control">
-                                <option value="">-- Pilih Semester --</option>
-                                <option value="Semester 1">Semester 1 (Ganjil)</option>
-                                <option value="Semester 2">Semester 2 (Genap)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Jenis Asesmen</label>
-                            <select name="jenis_asesmen" id="inp_asesmen" class="form-control">
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Jenis Asesmen <span class="text-danger">*</span></label>
+                            <select name="jenis_asesmen" id="inp_asesmen" class="form-control" required>
                                 <option value="">-- Pilih Asesmen --</option>
                                 <?php foreach ($asesmen_options as $a): ?>
                                     <option value="<?= htmlspecialchars($a) ?>"><?= htmlspecialchars($a) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label>Topik / Pokok Bahasan <span class="text-danger">*</span></label>
-                            <input type="text" name="topik" id="inp_topik" class="form-control" required placeholder="Contoh: Metamorfosis Kupu-kupu">
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Mata Pelajaran <span class="text-danger">*</span></label>
+                            <select name="id_mapel" id="inp_mapel" class="form-control" required>
+                                <option value="">-- Pilih Mapel --</option>
+                                <?php foreach ($mapel_list as $m): ?>
+                                    <option value="<?= (int)$m['id_mapel'] ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label>Sub Topik <span class="text-muted">(opsional)</span></label>
-                            <input type="text" name="sub_topik" id="inp_sub_topik" class="form-control" placeholder="Contoh: Tahapan pupa">
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Kelas <span class="text-danger">*</span></label>
+                            <select name="id_kelas" id="inp_kelas" class="form-control" required>
+                                <option value="">-- Pilih Kelas --</option>
+                                <?php foreach ($kelas_list as $k): ?>
+                                    <option value="<?= (int)$k['id_kelas'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label>Materi <span class="text-muted">(opsional)</span></label>
-                            <input type="text" name="materi_tp" id="inp_materi_tp" class="form-control" placeholder="Contoh: Metamorfosis">
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Materi / Topik <span class="text-danger">*</span></label>
+                            <input type="text" name="topik" id="inp_topik" class="form-control" required placeholder="Contoh: Metamorfosis">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Jumlah Soal <span class="text-danger">*</span></label>
+                            <input type="number" name="jumlah_soal" id="inp_jumlah_soal" class="form-control" value="5" min="1" max="100" required>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Tanggal Upload <span class="text-danger">*</span></label>
+                            <input type="date" name="tanggal_upload" id="inp_tanggal_upload" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-md-12 form-group">
-                            <label>Indikator Soal</label>
-                            <input type="text" name="indikator" id="inp_indikator" class="form-control" placeholder="Contoh: Siswa mampu menyebutkan...">
-                        </div>
-                        <div class="col-12 form-group">
-                            <label>Pertanyaan Soal <span class="text-danger">*</span></label>
-                            <textarea name="pertanyaan" id="inp_pertanyaan" class="form-control" rows="3" required placeholder="Tuliskan butir pertanyaan secara lengkap..."></textarea>
-                        </div>
-
-                        <!-- Opsi Pilihan Ganda -->
-                        <div class="col-12" id="wrapOpsiPG">
-                            <label class="font-weight-bold">Pilihan Jawaban</label>
-                            <small id="hintOpsiPG" class="text-info d-block mb-2" style="display:none;">PG Kompleks: kunci boleh lebih dari satu, pisahkan koma (mis. A,C).</small>
-                            <div class="row">
-                                <div class="col-md-6 form-group">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold">A</span></div>
-                                        <input type="text" name="opsi_a" id="inp_opsi_a" class="form-control" placeholder="Pilihan A">
-                                    </div>
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold">B</span></div>
-                                        <input type="text" name="opsi_b" id="inp_opsi_b" class="form-control" placeholder="Pilihan B">
-                                    </div>
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold">C</span></div>
-                                        <input type="text" name="opsi_c" id="inp_opsi_c" class="form-control" placeholder="Pilihan C">
-                                    </div>
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold">D</span></div>
-                                        <input type="text" name="opsi_d" id="inp_opsi_d" class="form-control" placeholder="Pilihan D">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 form-group">
-                            <label>Kunci / Jawaban Benar</label>
-                            <input type="text" name="jawaban_benar" id="inp_jawaban_benar" class="form-control" placeholder="Contoh: A (atau teks jawaban benar)">
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>Pembahasan</label>
-                            <textarea name="pembahasan" id="inp_pembahasan" class="form-control" rows="2" placeholder="Ulasan atau pembahasan jawaban..."></textarea>
+                            <label class="font-weight-bold">Upload File Soal <small class="text-muted">(format .doc, .docx, .pdf, .xls, .xlsx, .txt)</small></label>
+                            <input type="file" name="file_soal" id="inp_file_soal" class="form-control-file" accept=".doc,.docx,.pdf,.xls,.xlsx,.txt">
+                            <small class="form-text text-muted">Opsional: Jika file diupload, butir soal akan otomatis dibaca dan dimasukkan ke paket ini.</small>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Simpan Soal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Simpan</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal Detail Bank Soal (Fitur 5) -->
-<div class="modal fade" id="modalDetailSoal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+<form method="POST" id="formHapusPaket" class="d-none">
+    <input type="hidden" name="action" value="hapus_paket">
+    <input type="hidden" name="kode_paket" id="formHapusPaketKode">
+</form>
+
+<!-- Modal Preview Paket -->
+<div class="modal fade" id="modalPaketPreview" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-question-circle mr-2"></i>Detail Bank Soal</h5>
+                <h5 class="modal-title"><i class="fas fa-box mr-2"></i><span id="paketPreviewTitle">Preview Paket</span></h5>
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <table class="table table-bordered table-sm">
-                    <tr><th width="28%">Kode Soal</th><td id="det_kode" class="font-weight-bold text-primary"></td></tr>
-                    <tr><th>Jenis Soal</th><td id="det_jenis"></td></tr>
-                    <tr><th>Mata Pelajaran</th><td id="det_mapel"></td></tr>
-                    <tr><th>Kelas</th><td id="det_kelas"></td></tr>
-                    <tr><th>Semester</th><td id="det_semester"></td></tr>
-                    <tr><th>Kurikulum</th><td id="det_kurikulum"></td></tr>
-                    <tr><th>Jenis Asesmen</th><td id="det_asesmen"></td></tr>
-                    <tr><th>Topik / Pokok Bahasan</th><td id="det_topik" class="font-weight-bold"></td></tr>
-                    <tr><th>Sub Topik</th><td id="det_sub_topik"></td></tr>
-                    <tr><th>Materi</th><td id="det_materi"></td></tr>
-                    <tr><th>CP</th><td id="det_cp" style="white-space: pre-wrap;"></td></tr>
-                    <tr><th>TP</th><td id="det_tp" style="white-space: pre-wrap;"></td></tr>
-                    <tr><th>Indikator</th><td id="det_indikator"></td></tr>
-                    <tr><th>Level Kognitif</th><td id="det_level"></td></tr>
-                    <tr><th>Bobot</th><td id="det_bobot"></td></tr>
-                    <tr><th>Pertanyaan</th><td id="det_pertanyaan" style="white-space: pre-wrap;" class="font-weight-bold"></td></tr>
-                    <tr id="det_row_pilihan"><th>Pilihan Jawaban</th><td id="det_pilihan"></td></tr>
-                    <tr><th>Jawaban Benar</th><td id="det_jawaban_benar" class="font-weight-bold text-success"></td></tr>
-                    <tr><th>Pembahasan</th><td id="det_pembahasan" style="white-space: pre-wrap;"></td></tr>
-                    <tr><th>Pembuat</th><td id="det_pembuat"></td></tr>
-                    <tr><th>Tanggal Dibuat</th><td id="det_created"></td></tr>
-                </table>
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 p-3 bg-light rounded border">
+                    <div>
+                        <span class="font-weight-bold mr-2"><i class="fas fa-download mr-1 text-primary"></i> Unduh Soal:</span>
+                        <small class="text-muted">Pilih format file yang ingin diunduh</small>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-danger btn-sm" id="btnUnduhModalPDF">
+                            <i class="fas fa-file-pdf mr-1"></i> Unduh PDF
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnUnduhModalDOCX">
+                            <i class="fas fa-file-word mr-1"></i> Unduh Word (.docx)
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="btnUnduhModalXLSX">
+                            <i class="fas fa-file-excel mr-1"></i> Unduh Excel (.xlsx)
+                        </button>
+                    </div>
+                </div>
+                <div class="card mb-3" id="wrapModalKisi" style="display:none;">
+                    <div class="card-header bg-light py-2">
+                        <h6 class="mb-0 font-weight-bold text-primary"><i class="fas fa-th-list mr-1"></i> Kisi-Kisi Paket Soal</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead>
+                                    <tr class="bg-light">
+                                        <th width="4%" class="text-center">No</th>
+                                        <th>Bentuk</th>
+                                        <th>Materi</th>
+                                        <th>CP</th>
+                                        <th>TP</th>
+                                        <th>Indikator</th>
+                                        <th width="7%" class="text-center">Level</th>
+                                        <th width="8%" class="text-center">Kesulitan</th>
+                                        <th width="6%" class="text-center">Bobot</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paketPreviewKisiBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-light py-2">
+                        <h6 class="mb-0 font-weight-bold text-dark"><i class="fas fa-list-ol mr-1"></i> Daftar Butir Soal</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm mb-0">
+                                <thead>
+                                    <tr class="bg-light">
+                                        <th width="4%" class="text-center">No</th>
+                                        <th width="12%">Bentuk</th>
+                                        <th width="7%" class="text-center">Level</th>
+                                        <th>Pertanyaan</th>
+                                        <th>Opsi / Tabel</th>
+                                        <th width="10%">Kunci</th>
+                                        <th>Pembahasan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paketPreviewBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer d-flex justify-content-between">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="$('#btnUnduhModalPDF').click();">
+                        <i class="fas fa-file-pdf mr-1"></i> PDF
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="$('#btnUnduhModalDOCX').click();">
+                        <i class="fas fa-file-word mr-1"></i> Word (.docx)
+                    </button>
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="$('#btnUnduhModalXLSX').click();">
+                        <i class="fas fa-file-excel mr-1"></i> Excel (.xlsx)
+                    </button>
+                </div>
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>
 </div>
-
-<form method="POST" id="formHapus" class="d-none">
-    <input type="hidden" name="action" value="hapus">
-    <input type="hidden" name="id" id="formHapusId">
-</form>
 
 <?php include '../templates/footer.php'; ?>

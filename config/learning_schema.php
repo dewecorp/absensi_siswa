@@ -81,12 +81,13 @@ if (!function_exists('ensure_learning_schema')) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
-        // 4 & 5. Bank Soal
+        // 4 & 5. Bank Soal (1 paket = banyak butir berbagi kode_paket)
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_bank_soal (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 id_guru INT NOT NULL,
                 kode_soal VARCHAR(50) NOT NULL,
+                kode_paket VARCHAR(50) NULL,
                 jenis_soal ENUM('Pilihan Ganda','Pilihan Ganda Kompleks','Menjodohkan','Isian Singkat','Uraian') NOT NULL DEFAULT 'Pilihan Ganda',
                 id_mapel INT NULL,
                 id_kelas INT NULL,
@@ -124,6 +125,7 @@ if (!function_exists('ensure_learning_schema')) {
                 $pdo->exec("UPDATE tb_bank_soal SET jenis_soal = 'Isian Singkat' WHERE jenis_soal = 'Benar/Salah'");
             }
             foreach ([
+                "kode_paket VARCHAR(50) NULL",
                 "kurikulum VARCHAR(30) NULL DEFAULT 'PERMENDIKDASMEN_046'",
                 "semester VARCHAR(20) NULL",
                 "jenis_asesmen VARCHAR(60) NULL",
