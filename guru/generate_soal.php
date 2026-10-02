@@ -36,13 +36,7 @@ function aiHitungTotal() {
     var total = 0;
     $('#aiPaketWrap .ai-paket-num').each(function() {
         if (!$(this).prop('disabled')) {
-            var name = $(this).attr('name') || '';
-            var val = parseInt($(this).val() || '0', 10) || 0;
-            if (name.indexOf('Menjodohkan') !== -1) {
-                if (val > 0) total += 1;
-            } else {
-                total += val;
-            }
+            total += parseInt($(this).val() || '0', 10) || 0;
         }
     });
     $('#aiTotalPaket').text(total);
@@ -133,9 +127,18 @@ $('#formGenerateAI').on('submit', function(e) {
         });
         html += '</ol>';
         $('#aiHasil').html(html);
-        $('#aiCount').text(aiLastSoal.length);
+        // Hitung total butir: tiap baris pasangan Menjodohkan dihitung 1 butir
+        var totalButir = 0;
+        aiLastSoal.forEach(function(s) {
+            if (s.bentuk === 'Menjodohkan' && s.tabel && s.tabel.length) {
+                totalButir += s.tabel.length;
+            } else {
+                totalButir += 1;
+            }
+        });
+        $('#aiCount').text(totalButir);
         $('#aiHasilWrap').show();
-        Swal.fire({ icon: 'success', title: 'Selesai', text: aiLastSoal.length + ' butir (1 paket) berhasil dibuat.', timer: 1800, showConfirmButton: false });
+        Swal.fire({ icon: 'success', title: 'Selesai', text: totalButir + ' butir (1 paket) berhasil dibuat.', timer: 1800, showConfirmButton: false });
     }).fail(function(xhr) {
         var msg = 'Gagal generate soal.';
         try { var r = JSON.parse(xhr.responseText); if (r.msg) msg = r.msg; } catch(e) {}

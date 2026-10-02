@@ -230,6 +230,55 @@ function ai_docx_tabel_jodoh(array $rows): string {
     return $xml;
 }
 
+// Susun DOCX tabel kisi-kisi 9 kolom (sama seperti preview generator):
+// No | Bentuk | Materi | CP | TP | Indikator | Level | Kesulitan | Bobot
+function ai_docx_tabel_kisi(array $rows): string {
+    if (empty($rows)) {
+        return '';
+    }
+    // Lebar kolom (dxa), total 9000
+    $cols = [500, 900, 1000, 1200, 1200, 1600, 700, 1000, 800];
+    $heads = ['No', 'Bentuk', 'Materi', 'CP', 'TP', 'Indikator', 'Level', 'Kesulitan', 'Bobot'];
+    $keys = ['no', 'bentuk', 'materi', 'cp', 'tp', 'indikator', 'level_kognitif', 'kesulitan', 'bobot'];
+
+    $xml = '<w:tbl>'
+        . '<w:tblPr>'
+        . '<w:tblW w:w="9000" w:type="dxa"/>'
+        . '<w:tblBorders>'
+        . '<w:top w:val="single" w:sz="4" w:space="0" w:color="999999"/>'
+        . '<w:left w:val="single" w:sz="4" w:space="0" w:color="999999"/>'
+        . '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="999999"/>'
+        . '<w:right w:val="single" w:sz="4" w:space="0" w:color="999999"/>'
+        . '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
+        . '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
+        . '</w:tblBorders>'
+        . '</w:tblPr>'
+        . '<w:tblGrid>';
+    foreach ($cols as $w) {
+        $xml .= '<w:gridCol w:w="' . $w . '"/>';
+    }
+    $xml .= '</w:tblGrid>';
+
+    // Header row
+    $xml .= '<w:tr>';
+    foreach ($heads as $hi => $h) {
+        $xml .= '<w:tc><w:tcPr><w:tcW w:w="' . $cols[$hi] . '" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="EEEEEE"/></w:tcPr>' . ai_docx_p($h, true, 18) . '</w:tc>';
+    }
+    $xml .= '</w:tr>';
+
+    foreach ($rows as $r) {
+        if (!is_array($r)) continue;
+        $xml .= '<w:tr>';
+        foreach ($keys as $ki => $k) {
+            $xml .= '<w:tc><w:tcPr><w:tcW w:w="' . $cols[$ki] . '" w:type="dxa"/></w:tcPr>' . ai_docx_p((string)($r[$k] ?? ''), false, 18) . '</w:tc>';
+        }
+        $xml .= '</w:tr>';
+    }
+
+    $xml .= '</w:tbl>';
+    return $xml;
+}
+
 function ai_build_soal_docx(array $items, array $payload): string {
     $kur = ($payload['kurikulum'] ?? '') === 'KMA_1503_KBC' ? 'KMA 1503 + KBC' : 'Permendikdasmen CP 046';
     $judul = trim((string)($payload['jenis_asesmen'] ?? ''));
@@ -248,33 +297,17 @@ function ai_build_soal_docx(array $items, array $payload): string {
         $meta[] = 'Semester: ' . trim((string)$payload['semester']);
     }
     $meta[] = 'Kurikulum: ' . $kur;
-    $meta[] = 'Jumlah: ' . count($items) . ' butir';
+    $kisi_awal = is_array($payload['kisi_kisi'] ?? null) ? array_values(array_filter($payload['kisi_kisi'], 'is_array')) : [];
+    $meta[] = 'Jumlah: ' . ($kisi_awal ? count($kisi_awal) : count($items)) . ' butir';
     foreach ($meta as $m) {
         $body .= ai_docx_p($m);
     }
     $body .= ai_docx_p('');
-    // Kisi-kisi ringkas (bila dikirim).
+    // Kisi-kisi dalam bentuk TABEL 9 kolom (sama seperti preview generator).
     $kisi = is_array($payload['kisi_kisi'] ?? null) ? $payload['kisi_kisi'] : [];
     if ($kisi) {
         $body .= ai_docx_p('KISI-KISI', true, 24);
-        foreach ($kisi as $k) {
-            if (!is_array($k)) {
-                continue;
-            }
-            $body .= ai_docx_p(
-                (string)($k['no'] ?? '') . '. [' . (string)($k['bentuk'] ?? '') . '][' . (string)($k['level_kognitif'] ?? 'L2') . '] '
-                . (string)($k['materi'] ?? '')
-            );
-            if (trim((string)($k['cp'] ?? '')) !== '') {
-                $body .= ai_docx_p('CP: ' . (string)$k['cp']);
-            }
-            if (trim((string)($k['tp'] ?? '')) !== '') {
-                $body .= ai_docx_p('TP: ' . (string)$k['tp']);
-            }
-            if (trim((string)($k['indikator'] ?? '')) !== '') {
-                $body .= ai_docx_p('Indikator: ' . (string)$k['indikator'] . ' | Kesulitan: ' . (string)($k['kesulitan'] ?? ''));
-            }
-        }
+        $body .= ai_docx_tabel_kisi(array_values(array_filter($kisi, 'is_array')));
         $body .= ai_docx_p('');
     }
     foreach ($items as $i => $it) {
@@ -1004,6 +1037,17 @@ if ($aksi === 'unduh_paket') {
         echo json_encode(['ok' => false, 'msg' => 'Paket tidak ditemukan.']);
         exit;
     }
+    // Kisi-kisi hanya ditulis bila paket menyimpan data kisi asli (bukan upload manual).
+    $has_kisi_pk = false;
+    foreach ($rows as $rr) {
+        $ind0 = trim((string)($rr['indikator'] ?? ''));
+        $cp0 = trim((string)($rr['cp'] ?? ''));
+        $tp0 = trim((string)($rr['tp'] ?? ''));
+        if ($ind0 !== '' && $ind0 !== '-' && (($cp0 !== '' && $cp0 !== '-') || ($tp0 !== '' && $tp0 !== '-'))) {
+            $has_kisi_pk = true;
+            break;
+        }
+    }
     $items = [];
     $kisi_pk = [];
     foreach ($rows as $idx_r => $r) {
@@ -1077,6 +1121,9 @@ if ($aksi === 'unduh_paket') {
         }
     }
     $first = $rows[0];
+    if (!$has_kisi_pk) {
+        $kisi_pk = [];
+    }
     $jenis_asesmen_pk = $first['jenis_asesmen'] ?? '';
     if (!in_array($jenis_asesmen_pk, ai_asesmen_list(), true)) {
         $jenis_asesmen_pk = ai_asesmen_list()[0];
@@ -1288,6 +1335,18 @@ if ($aksi === 'detail_paket') {
         echo json_encode(['ok' => false, 'msg' => 'Paket tidak ditemukan.']);
         exit;
     }
+    // Kisi-kisi hanya dianggap ADA bila paket menyimpan data kisi asli
+    // (indikator + CP/TP terisi) — bukan paket upload manual tanpa kisi.
+    $has_kisi = false;
+    foreach ($rows as $rr) {
+        $ind0 = trim((string)($rr['indikator'] ?? ''));
+        $cp0 = trim((string)($rr['cp'] ?? ''));
+        $tp0 = trim((string)($rr['tp'] ?? ''));
+        if ($ind0 !== '' && $ind0 !== '-' && (($cp0 !== '' && $cp0 !== '-') || ($tp0 !== '' && $tp0 !== '-'))) {
+            $has_kisi = true;
+            break;
+        }
+    }
     $items = [];
     $kisi_items = [];
     foreach ($rows as $idx_r => $r) {
@@ -1367,6 +1426,30 @@ if ($aksi === 'detail_paket') {
         }
     }
     $first = $rows[0];
+    if (!$has_kisi) {
+        $kisi_items = [];
+    }
+    // File asli paket (bila paket berasal dari upload manual) — preview memakai format asli.
+    // Isi file ditanam base64 di JSON agar pratinjau tidak memakai request URL
+    // (request URL PDF dibajak pengelola unduhan/IDM menjadi dialog download).
+    $file_asli = null;
+    $file_ext = '';
+    $file_base64 = null;
+    foreach ($rows as $r) {
+        $fs = trim((string)($r['file_soal'] ?? ''));
+        if ($fs !== '') {
+            $url = function_exists('guru_file_url') ? guru_file_url('bank_soal', $fs) : '../uploads/bank_soal/' . ltrim($fs, '/');
+            if ($url) {
+                $file_asli = $url;
+                $file_ext = strtolower(pathinfo($fs, PATHINFO_EXTENSION));
+                $fp = dirname(__DIR__) . '/uploads/bank_soal/' . ltrim(str_replace('\\', '/', $fs), '/');
+                if (is_file($fp) && filesize($fp) > 0 && filesize($fp) <= 8 * 1024 * 1024) {
+                    $file_base64 = base64_encode((string)@file_get_contents($fp));
+                }
+                break;
+            }
+        }
+    }
     echo json_encode([
         'ok' => true,
         'kode_paket' => $kode_paket,
@@ -1378,9 +1461,68 @@ if ($aksi === 'detail_paket') {
         'topik' => $first['topik'] ?? '-',
         'sub_topik' => $first['sub_topik'] ?? '',
         'jumlah' => count($items),
+        'has_kisi' => $has_kisi,
         'kisi_kisi' => $kisi_items,
         'items' => $items,
+        'file_soal' => $file_asli,
+        'file_ext' => $file_ext,
+        'file_base64' => $file_base64,
     ]);
+    exit;
+}
+
+if ($aksi === 'preview_gambar') {
+    // Render halaman PDF menjadi PNG sisi server (PyMuPDF) agar pratinjau
+    // selalu sama persis dengan dokumen asli (tidak tergantung font browser).
+    @set_time_limit(120);
+    $kode_paket = trim((string)($_GET['kode_paket'] ?? ''));
+    if ($kode_paket === '') {
+        echo json_encode(['ok' => false, 'msg' => 'Kode paket tidak valid.']);
+        exit;
+    }
+    $st = $pdo->prepare("SELECT file_soal FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ? AND file_soal IS NOT NULL AND file_soal != '' ORDER BY id ASC LIMIT 1");
+    $st->execute([$kode_paket, $guru_id]);
+    $fs = trim((string)$st->fetchColumn());
+    if ($fs === '' || strtolower(pathinfo($fs, PATHINFO_EXTENSION)) !== 'pdf') {
+        echo json_encode(['ok' => false, 'msg' => 'Paket ini tidak memiliki berkas PDF.']);
+        exit;
+    }
+    $abs = dirname(__DIR__) . '/uploads/bank_soal/' . ltrim(str_replace('\\', '/', $fs), '/');
+    if (!is_file($abs)) {
+        echo json_encode(['ok' => false, 'msg' => 'Berkas fisik tidak ditemukan di server.']);
+        exit;
+    }
+    $hash = md5($abs . '|' . filesize($abs) . '|' . filemtime($abs));
+    $outdir = dirname(__DIR__) . '/uploads/bank_soal/.preview/' . $hash . '/';
+    $webbase = '../uploads/bank_soal/.preview/' . $hash . '/';
+    $script = dirname(__DIR__) . '/scripts/render_pdf_preview.py';
+    if (!is_dir($outdir) || count(glob($outdir . 'p*.png') ?: []) === 0) {
+        $py = 'py';
+        @exec('py --version 2>&1', $chk, $chkCode);
+        if ($chkCode !== 0) {
+            $py = 'python';
+        }
+        $cmd = $py . ' ' . escapeshellarg($script) . ' ' . escapeshellarg($abs) . ' ' . escapeshellarg($outdir) . ' 150 15 2>&1';
+        $lines = [];
+        $code = 0;
+        @exec($cmd, $lines, $code);
+        $res = json_decode(implode("\n", $lines), true);
+        if (!is_array($res) || empty($res['ok'])) {
+            echo json_encode(['ok' => false, 'msg' => is_array($res) && !empty($res['msg']) ? $res['msg'] : 'Gagal merender PDF di server.']);
+            exit;
+        }
+    }
+    $files = glob($outdir . 'p*.png') ?: [];
+    natsort($files);
+    $images = [];
+    foreach ($files as $fp) {
+        $images[] = $webbase . basename($fp);
+    }
+    if (!$images) {
+        echo json_encode(['ok' => false, 'msg' => 'Tidak ada halaman berhasil dirender.']);
+        exit;
+    }
+    echo json_encode(['ok' => true, 'images' => array_values($images), 'jumlah' => count($images)]);
     exit;
 }
 

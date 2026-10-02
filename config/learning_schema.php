@@ -108,6 +108,7 @@ if (!function_exists('ensure_learning_schema')) {
                 pilihan_jawaban TEXT NULL,
                 jawaban_benar TEXT NULL,
                 pembahasan TEXT NULL,
+                file_soal VARCHAR(255) NULL,
                 status ENUM('Draft','Aktif','Arsip') NOT NULL DEFAULT 'Aktif',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -135,6 +136,7 @@ if (!function_exists('ensure_learning_schema')) {
                 "cp TEXT NULL",
                 "tp TEXT NULL",
                 "atp TEXT NULL",
+                "file_soal VARCHAR(255) NULL",
             ] as $colDef) {
                 $colName = explode(' ', trim($colDef), 2)[0];
                 $has = $pdo->query("SHOW COLUMNS FROM tb_bank_soal LIKE '" . addslashes($colName) . "'")->fetch(PDO::FETCH_ASSOC);

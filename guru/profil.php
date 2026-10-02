@@ -142,7 +142,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tes_konektor_ai'])) {
         $tkey = trim((string)($_POST['ai_gemini_key'] ?? ''));
         $tmodel = trim((string)($_POST['ai_gemini_model'] ?? ''));
         $temail = trim((string)($_POST['ai_gemini_email'] ?? ''));
+        $pakai_bersama = ($tkey === '' && !empty($cfg['is_system_key']));
         [$ok, $note] = ai_test_connection('gemini', ($tkey !== '' ? $tkey : $cfg['gemini_key']), ($tmodel !== '' ? $tmodel : $cfg['gemini_model']), ($temail !== '' ? $temail : $cfg['gemini_email']));
+        if ($ok && $pakai_bersama) {
+            $note .= ' (memakai kunci server madrasah)';
+        }
     }
     $message = ['type' => $ok ? 'success' : 'danger', 'text' => $note];
 }
@@ -293,7 +297,7 @@ include '../templates/user_header.php';
                             </div>
                         </div>
                         <div class="card-body">
-                            <p class="text-muted small">Setiap guru cukup <strong>memilih salah satu penyedia AI</strong> (tidak wajib mengisi keduanya). Guru madrasah direkomendasikan menggunakan <strong>Google Gemini Pro</strong> dengan email resmi Kemenag.</p>
+                            <p class="text-muted small">Setiap guru cukup <strong>memilih salah satu penyedia AI</strong> (tidak wajib mengisi keduanya).</p>
                             <form method="POST" action="">
                                 <div class="row">
                                     <div class="col-md-12 mb-3">
@@ -301,7 +305,7 @@ include '../templates/user_header.php';
                                         <div class="custom-control custom-radio custom-control-inline mr-4">
                                             <input type="radio" id="prov_gemini" name="ai_provider" value="gemini" class="custom-control-input" <?= $ai_cfg['provider'] === 'gemini' ? 'checked' : '' ?>>
                                             <label class="custom-control-label font-weight-bold text-success" for="prov_gemini">
-                                                <i class="fas fa-check-circle mr-1"></i> Google Gemini Pro (Email Kemenag) <span class="badge badge-success ml-1">Rekomendasi</span>
+                                                <i class="fas fa-check-circle mr-1"></i> Google Gemini <span class="badge badge-success ml-1">Rekomendasi</span>
                                             </label>
                                         </div>
                                         <div class="custom-control custom-radio custom-control-inline">
@@ -313,30 +317,21 @@ include '../templates/user_header.php';
                                     </div>
                                 </div>
 
-                                <!-- Form Gemini Pro -->
+                                <!-- Form Gemini -->
                                 <div class="p-3 mb-3 rounded border border-success bg-light" id="wrap_gemini" style="<?= $ai_cfg['provider'] === 'openai' ? 'display:none;' : '' ?>">
-                                    <h6 class="font-weight-bold text-success mb-2"><i class="fas fa-check-circle mr-1"></i> Pengaturan Google Gemini Pro</h6>
-                                    
-                                    <div class="alert alert-warning small mb-3">
-                                        <i class="fas fa-info-circle mr-1 text-danger"></i> <strong>Pemberitahuan Akun Kemenag (@madrasah.kemenag.go.id):</strong><br>
-                                        Google AI Studio menolak akun organisasi Kemenag dengan pesan <em>"you do not have access to AI Studio"</em> karena Google Cloud dinonaktifkan oleh administrator domain pusat Kemenag.<br>
-                                        <strong>Cara Mengambil API Key:</strong><br>
-                                        1. Buka <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="font-weight-bold">Google AI Studio &raquo;</a><br>
-                                        2. Klik <strong>"Sign in with a different account"</strong> dan login menggunakan <strong>akun Gmail pribadi Anda (@gmail.com)</strong>.<br>
-                                        3. Klik <strong>"Create API Key"</strong> lalu salin kunci yang didapat (diawali <code>AIza...</code>).<br>
-                                        4. Tempelkan kunci tersebut pada kolom <strong>Gemini API Key</strong> di bawah ini.
-                                    </div>
+                                    <h6 class="font-weight-bold text-success mb-2"><i class="fas fa-check-circle mr-1"></i> Pengaturan Google Gemini</h6>
+
+                                    <?php if (!empty($ai_cfg['is_system_key'])): ?>
+                                        <div class="alert alert-success small mb-3">
+                                            <i class="fas fa-check-circle mr-1"></i> <strong>Kunci server madrasah AKTIF.</strong>
+                                            Generate soal langsung bisa dipakai.
+                                        </div>
+                                    <?php endif; ?>
 
                                     <div class="row">
-                                        <div class="col-md-6 form-group">
-                                            <label class="small font-weight-bold mb-1">Email Resmi Kemenag / Google Workspace:</label>
-                                            <input type="email" name="ai_gemini_email" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_email'] ?? '') ?>" placeholder="nama@kemenag.go.id / nama@madrasah.id">
-                                            <small class="text-muted d-block mt-1">Identitas akun guru madrasah terdaftar.</small>
-                                        </div>
-                                        <div class="col-md-6 form-group">
+                                        <div class="col-md-12 form-group">
                                             <label class="small font-weight-bold mb-1">Gemini API Key: <span class="text-danger">*</span></label>
-                                            <input type="password" name="ai_gemini_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_key']) ?>" placeholder="AIzaSy...">
-                                            <small class="text-muted d-block mt-1">Dapatkan gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio &raquo;</a> (login memakai <strong>Gmail pribadi</strong>).</small>
+                                            <input type="password" name="ai_gemini_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_key_pribadi'] ?? '') ?>" placeholder="AIzaSy..." autocomplete="new-password">
                                         </div>
                                     </div>
                                 </div>

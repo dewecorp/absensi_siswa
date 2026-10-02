@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
 require_once '../config/learning_schema.php';
@@ -16,6 +16,8 @@ $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
+
+$upload_dir = guru_upload_dir($pdo, $guru_id, 'bank_soal');
 
 $message = null;
 
@@ -226,11 +228,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $created_at = $tanggal_upload . ' ' . date('H:i:s');
 
-        // Cek file upload
+        // Cek file upload: simpan file asli agar preview bisa tampil format asli,
+        // sekaligus parse isinya bila memungkinkan.
         $has_file = !empty($_FILES['file_soal']) && (int)$_FILES['file_soal']['error'] === UPLOAD_ERR_OK;
         $file_items = [];
+        $file_link = null;
+        $file_err = '';
         if ($has_file) {
-            $file_items = parse_uploaded_soal_file((string)$_FILES['file_soal']['tmp_name'], (string)$_FILES['file_soal']['name']);
+            $orig_name = (string)$_FILES['file_soal']['name'];
+            $ext = strtolower(pathinfo($orig_name, PATHINFO_EXTENSION));
+            $allow_ext = ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'txt'];
+            $max_size = 5 * 1024 * 1024;
+            if (!in_array($ext, $allow_ext, true)) {
+                $file_err = 'Format file harus .doc, .docx, .pdf, .xls, .xlsx, atau .txt.';
+                $has_file = false;
+            } elseif ((int)$_FILES['file_soal']['size'] > $max_size) {
+                $file_err = 'Ukuran file maksimal 5 MB.';
+                $has_file = false;
+            } else {
+                $filename = 'soal_' . date('Ymd_His') . '_' . substr(uniqid(), -6) . '.' . $ext;
+                if (move_uploaded_file((string)$_FILES['file_soal']['tmp_name'], $upload_dir . $filename)) {
+                    $file_link = guru_folder_name($pdo, $guru_id) . '/' . $filename;
+                    $file_items = parse_uploaded_soal_file($upload_dir . $filename, $orig_name);
+                } else {
+                    $file_err = 'Gagal menyimpan file upload.';
+                    $has_file = false;
+                }
+            }
         }
 
         if ($topik === '') {
@@ -243,25 +267,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         INSERT INTO tb_bank_soal (
                             id_guru, kode_soal, kode_paket, jenis_soal, id_mapel, id_kelas,
                             jenis_asesmen, topik, pertanyaan, pilihan_jawaban, jawaban_benar, pembahasan,
-                            level_kognitif, tingkat_kesulitan, bobot, status, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Sedang', 1.0, 'Aktif', ?)
+                            level_kognitif, tingkat_kesulitan, bobot, status, created_at, file_soal
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Sedang', 1.0, 'Aktif', ?, ?)
                     ");
 
-                    if (!empty($file_items)) {
-                        foreach ($file_items as $item) {
+                    if ($has_file) {
+                        // Paket dari file upload: simpan hasil parse bila ada,
+                        // minimal 1 baris penanda agar paket tercatat + file asli tersimpan.
+                        $rows_to_save = $file_items;
+                        if (empty($rows_to_save)) {
+                            $rows_to_save = [[
+                                'bentuk' => 'Pilihan Ganda', 'level' => 'L2',
+                                'pertanyaan' => 'Soal tersimpan dalam format file asli. Buka preview untuk melihat file.',
+                                'opsi' => [], 'kunci' => '', 'pembahasan' => '',
+                            ]];
+                        }
+                        foreach ($rows_to_save as $item) {
                             $kode_soal = 'SOAL-' . strtoupper(substr(uniqid(), -6));
                             $opsi_json = (!empty($item['opsi']['A']) || !empty($item['opsi']['B'])) ? json_encode($item['opsi'], JSON_UNESCAPED_UNICODE) : null;
                             $stmtIns->execute([
                                 $guru_id, $kode_soal, $kode_paket_new,
                                 $item['bentuk'] ?? 'Pilihan Ganda', $id_mapel, $id_kelas,
                                 $jenis_asesmen, $topik, $item['pertanyaan'],
-                                $opsi_json, ($item['kunci'] !== '' ? $item['kunci'] : null),
-                                ($item['pembahasan'] !== '' ? $item['pembahasan'] : null),
-                                $item['level'] ?? 'L2', $created_at
+                                $opsi_json, (($item['kunci'] ?? '') !== '' ? $item['kunci'] : null),
+                                (($item['pembahasan'] ?? '') !== '' ? $item['pembahasan'] : null),
+                                $item['level'] ?? 'L2', $created_at, $file_link
                             ]);
                         }
                         $total_saved = count($file_items);
-                        $message = ['type' => 'success', 'text' => "Paket soal berhasil ditambahkan dari file ($total_saved butir soal)."];
+                        $message = ['type' => 'success', 'text' => $total_saved > 0
+                            ? "Paket soal berhasil ditambahkan dari file ($total_saved butir soal)."
+                            : 'File soal berhasil diupload. Preview menampilkan format file asli.'];
                     } else {
                         for ($i = 1; $i <= $jumlah_soal; $i++) {
                             $kode_soal = 'SOAL-' . strtoupper(substr(uniqid(), -6));
@@ -271,10 +307,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'Pilihan Ganda', $id_mapel, $id_kelas,
                                 $jenis_asesmen, $topik, $pertanyaan,
                                 null, null, null,
-                                'L2', $created_at
+                                'L2', $created_at, null
                             ]);
                         }
-                        $message = ['type' => 'success', 'text' => 'Paket soal berhasil ditambahkan (' . $jumlah_soal . ' butir).'];
+                        $message = $file_err !== ''
+                            ? ['type' => 'warning', 'text' => $file_err . ' Paket kosong tetap dibuat, silakan edit dan upload ulang file yang valid.']
+                            : ['type' => 'success', 'text' => 'Paket soal berhasil ditambahkan (' . $jumlah_soal . ' butir).'];
                     }
                 } else {
                     // Update metadata paket
@@ -292,30 +330,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $kode_paket, $guru_id
                     ]);
 
-                    if (!empty($file_items)) {
-                        // Jika ada file baru diupload saat edit, ganti butir soal
+                    if ($has_file) {
+                        // Jika ada file baru diupload saat edit, ganti butir soal + file lama dihapus
+                        $old_files = $pdo->prepare("SELECT DISTINCT file_soal FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ? AND file_soal IS NOT NULL AND file_soal != ''");
+                        $old_files->execute([$kode_paket, $guru_id]);
+                        foreach ($old_files->fetchAll(PDO::FETCH_COLUMN) as $of) {
+                            @unlink(dirname(__DIR__) . '/uploads/bank_soal/' . ltrim(str_replace('\\', '/', (string)$of), '/'));
+                        }
                         $pdo->prepare("DELETE FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ?")->execute([$kode_paket, $guru_id]);
                         $stmtIns = $pdo->prepare("
                             INSERT INTO tb_bank_soal (
                                 id_guru, kode_soal, kode_paket, jenis_soal, id_mapel, id_kelas,
                                 jenis_asesmen, topik, pertanyaan, pilihan_jawaban, jawaban_benar, pembahasan,
-                                level_kognitif, tingkat_kesulitan, bobot, status, created_at
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Sedang', 1.0, 'Aktif', ?)
+                                level_kognitif, tingkat_kesulitan, bobot, status, created_at, file_soal
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Sedang', 1.0, 'Aktif', ?, ?)
                         ");
-                        foreach ($file_items as $item) {
+                        $rows_to_save = $file_items;
+                        if (empty($rows_to_save)) {
+                            $rows_to_save = [[
+                                'bentuk' => 'Pilihan Ganda', 'level' => 'L2',
+                                'pertanyaan' => 'Soal tersimpan dalam format file asli. Buka preview untuk melihat file.',
+                                'opsi' => [], 'kunci' => '', 'pembahasan' => '',
+                            ]];
+                        }
+                        foreach ($rows_to_save as $item) {
                             $kode_soal = 'SOAL-' . strtoupper(substr(uniqid(), -6));
                             $opsi_json = (!empty($item['opsi']['A']) || !empty($item['opsi']['B'])) ? json_encode($item['opsi'], JSON_UNESCAPED_UNICODE) : null;
                             $stmtIns->execute([
                                 $guru_id, $kode_soal, $kode_paket,
                                 $item['bentuk'] ?? 'Pilihan Ganda', $id_mapel, $id_kelas,
                                 $jenis_asesmen, $topik, $item['pertanyaan'],
-                                $opsi_json, ($item['kunci'] !== '' ? $item['kunci'] : null),
-                                ($item['pembahasan'] !== '' ? $item['pembahasan'] : null),
-                                $item['level'] ?? 'L2', $created_at
+                                $opsi_json, (($item['kunci'] ?? '') !== '' ? $item['kunci'] : null),
+                                (($item['pembahasan'] ?? '') !== '' ? $item['pembahasan'] : null),
+                                $item['level'] ?? 'L2', $created_at, $file_link
                             ]);
                         }
                         $total_saved = count($file_items);
-                        $message = ['type' => 'success', 'text' => "Paket soal berhasil diperbarui dengan file baru ($total_saved butir soal)."];
+                        $message = ['type' => 'success', 'text' => $total_saved > 0
+                            ? "Paket soal berhasil diperbarui dengan file baru ($total_saved butir soal)."
+                            : 'File soal berhasil diperbarui. Preview menampilkan format file asli.'];
                     } else {
                         // Sesuaikan jumlah butir jika berubah secara manual
                         $stmtCnt = $pdo->prepare("SELECT COUNT(*) FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ?");
@@ -374,6 +427,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $kode_paket_del = trim((string)($_POST['kode_paket'] ?? ''));
         if ($kode_paket_del !== '') {
             try {
+                $del_files = $pdo->prepare("SELECT DISTINCT file_soal FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ? AND file_soal IS NOT NULL AND file_soal != ''");
+                $del_files->execute([$kode_paket_del, $guru_id]);
+                foreach ($del_files->fetchAll(PDO::FETCH_COLUMN) as $df) {
+                    @unlink(dirname(__DIR__) . '/uploads/bank_soal/' . ltrim(str_replace('\\', '/', (string)$df), '/'));
+                }
                 $stmt = $pdo->prepare("DELETE FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ?");
                 $stmt->execute([$kode_paket_del, $guru_id]);
                 $message = ['type' => 'success', 'text' => 'Paket soal berhasil dihapus.'];
@@ -432,6 +490,7 @@ $stmt = $pdo->prepare("
            MIN(b.semester) AS semester,
            MIN(b.status) AS status,
            COUNT(*) AS jumlah_butir,
+           MAX(b.file_soal) AS file_soal,
            MAX(b.created_at) AS created_at
     FROM tb_bank_soal b
     LEFT JOIN tb_mata_pelajaran m ON m.id_mapel = b.id_mapel
@@ -442,6 +501,39 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute($params);
 $paket_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Tambahan hitungan: tiap baris pasangan pada tabel Menjodohkan dihitung 1 butir.
+// (1 baris soal Menjodohkan berisi N baris pasangan => tambah N-1 ke jumlah butir.)
+$extra_butir = [];
+try {
+    $stM = $pdo->prepare("
+        SELECT kode_paket, pertanyaan, pilihan_jawaban
+        FROM tb_bank_soal
+        WHERE id_guru = ? AND jenis_soal = 'Menjodohkan'
+          AND kode_paket IS NOT NULL AND kode_paket != ''
+    ");
+    $stM->execute([$guru_id]);
+    foreach ($stM->fetchAll(PDO::FETCH_ASSOC) as $mr) {
+        $n_baris = 0;
+        if (!empty($mr['pilihan_jawaban'])) {
+            $pj = json_decode((string)$mr['pilihan_jawaban'], true);
+            if (is_array($pj) && (isset($pj[0]['no']) || isset($pj[0]['kiri']))) {
+                $n_baris = count($pj);
+            }
+        }
+        if ($n_baris === 0) {
+            // Fallback: hitung baris pola "1. ... | A. ..." pada teks pertanyaan
+            $n_baris = preg_match_all('/^\s*\d+[\.\)]\s*[^|\n]+\|/mu', (string)($mr['pertanyaan'] ?? ''), $mm);
+            if (!$n_baris) {
+                $n_baris = preg_match_all('/(?:^|\s+)\d+[\.\)]\s*[^|]+?\|\s*[A-Za-z][\.\)]/u', (string)($mr['pertanyaan'] ?? ''), $mm);
+            }
+        }
+        if ($n_baris > 1) {
+            $kp = (string)$mr['kode_paket'];
+            $extra_butir[$kp] = ($extra_butir[$kp] ?? 0) + ($n_baris - 1);
+        }
+    }
+} catch (Throwable $e) { /* abaikan, tampilkan hitungan dasar */ }
 
 $page_title = 'Daftar Bank Soal';
 $css_libs = [
@@ -456,7 +548,7 @@ $js_page = [<<<'JS'
 $(document).ready(function() {
     if ($('#table-paket').length) {
         $('#table-paket').DataTable({
-            'order': [[0, 'desc']],
+            'order': [[0, 'asc']],
             'columnDefs': [{ 'sortable': false, 'targets': [8] }],
             'language': {
                 'lengthMenu': 'Tampilkan _MENU_ entri',
@@ -483,11 +575,32 @@ $(document).ready(function() {
         $('#modalSoal').modal('show');
     });
 
+    // Validasi ukuran file SEBELUM submit (server menolak >5MB; file lebih besar
+    // membuat $_FILES kosong sehingga upload gagal diam-diam)
+    $('#formSoal').on('submit', function(e) {
+        var fi = $('#inp_file_soal')[0];
+        if (fi && fi.files && fi.files.length) {
+            var f = fi.files[0];
+            var allow = ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'txt'];
+            var ext = (f.name.split('.').pop() || '').toLowerCase();
+            if (allow.indexOf(ext) === -1) {
+                e.preventDefault();
+                Swal.fire({ icon: 'error', title: 'Format ditolak', text: 'Format file harus .doc, .docx, .pdf, .xls, .xlsx, atau .txt.' });
+                return false;
+            }
+            if (f.size > 5 * 1024 * 1024) {
+                e.preventDefault();
+                Swal.fire({ icon: 'error', title: 'File terlalu besar', text: 'Ukuran file maksimal 5 MB. Kecilkan/kompres dulu file PDF-nya, lalu upload ulang.' });
+                return false;
+            }
+        }
+    });
+
     $(document).on('click', '.btn-edit-paket', function() {
         var data = $(this).data('json');
         $('#formSoalAction').val('edit');
         $('#inp_kode_paket').val(data.kode_paket);
-        $('#modalSoalTitle').text('Edit Soal — ' + data.kode_paket);
+        $('#modalSoalTitle').text('Edit Soal â€” ' + data.kode_paket);
         $('#inp_asesmen').val(data.jenis_asesmen || '');
         $('#inp_mapel').val(data.id_mapel || '');
         $('#inp_kelas').val(data.id_kelas || '');
@@ -496,138 +609,6 @@ $(document).ready(function() {
         $('#inp_tanggal_upload').val(data.created_at ? data.created_at.substring(0, 10) : new Date().toISOString().substring(0, 10));
         $('#modalSoal').modal('show');
     });
-
-    var currentPreviewData = null;
-
-    // Preview Paket
-    $(document).on('click', '.btn-preview-paket', function() {
-        var kode = $(this).data('kode');
-        var $body = $('#paketPreviewBody');
-        $body.html('<tr><td colspan="7" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat...</td></tr>');
-        currentPreviewData = null;
-        $('#modalPaketPreview').modal('show');
-        $.getJSON('ajax_generate_soal.php?aksi=detail_paket&kode_paket=' + encodeURIComponent(kode), function(res) {
-            if (!res.ok) {
-                $body.html('<tr><td colspan="7" class="text-center text-danger">' + (res.msg || 'Gagal memuat.') + '</td></tr>');
-                return;
-            }
-            currentPreviewData = res;
-            $('#paketPreviewTitle').text((res.jenis_asesmen || 'Paket') + ' — ' + (res.topik || ''));
-
-            // Tampilkan Kisi-Kisi
-            if (res.kisi_kisi && res.kisi_kisi.length) {
-                var kHtml = '';
-                $.each(res.kisi_kisi, function(i, k) {
-                    kHtml += '<tr>'
-                        + '<td class="text-center">' + (k.no || (i+1)) + '</td>'
-                        + '<td><span class="badge badge-light border">' + $('<span>').text(k.bentuk || '').html() + '</span></td>'
-                        + '<td>' + $('<span>').text(k.materi || '-').html() + '</td>'
-                        + '<td>' + $('<span>').text(k.cp || '-').html() + '</td>'
-                        + '<td>' + $('<span>').text(k.tp || '-').html() + '</td>'
-                        + '<td>' + $('<span>').text(k.indikator || '-').html() + '</td>'
-                        + '<td class="text-center"><span class="badge badge-info">' + $('<span>').text(k.level_kognitif || 'L2').html() + '</span></td>'
-                        + '<td class="text-center">' + $('<span>').text(k.kesulitan || '-').html() + '</td>'
-                        + '<td class="text-center">' + (k.bobot || 1) + '</td>'
-                        + '</tr>';
-                });
-                $('#paketPreviewKisiBody').html(kHtml);
-                $('#wrapModalKisi').show();
-            } else {
-                $('#wrapModalKisi').hide();
-            }
-
-            // Tampilkan Soal
-            var html = '';
-            $.each(res.items, function(i, it) {
-                var opsiTxt = '';
-                if (it.bentuk === 'Menjodohkan' && it.tabel && it.tabel.length) {
-                    var tblHtml = '<div class="table-responsive"><table class="table table-bordered table-sm mb-0 small" style="font-size:11px;"><thead><tr class="bg-light"><th width="8%" class="text-center">No</th><th>Soal</th><th width="10%" class="text-center">Huruf</th><th>Pilihan Jawaban</th></tr></thead><tbody>';
-                    $.each(it.tabel, function(_, tr) {
-                        tblHtml += '<tr><td class="text-center">' + (tr.no || '') + '</td><td>' + $('<span>').text(tr.kiri || '').html() + '</td><td class="text-center font-weight-bold">' + $('<span>').text(tr.huruf || '').html() + '</td><td>' + $('<span>').text(tr.kanan || '').html() + '</td></tr>';
-                    });
-                    tblHtml += '</tbody></table></div>';
-                    opsiTxt = tblHtml;
-                } else if (it.opsi && typeof it.opsi === 'object') {
-                    var parts = [];
-                    $.each(['A','B','C','D'], function(_, k) {
-                        if (it.opsi[k]) parts.push(k + '. ' + it.opsi[k]);
-                    });
-                    opsiTxt = parts.join(' | ');
-                }
-                html += '<tr>'
-                    + '<td class="text-center">' + (i+1) + '</td>'
-                    + '<td><span class="badge badge-light border">' + $('<span>').text(it.bentuk).html() + '</span></td>'
-                    + '<td>' + $('<span>').text(it.level_kognitif).html() + '</td>'
-                    + '<td style="white-space:pre-wrap;max-width:300px;">' + $('<span>').text(it.pertanyaan).html() + '</td>'
-                    + '<td>' + (it.bentuk === 'Menjodohkan' ? opsiTxt : $('<span>').text(opsiTxt).html()) + '</td>'
-                    + '<td><b>' + $('<span>').text(it.kunci || '-').html() + '</b></td>'
-                    + '<td>' + $('<span>').text(it.pembahasan || '-').html() + '</td>'
-                    + '</tr>';
-            });
-            $body.html(html);
-        }).fail(function() {
-            $body.html('<tr><td colspan="7" class="text-center text-danger">Error koneksi.</td></tr>');
-        });
-    });
-
-    function unduhBlobDariModal(format) {
-        if (!currentPreviewData || !currentPreviewData.items || !currentPreviewData.items.length) {
-            Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Data soal belum selesai dimuat.' });
-            return;
-        }
-        var btn = format === 'pdf' ? $('#btnUnduhModalPDF') : (format === 'docx' ? $('#btnUnduhModalDOCX') : $('#btnUnduhModalXLSX'));
-        var origHtml = btn.html();
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Mengunduh...');
-
-        var payload = {
-            aksi: 'unduh',
-            format: format,
-            jenis_asesmen: currentPreviewData.jenis_asesmen || '',
-            kurikulum: currentPreviewData.kurikulum || 'PERMENDIKDASMEN_046',
-            mapel: currentPreviewData.mapel || '',
-            kelas: currentPreviewData.kelas || '',
-            semester: currentPreviewData.semester || '',
-            topik: currentPreviewData.topik || '',
-            kisi_kisi: currentPreviewData.kisi_kisi || [],
-            items: currentPreviewData.items
-        };
-
-        fetch('ajax_generate_soal.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(function(res) {
-            var cType = res.headers.get('content-type') || '';
-            if (cType.indexOf('application/json') !== -1) {
-                return res.json().then(function(j) { throw new Error(j.msg || 'Gagal mengunduh file.'); });
-            }
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            var disp = res.headers.get('content-disposition') || '';
-            var m = /filename="?([^";]+)"?/i.exec(disp);
-            var fname = m ? m[1] : ('soal_' + (currentPreviewData.topik || 'paket') + '.' + (format === 'xlsx' ? 'xlsx' : (format === 'docx' ? 'docx' : 'pdf')));
-            return res.blob().then(function(b) { return { blob: b, fname: fname }; });
-        })
-        .then(function(o) {
-            var a = document.createElement('a');
-            a.href = URL.createObjectURL(o.blob);
-            a.download = o.fname;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
-        })
-        .catch(function(err) {
-            Swal.fire({ icon: 'error', title: 'Gagal Unduh', text: err.message || 'Terjadi kesalahan saat mengunduh.' });
-        })
-        .finally(function() {
-            btn.prop('disabled', false).html(origHtml);
-        });
-    }
-
-    $(document).on('click', '#btnUnduhModalPDF', function() { unduhBlobDariModal('pdf'); });
-    $(document).on('click', '#btnUnduhModalDOCX', function() { unduhBlobDariModal('docx'); });
-    $(document).on('click', '#btnUnduhModalXLSX', function() { unduhBlobDariModal('xlsx'); });
 
     // Hapus Paket
     $(document).on('click', '.btn-hapus-paket', function() {
@@ -753,18 +734,18 @@ include '../templates/sidebar.php';
                                 <?php foreach ($paket_rows as $i => $p): ?>
                                     <tr>
                                         <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><strong><?= htmlspecialchars($p['kode_paket']) ?></strong></td>
+                                        <td><strong><?= htmlspecialchars($p['kode_paket']) ?></strong><?php if (!empty($p['file_soal'])): ?><br><span class="badge badge-info mt-1" title="Paket memiliki file soal asli: <?= htmlspecialchars(basename((string)$p['file_soal'])) ?>"><i class="fas fa-paperclip mr-1"></i><?= strtoupper(htmlspecialchars(pathinfo((string)$p['file_soal'], PATHINFO_EXTENSION))) ?> ASLI</span><?php endif; ?></td>
                                         <td><span class="badge badge-light border"><?= htmlspecialchars($p['jenis_asesmen'] ?? '-') ?></span></td>
                                         <td><?= htmlspecialchars($p['nama_mapel'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($p['nama_kelas'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($p['topik'] ?? '-') ?></td>
-                                        <td class="text-center"><span class="badge badge-primary"><?= (int)$p['jumlah_butir'] ?></span></td>
+                                        <td class="text-center"><span class="badge badge-primary"><?= (int)$p['jumlah_butir'] + (int)($extra_butir[$p['kode_paket']] ?? 0) ?></span></td>
                                         <td><?= htmlspecialchars(substr($p['created_at'] ?? '', 0, 10)) ?></td>
                                         <td class="text-center text-nowrap" style="white-space: nowrap;">
                                             <div class="d-inline-flex align-items-center" style="gap: 4px;">
-                                                <button type="button" class="btn btn-info btn-sm btn-preview-paket" data-kode="<?= htmlspecialchars($p['kode_paket'], ENT_QUOTES) ?>" title="Preview & Unduh">
-                                                    <i class="fas fa-eye mr-1"></i> Preview & Unduh
-                                                </button>
+                                            <a href="preview_bank_soal.php?kode_paket=<?= urlencode($p['kode_paket']) ?><?= $session_q ? '&' . ltrim($session_q, '?') : '' ?>" target="_blank" class="btn btn-info btn-sm" title="Pratinjau di laman penuh">
+                                                <i class="fas fa-eye mr-1"></i> Preview
+                                            </a>
                                                 <button type="button" class="btn btn-warning btn-sm btn-edit-paket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -857,101 +838,5 @@ include '../templates/sidebar.php';
     <input type="hidden" name="action" value="hapus_paket">
     <input type="hidden" name="kode_paket" id="formHapusPaketKode">
 </form>
-
-<!-- Modal Preview Paket -->
-<div class="modal fade" id="modalPaketPreview" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-box mr-2"></i><span id="paketPreviewTitle">Preview Paket</span></h5>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 p-3 bg-light rounded border">
-                    <div>
-                        <span class="font-weight-bold mr-2"><i class="fas fa-download mr-1 text-primary"></i> Unduh Soal:</span>
-                        <small class="text-muted">Pilih format file yang ingin diunduh</small>
-                    </div>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-danger btn-sm" id="btnUnduhModalPDF">
-                            <i class="fas fa-file-pdf mr-1"></i> Unduh PDF
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnUnduhModalDOCX">
-                            <i class="fas fa-file-word mr-1"></i> Unduh Word (.docx)
-                        </button>
-                        <button type="button" class="btn btn-success btn-sm" id="btnUnduhModalXLSX">
-                            <i class="fas fa-file-excel mr-1"></i> Unduh Excel (.xlsx)
-                        </button>
-                    </div>
-                </div>
-                <div class="card mb-3" id="wrapModalKisi" style="display:none;">
-                    <div class="card-header bg-light py-2">
-                        <h6 class="mb-0 font-weight-bold text-primary"><i class="fas fa-th-list mr-1"></i> Kisi-Kisi Paket Soal</h6>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered mb-0">
-                                <thead>
-                                    <tr class="bg-light">
-                                        <th width="4%" class="text-center">No</th>
-                                        <th>Bentuk</th>
-                                        <th>Materi</th>
-                                        <th>CP</th>
-                                        <th>TP</th>
-                                        <th>Indikator</th>
-                                        <th width="7%" class="text-center">Level</th>
-                                        <th width="8%" class="text-center">Kesulitan</th>
-                                        <th width="6%" class="text-center">Bobot</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="paketPreviewKisiBody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header bg-light py-2">
-                        <h6 class="mb-0 font-weight-bold text-dark"><i class="fas fa-list-ol mr-1"></i> Daftar Butir Soal</h6>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-sm mb-0">
-                                <thead>
-                                    <tr class="bg-light">
-                                        <th width="4%" class="text-center">No</th>
-                                        <th width="12%">Bentuk</th>
-                                        <th width="7%" class="text-center">Level</th>
-                                        <th>Pertanyaan</th>
-                                        <th>Opsi / Tabel</th>
-                                        <th width="10%">Kunci</th>
-                                        <th>Pembahasan</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="paketPreviewBody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer d-flex justify-content-between">
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="$('#btnUnduhModalPDF').click();">
-                        <i class="fas fa-file-pdf mr-1"></i> PDF
-                    </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="$('#btnUnduhModalDOCX').click();">
-                        <i class="fas fa-file-word mr-1"></i> Word (.docx)
-                    </button>
-                    <button type="button" class="btn btn-outline-success btn-sm" onclick="$('#btnUnduhModalXLSX').click();">
-                        <i class="fas fa-file-excel mr-1"></i> Excel (.xlsx)
-                    </button>
-                </div>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <?php include '../templates/footer.php'; ?>
