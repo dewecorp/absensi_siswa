@@ -2,8 +2,10 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 require_once '../config/learning_schema.php';
+require_once '../config/ai_helper.php';
 
 ensure_learning_schema($pdo);
+ai_helper_schema($pdo);
 
 if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
@@ -24,11 +26,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
         $kode_soal = trim((string)($_POST['kode_soal'] ?? ''));
+        $allowed_jenis = ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'];
         $jenis_soal = trim((string)($_POST['jenis_soal'] ?? 'Pilihan Ganda'));
+        if (!in_array($jenis_soal, $allowed_jenis, true)) {
+            $jenis_soal = 'Pilihan Ganda';
+        }
         $id_mapel = (int)($_POST['id_mapel'] ?? 0) ?: null;
         $id_kelas = (int)($_POST['id_kelas'] ?? 0) ?: null;
+        $kurikulum = in_array($_POST['kurikulum'] ?? '', ['PERMENDIKDASMEN_046', 'KMA_1503_KBC'], true) ? $_POST['kurikulum'] : 'PERMENDIKDASMEN_046';
+        $semester = trim((string)($_POST['semester'] ?? ''));
+        if ($semester !== '' && !in_array($semester, ['Semester 1', 'Semester 2'], true)) {
+            $semester = mb_substr($semester, 0, 20);
+        }
+        $jenis_asesmen = trim((string)($_POST['jenis_asesmen'] ?? ''));
+        if (!in_array($jenis_asesmen, ai_asesmen_list(), true)) {
+            $jenis_asesmen = '';
+        }
+        $topik = trim((string)($_POST['topik'] ?? ''));
+        $sub_topik = trim((string)($_POST['sub_topik'] ?? ''));
         $materi_tp = trim((string)($_POST['materi_tp'] ?? ''));
         $indikator = trim((string)($_POST['indikator'] ?? ''));
+        $level_kognitif = strtoupper(trim((string)($_POST['level_kognitif'] ?? 'L2')));
+        if (!in_array($level_kognitif, ['L1', 'L2', 'L3', 'L4'], true)) {
+            $level_kognitif = 'L2';
+        }
         $tingkat_kesulitan = in_array($_POST['tingkat_kesulitan'] ?? '', ['Mudah', 'Sedang', 'Sukar'], true) ? $_POST['tingkat_kesulitan'] : 'Sedang';
         $bobot = (float)($_POST['bobot'] ?? 1.00);
         $pertanyaan = trim((string)($_POST['pertanyaan'] ?? ''));
@@ -36,9 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pembahasan = trim((string)($_POST['pembahasan'] ?? ''));
         $status = in_array($_POST['status'] ?? '', ['Draft', 'Aktif', 'Arsip'], true) ? $_POST['status'] : 'Aktif';
 
-        // Pilihan jawaban JSON (jika pilihan ganda)
+        // Pilihan jawaban JSON (PG biasa + PG kompleks)
         $pilihan_jawaban = null;
-        if ($jenis_soal === 'Pilihan Ganda') {
+        if ($jenis_soal === 'Pilihan Ganda' || $jenis_soal === 'Pilihan Ganda Kompleks') {
             $opsi = [
                 'A' => trim((string)($_POST['opsi_a'] ?? '')),
                 'B' => trim((string)($_POST['opsi_b'] ?? '')),
@@ -55,33 +76,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($pertanyaan === '') {
             $message = ['type' => 'warning', 'text' => 'Pertanyaan soal wajib diisi.'];
+        } elseif ($topik === '') {
+            $message = ['type' => 'warning', 'text' => 'Topik/pokok bahasan wajib diisi.'];
         } else {
             try {
                 if ($action === 'tambah') {
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_bank_soal (
-                            id_guru, kode_soal, jenis_soal, id_mapel, id_kelas, materi_tp,
-                            indikator, tingkat_kesulitan, bobot, pertanyaan, pilihan_jawaban,
+                            id_guru, kode_soal, jenis_soal, id_mapel, id_kelas, kurikulum, semester, jenis_asesmen, topik, sub_topik, materi_tp,
+                            indikator, level_kognitif, tingkat_kesulitan, bobot, pertanyaan, pilihan_jawaban,
                             jawaban_benar, pembahasan, status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([
-                        $guru_id, $kode_soal, $jenis_soal, $id_mapel, $id_kelas, $materi_tp,
-                        $indikator, $tingkat_kesulitan, $bobot, $pertanyaan, $pilihan_jawaban,
+                        $guru_id, $kode_soal, $jenis_soal, $id_mapel, $id_kelas, $kurikulum, ($semester !== '' ? $semester : null), ($jenis_asesmen !== '' ? $jenis_asesmen : null), $topik, ($sub_topik !== '' ? $sub_topik : null), $materi_tp,
+                        $indikator, $level_kognitif, $tingkat_kesulitan, $bobot, $pertanyaan, $pilihan_jawaban,
                         $jawaban_benar, $pembahasan, $status
                     ]);
                     $message = ['type' => 'success', 'text' => 'Soal berhasil disimpan ke Bank Soal.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_bank_soal SET
-                            kode_soal = ?, jenis_soal = ?, id_mapel = ?, id_kelas = ?, materi_tp = ?,
-                            indikator = ?, tingkat_kesulitan = ?, bobot = ?, pertanyaan = ?,
+                            kode_soal = ?, jenis_soal = ?, id_mapel = ?, id_kelas = ?, kurikulum = ?, semester = ?, jenis_asesmen = ?, topik = ?, sub_topik = ?, materi_tp = ?,
+                            indikator = ?, level_kognitif = ?, tingkat_kesulitan = ?, bobot = ?, pertanyaan = ?,
                             pilihan_jawaban = ?, jawaban_benar = ?, pembahasan = ?, status = ?
                         WHERE id = ? AND id_guru = ?
                     ");
                     $stmt->execute([
-                        $kode_soal, $jenis_soal, $id_mapel, $id_kelas, $materi_tp,
-                        $indikator, $tingkat_kesulitan, $bobot, $pertanyaan,
+                        $kode_soal, $jenis_soal, $id_mapel, $id_kelas, $kurikulum, ($semester !== '' ? $semester : null), ($jenis_asesmen !== '' ? $jenis_asesmen : null), $topik, ($sub_topik !== '' ? $sub_topik : null), $materi_tp,
+                        $indikator, $level_kognitif, $tingkat_kesulitan, $bobot, $pertanyaan,
                         $pilihan_jawaban, $jawaban_benar, $pembahasan, $status,
                         $id, $guru_id
                     ]);
@@ -103,11 +126,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Master lists
-$mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+// Master lists (hanya mapel akademik untuk dropdown)
+$mapel_list = getFilteredSubjects($pdo);
 $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
-$jenis_soal_options = ['Pilihan Ganda', 'Uraian', 'Isian Singkat', 'Menjodohkan', 'Benar/Salah'];
+$jenis_soal_options = ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'];
+$kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_1503_KBC' => 'KMA 1503 + KBC'];
 $kesulitan_options = ['Mudah', 'Sedang', 'Sukar'];
+$asesmen_options = ai_asesmen_list();
+$session_q = isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '';
 
 // Filters
 $f_mapel = (int)($_GET['f_mapel'] ?? 0);
@@ -115,6 +141,7 @@ $f_kelas = (int)($_GET['f_kelas'] ?? 0);
 $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
 $f_kesulitan = trim((string)($_GET['f_kesulitan'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
+$f_asesmen = trim((string)($_GET['f_asesmen'] ?? ''));
 
 $where = ["b.id_guru = ?"];
 $params = [$guru_id];
@@ -138,6 +165,10 @@ if ($f_kesulitan !== '') {
 if ($f_status !== '') {
     $where[] = "b.status = ?";
     $params[] = $f_status;
+}
+if ($f_asesmen !== '') {
+    $where[] = "b.jenis_asesmen = ?";
+    $params[] = $f_asesmen;
 }
 
 $where_sql = implode(' AND ', $where);
@@ -168,7 +199,7 @@ $(document).ready(function() {
     if ($('#table-soal').length) {
         $('#table-soal').DataTable({
             'order': [[0, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [10] }],
+            'columnDefs': [{ 'sortable': false, 'targets': [11] }],
             'language': {
                 'lengthMenu': 'Tampilkan _MENU_ entri',
                 'zeroRecords': 'Tidak ada soal ditemukan',
@@ -181,8 +212,13 @@ $(document).ready(function() {
     }
 
     function toggleOpsiPG(jenis) {
-        if (jenis === 'Pilihan Ganda') {
+        if (jenis === 'Pilihan Ganda' || jenis === 'Pilihan Ganda Kompleks') {
             $('#wrapOpsiPG').show();
+            if (jenis === 'Pilihan Ganda Kompleks') {
+                $('#hintOpsiPG').show();
+            } else {
+                $('#hintOpsiPG').hide();
+            }
         } else {
             $('#wrapOpsiPG').hide();
         }
@@ -212,8 +248,14 @@ $(document).ready(function() {
         toggleOpsiPG(data.jenis_soal);
         $('#inp_mapel').val(data.id_mapel || '');
         $('#inp_kelas').val(data.id_kelas || '');
+        $('#inp_kurikulum').val(data.kurikulum || 'PERMENDIKDASMEN_046');
+        $('#inp_semester').val(data.semester || '');
+        $('#inp_asesmen').val(data.jenis_asesmen || '');
+        $('#inp_topik').val(data.topik || '');
+        $('#inp_sub_topik').val(data.sub_topik || '');
         $('#inp_materi_tp').val(data.materi_tp || '');
         $('#inp_indikator').val(data.indikator || '');
+        $('#inp_level').val(data.level_kognitif || 'L2');
         $('#inp_kesulitan').val(data.tingkat_kesulitan);
         $('#inp_bobot').val(data.bobot);
         $('#inp_pertanyaan').val(data.pertanyaan);
@@ -240,9 +282,16 @@ $(document).ready(function() {
         $('#det_jenis').text(data.jenis_soal);
         $('#det_mapel').text(data.nama_mapel || '-');
         $('#det_kelas').text(data.nama_kelas || '-');
+        $('#det_kurikulum').text(data.kurikulum === 'KMA_1503_KBC' ? 'KMA 1503 + KBC' : 'Permendikdasmen CP 046');
+        $('#det_semester').text(data.semester || '-');
+        $('#det_asesmen').text(data.jenis_asesmen || '-');
+        $('#det_topik').text(data.topik || '-');
+        $('#det_sub_topik').text(data.sub_topik || '-');
         $('#det_materi').text(data.materi_tp || '-');
-        $('#det_tp').text(data.materi_tp || '-');
+        $('#det_cp').text(data.cp || '-');
+        $('#det_tp').text(data.tp || '-');
         $('#det_indikator').text(data.indikator || '-');
+        $('#det_level').html('<span class="badge badge-info">' + $('<div>').text(data.level_kognitif || 'L2').html() + '</span>');
         $('#det_kesulitan').html('<span class="badge badge-' + (data.tingkat_kesulitan === 'Mudah' ? 'success' : (data.tingkat_kesulitan === 'Sedang' ? 'warning' : 'danger')) + '">' + data.tingkat_kesulitan + '</span>');
         $('#det_bobot').text(data.bobot);
         $('#det_pertanyaan').text(data.pertanyaan);
@@ -251,7 +300,7 @@ $(document).ready(function() {
         $('#det_pembuat').text(data.nama_guru || '-');
         $('#det_created').text(data.created_at || '-');
 
-        if (data.jenis_soal === 'Pilihan Ganda' && data.pilihan_jawaban) {
+        if ((data.jenis_soal === 'Pilihan Ganda' || data.jenis_soal === 'Pilihan Ganda Kompleks') && data.pilihan_jawaban) {
             try {
                 var ops = JSON.parse(data.pilihan_jawaban);
                 var htmlOps = '<ul class="pl-3 mb-0">';
@@ -292,6 +341,8 @@ $(document).ready(function() {
 });
 JS
 ];
+
+
 
 if (!empty($message)) {
     $js_page[] = "Swal.fire({ icon: '" . ($message['type'] === 'danger' ? 'error' : $message['type']) . "', title: '" . ($message['type'] === 'success' ? 'Berhasil' : 'Perhatian') . "', text: " . json_encode($message['text']) . ", timer: 2200, showConfirmButton: false });";
@@ -352,7 +403,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-2 mb-2">
                             <label class="small font-weight-bold">Status</label>
                             <select name="f_status" class="form-control form-control-sm">
                                 <option value="">-- Semua Status --</option>
@@ -361,9 +412,18 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="small font-weight-bold">Jenis Asesmen</label>
+                            <select name="f_asesmen" class="form-control form-control-sm">
+                                <option value="">-- Semua Asesmen --</option>
+                                <?php foreach ($asesmen_options as $a): ?>
+                                    <option value="<?= htmlspecialchars($a) ?>" <?= $f_asesmen === $a ? 'selected' : '' ?>><?= htmlspecialchars($a) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                         <div class="col-12 mt-2 d-flex">
                             <button type="submit" class="btn btn-primary btn-sm mr-2"><i class="fas fa-search"></i> Terapkan Filter</button>
-                            <a href="bank_soal.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                            <a href="bank_soal.php<?= $session_q ?>" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
                         </div>
                     </form>
                 </div>
@@ -373,9 +433,14 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Koleksi Butir Soal</h4>
-                    <button type="button" class="btn btn-primary" id="btnTambahSoal">
-                        <i class="fas fa-plus mr-1"></i> Tambah Soal
-                    </button>
+                    <div>
+                        <a href="generate_soal.php<?= $session_q ?>" class="btn btn-success mr-2">
+                            <i class="fas fa-robot mr-1"></i> Generate AI
+                        </a>
+                        <button type="button" class="btn btn-primary" id="btnTambahSoal">
+                            <i class="fas fa-plus mr-1"></i> Tambah Soal
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -388,7 +453,8 @@ include '../templates/sidebar.php';
                                     <th>Jenis Soal</th>
                                     <th>Mata Pelajaran</th>
                                     <th>Kelas</th>
-                                    <th>Materi/TP</th>
+                                    <th>Asesmen</th>
+                                    <th>Topik</th>
                                     <th>Tingkat Kesulitan</th>
                                     <th>Bobot</th>
                                     <th>Status</th>
@@ -419,7 +485,8 @@ include '../templates/sidebar.php';
                                         <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis_soal']) ?></span></td>
                                         <td><?= htmlspecialchars($r['nama_mapel'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['materi_tp'] ?? '-') ?></td>
+                                        <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis_asesmen'] ?? '-') ?></span></td>
+                                        <td><?= htmlspecialchars($r['topik'] ?? ($r['materi_tp'] ?? '-')) ?></td>
                                         <td class="text-center">
                                             <span class="badge badge-<?= $diff_badge ?>"><?= htmlspecialchars($r['tingkat_kesulitan']) ?></span>
                                         </td>
@@ -474,12 +541,21 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-2 form-group">
                             <label>Tingkat Kesulitan</label>
                             <select name="tingkat_kesulitan" id="inp_kesulitan" class="form-control">
                                 <option value="Mudah">Mudah</option>
                                 <option value="Sedang" selected>Sedang</option>
                                 <option value="Sukar">Sukar</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 form-group">
+                            <label>Level Kognitif</label>
+                            <select name="level_kognitif" id="inp_level" class="form-control">
+                                <option value="L1">L1 (C1)</option>
+                                <option value="L2" selected>L2 (C2)</option>
+                                <option value="L3">L3 (C3-C4)</option>
+                                <option value="L4">L4 (C5-C6)</option>
                             </select>
                         </div>
                         <div class="col-md-4 form-group">
@@ -512,11 +588,44 @@ include '../templates/sidebar.php';
                                 <option value="Arsip">Arsip</option>
                             </select>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label>Materi / TP</label>
+                        <div class="col-md-4 form-group">
+                            <label>Kurikulum</label>
+                            <select name="kurikulum" id="inp_kurikulum" class="form-control">
+                                <?php foreach ($kurikulum_options as $val => $label): ?>
+                                    <option value="<?= $val ?>"><?= $label ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Semester</label>
+                            <select name="semester" id="inp_semester" class="form-control">
+                                <option value="">-- Pilih Semester --</option>
+                                <option value="Semester 1">Semester 1 (Ganjil)</option>
+                                <option value="Semester 2">Semester 2 (Genap)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Jenis Asesmen</label>
+                            <select name="jenis_asesmen" id="inp_asesmen" class="form-control">
+                                <option value="">-- Pilih Asesmen --</option>
+                                <?php foreach ($asesmen_options as $a): ?>
+                                    <option value="<?= htmlspecialchars($a) ?>"><?= htmlspecialchars($a) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Topik / Pokok Bahasan <span class="text-danger">*</span></label>
+                            <input type="text" name="topik" id="inp_topik" class="form-control" required placeholder="Contoh: Metamorfosis Kupu-kupu">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Sub Topik <span class="text-muted">(opsional)</span></label>
+                            <input type="text" name="sub_topik" id="inp_sub_topik" class="form-control" placeholder="Contoh: Tahapan pupa">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Materi <span class="text-muted">(opsional)</span></label>
                             <input type="text" name="materi_tp" id="inp_materi_tp" class="form-control" placeholder="Contoh: Metamorfosis">
                         </div>
-                        <div class="col-md-6 form-group">
+                        <div class="col-md-12 form-group">
                             <label>Indikator Soal</label>
                             <input type="text" name="indikator" id="inp_indikator" class="form-control" placeholder="Contoh: Siswa mampu menyebutkan...">
                         </div>
@@ -528,6 +637,7 @@ include '../templates/sidebar.php';
                         <!-- Opsi Pilihan Ganda -->
                         <div class="col-12" id="wrapOpsiPG">
                             <label class="font-weight-bold">Pilihan Jawaban</label>
+                            <small id="hintOpsiPG" class="text-info d-block mb-2" style="display:none;">PG Kompleks: kunci boleh lebih dari satu, pisahkan koma (mis. A,C).</small>
                             <div class="row">
                                 <div class="col-md-6 form-group">
                                     <div class="input-group">
@@ -589,9 +699,16 @@ include '../templates/sidebar.php';
                     <tr><th>Jenis Soal</th><td id="det_jenis"></td></tr>
                     <tr><th>Mata Pelajaran</th><td id="det_mapel"></td></tr>
                     <tr><th>Kelas</th><td id="det_kelas"></td></tr>
+                    <tr><th>Semester</th><td id="det_semester"></td></tr>
+                    <tr><th>Kurikulum</th><td id="det_kurikulum"></td></tr>
+                    <tr><th>Jenis Asesmen</th><td id="det_asesmen"></td></tr>
+                    <tr><th>Topik / Pokok Bahasan</th><td id="det_topik" class="font-weight-bold"></td></tr>
+                    <tr><th>Sub Topik</th><td id="det_sub_topik"></td></tr>
                     <tr><th>Materi</th><td id="det_materi"></td></tr>
-                    <tr><th>Tujuan Pembelajaran (TP)</th><td id="det_tp"></td></tr>
+                    <tr><th>CP</th><td id="det_cp" style="white-space: pre-wrap;"></td></tr>
+                    <tr><th>TP</th><td id="det_tp" style="white-space: pre-wrap;"></td></tr>
                     <tr><th>Indikator</th><td id="det_indikator"></td></tr>
+                    <tr><th>Level Kognitif</th><td id="det_level"></td></tr>
                     <tr><th>Tingkat Kesulitan</th><td id="det_kesulitan"></td></tr>
                     <tr><th>Bobot</th><td id="det_bobot"></td></tr>
                     <tr><th>Pertanyaan</th><td id="det_pertanyaan" style="white-space: pre-wrap;" class="font-weight-bold"></td></tr>

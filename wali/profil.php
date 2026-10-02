@@ -1,10 +1,13 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/ai_helper.php';
 
 if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
 }
+
+ai_helper_schema($pdo);
 
 $school_profile = getSchoolProfile($pdo);
 
@@ -100,6 +103,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['simpan_konektor_ai'])) {
+    $provider = in_array($_POST['ai_provider'] ?? '', ['gemini', 'openai'], true) ? $_POST['ai_provider'] : 'gemini';
+    $gkey = trim((string)($_POST['ai_gemini_key'] ?? ''));
+    $oemail = trim((string)($_POST['ai_openai_email'] ?? ''));
+    $okey = trim((string)($_POST['ai_openai_key'] ?? ''));
+    try {
+        $stmt = $pdo->prepare("UPDATE tb_guru SET ai_provider=?, ai_gemini_key=?, ai_gemini_model=NULL, ai_openai_email=?, ai_openai_key=?, ai_openai_model=NULL WHERE id_guru=?");
+        $stmt->execute([$provider, ($gkey !== '' ? $gkey : null), ($oemail !== '' ? $oemail : null), ($okey !== '' ? $okey : null), $teacher['id_guru']]);
+        $message = ['type' => 'success', 'text' => 'Konektor AI berhasil disimpan.'];
+        $stmt = $pdo->prepare("SELECT * FROM tb_guru WHERE id_guru = ?");
+        $stmt->execute([$teacher['id_guru']]);
+        $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $message = ['type' => 'danger', 'text' => 'Gagal menyimpan konektor AI.'];
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tes_konektor_ai'])) {
+    $provider = in_array($_POST['ai_provider'] ?? '', ['gemini', 'openai'], true) ? $_POST['ai_provider'] : 'gemini';
+    $cfg = ai_guru_config($pdo, (int)$teacher['id_guru']);
+    if ($provider === 'openai') {
+        $tkey = trim((string)($_POST['ai_openai_key'] ?? ''));
+        $tmodel = trim((string)($_POST['ai_openai_model'] ?? ''));
+        [$ok, $note] = ai_test_connection('openai', ($tkey !== '' ? $tkey : $cfg['openai_key']), ($tmodel !== '' ? $tmodel : $cfg['openai_model']));
+    } else {
+        $tkey = trim((string)($_POST['ai_gemini_key'] ?? ''));
+        $tmodel = trim((string)($_POST['ai_gemini_model'] ?? ''));
+        [$ok, $note] = ai_test_connection('gemini', ($tkey !== '' ? $tkey : $cfg['gemini_key']), ($tmodel !== '' ? $tmodel : $cfg['gemini_model']));
+    }
+    $message = ['type' => $ok ? 'success' : 'danger', 'text' => $note];
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ubah_password'])) {
     $current_password = $_POST['current_password'] ?? '';
     $new_password = $_POST['new_password'] ?? '';
@@ -151,33 +186,8 @@ include '../templates/user_header.php';
 
         <div class="section-body">
             <div class="row">
-                <div class="col-12 col-md-5 mb-4">
-                    <div class="card profile-card shadow-sm">
-                        <div class="card-body py-4">
-                            <div class="text-center">
-                                <?php echo getTeacherAvatarImage($teacher, 130); ?>
-                                <h4 class="mt-3 mb-1 font-weight-bold"><?php echo htmlspecialchars($teacher['nama_guru']); ?></h4>
-                                <span class="badge badge-primary"><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></span>
-                                <span class="badge badge-info"><?php echo htmlspecialchars($teacher['pendidikan'] ?? '-'); ?></span>
-                            </div>
-                            <hr>
-                            <div class="mb-2">
-                                <div class="font-weight-bold"><i class="fas fa-fingerprint mr-1"></i>NUPTK</div>
-                                <div><?php echo htmlspecialchars($teacher['nuptk']); ?></div>
-                            </div>
-                            <div class="mb-2">
-                                <div class="font-weight-bold"><i class="fas fa-venus-mars mr-1"></i>Jenis Kelamin</div>
-                                <div><?php echo htmlspecialchars($teacher['jenis_kelamin']); ?></div>
-                            </div>
-                            <div class="mb-2">
-                                <div class="font-weight-bold text-success"><i class="fas fa-calendar-alt mr-1"></i>Masa Bakti</div>
-                                <div class="font-weight-bold text-success"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-7 mb-4">
-                    <div class="card profile-card shadow-sm">
+                <div class="col-12 col-lg-6 mb-4">
+                    <div class="card profile-card shadow-sm h-100">
                         <div class="card-header">
                             <h4><i class="fas fa-id-card mr-2"></i>Data Diri</h4>
                             <div class="card-header-action">
@@ -187,6 +197,13 @@ include '../templates/user_header.php';
                             </div>
                         </div>
                         <div class="card-body">
+                            <div class="text-center mb-3">
+                                <?php echo getTeacherAvatarImage($teacher, 110); ?>
+                                <h4 class="mt-2 mb-1 font-weight-bold"><?php echo htmlspecialchars($teacher['nama_guru']); ?></h4>
+                                <span class="badge badge-primary"><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></span>
+                                <span class="badge badge-info"><?php echo htmlspecialchars($teacher['pendidikan'] ?? '-'); ?></span>
+                            </div>
+                            <hr>
                             <div class="row mb-2">
                                 <div class="col-5 font-weight-bold">Nama Lengkap</div>
                                 <div class="col-7"><?php echo htmlspecialchars($teacher['nama_guru']); ?></div>
@@ -225,8 +242,9 @@ include '../templates/user_header.php';
                             </div>
                         </div>
                     </div>
-
-                    <div class="card shadow-sm">
+                </div>
+                <div class="col-12 col-lg-6 mb-4">
+                    <div class="card shadow-sm h-100">
                         <div class="card-header">
                             <h4><i class="fas fa-key mr-2"></i>Ubah Password</h4>
                         </div>
@@ -246,6 +264,51 @@ include '../templates/user_header.php';
                                     <input type="password" class="form-control" name="confirm_password" minlength="6" required>
                                 </div>
                                 <button type="submit" name="ubah_password" class="btn btn-primary"><i class="fas fa-key mr-2"></i>Ubah Password</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <?php $ai_cfg = ai_guru_config($pdo, (int)$teacher['id_guru']); ?>
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h4><i class="fas fa-robot mr-2"></i>Konektor AI (Akun Saya)</h4>
+                            <div class="card-header-action">
+                                <span class="badge badge-info"><?= htmlspecialchars($ai_cfg['provider'] === 'openai' ? 'ChatGPT' : 'Gemini') ?></span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Setiap guru/wali memakai akun AI sendiri. Pilih penyedia favorit, isi API key, lalu Tes Koneksi.</p>
+                            <form method="POST" action="">
+                                <div class="row">
+                                    <div class="col-md-4 form-group">
+                                        <label>Penyedia AI</label>
+                                        <select name="ai_provider" class="form-control">
+                                            <option value="gemini" <?= $ai_cfg['provider'] === 'gemini' ? 'selected' : '' ?>>Gemini (Google)</option>
+                                            <option value="openai" <?= $ai_cfg['provider'] === 'openai' ? 'selected' : '' ?>>ChatGPT (OpenAI)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 form-group">
+                                        <label>Gemini API Key</label>
+                                        <input type="password" name="ai_gemini_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_key']) ?>" placeholder="AIza...">
+                                        <small class="text-muted d-block">Ambil gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio &raquo;</a></small>
+                                        <small class="text-muted d-block">Model otomatis dipilih provider (tidak perlu diisi).</small>
+                                    </div>
+                                    <div class="col-md-4 form-group">
+                                        <label>Email Akun ChatGPT</label>
+                                        <input type="email" name="ai_openai_email" class="form-control" value="<?= htmlspecialchars($ai_cfg['openai_email']) ?>" placeholder="nama@email.com">
+                                        <small class="text-muted d-block">API Key (wajib untuk generate):</small>
+                                        <input type="password" name="ai_openai_key" class="form-control mt-1" value="<?= htmlspecialchars($ai_cfg['openai_key']) ?>" placeholder="sk-...">
+                                        <small class="text-muted d-block">Lihat di <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com &raquo;</a></small>
+                                        <small class="text-muted d-block">Model otomatis dipilih provider (tidak perlu diisi).</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex" style="gap:8px;">
+                                    <button type="submit" name="simpan_konektor_ai" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Simpan Konektor</button>
+                                    <button type="submit" name="tes_konektor_ai" class="btn btn-outline-info"><i class="fas fa-plug mr-1"></i>Tes Koneksi</button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -310,8 +373,8 @@ if ($message) {
     $js_page[] = "
     $(document).ready(function() {
         Swal.fire({
-            title: '" . ($message['type'] === 'success' ? 'Berhasil!' : 'Perhatian!') . "',
-            text: '" . addslashes($message['text']) . "',
+            title: " . json_encode($message['type'] === 'success' ? 'Berhasil!' : 'Perhatian!') . ",
+            text: " . json_encode((string)$message['text']) . ",
             icon: '" . ($message['type'] === 'success' ? 'success' : ($message['type'] === 'danger' ? 'error' : 'warning')) . "',
             timer: " . ($message['type'] === 'success' ? '3000' : '5000') . ",
             timerProgressBar: true,
