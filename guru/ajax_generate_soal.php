@@ -1471,61 +1471,6 @@ if ($aksi === 'detail_paket') {
     exit;
 }
 
-if ($aksi === 'preview_gambar') {
-    // Render halaman PDF menjadi PNG sisi server (PyMuPDF) agar pratinjau
-    // selalu sama persis dengan dokumen asli (tidak tergantung font browser).
-    @set_time_limit(120);
-    $kode_paket = trim((string)($_GET['kode_paket'] ?? ''));
-    if ($kode_paket === '') {
-        echo json_encode(['ok' => false, 'msg' => 'Kode paket tidak valid.']);
-        exit;
-    }
-    $st = $pdo->prepare("SELECT file_soal FROM tb_bank_soal WHERE kode_paket = ? AND id_guru = ? AND file_soal IS NOT NULL AND file_soal != '' ORDER BY id ASC LIMIT 1");
-    $st->execute([$kode_paket, $guru_id]);
-    $fs = trim((string)$st->fetchColumn());
-    if ($fs === '' || strtolower(pathinfo($fs, PATHINFO_EXTENSION)) !== 'pdf') {
-        echo json_encode(['ok' => false, 'msg' => 'Paket ini tidak memiliki berkas PDF.']);
-        exit;
-    }
-    $abs = dirname(__DIR__) . '/uploads/bank_soal/' . ltrim(str_replace('\\', '/', $fs), '/');
-    if (!is_file($abs)) {
-        echo json_encode(['ok' => false, 'msg' => 'Berkas fisik tidak ditemukan di server.']);
-        exit;
-    }
-    $hash = md5($abs . '|' . filesize($abs) . '|' . filemtime($abs));
-    $outdir = dirname(__DIR__) . '/uploads/bank_soal/.preview/' . $hash . '/';
-    $webbase = '../uploads/bank_soal/.preview/' . $hash . '/';
-    $script = dirname(__DIR__) . '/scripts/render_pdf_preview.py';
-    if (!is_dir($outdir) || count(glob($outdir . 'p*.png') ?: []) === 0) {
-        $py = 'py';
-        @exec('py --version 2>&1', $chk, $chkCode);
-        if ($chkCode !== 0) {
-            $py = 'python';
-        }
-        $cmd = $py . ' ' . escapeshellarg($script) . ' ' . escapeshellarg($abs) . ' ' . escapeshellarg($outdir) . ' 150 15 2>&1';
-        $lines = [];
-        $code = 0;
-        @exec($cmd, $lines, $code);
-        $res = json_decode(implode("\n", $lines), true);
-        if (!is_array($res) || empty($res['ok'])) {
-            echo json_encode(['ok' => false, 'msg' => is_array($res) && !empty($res['msg']) ? $res['msg'] : 'Gagal merender PDF di server.']);
-            exit;
-        }
-    }
-    $files = glob($outdir . 'p*.png') ?: [];
-    natsort($files);
-    $images = [];
-    foreach ($files as $fp) {
-        $images[] = $webbase . basename($fp);
-    }
-    if (!$images) {
-        echo json_encode(['ok' => false, 'msg' => 'Tidak ada halaman berhasil dirender.']);
-        exit;
-    }
-    echo json_encode(['ok' => true, 'images' => array_values($images), 'jumlah' => count($images)]);
-    exit;
-}
-
 if ($aksi === 'upload') {
     if (empty($_FILES['file_soal']) || (int)$_FILES['file_soal']['error'] !== UPLOAD_ERR_OK) {
         echo json_encode(['ok' => false, 'msg' => 'Pilih file soal untuk diupload.']);

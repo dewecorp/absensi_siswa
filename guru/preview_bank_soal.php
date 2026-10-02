@@ -74,6 +74,7 @@ if ($file_stored !== null) {
     }
 }
 
+
 // Parser tabel Menjodohkan (ringkas, lokal halaman ini)
 function pv_split_menjodohkan(string $pertanyaan): array {
     $lines = preg_split('/\r\n|\r|\n/', trim($pertanyaan));
@@ -201,6 +202,10 @@ $page_title = 'Pratinjau: ' . $judul . ($topik !== '' ? ' — ' . $topik : '');
         .document-paper ol.soal-list { padding-left: 22px; }
         .document-paper ol.soal-list > li { margin-bottom: 16px; }
         .pdf-canvas { display: block; margin: 0 auto 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); background: #ffffff; max-width: 100%; height: auto; }
+        .pdfpage { position: relative; margin: 0 auto 16px; background: #ffffff; box-shadow: 0 4px 18px rgba(0,0,0,0.35); }
+        .pdfpage canvas { display: block; }
+        .textLayer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; line-height: 1; }
+        .textLayer span { position: absolute; white-space: pre; transform-origin: 0 0; color: #000; cursor: text; }
         .loading-spinner { color: #f8fafc; font-size: 16px; font-weight: 600; text-align: center; padding: 60px 0; }
         .sheet-tabs { margin-bottom: 16px; display: flex; gap: 6px; flex-wrap: wrap; }
         .sheet-tab-btn { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 4px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; }
@@ -235,14 +240,17 @@ $page_title = 'Pratinjau: ' . $judul . ($topik !== '' ? ' — ' . $topik : '');
             </span>
         </div>
         <div class="d-flex align-items-center" style="gap: 8px;">
-            <button type="button" onclick="window.print()" class="btn btn-sm btn-light btn-action font-weight-bold" title="Cetak Dokumen">
-                <i class="fas fa-print"></i> Cetak
-            </button>
             <?php if ($is_file): ?>
+                <button type="button" onclick="window.print()" class="btn btn-sm btn-light btn-action font-weight-bold" title="Cetak Dokumen">
+                    <i class="fas fa-print"></i> Cetak
+                </button>
                 <a href="download_bank_soal.php?kode_paket=<?= urlencode($kode_paket) ?><?= $session_amp ?>" class="btn btn-sm btn-success btn-action font-weight-bold" title="Unduh Berkas Asli">
                     <i class="fas fa-download"></i> Unduh
                 </a>
             <?php else: ?>
+                <button type="button" onclick="window.print()" class="btn btn-sm btn-light btn-action font-weight-bold" title="Cetak Dokumen">
+                    <i class="fas fa-print"></i> Cetak
+                </button>
                 <div class="btn-group btn-group-sm" role="group" title="Unduh Paket">
                     <a href="ajax_generate_soal.php?aksi=unduh_paket&kode_paket=<?= urlencode($kode_paket) ?>&format=pdf<?= $session_amp ?>" target="_blank" class="btn btn-danger font-weight-bold"><i class="fas fa-file-pdf"></i> PDF</a>
                     <a href="ajax_generate_soal.php?aksi=unduh_paket&kode_paket=<?= urlencode($kode_paket) ?>&format=docx<?= $session_amp ?>" target="_blank" class="btn btn-primary font-weight-bold"><i class="fas fa-file-word"></i> Word</a>
@@ -334,7 +342,6 @@ $page_title = 'Pratinjau: ' . $judul . ($topik !== '' ? ' — ' . $topik : '');
     <script>
         var fileBase64 = "<?= $base64_data ?>";
         var fileExt = "<?= $ext ?>";
-        var paketKode = "<?= htmlspecialchars($kode_paket, ENT_QUOTES, 'UTF-8') ?>";
 
         function base64ToUint8Array(base64) {
             var raw = window.atob(base64);
@@ -355,49 +362,48 @@ $page_title = 'Pratinjau: ' . $judul . ($topik !== '' ? ' — ' . $topik : '');
 
         window.addEventListener('DOMContentLoaded', function() {
             var target = document.getElementById('renderTarget');
+            if (!target) return;
             var uint8 = base64ToUint8Array(fileBase64);
 
             if (fileExt === 'pdf') {
-                // 1) Coba gambar hasil render server (paling akurat, sama persis dgn PDF asli)
-                fetch('ajax_generate_soal.php?aksi=preview_gambar&kode_paket=' + encodeURIComponent(paketKode))
-                    .then(function(r) { return r.json(); })
-                    .then(function(j) {
-                        if (!j || !j.ok || !j.images || !j.images.length) throw new Error('render server gagal');
-                        j.images.forEach(function(src) {
-                            var img = document.createElement('img');
-                            img.src = src;
-                            img.className = 'pdf-canvas';
-                            img.alt = 'Halaman soal';
-                            target.appendChild(img);
-                        });
-                        hideLoading();
-                    })
-                    .catch(function() {
-                        // 2) Cadangan: render via PDF.js di browser
-                        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-                        pdfjsLib.getDocument({ data: uint8 }).promise.then(function(pdf) {
-                            var chain = Promise.resolve();
-                            for (var p = 1; p <= pdf.numPages; p++) {
-                                (function(pageNum) {
-                                    chain = chain.then(function() {
-                                        return pdf.getPage(pageNum).then(function(page) {
-                                            var viewport = page.getViewport({ scale: 1.5 });
-                                            var canvas = document.createElement('canvas');
-                                            canvas.height = viewport.height;
-                                            canvas.width = viewport.width;
-                                            canvas.className = 'pdf-canvas';
-                                            target.appendChild(canvas);
-                                            return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                // Data base64 tertanam — tanpa request URL sehingga tidak dibajak IDM.
+                // useSystemFonts: abaikan font rusak di dalam PDF, pakai font sistem.
+                // Lapisan teks ditampilkan langsung (terbukti mengekstrak sempurna
+                // walau penggambaran huruf canvas gagal pada font tertentu).
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                pdfjsLib.getDocument({ data: uint8, useSystemFonts: true }).promise.then(function(pdf) {
+                    var chain = Promise.resolve();
+                    for (var p = 1; p <= pdf.numPages; p++) {
+                        (function(pageNum) {
+                            chain = chain.then(function() {
+                                return pdf.getPage(pageNum).then(function(page) {
+                                    var viewport = page.getViewport({ scale: 1.5 });
+                                    var wrap = document.createElement('div');
+                                    wrap.className = 'pdfpage';
+                                    wrap.style.width = viewport.width + 'px';
+                                    wrap.style.height = viewport.height + 'px';
+                                    var canvas = document.createElement('canvas');
+                                    canvas.height = viewport.height;
+                                    canvas.width = viewport.width;
+                                    wrap.appendChild(canvas);
+                                    var textDiv = document.createElement('div');
+                                    textDiv.className = 'textLayer';
+                                    wrap.appendChild(textDiv);
+                                    target.appendChild(wrap);
+                                    return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise
+                                        .then(function() { return page.getTextContent(); })
+                                        .then(function(tc) {
+                                            return pdfjsLib.renderTextLayer({ textContent: tc, container: textDiv, viewport: viewport, textDivs: [] }).promise;
                                         });
-                                    });
-                                })(p);
-                            }
-                            chain.then(function() { hideLoading(); });
-                        }).catch(function(err) {
-                            target.innerHTML = '<div class="document-paper"><div class="alert alert-danger">Gagal merender PDF: ' + err.message + '</div></div>';
-                            hideLoading();
-                        });
-                    });
+                                });
+                            });
+                        })(p);
+                    }
+                    chain.then(function() { hideLoading(); });
+                }).catch(function(err) {
+                    target.innerHTML = '<div class="document-paper"><div class="alert alert-danger">Gagal merender PDF: ' + err.message + '</div></div>';
+                    hideLoading();
+                });
             }
             else if (fileExt === 'docx') {
                 mammoth.convertToHtml({ arrayBuffer: uint8.buffer })
