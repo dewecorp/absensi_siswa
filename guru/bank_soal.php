@@ -50,7 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($level_kognitif, ['L1', 'L2', 'L3', 'L4'], true)) {
             $level_kognitif = 'L2';
         }
-        $tingkat_kesulitan = in_array($_POST['tingkat_kesulitan'] ?? '', ['Mudah', 'Sedang', 'Sukar'], true) ? $_POST['tingkat_kesulitan'] : 'Sedang';
+        // Tanpa input manual: default Sedang; hasil AI menimpa acak otomatis per bentuk.
+        $tingkat_kesulitan = 'Sedang';
         $bobot = (float)($_POST['bobot'] ?? 1.00);
         $pertanyaan = trim((string)($_POST['pertanyaan'] ?? ''));
         $jawaban_benar = trim((string)($_POST['jawaban_benar'] ?? ''));
@@ -126,20 +127,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Master lists (hanya mapel akademik untuk dropdown)
+// Master lists (hanya mapel akademik untuk dropdown; kelas hanya yang diajar guru login)
 $mapel_list = getFilteredSubjects($pdo);
-$kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+$kelas_list = function_exists('getGuruTaughtClasses') ? getGuruTaughtClasses($pdo, $guru_id) : $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 $jenis_soal_options = ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'];
 $kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_1503_KBC' => 'KMA 1503 + KBC'];
-$kesulitan_options = ['Mudah', 'Sedang', 'Sukar'];
 $asesmen_options = ai_asesmen_list();
 $session_q = isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '';
 
 // Filters
 $f_mapel = (int)($_GET['f_mapel'] ?? 0);
 $f_kelas = (int)($_GET['f_kelas'] ?? 0);
-$f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
-$f_kesulitan = trim((string)($_GET['f_kesulitan'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 $f_asesmen = trim((string)($_GET['f_asesmen'] ?? ''));
 
@@ -153,14 +151,6 @@ if ($f_mapel > 0) {
 if ($f_kelas > 0) {
     $where[] = "b.id_kelas = ?";
     $params[] = $f_kelas;
-}
-if ($f_jenis !== '') {
-    $where[] = "b.jenis_soal = ?";
-    $params[] = $f_jenis;
-}
-if ($f_kesulitan !== '') {
-    $where[] = "b.tingkat_kesulitan = ?";
-    $params[] = $f_kesulitan;
 }
 if ($f_status !== '') {
     $where[] = "b.status = ?";
@@ -199,7 +189,7 @@ $(document).ready(function() {
     if ($('#table-soal').length) {
         $('#table-soal').DataTable({
             'order': [[0, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [11] }],
+            'columnDefs': [{ 'sortable': false, 'targets': [10] }],
             'language': {
                 'lengthMenu': 'Tampilkan _MENU_ entri',
                 'zeroRecords': 'Tidak ada soal ditemukan',
@@ -256,7 +246,6 @@ $(document).ready(function() {
         $('#inp_materi_tp').val(data.materi_tp || '');
         $('#inp_indikator').val(data.indikator || '');
         $('#inp_level').val(data.level_kognitif || 'L2');
-        $('#inp_kesulitan').val(data.tingkat_kesulitan);
         $('#inp_bobot').val(data.bobot);
         $('#inp_pertanyaan').val(data.pertanyaan);
         $('#inp_jawaban_benar').val(data.jawaban_benar || '');
@@ -292,7 +281,6 @@ $(document).ready(function() {
         $('#det_tp').text(data.tp || '-');
         $('#det_indikator').text(data.indikator || '-');
         $('#det_level').html('<span class="badge badge-info">' + $('<div>').text(data.level_kognitif || 'L2').html() + '</span>');
-        $('#det_kesulitan').html('<span class="badge badge-' + (data.tingkat_kesulitan === 'Mudah' ? 'success' : (data.tingkat_kesulitan === 'Sedang' ? 'warning' : 'danger')) + '">' + data.tingkat_kesulitan + '</span>');
         $('#det_bobot').text(data.bobot);
         $('#det_pertanyaan').text(data.pertanyaan);
         $('#det_jawaban_benar').text(data.jawaban_benar || '-');
@@ -386,24 +374,6 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-md-2 mb-2">
-                            <label class="small font-weight-bold">Jenis Soal</label>
-                            <select name="f_jenis" class="form-control form-control-sm">
-                                <option value="">-- Semua Jenis --</option>
-                                <?php foreach ($jenis_soal_options as $js): ?>
-                                    <option value="<?= $js ?>" <?= $f_jenis === $js ? 'selected' : '' ?>><?= $js ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="small font-weight-bold">Tingkat Kesulitan</label>
-                            <select name="f_kesulitan" class="form-control form-control-sm">
-                                <option value="">-- Semua --</option>
-                                <?php foreach ($kesulitan_options as $diff): ?>
-                                    <option value="<?= $diff ?>" <?= $f_kesulitan === $diff ? 'selected' : '' ?>><?= $diff ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-2 mb-2">
                             <label class="small font-weight-bold">Status</label>
                             <select name="f_status" class="form-control form-control-sm">
                                 <option value="">-- Semua Status --</option>
@@ -455,7 +425,6 @@ include '../templates/sidebar.php';
                                     <th>Kelas</th>
                                     <th>Asesmen</th>
                                     <th>Topik</th>
-                                    <th>Tingkat Kesulitan</th>
                                     <th>Bobot</th>
                                     <th>Status</th>
                                     <th width="12%">Aksi</th>
@@ -467,10 +436,6 @@ include '../templates/sidebar.php';
                                     // Potongan teks (maks 60 karakter)
                                     $raw_pertanyaan = strip_tags($r['pertanyaan']);
                                     $snippet = mb_strlen($raw_pertanyaan) > 60 ? mb_substr($raw_pertanyaan, 0, 60) . '...' : $raw_pertanyaan;
-
-                                    $diff_badge = 'warning';
-                                    if ($r['tingkat_kesulitan'] === 'Mudah') $diff_badge = 'success';
-                                    elseif ($r['tingkat_kesulitan'] === 'Sukar') $diff_badge = 'danger';
 
                                     $st_badge = $r['status'] === 'Aktif' ? 'success' : ($r['status'] === 'Draft' ? 'warning' : 'secondary');
                                     ?>
@@ -487,9 +452,6 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
                                         <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis_asesmen'] ?? '-') ?></span></td>
                                         <td><?= htmlspecialchars($r['topik'] ?? ($r['materi_tp'] ?? '-')) ?></td>
-                                        <td class="text-center">
-                                            <span class="badge badge-<?= $diff_badge ?>"><?= htmlspecialchars($r['tingkat_kesulitan']) ?></span>
-                                        </td>
                                         <td class="text-center"><?= (float)$r['bobot'] ?></td>
                                         <td class="text-center">
                                             <span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span>
@@ -541,15 +503,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 form-group">
-                            <label>Tingkat Kesulitan</label>
-                            <select name="tingkat_kesulitan" id="inp_kesulitan" class="form-control">
-                                <option value="Mudah">Mudah</option>
-                                <option value="Sedang" selected>Sedang</option>
-                                <option value="Sukar">Sukar</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 form-group">
+                        <div class="col-md-4 form-group">
                             <label>Level Kognitif</label>
                             <select name="level_kognitif" id="inp_level" class="form-control">
                                 <option value="L1">L1 (C1)</option>
@@ -709,7 +663,6 @@ include '../templates/sidebar.php';
                     <tr><th>TP</th><td id="det_tp" style="white-space: pre-wrap;"></td></tr>
                     <tr><th>Indikator</th><td id="det_indikator"></td></tr>
                     <tr><th>Level Kognitif</th><td id="det_level"></td></tr>
-                    <tr><th>Tingkat Kesulitan</th><td id="det_kesulitan"></td></tr>
                     <tr><th>Bobot</th><td id="det_bobot"></td></tr>
                     <tr><th>Pertanyaan</th><td id="det_pertanyaan" style="white-space: pre-wrap;" class="font-weight-bold"></td></tr>
                     <tr id="det_row_pilihan"><th>Pilihan Jawaban</th><td id="det_pilihan"></td></tr>

@@ -23,7 +23,6 @@ $mapel_list = function_exists('getGuruTaughtMapels') ? getGuruTaughtMapels($pdo,
 $kelas_list = function_exists('getGuruTaughtClasses') ? getGuruTaughtClasses($pdo, $guru_id) : $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 $jenis_soal_options = ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'];
 $kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_1503_KBC' => 'KMA 1503 + KBC'];
-$kesulitan_options = ['Mudah', 'Sedang', 'Sukar'];
 $asesmen_options = ai_asesmen_list();
 
 $page_title = 'Generate Soal AI';
@@ -246,7 +245,7 @@ include '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-2 form-group">
+                            <div class="col-md-4 form-group">
                                 <label>Semester</label>
                                 <select name="semester" id="ai_semester" class="form-control">
                                     <option value="">-- Semua --</option>
@@ -254,7 +253,7 @@ include '../templates/sidebar.php';
                                     <option value="Semester 2">Semester 2 (Genap)</option>
                                 </select>
                             </div>
-                            <div class="col-md-2 form-group">
+                            <div class="col-md-4 form-group">
                                 <label>Status Simpan</label>
                                 <select id="ai_status" class="form-control">
                                     <option value="Aktif">Aktif</option>
@@ -262,7 +261,7 @@ include '../templates/sidebar.php';
                                     <option value="Arsip">Arsip</option>
                                 </select>
                             </div>
-                            <div class="col-md-6 form-group">
+                            <div class="col-md-4 form-group">
                                 <label>Mata Pelajaran</label>
                                 <select name="id_mapel" id="ai_mapel" class="form-control">
                                     <option value="">-- Pilih Mapel --</option>
@@ -271,7 +270,7 @@ include '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-6 form-group">
+                            <div class="col-md-4 form-group">
                                 <label>Kelas</label>
                                 <select name="id_kelas" id="ai_kelas" class="form-control">
                                     <option value="">-- Pilih Kelas --</option>
@@ -280,8 +279,20 @@ include '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                            <div class="col-md-4 form-group">
+                                <label>Topik / Pokok Bahasan <span class="text-danger">*</span></label>
+                                <input type="text" name="topik" id="ai_topik" class="form-control" required placeholder="Contoh: Metamorfosis Kupu-kupu">
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label>Sub Topik <span class="text-muted">(opsional)</span></label>
+                                <input type="text" name="sub_topik" id="ai_sub_topik" class="form-control" placeholder="Contoh: Tahapan pupa">
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label>Upload Materi <span class="text-muted">(opsional, .docx/.txt maks 2MB)</span></label>
+                                <input type="file" name="materi_file" id="ai_file" class="form-control-file" accept=".docx,.txt">
+                            </div>
                             <div class="col-12 form-group">
-                                <label class="font-weight-bold">Paket Bentuk Soal <small class="text-muted">(centang + isi jumlah per bentuk — hasil jadi 1 paket)</small></label>
+                                <label class="font-weight-bold">Paket Bentuk Soal <small class="text-muted">(centang + isi jumlah per bentuk — hasil jadi 1 paket, kesulitan otomatis acak merata Mudah/Sedang/Sukar per bentuk)</small></label>
                                 <div class="row" id="aiPaketWrap">
                                     <?php foreach ($jenis_soal_options as $idx => $js): ?>
                                         <?php $def_jml = ['Pilihan Ganda' => 5, 'Pilihan Ganda Kompleks' => 0, 'Menjodohkan' => 0, 'Isian Singkat' => 0, 'Uraian' => 2][$js] ?? 0; ?>
@@ -297,22 +308,6 @@ include '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </div>
                                 <small class="text-muted">Total paket: <b id="aiTotalPaket">7</b> butir.</small>
-                            </div>
-                            <div class="col-md-3 form-group">
-                                <label>Tingkat Kesulitan <span class="text-muted">(otomatis acak merata)</span></label>
-                                <input type="text" class="form-control" value="Acak: Mudah + Sedang + Sukar" disabled>
-                            </div>
-                            <div class="col-md-3 form-group">
-                                <label>Upload Materi <span class="text-muted">(opsional, .docx/.txt maks 2MB)</span></label>
-                                <input type="file" name="materi_file" id="ai_file" class="form-control-file" accept=".docx,.txt">
-                            </div>
-                            <div class="col-md-3 form-group">
-                                <label>Topik / Pokok Bahasan <span class="text-danger">*</span></label>
-                                <input type="text" name="topik" id="ai_topik" class="form-control" required placeholder="Contoh: Metamorfosis Kupu-kupu">
-                            </div>
-                            <div class="col-md-3 form-group">
-                                <label>Sub Topik <span class="text-muted">(opsional)</span></label>
-                                <input type="text" name="sub_topik" id="ai_sub_topik" class="form-control" placeholder="Contoh: Tahapan pupa">
                             </div>
                             <div class="col-12 form-group">
                                 <label>Materi Detail <span class="text-muted">(opsional — ketik manual / tempel di sini; kosongkan bila ingin AI menyusun dari mapel/kelas/semester)</span></label>
