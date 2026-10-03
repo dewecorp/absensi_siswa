@@ -130,6 +130,16 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $jenis_options = ['Akademik', 'Kedisiplinan', 'Sikap', 'Kehadiran', 'Sosial', 'Lainnya'];
 $status_options = ['Berjalan', 'Dalam Pemantauan', 'Selesai'];
 
+// Master template pembinaan (sinkron dengan menu Data Pembinaan)
+$stMasterBina = $pdo->prepare("
+    SELECT id, jenis, permasalahan, tindakan, tindak_lanjut
+    FROM tb_master_pembinaan
+    WHERE id_guru = ? OR id_guru IS NULL OR id_guru = 0
+    ORDER BY jenis ASC, id ASC
+");
+$stMasterBina->execute([$guru_id]);
+$master_pembinaan = $stMasterBina->fetchAll(PDO::FETCH_ASSOC);
+
 $page_title = 'Daftar Pembinaan Siswa';
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
@@ -140,6 +150,9 @@ $js_libs = [
 ];
 
 $js_page = [<<<'JS'
+var masterPembinaan =
+JS
+. json_encode($master_pembinaan) . ";\n" . <<<'JS'
 $(document).ready(function() {
     if ($('#table-pembinaan').length) {
         $('#table-pembinaan').DataTable({
@@ -156,12 +169,93 @@ $(document).ready(function() {
         });
     }
 
+    function shortBina(s, n) {
+        s = (s || '').toString().replace(/\s+/g, ' ').trim();
+        n = n || 100;
+        return s.length > n ? s.substr(0, n) + '...' : s;
+    }
+
+    function autogrowBina($ta) {
+        if (!$ta || !$ta.length) return;
+        $ta.css('height', 'auto');
+        $ta.css('height', ($ta[0].scrollHeight + 4) + 'px');
+    }
+    $(document).on('input', '#modalPembinaan textarea', function() { autogrowBina($(this)); });
+    $('#modalPembinaan').on('shown.bs.modal', function() {
+        $('#modalPembinaan textarea').each(function() { autogrowBina($(this)); });
+    });
+
+    // Isi dropdown template sesuai jenis terpilih
+    function populateBina(jenis) {
+        $('#sel_bina_masalah').empty().append('<option value="">-- Pilih template permasalahan --</option>');
+        $('#sel_bina_tindakan').empty().append('<option value="">-- Pilih template tindakan --</option>');
+        $('#sel_bina_tl').empty().append('<option value="">-- Pilih template rencana tindak lanjut --</option>');
+        if (!jenis) return;
+        masterPembinaan.filter(function(m) {
+            return (m.jenis || '').toLowerCase() === jenis.toLowerCase();
+        }).forEach(function(m) {
+            var o1 = $('<option>').val(m.permasalahan).text(shortBina(m.permasalahan, 110));
+            o1.data('item', m);
+            $('#sel_bina_masalah').append(o1);
+            var o2 = $('<option>').val(m.tindakan).text(shortBina(m.tindakan, 110));
+            o2.data('item', m);
+            $('#sel_bina_tindakan').append(o2);
+            if (m.tindak_lanjut) {
+                var o3 = $('<option>').val(m.tindak_lanjut).text(shortBina(m.tindak_lanjut, 110));
+                o3.data('item', m);
+                $('#sel_bina_tl').append(o3);
+            }
+        });
+    }
+
+    $('#inp_jenis').on('change', function() {
+        populateBina($(this).val());
+    });
+
+    // Guru tinggal pilih sesuai kondisi siswa -> isi textarea masing-masing (bisa diubah manual)
+    $('#sel_bina_masalah').on('change', function() {
+        var v = $(this).val() || '';
+        if (v) { $('#inp_masalah').val(v); autogrowBina($('#inp_masalah')); }
+    });
+    $('#sel_bina_tindakan').on('change', function() {
+        var v = $(this).val() || '';
+        if (v) { $('#inp_tindakan').val(v); autogrowBina($('#inp_tindakan')); }
+    });
+    $('#sel_bina_tl').on('change', function() {
+        var v = $(this).val() || '';
+        if (v) { $('#inp_tindak_lanjut').val(v); autogrowBina($('#inp_tindak_lanjut')); }
+    });
+    // Pilih satu template lengkap langsung dari dropdown permasalahan
+    $(document).on('change', '#sel_bina_masalah_full', function() {
+        var item = $('#sel_bina_masalah_full option:selected').data('item');
+        if (!item) return;
+        $('#inp_masalah').val(item.permasalahan || '');
+        $('#inp_tindakan').val(item.tindakan || '');
+        $('#inp_tindak_lanjut').val(item.tindak_lanjut || '');
+        $('#modalPembinaan textarea').each(function() { autogrowBina($(this)); });
+    });
+
     $('#btnTambahPembinaan').on('click', function() {
         $('#formPembinaanAction').val('tambah');
         $('#pembinaanId').val('');
         $('#modalPembinaanTitle').text('Catat Pembinaan Siswa Baru');
         $('#formPembinaan')[0].reset();
+        var curJenis = $('#inp_jenis').val() || '';
+        populateBina(curJenis);
+        $('#sel_bina_masalah_full').empty().append('<option value="">-- Pilih satu template lengkap (opsional) --</option>');
+        if (curJenis) {
+            masterPembinaan.filter(function(m) {
+                return (m.jenis || '').toLowerCase() === curJenis.toLowerCase();
+            }).forEach(function(m) {
+                var o = $('<option>').val(m.id).text(shortBina(m.permasalahan, 110));
+                o.data('item', m);
+                $('#sel_bina_masalah_full').append(o);
+            });
+        }
         $('#modalPembinaan').modal('show');
+        setTimeout(function() {
+            $('#modalPembinaan textarea').each(function() { autogrowBina($(this)); });
+        }, 120);
     });
 
     $(document).on('click', '.btn-edit-pembinaan', function() {
@@ -172,11 +266,33 @@ $(document).ready(function() {
         $('#inp_siswa').val(data.id_siswa);
         $('#inp_tanggal').val(data.tanggal);
         $('#inp_jenis').val(data.jenis_pembinaan);
+        populateBina(data.jenis_pembinaan);
+        // Samakan dropdown dengan nilai tersimpan bila cocok persis
+        $('#sel_bina_masalah option').each(function() {
+            if ($(this).val() === (data.permasalahan || '')) $(this).prop('selected', true);
+        });
+        $('#sel_bina_tindakan option').each(function() {
+            if ($(this).val() === (data.tindakan || '')) $(this).prop('selected', true);
+        });
+        $('#sel_bina_tl option').each(function() {
+            if ($(this).val() === (data.tindak_lanjut || '')) $(this).prop('selected', true);
+        });
+        $('#sel_bina_masalah_full').empty().append('<option value="">-- Pilih satu template lengkap (opsional) --</option>');
+        masterPembinaan.filter(function(m) {
+            return (m.jenis || '').toLowerCase() === (data.jenis_pembinaan || '').toLowerCase();
+        }).forEach(function(m) {
+            var o = $('<option>').val(m.id).text(shortBina(m.permasalahan, 110));
+            o.data('item', m);
+            $('#sel_bina_masalah_full').append(o);
+        });
         $('#inp_masalah').val(data.permasalahan);
         $('#inp_tindakan').val(data.tindakan);
         $('#inp_tindak_lanjut').val(data.tindak_lanjut || '');
         $('#inp_status').val(data.status);
         $('#modalPembinaan').modal('show');
+        setTimeout(function() {
+            $('#modalPembinaan textarea').each(function() { autogrowBina($(this)); });
+        }, 120);
     });
 
     $(document).on('click', '.btn-detail-pembinaan', function() {
@@ -248,11 +364,32 @@ include '../templates/sidebar.php';
             <?php endif; ?>
 
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                     <h4>Catatan Pembinaan Wali Kelas</h4>
-                    <button type="button" class="btn btn-primary" id="btnTambahPembinaan" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
-                        <i class="fas fa-plus mr-1"></i> Catat Pembinaan
-                    </button>
+                    <div>
+                        <a href="data_pembinaan.php" class="btn btn-outline-info btn-sm mr-2">
+                            <i class="fas fa-database mr-1"></i> Data Pembinaan
+                        </a>
+                        <?php
+                        $qs_bina = [];
+                        if ($selected_kelas_id > 0) { $qs_bina['kelas'] = $selected_kelas_id; }
+                        $url_bina_cetak = 'export_pembinaan_pdf.php?' . http_build_query(array_merge($qs_bina, ['mode' => 'print']));
+                        $url_bina_pdf = 'export_pembinaan_pdf.php?' . http_build_query(array_merge($qs_bina, ['mode' => 'pdf']));
+                        $url_bina_xls = 'export_pembinaan_excel.php?' . http_build_query($qs_bina);
+                        ?>
+                        <a href="<?= htmlspecialchars($url_bina_cetak) ?>" target="_blank" class="btn btn-outline-secondary btn-sm mr-1" title="Cetak (print tab baru)">
+                            <i class="fas fa-print mr-1"></i> Cetak
+                        </a>
+                        <a href="<?= htmlspecialchars($url_bina_pdf) ?>" class="btn btn-outline-danger btn-sm mr-1" title="Unduh file PDF">
+                            <i class="fas fa-file-pdf mr-1"></i> PDF
+                        </a>
+                        <a href="<?= htmlspecialchars($url_bina_xls) ?>" class="btn btn-outline-success btn-sm mr-2" title="Ekspor Excel">
+                            <i class="fas fa-file-excel mr-1"></i> Excel
+                        </a>
+                        <button type="button" class="btn btn-primary" id="btnTambahPembinaan" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                            <i class="fas fa-plus mr-1"></i> Catat Pembinaan
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -301,6 +438,17 @@ include '../templates/sidebar.php';
                                             <button type="button" class="btn btn-danger btn-sm btn-hapus-pembinaan" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
                                                 <i class="fas fa-trash"></i>
                                             </button>
+                                            <div class="btn-group btn-group-sm mt-1">
+                                                <a href="export_pembinaan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-outline-secondary" title="Cetak laporan siswa ini">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+                                                <a href="export_pembinaan_pdf.php?id=<?= (int)$r['id'] ?>&mode=pdf" class="btn btn-outline-danger" title="Unduh file PDF catatan ini">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                                <a href="export_pembinaan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-outline-success" title="Ekspor Excel siswa ini">
+                                                    <i class="fas fa-file-excel"></i>
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -351,16 +499,31 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-12 form-group">
+                            <label>Pilih Cepat: Satu Template Lengkap <small class="text-muted">(opsional, isi 3 kolom sekaligus)</small></label>
+                            <select id="sel_bina_masalah_full" class="form-control">
+                                <option value="">-- Pilih satu template lengkap (opsional) --</option>
+                            </select>
+                        </div>
+                        <div class="col-12 form-group">
                             <label>Permasalahan / Kasus <span class="text-danger">*</span></label>
-                            <textarea name="permasalahan" id="inp_masalah" class="form-control" rows="3" required placeholder="Deskripsikan masalah yang terjadi..."></textarea>
+                            <select id="sel_bina_masalah" class="form-control form-control-sm mb-1">
+                                <option value="">-- Pilih permasalahan sesuai kondisi siswa --</option>
+                            </select>
+                            <textarea name="permasalahan" id="inp_masalah" class="form-control" rows="5" style="min-height:120px;" required placeholder="Pilih dari dropdown di atas sesuai kondisi siswa, atau ketik manual..."></textarea>
                         </div>
                         <div class="col-12 form-group">
                             <label>Tindakan Pembinaan <span class="text-danger">*</span></label>
-                            <textarea name="tindakan" id="inp_tindakan" class="form-control" rows="3" required placeholder="Tindakan/nasihat/pembinaan yang diberikan..."></textarea>
+                            <select id="sel_bina_tindakan" class="form-control form-control-sm mb-1">
+                                <option value="">-- Pilih tindakan sesuai kondisi siswa --</option>
+                            </select>
+                            <textarea name="tindakan" id="inp_tindakan" class="form-control" rows="5" style="min-height:120px;" required placeholder="Pilih dari dropdown di atas sesuai kondisi siswa, atau ketik manual..."></textarea>
                         </div>
                         <div class="col-md-8 form-group">
                             <label>Rencana Tindak Lanjut</label>
-                            <textarea name="tindak_lanjut" id="inp_tindak_lanjut" class="form-control" rows="2" placeholder="Komitmen siswa atau pemantauan ke depan..."></textarea>
+                            <select id="sel_bina_tl" class="form-control form-control-sm mb-1">
+                                <option value="">-- Pilih rencana tindak lanjut --</option>
+                            </select>
+                            <textarea name="tindak_lanjut" id="inp_tindak_lanjut" class="form-control" rows="5" style="min-height:120px;" placeholder="Pilih dari dropdown di atas sesuai kondisi siswa, atau ketik manual..."></textarea>
                         </div>
                         <div class="col-md-4 form-group">
                             <label>Status</label>

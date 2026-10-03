@@ -1269,7 +1269,9 @@ switch ($user_level) {
 
         $pengelolaan_kelas_submenu_wali = [
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php', 'active' => $current_page === 'pembinaan_siswa.php'],
+            ['title' => 'Data Pembinaan', 'url' => '../wali/data_pembinaan.php', 'active' => $current_page === 'data_pembinaan.php'],
             ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php', 'active' => $current_page === 'pelanggaran_siswa.php'],
+            ['title' => 'Data Pelanggaran', 'url' => '../wali/data_pelanggaran.php', 'active' => $current_page === 'data_pelanggaran.php'],
             ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php', 'active' => $current_page === 'konseling_awal.php'],
             ['title' => 'Tindak Lanjut', 'url' => '../wali/tindak_lanjut.php', 'active' => $current_page === 'tindak_lanjut.php'],
             ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php', 'active' => $current_page === 'komunikasi_ortu.php'],
@@ -1289,7 +1291,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_wali,
-                'active' => in_array($current_page, ['pembinaan_siswa.php', 'pelanggaran_siswa.php', 'konseling_awal.php', 'tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php'])
+                'active' => in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php'])
             ],
             [
                 'title' => 'Pembelajaran',

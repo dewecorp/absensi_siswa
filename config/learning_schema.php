@@ -532,6 +532,47 @@ if (!function_exists('ensure_learning_schema')) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
+        // 10b. Master Data Pembinaan (template permasalahan/kasus, tindakan, rencana tindak lanjut).
+        // $seeds_pembinaan dipakai seed + backfill agar scope-nya aman.
+        $seeds_pembinaan = [
+            ['jenis' => 'Akademik', 'permasalahan' => 'Nilai harian turun pada 2 asesmen terakhir', 'tindakan' => 'Bimbingan belajar personal + tutor sebaya', 'tindak_lanjut' => 'Remedial terjadwal, pantau progres tiap pekan'],
+            ['jenis' => 'Akademik', 'permasalahan' => 'Tugas sering tidak selesai tepat waktu', 'tindakan' => 'Dampingi pembagian tugas menjadi langkah kecil', 'tindak_lanjut' => 'Ceklis tugas harian, koordinasi dengan orang tua'],
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Sering terlambat masuk kelas pagi', 'tindakan' => 'Teguran lisan + surat pernyataan + pembiasaan datang 10 menit lebih awal', 'tindak_lanjut' => 'Pantau keterlambatan 2 pekan, libatkan orang tua bila berulang'],
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Tidak memakai seragam sesuai ketentuan', 'tindakan' => 'Teguran + pembinaan tata tertib berpakaian', 'tindak_lanjut' => 'Cek seragam tiap pagi selama 1 pekan'],
+            ['jenis' => 'Sikap', 'permasalahan' => 'Kurang sopan saat berbicara dengan guru/teman', 'tindakan' => 'Pembinaan adab + latihan meminta maaf/memaafkan', 'tindak_lanjut' => 'Pantau interaksi sosial selama 2 pekan'],
+            ['jenis' => 'Sikap', 'permasalahan' => 'Pasif dalam kerja kelompok', 'tindakan' => 'Beri peran spesifik dalam kelompok kecil', 'tindak_lanjut' => 'Rotasi peran tiap pekan agar berani tampil'],
+            ['jenis' => 'Kehadiran', 'permasalahan' => 'Alpa tanpa keterangan', 'tindakan' => 'Hubungi orang tua + surat panggilan wali', 'tindak_lanjut' => 'Pemantauan kehadiran harian 1 bulan'],
+            ['jenis' => 'Kehadiran', 'permasalahan' => 'Sering izin dengan alasan tidak jelas', 'tindakan' => 'Verifikasi surat izin + konseling wali', 'tindak_lanjut' => 'Catat pola izin, koordinasi dengan orang tua'],
+            ['jenis' => 'Sosial', 'permasalahan' => 'Berselisih dengan teman sekelas', 'tindakan' => 'Mediasi damai + latihan regulasi emosi', 'tindak_lanjut' => 'Pantau interaksi 2 pekan, libatkan guru BK bila perlu'],
+            ['jenis' => 'Sosial', 'permasalahan' => 'Menyendiri, enggan bergaul', 'tindakan' => 'Ajak kegiatan kelompok kecil + pendampingan teman sebaya', 'tindak_lanjut' => 'Evaluasi keberanian bersosial tiap pekan'],
+            ['jenis' => 'Lainnya', 'permasalahan' => 'Ketergantungan gawai saat jam belajar', 'tindakan' => 'Tata tertib penggunaan gawai + titip di loker saat KBM', 'tindak_lanjut' => 'Pantau 1 bulan, libatkan orang tua atur screen time'],
+            ['jenis' => 'Lainnya', 'permasalahan' => 'Belum lancar membaca Al-Quran sesuai tajwid', 'tindakan' => 'Program tahsin 15 menit sebelum KBM', 'tindak_lanjut' => 'Setoran bacaan harian ke guru tahsin'],
+        ];
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_master_pembinaan (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_guru INT NULL,
+                jenis VARCHAR(50) NOT NULL,
+                permasalahan TEXT NOT NULL,
+                tindakan TEXT NOT NULL,
+                tindak_lanjut TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_jenis (jenis),
+                INDEX idx_guru (id_guru)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        try {
+            $cntB = (int)$pdo->query("SELECT COUNT(*) FROM tb_master_pembinaan")->fetchColumn();
+            if ($cntB === 0) {
+                $insB = $pdo->prepare("INSERT INTO tb_master_pembinaan (id_guru, jenis, permasalahan, tindakan, tindak_lanjut) VALUES (NULL, :jenis, :permasalahan, :tindakan, :tindak_lanjut)");
+                foreach ($seeds_pembinaan as $sd) {
+                    $insB->execute([':jenis' => $sd['jenis'], ':permasalahan' => $sd['permasalahan'], ':tindakan' => $sd['tindakan'], ':tindak_lanjut' => $sd['tindak_lanjut']]);
+                }
+            }
+        } catch (Throwable $e) {}
+
         // 11. Pelanggaran Siswa (Level Wali)
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_pelanggaran_siswa (
@@ -553,6 +594,47 @@ if (!function_exists('ensure_learning_schema')) {
                 INDEX idx_kelas (id_kelas)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+
+        // 11b. Master Data Pelanggaran (template jenis, tindakan/sanksi, poin).
+        // $seeds_pelanggaran dipakai seed agar scope-nya aman.
+        $seeds_pelanggaran = [
+            ['kategori' => 'Ringan', 'jenis' => 'Terlambat masuk kelas lebih dari 15 menit', 'tindakan' => 'Teguran lisan + dicatat di buku kedisiplinan', 'poin' => 5],
+            ['kategori' => 'Ringan', 'jenis' => 'Tidak memakai atribut seragam lengkap', 'tindakan' => 'Teguran + pembinaan tata tertib berpakaian', 'poin' => 5],
+            ['kategori' => 'Ringan', 'jenis' => 'Lupa membawa buku atau alat tulis', 'tindakan' => 'Teguran + pinjam dengan izin guru', 'poin' => 5],
+            ['kategori' => 'Ringan', 'jenis' => 'Membuang sampah sembarangan di lingkungan madrasah', 'tindakan' => 'Teguran + membersihkan area yang dikotori', 'poin' => 5],
+            ['kategori' => 'Sedang', 'jenis' => 'Tidak mengerjakan tugas/PR 2 kali berturut-turut', 'tindakan' => 'Panggilan wali + tugas tambahan + pemberitahuan orang tua', 'poin' => 15],
+            ['kategori' => 'Sedang', 'jenis' => 'Keluar kelas tanpa izin guru saat KBM', 'tindakan' => 'Teguran tertulis + surat pernyataan tidak mengulangi', 'poin' => 15],
+            ['kategori' => 'Sedang', 'jenis' => 'Gaduh dan mengganggu jalannya KBM', 'tindakan' => 'Teguran + duduk terpisah sementara + pembinaan adab kelas', 'poin' => 15],
+            ['kategori' => 'Sedang', 'jenis' => 'Menyontek saat ulangan/asesmen', 'tindakan' => 'Nilai dibatalkan + pembinaan kejujuran + pemberitahuan orang tua', 'poin' => 20],
+            ['kategori' => 'Sedang', 'jenis' => 'Bermain gawai saat KBM berlangsung', 'tindakan' => 'Gawai disita 1 hari + surat pernyataan + pembinaan', 'poin' => 20],
+            ['kategori' => 'Berat', 'jenis' => 'Berkelahi dengan teman', 'tindakan' => 'Mediasi + skorsing 1 hari + pemanggilan orang tua', 'poin' => 40],
+            ['kategori' => 'Berat', 'jenis' => 'Merusak fasilitas madrasah', 'tindakan' => 'Ganti rugi + surat pernyataan + pemanggilan orang tua', 'poin' => 50],
+            ['kategori' => 'Berat', 'jenis' => 'Membolos sekolah tanpa keterangan', 'tindakan' => 'Pemanggilan orang tua + pembinaan intensif wali kelas', 'poin' => 30],
+        ];
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_master_pelanggaran (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_guru INT NULL,
+                kategori VARCHAR(50) NOT NULL,
+                jenis VARCHAR(255) NOT NULL,
+                tindakan TEXT NOT NULL,
+                poin INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_kategori (kategori),
+                INDEX idx_guru (id_guru)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        try {
+            $cntP = (int)$pdo->query("SELECT COUNT(*) FROM tb_master_pelanggaran")->fetchColumn();
+            if ($cntP === 0) {
+                $insP = $pdo->prepare("INSERT INTO tb_master_pelanggaran (id_guru, kategori, jenis, tindakan, poin) VALUES (NULL, :kategori, :jenis, :tindakan, :poin)");
+                foreach ($seeds_pelanggaran as $sd) {
+                    $insP->execute([':kategori' => $sd['kategori'], ':jenis' => $sd['jenis'], ':tindakan' => $sd['tindakan'], ':poin' => $sd['poin']]);
+                }
+            }
+        } catch (Throwable $e) {}
 
         // 13. Konseling Awal (Level Wali)
         $pdo->exec("

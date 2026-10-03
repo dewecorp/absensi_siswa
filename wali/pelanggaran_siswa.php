@@ -130,6 +130,16 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $kategori_options = ['Ringan', 'Sedang', 'Berat'];
 $status_options = ['Dicatat', 'Ditindaklanjuti', 'Selesai'];
 
+// Master template pelanggaran (sinkron dengan menu Data Pelanggaran)
+$stMasterLanggar = $pdo->prepare("
+    SELECT id, kategori, jenis, tindakan, poin
+    FROM tb_master_pelanggaran
+    WHERE id_guru = ? OR id_guru IS NULL OR id_guru = 0
+    ORDER BY FIELD(kategori, 'Ringan', 'Sedang', 'Berat'), poin ASC, id ASC
+");
+$stMasterLanggar->execute([$guru_id]);
+$master_pelanggaran = $stMasterLanggar->fetchAll(PDO::FETCH_ASSOC);
+
 $page_title = 'Daftar Pelanggaran Siswa';
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
@@ -140,6 +150,9 @@ $js_libs = [
 ];
 
 $js_page = [<<<'JS'
+var masterPelanggaran =
+JS
+. json_encode($master_pelanggaran) . ";\n" . <<<'JS'
 $(document).ready(function() {
     if ($('#table-pelanggaran').length) {
         $('#table-pelanggaran').DataTable({
@@ -156,12 +169,93 @@ $(document).ready(function() {
         });
     }
 
+    function shortLanggar(s, n) {
+        s = (s || '').toString().replace(/\s+/g, ' ').trim();
+        n = n || 110;
+        return s.length > n ? s.substr(0, n) + '...' : s;
+    }
+
+    function autogrowLanggar($ta) {
+        if (!$ta || !$ta.length) return;
+        $ta.css('height', 'auto');
+        $ta.css('height', ($ta[0].scrollHeight + 4) + 'px');
+    }
+    $(document).on('input', '#modalPelanggaran textarea', function() { autogrowLanggar($(this)); });
+    $('#modalPelanggaran').on('shown.bs.modal', function() {
+        $('#modalPelanggaran textarea').each(function() { autogrowLanggar($(this)); });
+    });
+
+    // Isi dropdown template sesuai kategori terpilih
+    function populateLanggar(kategori) {
+        $('#sel_langgar_jenis').empty().append('<option value="">-- Pilih jenis pelanggaran sesuai kondisi --</option>');
+        $('#sel_langgar_tindakan').empty().append('<option value="">-- Pilih tindakan/sanksi sesuai kondisi --</option>');
+        if (!kategori) return;
+        masterPelanggaran.filter(function(m) {
+            return (m.kategori || '').toLowerCase() === kategori.toLowerCase();
+        }).forEach(function(m) {
+            var o1 = $('<option>').val(m.jenis).text(shortLanggar(m.jenis, 110) + ' (' + m.poin + ' poin)');
+            o1.data('item', m);
+            $('#sel_langgar_jenis').append(o1);
+            var o2 = $('<option>').val(m.tindakan).text(shortLanggar(m.tindakan, 110));
+            o2.data('item', m);
+            $('#sel_langgar_tindakan').append(o2);
+        });
+    }
+
+    // Pilih template lengkap sekaligus (jenis + tindakan + poin)
+    $('#sel_langgar_full').on('change', function() {
+        var item = $('#sel_langgar_full option:selected').data('item');
+        if (!item) return;
+        $('#inp_jenis').val(item.jenis || '');
+        $('#inp_tindakan').val(item.tindakan || '');
+        $('#inp_poin').val(item.poin || 0);
+        $('#inp_kategori').val(item.kategori || 'Ringan');
+        populateLanggar(item.kategori || '');
+        $('#modalPelanggaran textarea').each(function() { autogrowLanggar($(this)); });
+    });
+
+    $('#inp_kategori').on('change', function() {
+        populateLanggar($(this).val());
+    });
+
+    // Guru tinggal pilih sesuai kondisi siswa -> isi textarea masing-masing (bisa diubah manual)
+    $('#sel_langgar_jenis').on('change', function() {
+        var item = $('#sel_langgar_jenis option:selected').data('item');
+        if ($('#sel_langgar_jenis').val()) {
+            $('#inp_jenis').val($('#sel_langgar_jenis').val());
+            autogrowLanggar($('#inp_jenis'));
+        }
+        if (item) {
+            $('#inp_poin').val(item.poin || 0);
+            $('#inp_kategori').val(item.kategori || $('#inp_kategori').val());
+        }
+    });
+    $('#sel_langgar_tindakan').on('change', function() {
+        if ($('#sel_langgar_tindakan').val()) {
+            $('#inp_tindakan').val($('#sel_langgar_tindakan').val());
+            autogrowLanggar($('#inp_tindakan'));
+        }
+    });
+
     $('#btnTambahPelanggaran').on('click', function() {
         $('#formPelanggaranAction').val('tambah');
         $('#pelanggaranId').val('');
         $('#modalPelanggaranTitle').text('Catat Pelanggaran Siswa');
         $('#formPelanggaran')[0].reset();
+        var curKat = $('#inp_kategori').val() || 'Ringan';
+        populateLanggar(curKat);
+        $('#sel_langgar_full').empty().append('<option value="">-- Pilih satu template lengkap (opsional) --</option>');
+        masterPelanggaran.filter(function(m) {
+            return (m.kategori || '').toLowerCase() === curKat.toLowerCase();
+        }).forEach(function(m) {
+            var o = $('<option>').val(m.id).text(shortLanggar(m.jenis, 110) + ' (' + m.poin + ' poin)');
+            o.data('item', m);
+            $('#sel_langgar_full').append(o);
+        });
         $('#modalPelanggaran').modal('show');
+        setTimeout(function() {
+            $('#modalPelanggaran textarea').each(function() { autogrowLanggar($(this)); });
+        }, 120);
     });
 
     $(document).on('click', '.btn-edit-pelanggaran', function() {
@@ -171,13 +265,32 @@ $(document).ready(function() {
         $('#modalPelanggaranTitle').text('Edit Pelanggaran Siswa');
         $('#inp_siswa').val(data.id_siswa);
         $('#inp_tanggal').val(data.tanggal);
-        $('#inp_jenis').val(data.jenis_pelanggaran);
         $('#inp_kategori').val(data.kategori || 'Ringan');
+        populateLanggar(data.kategori || 'Ringan');
+        $('#sel_langgar_full').empty().append('<option value="">-- Pilih satu template lengkap (opsional) --</option>');
+        masterPelanggaran.filter(function(m) {
+            return (m.kategori || '').toLowerCase() === (data.kategori || '').toLowerCase();
+        }).forEach(function(m) {
+            var o = $('<option>').val(m.id).text(shortLanggar(m.jenis, 110) + ' (' + m.poin + ' poin)');
+            o.data('item', m);
+            $('#sel_langgar_full').append(o);
+        });
+        // Samakan dropdown dengan nilai tersimpan bila cocok persis
+        $('#sel_langgar_jenis option').each(function() {
+            if ($(this).val() === (data.jenis_pelanggaran || '')) $(this).prop('selected', true);
+        });
+        $('#sel_langgar_tindakan option').each(function() {
+            if ($(this).val() === (data.tindakan || '')) $(this).prop('selected', true);
+        });
+        $('#inp_jenis').val(data.jenis_pelanggaran);
         $('#inp_poin').val(data.poin || 0);
         $('#inp_tindakan').val(data.tindakan || '');
         $('#inp_ortu').val(data.orang_tua || '');
         $('#inp_status').val(data.status);
         $('#modalPelanggaran').modal('show');
+        setTimeout(function() {
+            $('#modalPelanggaran textarea').each(function() { autogrowLanggar($(this)); });
+        }, 120);
     });
 
     $(document).on('click', '.btn-detail-pelanggaran', function() {
@@ -250,11 +363,32 @@ include '../templates/sidebar.php';
             <?php endif; ?>
 
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                     <h4>Catatan Kedisiplinan & Pelanggaran Tata Tertib</h4>
-                    <button type="button" class="btn btn-primary" id="btnTambahPelanggaran" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
-                        <i class="fas fa-plus mr-1"></i> Catat Pelanggaran
-                    </button>
+                    <div>
+                        <a href="data_pelanggaran.php" class="btn btn-outline-info btn-sm mr-2">
+                            <i class="fas fa-database mr-1"></i> Data Pelanggaran
+                        </a>
+                        <?php
+                        $qs_lg = [];
+                        if ($selected_kelas_id > 0) { $qs_lg['kelas'] = $selected_kelas_id; }
+                        $url_lg_cetak = 'export_pelanggaran_pdf.php?' . http_build_query(array_merge($qs_lg, ['mode' => 'print']));
+                        $url_lg_pdf = 'export_pelanggaran_pdf.php?' . http_build_query(array_merge($qs_lg, ['mode' => 'pdf']));
+                        $url_lg_xls = 'export_pelanggaran_excel.php?' . http_build_query($qs_lg);
+                        ?>
+                        <a href="<?= htmlspecialchars($url_lg_cetak) ?>" target="_blank" class="btn btn-outline-secondary btn-sm mr-1" title="Cetak (print tab baru)">
+                            <i class="fas fa-print mr-1"></i> Cetak
+                        </a>
+                        <a href="<?= htmlspecialchars($url_lg_pdf) ?>" class="btn btn-outline-danger btn-sm mr-1" title="Unduh file PDF">
+                            <i class="fas fa-file-pdf mr-1"></i> PDF
+                        </a>
+                        <a href="<?= htmlspecialchars($url_lg_xls) ?>" class="btn btn-outline-success btn-sm mr-2" title="Ekspor Excel">
+                            <i class="fas fa-file-excel mr-1"></i> Excel
+                        </a>
+                        <button type="button" class="btn btn-primary" id="btnTambahPelanggaran" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                            <i class="fas fa-plus mr-1"></i> Catat Pelanggaran
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -301,6 +435,17 @@ include '../templates/sidebar.php';
                                             <button type="button" class="btn btn-danger btn-sm btn-hapus-pelanggaran" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
                                                 <i class="fas fa-trash"></i>
                                             </button>
+                                            <div class="btn-group btn-group-sm mt-1">
+                                                <a href="export_pelanggaran_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-outline-secondary" title="Cetak laporan siswa ini">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+                                                <a href="export_pelanggaran_pdf.php?id=<?= (int)$r['id'] ?>&mode=print" target="_blank" class="btn btn-outline-danger" title="Buka print / Simpan PDF catatan ini">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                                <a href="export_pelanggaran_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-outline-success" title="Ekspor Excel siswa ini">
+                                                    <i class="fas fa-file-excel"></i>
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -326,9 +471,12 @@ include '../templates/sidebar.php';
                     <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
+                    <style>
+                        #modalPelanggaran textarea { min-height: 110px; line-height: 1.55; resize: vertical; overflow-y: auto; }
+                    </style>
                     <div class="row">
                         <div class="col-md-6 form-group">
-                            <label>Siswa <span class="text-danger">*</span></label>
+                            <label class="font-weight-bold">Siswa <span class="text-danger">*</span></label>
                             <select name="id_siswa" id="inp_siswa" class="form-control" required>
                                 <option value="">-- Pilih Siswa --</option>
                                 <?php foreach ($siswa_list as $s): ?>
@@ -339,35 +487,45 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-md-3 form-group">
-                            <label>Tanggal</label>
+                            <label class="font-weight-bold">Tanggal</label>
                             <input type="date" name="tanggal" id="inp_tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-md-3 form-group">
-                            <label>Kategori</label>
+                            <label class="font-weight-bold">Kategori</label>
                             <select name="kategori" id="inp_kategori" class="form-control">
                                 <?php foreach ($kategori_options as $k): ?>
                                     <option value="<?= $k ?>"><?= $k ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-8 form-group">
-                            <label>Jenis Pelanggaran <span class="text-danger">*</span></label>
-                            <input type="text" name="jenis_pelanggaran" id="inp_jenis" class="form-control" required placeholder="Contoh: Datang terlambat lebih dari 15 menit">
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Poin Pelanggaran</label>
-                            <input type="number" name="poin" id="inp_poin" class="form-control" value="5" min="0">
-                        </div>
                         <div class="col-12 form-group">
-                            <label>Tindakan / Sanksi yang Diberikan</label>
-                            <textarea name="tindakan" id="inp_tindakan" class="form-control" rows="2" placeholder="Contoh: Peringatan lisan dan tugas kebersihan"></textarea>
+                            <label class="font-weight-bold">Pilih Cepat: Satu Template Lengkap <small class="text-muted">(opsional, isi jenis + tindakan + poin sekaligus)</small></label>
+                            <select id="sel_langgar_full" class="form-control">
+                                <option value="">-- Pilih satu template lengkap (opsional) --</option>
+                            </select>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label>Keterangan Orang Tua</label>
+                            <label class="font-weight-bold">Jenis Pelanggaran <span class="text-danger">*</span></label>
+                            <select id="sel_langgar_jenis" class="form-control form-control-sm mb-1">
+                                <option value="">-- Pilih jenis pelanggaran sesuai kondisi --</option>
+                            </select>
+                            <textarea name="jenis_pelanggaran" id="inp_jenis" class="form-control" rows="4" required placeholder="Pilih dari dropdown di atas sesuai kondisi, atau ketik manual..."></textarea>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Poin Pelanggaran</label>
+                            <input type="number" name="poin" id="inp_poin" class="form-control mb-1" value="5" min="0">
+                            <label class="font-weight-bold mt-2">Tindakan / Sanksi yang Diberikan</label>
+                            <select id="sel_langgar_tindakan" class="form-control form-control-sm mb-1">
+                                <option value="">-- Pilih tindakan/sanksi sesuai kondisi --</option>
+                            </select>
+                            <textarea name="tindakan" id="inp_tindakan" class="form-control" rows="4" placeholder="Pilih dari dropdown di atas sesuai kondisi, atau ketik manual..."></textarea>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Keterangan Orang Tua</label>
                             <input type="text" name="orang_tua" id="inp_ortu" class="form-control" placeholder="Contoh: Surat pemberitahuan terkirim">
                         </div>
                         <div class="col-md-6 form-group">
-                            <label>Status</label>
+                            <label class="font-weight-bold">Status</label>
                             <select name="status" id="inp_status" class="form-control">
                                 <?php foreach ($status_options as $st): ?>
                                     <option value="<?= $st ?>"><?= $st ?></option>

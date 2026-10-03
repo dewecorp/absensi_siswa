@@ -5,10 +5,11 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali', 'admin', 'tata_usaha', 'kepala_madrasah'])) {
+if (!isAuthorized(['wali', 'admin'])) {
     redirect('../login.php');
 }
 
+$user_level = getUserLevel();
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -16,12 +17,10 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
 
 $id_siswa = (int)($_GET['id_siswa'] ?? 0);
 $id_catatan = (int)($_GET['id'] ?? 0);
-$f_kelas = (int)($_GET['f_kelas'] ?? 0);
-$f_mapel = (int)($_GET['f_mapel'] ?? 0);
-$f_kategori = trim((string)($_GET['f_kategori'] ?? ''));
+$f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
+$f_kelas = (int)($_GET['kelas'] ?? $_GET['f_kelas'] ?? 0);
 $f_status = trim((string)($_GET['f_status'] ?? ''));
-// Mode output: print (window.print tab baru, stabil) atau pdf (unduh file via Dompdf).
-// Kompatibel mundur: download=1 dianggap mode pdf.
+// Mode output: print (window.print tab baru, stabil + support reload) atau pdf (unduh file via Dompdf).
 $mode = strtolower(trim((string)($_GET['mode'] ?? '')));
 if ($mode === '' && (int)($_GET['download'] ?? 0) === 1) {
     $mode = 'pdf';
@@ -41,81 +40,77 @@ $tempat_jadwal = $school['tempat_jadwal'] ?? 'Jepara';
 $kepala_madrasah = $school['kepala_madrasah'] ?? '-';
 $nip_kepala = $school['nip_kepala'] ?? '-';
 
-// Profil Guru Login
-$stG = $pdo->prepare("SELECT nama_guru, nuptk FROM tb_guru WHERE id_guru = ?");
+// Profil Wali Login
+$stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
 $stG->execute([$guru_id]);
-$guru_info = $stG->fetch(PDO::FETCH_ASSOC);
-$nama_guru = $guru_info['nama_guru'] ?? ($_SESSION['nama_guru'] ?? 'Guru Pengampu');
-$nip_guru = $guru_info['nuptk'] ?? '-';
+$nama_wali = $stG->fetchColumn() ?: ($_SESSION['nama_guru'] ?? 'Wali Kelas');
 
-// Query Catatan
-$where = ["c.id_guru = ?"];
-$params = [$guru_id];
+// Query Pembinaan
+$where = ["1=1"];
+$params = [];
 
 if ($id_catatan > 0) {
-    $where[] = "c.id = ?";
+    $where[] = "p.id = ?";
     $params[] = $id_catatan;
 } elseif ($id_siswa > 0) {
-    $where[] = "c.id_siswa = ?";
+    $where[] = "p.id_siswa = ?";
     $params[] = $id_siswa;
 } else {
     if ($f_kelas > 0) {
-        $where[] = "c.id_kelas = ?";
+        $where[] = "p.id_kelas = ?";
         $params[] = $f_kelas;
     }
-    if ($f_mapel > 0) {
-        $where[] = "c.id_mapel = ?";
-        $params[] = $f_mapel;
-    }
-    if ($f_kategori !== '') {
-        $where[] = "c.kategori = ?";
-        $params[] = $f_kategori;
+    if ($f_jenis !== '') {
+        $where[] = "p.jenis_pembinaan = ?";
+        $params[] = $f_jenis;
     }
     if ($f_status !== '') {
-        $where[] = "c.status = ?";
+        $where[] = "p.status = ?";
         $params[] = $f_status;
     }
+}
+if ($user_level !== 'admin') {
+    $where[] = "p.id_wali = ?";
+    $params[] = $guru_id;
 }
 
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
-    SELECT c.*, s.nama_siswa, s.nisn, s.jenis_kelamin, k.nama_kelas, m.nama_mapel, g.nama_guru
-    FROM tb_catatan_perkembangan c
-    JOIN tb_siswa s ON s.id_siswa = c.id_siswa
-    LEFT JOIN tb_kelas k ON k.id_kelas = c.id_kelas
-    LEFT JOIN tb_mata_pelajaran m ON m.id_mapel = c.id_mapel
-    LEFT JOIN tb_guru g ON g.id_guru = c.id_guru
+    SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas, g.nama_guru
+    FROM tb_pembinaan_siswa p
+    JOIN tb_siswa s ON s.id_siswa = p.id_siswa
+    LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas
+    LEFT JOIN tb_guru g ON g.id_guru = p.id_wali
     WHERE $where_sql
-    ORDER BY s.nama_siswa ASC, c.tanggal DESC, c.id DESC
+    ORDER BY s.nama_siswa ASC, p.tanggal DESC, p.id DESC
 ");
 $stmt->execute($params);
-$catatan_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$bina_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if (empty($catatan_list)) {
-    echo "<script>alert('Tidak ada data catatan perkembangan untuk dicetak.'); window.history.back();</script>";
+if (empty($bina_list)) {
+    echo "<script>alert('Tidak ada data pembinaan untuk dicetak.'); window.history.back();</script>";
     exit;
 }
 
 // Mode: 1 Siswa Spesifik atau Rekap Kolektif
-$is_single_student = ($id_siswa > 0 || $id_catatan > 0) && count(array_unique(array_column($catatan_list, 'id_siswa'))) === 1;
-$student_info = $is_single_student ? $catatan_list[0] : null;
+$is_single_student = ($id_siswa > 0 || $id_catatan > 0) && count(array_unique(array_column($bina_list, 'id_siswa'))) === 1;
+$student_info = $is_single_student ? $bina_list[0] : null;
 
 // Judul Dokumen (tampilkan tahun ajaran; untuk per siswa tampilkan juga nama)
 $ta_file = preg_replace('/[^A-Za-z0-9-]+/', '', str_replace('/', '-', $tahun_ajaran));
 if ($is_single_student) {
     $nama_safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $student_info['nama_siswa']);
-    $judul_dokumen = "LAPORAN PERKEMBANGAN BELAJAR PESERTA DIDIK - " . strtoupper($student_info['nama_siswa']) . " - TAHUN AJARAN " . $tahun_ajaran;
-    $filename = "Laporan_Perkembangan_" . $nama_safe . "_TA" . $ta_file . "_" . date('Ymd');
+    $judul_dokumen = "LAPORAN PEMBINAAN SISWA - " . strtoupper($student_info['nama_siswa']) . " - TAHUN AJARAN " . $tahun_ajaran;
+    $filename = "Laporan_Pembinaan_" . $nama_safe . "_TA" . $ta_file . "_" . date('Ymd');
 } else {
-    $judul_dokumen = "REKAPITULASI CATATAN PERKEMBANGAN PESERTA DIDIK - TAHUN AJARAN " . $tahun_ajaran;
-    $filename = "Rekap_Catatan_Perkembangan_TA" . $ta_file . "_" . date('Ymd');
+    $judul_dokumen = "REKAPITULASI PEMBINAAN SISWA - TAHUN AJARAN " . $tahun_ajaran;
+    $filename = "Rekap_Pembinaan_TA" . $ta_file . "_" . date('Ymd');
 }
 
-// Nama file logo (kop pakai path file langsung seperti cetak rekap nilai)
 $logo_file = $school['logo'] ?? '';
 
 // QR Code Signature
-$qr_guru = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Guru: {$nama_guru} - Catatan Perkembangan - {$nama_madrasah}");
+$qr_wali = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Wali Kelas: {$nama_wali} - Pembinaan Siswa - {$nama_madrasah}");
 $qr_kepala = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Kepala Madrasah: {$kepala_madrasah} - {$nama_madrasah}");
 
 // Buffer HTML
@@ -150,11 +145,6 @@ ob_start();
             padding-bottom: 10px;
             margin-bottom: 15px;
         }
-        .kop-table { width: 100%; border: none; border-collapse: collapse; margin: 0; }
-        .kop-table td { vertical-align: middle; border: none !important; padding: 0; }
-        .kop-logo { width: 100px; text-align: center; }
-        .kop-title { text-align: center; }
-        .kop-spacer { width: 100px; }
         .header-kop h2 {
             margin: 0;
             font-size: 14pt;
@@ -243,23 +233,6 @@ ob_start();
             font-weight: bold;
             font-size: 8.5pt;
         }
-        .aspect-grid {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-            font-size: 8.5pt;
-        }
-        .aspect-grid td {
-            border: 1px solid #ddd;
-            padding: 4px 6px;
-            vertical-align: top;
-            width: 50%;
-        }
-        .aspect-grid .asp-title {
-            font-weight: bold;
-            color: #1e3a8a;
-            margin-bottom: 2px;
-        }
         .signature-table {
             width: 100%;
             border-collapse: collapse;
@@ -293,19 +266,19 @@ ob_start();
 <?php if (!$is_download): ?>
     <div class="no-print">
         <div>
-            <strong>Pratinjau Cetak Laporan Perkembangan</strong> &bull; <span class="text-muted"><?= htmlspecialchars($filename) ?></span>
+            <strong>Pratinjau Cetak Pembinaan Siswa</strong> &bull; <span class="text-muted"><?= htmlspecialchars($filename) ?></span>
         </div>
         <div>
             <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:7px 16px;border-radius:4px;font-weight:bold;cursor:pointer;">
-                <i class="fas fa-print"></i> Cetak Sekarang
+                Cetak Sekarang
             </button>
             <?php
             $qs_pdf = $_GET;
             unset($qs_pdf['download']);
             $qs_pdf['mode'] = 'pdf';
             ?>
-            <a href="export_catatan_perkembangan_pdf.php?<?= http_build_query($qs_pdf) ?>" style="background:#dc2626;color:#fff;text-decoration:none;padding:7px 14px;border-radius:4px;font-weight:bold;margin-left:6px;">
-                <i class="fas fa-file-pdf"></i> Unduh File PDF
+            <a href="export_pembinaan_pdf.php?<?= http_build_query($qs_pdf) ?>" style="background:#dc2626;color:#fff;text-decoration:none;padding:7px 14px;border-radius:4px;font-weight:bold;margin-left:6px;">
+                Unduh File PDF
             </a>
             <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;padding:7px 12px;border-radius:4px;margin-left:6px;cursor:pointer;">
                 Tutup
@@ -335,7 +308,7 @@ ob_start();
             </td>
             <td style="border: none; text-align: center; vertical-align: middle;">
                 <h2><?= htmlspecialchars($nama_madrasah) ?></h2>
-                <h3>CATATAN PERKEMBANGAN &amp; PEMBINAAN PESERTA DIDIK</h3>
+                <h3>PEMBINAAN PESERTA DIDIK</h3>
                 <p><?= htmlspecialchars($alamat_madrasah) ?> &bull; Tahun Ajaran: <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars($semester) ?>)</p>
             </td>
             <td style="border: none; width: 100px;"></td>
@@ -355,7 +328,7 @@ ob_start();
             <td class="lbl">Nama Peserta Didik</td>
             <td style="width: 10px;">:</td>
             <td><strong><?= htmlspecialchars($student_info['nama_siswa']) ?></strong></td>
-            <td class="lbl">Kelas / Fase</td>
+            <td class="lbl">Kelas</td>
             <td style="width: 10px;">:</td>
             <td>Kelas <?= htmlspecialchars($student_info['nama_kelas'] ?? '-') ?></td>
         </tr>
@@ -363,99 +336,49 @@ ob_start();
             <td class="lbl">NISN</td>
             <td>:</td>
             <td><?= htmlspecialchars($student_info['nisn'] ?? '-') ?></td>
-            <td class="lbl">Mata Pelajaran</td>
+            <td class="lbl">Status Terakhir</td>
             <td>:</td>
-            <td><?= htmlspecialchars($student_info['nama_mapel'] ?? 'Umum / Terpadu') ?></td>
+            <td><strong><?= htmlspecialchars($student_info['status'] ?? 'Berjalan') ?></strong></td>
         </tr>
         <tr>
-            <td class="lbl">Guru Pengampu</td>
+            <td class="lbl">Wali Kelas</td>
             <td>:</td>
-            <td><?= htmlspecialchars($student_info['nama_guru'] ?? $nama_guru) ?></td>
-            <td class="lbl">Status Pemantauan</td>
+            <td><?= htmlspecialchars($student_info['nama_guru'] ?? $nama_wali) ?></td>
+            <td class="lbl">Jumlah Catatan</td>
             <td>:</td>
-            <td><strong><?= htmlspecialchars($student_info['status'] ?? 'Aktif') ?></strong></td>
+            <td><?= count($bina_list) ?> kali pembinaan</td>
         </tr>
     </table>
 
     <h5 style="margin: 14px 0 8px; font-size: 10.5pt; border-bottom: 1.5px solid #2563eb; color: #1e3a8a; padding-bottom: 3px;">
-        RIWAYAT &amp; ASPEK PERKEMBANGAN PESERTA DIDIK
+        RIWAYAT PEMBINAAN PESERTA DIDIK
     </h5>
 
-    <?php foreach ($catatan_list as $idx => $c): ?>
+    <?php foreach ($bina_list as $idx => $c): ?>
         <div class="card-entry">
             <div class="entry-header">
                 <div>
-                    <strong>Pengamatan #<?= $idx + 1 ?> &bull; <?= date('d F Y', strtotime($c['tanggal'])) ?></strong>
-                    <span class="badge-asp" style="margin-left: 8px;"><?= htmlspecialchars($c['kategori']) ?></span>
+                    <strong>Pembinaan #<?= $idx + 1 ?> &bull; <?= date('d F Y', strtotime($c['tanggal'])) ?></strong>
+                    <span class="badge-asp" style="margin-left: 8px;"><?= htmlspecialchars($c['jenis_pembinaan']) ?></span>
                 </div>
                 <div>Status: <strong><?= htmlspecialchars($c['status']) ?></strong></div>
             </div>
 
-            <div style="margin-bottom: 6px;">
-                <strong>Ringkasan Perkembangan:</strong>
-                <div style="margin-top: 2px;"><?= nl2br(htmlspecialchars($c['ringkasan'])) ?></div>
+            <div style="margin-bottom: 6px; color: #b91c1c;">
+                <strong>Permasalahan / Kasus:</strong>
+                <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['permasalahan'])) ?></div>
             </div>
 
-            <?php if (!empty($c['kendala'])): ?>
-                <div style="margin-bottom: 6px; color: #b91c1c;">
-                    <strong>Kendala Pembelajaran:</strong>
-                    <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['kendala'])) ?></div>
-                </div>
-            <?php endif; ?>
+            <div style="margin-bottom: 6px; color: #1d4ed8;">
+                <strong>Tindakan Pembinaan:</strong>
+                <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['tindakan'])) ?></div>
+            </div>
 
             <?php if (!empty($c['tindak_lanjut'])): ?>
-                <div style="margin-bottom: 6px; color: #15803d;">
-                    <strong>Tindak Lanjut / Solusi:</strong>
+                <div style="margin-bottom: 2px; color: #15803d;">
+                    <strong>Rencana Tindak Lanjut:</strong>
                     <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['tindak_lanjut'])) ?></div>
                 </div>
-            <?php endif; ?>
-
-            <!-- Rincian Aspek Detail -->
-            <?php
-            $details = [
-                ['Akademik', $c['perkembangan_akademik'] ?? ''],
-                ['Sikap & Karakter', $c['perkembangan_sikap'] ?? ''],
-                ['Keterampilan', $c['perkembangan_keterampilan'] ?? ''],
-                ['Keaktifan Siswa', $c['keaktifan'] ?? ''],
-                ['Potensi / Bakat', $c['potensi'] ?? ''],
-                ['Rekomendasi Guru', $c['rekomendasi'] ?? ''],
-            ];
-            $has_detail = false;
-            foreach ($details as $d) { if (trim((string)$d[1]) !== '' && $d[1] !== '-') { $has_detail = true; break; } }
-            ?>
-            <?php if ($has_detail): ?>
-                <table class="aspect-grid">
-                    <tr>
-                        <td>
-                            <div class="asp-title">Perkembangan Akademik:</div>
-                            <div><?= !empty($c['perkembangan_akademik']) ? htmlspecialchars($c['perkembangan_akademik']) : '-' ?></div>
-                        </td>
-                        <td>
-                            <div class="asp-title">Sikap &amp; Karakter:</div>
-                            <div><?= !empty($c['perkembangan_sikap']) ? htmlspecialchars($c['perkembangan_sikap']) : '-' ?></div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asp-title">Keterampilan:</div>
-                            <div><?= !empty($c['perkembangan_keterampilan']) ? htmlspecialchars($c['perkembangan_keterampilan']) : '-' ?></div>
-                        </td>
-                        <td>
-                            <div class="asp-title">Keaktifan Partisipasi:</div>
-                            <div><?= !empty($c['keaktifan']) ? htmlspecialchars($c['keaktifan']) : '-' ?></div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asp-title">Bakat &amp; Potensi Khusus:</div>
-                            <div><?= !empty($c['potensi']) ? htmlspecialchars($c['potensi']) : '-' ?></div>
-                        </td>
-                        <td>
-                            <div class="asp-title">Rekomendasi Pembimbingan:</div>
-                            <div><?= !empty($c['rekomendasi']) ? htmlspecialchars($c['rekomendasi']) : '-' ?></div>
-                        </td>
-                    </tr>
-                </table>
             <?php endif; ?>
         </div>
     <?php endforeach; ?>
@@ -469,14 +392,15 @@ ob_start();
                 <th style="width: 70px;">Tanggal</th>
                 <th style="width: 130px;">Nama Siswa</th>
                 <th style="width: 50px;">Kelas</th>
-                <th style="width: 85px;">Aspek</th>
-                <th>Ringkasan Perkembangan</th>
-                <th>Kendala</th>
-                <th>Tindak Lanjut</th>
+                <th style="width: 85px;">Jenis</th>
+                <th>Permasalahan / Kasus</th>
+                <th>Tindakan Pembinaan</th>
+                <th>Rencana Tindak Lanjut</th>
+                <th style="width: 80px;">Status</th>
             </tr>
         </thead>
         <tbody>
-            <?php $no = 1; foreach ($catatan_list as $row): ?>
+            <?php $no = 1; foreach ($bina_list as $row): ?>
                 <tr>
                     <td style="text-align: center;"><?= $no++ ?></td>
                     <td style="text-align: center;"><?= date('d/m/Y', strtotime($row['tanggal'])) ?></td>
@@ -488,11 +412,12 @@ ob_start();
                     </td>
                     <td style="text-align: center;">Kelas <?= htmlspecialchars($row['nama_kelas'] ?? '-') ?></td>
                     <td style="text-align: center;">
-                        <span class="badge-asp"><?= htmlspecialchars($row['kategori']) ?></span>
+                        <span class="badge-asp"><?= htmlspecialchars($row['jenis_pembinaan']) ?></span>
                     </td>
-                    <td><?= nl2br(htmlspecialchars($row['ringkasan'])) ?></td>
-                    <td style="color: #b91c1c;"><?= htmlspecialchars($row['kendala'] ?? '-') ?></td>
+                    <td><?= nl2br(htmlspecialchars($row['permasalahan'])) ?></td>
+                    <td style="color: #1d4ed8;"><?= htmlspecialchars($row['tindakan']) ?></td>
                     <td style="color: #15803d;"><?= htmlspecialchars($row['tindak_lanjut'] ?? '-') ?></td>
+                    <td style="text-align: center; font-weight: bold;"><?= htmlspecialchars($row['status']) ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
@@ -511,16 +436,16 @@ ob_start();
         </td>
         <td>
             <?= htmlspecialchars($tempat_jadwal) ?>, <?= date('d F Y') ?><br>
-            Guru Pengampu,<br>
-            <img src="<?= $qr_guru ?>" alt="QR TTD Guru" style="width: 60px; height: 60px; margin: 6px auto; display: block;">
-            <strong><?= htmlspecialchars($nama_guru) ?></strong>
+            Wali Kelas,<br>
+            <img src="<?= $qr_wali ?>" alt="QR TTD Wali" style="width: 60px; height: 60px; margin: 6px auto; display: block;">
+            <strong><?= htmlspecialchars($nama_wali) ?></strong>
         </td>
     </tr>
 </table>
 
 <?php if (!$is_download): ?>
     <script>
-        // Auto print dialog upon page open
+        // Auto print dialog upon page open (stabil, support reload)
         window.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
                 window.print();
@@ -534,7 +459,7 @@ ob_start();
 <?php
 $html_out = ob_get_clean();
 
-// Jika download PDF diminta
+// Jika download file PDF diminta
 if ($is_download) {
     require_once '../vendor/autoload.php';
     while (ob_get_level()) { ob_end_clean(); }
