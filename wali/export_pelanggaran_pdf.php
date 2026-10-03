@@ -109,9 +109,59 @@ if ($is_single_student) {
 
 $logo_file = $school['logo'] ?? '';
 
-// QR Code Signature
-$qr_wali = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Wali Kelas: {$nama_wali} - Pelanggaran Siswa - {$nama_madrasah}");
-$qr_kepala = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Kepala Madrasah: {$kepala_madrasah} - {$nama_madrasah}");
+// Helper: ambil gambar (lokal/remote) jadi data-URI base64 agar Dompdf selalu render
+// (path relatif putus di Dompdf, URL remote kadang gagal fetch saat render PDF).
+if (!function_exists('pelanggaran_img_b64')) {
+    function pelanggaran_img_b64(string $src): string {
+        $src = trim($src);
+        if ($src === '') return '';
+        if (strpos($src, 'data:image') === 0) return $src;
+        $data = false;
+        if (preg_match('#^https?://#i', $src)) {
+            if (function_exists('curl_init')) {
+                $ch = curl_init($src);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'SIMAD-Madrasah/1.0');
+                $data = curl_exec($ch);
+                $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($code !== 200 || !is_string($data) || strlen($data) < 500) $data = false;
+            } else {
+                $ctx = stream_context_create(['http' => ['timeout' => 15, 'user_agent' => 'SIMAD-Madrasah/1.0']]);
+                $data = @file_get_contents($src, false, $ctx);
+                if (!is_string($data) || strlen($data) < 500) $data = false;
+            }
+            if ($data === false) return $src; // fallback: biarkan URL (print-tab tetap tampil)
+            $mime = 'image/png';
+        } else {
+            $fs = (strpos($src, __DIR__) === 0) ? $src : __DIR__ . '/' . ltrim($src, '/');
+            if (!is_file($fs)) return '';
+            $info = @getimagesize($fs);
+            $mime = $info['mime'] ?? 'image/png';
+            $data = @file_get_contents($fs);
+            if (!is_string($data) || $data === '') return '';
+        }
+        return 'data:' . $mime . ';base64,' . base64_encode($data);
+    }
+}
+
+// Logo kop: embed base64 (path relatif putus saat render Dompdf)
+$logo_src = '';
+if (!empty($logo_file)) {
+    foreach (['../assets/img/' . $logo_file, '../uploads/' . $logo_file] as $lp) {
+        $fs = __DIR__ . '/' . $lp;
+        if (is_file($fs)) { $logo_src = pelanggaran_img_b64($fs); break; }
+    }
+}
+
+// QR Code Signature: embed base64 agar posisi stabil di file PDF
+$qr_wali_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Wali Kelas: {$nama_wali} - Pelanggaran Siswa - {$nama_madrasah}");
+$qr_kepala_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Kepala Madrasah: {$kepala_madrasah} - {$nama_madrasah}");
+$qr_wali = pelanggaran_img_b64($qr_wali_url);
+$qr_kepala = pelanggaran_img_b64($qr_kepala_url);
 
 // Buffer HTML
 ob_start();
@@ -289,21 +339,11 @@ ob_start();
 
 <!-- KOP MADRASAH -->
 <div class="header-kop">
-    <?php
-    // Samakan pola kop dengan cetak lain (path file langsung, height 80px width auto).
-    $logo_path = '';
-    if (!empty($logo_file)) {
-        foreach (['../assets/img/' . $logo_file, __DIR__ . '/../assets/img/' . $logo_file] as $lp) {
-            $fs = (strpos($lp, __DIR__) === 0) ? $lp : __DIR__ . '/' . $lp;
-            if (is_file($fs)) { $logo_path = '../assets/img/' . $logo_file; break; }
-        }
-    }
-    ?>
     <table style="width: 100%; border: none; margin: 0;">
         <tr style="border: none;">
             <td style="border: none; width: 100px; text-align: center; vertical-align: middle;">
-                <?php if ($logo_path !== ''): ?>
-                    <img src="<?= htmlspecialchars($logo_path) ?>" style="height: 80px; width: auto;">
+                <?php if ($logo_src !== ''): ?>
+                    <img src="<?= $logo_src ?>" style="height: 80px; width: auto;">
                 <?php endif; ?>
             </td>
             <td style="border: none; text-align: center; vertical-align: middle;">
@@ -427,17 +467,25 @@ ob_start();
 <!-- TANDA TANGAN -->
 <table class="signature-table">
     <tr>
-        <td>
+        <td style="text-align: center; vertical-align: top; width: 50%;">
             Mengetahui,<br>
             Kepala Madrasah<br>
-            <img src="<?= $qr_kepala ?>" alt="QR TTD Kepala" style="width: 60px; height: 60px; margin: 6px auto; display: block;">
+            <div style="height: 72px; text-align: center; margin: 4px 0;">
+                <?php if ($qr_kepala !== '' && strpos($qr_kepala, 'data:image') === 0): ?>
+                    <img src="<?= $qr_kepala ?>" alt="QR TTD Kepala" style="width: 64px; height: 64px;">
+                <?php endif; ?>
+            </div>
             <strong><?= htmlspecialchars($kepala_madrasah) ?></strong><br>
             NIP: <?= htmlspecialchars($nip_kepala) ?>
         </td>
-        <td>
+        <td style="text-align: center; vertical-align: top; width: 50%;">
             <?= htmlspecialchars($tempat_jadwal) ?>, <?= date('d F Y') ?><br>
             Wali Kelas,<br>
-            <img src="<?= $qr_wali ?>" alt="QR TTD Wali" style="width: 60px; height: 60px; margin: 6px auto; display: block;">
+            <div style="height: 72px; text-align: center; margin: 4px 0;">
+                <?php if ($qr_wali !== '' && strpos($qr_wali, 'data:image') === 0): ?>
+                    <img src="<?= $qr_wali ?>" alt="QR TTD Wali" style="width: 64px; height: 64px;">
+                <?php endif; ?>
+            </div>
             <strong><?= htmlspecialchars($nama_wali) ?></strong>
         </td>
     </tr>

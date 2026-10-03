@@ -197,7 +197,7 @@ include '../templates/sidebar.php';
         <div class="section-header">
             <h1>Master Data Perkembangan</h1>
             <div class="section-header-breadcrumb">
-                <a href="catatan_perkembangan.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode($_GET['session_type']) : '' ?>" class="btn btn-outline-primary btn-sm mr-2">
+                <a href="catatan_perkembangan.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode($_GET['session_type']) : '' ?>" class="btn btn-secondary btn-sm mr-2">
                     <i class="fas fa-clipboard-list mr-1"></i> Catatan Perkembangan Siswa
                 </a>
                 <button type="button" class="btn btn-primary btn-sm" id="btnTambahMaster">

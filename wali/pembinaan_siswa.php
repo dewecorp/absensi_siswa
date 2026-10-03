@@ -367,26 +367,22 @@ include '../templates/sidebar.php';
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                     <h4>Catatan Pembinaan Wali Kelas</h4>
                     <div>
-                        <a href="data_pembinaan.php" class="btn btn-outline-info btn-sm mr-2">
+                        <a href="data_pembinaan.php" class="btn btn-info btn-sm mr-1">
                             <i class="fas fa-database mr-1"></i> Data Pembinaan
                         </a>
                         <?php
                         $qs_bina = [];
                         if ($selected_kelas_id > 0) { $qs_bina['kelas'] = $selected_kelas_id; }
                         $url_bina_cetak = 'export_pembinaan_pdf.php?' . http_build_query(array_merge($qs_bina, ['mode' => 'print']));
-                        $url_bina_pdf = 'export_pembinaan_pdf.php?' . http_build_query(array_merge($qs_bina, ['mode' => 'pdf']));
                         $url_bina_xls = 'export_pembinaan_excel.php?' . http_build_query($qs_bina);
                         ?>
-                        <a href="<?= htmlspecialchars($url_bina_cetak) ?>" target="_blank" class="btn btn-outline-secondary btn-sm mr-1" title="Cetak (print tab baru)">
-                            <i class="fas fa-print mr-1"></i> Cetak
+                        <a href="<?= htmlspecialchars($url_bina_cetak) ?>" target="_blank" class="btn btn-danger btn-sm mr-1" title="Cetak / Simpan PDF">
+                            <i class="fas fa-print mr-1"></i> Cetak / PDF
                         </a>
-                        <a href="<?= htmlspecialchars($url_bina_pdf) ?>" class="btn btn-outline-danger btn-sm mr-1" title="Unduh file PDF">
-                            <i class="fas fa-file-pdf mr-1"></i> PDF
-                        </a>
-                        <a href="<?= htmlspecialchars($url_bina_xls) ?>" class="btn btn-outline-success btn-sm mr-2" title="Ekspor Excel">
+                        <a href="<?= htmlspecialchars($url_bina_xls) ?>" class="btn btn-success btn-sm mr-2" title="Ekspor Excel">
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
-                        <button type="button" class="btn btn-primary" id="btnTambahPembinaan" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahPembinaan" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Catat Pembinaan
                         </button>
                     </div>
@@ -439,13 +435,10 @@ include '../templates/sidebar.php';
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                             <div class="btn-group btn-group-sm mt-1">
-                                                <a href="export_pembinaan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-outline-secondary" title="Cetak laporan siswa ini">
+                                                <a href="export_pembinaan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger" title="Cetak / Simpan PDF laporan siswa ini">
                                                     <i class="fas fa-print"></i>
                                                 </a>
-                                                <a href="export_pembinaan_pdf.php?id=<?= (int)$r['id'] ?>&mode=pdf" class="btn btn-outline-danger" title="Unduh file PDF catatan ini">
-                                                    <i class="fas fa-file-pdf"></i>
-                                                </a>
-                                                <a href="export_pembinaan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-outline-success" title="Ekspor Excel siswa ini">
+                                                <a href="export_pembinaan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success" title="Ekspor Excel siswa ini">
                                                     <i class="fas fa-file-excel"></i>
                                                 </a>
                                             </div>
