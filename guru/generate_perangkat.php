@@ -32,6 +32,7 @@ $jenis_options = [
     'Kriteria Ketercapaian (KKTP)',
     'LKPD (Lembar Kerja Peserta Didik)',
     'PPT (Slide Show) Materi Pembelajaran',
+    'Materi Kokurikuler',
     'Lainnya'
 ];
 $kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_1503_KBC' => 'KMA 1503 + KBC'];

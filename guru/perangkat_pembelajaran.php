@@ -180,6 +180,7 @@ $jenis_options = [
     'Kriteria Ketercapaian (KKTP)',
     'LKPD (Lembar Kerja Peserta Didik)',
     'PPT (Slide Show) Materi Pembelajaran',
+    'Materi Kokurikuler',
     'Lainnya'
 ];
 $semester_options = ['Semester 1', 'Semester 2'];

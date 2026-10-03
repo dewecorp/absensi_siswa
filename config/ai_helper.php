@@ -340,7 +340,11 @@ if (!function_exists('ai_build_soal_prompt')) {
         if (trim((string)($in['instruksi_tambahan'] ?? '')) !== '') {
             $lines[] = '- Instruksi / Perintah Tambahan Khusus: ' . trim((string)$in['instruksi_tambahan']) . ' (PENTING: Wajib dipatuhi dan diimplementasikan pada pembuatan butir soal/kisi-kisi terkait. Bila instruksi meminta gambar/ilustrasi pada butir tertentu, WAJIB menuliskan blok deskripsi gambar dengan format persis: [GAMBAR: uraian detail objek gambar agar guru dapat menggambar ulang/menempelkan gambar pada naskah cetak] tepat setelah kalimat pertanyaan butir tersebut, dan biarkan field "gambar" pada JSON tetap terisi teks uraian yang sama).';
         }
-        $lines[] = '- Aturan gambar/ilustrasi: bila materi atau instruksi tambahan meminta gambar (misal diagram organ, peta, bangun datar/ruang, rangkaian listrik, grafik), WAJIB sisipkan blok [GAMBAR: ...] pada butir soal yang memerlukan gambar. Jangan menulis soal "perhatikan gambar berikut" tanpa blok [GAMBAR: ...]. Bila tidak memerlukan gambar, JANGAN menulis blok [GAMBAR: ...].';
+        $lines[] = '- ATURAN MUTLAK GAMBAR / ILUSTRASI SOAL (DISIPLIN TINGGI & RELEVAN):';
+        $lines[] = '  1. RELEVANSI 100%: Gambar WAJIB langsung terkait dengan materi pokok yang diuji. DILARANG KERAS membuat deskripsi gambar yang tidak sesuai tema atau menyimpang.';
+        $lines[] = '  2. KESESUAIAN SUBJEK & USIA: Jika soal menceritakan kegiatan peserta didik madrasah (MI/SD, MTs, MA), subjek visual WAJIB dideskripsikan sebagai "peserta didik / siswa madrasah (anak-anak usia sekolah berseragam sekolah)". DILARANG KERAS mendeskripsikan warga masyarakat dewasa, orang kampung, atau petani jika konteksnya adalah murid madrasah.';
+        $lines[] = '  3. MATERI SAINS / DIAGRAM: Gunakan istilah anatomi atau sains yang baku dan presisi (misal: "Diagram sistem pencernaan manusia dengan label mulut, kerongkongan, lambung, usus halus, usus besar, anus").';
+        $lines[] = '  4. PENULISAN BLOK: Tuliskan persis [GAMBAR: deskripsi objek edukatif yang fokus dan spesifik] tepat setelah kalimat pertanyaan. Jangan menulis "perhatikan gambar berikut" tanpa menyertakan blok [GAMBAR: ...]. Jika soal tidak memerlukan gambar, JANGAN menuliskan blok tersebut.';
         $lines[] = '- Tingkat kesulitan: ACAK dan MERATA untuk tiap bentuk soal (setiap bentuk wajib ada yang Mudah, Sedang, dan Sukar bila jumlah memungkinkan; bila jumlah < 3, variasikan sebisa mungkin). Tandai tiap butir pada field "kesulitan".';
         $lines[] = 'Level kognitif (WAJIB untuk tiap butir kisi-kisi dan soal, cantumkan field "level_kognitif" dengan nilai persis C1, C2, C3, atau C4 / L1-L4):';
         $lines[] = '- Kognitif C1 Knowledge (Mengingat): Pada level ini pelajar perlu mengingat istilah, fakta, & detail tanpa perlu memahami konsep materinya.';
@@ -414,9 +418,20 @@ if (!function_exists('ai_build_perangkat_prompt')) {
         $lines[] = '- Kriteria Ketercapaian (KKTP): tulis tabel tujuan/indikator, rentang nilai, kriteria ketuntasan, dan tindak lanjut.';
         $lines[] = '- LKPD (Lembar Kerja Peserta Didik): tulis identitas kelompok/nama siswa, capaian & tujuan pembelajaran, petunjuk pengerjaan, stimulus materi/kasus kontekstual, langkah kegiatan bertahap, tabel pengamatan/pengisian data peserta didik, pertanyaan diskusi analitis, dan lembar kesimpulan/refleksi.';
         $lines[] = '- PPT (Slide Show) Materi Pembelajaran: susun naskah presentasi slide demi slide secara lengkap dan menarik (Slide 1: Judul & Identitas, Slide 2: Tujuan Pembelajaran & Apersepsi KBC, Slide 3-7: Materi Pokok & Visualisasi [GAMBAR: ...], Slide 8: Aktivitas/Diskusi Interaktif Siswa, Slide 9: Rangkuman & Refleksi, Slide 10: Penugasan & Penutup); sertakan poin-poin teks tampilan slide dan narasi catatan pembicara (speaker notes) untuk guru.';
+        $lines[] = '- Materi Kokurikuler: tulis modul/panduan kegiatan kokurikuler lengkap (tema projek/kokurikuler, alokasi JP/waktu, dimensi profil Pancasila & PPRA / pilar cinta KBC, tujuan projek, latar belakang & stimulus kontekstual, alur tahapan aktivitas kokurikuler (tahap pengenalan, kontekstualisasi, aksi nyata, refleksi & tindak lanjut), tabel rubrik penilaian observasi kokurikuler, dan panduan aksi peserta didik).';
         $lines[] = '- Lainnya: susun dokumen pembelajaran yang rapi sesuai topik (judul, tujuan, uraian materi, penutup).';
-        $lines[] = 'INSTRUKSI VISUALISASI GAMBAR / ILUSTRASI:';
-        $lines[] = 'Jika materi atau instruksi meminta gambar/ilustrasi (misal LKPD, PPT, Modul Ajar, diagram, denah, siklus, bangun ruang, adab, gotong royong, kegiatan kontekstual): WAJIB sertakan blok [GAMBAR: deskripsi visual yang jelas, spesifik, dan detail tentang objek gambar yang ditampilkan]. Sistem akan otomatis meng-generate dan menyematkan gambar nyata/foto/ilustrasi dari deskripsi tersebut ke dalam dokumen.';
+        $lines[] = 'PEDOMAN MUTLAK & DISIPLIN TINGGI VISUALISASI GAMBAR [GAMBAR: ...]:';
+        $lines[] = '1. RELEVANSI TOTAL DENGAN TEMA & SUBJEK: Setiap blok [GAMBAR: ...] WAJIB 100% fokus pada konsep materi pokok yang sedang dipelajari. DILARANG KERAS membuat deskripsi gambar yang tidak sesuai tema atau menyimpang ke hal-hal umum.';
+        $lines[] = '2. KESESUAIAN JENJANG & SUBJEK DIDIK (SANGAT PENTING):';
+        $lines[] = '   - Bila konteks materi/kegiatan adalah madrasah/sekolah (MI/SD, MTs, MA): Subjek yang digambarkan WAJIB adalah PESERTA DIDIK / MURID MADRASAH (anak-anak usia sekolah berseragam sekolah rapi di lingkungan madrasah/kelas).';
+        $lines[] = '   - DILARANG KERAS mendeskripsikan warga masyarakat dewasa, orang kampung, atau petani jika konteksnya adalah kegiatan murid madrasah.';
+        $lines[] = '   - Contoh BENAR: [GAMBAR: Peserta didik madrasah ibtidaiyah berseragam sekolah sedang memilah sampah plastik di tempat sampah daur ulang madrasah didampingi guru]';
+        $lines[] = '   - Contoh SALAH: [GAMBAR: Warga desa sedang kerja bakti membersihkan rumput di kebun]';
+        $lines[] = '3. MATERI SAINS / DIAGRAM / ANATOMI:';
+        $lines[] = '   - Jika materi sains (anatomi tubuh manusia, organ pencernaan, pernapasan, tata surya, siklus air, tumbuhan, metamorfosis): Tuliskan istilah ilmiah dan bagian spesifiknya dengan presisi.';
+        $lines[] = '   - Contoh BENAR: [GAMBAR: Diagram sistem pencernaan manusia dengan label organ mulut, kerongkongan, lambung, usus halus, usus besar, anus]';
+        $lines[] = '   - DILARANG menggunakan bahasa kiasan atau umum yang ambigu.';
+        $lines[] = '4. JANGAN MEMBUAT GAMBAR JIKA TIDAK DIBUTUHKAN: Hanya cantumkan blok [GAMBAR: ...] bila materi atau jenis perangkat (seperti LKPD, PPT, Modul Ajar) benar-benar memerlukan stimulus visual untuk pembelajaran siswa.';
         $lines[] = 'Jawab HANYA dengan JSON valid (tanpa markdown, tanpa penjelasan di luar JSON) memakai skema persis ini:';
         $lines[] = '{"judul":"...","cp":"...","tp":"...","materi":"...","tujuan_pembelajaran":"...","indikator":"...","deskripsi":"...","isi_dokumen":"..."}';
         $lines[] = 'Field "isi_dokumen": teks UTUH dan LENGKAP seluruh dokumen sesuai struktur jenis perangkat di atas (format teks biasa dengan baris baru; bagian tabel ditulis sebagai teks berkolom memakai pemisah " | "). WAJIB diisi penuh, minimal 15 baris, JANGAN dikosongkan, JANGAN diringkas, JANGAN diganti kalimat seperti "lihat lampiran" atau sejenisnya. Field "deskripsi": ringkasan 1-2 kalimat isi dokumen.';
@@ -528,9 +543,9 @@ if (!function_exists('ai_resolve_image_file')) {
             'gaya' => 'Gaya_(fisika)',
             'energi' => 'Energi',
             'kalor' => 'Kalor',
-            'gotong royong' => 'Gotong_royong',
-            'kerja bakti' => 'Gotong_royong',
-            'membersihkan' => 'Gotong_royong',
+            'sampah' => 'Daur_ulang',
+            'daur ulang' => 'Daur_ulang',
+            'kebersihan' => 'Kebersihan',
             'pancasila' => 'Garuda_Pancasila',
             'garuda' => 'Garuda_Pancasila',
             'sila' => 'Garuda_Pancasila',
@@ -760,7 +775,7 @@ if (!function_exists('ai_format_perangkat_html')) {
             }
 
             // Document main title
-            if (preg_match('/^(MODUL AJAR|PROGRAM TAHUNAN|PROGRAM SEMESTER|ALUR TUJUAN|KRITERIA KETERCAPAIAN|RENCANA PELAKSANAAN|SILABUS|JURNAL MENGAJAR|PEMETAAN KOMPETENSI|LEMBAR KERJA|LKPD|PPT|SLIDE|PRESENTASI|POWERPOINT)/i', $trimmed)) {
+            if (preg_match('/^(MODUL AJAR|PROGRAM TAHUNAN|PROGRAM SEMESTER|ALUR TUJUAN|KRITERIA KETERCAPAIAN|RENCANA PELAKSANAAN|SILABUS|JURNAL MENGAJAR|PEMETAAN KOMPETENSI|LEMBAR KERJA|LKPD|PPT|SLIDE|PRESENTASI|POWERPOINT|MATERI KOKURIKULER|KOKURIKULER|PROJEK)/i', $trimmed)) {
                 $title_style = $is_pdf
                     ? 'text-align: center; font-size: 14pt; font-weight: bold; margin: 10px 0 6px; color: #000; text-transform: uppercase;'
                     : 'text-align: center; font-size: 18px; font-weight: 800; margin: 16px 0 10px; color: #0f172a; letter-spacing: 0.5px; text-transform: uppercase;';
@@ -1114,7 +1129,7 @@ if (!function_exists('ai_build_perangkat_xlsx')) {
                 $row_idx++;
             } else {
                 $sh2->setCellValue('A' . $row_idx, $trimmed);
-                if (preg_match('/^[A-Z]\.\s+/', $trimmed) || preg_match('/^(PROGRAM|MODUL|ALUR|SILABUS)/i', $trimmed)) {
+                if (preg_match('/^[A-Z]\.\s+/', $trimmed) || preg_match('/^(PROGRAM|MODUL|ALUR|SILABUS|MATERI|KOKURIKULER|LEMBAR|LKPD|PPT|SLIDE)/i', $trimmed)) {
                     $sh2->getStyle('A' . $row_idx)->getFont()->setBold(true)->setSize(12);
                 }
                 $row_idx++;

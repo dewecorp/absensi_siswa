@@ -112,6 +112,7 @@ $jenis_allow = [
     'Kriteria Ketercapaian (KKTP)',
     'LKPD (Lembar Kerja Peserta Didik)',
     'PPT (Slide Show) Materi Pembelajaran',
+    'Materi Kokurikuler',
     'Lainnya'
 ];
 
