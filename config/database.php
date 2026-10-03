@@ -7,7 +7,8 @@ $env = static function (string $key, string $fallback): string {
 };
 
 $host = $_SERVER['HTTP_HOST'] ?? '';
-if ($host == 'localhost' || $host == '127.0.0.1' || strpos($host, '.test') !== false || strpos($host, '.local') !== false) {
+$isCli = (php_sapi_name() === 'cli');
+if ($isCli || $host == 'localhost' || $host == '127.0.0.1' || strpos($host, '.test') !== false || strpos($host, '.local') !== false) {
     // Local environment (Laragon, XAMPP, etc.)
     define('DB_HOST', $env('DB_HOST', 'localhost'));
     define('DB_USER', $env('DB_USER', 'root'));

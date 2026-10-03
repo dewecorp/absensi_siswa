@@ -143,6 +143,10 @@ if (!$is_file) {
             'level' => $r['level_kognitif'] ?? 'L2',
             'sulit' => $r['tingkat_kesulitan'] ?? 'Sedang',
             'tanya' => $tanya,
+            'gambar' => (function ($t) {
+                if (preg_match('/\[GAMBAR:\s*(.*?)\]/s', (string)($t), $m)) return trim($m[1]);
+                return '';
+            })((string)($r['pertanyaan'] ?? '')),
             'opsi' => $opsi_arr,
             'tabel' => $tabel_arr,
             'kunci' => $r['jawaban_benar'] ?? '',
@@ -301,9 +305,19 @@ $page_title = 'Pratinjau: ' . $judul . ($topik !== '' ? ' — ' . $topik : '');
                 <h4>Soal</h4>
                 <ol class="soal-list">
                     <?php foreach ($items as $it): ?>
+                        <?php
+                        $tanya_txt = (string)($it['tanya'] ?? '');
+                        $gbr_txt = '';
+                        if (preg_match('/\[GAMBAR:\s*(.*?)\]/s', $tanya_txt, $gm)) {
+                            $gbr_txt = trim($gm[1]);
+                        }
+                        ?>
                         <li>
+                            <?php if (trim((string)($it['gambar'] ?? $gbr_txt)) !== ''): ?>
+                                <div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:4px;padding:8px 10px;margin-bottom:8px;font-size:13.5px;"><strong>[GAMBAR: <?= htmlspecialchars(trim((string)($it['gambar'] ?? $gbr_txt))) ?>]</strong></div>
+                            <?php endif; ?>
                             <p><strong>[<?= htmlspecialchars((string)($it['bentuk'] ?? '')) ?>][<?= htmlspecialchars((string)($it['level'] ?? '')) ?>]</strong>
-                            <?= nl2br(htmlspecialchars((string)($it['tanya'] ?? ''))) ?></p>
+                            <?= nl2br(htmlspecialchars($tanya_txt)) ?></p>
                             <?php if (($it['bentuk'] ?? '') === 'Menjodohkan' && !empty($it['tabel'])): ?>
                                 <table>
                                     <thead><tr><th style="width:36px;">No</th><th>Soal</th><th style="width:52px;">Huruf</th><th>Pilihan Jawaban</th></tr></thead>

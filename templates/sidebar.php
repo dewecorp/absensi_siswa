@@ -972,6 +972,7 @@ switch ($user_level) {
 
         $pembelajaran_submenu_guru = [
             ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php', 'active' => $current_page === 'perangkat_pembelajaran.php'],
+            ['title' => 'Generate Perangkat AI', 'url' => '../guru/generate_perangkat.php', 'active' => $current_page === 'generate_perangkat.php'],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
             ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php', 'active' => $current_page === 'bank_soal.php'],
             ['title' => 'Generate Soal AI', 'url' => '../guru/generate_soal.php', 'active' => $current_page === 'generate_soal.php'],
@@ -1255,6 +1256,7 @@ switch ($user_level) {
 
         $pembelajaran_submenu_wali = [
             ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=wali', 'active' => $current_page === 'perangkat_pembelajaran.php'],
+            ['title' => 'Generate Perangkat AI', 'url' => '../guru/generate_perangkat.php?session_type=wali', 'active' => $current_page === 'generate_perangkat.php'],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=wali', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
             ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=wali', 'active' => $current_page === 'bank_soal.php'],
             ['title' => 'Generate Soal AI', 'url' => '../guru/generate_soal.php?session_type=wali', 'active' => $current_page === 'generate_soal.php'],

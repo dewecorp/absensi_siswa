@@ -327,13 +327,16 @@ function getUserLevel(): string {
 }
 
 function getCurrentGuruId(PDO $pdo): int {
+    if (isset($_SESSION['id_guru']) && (int)$_SESSION['id_guru'] > 0) {
+        return (int)$_SESSION['id_guru'];
+    }
     $userId = (int)($_SESSION['user_id'] ?? 0);
     if ($userId <= 0) {
         return 0;
     }
 
     $loginSource = $_SESSION['login_source'] ?? '';
-    if ($loginSource === 'tb_guru') {
+    if ($loginSource === 'tb_guru' || ($_SESSION['level'] ?? '') === 'guru' || ($_SESSION['level'] ?? '') === 'wali') {
         return $userId;
     }
 

@@ -4,6 +4,7 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/ai_helper.php';
 
 if (!isAuthorized(['guru', 'wali', 'admin', 'tata_usaha', 'kepala_madrasah'])) {
     redirect('../login.php');
@@ -25,23 +26,29 @@ $stmt = $pdo->prepare("
 $stmt->execute([$id]);
 $perangkat = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$perangkat || empty($perangkat['file_path'])) {
-    exit('Berkas perangkat tidak ditemukan.');
+if (!$perangkat) {
+    exit('Dokumen perangkat tidak ditemukan.');
 }
 
 require_once '../config/learning_schema.php';
 ensure_learning_schema($pdo);
 
-$file_path = resolve_guru_file_path('perangkat', $perangkat['file_path']);
-
-if (!is_file($file_path)) {
-    exit('Berkas fisik tidak ditemukan di server.');
+// Perangkat hasil Generate AI tidak punya file upload: render dari kolom teks DB.
+$is_teks_ai = empty($perangkat['file_path']);
+$file_path = null;
+$ext = '';
+$base64_data = '';
+$filesize_formatted = '';
+if (!$is_teks_ai) {
+    $file_path = resolve_guru_file_path('perangkat', $perangkat['file_path']);
+    if (!is_file($file_path)) {
+        exit('Berkas fisik tidak ditemukan di server.');
+    }
+    $ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+    $file_bytes = file_get_contents($file_path);
+    $base64_data = base64_encode($file_bytes);
+    $filesize_formatted = number_format(filesize($file_path) / 1024, 1) . ' KB';
 }
-
-$ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
-$file_bytes = file_get_contents($file_path);
-$base64_data = base64_encode($file_bytes);
-$filesize_formatted = number_format(filesize($file_path) / 1024, 1) . ' KB';
 $page_title = 'Baca: ' . htmlspecialchars($perangkat['judul']);
 ?>
 <!DOCTYPE html>
@@ -123,13 +130,20 @@ $page_title = 'Baca: ' . htmlspecialchars($perangkat['judul']);
             box-shadow: 0 6px 24px rgba(0,0,0,0.35);
             border-radius: 4px;
             width: 100%;
-            max-width: 960px;
+            max-width: 1250px;
             min-height: 800px;
-            padding: 40px 48px;
+            padding: 36px 44px;
             margin-bottom: 24px;
             box-sizing: border-box;
             transition: transform 0.15s ease-in-out;
             transform-origin: top center;
+        }
+        @media print {
+            @page { size: 330mm 215mm landscape; margin: 12mm 15mm; }
+            body { margin: 0; background: #fff !important; }
+            .preview-toolbar { display: none !important; }
+            .preview-viewport { margin: 0 !important; padding: 0 !important; }
+            .document-paper { box-shadow: none !important; border: none !important; padding: 0 !important; max-width: 100% !important; }
         }
         /* Document Typography for Word/Docx & Text */
         .document-paper h1, .document-paper h2, .document-paper h3, .document-paper h4 {
@@ -216,16 +230,16 @@ $page_title = 'Baca: ' . htmlspecialchars($perangkat['judul']);
     <!-- Header Toolbar -->
     <div class="preview-toolbar">
         <div class="title-area">
-            <button type="button" onclick="window.close()" class="btn btn-sm btn-outline-light btn-action" title="Tutup / Kembali">
-                <i class="fas fa-times"></i> Tutup
-            </button>
+            <a href="perangkat_pembelajaran.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '' ?>" class="btn btn-sm btn-outline-light btn-action" title="Kembali ke Daftar Perangkat">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </a>
             <span class="badge badge-info px-2 py-1"><?= htmlspecialchars($perangkat['jenis_perangkat']) ?></span>
             <span class="doc-title" title="<?= htmlspecialchars($perangkat['judul']) ?>">
                 <?= htmlspecialchars($perangkat['judul']) ?>
             </span>
             <span class="text-secondary small d-none d-md-inline">&bull;</span>
             <span class="text-white-50 small d-none d-md-inline">
-                <?= htmlspecialchars($perangkat['nama_mapel'] ?? '-') ?> (Kelas <?= htmlspecialchars($perangkat['nama_kelas'] ?? '-') ?>) &bull; <?= $filesize_formatted ?>
+                <?= htmlspecialchars($perangkat['nama_mapel'] ?? '-') ?> (Kelas <?= htmlspecialchars($perangkat['nama_kelas'] ?? '-') ?>)<?= $is_teks_ai ? '' : ' &bull; ' . $filesize_formatted ?>
             </span>
         </div>
 
@@ -242,21 +256,175 @@ $page_title = 'Baca: ' . htmlspecialchars($perangkat['judul']);
             <button type="button" onclick="window.print()" class="btn btn-sm btn-light btn-action font-weight-bold" title="Cetak Dokumen">
                 <i class="fas fa-print"></i> Cetak
             </button>
-            <a href="download_perangkat.php?id=<?= $id ?>" class="btn btn-sm btn-success btn-action font-weight-bold" title="Unduh Berkas">
-                <i class="fas fa-download"></i> Unduh
-            </a>
+            <?php if ($is_teks_ai): ?>
+                <div class="btn-group btn-group-sm" role="group" title="Unduh Dokumen">
+                    <a href="download_perangkat.php?id=<?= $id ?>&format=pdf" onclick="event.preventDefault(); triggerBrowserDownload(this.href, this);" download class="btn btn-danger font-weight-bold"><i class="fas fa-file-pdf"></i> PDF</a>
+                    <a href="download_perangkat.php?id=<?= $id ?>&format=docx" onclick="event.preventDefault(); triggerBrowserDownload(this.href, this);" download class="btn btn-primary font-weight-bold"><i class="fas fa-file-word"></i> Word</a>
+                    <a href="download_perangkat.php?id=<?= $id ?>&format=xlsx" onclick="event.preventDefault(); triggerBrowserDownload(this.href, this);" download class="btn btn-success font-weight-bold"><i class="fas fa-file-excel"></i> Excel</a>
+                </div>
+            <?php else: ?>
+                <a href="download_perangkat.php?id=<?= $id ?>" class="btn btn-sm btn-success btn-action font-weight-bold" title="Unduh Berkas">
+                    <i class="fas fa-download"></i> Unduh
+                </a>
+            <?php endif; ?>
         </div>
     </div>
 
     <!-- Viewport Container -->
     <div class="preview-viewport" id="viewport">
-        <div id="loading" class="loading-spinner">
-            <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block text-primary"></i>
-            Mempersiapkan dokumen untuk dibaca...
-        </div>
-        <div id="renderTarget" style="display: none; width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+        <?php if ($is_teks_ai): ?>
+            <?php
+            $isi_raw = trim((string)($perangkat['isi_dokumen'] ?? ''));
+            if ($isi_raw === '') {
+                // Data lama hasil generate yang isi_dokumen-nya kosong: susun dari field terpisah
+                $susunan = [];
+                foreach ([
+                    'A. CAPAIAN PEMBELAJARAN (CP)' => $perangkat['cp'] ?? '',
+                    'B. TUJUAN PEMBELAJARAN (TP)' => $perangkat['tp'] ?? '',
+                    'C. MATERI POKOK' => trim(trim((string)($perangkat['materi_tp'] ?? '')) . "\n" . trim((string)($perangkat['materi'] ?? ''))),
+                    'D. TUJUAN PEMBELAJARAN KHUSUS' => $perangkat['tujuan_pembelajaran'] ?? '',
+                    'E. INDIKATOR KETERCAPAIAN' => $perangkat['indikator'] ?? '',
+                    'F. DESKRIPSI / CATATAN' => $perangkat['deskripsi'] ?? '',
+                ] as $jdl => $val) {
+                    $val = trim((string)$val);
+                    if ($val !== '') $susunan[] = $jdl . "\n" . $val;
+                }
+                $isi_raw = implode("\n\n", $susunan);
+            }
+            ?>
+            <div class="document-paper" id="paperTarget">
+                <h2 style="text-align:center;font-weight:800;color:#0f172a;margin-bottom:6px;"><?= htmlspecialchars($perangkat['judul']) ?></h2>
+                <p style="text-align:center;color:#64748b;font-size:13px;margin-bottom:24px;">
+                    <span class="badge badge-primary px-2 py-1 mr-1"><?= htmlspecialchars($perangkat['jenis_perangkat']) ?></span>
+                    <?= !empty($perangkat['nama_mapel']) ? htmlspecialchars($perangkat['nama_mapel']) : '' ?>
+                    <?= !empty($perangkat['nama_kelas']) ? ' &bull; Kelas ' . htmlspecialchars($perangkat['nama_kelas']) : '' ?>
+                    <?= !empty($perangkat['semester']) ? ' &bull; ' . htmlspecialchars($perangkat['semester']) : '' ?>
+                    <?= !empty($perangkat['tahun_ajaran']) ? ' &bull; ' . htmlspecialchars($perangkat['tahun_ajaran']) : '' ?>
+                    <?= !empty($perangkat['nama_guru']) ? ' &bull; Guru: ' . htmlspecialchars($perangkat['nama_guru']) : '' ?>
+                </p>
+
+                <!-- Komponen Hasil Generator AI -->
+                <div class="perangkat-komponen mb-4">
+                    <?php
+                    $komponen = [
+                        ['Capaian Pembelajaran (CP)', $perangkat['cp'] ?? '', 'fas fa-bullseye'],
+                        ['Tujuan Pembelajaran (TP)', $perangkat['tp'] ?? '', 'fas fa-flag-checkered'],
+                        ['Materi Pokok / Pembelajaran', trim(trim((string)($perangkat['materi_tp'] ?? '')) . "\n" . trim((string)($perangkat['materi'] ?? ''))), 'fas fa-book-open'],
+                        ['Tujuan Pembelajaran Khusus', $perangkat['tujuan_pembelajaran'] ?? '', 'fas fa-check-circle'],
+                        ['Indikator Ketercapaian', $perangkat['indikator'] ?? '', 'fas fa-tasks'],
+                        ['Deskripsi Ringkas', $perangkat['deskripsi'] ?? '', 'fas fa-comment-alt'],
+                    ];
+                    foreach ($komponen as $item):
+                        $val = trim((string)$item[1]);
+                        if ($val === '' || $val === '-') continue;
+                    ?>
+                        <div class="mb-3" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;">
+                            <div style="background:#f1f5f9;border-bottom:1px solid #cbd5e1;padding:8px 12px;font-size:12.5px;font-weight:800;color:#1e3a8a;text-transform:uppercase;letter-spacing:0.3px;">
+                                <i class="<?= $item[2] ?> mr-1 text-primary"></i> <?= htmlspecialchars($item[0]) ?>
+                            </div>
+                            <div style="padding:12px 14px;font-size:13.5px;line-height:1.65;color:#0f172a;white-space:pre-wrap;background:#ffffff;">
+                                <?= htmlspecialchars($val) ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Isi Dokumen Seutuhnya -->
+                <div class="mb-3" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;">
+                    <div style="background:#0f172a;color:#ffffff;padding:10px 14px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;justify-content:space-between;">
+                        <span><i class="fas fa-file-alt mr-2 text-warning"></i> Isi Dokumen Lengkap</span>
+                        <span style="font-size:11px;color:#94a3b8;font-weight:600;">Hasil Generasi AI</span>
+                    </div>
+                    <div style="padding:18px 20px;font-size:14px;line-height:1.7;color:#0f172a;background:#ffffff;">
+                        <?= ai_format_perangkat_html($isi_raw, false) ?>
+                    </div>
+                </div>
+            </div>
+        <?php else: ?>
+            <div id="loading" class="loading-spinner">
+                <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block text-primary"></i>
+                Mempersiapkan dokumen untuk dibaca...
+            </div>
+            <div id="renderTarget" style="display: none; width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+        <?php endif; ?>
     </div>
 
+    <script>
+        var currentZoom = 1.0;
+        function updateZoomDisplay() {
+            var pct = Math.round(currentZoom * 100) + '%';
+            var zEl = document.getElementById('zoomLevelText');
+            if (zEl) zEl.textContent = pct;
+            var target = document.getElementById('renderTarget') || document.getElementById('paperTarget');
+            if (target) {
+                target.style.transform = 'scale(' + currentZoom + ')';
+                target.style.transformOrigin = 'top center';
+            }
+        }
+        var btnIn = document.getElementById('btnZoomIn');
+        if (btnIn) {
+            btnIn.addEventListener('click', function() {
+                if (currentZoom < 2.0) {
+                    currentZoom += 0.15;
+                    updateZoomDisplay();
+                }
+            });
+        }
+        var btnOut = document.getElementById('btnZoomOut');
+        if (btnOut) {
+            btnOut.addEventListener('click', function() {
+                if (currentZoom > 0.6) {
+                    currentZoom -= 0.15;
+                    updateZoomDisplay();
+                }
+            });
+        }
+        var btnReset = document.getElementById('btnZoomReset');
+        if (btnReset) {
+            btnReset.addEventListener('click', function() {
+                currentZoom = 1.0;
+                updateZoomDisplay();
+            });
+        }
+
+        function triggerBrowserDownload(url, btnElement) {
+            var oldText = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btnElement.style.pointerEvents = 'none';
+
+            fetch(url)
+                .then(function(res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    var disp = res.headers.get('Content-Disposition') || '';
+                    var fname = '';
+                    var m = /filename="?([^";]+)"?/i.exec(disp);
+                    if (m) fname = m[1].trim();
+                    return res.blob().then(function(b) { return { blob: b, fname: fname }; });
+                })
+                .then(function(data) {
+                    var blobUrl = window.URL.createObjectURL(data.blob);
+                    var a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = blobUrl;
+                    if (data.fname) a.download = data.fname;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(function() {
+                        window.URL.revokeObjectURL(blobUrl);
+                        a.remove();
+                    }, 500);
+                })
+                .catch(function(err) {
+                    window.location.href = url;
+                })
+                .finally(function() {
+                    btnElement.innerHTML = oldText;
+                    btnElement.style.pointerEvents = 'auto';
+                });
+        }
+    </script>
+
+    <?php if (!$is_teks_ai): ?>
     <script>
         var fileBase64 = "<?= $base64_data ?>";
         var fileExt = "<?= $ext ?>";
@@ -454,7 +622,7 @@ $page_title = 'Baca: ' . htmlspecialchars($perangkat['judul']);
                 var paper = document.createElement('div');
                 paper.className = 'document-paper text-center p-5';
                 paper.innerHTML = '<div class="py-4"><i class="fas fa-file-alt fa-4x text-primary mb-3"></i>' +
-                    '<h4 class="font-weight-bold text-dark"><?= htmlspecialchars($perangkat['judul']) ?></h4>' +
+                    '<h4 class="font-weight-bold text-dark"><?= htmlspecialchars(addslashes($perangkat['judul'])) ?></h4>' +
                     '<p class="text-muted">Berkas berformat <strong>.' + fileExt.toUpperCase() + '</strong> dapat langsung dibaca dengan mengunduh atau membuka aplikasi terkait di perangkat Anda.</p>' +
                     '<a href="download_perangkat.php?id=<?= $id ?>" class="btn btn-success btn-lg px-4 font-weight-bold shadow-sm"><i class="fas fa-download mr-2"></i> Unduh dan Buka Berkas (' + fileExt.toUpperCase() + ')</a>' +
                     '</div>';
@@ -463,5 +631,6 @@ $page_title = 'Baca: ' . htmlspecialchars($perangkat['judul']);
             }
         });
     </script>
+    <?php endif; ?>
 </body>
 </html>

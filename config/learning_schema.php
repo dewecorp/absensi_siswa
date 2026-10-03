@@ -27,6 +27,7 @@ if (!function_exists('ensure_learning_schema')) {
                 tujuan_pembelajaran TEXT NULL,
                 indikator TEXT NULL,
                 deskripsi TEXT NULL,
+                isi_dokumen LONGTEXT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_guru (id_guru),
@@ -143,6 +144,15 @@ if (!function_exists('ensure_learning_schema')) {
                 if (!$has) {
                     $pdo->exec("ALTER TABLE tb_bank_soal ADD COLUMN {$colDef}");
                 }
+            }
+        } catch (Throwable $e) { /* abaikan bila tabel belum ada */
+        }
+
+        // Migrasi perangkat: kolom isi_dokumen untuk hasil Generate AI
+        try {
+            $has_isi = $pdo->query("SHOW COLUMNS FROM tb_perangkat_pembelajaran LIKE 'isi_dokumen'")->fetch(PDO::FETCH_ASSOC);
+            if (!$has_isi) {
+                $pdo->exec("ALTER TABLE tb_perangkat_pembelajaran ADD COLUMN isi_dokumen LONGTEXT NULL AFTER deskripsi");
             }
         } catch (Throwable $e) { /* abaikan bila tabel belum ada */
         }

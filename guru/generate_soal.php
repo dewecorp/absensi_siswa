@@ -112,7 +112,11 @@ $('#formGenerateAI').on('submit', function(e) {
         }
         var html = '<ol class="pl-3 mb-0">';
         aiLastSoal.forEach(function(s) {
-            html += '<li class="mb-3"><span class="badge badge-primary mb-1">' + $('<div>').text(s.bentuk || '').html() + '</span> <span class="badge badge-info mb-1">' + $('<div>').text(s.level_kognitif || 'L2').html() + '</span><div class="font-weight-bold">' + $('<div>').text(s.pertanyaan || '').html() + '</div>';
+            html += '<li class="mb-3"><span class="badge badge-primary mb-1">' + $('<div>').text(s.bentuk || '').html() + '</span> <span class="badge badge-info mb-1">' + $('<div>').text(s.level_kognitif || 'L2').html() + '</span>';
+            if (s.gambar && (s.gambar + '').trim() !== '') {
+                html += '<div class="alert alert-warning py-2 px-2 mb-2 small"><i class="fas fa-image mr-1"></i><strong>[GAMBAR: </strong>' + $('<div>').text(s.gambar).html() + '<strong>]</strong></div>';
+            }
+            html += '<div class="font-weight-bold">' + $('<div>').text(s.pertanyaan || '').html() + '</div>';
             if (s.bentuk === 'Menjodohkan' && s.tabel && s.tabel.length) {
                 html += aiTabelJodoh(s.tabel);
             } else if (s.opsi && typeof s.opsi === 'object' && (s.opsi.A || s.opsi.B || s.opsi.C || s.opsi.D)) {

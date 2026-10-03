@@ -169,7 +169,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $mapel_list = getGuruTaughtMapels($pdo, $guru_id);
 $kelas_list = getGuruTaughtClasses($pdo, $guru_id);
 
-$jenis_options = ['CP/TP', 'ATP', 'Modul Ajar', 'RPP', 'Silabus', 'Program Tahunan (Prota)', 'Program Semester (Promes)', 'Kriteria Ketercapaian (KKTP)', 'Lainnya'];
+$jenis_options = [
+    'CP/TP',
+    'ATP',
+    'Modul Ajar',
+    'RPP',
+    'Silabus',
+    'Program Tahunan (Prota)',
+    'Program Semester (Promes)',
+    'Kriteria Ketercapaian (KKTP)',
+    'LKPD (Lembar Kerja Peserta Didik)',
+    'PPT (Slide Show) Materi Pembelajaran',
+    'Lainnya'
+];
 $semester_options = ['Semester 1', 'Semester 2'];
 
 // Filters
@@ -238,16 +250,20 @@ $js_libs = [
 
 $js_page = [<<<'JS'
 // JavaScript Download Function using Blob (Safe from Chrome/Edge insecure connection blocking)
-function downloadPerangkat(id) {
+function downloadPerangkat(id, format) {
     if (!id) return;
     if (typeof toastr !== 'undefined') {
         toastr.info('Memulai pengunduhan berkas...', '', { timeOut: 1500 });
     }
-    fetch('download_perangkat.php?id=' + id)
+    var url = 'download_perangkat.php?id=' + encodeURIComponent(id);
+    if (format) {
+        url += '&format=' + encodeURIComponent(format);
+    }
+    fetch(url)
         .then(function(res) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             var disposition = res.headers.get('Content-Disposition') || '';
-            var filename = 'perangkat_pembelajaran';
+            var filename = 'perangkat_pembelajaran' + (format ? '.' + format : '');
             var matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
             if (matches != null && matches[1]) {
                 filename = matches[1].replace(/['"]/g, '').trim();
@@ -267,13 +283,15 @@ function downloadPerangkat(id) {
             setTimeout(function() {
                 window.URL.revokeObjectURL(blobUrl);
                 document.body.removeChild(a);
-            }, 300);
+            }, 500);
             if (typeof toastr !== 'undefined') {
-                toastr.success('Berkas berhasil diunduh.', 'Selesai');
+                toastr.success('Berkas ' + data.filename + ' berhasil diunduh.', 'Selesai');
+            } else if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Berkas ' + data.filename + ' berhasil diunduh.', timer: 2000, showConfirmButton: false });
             }
         })
         .catch(function(err) {
-            window.location.href = 'download_perangkat.php?id=' + id;
+            window.location.href = url;
         });
 }
 
@@ -346,7 +364,30 @@ $(document).ready(function() {
         }
         html += '</div>';
 
-        // 2. Berkas Terlampir (Hanya jika ada)
+        // 2. Hasil Generate AI tanpa file: tampilkan tombol Baca + Unduh seperti versi file
+        if ((!data.file_path || data.file_path.trim() === '') && (data.isi_dokumen || data.deskripsi)) {
+            html += '<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">';
+            html += '  <div style="display: flex; align-items: center; gap: 12px;">';
+            html += '    <div style="width: 40px; height: 40px; background: #dcfce7; color: #15803d; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">';
+            html += '      <i class="fas fa-robot"></i>';
+            html += '    </div>';
+            html += '    <div>';
+            html += '      <div style="font-size: 14px; font-weight: 700; color: #0f172a;">Dokumen Hasil Generate AI</div>';
+            html += '      <div style="font-size: 12px; color: #475569; font-weight: 600;">Pratinjau teks + unduh PDF / Word / Excel</div>';
+            html += '    </div>';
+            html += '  </div>';
+            html += '  <div style="display: flex; gap: 6px;">';
+            html += '    <a href="preview_perangkat.php?id=' + data.id + '" target="_blank" class="btn btn-sm" style="background: #2563eb; color: #ffffff; font-weight: 700; padding: 7px 14px; border-radius: 6px; text-decoration: none;">';
+            html += '      <i class="fas fa-book-reader mr-1"></i> Baca Dokumen';
+            html += '    </a>';
+            html += '    <button type="button" onclick="downloadPerangkat(' + data.id + ', \'pdf\')" class="btn btn-sm" style="background: #dc2626; color: #ffffff; font-weight: 700; padding: 7px 12px; border-radius: 6px; border:none;" title="Unduh PDF"><i class="fas fa-file-pdf"></i></button>';
+            html += '    <button type="button" onclick="downloadPerangkat(' + data.id + ', \'docx\')" class="btn btn-sm" style="background: #1d4ed8; color: #ffffff; font-weight: 700; padding: 7px 12px; border-radius: 6px; border:none;" title="Unduh Word"><i class="fas fa-file-word"></i></button>';
+            html += '    <button type="button" onclick="downloadPerangkat(' + data.id + ', \'xlsx\')" class="btn btn-sm" style="background: #16a34a; color: #ffffff; font-weight: 700; padding: 7px 12px; border-radius: 6px; border:none;" title="Unduh Excel"><i class="fas fa-file-excel"></i></button>';
+            html += '  </div>';
+            html += '</div>';
+        }
+
+        // 2b. Berkas Terlampir (Hanya jika ada)
         if (data.file_path && data.file_path.trim() !== '') {
             var ext = data.file_path.split('.').pop().toUpperCase();
             html += '<div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">';
@@ -371,6 +412,23 @@ $(document).ready(function() {
         }
 
         // 3. Rincian Konten (HANYA tampilkan yang terisi/ada isinya!)
+        // Hasil Generate AI memakai isi_dokumen sebagai Isi Dokumen;
+        // bila kosong (data lama), susun dari field terpisah agar tetap tampil.
+        var isiAi = (data.isi_dokumen && String(data.isi_dokumen).trim() !== '') ? data.isi_dokumen : '';
+        if (isiAi === '') {
+            var susun = [];
+            var tambah = function(j, v) {
+                v = v ? String(v).trim() : '';
+                if (v !== '' && v !== '-') susun.push(j + '\n' + v);
+            };
+            tambah('A. CAPAIAN PEMBELAJARAN (CP)', data.cp);
+            tambah('B. TUJUAN PEMBELAJARAN (TP)', data.tp);
+            tambah('C. MATERI POKOK', ((data.materi_tp ? String(data.materi_tp).trim() + '\n' : '') + (data.materi ? String(data.materi).trim() : '')).trim());
+            tambah('D. TUJUAN PEMBELAJARAN KHUSUS', data.tujuan_pembelajaran);
+            tambah('E. INDIKATOR KETERCAPAIAN', data.indikator);
+            tambah('F. DESKRIPSI / CATATAN', data.deskripsi);
+            isiAi = susun.join('\n\n');
+        }
         var items = [
             { label: 'Materi / TP Ringkas', val: data.materi_tp, icon: 'fas fa-bookmark' },
             { label: 'Capaian Pembelajaran (CP)', val: data.cp, icon: 'fas fa-bullseye' },
@@ -378,20 +436,115 @@ $(document).ready(function() {
             { label: 'Materi Pembelajaran', val: data.materi, icon: 'fas fa-book-reader' },
             { label: 'Tujuan Pembelajaran Khusus', val: data.tujuan_pembelajaran, icon: 'fas fa-check-circle' },
             { label: 'Indikator Ketercapaian', val: data.indikator, icon: 'fas fa-tasks' },
+            { label: 'Isi Dokumen', val: isiAi, icon: 'fas fa-file-alt' },
             { label: 'Deskripsi / Catatan Tambahan', val: data.deskripsi, icon: 'fas fa-comment-alt' }
         ];
+
+        // Formatter untuk teks yang mengandung baris tabel matriks (Promes, Prota, Silabus, dll)
+        function formatModalTextWithTables(raw) {
+            if (!raw) return '';
+            var lines = (raw + '').split(/\r\n|\r|\n/);
+            var out = [];
+            var tbl = [];
+
+            function flushTbl() {
+                if (!tbl.length) return;
+                var max_c = 0;
+                var clean_rows = [];
+                tbl.forEach(function(r) {
+                    var cols = r.split('|').map(function(c) { return c.trim(); });
+                    if (cols.length && cols[0] === '') cols.shift();
+                    if (cols.length && cols[cols.length - 1] === '') cols.pop();
+                    if (!cols.length) return;
+                    var isSep = cols.every(function(c) { return /^:?-+:?$/.test(c); });
+                    if (isSep) return;
+                    if (cols.length > max_c) max_c = cols.length;
+                    clean_rows.push(cols);
+                });
+
+                if (clean_rows.length > 0) {
+                    var t = '<div class="table-responsive my-3"><table class="table table-bordered table-sm table-striped text-dark" style="font-size:12.5px;width:100%;min-width:' + (max_c > 7 ? '850px' : '600px') + ';">';
+                    var first = true;
+                    clean_rows.forEach(function(cols) {
+                        var tag = first ? 'th' : 'td';
+                        var bg = first ? ' class="thead-light text-center"' : '';
+                        t += '<tr' + bg + '>';
+                        cols.forEach(function(c, ci) {
+                            var align = (first || ci === 0 || /^\d+(\s*JP)?$/i.test(c) || c === '-') ? ' text-center' : ' text-left';
+                            t += '<' + tag + ' class="align-middle' + align + '" style="padding:6px 8px;border:1px solid #cbd5e1;">' + $('<div>').text(c).html() + '</' + tag + '>';
+                        });
+                        t += '</tr>';
+                        first = false;
+                    });
+                    t += '</table></div>';
+                    out.push(t);
+                }
+                tbl = [];
+            }
+
+            lines.forEach(function(ln) {
+                var tr = ln.trim();
+                if (tr.indexOf('|') !== -1 && !/^[A-Z]\./.test(tr)) {
+                    tbl.push(tr);
+                } else {
+                    flushTbl();
+                    if (tr === '') {
+                        out.push('<div style="height:6px;"></div>');
+                    } else if (/^\[GAMBAR:\s*(.*?)\]$/i.test(tr)) {
+                        var gm = /^\[GAMBAR:\s*(.*?)\]$/i.exec(tr);
+                        var gDesc = gm ? gm[1] : '';
+                        var imgId = 'modalImg_' + Math.random().toString(36).substr(2, 9);
+                        out.push('<div class="my-3 text-center p-2 bg-white rounded border" style="max-width:650px;margin-left:auto;margin-right:auto;box-shadow:0 2px 6px rgba(0,0,0,0.08);">'
+                            + '<img id="' + imgId + '" src="" alt="' + $('<div>').text(gDesc).html() + '" style="max-width:100%;height:auto;max-height:360px;border-radius:4px;display:none;">'
+                            + '<div id="' + imgId + '_loading" class="text-muted small py-3"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat gambar edukasi otentik...</div>'
+                            + '<div class="mt-2 text-muted small font-italic"><i class="fas fa-image mr-1"></i>Gambar: ' + $('<div>').text(gDesc).html() + '</div>'
+                            + '</div>');
+                        setTimeout((function(id, desc) {
+                            return function() {
+                                $.getJSON('ajax_generate_perangkat.php', { aksi: 'resolve_image', desc: desc }, function(res) {
+                                    $('#' + id + '_loading').hide();
+                                    if (res && res.ok && res.url) {
+                                        $('#' + id).attr('src', res.url).show();
+                                    }
+                                });
+                            };
+                        })(imgId, gDesc), 100);
+                    } else if (/^[A-Z]\.\s+/.test(tr)) {
+                        out.push('<h6 class="font-weight-bold mt-3 mb-1 text-primary border-bottom pb-1">' + $('<div>').text(tr).html() + '</h6>');
+                    } else if (/^\d+\.\s+/.test(tr)) {
+                        out.push('<div class="font-weight-bold mt-2 mb-1 text-dark">' + $('<div>').text(tr).html() + '</div>');
+                    } else {
+                        var escP = $('<div>').text(tr).html();
+                        out.push('<p class="mb-1 text-dark" style="line-height:1.6;font-size:13.5px;">' + escP + '</p>');
+                    }
+                }
+            });
+            flushTbl();
+            return out.join('');
+        }
 
         var contentCount = 0;
         items.forEach(function(item) {
             var val = item.val ? String(item.val).trim() : '';
             if (val !== '' && val !== '-') {
                 contentCount++;
+                var isTableContent = (item.label === 'Isi Dokumen' || val.indexOf('|') !== -1);
+                var bodyHtml = '';
+                if (isTableContent) {
+                    bodyHtml = formatModalTextWithTables(val);
+                } else {
+                    bodyHtml = $('<div>').text(val).html();
+                    bodyHtml = bodyHtml.replace(/\[GAMBAR:\s*([\s\S]*?)\]/g, function(m, g) {
+                        return '<div style="border:1px solid #f59e0b;background:#fffbeb;padding:6px 8px;margin:6px 0;font-weight:700;">[GAMBAR: ' + g + ']</div>';
+                    });
+                }
+                var preWrapStyle = isTableContent ? '' : 'white-space: pre-wrap; ';
                 html += '<div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">';
                 html += '  <div style="background: #f1f5f9; padding: 9px 14px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; gap: 8px;">';
                 html += '    <i class="' + item.icon + '" style="color: #2563eb; font-size: 13px;"></i>';
                 html += '    <span style="font-size: 12.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.3px;">' + item.label + '</span>';
                 html += '  </div>';
-                html += '  <div style="padding: 12px 14px; font-size: 14px; line-height: 1.6; color: #0f172a; font-weight: 500; white-space: pre-wrap; background: #ffffff;">' + $('<div>').text(val).html() + '</div>';
+                html += '  <div style="padding: 12px 14px; font-size: 14px; line-height: 1.6; color: #0f172a; font-weight: 500; ' + preWrapStyle + 'background: #ffffff;">' + bodyHtml + '</div>';
                 html += '</div>';
             }
         });
@@ -571,6 +724,9 @@ include '../templates/sidebar.php';
                         <button type="button" class="btn btn-primary" id="btnTambahPerangkat">
                             <i class="fas fa-plus mr-1"></i> Tambah Perangkat
                         </button>
+                        <a href="generate_perangkat.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '' ?>" class="btn btn-success ml-2">
+                            <i class="fas fa-robot mr-1"></i> Generate AI
+                        </a>
                     </div>
                 </div>
                 <div class="card-body">
@@ -610,7 +766,10 @@ include '../templates/sidebar.php';
                                                     <small class="d-block" style="font-size: 10px;"><?= strtoupper(pathinfo($r['file_path'], PATHINFO_EXTENSION)) ?></small>
                                                 </a>
                                             <?php else: ?>
-                                                <span class="text-muted">-</span>
+                                                <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="text-success font-weight-bold" title="Pratinjau hasil Generate AI">
+                                                    <i class="fas fa-robot fa-lg"></i>
+                                                    <small class="d-block" style="font-size: 10px;">AI</small>
+                                                </a>
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-center">
@@ -635,6 +794,15 @@ include '../templates/sidebar.php';
                                                     <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>)" class="btn btn-success btn-sm" title="Unduh Berkas">
                                                         <i class="fas fa-download"></i>
                                                     </button>
+                                                <?php else: ?>
+                                                    <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Pratinjau Hasil AI (Laman Penuh)">
+                                                        <i class="fas fa-book-reader"></i>
+                                                    </a>
+                                                    <div class="btn-group btn-group-sm" role="group" title="Unduh Dokumen">
+                                                        <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>, 'pdf')" class="btn btn-outline-danger" title="Unduh PDF"><i class="fas fa-file-pdf"></i></button>
+                                                        <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>, 'docx')" class="btn btn-outline-primary" title="Unduh Word"><i class="fas fa-file-word"></i></button>
+                                                        <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>, 'xlsx')" class="btn btn-outline-success" title="Unduh Excel"><i class="fas fa-file-excel"></i></button>
+                                                    </div>
                                                 <?php endif; ?>
                                                 <?php if ($r['status'] !== 'Arsip'): ?>
                                                     <button type="button" class="btn btn-secondary btn-sm btn-arsip" data-id="<?= (int)$r['id'] ?>" title="Arsipkan">
@@ -769,7 +937,7 @@ include '../templates/sidebar.php';
 
 <!-- Modal Detail Perangkat (Modern & Informatif) -->
 <div class="modal fade" id="modalDetail" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header border-bottom py-3">
                 <h5 class="modal-title text-primary"><i class="fas fa-file-invoice mr-2"></i>Rincian Dokumen Perangkat</h5>

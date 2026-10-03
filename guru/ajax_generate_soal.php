@@ -99,6 +99,7 @@ function ai_docx_p(string $text, bool $bold = false, int $size = 22): string {
 
 // Bangun ZIP minimal (metode stored, tanpa kompresi) untuk berkas DOCX.
 // Ditulis field per field agar tidak bergantung pada hitungan format pack.
+if (!function_exists('ai_zip_stored')) {
 function ai_zip_stored(array $files): string {
     $local = '';
     $central = '';
@@ -132,6 +133,21 @@ function ai_zip_stored(array $files): string {
         . pack('V', strlen($central)) . pack('V', $offset)
         . pack('v', 0);
     return $local . $central . $eocd;
+}
+}
+
+// Ambil uraian [GAMBAR: ...] dari teks pertanyaan / field gambar AI
+function ai_extract_gambar(string $pertanyaan, string $gambar_field = ''): string {
+    if (preg_match('/\[GAMBAR:\s*(.*?)\]/s', $pertanyaan, $m)) {
+        return trim($m[1]);
+    }
+    return trim($gambar_field);
+}
+
+// Render blok gambar untuk HTML (PDF) maupun DOCX-teks
+function ai_gambar_html(string $uraian): string {
+    if ($uraian === '') return '';
+    return '<p style="margin:4px 0;padding:6px 8px;background:#fffbeb;border:1px solid #f59e0b;"><strong>[GAMBAR: ' . htmlspecialchars($uraian) . ']</strong></p>';
 }
 
 function ai_parse_menjodohkan_text(string $pertanyaan): array {
@@ -326,6 +342,10 @@ function ai_build_soal_docx(array $items, array $payload): string {
         }
 
         $body .= ai_docx_p(($i + 1) . '. [' . (string)$b_it . '][' . (string)($it['level_kognitif'] ?? 'L2') . '] ' . $pert_it, true);
+        $gbr_it = ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? ''));
+        if ($gbr_it !== '') {
+            $body .= ai_docx_p('[GAMBAR: ' . $gbr_it . ']', true);
+        }
         if ($b_it === 'Menjodohkan' && !empty($tbl_docx)) {
             $body .= ai_docx_tabel_jodoh($tbl_docx);
         } else {
@@ -344,24 +364,47 @@ function ai_build_soal_docx(array $items, array $payload): string {
         $body .= ai_docx_p('');
     }
     $doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        . '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
+        . '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>'
         . $body
         . '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>'
         . '</w:body></w:document>';
-    $types = '<?xml version="1.0" encoding="UTF-8"?>'
+    $types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
         . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
         . '<Default Extension="xml" ContentType="application/xml"/>'
         . '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+        . '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+        . '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+        . '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
         . '</Types>';
-    $rels = '<?xml version="1.0" encoding="UTF-8"?>'
+    $rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
         . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+        . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+        . '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
         . '</Relationships>';
+    $word_rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+        . '</Relationships>';
+    $styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        . '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault>'
+        . '<w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'
+        . '</w:styles>';
+    $core = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+        . '<dc:title>' . htmlspecialchars($judul, ENT_XML1, 'UTF-8') . '</dc:title><dc:creator>SIMAD</dc:creator><cp:lastModifiedBy>SIMAD</cp:lastModifiedBy></cp:coreProperties>';
+    $app = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application></Properties>';
     return ai_zip_stored([
         '[Content_Types].xml' => $types,
         '_rels/.rels' => $rels,
+        'word/_rels/document.xml.rels' => $word_rels,
         'word/document.xml' => $doc,
+        'word/styles.xml' => $styles,
+        'docProps/core.xml' => $core,
+        'docProps/app.xml' => $app,
     ]);
 }
 
@@ -554,6 +597,7 @@ if ($aksi === 'generate') {
         $it['level_kognitif'] = $lv !== '' ? $lv : 'L2';
         $it['cp'] = trim((string)($it['cp'] ?? ''));
         $it['tp'] = trim((string)($it['tp'] ?? ''));
+        $it['gambar'] = trim((string)($it['gambar'] ?? ''));
         $it['bobot'] = (float)($it['bobot'] ?? 1);
         if (!empty($it['opsi']) && is_array($it['opsi'])) {
             $it['opsi'] = [
@@ -732,6 +776,12 @@ if ($aksi === 'simpan') {
             if (!in_array($lv_item, ['L1', 'L2', 'L3', 'L4'], true)) {
                 $lv_item = 'L2';
             }
+            // Amankan gambar AI agar tidak hilang: gambar hanya tersimpan sebagai
+            // blok [GAMBAR: ...] sehingga ikut tersimpan, tampil di preview, dan terunduh.
+            $gambar_item = trim((string)($it['gambar'] ?? ''));
+            if ($gambar_item !== '' && stripos($pertanyaan, '[GAMBAR:') === false) {
+                $pertanyaan = trim($pertanyaan) . "\n[GAMBAR: " . $gambar_item . "]";
+            }
             $kisi_list = is_array($payload['kisi_kisi'] ?? null) ? $payload['kisi_kisi'] : [];
             $cp_item = trim((string)($it['cp'] ?? ($kisi_list[$idx]['cp'] ?? '')));
             $tp_item = trim((string)($it['tp'] ?? ($kisi_list[$idx]['tp'] ?? '')));
@@ -885,23 +935,23 @@ if ($aksi === 'unduh') {
         foreach (range('A', 'I') as $c) {
             $sh->getColumnDimension($c)->setAutoSize(true);
         }
-        // Sheet 2: Soal (No, Bentuk, Level, Pertanyaan, Tabel Jodoh, Opsi A-D, Kunci, Pembahasan).
+        // Sheet 2: Soal (No, Bentuk, Level, Pertanyaan, Gambar, Tabel Jodoh, Opsi A-D, Kunci, Pembahasan).
         $sh2 = $ss->createSheet();
         $sh2->setTitle('Soal');
-        $sh2->fromArray(['No', 'Bentuk', 'Level Kognitif', 'Pertanyaan', 'Tabel Menjodohkan (No|Soal|Huruf|Jawaban)', 'Opsi A', 'Opsi B', 'Opsi C', 'Opsi D', 'Kunci', 'Pembahasan'], null, 'A1');
+        $sh2->fromArray(['No', 'Bentuk', 'Level Kognitif', 'Pertanyaan', 'Gambar / Ilustrasi', 'Tabel Menjodohkan (No|Soal|Huruf|Jawaban)', 'Opsi A', 'Opsi B', 'Opsi C', 'Opsi D', 'Kunci', 'Pembahasan'], null, 'A1');
         $row = 2;
         foreach ($items as $i => $it) {
             $opsi_dl = (isset($it['opsi']) && is_array($it['opsi'])) ? $it['opsi'] : [];
             $sh2->fromArray([
                 $i + 1, (string)($it['bentuk'] ?? 'Pilihan Ganda'), (string)($it['level_kognitif'] ?? 'L2'),
-                (string)($it['pertanyaan'] ?? ''), $ai_tabel_txt($it),
+                (string)($it['pertanyaan'] ?? ''), ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? '')), $ai_tabel_txt($it),
                 (string)($opsi_dl['A'] ?? ''), (string)($opsi_dl['B'] ?? ''),
                 (string)($opsi_dl['C'] ?? ''), (string)($opsi_dl['D'] ?? ''),
                 (string)($it['kunci'] ?? ''), (string)($it['pembahasan'] ?? ''),
             ], null, 'A' . $row);
             $row++;
         }
-        foreach (range('A', 'K') as $c) {
+        foreach (range('A', 'L') as $c) {
             $sh2->getColumnDimension($c)->setAutoSize(true);
         }
         $ss->setActiveSheetIndex(0);
@@ -967,6 +1017,7 @@ if ($aksi === 'unduh') {
     $html .= '<h4>Soal</h4><ol>';
     foreach ($items as $it) {
         $html .= '<li><p><b>[' . htmlspecialchars((string)($it['bentuk'] ?? 'Soal')) . '][' . htmlspecialchars((string)($it['level_kognitif'] ?? 'L2')) . ']</b> ' . nl2br(htmlspecialchars((string)($it['pertanyaan'] ?? ''))) . '</p>';
+        $html .= ai_gambar_html(ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? '')));
         $tbl = $ai_tabel_html($it);
         if ($tbl !== '') {
             $html .= $tbl;
@@ -1075,6 +1126,7 @@ if ($aksi === 'unduh_paket') {
             'bentuk' => $r['jenis_soal'],
             'level_kognitif' => $r['level_kognitif'] ?? 'L2',
             'pertanyaan' => $pertanyaan_val,
+            'gambar' => ai_extract_gambar((string)($r['pertanyaan'] ?? '')),
             'opsi' => $opsi_arr,
             'tabel' => $tabel_arr,
             'kunci' => $r['jawaban_benar'] ?? '',
@@ -1268,6 +1320,7 @@ if ($aksi === 'unduh_paket') {
     $html .= '<h4>Soal</h4><ol>';
     foreach ($items as $it) {
         $html .= '<li><p style="margin:0 0 4px;"><b>[' . htmlspecialchars($it['bentuk']) . '][' . htmlspecialchars($it['level_kognitif']) . ']</b> ' . nl2br(htmlspecialchars($it['pertanyaan'])) . '</p>';
+        $html .= ai_gambar_html(ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? '')));
         if ($it['bentuk'] === 'Menjodohkan' && !empty($it['tabel']) && is_array($it['tabel'])) {
             $html .= '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:10pt;margin:8px 0;">'
                 . '<thead><tr style="background:#f0f0f0;"><th width="6%" style="text-align:center;">No</th><th>Soal</th><th width="8%" style="text-align:center;">Huruf</th><th>Pilihan Jawaban</th></tr></thead><tbody>';
@@ -1386,6 +1439,7 @@ if ($aksi === 'detail_paket') {
             'level_kognitif' => $r['level_kognitif'] ?? 'L2',
             'tingkat_kesulitan' => $r['tingkat_kesulitan'] ?? 'Sedang',
             'pertanyaan' => $pertanyaan_val,
+            'gambar' => ai_extract_gambar((string)($r['pertanyaan'] ?? '')),
             'opsi' => $opsi_arr,
             'tabel' => $tabel_arr,
             'kunci' => $r['jawaban_benar'] ?? '',

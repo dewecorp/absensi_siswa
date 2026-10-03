@@ -67,9 +67,12 @@ Options -Indexes
     RewriteCond %{REQUEST_METHOD} GET [NC]
     RewriteCond %{THE_REQUEST} !download [NC]
     RewriteCond %{THE_REQUEST} !export [NC]
-    RewriteCond %{QUERY_STRING} !(?:download|export|action) [NC]
+    RewriteCond %{THE_REQUEST} !unduh [NC]
+    RewriteCond %{THE_REQUEST} !ajax [NC]
+    RewriteCond %{QUERY_STRING} !(?:download|export|action|aksi|unduh|format) [NC]
+    RewriteCond %{REQUEST_URI} !^.*/ajax_.*\.php [NC]
     RewriteCond %{THE_REQUEST} \s/+(.+)\.php[?\s] [NC]
-    RewriteRule ^(.+)\.php$ /$1 [R=302,L,NE]
+    RewriteRule ^(.+)\.php$ $1 [R=302,L,NE]
 
     # Fallback aman: URL lama tanpa .php tetap bisa dibuka,
     # tetapi aplikasi tidak dipaksa memakai clean URL.
