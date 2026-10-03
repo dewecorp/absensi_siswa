@@ -680,21 +680,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <?php endif; ?>
 
-                    <!-- Attendance Box for Teacher -->
-                    <div class="row">
-                        <?php 
+                    <?php
+                    // Box Jadwal Reguler Hari Ini (khusus guru login)
+                    $jd_hari_map = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Ahad'];
+                    $jd_hari_ini = $jd_hari_map[date('l')] ?? date('l');
+                    $jd_tanggal_ini = date('d F Y');
+                    $jd_guru_id = (int)($teacher['id_guru'] ?? 0);
+                    $jadwal_hari_ini = [];
+                    if ($jd_guru_id > 0) {
+                        try {
+                            $jd_cari = [$jd_hari_ini];
+                            if ($jd_hari_ini === 'Ahad') { $jd_cari[] = 'Minggu'; }
+                            if ($jd_hari_ini === 'Jumat') { $jd_cari[] = "Jum'at"; }
+                            $jd_in = implode(',', array_fill(0, count($jd_cari), '?'));
+                            $stJd = $pdo->prepare("
+                                SELECT j.jam_ke, j.hari, k.nama_kelas, m.nama_mapel,
+                                       jm.waktu_mulai, jm.waktu_selesai
+                                FROM tb_jadwal_pelajaran j
+                                LEFT JOIN tb_kelas k ON k.id_kelas = j.kelas_id
+                                LEFT JOIN tb_mata_pelajaran m ON m.id_mapel = j.mapel_id
+                                LEFT JOIN tb_jam_mengajar jm ON jm.jam_ke = j.jam_ke AND jm.jenis = 'Reguler'
+                                WHERE j.guru_id = ? AND j.jenis = 'Reguler' AND j.hari IN ($jd_in)
+                                ORDER BY jm.waktu_mulai ASC, j.jam_ke ASC
+                            ");
+                            $stJd->execute(array_merge([$jd_guru_id], $jd_cari));
+                            $jadwal_hari_ini = array_values(array_filter($stJd->fetchAll(PDO::FETCH_ASSOC), static function ($jd) {
+                                return preg_match('/^[0-9]+$/', (string)($jd['jam_ke'] ?? ''));
+                            }));
+                            usort($jadwal_hari_ini, static function ($a, $b) {
+                                $d = ((int)$a['jam_ke']) <=> ((int)$b['jam_ke']);
+                                if ($d !== 0) return $d;
+                                return strcmp((string)($a['waktu_mulai'] ?? ''), (string)($b['waktu_mulai'] ?? ''));
+                            });
+                        } catch (Throwable $e) {
+                            $jadwal_hari_ini = [];
+                        }
+                    }
+                    ?>
+                    <!-- Jadwal + Kehadiran sejajar 2 kolom -->
+                    <div class="row align-items-stretch">
+                        <div class="col-12 col-md-6 mb-4 d-flex">
+                            <div class="card card-primary w-100 h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                                    <h4>Jadwal Mengajar Hari Ini</h4>
+                                    <a href="jadwal_reguler.php" class="btn btn-light btn-sm font-weight-bold"><i class="fas fa-table mr-1"></i> Lihat Jadwal Penuh</a>
+                                </div>
+                                <div class="px-4 pt-3 pb-0 text-center">
+                                    <span class="badge badge-primary px-3 py-2"><i class="fas fa-calendar-day mr-1"></i> <?= htmlspecialchars($jd_hari_ini) ?>, <?= htmlspecialchars($jd_tanggal_ini) ?> &bull; <?= count($jadwal_hari_ini) ?> jam pelajaran</span>
+                                </div>
+                                <div class="card-body p-3">
+                                    <?php if (!empty($jadwal_hari_ini)): ?>
+                                        <div class="row">
+                                            <?php foreach ($jadwal_hari_ini as $jd): ?>
+                                                <div class="col-md-6 col-lg-4 mb-2">
+                                                    <div class="d-flex align-items-center p-2 rounded border bg-light h-100">
+                                                        <span class="badge badge-primary mr-2 px-2 py-2" style="font-size:13px;">Jam <?= htmlspecialchars($jd['jam_ke']) ?></span>
+                                                        <div class="flex-grow-1" style="min-width:0;">
+                                                            <div class="font-weight-bold text-dark text-truncate"><?= htmlspecialchars($jd['nama_mapel'] ?? '-') ?></div>
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-door-open mr-1"></i>Kelas <?= htmlspecialchars($jd['nama_kelas'] ?? '-') ?>
+                                                                <?php if (!empty($jd['waktu_mulai'])): ?>
+                                                                    &bull; <i class="far fa-clock mr-1"></i><?= htmlspecialchars(substr($jd['waktu_mulai'], 0, 5)) ?><?= !empty($jd['waktu_selesai']) ? '–' . htmlspecialchars(substr($jd['waktu_selesai'], 0, 5)) : '' ?>
+                                                                <?php endif; ?>
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="py-3 text-center"><i class="fas fa-calendar-check mb-2 d-block text-primary" style="font-size:34px;"></i><p class="font-weight-bold text-dark mb-1" style="font-size:18px;line-height:1.6;">Tidak ada jadwal mengajar hari <?= htmlspecialchars($jd_hari_ini) ?>.</p><p class="text-muted mb-0" style="font-size:14px;">Hari ini (<?= htmlspecialchars($jd_tanggal_ini) ?>) Anda tidak terjadwal mengajar. Gunakan waktu untuk memeriksa perangkat, jurnal, dan catatan perkembangan siswa.</p></div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <!-- Attendance Box: kolom kanan, satu baris dengan box jadwal -->
+                        <?php
                         // Box les selalu muncul untuk guru kelas 6, cek apakah ada jadwal hari ini
                         $show_les_box = $is_grade_6_guru && $has_les_schedule_guru; // Hanya tampilkan jika ada jadwal les hari ini
-                        $col_class = $show_les_box ? 'col-12 col-md-6' : 'col-12';
-                        
-                        if (!$holiday['is_holiday']): 
+                        $col_class = 'col-12 col-md-6 mb-4 d-flex';
+
+                        if (!$holiday['is_holiday']):
                             // Get current regular attendance
                             $stmt_check_reg = $pdo->prepare("SELECT * FROM tb_absensi_guru WHERE id_guru = ? AND tanggal = ?");
                             $stmt_check_reg->execute([$teacher['id_guru'], $today]);
                             $today_reg_attendance = $stmt_check_reg->fetch(PDO::FETCH_ASSOC);
                         ?>
-                        <div class="<?php echo $col_class; ?> mb-4">
-                            <div class="card card-primary">
+                        <div class="<?php echo $col_class; ?>">
+                            <div class="card card-primary w-100 h-100">
                                 <div class="card-header">
                                     <h4>Kehadiran Harian</h4>
                                 </div>
@@ -782,8 +855,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                         <?php else: ?>
-                        <div class="<?php echo $col_class; ?> mb-4">
-                            <div class="card card-warning">
+                        <div class="<?php echo $col_class; ?>">
+                            <div class="card card-warning w-100 h-100">
                                 <div class="card-header"><h4>Kehadiran Harian Guru</h4></div>
                                 <div class="card-body d-flex align-items-center justify-content-center text-center">
                                     <div class="py-2">
@@ -800,9 +873,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                         <?php endif; ?>
+                    </div>
 
-                        <?php 
-                        if ($show_les_box): 
+                    <div class="row">
+                        <?php
+                        if ($show_les_box):
                             // Get current les attendance
                             $stmt_check_les = $pdo->prepare("SELECT * FROM tb_absensi_les_guru WHERE id_guru = ? AND tanggal = ?");
                             $stmt_check_les->execute([$teacher['id_guru'], $today]);
