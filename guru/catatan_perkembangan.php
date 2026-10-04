@@ -15,11 +15,17 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
 
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah', 'tata_usaha'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
+
 $message = null;
 
 // Handle CRUD Catatan Perkembangan
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki hak akses untuk mengubah data ini.'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -99,22 +105,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
         }
+        }
     }
 }
 
-// 1. Kelas yang diajar guru login
-$kelas_list = getGuruTaughtClasses($pdo, $guru_id);
-if (empty($kelas_list)) {
+// 1. List kelas
+if ($is_admin_or_kepala) {
     $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
-}
-
-// 2. Mata pelajaran yang diajar guru login
-$mapel_list = getGuruTaughtMapels($pdo, $guru_id);
-if (empty($mapel_list)) {
     $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $kelas_list = getGuruTaughtClasses($pdo, $guru_id);
+    if (empty($kelas_list)) {
+        $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+    $mapel_list = getGuruTaughtMapels($pdo, $guru_id);
+    if (empty($mapel_list)) {
+        $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
-// 3. Siswa: Hanya dari kelas-kelas yang diajar guru login
+// 3. Siswa
 $taught_kelas_ids = array_filter(array_map(function($k) { return (int)($k['id_kelas'] ?? 0); }, $kelas_list));
 if (!empty($taught_kelas_ids)) {
     $in_clause = implode(',', $taught_kelas_ids);
@@ -134,7 +144,7 @@ if (!empty($taught_kelas_ids)) {
     ")->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// 4. Data Master Pemetaan Perkembangan (Dinamis dari tb_master_perkembangan)
+// 4. Data Master Pemetaan Perkembangan
 $stMaster = $pdo->prepare("
     SELECT id, aspek, kendala, tindak_lanjut, ringkasan,
            perkembangan_akademik, perkembangan_sikap, perkembangan_keterampilan,
@@ -159,8 +169,13 @@ $f_mapel = (int)($_GET['f_mapel'] ?? 0);
 $f_siswa = (int)($_GET['f_siswa'] ?? 0);
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
-$where = ["c.id_guru = ?"];
-$params = [$guru_id];
+if ($is_admin_or_kepala) {
+    $where = ["1=1"];
+    $params = [];
+} else {
+    $where = ["c.id_guru = ?"];
+    $params = [$guru_id];
+}
 
 if ($f_kategori !== '') {
     $where[] = "c.kategori = ?";
@@ -620,6 +635,10 @@ include '../templates/sidebar.php';
 .catatan-actions .btn { margin-bottom: 4px; white-space: nowrap; }
 #modalCatatan textarea.catatan-ta { min-height: 110px; line-height: 1.55; resize: vertical; overflow-y: auto; }
 #modalCatatan select.sel-detail-tpl { white-space: normal; }
+.aksi-satu-baris { display: inline-flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; white-space: nowrap; }
+.aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
+#table-catatan td:last-child { white-space: nowrap; }
 </style>
 <div class="main-content">
     <section class="section">
@@ -708,9 +727,11 @@ include '../templates/sidebar.php';
                                 <a href="<?= htmlspecialchars($url_xls) ?>" class="btn btn-success btn-sm" title="Ekspor Excel sesuai filter">
                                     <i class="fas fa-file-excel mr-1"></i> Excel
                                 </a>
+                                <?php if ($can_crud): ?>
                                 <button type="button" class="btn btn-primary btn-sm" id="btnTambahCatatan">
                                     <i class="fas fa-plus mr-1"></i> Tambah Catatan
                                 </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </form>
@@ -735,7 +756,7 @@ include '../templates/sidebar.php';
                                     <th>Tindak Lanjut</th>
                                     <th style="width: 100px;">Status</th>
                                     <th>Guru</th>
-                                    <th style="width: 110px;">Aksi</th>
+                                    <th style="width:180px;min-width:180px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -767,22 +788,22 @@ include '../templates/sidebar.php';
                                         </td>
                                         <td class="align-middle small text-muted"><?= htmlspecialchars($r['nama_guru'] ?? '-') ?></td>
                                         <td class="text-center align-middle">
-                                            <div class="btn-group btn-group-sm">
-                                                <button type="button" class="btn btn-info btn-detail-catatan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail & Timeline">
+                                            <div class="aksi-satu-baris">
+                                                <button type="button" class="btn btn-info btn-sm btn-detail-catatan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail & Timeline">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-warning btn-edit-catatan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                <?php if ($can_crud): ?>
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-catatan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-danger btn-hapus-catatan" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa']) ?>" title="Hapus">
+                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-catatan" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa']) ?>" title="Hapus">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            </div>
-                                            <div class="btn-group btn-group-sm mt-1">
-                                                <a href="export_catatan_perkembangan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger" title="Cetak / Simpan PDF laporan siswa ini (<?= htmlspecialchars($r['nama_siswa']) ?>)">
+                                                <?php endif; ?>
+                                                <a href="export_catatan_perkembangan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini (<?= htmlspecialchars($r['nama_siswa']) ?>)">
                                                     <i class="fas fa-print"></i>
                                                 </a>
-                                                <a href="export_catatan_perkembangan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success" title="Ekspor Excel siswa ini">
+                                                <a href="export_catatan_perkembangan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel siswa ini">
                                                     <i class="fas fa-file-excel"></i>
                                                 </a>
                                             </div>

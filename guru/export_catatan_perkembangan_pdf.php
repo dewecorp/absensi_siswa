@@ -111,12 +111,72 @@ if ($is_single_student) {
     $filename = "Rekap_Catatan_Perkembangan_TA" . $ta_file . "_" . date('Ymd');
 }
 
-// Nama file logo (kop pakai path file langsung seperti cetak rekap nilai)
+// Nama file logo: mode print pakai path langsung (cepat, anti-separo);
+// mode file PDF pakai base64 (path relatif putus saat render Dompdf).
 $logo_file = $school['logo'] ?? '';
+$logo_print = '';
+if (!empty($logo_file)) {
+    foreach (['../assets/img/' . $logo_file, '../uploads/' . $logo_file] as $lp) {
+        $fs = __DIR__ . '/' . $lp;
+        if (is_file($fs)) { $logo_print = $lp; break; }
+    }
+}
+$logo_path = $logo_print;
 
-// QR Code Signature
-$qr_guru = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Guru: {$nama_guru} - Catatan Perkembangan - {$nama_madrasah}");
-$qr_kepala = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Kepala Madrasah: {$kepala_madrasah} - {$nama_madrasah}");
+if (!function_exists('kembang_img_b64')) {
+    function kembang_img_b64(string $src): string {
+        $src = trim($src);
+        if ($src === '') return '';
+        if (strpos($src, 'data:image') === 0) return $src;
+        $data = false;
+        if (preg_match('#^https?://#i', $src)) {
+            if (function_exists('curl_init')) {
+                $ch = curl_init($src);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'SIMAD-Madrasah/1.0');
+                $data = curl_exec($ch);
+                $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($code !== 200 || !is_string($data) || strlen($data) < 500) $data = false;
+            } else {
+                $ctx = stream_context_create(['http' => ['timeout' => 15, 'user_agent' => 'SIMAD-Madrasah/1.0']]);
+                $data = @file_get_contents($src, false, $ctx);
+                if (!is_string($data) || strlen($data) < 500) $data = false;
+            }
+            if ($data === false) return $src;
+            $mime = 'image/png';
+        } else {
+            $fs = (strpos($src, __DIR__) === 0) ? $src : __DIR__ . '/' . ltrim($src, '/');
+            if (!is_file($fs)) return '';
+            $info = @getimagesize($fs);
+            $mime = $info['mime'] ?? 'image/png';
+            $data = @file_get_contents($fs);
+            if (!is_string($data) || $data === '') return '';
+        }
+        return 'data:' . $mime . ';base64,' . base64_encode($data);
+    }
+}
+
+// QR Code Signature: mode print pakai URL langsung (cepat);
+// mode file PDF pakai base64 agar posisi stabil.
+$qr_guru_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Guru: {$nama_guru} - Catatan Perkembangan - {$nama_madrasah}");
+$qr_kepala_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Kepala Madrasah: {$kepala_madrasah} - {$nama_madrasah}");
+$qr_guru = $qr_guru_url;
+$qr_kepala = $qr_kepala_url;
+if ($is_download) {
+    $b64g = kembang_img_b64($qr_guru_url);
+    $b64k = kembang_img_b64($qr_kepala_url);
+    if (strpos($b64g, 'data:image') === 0) $qr_guru = $b64g;
+    if (strpos($b64k, 'data:image') === 0) $qr_kepala = $b64k;
+    if ($logo_print !== '') {
+        $fs = (strpos($logo_print, __DIR__) === 0) ? $logo_print : __DIR__ . '/' . ltrim($logo_print, '/');
+        $b64 = kembang_img_b64($fs);
+        if ($b64 !== '') $logo_path = $b64;
+    }
+}
 
 // Buffer HTML
 ob_start();
@@ -171,6 +231,14 @@ ob_start();
             margin: 2px 0;
             font-size: 9pt;
             color: #333;
+        }
+        .header-kop table { table-layout: fixed; }
+        .header-kop td { overflow: visible; }
+        .kop-logo-img {
+            width: 82px;
+            height: 71px;
+            display: block;
+            margin: 0 auto;
         }
         .doc-title {
             text-align: center;
@@ -316,21 +384,11 @@ ob_start();
 
 <!-- KOP MADRASAH -->
 <div class="header-kop">
-    <?php
-    // Samakan pola kop dengan cetak lain (path file langsung, height 80px width auto).
-    $logo_path = '';
-    if (!empty($logo_file)) {
-        foreach (['../assets/img/' . $logo_file, __DIR__ . '/../assets/img/' . $logo_file] as $lp) {
-            $fs = (strpos($lp, __DIR__) === 0) ? $lp : __DIR__ . '/' . $lp;
-            if (is_file($fs)) { $logo_path = '../assets/img/' . $logo_file; break; }
-        }
-    }
-    ?>
     <table style="width: 100%; border: none; margin: 0;">
         <tr style="border: none;">
-            <td style="border: none; width: 100px; text-align: center; vertical-align: middle;">
+            <td style="border: none; width: 110px; min-width: 110px; text-align: center; vertical-align: middle; padding: 0 5px;">
                 <?php if ($logo_path !== ''): ?>
-                    <img src="<?= htmlspecialchars($logo_path) ?>" style="height: 80px; width: auto;">
+                    <img src="<?= $logo_path ?>" class="kop-logo-img" alt="Logo">
                 <?php endif; ?>
             </td>
             <td style="border: none; text-align: center; vertical-align: middle;">
@@ -338,7 +396,7 @@ ob_start();
                 <h3>CATATAN PERKEMBANGAN &amp; PEMBINAAN PESERTA DIDIK</h3>
                 <p><?= htmlspecialchars($alamat_madrasah) ?> &bull; Tahun Ajaran: <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars($semester) ?>)</p>
             </td>
-            <td style="border: none; width: 100px;"></td>
+            <td style="border: none; width: 110px; min-width: 110px;"></td>
         </tr>
     </table>
 </div>
@@ -520,12 +578,27 @@ ob_start();
 
 <?php if (!$is_download): ?>
     <script>
-        // Auto print dialog upon page open
-        window.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                window.print();
-            }, 600);
-        });
+        // Tunggu semua gambar (logo + QR) selesai load agar tidak kepotong/separo saat print.
+        function printWhenReady() {
+            var imgs = Array.prototype.slice.call(document.images || []);
+            var pending = imgs.filter(function(im) { return !im.complete; });
+            if (pending.length === 0) {
+                setTimeout(function() { window.print(); }, 350);
+                return;
+            }
+            var done = 0;
+            function tick() {
+                done++;
+                if (done >= pending.length) setTimeout(function() { window.print(); }, 350);
+            }
+            pending.forEach(function(im) {
+                im.addEventListener('load', tick, { once: true });
+                im.addEventListener('error', tick, { once: true });
+            });
+            setTimeout(function() { window.print(); }, 3500);
+        }
+        if (document.readyState === 'complete') printWhenReady();
+        else window.addEventListener('load', printWhenReady);
     </script>
 <?php endif; ?>
 

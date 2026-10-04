@@ -7,7 +7,7 @@ require_once '../config/ai_helper.php';
 ensure_learning_schema($pdo);
 ai_helper_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
@@ -16,6 +16,9 @@ $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
+
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
 
 $upload_dir = guru_upload_dir($pdo, $guru_id, 'bank_soal');
 
@@ -210,7 +213,10 @@ function parse_uploaded_soal_file(string $tmpPath, string $originalName): array 
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki hak akses untuk mengubah data ini.'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $kode_paket = trim((string)($_POST['kode_paket'] ?? ''));
@@ -441,10 +447,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+}
 
-// Master lists (hanya mapel yang diajar guru login; kelas hanya yang diajar guru login)
-$mapel_list = function_exists('getGuruTaughtMapels') ? getGuruTaughtMapels($pdo, $guru_id) : getFilteredSubjects($pdo);
-$kelas_list = function_exists('getGuruTaughtClasses') ? getGuruTaughtClasses($pdo, $guru_id) : $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+// Master lists
+if ($is_admin_or_kepala) {
+    $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $mapel_list = function_exists('getGuruTaughtMapels') ? getGuruTaughtMapels($pdo, $guru_id) : getFilteredSubjects($pdo);
+    $kelas_list = function_exists('getGuruTaughtClasses') ? getGuruTaughtClasses($pdo, $guru_id) : $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+}
 $jenis_soal_options = ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'];
 $kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_1503_KBC' => 'KMA 1503 + KBC'];
 $asesmen_options = ai_asesmen_list();
@@ -456,8 +468,13 @@ $f_kelas = (int)($_GET['f_kelas'] ?? 0);
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 $f_asesmen = trim((string)($_GET['f_asesmen'] ?? ''));
 
-$where = ["b.id_guru = ?"];
-$params = [$guru_id];
+if ($is_admin_or_kepala) {
+    $where = ["1=1"];
+    $params = [];
+} else {
+    $where = ["b.id_guru = ?"];
+    $params = [$guru_id];
+}
 
 if ($f_mapel > 0) {
     $where[] = "b.id_mapel = ?";
@@ -705,6 +722,7 @@ include '../templates/sidebar.php';
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4><i class="fas fa-box mr-2"></i>Bank Soal</h4>
+                    <?php if ($can_crud): ?>
                     <div>
                         <button type="button" class="btn btn-primary" id="btnTambahSoal">
                             <i class="fas fa-plus mr-1"></i> Tambah Soal
@@ -713,6 +731,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-robot mr-1"></i> Generate Soal
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -743,15 +762,17 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars(substr($p['created_at'] ?? '', 0, 10)) ?></td>
                                         <td class="text-center text-nowrap" style="white-space: nowrap;">
                                             <div class="d-inline-flex align-items-center" style="gap: 4px;">
-                                            <a href="preview_bank_soal.php?kode_paket=<?= urlencode($p['kode_paket']) ?><?= $session_q ? '&' . ltrim($session_q, '?') : '' ?>" target="_blank" class="btn btn-info btn-sm" title="Pratinjau di laman penuh">
-                                                <i class="fas fa-eye mr-1"></i> Preview
-                                            </a>
+                                                <a href="preview_bank_soal.php?kode_paket=<?= urlencode($p['kode_paket']) ?><?= $session_q ? '&' . ltrim($session_q, '?') : '' ?>" target="_blank" class="btn btn-info btn-sm" title="Pratinjau di laman penuh">
+                                                    <i class="fas fa-eye mr-1"></i> Preview
+                                                </a>
+                                                <?php if ($can_crud): ?>
                                                 <button type="button" class="btn btn-warning btn-sm btn-edit-paket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-danger btn-sm btn-hapus-paket" data-kode="<?= htmlspecialchars($p['kode_paket'], ENT_QUOTES) ?>" title="Hapus Paket">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>

@@ -5,7 +5,7 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
@@ -14,6 +14,9 @@ $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
+
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
 
 $school_profile = getSchoolProfile($pdo);
 $tahun_ajaran_aktif = $school_profile['tahun_ajaran'] ?? date('Y') . '/' . (date('Y') + 1);
@@ -25,7 +28,10 @@ $message = null;
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki hak akses untuk mengubah data ini.'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -108,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+}
 
 // Master lists
 $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -123,8 +130,13 @@ $f_semester = trim((string)($_GET['f_semester'] ?? ''));
 $f_tahun = trim((string)($_GET['f_tahun'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
-$where = ["b.id_guru = ?"];
-$params = [$guru_id];
+if ($is_admin_or_kepala) {
+    $where = ["1=1"];
+    $params = [];
+} else {
+    $where = ["b.id_guru = ?"];
+    $params = [$guru_id];
+}
 
 if ($f_jenis !== '') {
     $where[] = "b.jenis = ?";
@@ -356,9 +368,11 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Materi & Bahan Pembelajaran</h4>
+                    <?php if ($can_crud): ?>
                     <button type="button" class="btn btn-primary" id="btnTambahBahan">
                         <i class="fas fa-plus mr-1"></i> Tambah Bahan Ajar
                     </button>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -423,17 +437,19 @@ include '../templates/sidebar.php';
                                             <a href="<?= $file_dest ?>" target="_blank" class="btn btn-secondary btn-sm" title="Buka">
                                                 <i class="fas fa-external-link-alt"></i>
                                             </a>
-                                            <?php if (!$is_url && !empty($r['file_link'])): ?>
-                                                <a href="<?= $file_dest ?>" download class="btn btn-success btn-sm" title="Download">
-                                                    <i class="fas fa-download"></i>
-                                                </a>
-                                            <?php endif; ?>
-                                            <button type="button" class="btn btn-warning btn-sm btn-edit-bahan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm btn-hapus-bahan" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                             <?php if (!$is_url && !empty($r['file_link'])): ?>
+                                                 <a href="<?= $file_dest ?>" download class="btn btn-success btn-sm" title="Download">
+                                                     <i class="fas fa-download"></i>
+                                                 </a>
+                                             <?php endif; ?>
+                                             <?php if ($can_crud): ?>
+                                             <button type="button" class="btn btn-warning btn-sm btn-edit-bahan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                 <i class="fas fa-edit"></i>
+                                             </button>
+                                             <button type="button" class="btn btn-danger btn-sm btn-hapus-bahan" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
+                                                 <i class="fas fa-trash"></i>
+                                             </button>
+                                             <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -53,10 +53,14 @@ if (isset($_GET['download']) && (int)$_GET['download'] > 0) {
 }
 
 $message = null;
+$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah', 'tata_usaha'], true);
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki hak akses untuk mengubah data ini.'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -162,12 +166,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
         }
+        }
     }
 }
 
-// Master lists for filter & forms (khusus mapel & kelas yang diajar oleh guru yang login pada jadwal Reguler)
-$mapel_list = getGuruTaughtMapels($pdo, $guru_id);
-$kelas_list = getGuruTaughtClasses($pdo, $guru_id);
+// Master lists for filter & forms
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah', 'tata_usaha'], true);
+if ($is_admin_or_kepala) {
+    $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $mapel_list = getGuruTaughtMapels($pdo, $guru_id);
+    $kelas_list = getGuruTaughtClasses($pdo, $guru_id);
+}
 
 $jenis_options = [
     'CP/TP',
@@ -193,8 +204,13 @@ $f_semester = trim((string)($_GET['f_semester'] ?? ''));
 $f_tahun = trim((string)($_GET['f_tahun'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
-$where = ["p.id_guru = ?"];
-$params = [$guru_id];
+if ($is_admin_or_kepala) {
+    $where = ["1=1"];
+    $params = [];
+} else {
+    $where = ["p.id_guru = ?"];
+    $params = [$guru_id];
+}
 
 if ($f_jenis !== '') {
     $where[] = "p.jenis_perangkat = ?";
@@ -721,6 +737,7 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Daftar Dokumen</h4>
+                    <?php if ($can_crud): ?>
                     <div>
                         <button type="button" class="btn btn-primary" id="btnTambahPerangkat">
                             <i class="fas fa-plus mr-1"></i> Tambah Perangkat
@@ -729,6 +746,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-robot mr-1"></i> Generate AI
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -785,9 +803,11 @@ include '../templates/sidebar.php';
                                                 <button type="button" class="btn btn-info btn-sm btn-detail" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
+                                                <?php if ($can_crud): ?>
                                                 <button type="button" class="btn btn-warning btn-sm btn-edit" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
+                                                <?php endif; ?>
                                                 <?php if (!empty($r['file_path'])): ?>
                                                     <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Baca Dokumen (Laman Penuh)">
                                                         <i class="fas fa-book-reader"></i>
@@ -805,14 +825,16 @@ include '../templates/sidebar.php';
                                                         <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>, 'xlsx')" class="btn btn-outline-success" title="Unduh Excel"><i class="fas fa-file-excel"></i></button>
                                                     </div>
                                                 <?php endif; ?>
-                                                <?php if ($r['status'] !== 'Arsip'): ?>
-                                                    <button type="button" class="btn btn-secondary btn-sm btn-arsip" data-id="<?= (int)$r['id'] ?>" title="Arsipkan">
-                                                        <i class="fas fa-archive"></i>
+                                                <?php if ($can_crud): ?>
+                                                    <?php if ($r['status'] !== 'Arsip'): ?>
+                                                        <button type="button" class="btn btn-secondary btn-sm btn-arsip" data-id="<?= (int)$r['id'] ?>" title="Arsipkan">
+                                                            <i class="fas fa-archive"></i>
+                                                        </button>
+                                                    <?php endif; ?>
+                                                    <button type="button" class="btn btn-danger btn-sm btn-hapus" data-id="<?= (int)$r['id'] ?>" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
                                                     </button>
                                                 <?php endif; ?>
-                                                <button type="button" class="btn btn-danger btn-sm btn-hapus" data-id="<?= (int)$r['id'] ?>" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>

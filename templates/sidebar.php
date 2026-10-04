@@ -386,12 +386,51 @@ switch ($user_level) {
             ['title' => 'Surat Keputusan', 'url' => '../admin/surat_keputusan.php', 'active' => $current_page === 'surat_keputusan.php', 'badge' => $surat_counts_admin['keputusan'] > 0 ? $surat_counts_admin['keputusan'] : null],
         ];
 
+        $pembelajaran_submenu_admin = [
+            ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php?session_type=admin', 'active' => $current_page === 'bahan_ajar.php'],
+            ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=admin', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
+            ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php?session_type=admin', 'active' => $current_page === 'catatan_perkembangan.php'],
+            ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php?session_type=admin', 'active' => $current_page === 'data_perkembangan.php'],
+            ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=admin', 'active' => $current_page === 'komunikasi_kelas.php'],
+            ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=admin', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
+            ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=admin', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
+        ];
+        usort($pembelajaran_submenu_admin, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
+
+        $pengelolaan_kelas_submenu_admin = [
+            ['title' => 'Agenda Kelas', 'url' => '../wali/agenda_kelas.php?session_type=admin', 'active' => $current_page === 'agenda_kelas.php'],
+            ['title' => 'Data Konseling', 'url' => '../wali/data_konseling.php?session_type=admin', 'active' => $current_page === 'data_konseling.php'],
+            ['title' => 'Data Pelanggaran', 'url' => '../wali/data_pelanggaran.php?session_type=admin', 'active' => $current_page === 'data_pelanggaran.php'],
+            ['title' => 'Data Pembinaan', 'url' => '../wali/data_pembinaan.php?session_type=admin', 'active' => $current_page === 'data_pembinaan.php'],
+            ['title' => 'Data Tindak Lanjut', 'url' => '../wali/data_tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'data_tindak_lanjut.php'],
+            ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php?session_type=admin', 'active' => $current_page === 'jadwal_piket_kelas.php'],
+            ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php?session_type=admin', 'active' => $current_page === 'komunikasi_ortu.php'],
+            ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php?session_type=admin', 'active' => $current_page === 'konseling_awal.php'],
+            ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php?session_type=admin', 'active' => $current_page === 'pelanggaran_siswa.php'],
+            ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php?session_type=admin', 'active' => $current_page === 'pembinaan_siswa.php'],
+            ['title' => 'Tindak Lanjut', 'url' => '../wali/tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'tindak_lanjut.php'],
+            ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=admin', 'active' => $current_page === 'projek_kokurikuler.php'],
+            ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php', 'active' => $current_page === 'struktur_kelas.php'],
+        ];
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
                 'icon' => 'fas fa-fire',
                 'url' => '../admin/dashboard.php',
                 'active' => $current_page === 'dashboard.php'
+            ],
+            [
+                'title' => 'Pembelajaran',
+                'icon' => 'fas fa-chalkboard-teacher',
+                'submenu' => $pembelajaran_submenu_admin,
+                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'preview_bank_soal.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php'])
+            ],
+            [
+                'title' => 'Pengelolaan Kelas',
+                'icon' => 'fas fa-user-graduate',
+                'submenu' => $pengelolaan_kelas_submenu_admin,
+                'active' => in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'tindak_lanjut.php', 'data_tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php'])
             ],
             [
                 'title' => 'Master Data',
@@ -584,6 +623,28 @@ switch ($user_level) {
             ['title' => 'Surat Keputusan', 'url' => '../admin/surat_keputusan.php?session_type=kepala_madrasah', 'active' => $current_page === 'surat_keputusan.php', 'badge' => $surat_counts_kepala['keputusan'] > 0 ? $surat_counts_kepala['keputusan'] : null],
         ];
 
+        $pembelajaran_submenu_kepala = [
+            ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php?session_type=kepala_madrasah', 'active' => $current_page === 'bahan_ajar.php'],
+            ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
+            ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php?session_type=kepala_madrasah', 'active' => $current_page === 'catatan_perkembangan.php'],
+            ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_perkembangan.php'],
+            ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'komunikasi_kelas.php'],
+            ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
+            ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
+        ];
+        usort($pembelajaran_submenu_kepala, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
+
+        $pengelolaan_kelas_submenu_kepala = [
+            ['title' => 'Agenda Kelas', 'url' => '../wali/agenda_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'agenda_kelas.php'],
+            ['title' => 'Data Konseling', 'url' => '../wali/data_konseling.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_konseling.php'],
+            ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'jadwal_piket_kelas.php'],
+            ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php?session_type=kepala_madrasah', 'active' => $current_page === 'komunikasi_ortu.php'],
+            ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php?session_type=kepala_madrasah', 'active' => $current_page === 'konseling_awal.php'],
+            ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'projek_kokurikuler.php'],
+            ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'struktur_kelas.php'],
+        ];
+        usort($pengelolaan_kelas_submenu_kepala, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
+
         $menu_items = [
             [
                 'title' => 'Dashboard',
@@ -595,12 +656,23 @@ switch ($user_level) {
                 'title' => 'Data Utama',
                 'icon' => 'fas fa-database',
                 'submenu' => [
-                    ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'struktur_kelas.php'],
                     ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=kepala_madrasah', 'active' => $current_page === 'mata_pelajaran.php'],
                     ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=kepala_madrasah', 'active' => $current_page === 'kalender_pendidikan.php'],
                     ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=kepala_madrasah', 'active' => $current_page === 'siswa_baru.php']
                 ],
-                'active' => in_array($current_page, ['struktur_kelas.php', 'mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
+                'active' => in_array($current_page, ['mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php'])
+            ],
+            [
+                'title' => 'Pembelajaran',
+                'icon' => 'fas fa-chalkboard-teacher',
+                'submenu' => $pembelajaran_submenu_kepala,
+                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'preview_bank_soal.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php'])
+            ],
+            [
+                'title' => 'Pengelolaan Kelas',
+                'icon' => 'fas fa-user-graduate',
+                'submenu' => $pengelolaan_kelas_submenu_kepala,
+                'active' => in_array($current_page, ['konseling_awal.php', 'data_konseling.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'struktur_kelas.php'])
             ],
             [
                 'title' => 'Program Kerja',
@@ -1227,7 +1299,6 @@ switch ($user_level) {
         });
 
         $data_utama_submenu_wali = [
-            ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=wali', 'active' => $current_page === 'struktur_kelas.php'],
             ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=wali', 'active' => $current_page === 'mata_pelajaran.php'],
             ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=wali', 'active' => $current_page === 'kalender_pendidikan.php']
         ];
@@ -1268,16 +1339,19 @@ switch ($user_level) {
         ];
 
         $pengelolaan_kelas_submenu_wali = [
-            ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php', 'active' => $current_page === 'pembinaan_siswa.php'],
-            ['title' => 'Data Pembinaan', 'url' => '../wali/data_pembinaan.php', 'active' => $current_page === 'data_pembinaan.php'],
-            ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php', 'active' => $current_page === 'pelanggaran_siswa.php'],
-            ['title' => 'Data Pelanggaran', 'url' => '../wali/data_pelanggaran.php', 'active' => $current_page === 'data_pelanggaran.php'],
-            ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php', 'active' => $current_page === 'konseling_awal.php'],
-            ['title' => 'Tindak Lanjut', 'url' => '../wali/tindak_lanjut.php', 'active' => $current_page === 'tindak_lanjut.php'],
-            ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php', 'active' => $current_page === 'komunikasi_ortu.php'],
             ['title' => 'Agenda Kelas', 'url' => '../wali/agenda_kelas.php', 'active' => $current_page === 'agenda_kelas.php'],
+            ['title' => 'Data Konseling', 'url' => '../wali/data_konseling.php', 'active' => $current_page === 'data_konseling.php'],
+            ['title' => 'Data Pelanggaran', 'url' => '../wali/data_pelanggaran.php', 'active' => $current_page === 'data_pelanggaran.php'],
+            ['title' => 'Data Pembinaan', 'url' => '../wali/data_pembinaan.php', 'active' => $current_page === 'data_pembinaan.php'],
+            ['title' => 'Data Tindak Lanjut', 'url' => '../wali/data_tindak_lanjut.php', 'active' => $current_page === 'data_tindak_lanjut.php'],
             ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php', 'active' => $current_page === 'jadwal_piket_kelas.php'],
+            ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php', 'active' => $current_page === 'komunikasi_ortu.php'],
+            ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php', 'active' => $current_page === 'konseling_awal.php'],
+            ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php', 'active' => $current_page === 'pelanggaran_siswa.php'],
+            ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php', 'active' => $current_page === 'pembinaan_siswa.php'],
+            ['title' => 'Tindak Lanjut', 'url' => '../wali/tindak_lanjut.php', 'active' => $current_page === 'tindak_lanjut.php'],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php', 'active' => $current_page === 'projek_kokurikuler.php'],
+            ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=wali', 'active' => $current_page === 'struktur_kelas.php'],
         ];
 
         $menu_items = [
@@ -1291,7 +1365,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_wali,
-                'active' => in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php'])
+                'active' => in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'tindak_lanjut.php', 'data_tindak_lanjut.php', 'struktur_kelas.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php'])
             ],
             [
                 'title' => 'Pembelajaran',

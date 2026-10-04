@@ -5,7 +5,7 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
@@ -15,13 +15,19 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
 
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
+
 $upload_dir = guru_upload_dir($pdo, $guru_id, 'tugas');
 
 $message = null;
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki hak akses untuk mengubah data ini.'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -127,21 +133,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
         }
+        }
     }
 }
 
-// Master lists (khusus mapel & kelas yang diajar oleh guru login pada jadwal Reguler)
-$mapel_list = getGuruTaughtMapels($pdo, $guru_id);
-$kelas_list = getGuruTaughtClasses($pdo, $guru_id);
+// Master lists
+if ($is_admin_or_kepala) {
+    $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $mapel_list = getGuruTaughtMapels($pdo, $guru_id);
+    $kelas_list = getGuruTaughtClasses($pdo, $guru_id);
+}
 $jenis_tugas_options = ['Individu', 'Kelompok', 'Proyek', 'Praktik', 'Portofolio', 'Kuis'];
 
 // Deteksi kelas wali jika login sebagai wali kelas
 $wali_kelas_id = 0;
-try {
-    $stWali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
-    $stWali->execute([$guru_id, $guru_id]);
-    $wali_kelas_id = (int)$stWali->fetchColumn() ?: 0;
-} catch (Throwable $e) {}
+if (!$is_admin_or_kepala) {
+    try {
+        $stWali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
+        $stWali->execute([$guru_id, $guru_id]);
+        $wali_kelas_id = (int)$stWali->fetchColumn() ?: 0;
+    } catch (Throwable $e) {}
+}
 
 // Filters
 $f_mapel = (int)($_GET['f_mapel'] ?? 0);
@@ -150,7 +164,10 @@ $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 $f_periode = trim((string)($_GET['f_periode'] ?? '')); // 'aktif', 'lewat', 'semua'
 
-if ($wali_kelas_id > 0) {
+if ($is_admin_or_kepala) {
+    $where = ["1=1"];
+    $params = [];
+} elseif ($wali_kelas_id > 0) {
     // Wali kelas dapat melihat tugas yang dibuatnya sendiri DAN tugas untuk kelas yang diampunya
     $where = ["(t.id_guru = ? OR t.id_kelas = ?)"];
     $params = [$guru_id, $wali_kelas_id];
@@ -361,11 +378,13 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Daftar Penugasan</h4>
+                    <?php if ($can_crud): ?>
                     <div>
                         <button type="button" class="btn btn-primary" id="btnTambahTugas">
                             <i class="fas fa-plus mr-1"></i> Buat Tugas Baru
                         </button>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -443,12 +462,14 @@ include '../templates/sidebar.php';
                                             <a href="detail_tugas.php?id=<?= (int)$r['id'] ?>" class="btn btn-info btn-sm" title="Detail & Pengumpulan">
                                                 <i class="fas fa-list"></i>
                                             </a>
+                                            <?php if ($can_crud): ?>
                                             <button type="button" class="btn btn-warning btn-sm btn-edit-tugas" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             <button type="button" class="btn btn-danger btn-sm btn-hapus-tugas" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
                                                 <i class="fas fa-trash"></i>
                                             </button>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -124,6 +124,17 @@ $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $status_options = ['Terbuka', 'Proses', 'Selesai'];
+$topik_options = ['Motivasi Belajar', 'Penyesuaian Sosial', 'Keluarga', 'Kedisiplinan', 'Kecemasan / Emosi', 'Minat & Bakat', 'Ibadah & Spiritual', 'Lainnya'];
+
+// Master template konseling (sinkron dengan menu Data Konseling)
+$stMasterKons = $pdo->prepare("
+    SELECT id, topik, ringkasan, tindak_lanjut, follow_up
+    FROM tb_master_konseling
+    WHERE id_guru = ? OR id_guru IS NULL OR id_guru = 0
+    ORDER BY topik ASC, id ASC
+");
+$stMasterKons->execute([$guru_id]);
+$master_konseling = $stMasterKons->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = 'Daftar Konseling Awal';
 $css_libs = [
@@ -135,6 +146,9 @@ $js_libs = [
 ];
 
 $js_page = [<<<'JS'
+var masterKonseling =
+JS
+. json_encode($master_konseling) . ";\n" . <<<'JS'
 $(document).ready(function() {
     if ($('#table-konseling').length) {
         $('#table-konseling').DataTable({
@@ -151,12 +165,97 @@ $(document).ready(function() {
         });
     }
 
+    function shortKons(s, n) {
+        s = (s || '').toString().replace(/\s+/g, ' ').trim();
+        n = n || 100;
+        return s.length > n ? s.substr(0, n) + '...' : s;
+    }
+
+    function autogrowKons($ta) {
+        if (!$ta || !$ta.length) return;
+        $ta.css('height', 'auto');
+        $ta.css('height', ($ta[0].scrollHeight + 4) + 'px');
+    }
+    $(document).on('input', '#modalKonseling textarea', function() { autogrowKons($(this)); });
+    $('#modalKonseling').on('shown.bs.modal', function() {
+        $('#modalKonseling textarea').each(function() { autogrowKons($(this)); });
+    });
+
+    function populateKons(topik) {
+        $('#sel_kons_masalah').empty().append('<option value="">-- Pilih template ringkasan --</option>');
+        $('#sel_kons_tl').empty().append('<option value="">-- Pilih template tindak lanjut --</option>');
+        $('#sel_kons_fu').empty().append('<option value="">-- Pilih template rencana follow up --</option>');
+        if (!topik) return;
+        masterKonseling.filter(function(m) {
+            return (m.topik || '').toLowerCase() === topik.toLowerCase();
+        }).forEach(function(m) {
+            var o1 = $('<option>').val(m.ringkasan).text(shortKons(m.ringkasan, 110));
+            o1.data('item', m);
+            $('#sel_kons_masalah').append(o1);
+            if (m.tindak_lanjut) {
+                var o2 = $('<option>').val(m.tindak_lanjut).text(shortKons(m.tindak_lanjut, 110));
+                o2.data('item', m);
+                $('#sel_kons_tl').append(o2);
+            }
+            if (m.follow_up) {
+                var o3 = $('<option>').val(m.follow_up).text(shortKons(m.follow_up, 110));
+                o3.data('item', m);
+                $('#sel_kons_fu').append(o3);
+            }
+        });
+    }
+
+    function fillFullKons() {
+        $('#sel_kons_full').empty().append('<option value="">-- Pilih satu template lengkap (opsional) --</option>');
+        var cur = $('#inp_topik').val() || '';
+        if (!cur) return;
+        masterKonseling.filter(function(m) {
+            return (m.topik || '').toLowerCase() === cur.toLowerCase();
+        }).forEach(function(m) {
+            var o = $('<option>').val(m.id).text(shortKons(m.ringkasan, 110));
+            o.data('item', m);
+            $('#sel_kons_full').append(o);
+        });
+    }
+
+    $('#inp_topik').on('change', function() {
+        populateKons($(this).val());
+        fillFullKons();
+    });
+
+    $('#sel_kons_masalah').on('change', function() {
+        var v = $(this).val() || '';
+        if (v) { $('#inp_masalah').val(v); autogrowKons($('#inp_masalah')); }
+    });
+    $('#sel_kons_tl').on('change', function() {
+        var v = $(this).val() || '';
+        if (v) { $('#inp_tindak_lanjut').val(v); autogrowKons($('#inp_tindak_lanjut')); }
+    });
+    $('#sel_kons_fu').on('change', function() {
+        var v = $(this).val() || '';
+        if (v) { $('#inp_follow_up').val(v); autogrowKons($('#inp_follow_up')); }
+    });
+    $(document).on('change', '#sel_kons_full', function() {
+        var item = $('#sel_kons_full option:selected').data('item');
+        if (!item) return;
+        $('#inp_masalah').val(item.ringkasan || '');
+        $('#inp_tindak_lanjut').val(item.tindak_lanjut || '');
+        $('#inp_follow_up').val(item.follow_up || '');
+        $('#modalKonseling textarea').each(function() { autogrowKons($(this)); });
+    });
+
     $('#btnTambahKonseling').on('click', function() {
         $('#formKonselingAction').val('tambah');
         $('#konselingId').val('');
         $('#modalKonselingTitle').text('Catat Sesi Konseling Awal');
         $('#formKonseling')[0].reset();
+        var curTopik = $('#inp_topik').val() || '';
+        populateKons(curTopik);
+        fillFullKons();
         $('#modalKonseling').modal('show');
+        setTimeout(function() {
+            $('#modalKonseling textarea').each(function() { autogrowKons($(this)); });
+        }, 120);
     });
 
     $(document).on('click', '.btn-edit-konseling', function() {
@@ -167,11 +266,25 @@ $(document).ready(function() {
         $('#inp_siswa').val(data.id_siswa);
         $('#inp_tanggal').val(data.tanggal);
         $('#inp_topik').val(data.topik);
+        populateKons(data.topik);
+        $('#sel_kons_masalah option').each(function() {
+            if ($(this).val() === (data.ringkasan_masalah || '')) $(this).prop('selected', true);
+        });
+        $('#sel_kons_tl option').each(function() {
+            if ($(this).val() === (data.tindak_lanjut || '')) $(this).prop('selected', true);
+        });
+        $('#sel_kons_fu option').each(function() {
+            if ($(this).val() === (data.follow_up || '')) $(this).prop('selected', true);
+        });
+        fillFullKons();
         $('#inp_masalah').val(data.ringkasan_masalah);
         $('#inp_tindak_lanjut').val(data.tindak_lanjut || '');
         $('#inp_follow_up').val(data.follow_up || '');
         $('#inp_status').val(data.status);
         $('#modalKonseling').modal('show');
+        setTimeout(function() {
+            $('#modalKonseling textarea').each(function() { autogrowKons($(this)); });
+        }, 120);
     });
 
     $(document).on('click', '.btn-detail-konseling', function() {
@@ -218,6 +331,12 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.aksi-satu-baris { display: inline-flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; white-space: nowrap; }
+.aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
+#table-konseling td:last-child { white-space: nowrap; }
+</style>
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -243,11 +362,28 @@ include '../templates/sidebar.php';
             <?php endif; ?>
 
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                     <h4>Catatan Konseling Pribadi & Wawancara Awal</h4>
-                    <button type="button" class="btn btn-primary" id="btnTambahKonseling" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
-                        <i class="fas fa-plus mr-1"></i> Sesi Konseling Baru
-                    </button>
+                    <div>
+                        <a href="data_konseling.php" class="btn btn-info btn-sm mr-1">
+                            <i class="fas fa-database mr-1"></i> Data Konseling
+                        </a>
+                        <?php
+                        $qs_kons = [];
+                        if ($selected_kelas_id > 0) { $qs_kons['kelas'] = $selected_kelas_id; }
+                        $url_kons_cetak = 'export_konseling_pdf.php?' . http_build_query(array_merge($qs_kons, ['mode' => 'print']));
+                        $url_kons_xls = 'export_konseling_excel.php?' . http_build_query($qs_kons);
+                        ?>
+                        <a href="<?= htmlspecialchars($url_kons_cetak) ?>" target="_blank" class="btn btn-danger btn-sm mr-1" title="Cetak / Simpan PDF">
+                            <i class="fas fa-print mr-1"></i> Cetak / PDF
+                        </a>
+                        <a href="<?= htmlspecialchars($url_kons_xls) ?>" class="btn btn-success btn-sm mr-2" title="Ekspor Excel">
+                            <i class="fas fa-file-excel mr-1"></i> Excel
+                        </a>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahKonseling" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                            <i class="fas fa-plus mr-1"></i> Sesi Konseling Baru
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-light border small text-muted mb-3">
@@ -267,7 +403,7 @@ include '../templates/sidebar.php';
                                     <th>Tindak Lanjut</th>
                                     <th>Status</th>
                                     <th>Follow Up</th>
-                                    <th width="12%">Aksi</th>
+                                    <th style="width:180px;min-width:180px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -290,16 +426,24 @@ include '../templates/sidebar.php';
                                         <td><small class="text-success"><?= htmlspecialchars($tl_cut) ?></small></td>
                                         <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
                                         <td><small><?= htmlspecialchars(mb_strimwidth($r['follow_up'] ?? '-', 0, 25, '...')) ?></small></td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-info btn-sm btn-detail-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail Rahasia">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-warning btn-sm btn-edit-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm btn-hapus-konseling" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                        <td class="text-center align-middle">
+                                            <div class="aksi-satu-baris">
+                                                <button type="button" class="btn btn-info btn-sm btn-detail-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail Rahasia">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-konseling" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <a href="export_konseling_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+                                                <a href="export_konseling_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel siswa ini">
+                                                    <i class="fas fa-file-excel"></i>
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -349,21 +493,41 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-12 form-group">
+                        <div class="col-md-6 form-group">
                             <label>Topik / Fokus Konseling <span class="text-danger">*</span></label>
-                            <input type="text" name="topik" id="inp_topik" class="form-control" required placeholder="Contoh: Kesulitan penyesuaian sosial di kelas / motivasi belajar">
+                            <select name="topik" id="inp_topik" class="form-control" required>
+                                <option value="">-- Pilih Topik --</option>
+                                <?php foreach ($topik_options as $t): ?>
+                                    <option value="<?= htmlspecialchars($t) ?>"><?= htmlspecialchars($t) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-12 form-group">
+                            <label>Pilih Cepat: Satu Template Lengkap <small class="text-muted">(opsional, isi 3 kolom sekaligus)</small></label>
+                            <select id="sel_kons_full" class="form-control">
+                                <option value="">-- Pilih satu template lengkap (opsional) --</option>
+                            </select>
                         </div>
                         <div class="col-12 form-group">
                             <label>Ringkasan Masalah / Hasil Konseling <span class="text-danger">*</span></label>
-                            <textarea name="ringkasan_masalah" id="inp_masalah" class="form-control" rows="3" required placeholder="Catatan percakapan atau hal yang dikeluhkan siswa..."></textarea>
+                            <select id="sel_kons_masalah" class="form-control form-control-sm mb-1">
+                                <option value="">-- Pilih template ringkasan sesuai kondisi siswa --</option>
+                            </select>
+                            <textarea name="ringkasan_masalah" id="inp_masalah" class="form-control" rows="5" style="min-height:120px;" required placeholder="Pilih dari dropdown di atas sesuai kondisi siswa, atau ketik manual..."></textarea>
                         </div>
                         <div class="col-md-6 form-group">
                             <label>Tindak Lanjut / Solusi yang Disepakati</label>
-                            <textarea name="tindak_lanjut" id="inp_tindak_lanjut" class="form-control" rows="2" placeholder="Komitmen atau langkah penanganan..."></textarea>
+                            <select id="sel_kons_tl" class="form-control form-control-sm mb-1">
+                                <option value="">-- Pilih template tindak lanjut --</option>
+                            </select>
+                            <textarea name="tindak_lanjut" id="inp_tindak_lanjut" class="form-control" rows="5" style="min-height:120px;" placeholder="Pilih dari dropdown di atas sesuai kondisi siswa, atau ketik manual..."></textarea>
                         </div>
                         <div class="col-md-6 form-group">
                             <label>Rencana Follow Up</label>
-                            <textarea name="follow_up" id="inp_follow_up" class="form-control" rows="2" placeholder="Jadwal pertemuan berikutnya / pengamatan guru..."></textarea>
+                            <select id="sel_kons_fu" class="form-control form-control-sm mb-1">
+                                <option value="">-- Pilih template rencana follow up --</option>
+                            </select>
+                            <textarea name="follow_up" id="inp_follow_up" class="form-control" rows="5" style="min-height:120px;" placeholder="Pilih dari dropdown di atas sesuai kondisi siswa, atau ketik manual..."></textarea>
                         </div>
                     </div>
                 </div>

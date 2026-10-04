@@ -534,19 +534,25 @@ if (!function_exists('ensure_learning_schema')) {
 
         // 10b. Master Data Pembinaan (template permasalahan/kasus, tindakan, rencana tindak lanjut).
         // $seeds_pembinaan dipakai seed + backfill agar scope-nya aman.
+        // SELARAS 1:1 dengan 12 template pelanggaran (jenis + redaksi boleh beda gaya, makna sama).
         $seeds_pembinaan = [
-            ['jenis' => 'Akademik', 'permasalahan' => 'Nilai harian turun pada 2 asesmen terakhir', 'tindakan' => 'Bimbingan belajar personal + tutor sebaya', 'tindak_lanjut' => 'Remedial terjadwal, pantau progres tiap pekan'],
-            ['jenis' => 'Akademik', 'permasalahan' => 'Tugas sering tidak selesai tepat waktu', 'tindakan' => 'Dampingi pembagian tugas menjadi langkah kecil', 'tindak_lanjut' => 'Ceklis tugas harian, koordinasi dengan orang tua'],
-            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Sering terlambat masuk kelas pagi', 'tindakan' => 'Teguran lisan + surat pernyataan + pembiasaan datang 10 menit lebih awal', 'tindak_lanjut' => 'Pantau keterlambatan 2 pekan, libatkan orang tua bila berulang'],
-            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Tidak memakai seragam sesuai ketentuan', 'tindakan' => 'Teguran + pembinaan tata tertib berpakaian', 'tindak_lanjut' => 'Cek seragam tiap pagi selama 1 pekan'],
-            ['jenis' => 'Sikap', 'permasalahan' => 'Kurang sopan saat berbicara dengan guru/teman', 'tindakan' => 'Pembinaan adab + latihan meminta maaf/memaafkan', 'tindak_lanjut' => 'Pantau interaksi sosial selama 2 pekan'],
-            ['jenis' => 'Sikap', 'permasalahan' => 'Pasif dalam kerja kelompok', 'tindakan' => 'Beri peran spesifik dalam kelompok kecil', 'tindak_lanjut' => 'Rotasi peran tiap pekan agar berani tampil'],
-            ['jenis' => 'Kehadiran', 'permasalahan' => 'Alpa tanpa keterangan', 'tindakan' => 'Hubungi orang tua + surat panggilan wali', 'tindak_lanjut' => 'Pemantauan kehadiran harian 1 bulan'],
-            ['jenis' => 'Kehadiran', 'permasalahan' => 'Sering izin dengan alasan tidak jelas', 'tindakan' => 'Verifikasi surat izin + konseling wali', 'tindak_lanjut' => 'Catat pola izin, koordinasi dengan orang tua'],
-            ['jenis' => 'Sosial', 'permasalahan' => 'Berselisih dengan teman sekelas', 'tindakan' => 'Mediasi damai + latihan regulasi emosi', 'tindak_lanjut' => 'Pantau interaksi 2 pekan, libatkan guru BK bila perlu'],
-            ['jenis' => 'Sosial', 'permasalahan' => 'Menyendiri, enggan bergaul', 'tindakan' => 'Ajak kegiatan kelompok kecil + pendampingan teman sebaya', 'tindak_lanjut' => 'Evaluasi keberanian bersosial tiap pekan'],
-            ['jenis' => 'Lainnya', 'permasalahan' => 'Ketergantungan gawai saat jam belajar', 'tindakan' => 'Tata tertib penggunaan gawai + titip di loker saat KBM', 'tindak_lanjut' => 'Pantau 1 bulan, libatkan orang tua atur screen time'],
-            ['jenis' => 'Lainnya', 'permasalahan' => 'Belum lancar membaca Al-Quran sesuai tajwid', 'tindakan' => 'Program tahsin 15 menit sebelum KBM', 'tindak_lanjut' => 'Setoran bacaan harian ke guru tahsin'],
+            // Kedisiplinan: pasangannya Terlambat / Seragam / Lupa buku / Sampah
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Terlambat masuk kelas lebih dari 15 menit', 'tindakan' => 'Teguran + surat pernyataan + pembiasaan datang 10 menit lebih awal', 'tindak_lanjut' => 'Pantau keterlambatan 2 pekan, libatkan orang tua bila berulang'],
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Tidak memakai atribut seragam lengkap', 'tindakan' => 'Teguran + pembinaan tata tertib berpakaian', 'tindak_lanjut' => 'Cek seragam tiap pagi selama 1 pekan'],
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Lupa membawa buku atau alat tulis', 'tindakan' => 'Teguran + ceklis perlengkapan harian + pinjam dengan izin guru', 'tindak_lanjut' => 'Ceklis tas tiap pagi 2 pekan, koordinasi orang tua'],
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Membuang sampah sembarangan di lingkungan madrasah', 'tindakan' => 'Teguran + membersihkan area yang dikotori + piket tambahan', 'tindak_lanjut' => 'Pantau kebersihan 2 pekan, apresiasi kelas terbersih'],
+            // Kedisiplinan lanjutan: Keluar kelas / Gaduh / Gawai
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Keluar kelas tanpa izin guru saat KBM', 'tindakan' => 'Teguran tertulis + surat pernyataan tidak mengulangi', 'tindak_lanjut' => 'Pantau izin keluar-masuk 2 pekan'],
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Gaduh dan mengganggu jalannya KBM', 'tindakan' => 'Teguran + duduk terpisah sementara + pembinaan adab kelas', 'tindak_lanjut' => 'Pantau ketertiban KBM 2 pekan'],
+            ['jenis' => 'Kedisiplinan', 'permasalahan' => 'Bermain gawai saat KBM berlangsung', 'tindakan' => 'Gawai dititipkan + surat pernyataan + pembinaan tata tertib gawai', 'tindak_lanjut' => 'Pantau 1 bulan, libatkan orang tua atur screen time'],
+            // Akademik: Tugas / Menyontek
+            ['jenis' => 'Akademik', 'permasalahan' => 'Tidak mengerjakan tugas/PR 2 kali berturut-turut', 'tindakan' => 'Tugas tambahan + dampingi pembagian tugas menjadi langkah kecil', 'tindak_lanjut' => 'Ceklis tugas harian, koordinasi dengan orang tua'],
+            ['jenis' => 'Akademik', 'permasalahan' => 'Menyontek saat ulangan/asesmen', 'tindakan' => 'Pembinaan kejujuran + ulangan susulan + pemberitahuan orang tua', 'tindak_lanjut' => 'Pantau kejujuran asesmen 1 bulan'],
+            // Sikap: Berkelahi / Merusak fasilitas
+            ['jenis' => 'Sikap', 'permasalahan' => 'Berkelahi dengan teman', 'tindakan' => 'Mediasi damai + latihan regulasi emosi + meminta maaf', 'tindak_lanjut' => 'Pantau kerukunan 1 bulan, libatkan guru BK bila berulang'],
+            ['jenis' => 'Sikap', 'permasalahan' => 'Merusak fasilitas madrasah', 'tindakan' => 'Ganti rugi + kerja sosial + surat pernyataan', 'tindak_lanjut' => 'Pantau kepedulian fasilitas 1 bulan'],
+            // Kehadiran: Membolos
+            ['jenis' => 'Kehadiran', 'permasalahan' => 'Membolos sekolah tanpa keterangan', 'tindakan' => 'Pemanggilan orang tua + pembinaan intensif wali kelas', 'tindak_lanjut' => 'Pemantauan kehadiran harian 1 bulan'],
         ];
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_master_pembinaan (
@@ -569,6 +575,31 @@ if (!function_exists('ensure_learning_schema')) {
                 $insB = $pdo->prepare("INSERT INTO tb_master_pembinaan (id_guru, jenis, permasalahan, tindakan, tindak_lanjut) VALUES (NULL, :jenis, :permasalahan, :tindakan, :tindak_lanjut)");
                 foreach ($seeds_pembinaan as $sd) {
                     $insB->execute([':jenis' => $sd['jenis'], ':permasalahan' => $sd['permasalahan'], ':tindakan' => $sd['tindakan'], ':tindak_lanjut' => $sd['tindak_lanjut']]);
+                }
+            } else {
+                // Sinkronkan seed selaras: update template lama yang redaksinya beda jauh dari sumber pelanggaran.
+                $mapSync = [
+                    'Nilai harian turun pada 2 asesmen terakhir' => $seeds_pembinaan[7],
+                    'Tugas sering tidak selesai tepat waktu' => $seeds_pembinaan[7],
+                    'Sering terlambat masuk kelas pagi' => $seeds_pembinaan[0],
+                    'Tidak memakai seragam sesuai ketentuan' => $seeds_pembinaan[1],
+                    'Kurang sopan saat berbicara dengan guru/teman' => null, // biarkan (tidak ada di 12 pelanggaran)
+                    'Pasif dalam kerja kelompok' => null,
+                    'Alpa tanpa keterangan' => null, // ganti jadi Membolos agar nyambung
+                    'Sering izin dengan alasan tidak jelas' => null,
+                    'Berselisih dengan teman sekelas' => null, // biarkan (Sosial umum)
+                    'Menyendiri, enggan bergaul' => null,
+                    'Ketergantungan gawai saat jam belajar' => $seeds_pembinaan[6],
+                    'Belum lancar membaca Al-Quran sesuai tajwid' => null,
+                ];
+                // Tambahkan seed baru yang belum ada (hindari duplikat redaksi).
+                $exM = $pdo->query("SELECT permasalahan FROM tb_master_pembinaan WHERE id_guru IS NULL OR id_guru = 0")->fetchAll(PDO::FETCH_COLUMN);
+                $exN = array_map(function($s) { return mb_strtolower(trim((string)$s)); }, (array)$exM);
+                $insB2 = $pdo->prepare("INSERT INTO tb_master_pembinaan (id_guru, jenis, permasalahan, tindakan, tindak_lanjut) VALUES (NULL, :jenis, :permasalahan, :tindakan, :tindak_lanjut)");
+                foreach ($seeds_pembinaan as $sd) {
+                    if (!in_array(mb_strtolower(trim($sd['permasalahan'])), $exN, true)) {
+                        $insB2->execute([':jenis' => $sd['jenis'], ':permasalahan' => $sd['permasalahan'], ':tindakan' => $sd['tindakan'], ':tindak_lanjut' => $sd['tindak_lanjut']]);
+                    }
                 }
             }
         } catch (Throwable $e) {}
@@ -636,6 +667,126 @@ if (!function_exists('ensure_learning_schema')) {
             }
         } catch (Throwable $e) {}
 
+        // Relasi alur: 1 Pelanggaran -> 2 Pembinaan -> 3 Tindak Lanjut (bisa dari Pembinaan / Konseling).
+        // Tambah kolom penghubung bila belum ada (aman untuk data lama).
+        foreach ([
+            ['tb_pelanggaran_siswa', 'jenis_binaan', 'VARCHAR(50) NULL'],
+            ['tb_master_pelanggaran', 'jenis_binaan', 'VARCHAR(50) NULL'],
+            ['tb_pembinaan_siswa', 'id_pelanggaran', 'INT NULL'],
+            ['tb_tindak_lanjut_wali', 'id_pembinaan', 'INT NULL'],
+            ['tb_tindak_lanjut_wali', 'id_konseling', 'INT NULL'],
+        ] as $rel) {
+            try {
+                $chk = $pdo->query("SHOW COLUMNS FROM {$rel[0]} LIKE '{$rel[1]}'")->fetch();
+                if (!$chk) {
+                    $pdo->exec("ALTER TABLE {$rel[0]} ADD COLUMN {$rel[1]} {$rel[2]}");
+                }
+            } catch (Throwable $e) {}
+        }
+
+        // Mapping resmi: jenis pelanggaran (Alur 1) -> jenis pembinaan (Alur 2).
+        // Dipakai deteksi otomatis di modal pembinaan + validasi server.
+        if (!function_exists('pelanggaran_jenis_binaan_map')) {
+            function pelanggaran_jenis_binaan_map(): array {
+                return [
+                    'Kedisiplinan' => 'Kedisiplinan',
+                    'Kehadiran' => 'Kehadiran',
+                    'Akademik' => 'Akademik',
+                    'Sikap' => 'Sikap',
+                    'Sosial' => 'Sosial',
+                    'Ibadah' => 'Sikap',
+                    'Kebersihan' => 'Kedisiplinan',
+                ];
+            }
+        }
+        if (!function_exists('pelanggaran_deteksi_jenis')) {
+            // Deteksi jenis pelanggaran dari teks + kategori. Return: ['jenis', 'via'].
+            // Urutan prioritas: Kehadiran (absensi murni) -> Sikap (akhlak berat) ->
+            // Sosial -> Akademik -> Kedisiplinan (tata tertib umum).
+            // 'Terlambat masuk kelas' = Kedisiplinan (bukan Kehadiran); Kehadiran hanya
+            // untuk alpa/bolos/tidak masuk.
+            function pelanggaran_deteksi_jenis(string $teks, string $kategori = ''): array {
+                $norm = function($s) {
+                    $s = mb_strtolower((string)$s);
+                    $s = str_replace(['-', '_'], ' ', $s);
+                    $s = preg_replace('/\s+/', ' ', $s);
+                    return ' ' . trim((string)$s) . ' ';
+                };
+                $t = $norm($teks);
+                $has = function(array $keys) use ($t, $norm) {
+                    foreach ($keys as $k) {
+                        $nk = trim((string)$norm($k));
+                        if ($nk !== '' && mb_strpos($t, $nk) !== false) return $k;
+                    }
+                    return null;
+                };
+                // 1. Kehadiran = absensi murni (tanpa 'terlambat': itu disiplin waktu).
+                if ($m = $has(['alpa', 'bolos', 'membolos', 'tidak masuk', 'absen tanpa', 'tanpa keterangan'])) {
+                    return ['jenis' => 'Kehadiran', 'via' => 'keyword:' . $m];
+                }
+                // 2. Sikap = akhlak/berat (cek duluan agar 'berkelahi dengan teman' tidak jadi Sosial).
+                if ($m = $has(['berkelahi', 'tawuran', 'memukul', 'menendang', 'merokok', 'rokok', 'vape', 'mencuri', 'mengambil milik', 'berbohong', 'bohong', 'dusta', 'melawan guru', 'membentak', 'berkata kasar', 'berkata kotor', 'mengumpat', 'mengejek', 'membully', 'bully', 'mencaci', 'caci', 'fitnah', 'tidak sopan', 'tidak santun', 'kurang sopan', 'kasar', 'sholat', 'shalat', 'ibadah', 'mengaji', 'puasa', 'jujur', 'sopan', 'santun', 'adab', 'akhlak'])) {
+                    return ['jenis' => 'Sikap', 'via' => 'keyword:' . $m];
+                }
+                // 3. Sosial = relasi teman/kelompok.
+                if ($m = $has(['berselisih', 'bertengkar', 'cekcok', 'menyendiri', 'mengucilkan', 'dikucilkan', 'kerjasama', 'kerja sama', 'gotong royong', 'bergaul'])) {
+                    return ['jenis' => 'Sosial', 'via' => 'keyword:' . $m];
+                }
+                // 4. Akademik = KBM/tugas/asesmen (tanpa kata umum 'kelas'/'belajar' agar tidak telan disiplin).
+                if ($m = $has(['menyontek', 'nyontek', 'contekan', 'tidak mengerjakan tugas', 'tidak mengerjakan pr', 'ulangan', 'asesmen', 'ujian', 'nilai harian', 'tugas'])) {
+                    return ['jenis' => 'Akademik', 'via' => 'keyword:' . $m];
+                }
+                // 5. Kedisiplinan = tata tertib/waktu/seragam/kebersihan/gawai/gaduh.
+                // Termasuk 'terlambat masuk kelas' dan 'tidak memakai atribut seragam'.
+                if ($m = $has(['terlambat', 'telat', 'seragam', 'atribut', 'pakaian', 'berseragam', 'sepatu', 'rambut', 'kuku', 'gondrong', 'tata tertib', 'disiplin', 'apel', 'upacara', 'baris', 'piket', 'sampah', 'kebersihan', 'lupa membawa', 'tidak membawa', 'gawai', 'handphone', 'gadget', 'main hp', 'bermain gawai', 'keluar kelas', 'tanpa izin', 'gaduh', 'ribut', 'berisik', 'mengganggu', 'buku', 'alat tulis', 'izin'])) {
+                    return ['jenis' => 'Kedisiplinan', 'via' => 'keyword:' . $m];
+                }
+                // Fallback kategori: Ringan/Sedang dominan kedisiplinan.
+                $kat = mb_strtolower(trim($kategori));
+                if ($kat === 'ringan') return ['jenis' => 'Kedisiplinan', 'via' => 'fallback:kategori-ringan'];
+                if ($kat === 'sedang') return ['jenis' => 'Kedisiplinan', 'via' => 'fallback:kategori-sedang'];
+                if ($kat === 'berat') return ['jenis' => 'Sikap', 'via' => 'fallback:kategori-berat'];
+                return ['jenis' => 'Kedisiplinan', 'via' => 'fallback:default'];
+            }
+        }
+        // Backfill jenis_binaan untuk data pelanggaran lama yang masih kosong.
+        // Dijalankan SETELAH fungsi deteksi didefinisikan agar tidak pernah bocor.
+        try {
+            $stBf = $pdo->query("SELECT id, jenis_pelanggaran, kategori FROM tb_pelanggaran_siswa WHERE jenis_binaan IS NULL OR jenis_binaan = '' LIMIT 500");
+            $bfRows = $stBf ? $stBf->fetchAll(PDO::FETCH_ASSOC) : [];
+            if (!empty($bfRows)) {
+                $stU = $pdo->prepare("UPDATE tb_pelanggaran_siswa SET jenis_binaan = ? WHERE id = ?");
+                foreach ($bfRows as $br) {
+                    $det = pelanggaran_deteksi_jenis((string)($br['jenis_pelanggaran'] ?? ''), (string)($br['kategori'] ?? ''));
+                    $stU->execute([$det['jenis'], (int)$br['id']]);
+                }
+            }
+        } catch (Throwable $e) {}
+        // Backfill master: isi jenis_binaan template yang masih kosong.
+        try {
+            $chkM = $pdo->query("SHOW COLUMNS FROM tb_master_pelanggaran LIKE 'jenis_binaan'")->fetch();
+            if ($chkM) {
+                $stBfM = $pdo->query("SELECT id, jenis, kategori FROM tb_master_pelanggaran WHERE jenis_binaan IS NULL OR jenis_binaan = '' LIMIT 500");
+                $bfM = $stBfM ? $stBfM->fetchAll(PDO::FETCH_ASSOC) : [];
+                if (!empty($bfM)) {
+                    $stUM = $pdo->prepare("UPDATE tb_master_pelanggaran SET jenis_binaan = ? WHERE id = ?");
+                    foreach ($bfM as $br) {
+                        $det = pelanggaran_deteksi_jenis((string)($br['jenis'] ?? ''), (string)($br['kategori'] ?? ''));
+                        $stUM->execute([$det['jenis'], (int)$br['id']]);
+                    }
+                }
+            }
+        } catch (Throwable $e) {}
+        if (!function_exists('pelanggaran_sanksi_by_poin')) {
+            function pelanggaran_sanksi_by_poin(int $total): array {
+                if ($total >= 100) return ['level' => 'Dikeluarkan (DO)', 'badge' => 'dark', 'desc' => 'Poin mencapai/melewati 100: usulan pemberhentian / dikeluarkan dari madrasah + pemanggilan orang tua + berita acara.'];
+                if ($total >= 75) return ['level' => 'Skorsing', 'badge' => 'danger', 'desc' => 'Poin 75-99: skorsing + surat peringatan keras + pembinaan intensif wali + pemanggilan orang tua.'];
+                if ($total >= 50) return ['level' => 'SP 1 / Pembinaan Khusus', 'badge' => 'warning', 'desc' => 'Poin 50-74: surat peringatan 1 + pembinaan khusus terjadwal + kontrak perilaku.'];
+                if ($total >= 25) return ['level' => 'Dalam Pemantauan', 'badge' => 'info', 'desc' => 'Poin 25-49: masuk daftar pemantauan wali + teguran tertulis + koordinasi orang tua.'];
+                return ['level' => 'Pembinaan Ringan', 'badge' => 'success', 'desc' => 'Poin 0-24: teguran lisan/tertulis + pembinaan adab di kelas.'];
+            }
+        }
+
         // 13. Konseling Awal (Level Wali)
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_konseling_awal (
@@ -656,6 +807,85 @@ if (!function_exists('ensure_learning_schema')) {
                 INDEX idx_kelas (id_kelas)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+
+        // 13b. Master Data Konseling (template topik, ringkasan, tindak lanjut, follow up).
+        $seeds_konseling = [
+            ['topik' => 'Motivasi Belajar', 'ringkasan' => 'Siswa kurang semangat belajar dan mudah menyerah saat menghadapi tugas sulit.', 'tindak_lanjut' => 'Bimbingan motivasi + target belajar kecil yang terukur disepakati bersama.', 'follow_up' => 'Pantau progres tiap pekan, jadwal pertemuan ulang 2 minggu lagi.'],
+            ['topik' => 'Motivasi Belajar', 'ringkasan' => 'Hasil belajar menurun karena kurang fokus dan manajemen waktu yang belum tertata.', 'tindak_lanjut' => 'Susun jadwal belajar harian bersama + ceklis tugas.', 'follow_up' => 'Evaluasi jadwal belajar tiap pekan bersama wali kelas.'],
+            ['topik' => 'Penyesuaian Sosial', 'ringkasan' => 'Siswa sulit beradaptasi dengan teman baru dan cenderung menyendiri di kelas.', 'tindak_lanjut' => 'Libatkan dalam kelompok kecil + pendampingan teman sebaya.', 'follow_up' => 'Observasi interaksi sosial 2 pekan, konseling lanjutan bila perlu.'],
+            ['topik' => 'Penyesuaian Sosial', 'ringkasan' => 'Terjadi selisih paham dengan teman sekelas yang mengganggu kenyamanan belajar.', 'tindak_lanjut' => 'Mediasi damai + latihan meminta maaf dan memaafkan.', 'follow_up' => 'Pantau kerukunan 2 pekan ke depan.'],
+            ['topik' => 'Keluarga', 'ringkasan' => 'Siswa terlihat murung dan kurang konsentrasi diduga ada persoalan di rumah.', 'tindak_lanjut' => 'Pendekatan empatik + komunikasi dengan orang tua bila siswa bersedia.', 'follow_up' => 'Pertemuan lanjutan sesuai kesiapan siswa, jaga kerahasiaan.'],
+            ['topik' => 'Keluarga', 'ringkasan' => 'Pola asuh kurang konsisten membuat siswa bingung membagi waktu belajar dan bermain.', 'tindak_lanjut' => 'Koordinasi dengan orang tua untuk menyepakati aturan screen time.', 'follow_up' => 'Hubungi orang tua 1 bulan lagi untuk evaluasi.'],
+            ['topik' => 'Kedisiplinan', 'ringkasan' => 'Siswa sering terlambat dan kurang tertib mengikuti tata tertib madrasah.', 'tindak_lanjut' => 'Kontrak perilaku + pengingat harian disepakati bersama.', 'follow_up' => 'Pantau kedisiplinan 1 bulan, apresiasi tiap pekan tanpa pelanggaran.'],
+            ['topik' => 'Kecemasan / Emosi', 'ringkasan' => 'Siswa mudah cemas saat ulangan dan takut salah menjawab di depan kelas.', 'tindak_lanjut' => 'Latihan regulasi emosi (tarik napas) + tugas berjenjang dari yang mudah.', 'follow_up' => 'Latihan tiap pagi + jurnal perasaan harian, evaluasi 2 pekan.'],
+            ['topik' => 'Kecemasan / Emosi', 'ringkasan' => 'Siswa mudah tersulut emosi saat berbeda pendapat dengan teman.', 'tindak_lanjut' => 'Konseling regulasi emosi + mediasi damai berlandaskan kasih sayang.', 'follow_up' => 'Pantau 2 pekan, libatkan guru BK bila berulang.'],
+            ['topik' => 'Minat & Bakat', 'ringkasan' => 'Siswa belum mengenali minatnya dan bingung memilih kegiatan ekstrakurikuler.', 'tindak_lanjut' => 'Eksplorasi minat via observasi + coba 2 kegiatan selama sebulan.', 'follow_up' => 'Evaluasi kecocokan kegiatan bulan depan.'],
+            ['topik' => 'Ibadah & Spiritual', 'ringkasan' => 'Semangat ibadah fluktuatif, perlu penguatan pembiasaan sholat dan mengaji.', 'tindak_lanjut' => 'Dampingi program tahsin/sholat berjamaah + target hafalan kecil.', 'follow_up' => 'Setoran berkala tiap pekan ke guru pendamping.'],
+            ['topik' => 'Lainnya', 'ringkasan' => 'Keluhan umum terkait kenyamanan belajar di kelas.', 'tindak_lanjut' => 'Penyesuaian tempat duduk + komunikasi intensif wali kelas.', 'follow_up' => 'Tanya kabar berkala tiap pekan.'],
+        ];
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_master_konseling (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_guru INT NULL,
+                topik VARCHAR(100) NOT NULL,
+                ringkasan TEXT NOT NULL,
+                tindak_lanjut TEXT NULL,
+                follow_up TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_topik (topik),
+                INDEX idx_guru (id_guru)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        try {
+            $cntK = (int)$pdo->query("SELECT COUNT(*) FROM tb_master_konseling")->fetchColumn();
+            if ($cntK === 0) {
+                $insK = $pdo->prepare("INSERT INTO tb_master_konseling (id_guru, topik, ringkasan, tindak_lanjut, follow_up) VALUES (NULL, :topik, :ringkasan, :tindak_lanjut, :follow_up)");
+                foreach ($seeds_konseling as $sd) {
+                    $insK->execute([':topik' => $sd['topik'], ':ringkasan' => $sd['ringkasan'], ':tindak_lanjut' => $sd['tindak_lanjut'], ':follow_up' => $sd['follow_up']]);
+                }
+            }
+        } catch (Throwable $e) {}
+
+        // 13c. Master Data Tindak Lanjut (template tindakan/langkah perbaikan per sumber).
+        $seeds_tl = [
+            ['sumber' => 'Pelanggaran', 'tindakan' => 'Teguran tertulis + surat pernyataan tidak mengulangi', 'penanggung_jawab' => 'Wali Kelas'],
+            ['sumber' => 'Pelanggaran', 'tindakan' => 'Pemanggilan orang tua + pembinaan intensif 2 pekan', 'penanggung_jawab' => 'Wali Kelas'],
+            ['sumber' => 'Pelanggaran', 'tindakan' => 'Skorsing 1 hari + tugas refleksi tertulis + konseling', 'penanggung_jawab' => 'Wali Kelas'],
+            ['sumber' => 'Pelanggaran', 'tindakan' => 'Mediasi damai + kontrak perilaku disepakati bersama', 'penanggung_jawab' => 'Wali Kelas'],
+            ['sumber' => 'Pelanggaran', 'tindakan' => 'Ganti rugi / kerja sosial + pengawasan harian 1 bulan', 'penanggung_jawab' => 'Wali Kelas'],
+            ['sumber' => 'Pembinaan', 'tindakan' => 'Bimbingan personal terjadwal 2x seminggu', 'penanggung_jawab' => 'Wali Kelas'],
+            ['sumber' => 'Pembinaan', 'tindakan' => 'Tutor sebaya + ceklis tugas harian', 'penanggung_jawab' => 'Wali Kelas'],
+            ['sumber' => 'Konseling', 'tindakan' => 'Konseling lanjutan 2 minggu + jurnal perasaan harian', 'penanggung_jawab' => 'Guru BK'],
+            ['sumber' => 'Konseling', 'tindakan' => 'Koordinasi orang tua + pendampingan teman sebaya', 'penanggung_jawab' => 'Wali Kelas'],
+            ['sumber' => 'Perkembangan', 'tindakan' => 'Remedial terstruktur + modul latihan mandiri', 'penanggung_jawab' => 'Guru Mapel'],
+            ['sumber' => 'Perkembangan', 'tindakan' => 'Pengayaan proyek + presentasi kelompok kecil', 'penanggung_jawab' => 'Guru Mapel'],
+            ['sumber' => 'Pelanggaran', 'tindakan' => 'Pantau kedisiplinan harian + apresiasi pekan tanpa pelanggaran', 'penanggung_jawab' => 'Orang Tua'],
+        ];
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_master_tindak_lanjut (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_guru INT NULL,
+                sumber VARCHAR(50) NOT NULL,
+                tindakan TEXT NOT NULL,
+                penanggung_jawab VARCHAR(100) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_sumber (sumber),
+                INDEX idx_guru (id_guru)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        try {
+            $cntTL = (int)$pdo->query("SELECT COUNT(*) FROM tb_master_tindak_lanjut")->fetchColumn();
+            if ($cntTL === 0) {
+                $insTL = $pdo->prepare("INSERT INTO tb_master_tindak_lanjut (id_guru, sumber, tindakan, penanggung_jawab) VALUES (NULL, :sumber, :tindakan, :pj)");
+                foreach ($seeds_tl as $sd) {
+                    $insTL->execute([':sumber' => $sd['sumber'], ':tindakan' => $sd['tindakan'], ':pj' => $sd['penanggung_jawab']]);
+                }
+            }
+        } catch (Throwable $e) {}
 
         // 14. Tindak Lanjut (Level Wali)
         $pdo->exec("

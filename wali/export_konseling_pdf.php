@@ -17,7 +17,7 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
 
 $id_siswa = (int)($_GET['id_siswa'] ?? 0);
 $id_catatan = (int)($_GET['id'] ?? 0);
-$f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
+$f_topik = trim((string)($_GET['f_topik'] ?? ''));
 $f_kelas = (int)($_GET['kelas'] ?? $_GET['f_kelas'] ?? 0);
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 // Mode output: print (window.print tab baru, stabil + support reload) atau pdf (unduh file via Dompdf).
@@ -45,7 +45,7 @@ $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
 $stG->execute([$guru_id]);
 $nama_wali = $stG->fetchColumn() ?: ($_SESSION['nama_guru'] ?? 'Wali Kelas');
 
-// Query Pembinaan
+// Query Konseling
 $where = ["1=1"];
 $params = [];
 
@@ -60,9 +60,9 @@ if ($id_catatan > 0) {
         $where[] = "p.id_kelas = ?";
         $params[] = $f_kelas;
     }
-    if ($f_jenis !== '') {
-        $where[] = "p.jenis_pembinaan = ?";
-        $params[] = $f_jenis;
+    if ($f_topik !== '') {
+        $where[] = "p.topik = ?";
+        $params[] = $f_topik;
     }
     if ($f_status !== '') {
         $where[] = "p.status = ?";
@@ -76,43 +76,43 @@ if ($user_level !== 'admin') {
 
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
-    SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas, g.nama_guru,
-           lg.tanggal AS lg_tanggal, lg.jenis_pelanggaran AS lg_jenis, lg.kategori AS lg_kategori, lg.poin AS lg_poin
-    FROM tb_pembinaan_siswa p
+    SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas, g.nama_guru
+    FROM tb_konseling_awal p
     JOIN tb_siswa s ON s.id_siswa = p.id_siswa
     LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas
     LEFT JOIN tb_guru g ON g.id_guru = p.id_wali
-    LEFT JOIN tb_pelanggaran_siswa lg ON lg.id = p.id_pelanggaran
     WHERE $where_sql
     ORDER BY s.nama_siswa ASC, p.tanggal DESC, p.id DESC
 ");
 $stmt->execute($params);
-$bina_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$konseling_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if (empty($bina_list)) {
-    echo "<script>alert('Tidak ada data pembinaan untuk dicetak.'); window.history.back();</script>";
+if (empty($konseling_list)) {
+    echo "<script>alert('Tidak ada data konseling untuk dicetak.'); window.history.back();</script>";
     exit;
 }
 
 // Mode: 1 Siswa Spesifik atau Rekap Kolektif
-$is_single_student = ($id_siswa > 0 || $id_catatan > 0) && count(array_unique(array_column($bina_list, 'id_siswa'))) === 1;
-$student_info = $is_single_student ? $bina_list[0] : null;
+$is_single_student = ($id_siswa > 0 || $id_catatan > 0) && count(array_unique(array_column($konseling_list, 'id_siswa'))) === 1;
+$student_info = $is_single_student ? $konseling_list[0] : null;
 
 // Judul Dokumen (tampilkan tahun ajaran; untuk per siswa tampilkan juga nama)
 $ta_file = preg_replace('/[^A-Za-z0-9-]+/', '', str_replace('/', '-', $tahun_ajaran));
 if ($is_single_student) {
     $nama_safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $student_info['nama_siswa']);
-    $judul_dokumen = "LAPORAN PEMBINAAN SISWA - " . strtoupper($student_info['nama_siswa']) . " - TAHUN AJARAN " . $tahun_ajaran;
-    $filename = "Laporan_Pembinaan_" . $nama_safe . "_TA" . $ta_file . "_" . date('Ymd');
+    $judul_dokumen = "LAPORAN KONSELING SISWA - " . strtoupper($student_info['nama_siswa']) . " - TAHUN AJARAN " . $tahun_ajaran;
+    $filename = "Laporan_Konseling_" . $nama_safe . "_TA" . $ta_file . "_" . date('Ymd');
 } else {
-    $judul_dokumen = "REKAPITULASI PEMBINAAN SISWA - TAHUN AJARAN " . $tahun_ajaran;
-    $filename = "Rekap_Pembinaan_TA" . $ta_file . "_" . date('Ymd');
+    $judul_dokumen = "REKAPITULASI KONSELING SISWA - TAHUN AJARAN " . $tahun_ajaran;
+    $filename = "Rekap_Konseling_TA" . $ta_file . "_" . date('Ymd');
 }
 
 $logo_file = $school['logo'] ?? '';
 
-if (!function_exists('bina_img_b64')) {
-    function bina_img_b64(string $src): string {
+// Helper: ambil gambar (lokal/remote) jadi data-URI base64 agar Dompdf selalu render
+// (path relatif putus di Dompdf, URL remote kadang gagal fetch saat render PDF).
+if (!function_exists('konseling_img_b64')) {
+    function konseling_img_b64(string $src): string {
         $src = trim($src);
         if ($src === '') return '';
         if (strpos($src, 'data:image') === 0) return $src;
@@ -134,7 +134,7 @@ if (!function_exists('bina_img_b64')) {
                 $data = @file_get_contents($src, false, $ctx);
                 if (!is_string($data) || strlen($data) < 500) $data = false;
             }
-            if ($data === false) return $src;
+            if ($data === false) return $src; // fallback: biarkan URL (print-tab tetap tampil)
             $mime = 'image/png';
         } else {
             $fs = (strpos($src, __DIR__) === 0) ? $src : __DIR__ . '/' . ltrim($src, '/');
@@ -157,22 +157,22 @@ if (!empty($logo_file)) {
         if (is_file($fs)) { $logo_print = $lp; break; }
     }
 }
-$logo_path = $logo_print;
+$logo_src = $logo_print;
 if ($is_download && $logo_print !== '') {
     $fs = (strpos($logo_print, __DIR__) === 0) ? $logo_print : __DIR__ . '/' . ltrim($logo_print, '/');
-    $b64 = bina_img_b64($fs);
-    if ($b64 !== '') $logo_path = $b64;
+    $b64 = konseling_img_b64($fs);
+    if ($b64 !== '') $logo_src = $b64;
 }
 
 // QR Code Signature: mode print pakai URL langsung (cepat);
 // mode file PDF pakai base64 agar posisi stabil.
-$qr_wali_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Wali Kelas: {$nama_wali} - Pembinaan Siswa - {$nama_madrasah}");
+$qr_wali_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Wali Kelas: {$nama_wali} - Konseling Siswa - {$nama_madrasah}");
 $qr_kepala_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Kepala Madrasah: {$kepala_madrasah} - {$nama_madrasah}");
 $qr_wali = $qr_wali_url;
 $qr_kepala = $qr_kepala_url;
 if ($is_download) {
-    $b64w = bina_img_b64($qr_wali_url);
-    $b64k = bina_img_b64($qr_kepala_url);
+    $b64w = konseling_img_b64($qr_wali_url);
+    $b64k = konseling_img_b64($qr_kepala_url);
     if (strpos($b64w, 'data:image') === 0) $qr_wali = $b64w;
     if (strpos($b64k, 'data:image') === 0) $qr_kepala = $b64k;
 }
@@ -338,7 +338,7 @@ ob_start();
 <?php if (!$is_download): ?>
     <div class="no-print">
         <div>
-            <strong>Pratinjau Cetak Pembinaan Siswa</strong> &bull; <span class="text-muted"><?= htmlspecialchars($filename) ?></span>
+            <strong>Pratinjau Cetak Konseling Siswa</strong> &bull; <span class="text-muted"><?= htmlspecialchars($filename) ?></span>
         </div>
         <div>
             <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:7px 16px;border-radius:4px;font-weight:bold;cursor:pointer;">
@@ -349,7 +349,7 @@ ob_start();
             unset($qs_pdf['download']);
             $qs_pdf['mode'] = 'pdf';
             ?>
-            <a href="export_pembinaan_pdf.php?<?= http_build_query($qs_pdf) ?>" style="background:#dc2626;color:#fff;text-decoration:none;padding:7px 14px;border-radius:4px;font-weight:bold;margin-left:6px;">
+            <a href="export_konseling_pdf.php?<?= http_build_query($qs_pdf) ?>" style="background:#dc2626;color:#fff;text-decoration:none;padding:7px 14px;border-radius:4px;font-weight:bold;margin-left:6px;">
                 Unduh File PDF
             </a>
             <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;padding:7px 12px;border-radius:4px;margin-left:6px;cursor:pointer;">
@@ -364,13 +364,13 @@ ob_start();
     <table style="width: 100%; border: none; margin: 0;">
         <tr style="border: none;">
             <td style="border: none; width: 110px; min-width: 110px; text-align: center; vertical-align: middle; padding: 0 5px;">
-                <?php if ($logo_path !== ''): ?>
-                    <img src="<?= $logo_path ?>" class="kop-logo-img" alt="Logo">
+                <?php if ($logo_src !== ''): ?>
+                    <img src="<?= $logo_src ?>" class="kop-logo-img" alt="Logo">
                 <?php endif; ?>
             </td>
             <td style="border: none; text-align: center; vertical-align: middle;">
                 <h2><?= htmlspecialchars($nama_madrasah) ?></h2>
-                <h3>PEMBINAAN PESERTA DIDIK</h3>
+                <h3>KONSELING PESERTA DIDIK</h3>
                 <p><?= htmlspecialchars($alamat_madrasah) ?> &bull; Tahun Ajaran: <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars($semester) ?>)</p>
             </td>
             <td style="border: none; width: 110px; min-width: 110px;"></td>
@@ -408,44 +408,38 @@ ob_start();
             <td><?= htmlspecialchars($student_info['nama_guru'] ?? $nama_wali) ?></td>
             <td class="lbl">Jumlah Catatan</td>
             <td>:</td>
-            <td><?= count($bina_list) ?> kali pembinaan</td>
+            <td><?= count($konseling_list) ?> sesi konseling</td>
         </tr>
     </table>
 
     <h5 style="margin: 14px 0 8px; font-size: 10.5pt; border-bottom: 1.5px solid #2563eb; color: #1e3a8a; padding-bottom: 3px;">
-        RIWAYAT PEMBINAAN PESERTA DIDIK
+        RIWAYAT KONSELING PESERTA DIDIK
     </h5>
 
-    <?php foreach ($bina_list as $idx => $c): ?>
+    <?php foreach ($konseling_list as $idx => $c): ?>
         <div class="card-entry">
             <div class="entry-header">
                 <div>
-                    <strong>Pembinaan #<?= $idx + 1 ?> &bull; <?= date('d F Y', strtotime($c['tanggal'])) ?></strong>
-                    <span class="badge-asp" style="margin-left: 8px;"><?= htmlspecialchars($c['jenis_pembinaan']) ?></span>
+                    <strong>Konseling #<?= $idx + 1 ?> &bull; <?= date('d F Y', strtotime($c['tanggal'])) ?></strong>
+                    <span class="badge-asp" style="margin-left: 8px;"><?= htmlspecialchars($c['topik']) ?></span>
                 </div>
                 <div>Status: <strong><?= htmlspecialchars($c['status']) ?></strong></div>
             </div>
 
-            <?php if (!empty($c['lg_jenis'])): ?>
-                <div style="margin-bottom: 6px;">
-                    <strong>Pelanggaran Sumber (Alur 1):</strong>
-                    <div style="margin-top: 2px;"><?= htmlspecialchars($c['lg_jenis']) ?> (<?= htmlspecialchars($c['lg_kategori'] ?? '-') ?>, +<?= (int)($c['lg_poin'] ?? 0) ?> poin, <?= htmlspecialchars($c['lg_tanggal'] ?? '-') ?>)</div>
-                </div>
-            <?php endif; ?>
             <div style="margin-bottom: 6px; color: #b91c1c;">
-                <strong>Permasalahan / Kasus:</strong>
-                <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['permasalahan'])) ?></div>
+                <strong>Ringkasan Masalah:</strong>
+                <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['ringkasan_masalah'])) ?></div>
             </div>
 
             <div style="margin-bottom: 6px; color: #1d4ed8;">
-                <strong>Tindakan Pembinaan:</strong>
-                <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['tindakan'])) ?></div>
+                <strong>Tindak Lanjut / Solusi:</strong>
+                <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['tindak_lanjut'])) ?></div>
             </div>
 
-            <?php if (!empty($c['tindak_lanjut'])): ?>
+            <?php if (!empty($c['follow_up'])): ?>
                 <div style="margin-bottom: 2px; color: #15803d;">
-                    <strong>Rencana Tindak Lanjut:</strong>
-                    <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['tindak_lanjut'])) ?></div>
+                    <strong>Rencana Follow Up:</strong>
+                    <div style="margin-top: 2px; color: #111;"><?= nl2br(htmlspecialchars($c['follow_up'])) ?></div>
                 </div>
             <?php endif; ?>
         </div>
@@ -460,16 +454,15 @@ ob_start();
                 <th style="width: 70px;">Tanggal</th>
                 <th style="width: 130px;">Nama Siswa</th>
                 <th style="width: 50px;">Kelas</th>
-                <th style="width: 120px;">Pelanggaran Sumber</th>
-                <th style="width: 85px;">Jenis</th>
-                <th>Permasalahan / Kasus</th>
-                <th>Tindakan Pembinaan</th>
-                <th>Rencana Tindak Lanjut</th>
+                <th style="width: 85px;">Topik</th>
+                <th>Ringkasan Masalah</th>
+                <th>Tindak Lanjut / Solusi</th>
+                <th>Rencana Follow Up</th>
                 <th style="width: 80px;">Status</th>
             </tr>
         </thead>
         <tbody>
-            <?php $no = 1; foreach ($bina_list as $row): ?>
+            <?php $no = 1; foreach ($konseling_list as $row): ?>
                 <tr>
                     <td style="text-align: center;"><?= $no++ ?></td>
                     <td style="text-align: center;"><?= date('d/m/Y', strtotime($row['tanggal'])) ?></td>
@@ -480,13 +473,12 @@ ob_start();
                         <?php endif; ?>
                     </td>
                     <td style="text-align: center;">Kelas <?= htmlspecialchars($row['nama_kelas'] ?? '-') ?></td>
-                    <td style="font-size: 8pt;"><?= !empty($row['lg_jenis']) ? htmlspecialchars($row['lg_jenis']) . ' (' . htmlspecialchars($row['lg_kategori'] ?? '-') . ', +' . (int)($row['lg_poin'] ?? 0) . ')' : '-' ?></td>
                     <td style="text-align: center;">
-                        <span class="badge-asp"><?= htmlspecialchars($row['jenis_pembinaan']) ?></span>
+                        <span class="badge-asp"><?= htmlspecialchars($row['topik']) ?></span>
                     </td>
-                    <td><?= nl2br(htmlspecialchars($row['permasalahan'])) ?></td>
-                    <td style="color: #1d4ed8;"><?= htmlspecialchars($row['tindakan']) ?></td>
-                    <td style="color: #15803d;"><?= htmlspecialchars($row['tindak_lanjut'] ?? '-') ?></td>
+                    <td><?= nl2br(htmlspecialchars($row['ringkasan_masalah'])) ?></td>
+                    <td style="color: #1d4ed8;"><?= htmlspecialchars($row['tindak_lanjut']) ?></td>
+                    <td style="color: #15803d;"><?= htmlspecialchars($row['follow_up'] ?? '-') ?></td>
                     <td style="text-align: center; font-weight: bold;"><?= htmlspecialchars($row['status']) ?></td>
                 </tr>
             <?php endforeach; ?>

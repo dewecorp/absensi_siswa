@@ -54,29 +54,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id_siswa <= 0 || $jenis_pelanggaran === '') {
             $message = ['type' => 'warning', 'text' => 'Pilih Siswa dan isi Jenis Pelanggaran.'];
         } else {
+            // Deteksi otomatis jenis binaan dari teks pelanggaran (server, anti-bocor).
+            $detJ = function_exists('pelanggaran_deteksi_jenis') ? pelanggaran_deteksi_jenis($jenis_pelanggaran, $kategori) : ['jenis' => 'Kedisiplinan'];
+            $jenis_binaan = $detJ['jenis'];
             try {
                 if ($action === 'tambah') {
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_pelanggaran_siswa (
                             id_wali, id_siswa, id_kelas, tanggal, jenis_pelanggaran,
-                            kategori, poin, tindakan, orang_tua, status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            kategori, poin, tindakan, orang_tua, status, jenis_binaan
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([
                         $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
-                        $kategori, $poin, $tindakan, $orang_tua, $status
+                        $kategori, $poin, $tindakan, $orang_tua, $status, $jenis_binaan
                     ]);
                     $message = ['type' => 'success', 'text' => 'Pelanggaran siswa berhasil dicatat.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_pelanggaran_siswa SET
                             id_siswa = ?, id_kelas = ?, tanggal = ?, jenis_pelanggaran = ?,
-                            kategori = ?, poin = ?, tindakan = ?, orang_tua = ?, status = ?
+                            kategori = ?, poin = ?, tindakan = ?, orang_tua = ?, status = ?, jenis_binaan = ?
                         WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
                         $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
-                        $kategori, $poin, $tindakan, $orang_tua, $status, $id
+                        $kategori, $poin, $tindakan, $orang_tua, $status, $jenis_binaan, $id
                     ]);
                     $message = ['type' => 'success', 'text' => 'Data pelanggaran berhasil diperbarui.'];
                 }
@@ -117,7 +120,8 @@ if ($user_level !== 'admin') {
 
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
-    SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas
+    SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas,
+           (SELECT COUNT(*) FROM tb_pembinaan_siswa b WHERE b.id_pelanggaran = p.id) AS n_bina
     FROM tb_pelanggaran_siswa p
     JOIN tb_siswa s ON s.id_siswa = p.id_siswa
     LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas
@@ -132,13 +136,45 @@ $status_options = ['Dicatat', 'Ditindaklanjuti', 'Selesai'];
 
 // Master template pelanggaran (sinkron dengan menu Data Pelanggaran)
 $stMasterLanggar = $pdo->prepare("
-    SELECT id, kategori, jenis, tindakan, poin
+    SELECT id, kategori, jenis, tindakan, poin, jenis_binaan
     FROM tb_master_pelanggaran
     WHERE id_guru = ? OR id_guru IS NULL OR id_guru = 0
     ORDER BY FIELD(kategori, 'Ringan', 'Sedang', 'Berat'), poin ASC, id ASC
 ");
 $stMasterLanggar->execute([$guru_id]);
 $master_pelanggaran = $stMasterLanggar->fetchAll(PDO::FETCH_ASSOC);
+
+// Akumulasi poin per siswa (dari data tampil) untuk badge total di tabel
+$poin_total_map = [];
+$poin_count_map = [];
+foreach ($rows as $tr) {
+    $sid = (int)$tr['id_siswa'];
+    $poin_total_map[$sid] = ($poin_total_map[$sid] ?? 0) + (int)$tr['poin'];
+    $poin_count_map[$sid] = ($poin_count_map[$sid] ?? 0) + 1;
+}
+
+// AJAX Timeline + akumulasi poin per siswa (untuk modal detail)
+if (isset($_GET['ajax_timeline']) && (int)$_GET['ajax_timeline'] === 1) {
+    header('Content-Type: application/json; charset=UTF-8');
+    $sid = (int)($_GET['id_siswa'] ?? 0);
+    $stT = $pdo->prepare("
+        SELECT id, tanggal, jenis_pelanggaran, kategori, poin, tindakan, orang_tua, status
+        FROM tb_pelanggaran_siswa
+        WHERE id_siswa = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+        ORDER BY tanggal DESC, id DESC
+    ");
+    $stT->execute([$sid]);
+    $t_rows = $stT->fetchAll(PDO::FETCH_ASSOC);
+    $total = 0;
+    foreach ($t_rows as $tr) { $total += (int)$tr['poin']; }
+    foreach ($t_rows as &$it) {
+        $it['tanggal_formatted'] = date('d F Y', strtotime($it['tanggal']));
+    }
+    unset($it);
+    $sanksi = function_exists('pelanggaran_sanksi_by_poin') ? pelanggaran_sanksi_by_poin($total) : ['level' => '-', 'badge' => 'secondary', 'desc' => ''];
+    echo json_encode(['total' => $total, 'count' => count($t_rows), 'sanksi' => $sanksi, 'timeline' => $t_rows]);
+    exit;
+}
 
 $page_title = 'Daftar Pelanggaran Siswa';
 $css_libs = [
@@ -202,18 +238,6 @@ $(document).ready(function() {
         });
     }
 
-    // Pilih template lengkap sekaligus (jenis + tindakan + poin)
-    $('#sel_langgar_full').on('change', function() {
-        var item = $('#sel_langgar_full option:selected').data('item');
-        if (!item) return;
-        $('#inp_jenis').val(item.jenis || '');
-        $('#inp_tindakan').val(item.tindakan || '');
-        $('#inp_poin').val(item.poin || 0);
-        $('#inp_kategori').val(item.kategori || 'Ringan');
-        populateLanggar(item.kategori || '');
-        $('#modalPelanggaran textarea').each(function() { autogrowLanggar($(this)); });
-    });
-
     $('#inp_kategori').on('change', function() {
         populateLanggar($(this).val());
     });
@@ -244,14 +268,6 @@ $(document).ready(function() {
         $('#formPelanggaran')[0].reset();
         var curKat = $('#inp_kategori').val() || 'Ringan';
         populateLanggar(curKat);
-        $('#sel_langgar_full').empty().append('<option value="">-- Pilih satu template lengkap (opsional) --</option>');
-        masterPelanggaran.filter(function(m) {
-            return (m.kategori || '').toLowerCase() === curKat.toLowerCase();
-        }).forEach(function(m) {
-            var o = $('<option>').val(m.id).text(shortLanggar(m.jenis, 110) + ' (' + m.poin + ' poin)');
-            o.data('item', m);
-            $('#sel_langgar_full').append(o);
-        });
         $('#modalPelanggaran').modal('show');
         setTimeout(function() {
             $('#modalPelanggaran textarea').each(function() { autogrowLanggar($(this)); });
@@ -267,14 +283,6 @@ $(document).ready(function() {
         $('#inp_tanggal').val(data.tanggal);
         $('#inp_kategori').val(data.kategori || 'Ringan');
         populateLanggar(data.kategori || 'Ringan');
-        $('#sel_langgar_full').empty().append('<option value="">-- Pilih satu template lengkap (opsional) --</option>');
-        masterPelanggaran.filter(function(m) {
-            return (m.kategori || '').toLowerCase() === (data.kategori || '').toLowerCase();
-        }).forEach(function(m) {
-            var o = $('<option>').val(m.id).text(shortLanggar(m.jenis, 110) + ' (' + m.poin + ' poin)');
-            o.data('item', m);
-            $('#sel_langgar_full').append(o);
-        });
         // Samakan dropdown dengan nilai tersimpan bila cocok persis
         $('#sel_langgar_jenis option').each(function() {
             if ($(this).val() === (data.jenis_pelanggaran || '')) $(this).prop('selected', true);
@@ -305,6 +313,50 @@ $(document).ready(function() {
         $('#det_status').text(data.status);
         $('#det_tindakan').text(data.tindakan || '-');
         $('#det_ortu').text(data.orang_tua || '-');
+        $('#timelineLanggar').html('<div class="text-center p-3"><i class="fas fa-spinner fa-spin"></i> Memuat timeline...</div>');
+        $('#akumulasiLanggar').html('');
+        $.ajax({
+            url: 'pelanggaran_siswa.php?ajax_timeline=1&id_siswa=' + data.id_siswa,
+            dataType: 'json',
+            success: function(res) {
+                var total = (res && typeof res.total !== 'undefined') ? res.total : 0;
+                var count = (res && typeof res.count !== 'undefined') ? res.count : 0;
+                var sanksi = (res && res.sanksi) ? res.sanksi : { level: '-', badge: 'secondary', desc: '' };
+                var acc = '<div class="alert alert-' + sanksi.badge + ' mb-2">';
+                acc += '<div class="d-flex justify-content-between align-items-center flex-wrap">';
+                acc += '<div><strong>Total ' + total + ' poin</strong> dari ' + count + ' pelanggaran</div>';
+                acc += '<span class="badge badge-' + sanksi.badge + '">' + sanksi.level + '</span>';
+                acc += '</div><div class="small mt-1">' + sanksi.desc + '</div>';
+                acc += '<div class="progress mt-2" style="height: 10px;"><div class="progress-bar bg-' + sanksi.badge + '" style="width: ' + Math.min(100, total) + '%"></div></div>';
+                acc += '<div class="small text-muted mt-1">25 Pemantauan &bull; 50 SP1 &bull; 75 Skorsing &bull; 100 DO</div></div>';
+                $('#akumulasiLanggar').html(acc);
+                var tl = (res && res.timeline) ? res.timeline : [];
+                if (!tl.length) {
+                    $('#timelineLanggar').html('<div class="text-muted p-3 text-center">Belum ada riwayat lain.</div>');
+                    return;
+                }
+                var run = 0;
+                var html = '<div class="activities">';
+                tl.forEach(function(item) {
+                    run += parseInt(item.poin || 0, 10);
+                    var kb = item.kategori === 'Berat' ? 'danger' : (item.kategori === 'Sedang' ? 'warning' : 'info');
+                    html += '<div class="activity">';
+                    html += '  <div class="activity-icon bg-danger text-white"><i class="fas fa-exclamation-triangle"></i></div>';
+                    html += '  <div class="activity-detail">';
+                    html += '    <div class="mb-1"><span class="text-job text-danger font-weight-bold">' + item.tanggal + '</span>';
+                    html += ' <span class="badge badge-' + kb + '">' + item.kategori + '</span>';
+                    html += ' <span class="badge badge-dark">+' + item.poin + ' poin (akumulasi ' + run + ')</span></div>';
+                    html += '    <p class="font-weight-bold mb-1">' + $('<div>').text(item.jenis_pelanggaran).html() + '</p>';
+                    if (item.tindakan) html += '    <p class="mb-0 small"><strong>Sanksi:</strong> ' + $('<div>').text(item.tindakan).html() + '</p>';
+                    html += '  </div></div>';
+                });
+                html += '</div>';
+                $('#timelineLanggar').html(html);
+            },
+            error: function() {
+                $('#timelineLanggar').html('<div class="text-muted p-3 text-center">Gagal memuat timeline.</div>');
+            }
+        });
         $('#modalDetailPelanggaran').modal('show');
     });
 
@@ -338,6 +390,12 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.aksi-satu-baris { display: inline-flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; white-space: nowrap; }
+.aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
+#table-pelanggaran td:last-child { white-space: nowrap; }
+</style>
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -401,7 +459,7 @@ include '../templates/sidebar.php';
                                     <th>Tindakan</th>
                                     <th>Orang Tua</th>
                                     <th>Status</th>
-                                    <th width="12%">Aksi</th>
+                                    <th style="width:180px;min-width:180px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -409,33 +467,44 @@ include '../templates/sidebar.php';
                                     <?php
                                     $st_badge = $r['status'] === 'Selesai' ? 'success' : ($r['status'] === 'Ditindaklanjuti' ? 'warning' : 'danger');
                                     $kat_badge = $r['kategori'] === 'Berat' ? 'danger' : ($r['kategori'] === 'Sedang' ? 'warning' : 'info');
+                                    $sid = (int)$r['id_siswa'];
+                                    $tot = (int)($poin_total_map[$sid] ?? 0);
+                                    $sk = function_exists('pelanggaran_sanksi_by_poin') ? pelanggaran_sanksi_by_poin($tot) : ['level' => '-', 'badge' => 'secondary'];
                                     ?>
                                     <tr>
                                         <td class="text-center"><?= $i + 1 ?></td>
                                         <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                        <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong></td>
+                                        <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong>
+                                            <div class="mt-1"><span class="badge badge-<?= $sk['badge'] ?>" title="<?= htmlspecialchars($sk['level']) ?>">Total <?= $tot ?> poin &bull; <?= htmlspecialchars($sk['level']) ?></span></div>
+                                        </td>
                                         <td><?= htmlspecialchars($r['nisn'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['jenis_pelanggaran']) ?></td>
+                                        <td><?= htmlspecialchars($r['jenis_pelanggaran']) ?>
+                                            <?php if ((int)($r['n_bina'] ?? 0) > 0): ?>
+                                                <div class="mt-1"><span class="badge badge-success">Sudah dibina</span></div>
+                                            <?php else: ?>
+                                                <div class="mt-1"><span class="badge badge-warning">Belum dibina</span></div>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="text-center"><span class="badge badge-<?= $kat_badge ?>"><?= htmlspecialchars($r['kategori']) ?></span></td>
                                         <td class="text-center font-weight-bold text-danger"><?= (int)$r['poin'] ?></td>
                                         <td><?= htmlspecialchars(mb_strimwidth($r['tindakan'], 0, 35, '...')) ?></td>
                                         <td><small><?= htmlspecialchars($r['orang_tua'] ?: '-') ?></small></td>
                                         <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-info btn-sm btn-detail-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-warning btn-sm btn-edit-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm btn-hapus-pelanggaran" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                            <div class="btn-group btn-group-sm mt-1">
-                                                <a href="export_pelanggaran_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger" title="Cetak / Simpan PDF laporan siswa ini">
+                                        <td class="text-center align-middle">
+                                            <div class="aksi-satu-baris">
+                                                <button type="button" class="btn btn-info btn-sm btn-detail-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-pelanggaran" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <a href="export_pelanggaran_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini">
                                                     <i class="fas fa-print"></i>
                                                 </a>
-                                                <a href="export_pelanggaran_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success" title="Ekspor Excel siswa ini">
+                                                <a href="export_pelanggaran_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel siswa ini">
                                                     <i class="fas fa-file-excel"></i>
                                                 </a>
                                             </div>
@@ -491,12 +560,6 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-12 form-group">
-                            <label class="font-weight-bold">Pilih Cepat: Satu Template Lengkap <small class="text-muted">(opsional, isi jenis + tindakan + poin sekaligus)</small></label>
-                            <select id="sel_langgar_full" class="form-control">
-                                <option value="">-- Pilih satu template lengkap (opsional) --</option>
-                            </select>
-                        </div>
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold">Jenis Pelanggaran <span class="text-danger">*</span></label>
                             <select id="sel_langgar_jenis" class="form-control form-control-sm mb-1">
@@ -536,12 +599,12 @@ include '../templates/sidebar.php';
     </div>
 </div>
 
-<!-- Modal Detail -->
+<!-- Modal Detail + Timeline + Akumulasi Poin -->
 <div class="modal fade" id="modalDetailPelanggaran" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-md" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-info-circle mr-2"></i>Rincian Pelanggaran Siswa</h5>
+                <h5 class="modal-title"><i class="fas fa-info-circle mr-2"></i>Rincian, Timeline & Akumulasi Poin</h5>
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
@@ -558,6 +621,13 @@ include '../templates/sidebar.php';
                     <tr><th colspan="2">Tindakan / Sanksi:</th></tr>
                     <tr><td colspan="2" id="det_tindakan" style="white-space: pre-wrap;" class="bg-light p-2 text-dark"></td></tr>
                 </table>
+                <div id="akumulasiLanggar"></div>
+                <div class="card border mb-0">
+                    <div class="card-header bg-white py-2 border-bottom">
+                        <h6 class="mb-0 text-dark"><i class="fas fa-history mr-1 text-danger"></i> Timeline Pelanggaran + Poin Berjalan</h6>
+                    </div>
+                    <div class="card-body p-2" id="timelineLanggar" style="max-height: 280px; overflow-y: auto;"></div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>

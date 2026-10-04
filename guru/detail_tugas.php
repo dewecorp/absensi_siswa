@@ -5,7 +5,7 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
@@ -15,6 +15,9 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
 
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
+
 $id_tugas = (int)($_GET['id'] ?? 0);
 if ($id_tugas <= 0) {
     redirect('tugas.php');
@@ -22,14 +25,22 @@ if ($id_tugas <= 0) {
 
 // Deteksi kelas wali jika login sebagai wali
 $wali_kelas_id = 0;
-try {
-    $stWali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
-    $stWali->execute([$guru_id, $guru_id]);
-    $wali_kelas_id = (int)$stWali->fetchColumn() ?: 0;
-} catch (Throwable $e) {}
+if (!$is_admin_or_kepala) {
+    try {
+        $stWali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
+        $stWali->execute([$guru_id, $guru_id]);
+        $wali_kelas_id = (int)$stWali->fetchColumn() ?: 0;
+    } catch (Throwable $e) {}
+}
 
-// Guru pengampu tugas atau Wali Kelas target dapat mengakses
-$auth_sql = "t.id = ? AND (t.id_guru = ? " . ($wali_kelas_id > 0 ? "OR t.id_kelas = $wali_kelas_id" : "") . ")";
+if ($is_admin_or_kepala) {
+    $auth_sql = "t.id = ?";
+    $auth_params = [$id_tugas];
+} else {
+    // Guru pengampu tugas atau Wali Kelas target dapat mengakses
+    $auth_sql = "t.id = ? AND (t.id_guru = ? " . ($wali_kelas_id > 0 ? "OR t.id_kelas = $wali_kelas_id" : "") . ")";
+    $auth_params = [$id_tugas, $guru_id];
+}
 
 // Fetch tugas info
 $stmt = $pdo->prepare("
@@ -41,7 +52,7 @@ $stmt = $pdo->prepare("
     WHERE $auth_sql
     LIMIT 1
 ");
-$stmt->execute([$id_tugas, $guru_id]);
+$stmt->execute($auth_params);
 $tugas = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$tugas) {
@@ -52,8 +63,11 @@ $message = null;
 
 // Handle periksa / nilai / feedback
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    if ($action === 'nilai_tugas') {
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki hak akses untuk mengubah nilai.'];
+    } else {
+        $action = $_POST['action'] ?? '';
+        if ($action === 'nilai_tugas') {
         $id_pengumpulan = (int)($_POST['id_pengumpulan'] ?? 0);
         $id_siswa = (int)($_POST['id_siswa'] ?? 0);
         $nilai = $_POST['nilai'] !== '' ? (float)$_POST['nilai'] : null;
@@ -84,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = ['type' => 'danger', 'text' => 'Gagal menyimpan nilai: ' . $e->getMessage()];
         }
     }
+}
 }
 
 // Fetch all students in this class with their submission status
@@ -160,6 +175,9 @@ $(document).ready(function() {
         $('#mdl_nilai').val(data.nilai !== null ? data.nilai : '');
         $('#mdl_status_periksa').val(data.status_periksa || 'Sudah Diperiksa');
         $('#mdl_feedback').val(data.feedback || '');
+        if (!<?= json_encode($can_crud) ?>) {
+            $('#mdl_nilai, #mdl_status_periksa, #mdl_feedback').prop('disabled', true);
+        }
 
         if (data.file_path) {
             var ext = data.file_path.split('.').pop().toLowerCase();
@@ -356,11 +374,19 @@ include '../templates/sidebar.php';
                                             <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($st_periksa) ?></span>
                                         </td>
                                         <td class="text-center">
+                                            <?php if ($can_crud): ?>
                                             <button type="button" class="btn btn-primary btn-sm btn-periksa"
                                                 data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'
                                                 title="Periksa, Nilai & Feedback">
                                                 <i class="fas fa-check-circle mr-1"></i> Periksa / Nilai
                                             </button>
+                                            <?php else: ?>
+                                            <button type="button" class="btn btn-info btn-sm btn-periksa"
+                                                data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'
+                                                title="Lihat Detail Nilai & Feedback">
+                                                <i class="fas fa-eye mr-1"></i> Detail
+                                            </button>
+                                            <?php endif; ?>
                                             <?php $s_href = guru_file_href('tugas', $s['file_path'] ?? ''); ?>
                                             <?php if ($s_href): ?>
                                                 <a href="<?= htmlspecialchars($s_href) ?>" target="_blank" class="btn btn-info btn-sm" title="Lihat / Download File">
@@ -422,8 +448,10 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                    <?php if ($can_crud): ?>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Simpan Penilaian</button>
+                    <?php endif; ?>
                 </div>
             </form>
         </div>

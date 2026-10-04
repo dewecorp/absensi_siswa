@@ -24,7 +24,7 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
 
 $id_siswa = (int)($_GET['id_siswa'] ?? 0);
 $id_catatan = (int)($_GET['id'] ?? 0);
-$f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
+$f_topik = trim((string)($_GET['f_topik'] ?? ''));
 $f_kelas = (int)($_GET['kelas'] ?? $_GET['f_kelas'] ?? 0);
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
@@ -40,7 +40,7 @@ $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
 $stG->execute([$guru_id]);
 $nama_wali = $stG->fetchColumn() ?: ($_SESSION['nama_guru'] ?? 'Wali Kelas');
 
-// Query Pembinaan
+// Query Konseling
 $where = ["1=1"];
 $params = [];
 
@@ -55,9 +55,9 @@ if ($id_catatan > 0) {
         $where[] = "p.id_kelas = ?";
         $params[] = $f_kelas;
     }
-    if ($f_jenis !== '') {
-        $where[] = "p.jenis_pembinaan = ?";
-        $params[] = $f_jenis;
+    if ($f_topik !== '') {
+        $where[] = "p.topik = ?";
+        $params[] = $f_topik;
     }
     if ($f_status !== '') {
         $where[] = "p.status = ?";
@@ -71,40 +71,38 @@ if ($user_level !== 'admin') {
 
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
-    SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas, g.nama_guru,
-           lg.jenis_pelanggaran AS lg_jenis, lg.kategori AS lg_kategori, lg.poin AS lg_poin, lg.tanggal AS lg_tanggal
-    FROM tb_pembinaan_siswa p
+    SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas, g.nama_guru
+    FROM tb_konseling_awal p
     JOIN tb_siswa s ON s.id_siswa = p.id_siswa
     LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas
     LEFT JOIN tb_guru g ON g.id_guru = p.id_wali
-    LEFT JOIN tb_pelanggaran_siswa lg ON lg.id = p.id_pelanggaran
     WHERE $where_sql
     ORDER BY s.nama_siswa ASC, p.tanggal DESC, p.id DESC
 ");
 $stmt->execute($params);
-$bina_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$konseling_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if (empty($bina_list)) {
-    echo "<script>alert('Tidak ada data pembinaan untuk diekspor.'); window.history.back();</script>";
+if (empty($konseling_list)) {
+    echo "<script>alert('Tidak ada data konseling untuk diekspor.'); window.history.back();</script>";
     exit;
 }
 
-$is_single = ($id_siswa > 0 || $id_catatan > 0) && count(array_unique(array_column($bina_list, 'id_siswa'))) === 1;
-$first_item = $bina_list[0];
+$is_single = ($id_siswa > 0 || $id_catatan > 0) && count(array_unique(array_column($konseling_list, 'id_siswa'))) === 1;
+$first_item = $konseling_list[0];
 
 $ta_file = preg_replace('/[^A-Za-z0-9-]+/', '', str_replace('/', '-', $tahun_ajaran));
 if ($is_single) {
     $nama_safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $first_item['nama_siswa']);
-    $title = "LAPORAN PEMBINAAN SISWA - " . strtoupper($first_item['nama_siswa']) . " - TAHUN AJARAN " . $tahun_ajaran;
-    $filename = "Laporan_Pembinaan_" . $nama_safe . "_TA" . $ta_file . "_" . date('Ymd') . ".xlsx";
+    $title = "LAPORAN KONSELING SISWA - " . strtoupper($first_item['nama_siswa']) . " - TAHUN AJARAN " . $tahun_ajaran;
+    $filename = "Laporan_Konseling_" . $nama_safe . "_TA" . $ta_file . "_" . date('Ymd') . ".xlsx";
 } else {
-    $title = "REKAPITULASI PEMBINAAN SISWA - TAHUN AJARAN " . $tahun_ajaran;
-    $filename = "Rekap_Pembinaan_TA" . $ta_file . "_" . date('Ymd') . ".xlsx";
+    $title = "REKAPITULASI KONSELING SISWA - TAHUN AJARAN " . $tahun_ajaran;
+    $filename = "Rekap_Konseling_TA" . $ta_file . "_" . date('Ymd') . ".xlsx";
 }
 
 $ss = new Spreadsheet();
 $sh = $ss->getActiveSheet();
-$sh->setTitle('Pembinaan Siswa');
+$sh->setTitle('Konseling Siswa');
 
 // Header Dokumen
 $sh->setCellValue('A1', strtoupper($nama_madrasah));
@@ -124,11 +122,10 @@ $headers = [
     'Nama Siswa',
     'NISN',
     'Kelas',
-    'Pelanggaran Sumber (Alur 1)',
-    'Jenis Pembinaan',
-    'Permasalahan / Kasus',
-    'Tindakan Pembinaan',
-    'Rencana Tindak Lanjut',
+    'Topik',
+    'Ringkasan Masalah',
+    'Tindak Lanjut / Solusi',
+    'Rencana Follow Up',
     'Status'
 ];
 
@@ -149,29 +146,24 @@ $row++;
 $startDataRow = $row;
 $no = 1;
 
-foreach ($bina_list as $c) {
-    $srcTxt = '-';
-    if (!empty($c['lg_jenis'])) {
-        $srcTxt = $c['lg_jenis'] . ' (' . ($c['lg_kategori'] ?? '-') . ', +' . (int)($c['lg_poin'] ?? 0) . ' poin)';
-    }
+foreach ($konseling_list as $c) {
     $sh->setCellValue('A' . $row, $no++);
     $sh->setCellValue('B' . $row, date('d/m/Y', strtotime($c['tanggal'])));
     $sh->setCellValue('C' . $row, $c['nama_siswa']);
     $sh->setCellValue('D' . $row, !empty($c['nisn']) ? ' ' . $c['nisn'] : '-');
     $sh->setCellValue('E' . $row, 'Kelas ' . ($c['nama_kelas'] ?? '-'));
-    $sh->setCellValue('F' . $row, $srcTxt);
-    $sh->setCellValue('G' . $row, $c['jenis_pembinaan']);
-    $sh->setCellValue('H' . $row, $c['permasalahan']);
-    $sh->setCellValue('I' . $row, $c['tindakan']);
-    $sh->setCellValue('J' . $row, !empty($c['tindak_lanjut']) ? $c['tindak_lanjut'] : '-');
-    $sh->setCellValue('K' . $row, $c['status']);
+    $sh->setCellValue('F' . $row, $c['topik']);
+    $sh->setCellValue('G' . $row, $c['ringkasan_masalah']);
+    $sh->setCellValue('H' . $row, $c['tindak_lanjut']);
+    $sh->setCellValue('I' . $row, !empty($c['follow_up']) ? $c['follow_up'] : '-');
+    $sh->setCellValue('J' . $row, $c['status']);
 
     $sh->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sh->getStyle('B' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sh->getStyle('D' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sh->getStyle('E' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-    $sh->getStyle('G' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-    $sh->getStyle('K' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sh->getStyle('F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sh->getStyle('J' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
     $row++;
 }
@@ -194,7 +186,7 @@ for ($i = 1; $i <= count($headers); $i++) {
     $sh->getColumnDimension($colLetter)->setAutoSize(true);
 }
 // Lebar maksimum untuk teks panjang
-foreach (['F', 'H', 'I', 'J'] as $cWrap) {
+foreach (['G', 'H', 'I'] as $cWrap) {
     $sh->getColumnDimension($cWrap)->setAutoSize(false);
     $sh->getColumnDimension($cWrap)->setWidth(40);
     $sh->getStyle($cWrap . $startDataRow . ':' . $cWrap . $endDataRow)->getAlignment()->setWrapText(true);

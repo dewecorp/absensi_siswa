@@ -15,11 +15,17 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
 
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah', 'tata_usaha'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
+
 $message = null;
 
 // Handle CRUD Master Perkembangan
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Anda tidak memiliki hak akses untuk mengubah data ini.'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -76,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
         }
     }
+}
 }
 
 // Master Aspek unik untuk filter & select
@@ -200,9 +207,11 @@ include '../templates/sidebar.php';
                 <a href="catatan_perkembangan.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode($_GET['session_type']) : '' ?>" class="btn btn-secondary btn-sm mr-2">
                     <i class="fas fa-clipboard-list mr-1"></i> Catatan Perkembangan Siswa
                 </a>
+                <?php if ($can_crud): ?>
                 <button type="button" class="btn btn-primary btn-sm" id="btnTambahMaster">
                     <i class="fas fa-plus mr-1"></i> Tambah Pemetaan
                 </button>
+                <?php endif; ?>
             </div>
         </div>
 

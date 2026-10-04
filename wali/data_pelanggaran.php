@@ -31,21 +31,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($jenis === '' || $tindakan === '') {
             $message = ['type' => 'warning', 'text' => 'Jenis pelanggaran dan tindakan/sanksi wajib diisi.'];
         } else {
+            $detM = function_exists('pelanggaran_deteksi_jenis') ? pelanggaran_deteksi_jenis($jenis, $kategori) : ['jenis' => 'Kedisiplinan'];
+            $jenis_binaan = trim((string)($_POST['jenis_binaan'] ?? ''));
+            if (!in_array($jenis_binaan, ['Kedisiplinan', 'Kehadiran', 'Akademik', 'Sikap', 'Sosial'], true)) {
+                $jenis_binaan = $detM['jenis'];
+            }
             try {
                 if ($action === 'tambah') {
                     $st = $pdo->prepare("
-                        INSERT INTO tb_master_pelanggaran (id_guru, kategori, jenis, tindakan, poin)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT INTO tb_master_pelanggaran (id_guru, kategori, jenis, tindakan, poin, jenis_binaan)
+                        VALUES (?, ?, ?, ?, ?, ?)
                     ");
-                    $st->execute([$guru_id, $kategori, $jenis, $tindakan, $poin]);
+                    $st->execute([$guru_id, $kategori, $jenis, $tindakan, $poin, $jenis_binaan]);
                     $message = ['type' => 'success', 'text' => 'Template pelanggaran berhasil ditambahkan.'];
                 } else {
                     $st = $pdo->prepare("
                         UPDATE tb_master_pelanggaran SET
-                            kategori = ?, jenis = ?, tindakan = ?, poin = ?
+                            kategori = ?, jenis = ?, tindakan = ?, poin = ?, jenis_binaan = ?
                         WHERE id = ? AND (id_guru = ? OR id_guru IS NULL OR id_guru = 0)
                     ");
-                    $st->execute([$kategori, $jenis, $tindakan, $poin, $id, $guru_id]);
+                    $st->execute([$kategori, $jenis, $tindakan, $poin, $jenis_binaan, $id, $guru_id]);
                     $message = ['type' => 'success', 'text' => 'Template pelanggaran berhasil diperbarui.'];
                 }
             } catch (Exception $e) {
@@ -102,11 +107,38 @@ $(document).ready(function() {
         });
     }
 
+    function deteksiJenisBinaanMaster(teks, kategori) {
+        var t = ' ' + String(teks || '').toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+        function has(keys) {
+            for (var i = 0; i < keys.length; i++) {
+                var k = ' ' + String(keys[i]).toLowerCase().replace(/\s+/g, ' ').trim() + ' ';
+                if (k.trim() !== '' && t.indexOf(k) !== -1) return keys[i];
+            }
+            return null;
+        }
+        var m;
+        if ((m = has(['alpa', 'bolos', 'membolos', 'tidak masuk', 'absen tanpa', 'tanpa keterangan']))) return 'Kehadiran';
+        if ((m = has(['berkelahi', 'tawuran', 'memukul', 'menendang', 'merokok', 'rokok', 'vape', 'mencuri', 'mengambil milik', 'berbohong', 'bohong', 'dusta', 'melawan guru', 'membentak', 'berkata kasar', 'berkata kotor', 'mengumpat', 'mengejek', 'membully', 'bully', 'mencaci', 'caci', 'fitnah', 'tidak sopan', 'tidak santun', 'kurang sopan', 'kasar', 'sholat', 'shalat', 'ibadah', 'mengaji', 'puasa', 'jujur', 'sopan', 'santun', 'adab', 'akhlak']))) return 'Sikap';
+        if ((m = has(['berselisih', 'bertengkar', 'cekcok', 'menyendiri', 'mengucilkan', 'dikucilkan', 'kerjasama', 'kerja sama', 'gotong royong', 'bergaul']))) return 'Sosial';
+        if ((m = has(['menyontek', 'nyontek', 'contekan', 'tidak mengerjakan tugas', 'tidak mengerjakan pr', 'ulangan', 'asesmen', 'ujian', 'nilai harian', 'tugas']))) return 'Akademik';
+        if ((m = has(['terlambat', 'telat', 'seragam', 'atribut', 'pakaian', 'berseragam', 'sepatu', 'rambut', 'kuku', 'gondrong', 'tata tertib', 'disiplin', 'apel', 'upacara', 'baris', 'piket', 'sampah', 'kebersihan', 'lupa membawa', 'tidak membawa', 'gawai', 'handphone', 'gadget', 'main hp', 'bermain gawai', 'keluar kelas', 'tanpa izin', 'gaduh', 'ribut', 'berisik', 'mengganggu', 'buku', 'alat tulis', 'izin']))) return 'Kedisiplinan';
+        var kat = String($('#inp_l_kategori').val() || kategori || '').toLowerCase();
+        if (kat === 'berat') return 'Sikap';
+        return 'Kedisiplinan';
+    }
+    function autoBinaanMaster() {
+        var v = deteksiJenisBinaanMaster($('#inp_l_jenis').val(), $('#inp_l_kategori').val());
+        if (v) $('#inp_l_binaan').val(v);
+    }
+    $('#inp_l_jenis').on('input change', autoBinaanMaster);
+    $('#inp_l_kategori').on('change', autoBinaanMaster);
+
     $('#btnTambahLanggar').on('click', function() {
         $('#formLanggarAction').val('tambah');
         $('#langgarId').val('');
         $('#modalLanggarTitle').text('Tambah Template Pelanggaran');
         $('#formLanggar')[0].reset();
+        autoBinaanMaster();
         $('#modalLanggar').modal('show');
     });
 
@@ -119,6 +151,8 @@ $(document).ready(function() {
         $('#inp_l_jenis').val(data.jenis);
         $('#inp_l_tindakan').val(data.tindakan);
         $('#inp_l_poin').val(data.poin);
+        if (data.jenis_binaan) $('#inp_l_binaan').val(data.jenis_binaan);
+        else autoBinaanMaster();
         $('#modalLanggar').modal('show');
     });
 
@@ -179,6 +213,11 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
+            <div class="alert alert-light border small text-muted mb-3">
+                <i class="fas fa-gavel mr-1 text-danger"></i> <strong>Ambang sanksi akumulasi poin:</strong>
+                0-24 Pembinaan Ringan &bull; 25-49 Dalam Pemantauan &bull; 50-74 SP 1 / Pembinaan Khusus &bull; 75-99 Skorsing &bull; 100+ Dikeluarkan (DO).
+            </div>
+
             <!-- Tabel Template -->
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
@@ -198,7 +237,8 @@ include '../templates/sidebar.php';
                             <thead class="thead-light text-center">
                                 <tr>
                                     <th style="width: 40px;">No</th>
-                                    <th style="width: 130px;">Kategori</th>
+                                    <th style="width: 110px;">Kategori</th>
+                                    <th style="width: 120px;">Jenis Binaan</th>
                                     <th>Jenis Pelanggaran</th>
                                     <th>Tindakan / Sanksi</th>
                                     <th style="width: 80px;">Poin</th>
@@ -213,6 +253,11 @@ include '../templates/sidebar.php';
                                         <td class="align-middle text-center">
                                             <span class="badge badge-<?= $kb ?> px-2 py-1 font-weight-bold" style="font-size: 11.5px;">
                                                 <?= htmlspecialchars($r['kategori']) ?>
+                                            </span>
+                                        </td>
+                                        <td class="align-middle text-center">
+                                            <span class="badge badge-success px-2 py-1" style="font-size: 11.5px;">
+                                                <?= htmlspecialchars($r['jenis_binaan'] ?? '-') ?>
                                             </span>
                                         </td>
                                         <td class="align-middle" style="font-size: 13px; min-width: 220px;"><?= nl2br(htmlspecialchars($r['jenis'])) ?></td>
@@ -255,7 +300,7 @@ include '../templates/sidebar.php';
                         #modalLanggar textarea { min-height: 110px; line-height: 1.55; resize: vertical; overflow-y: auto; }
                     </style>
                     <div class="row">
-                        <div class="col-md-6 form-group">
+                        <div class="col-md-4 form-group">
                             <label class="font-weight-bold">Kategori <span class="text-danger">*</span></label>
                             <select name="kategori" id="inp_l_kategori" class="form-control" required>
                                 <option value="Ringan">Ringan</option>
@@ -263,7 +308,17 @@ include '../templates/sidebar.php';
                                 <option value="Berat">Berat</option>
                             </select>
                         </div>
-                        <div class="col-md-6 form-group">
+                        <div class="col-md-4 form-group">
+                            <label class="font-weight-bold">Jenis Binaan (Alur 2) <span class="text-danger">*</span></label>
+                            <select name="jenis_binaan" id="inp_l_binaan" class="form-control" required>
+                                <option value="">-- Otomatis / Pilih --</option>
+                                <?php foreach (['Kedisiplinan', 'Kehadiran', 'Akademik', 'Sikap', 'Sosial'] as $jb): ?>
+                                    <option value="<?= $jb ?>"><?= $jb ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted">Otomatis terisi dari teks + kategori.</small>
+                        </div>
+                        <div class="col-md-4 form-group">
                             <label class="font-weight-bold">Poin Pelanggaran <span class="text-danger">*</span></label>
                             <input type="number" name="poin" id="inp_l_poin" class="form-control" value="5" min="0" required>
                         </div>

@@ -87,6 +87,16 @@ $stmt = $pdo->prepare("
 $stmt->execute($params);
 $langgar_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Akumulasi total poin SEMUA WAKTU per siswa (untuk status sanksi valid, bukan hanya filter tampil)
+$poin_all_map = [];
+try {
+    $stAll = $pdo->prepare("SELECT id_siswa, COALESCE(SUM(poin),0) AS tot, COUNT(*) AS cnt FROM tb_pelanggaran_siswa WHERE 1=1 " . ($user_level !== 'admin' ? "AND id_wali = " . (int)$guru_id : "") . " GROUP BY id_siswa");
+    $stAll->execute();
+    foreach ($stAll->fetchAll(PDO::FETCH_ASSOC) as $pa) {
+        $poin_all_map[(int)$pa['id_siswa']] = ['total' => (int)$pa['tot'], 'count' => (int)$pa['cnt']];
+    }
+} catch (Throwable $e) {}
+
 if (empty($langgar_list)) {
     echo "<script>alert('Tidak ada data pelanggaran untuk dicetak.'); window.history.back();</script>";
     exit;
@@ -148,20 +158,34 @@ if (!function_exists('pelanggaran_img_b64')) {
     }
 }
 
-// Logo kop: embed base64 (path relatif putus saat render Dompdf)
-$logo_src = '';
+// Logo kop: mode print pakai path langsung (cepat, anti-separo);
+// mode file PDF pakai base64 (path relatif putus saat render Dompdf).
+$logo_print = '';
 if (!empty($logo_file)) {
     foreach (['../assets/img/' . $logo_file, '../uploads/' . $logo_file] as $lp) {
         $fs = __DIR__ . '/' . $lp;
-        if (is_file($fs)) { $logo_src = pelanggaran_img_b64($fs); break; }
+        if (is_file($fs)) { $logo_print = $lp; break; }
     }
 }
+$logo_src = $logo_print;
+if ($is_download && $logo_print !== '') {
+    $fs = (strpos($logo_print, __DIR__) === 0) ? $logo_print : __DIR__ . '/' . ltrim($logo_print, '/');
+    $b64 = pelanggaran_img_b64($fs);
+    if ($b64 !== '') $logo_src = $b64;
+}
 
-// QR Code Signature: embed base64 agar posisi stabil di file PDF
+// QR Code Signature: mode print pakai URL langsung (cepat);
+// mode file PDF pakai base64 agar posisi stabil.
 $qr_wali_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Wali Kelas: {$nama_wali} - Pelanggaran Siswa - {$nama_madrasah}");
 $qr_kepala_url = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' . urlencode("Tanda Tangan Kepala Madrasah: {$kepala_madrasah} - {$nama_madrasah}");
-$qr_wali = pelanggaran_img_b64($qr_wali_url);
-$qr_kepala = pelanggaran_img_b64($qr_kepala_url);
+$qr_wali = $qr_wali_url;
+$qr_kepala = $qr_kepala_url;
+if ($is_download) {
+    $b64w = pelanggaran_img_b64($qr_wali_url);
+    $b64k = pelanggaran_img_b64($qr_kepala_url);
+    if (strpos($b64w, 'data:image') === 0) $qr_wali = $b64w;
+    if (strpos($b64k, 'data:image') === 0) $qr_kepala = $b64k;
+}
 
 // Buffer HTML
 ob_start();
@@ -211,6 +235,14 @@ ob_start();
             margin: 2px 0;
             font-size: 9pt;
             color: #333;
+        }
+        .header-kop table { table-layout: fixed; }
+        .header-kop td { overflow: visible; }
+        .kop-logo-img {
+            width: 82px;
+            height: 71px;
+            display: block;
+            margin: 0 auto;
         }
         .doc-title {
             text-align: center;
@@ -343,7 +375,7 @@ ob_start();
         <tr style="border: none;">
             <td style="border: none; width: 100px; text-align: center; vertical-align: middle;">
                 <?php if ($logo_src !== ''): ?>
-                    <img src="<?= $logo_src ?>" style="height: 80px; width: auto;">
+                    <img src="<?= $logo_src ?>" class="kop-logo-img" alt="Logo">
                 <?php endif; ?>
             </td>
             <td style="border: none; text-align: center; vertical-align: middle;">
@@ -378,7 +410,13 @@ ob_start();
             <td><?= htmlspecialchars($student_info['nisn'] ?? '-') ?></td>
             <td class="lbl">Total Poin</td>
             <td>:</td>
-            <td><strong><?= (int)array_sum(array_column($langgar_list, 'poin')) ?> poin</strong></td>
+            <?php
+            $sid_info = (int)$student_info['id_siswa'];
+            $tot_all = (int)($poin_all_map[$sid_info]['total'] ?? array_sum(array_column($langgar_list, 'poin')));
+            $cnt_all = (int)($poin_all_map[$sid_info]['count'] ?? count($langgar_list));
+            $sk_info = function_exists('pelanggaran_sanksi_by_poin') ? pelanggaran_sanksi_by_poin($tot_all) : ['level' => '-', 'desc' => ''];
+            ?>
+            <td><strong><?= $tot_all ?> poin</strong> (<?= htmlspecialchars($sk_info['level']) ?>)</td>
         </tr>
         <tr>
             <td class="lbl">Wali Kelas</td>
@@ -386,7 +424,12 @@ ob_start();
             <td><?= htmlspecialchars($student_info['nama_guru'] ?? $nama_wali) ?></td>
             <td class="lbl">Jumlah Catatan</td>
             <td>:</td>
-            <td><?= count($langgar_list) ?> kali pelanggaran</td>
+            <td><?= $cnt_all ?> kali pelanggaran</td>
+        </tr>
+        <tr>
+            <td class="lbl">Status Sanksi</td>
+            <td>:</td>
+            <td colspan="4"><strong><?= htmlspecialchars($sk_info['level']) ?></strong> &mdash; <?= htmlspecialchars($sk_info['desc']) ?></td>
         </tr>
     </table>
 
@@ -394,12 +437,12 @@ ob_start();
         RIWAYAT PELANGGARAN PESERTA DIDIK
     </h5>
 
-    <?php foreach ($langgar_list as $idx => $c): ?>
+    <?php $run = 0; foreach ($langgar_list as $idx => $c): $run += (int)$c['poin']; ?>
         <div class="card-entry">
             <div class="entry-header">
                 <div>
                     <strong>Pelanggaran #<?= $idx + 1 ?> &bull; <?= date('d F Y', strtotime($c['tanggal'])) ?></strong>
-                    <span class="badge-asp" style="margin-left: 8px;"><?= htmlspecialchars($c['kategori']) ?> &bull; <?= (int)$c['poin'] ?> poin</span>
+                    <span class="badge-asp" style="margin-left: 8px;"><?= htmlspecialchars($c['kategori']) ?> &bull; +<?= (int)$c['poin'] ?> poin (akumulasi <?= $run ?>)</span>
                 </div>
                 <div>Status: <strong><?= htmlspecialchars($c['status']) ?></strong></div>
             </div>
@@ -422,6 +465,52 @@ ob_start();
     <?php endforeach; ?>
 
 <?php else: ?>
+    <!-- REKAP AKUMULASI POIN + STATUS SANKSI PER SISWA -->
+    <?php
+    $rekap = [];
+    foreach ($langgar_list as $rw) {
+        $sid = (int)$rw['id_siswa'];
+        if (!isset($rekap[$sid])) {
+            $tot = (int)($poin_all_map[$sid]['total'] ?? 0);
+            $rekap[$sid] = [
+                'nama' => $rw['nama_siswa'], 'nisn' => $rw['nisn'] ?? '-',
+                'kelas' => $rw['nama_kelas'] ?? '-', 'total' => $tot,
+                'count' => (int)($poin_all_map[$sid]['count'] ?? 0),
+            ];
+            $rekap[$sid]['sanksi'] = function_exists('pelanggaran_sanksi_by_poin') ? pelanggaran_sanksi_by_poin($tot) : ['level' => '-'];
+        }
+    }
+    uasort($rekap, function($a, $b) { return $b['total'] <=> $a['total']; });
+    ?>
+    <h5 style="margin: 14px 0 8px; font-size: 10.5pt; border-bottom: 1.5px solid #b91c1c; color: #991b1b; padding-bottom: 3px;">
+        AKUMULASI POIN &amp; STATUS SANKSI (25 PEMANTAUAN &bull; 50 SP1 &bull; 75 SKORSING &bull; 100 DO)
+    </h5>
+    <table class="table-data">
+        <thead>
+            <tr>
+                <th style="width: 25px;">No</th>
+                <th style="width: 140px;">Nama Siswa</th>
+                <th style="width: 55px;">Kelas</th>
+                <th style="width: 55px;">Jml</th>
+                <th style="width: 55px;">Total Poin</th>
+                <th style="width: 150px;">Status Sanksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php $no = 1; foreach ($rekap as $rk): ?>
+                <tr>
+                    <td style="text-align: center;"><?= $no++ ?></td>
+                    <td><strong><?= htmlspecialchars($rk['nama']) ?></strong>
+                        <div style="font-size: 8pt; color: #555;">NISN: <?= htmlspecialchars($rk['nisn']) ?></div>
+                    </td>
+                    <td style="text-align: center;"><?= htmlspecialchars($rk['kelas']) ?></td>
+                    <td style="text-align: center;"><?= (int)$rk['count'] ?>x</td>
+                    <td style="text-align: center; font-weight: bold; color: #b91c1c;"><?= (int)$rk['total'] ?></td>
+                    <td style="text-align: center; font-weight: bold;"><?= htmlspecialchars($rk['sanksi']['level']) ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
     <!-- TABEL REKAPITULASI SEMUA SISWA -->
     <table class="table-data">
         <thead>
@@ -493,12 +582,27 @@ ob_start();
 
 <?php if (!$is_download): ?>
     <script>
-        // Auto print dialog upon page open (stabil, support reload)
-        window.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                window.print();
-            }, 600);
-        });
+        // Tunggu semua gambar (logo + QR) selesai load agar tidak kepotong/separo saat print.
+        function printWhenReady() {
+            var imgs = Array.prototype.slice.call(document.images || []);
+            var pending = imgs.filter(function(im) { return !im.complete; });
+            if (pending.length === 0) {
+                setTimeout(function() { window.print(); }, 350);
+                return;
+            }
+            var done = 0;
+            function tick() {
+                done++;
+                if (done >= pending.length) setTimeout(function() { window.print(); }, 350);
+            }
+            pending.forEach(function(im) {
+                im.addEventListener('load', tick, { once: true });
+                im.addEventListener('error', tick, { once: true });
+            });
+            setTimeout(function() { window.print(); }, 3500);
+        }
+        if (document.readyState === 'complete') printWhenReady();
+        else window.addEventListener('load', printWhenReady);
     </script>
 <?php endif; ?>
 
