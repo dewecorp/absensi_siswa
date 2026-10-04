@@ -710,10 +710,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             usort($jadwal_hari_ini, static function ($a, $b) {
                                 $d = ((int)$a['jam_ke']) <=> ((int)$b['jam_ke']);
                                 if ($d !== 0) return $d;
-                                return strcmp((string)($a['waktu_mulai'] ?? ''), (string)($b['waktu_mulai'] ?? ''));
+                                return strcmp((string)($a['waktu_mulai'] ?? ''), (string)($b['waktu_selesai'] ?? ''));
                             });
                         } catch (Throwable $e) {
                             $jadwal_hari_ini = [];
+                        }
+                    }
+
+                    // Kelompokkan jam pelajaran berurutan untuk mapel & kelas yang sama
+                    $jadwal_grouped = [];
+                    if (!empty($jadwal_hari_ini)) {
+                        $cur = null;
+                        foreach ($jadwal_hari_ini as $jd) {
+                            $jam = (int)($jd['jam_ke'] ?? 0);
+                            $mapel = (string)($jd['nama_mapel'] ?? '');
+                            $kelas = (string)($jd['nama_kelas'] ?? '');
+                            $wm = (string)($jd['waktu_mulai'] ?? '');
+                            $ws = (string)($jd['waktu_selesai'] ?? '');
+
+                            if ($cur !== null && $cur['nama_mapel'] === $mapel && $cur['nama_kelas'] === $kelas && $jam === $cur['jam_akhir'] + 1) {
+                                $cur['jam_akhir'] = $jam;
+                                if ($ws !== '') {
+                                    $cur['waktu_selesai'] = $ws;
+                                }
+                                $cur['jumlah_jam']++;
+                            } else {
+                                if ($cur !== null) {
+                                    $jadwal_grouped[] = $cur;
+                                }
+                                $cur = [
+                                    'nama_mapel' => $mapel,
+                                    'nama_kelas' => $kelas,
+                                    'jam_awal' => $jam,
+                                    'jam_akhir' => $jam,
+                                    'waktu_mulai' => $wm,
+                                    'waktu_selesai' => $ws,
+                                    'jumlah_jam' => 1
+                                ];
+                            }
+                        }
+                        if ($cur !== null) {
+                            $jadwal_grouped[] = $cur;
                         }
                     }
                     ?>
@@ -725,31 +762,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <h4>Jadwal Mengajar Hari Ini</h4>
                                     <a href="jadwal_reguler.php" class="btn btn-light btn-sm font-weight-bold"><i class="fas fa-table mr-1"></i> Lihat Jadwal Penuh</a>
                                 </div>
-                                <div class="px-4 pt-3 pb-0 text-center">
-                                    <span class="badge badge-primary px-3 py-2"><i class="fas fa-calendar-day mr-1"></i> <?= htmlspecialchars($jd_hari_ini) ?>, <?= htmlspecialchars($jd_tanggal_ini) ?> &bull; <?= count($jadwal_hari_ini) ?> jam pelajaran</span>
+                                <div class="px-3 pt-3 pb-0">
+                                    <div class="alert alert-primary border-0 shadow-none mb-0 py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap" style="background: rgba(103, 119, 239, 0.1); color: #6777ef; border-radius: 8px;">
+                                        <div class="font-weight-bold" style="font-size: 14px;"><i class="fas fa-calendar-day mr-1.5"></i> <?= htmlspecialchars($jd_hari_ini) ?>, <?= htmlspecialchars($jd_tanggal_ini) ?></div>
+                                        <div><span class="badge badge-primary font-weight-bold" style="font-size: 12px;"><?= count($jadwal_hari_ini) ?> Jam Pelajaran (<?= count($jadwal_grouped) ?> Sesi)</span></div>
+                                    </div>
                                 </div>
                                 <div class="card-body p-3">
-                                    <?php if (!empty($jadwal_hari_ini)): ?>
+                                    <?php if (!empty($jadwal_grouped)): ?>
                                         <div class="row">
-                                            <?php foreach ($jadwal_hari_ini as $jd): ?>
-                                                <div class="col-md-6 col-lg-4 mb-2">
-                                                    <div class="d-flex align-items-center p-2 rounded border bg-light h-100">
-                                                        <span class="badge badge-primary mr-2 px-2 py-2" style="font-size:13px;">Jam <?= htmlspecialchars($jd['jam_ke']) ?></span>
-                                                        <div class="flex-grow-1" style="min-width:0;">
-                                                            <div class="font-weight-bold text-dark text-truncate"><?= htmlspecialchars($jd['nama_mapel'] ?? '-') ?></div>
-                                                            <small class="text-muted">
-                                                                <i class="fas fa-door-open mr-1"></i>Kelas <?= htmlspecialchars($jd['nama_kelas'] ?? '-') ?>
-                                                                <?php if (!empty($jd['waktu_mulai'])): ?>
-                                                                    &bull; <i class="far fa-clock mr-1"></i><?= htmlspecialchars(substr($jd['waktu_mulai'], 0, 5)) ?><?= !empty($jd['waktu_selesai']) ? '–' . htmlspecialchars(substr($jd['waktu_selesai'], 0, 5)) : '' ?>
-                                                                <?php endif; ?>
-                                                            </small>
+                                            <?php foreach ($jadwal_grouped as $g): ?>
+                                                <div class="col-12 col-sm-6 mb-3">
+                                                    <div class="p-3 rounded border bg-white shadow-none h-100" style="border-left: 4px solid #6777ef !important; background-color: #f8fafc;">
+                                                        <div class="font-weight-bold text-dark text-break mb-1.5" style="font-size: 15.5px; line-height: 1.35;">
+                                                            <?= htmlspecialchars($g['nama_mapel'] ?? '-') ?>
+                                                        </div>
+                                                        <div class="text-primary font-weight-bold mb-1.5" style="font-size: 13.5px;">
+                                                            <i class="fas fa-door-open mr-1"></i>Kelas <?= htmlspecialchars($g['nama_kelas'] ?? '-') ?>
+                                                        </div>
+                                                        <div class="text-dark" style="font-size: 12.5px;">
+                                                            <i class="far fa-clock mr-1 text-primary"></i>
+                                                            <strong class="text-dark">Jam ke <?= $g['jam_awal'] == $g['jam_akhir'] ? $g['jam_awal'] : $g['jam_awal'] . '–' . $g['jam_akhir'] ?></strong>
+                                                            <?php if (!empty($g['waktu_mulai'])): ?>
+                                                                &bull; Pukul <?= str_replace(':', '.', substr($g['waktu_mulai'], 0, 5)) ?><?= !empty($g['waktu_selesai']) ? '–' . str_replace(':', '.', substr($g['waktu_selesai'], 0, 5)) : '' ?> WIB
+                                                            <?php endif; ?>
                                                         </div>
                                                     </div>
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
                                     <?php else: ?>
-                                        <div class="py-3 text-center"><i class="fas fa-calendar-check mb-2 d-block text-primary" style="font-size:34px;"></i><p class="font-weight-bold text-dark mb-1" style="font-size:18px;line-height:1.6;">Tidak ada jadwal mengajar hari <?= htmlspecialchars($jd_hari_ini) ?>.</p><p class="text-muted mb-0" style="font-size:14px;">Hari ini (<?= htmlspecialchars($jd_tanggal_ini) ?>) Anda tidak terjadwal mengajar. Gunakan waktu untuk memeriksa perangkat, jurnal, dan catatan perkembangan siswa.</p></div>
+                                        <div class="py-4 text-center px-2">
+                                            <div class="mb-3">
+                                                <span class="avatar-item bg-light text-primary rounded-circle d-inline-flex align-items-center justify-content-center shadow-none" style="width: 54px; height: 54px;">
+                                                    <i class="fas fa-calendar-check" style="font-size: 26px;"></i>
+                                                </span>
+                                            </div>
+                                            <h6 class="font-weight-bold text-dark mb-1">Tidak Ada Jadwal Mengajar Hari <?= htmlspecialchars($jd_hari_ini) ?></h6>
+                                            <p class="text-muted small mx-auto mb-0" style="max-width: 360px; line-height: 1.5;">
+                                                Hari ini (<?= htmlspecialchars($jd_tanggal_ini) ?>) Anda tidak terjadwal mengajar. Gunakan waktu untuk persiapan perangkat pembelajaran, pemeriksaan tugas, atau catatan perkembangan siswa.
+                                            </p>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                             </div>
