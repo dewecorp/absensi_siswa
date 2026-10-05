@@ -57,6 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         $id_kelas = (int)($_POST['id_kelas'] ?? $selected_kelas_id);
         $tanggal = !empty($_POST['tanggal']) ? date('Y-m-d', strtotime($_POST['tanggal'])) : date('Y-m-d');
+        $tanggal_mulai = !empty($_POST['tanggal_mulai']) ? date('Y-m-d', strtotime($_POST['tanggal_mulai'])) : $tanggal;
+        $tanggal_selesai = !empty($_POST['tanggal_selesai']) ? date('Y-m-d', strtotime($_POST['tanggal_selesai'])) : $tanggal_mulai;
+        if ($tanggal_selesai < $tanggal_mulai) { $tmpT = $tanggal_mulai; $tanggal_mulai = $tanggal_selesai; $tanggal_selesai = $tmpT; }
+        $tanggal = $tanggal_mulai;
         $waktu_mulai = !empty($_POST['waktu_mulai']) ? date('H:i:s', strtotime($_POST['waktu_mulai'])) : null;
         $waktu_selesai = !empty($_POST['waktu_selesai']) ? date('H:i:s', strtotime($_POST['waktu_selesai'])) : null;
         $nama_agenda = trim((string)($_POST['nama_agenda'] ?? ''));
@@ -73,25 +77,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($action === 'tambah') {
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_agenda_kelas (
-                            id_wali, id_kelas, tanggal, waktu_mulai, waktu_selesai,
+                            id_wali, id_kelas, tanggal, tanggal_mulai, tanggal_selesai, waktu_mulai, waktu_selesai,
                             nama_agenda, jenis, tempat, penanggung_jawab, status, keterangan
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([
-                        $guru_id, $id_kelas, $tanggal, $waktu_mulai, $waktu_selesai,
+                        $guru_id, $id_kelas, $tanggal, $tanggal_mulai, $tanggal_selesai, $waktu_mulai, $waktu_selesai,
                         $nama_agenda, $jenis, $tempat, $penanggung_jawab, $status, $keterangan
                     ]);
                     $message = ['type' => 'success', 'text' => 'Agenda kelas berhasil ditambahkan.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_agenda_kelas SET
-                            id_kelas = ?, tanggal = ?, waktu_mulai = ?, waktu_selesai = ?,
+                            id_kelas = ?, tanggal = ?, tanggal_mulai = ?, tanggal_selesai = ?, waktu_mulai = ?, waktu_selesai = ?,
                             nama_agenda = ?, jenis = ?, tempat = ?, penanggung_jawab = ?,
                             status = ?, keterangan = ?
                         WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
-                        $id_kelas, $tanggal, $waktu_mulai, $waktu_selesai,
+                        $id_kelas, $tanggal, $tanggal_mulai, $tanggal_selesai, $waktu_mulai, $waktu_selesai,
                         $nama_agenda, $jenis, $tempat, $penanggung_jawab,
                         $status, $keterangan, $id
                     ]);
@@ -142,11 +146,13 @@ if ($f_status !== '') {
 
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
-    SELECT a.*, c.nama_kelas
+    SELECT a.*, c.nama_kelas,
+           COALESCE(a.tanggal_mulai, a.tanggal) AS tgl_mulai_ef,
+           COALESCE(a.tanggal_selesai, COALESCE(a.tanggal_mulai, a.tanggal)) AS tgl_selesai_ef
     FROM tb_agenda_kelas a
     LEFT JOIN tb_kelas c ON c.id_kelas = a.id_kelas
     WHERE $where_sql
-    ORDER BY a.tanggal ASC, a.waktu_mulai ASC
+    ORDER BY tgl_mulai_ef ASC, a.waktu_mulai ASC
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -155,21 +161,50 @@ $jenis_options = ['Ujian', 'Kegiatan Kelas', 'Kegiatan Madrasah', 'Piket', 'Proj
 $status_options = ['Rencana', 'Berjalan', 'Selesai', 'Batal'];
 
 // Siapkan event JSON untuk tampilan kalender
+// FullCalendar end eksklusif: all-day +1 hari, timed pakai jam asli tanpa +1 hari.
+$agenda_color_map = [
+    'Kegiatan Kelas' => '#6777ef',
+    'Ujian' => '#ffa426',
+    'Kegiatan Madrasah' => '#47c363',
+    'Piket' => '#3abaf4',
+    'Projek' => '#9467ef',
+    'Kokurikuler' => '#20c997',
+];
 $calendar_events = [];
+$legend_used = [];
 foreach ($rows as $r) {
-    $color = '#6777ef';
-    if ($r['jenis'] === 'Ujian') $color = '#fc544b';
-    elseif ($r['jenis'] === 'Projek') $color = '#ffa426';
-    elseif ($r['jenis'] === 'Kegiatan Madrasah') $color = '#47c363';
-    elseif ($r['jenis'] === 'Kokurikuler') $color = '#3abaf4';
+    $ev_start_tgl = $r['tgl_mulai_ef'] ?? $r['tanggal'];
+    $ev_end_tgl = $r['tgl_selesai_ef'] ?? $ev_start_tgl;
+    $is_libur = stripos(($r['nama_agenda'] ?? '') . ' ' . ($r['jenis'] ?? '') . ' ' . ($r['keterangan'] ?? ''), 'libur') !== false;
+    if ($is_libur) {
+        $color = '#dc3545';
+        $legend_used['Libur'] = '#dc3545';
+    } else {
+        $jenis_ev = (string)($r['jenis'] ?? '');
+        $color = $agenda_color_map[$jenis_ev] ?? '#6777ef';
+        if ($jenis_ev !== '') $legend_used[$jenis_ev] = $color;
+    }
 
+    $has_time = !empty($r['waktu_mulai']) || !empty($r['waktu_selesai']);
+    if (!$has_time) {
+        $ev_start = $ev_start_tgl;
+        $ev_end = date('Y-m-d', strtotime($ev_end_tgl . ' +1 day'));
+    } elseif ($ev_start_tgl === $ev_end_tgl) {
+        $ev_start = $ev_start_tgl . (!empty($r['waktu_mulai']) ? 'T' . substr((string)$r['waktu_mulai'], 0, 5) : '');
+        $ev_end = $ev_end_tgl . (!empty($r['waktu_selesai']) ? 'T' . substr((string)$r['waktu_selesai'], 0, 5) : (!empty($r['waktu_mulai']) ? 'T' . substr((string)$r['waktu_mulai'], 0, 5) : ''));
+    } else {
+        $ev_start = $ev_start_tgl . (!empty($r['waktu_mulai']) ? 'T' . substr((string)$r['waktu_mulai'], 0, 5) : '');
+        $ev_end = $ev_end_tgl . (!empty($r['waktu_selesai']) ? 'T' . substr((string)$r['waktu_selesai'], 0, 5) : '');
+    }
     $calendar_events[] = [
         'id' => $r['id'],
-        'title' => $r['nama_agenda'] . ($r['tempat'] ? ' (' . $r['tempat'] . ')' : ''),
-        'start' => $r['tanggal'] . (!empty($r['waktu_mulai']) ? 'T' . $r['waktu_mulai'] : ''),
-        'end' => $r['tanggal'] . (!empty($r['waktu_selesai']) ? 'T' . $r['waktu_selesai'] : ''),
+        'title' => $r['nama_agenda'],
+        'start' => $ev_start,
+        'end' => $ev_end,
+        'allDay' => !$has_time,
         'backgroundColor' => $color,
         'borderColor' => $color,
+        'textColor' => '#ffffff',
         'extendedProps' => $r
     ];
 }
@@ -223,6 +258,10 @@ $(document).ready(function() {
                 week: 'Minggu',
                 list: 'Agenda List'
             },
+            displayEventEnd: false,
+            displayEventTime: false,
+            eventDisplay: 'block',
+            eventTextColor: '#ffffff',
             events: calendarEvents,
             eventClick: function(info) {
                 var data = info.event.extendedProps;
@@ -247,7 +286,9 @@ $(document).ready(function() {
     });
 
     function showDetailAgenda(data) {
-        $('#det_tanggal').text(data.tanggal);
+        var tglM = data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal;
+        var tglS = data.tanggal_selesai || data.tgl_selesai_ef || tglM;
+        $('#det_tanggal').text(tglM === tglS ? tglM : (tglM + ' s/d ' + tglS));
         var waktu = (data.waktu_mulai ? data.waktu_mulai.substring(0,5) : '-') + ' s/d ' + (data.waktu_selesai ? data.waktu_selesai.substring(0,5) : '-');
         $('#det_waktu').text(waktu);
         $('#det_nama').text(data.nama_agenda);
@@ -271,6 +312,8 @@ $(document).ready(function() {
         $('#agendaId').val(data.id);
         $('#modalAgendaTitle').text('Edit Agenda Kelas');
         $('#inp_tanggal').val(data.tanggal);
+        $('#inp_tanggal_mulai').val(data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal);
+        $('#inp_tanggal_selesai').val(data.tanggal_selesai || data.tgl_selesai_ef || data.tanggal);
         $('#inp_mulai').val(data.waktu_mulai ? data.waktu_mulai.substring(0,5) : '');
         $('#inp_selesai').val(data.waktu_selesai ? data.waktu_selesai.substring(0,5) : '');
         $('#inp_nama').val(data.nama_agenda);
@@ -393,7 +436,7 @@ include '../templates/sidebar.php';
                                     <thead>
                                         <tr>
                                             <th width="4%">No</th>
-                                            <th>Tanggal</th>
+                                            <th>Tanggal Mulai - Selesai</th>
                                             <th>Waktu</th>
                                             <th>Nama Agenda</th>
                                             <th>Jenis</th>
@@ -420,7 +463,13 @@ include '../templates/sidebar.php';
                                             ?>
                                             <tr>
                                                 <td class="text-center"><?= $i + 1 ?></td>
-                                                <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
+                                                <?php
+                                                $tm_ef = $r['tanggal_mulai'] ?? $r['tgl_mulai_ef'] ?? $r['tanggal'];
+                                                $ts_ef = $r['tanggal_selesai'] ?? $r['tgl_selesai_ef'] ?? $tm_ef;
+                                                $tgl_str = date('d/m/Y', strtotime($tm_ef));
+                                                if ($ts_ef !== $tm_ef) $tgl_str .= ' - ' . date('d/m/Y', strtotime($ts_ef));
+                                                ?>
+                                                <td><?= $tgl_str ?></td>
                                                 <td class="text-center"><?= $waktu_str ?></td>
                                                 <td><strong><?= htmlspecialchars($r['nama_agenda']) ?></strong></td>
                                                 <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis']) ?></span></td>
@@ -450,6 +499,13 @@ include '../templates/sidebar.php';
 
                         <!-- Tampilan Kalender -->
                         <div class="tab-pane fade" id="tab-kalender" role="tabpanel">
+                            <?php if (!empty($legend_used)): ?>
+                            <div class="d-flex flex-wrap mb-2" style="gap:6px;font-size:12px;">
+                                <?php foreach ($legend_used as $lg_name => $lg_color): ?>
+                                    <span class="badge" style="background:<?= htmlspecialchars($lg_color) ?>;color:#fff;font-weight:700;padding:5px 10px;border-radius:4px;text-shadow:0 1px 2px rgba(0,0,0,.45);"><?= htmlspecialchars($lg_name) ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
                             <div class="p-2" id="calendarView"></div>
                         </div>
                     </div>
@@ -486,15 +542,20 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label>Tanggal</label>
-                            <input type="date" name="tanggal" id="inp_tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        <input type="hidden" name="tanggal" id="inp_tanggal" value="<?= date('Y-m-d') ?>">
+                        <div class="col-md-6 form-group">
+                            <label>Tanggal Mulai <span class="text-danger">*</span></label>
+                            <input type="date" name="tanggal_mulai" id="inp_tanggal_mulai" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-6 form-group">
+                            <label>Tanggal Selesai <span class="text-danger">*</span></label>
+                            <input type="date" name="tanggal_selesai" id="inp_tanggal_selesai" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-md-6 form-group">
                             <label>Waktu Mulai</label>
                             <input type="time" name="waktu_mulai" id="inp_mulai" class="form-control">
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-6 form-group">
                             <label>Waktu Selesai</label>
                             <input type="time" name="waktu_selesai" id="inp_selesai" class="form-control">
                         </div>
@@ -540,7 +601,7 @@ include '../templates/sidebar.php';
             <div class="modal-body">
                 <table class="table table-bordered table-sm">
                     <tr><th width="35%">Nama Agenda</th><td id="det_nama" class="font-weight-bold text-primary"></td></tr>
-                    <tr><th>Tanggal</th><td id="det_tanggal"></td></tr>
+                    <tr><th>Tanggal Mulai - Selesai</th><td id="det_tanggal"></td></tr>
                     <tr><th>Waktu</th><td id="det_waktu"></td></tr>
                     <tr><th>Jenis</th><td id="det_jenis"></td></tr>
                     <tr><th>Kelas</th><td id="det_kelas"></td></tr>

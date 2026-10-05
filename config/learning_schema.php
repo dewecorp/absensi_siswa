@@ -675,6 +675,8 @@ if (!function_exists('ensure_learning_schema')) {
             ['tb_pembinaan_siswa', 'id_pelanggaran', 'INT NULL'],
             ['tb_tindak_lanjut_wali', 'id_pembinaan', 'INT NULL'],
             ['tb_tindak_lanjut_wali', 'id_konseling', 'INT NULL'],
+            ['tb_agenda_kelas', 'tanggal_mulai', 'DATE NULL'],
+            ['tb_agenda_kelas', 'tanggal_selesai', 'DATE NULL'],
         ] as $rel) {
             try {
                 $chk = $pdo->query("SHOW COLUMNS FROM {$rel[0]} LIKE '{$rel[1]}'")->fetch();
@@ -938,6 +940,8 @@ if (!function_exists('ensure_learning_schema')) {
                 id_wali INT NOT NULL,
                 id_kelas INT NOT NULL,
                 tanggal DATE NOT NULL,
+                tanggal_mulai DATE NULL,
+                tanggal_selesai DATE NULL,
                 waktu_mulai TIME NULL,
                 waktu_selesai TIME NULL,
                 nama_agenda VARCHAR(255) NOT NULL,
