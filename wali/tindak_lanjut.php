@@ -665,7 +665,7 @@ include '../templates/sidebar.php';
 
             <div class="alert alert-light border small text-muted mb-3">
                 <i class="fas fa-stream mr-1 text-primary"></i> <strong>Hibrid (Pembinaan &amp; Konseling):</strong> Tindak lanjut dapat dibuat dari
-                <strong>Pembinaan Siswa</strong> maupun <strong>Konseling Awal</strong> yang BELUM ditindaklanjuti.
+                <strong>Pembinaan Siswa</strong> maupun <strong>Konseling Siswa</strong> yang BELUM ditindaklanjuti.
             </div>
 
             <div class="card">
@@ -814,7 +814,7 @@ include '../templates/sidebar.php';
                             <label class="font-weight-bold">Sumber Masalah <span class="text-danger">*</span></label>
                             <select name="sumber" id="inp_sumber" class="form-control" required>
                                 <option value="Pembinaan">Pembinaan Siswa</option>
-                                <option value="Konseling">Konseling Awal</option>
+                                <option value="Konseling">Konseling Siswa</option>
                             </select>
                             <small class="text-muted">Pilih apakah tindak lanjut dari Pembinaan atau dari Konseling.</small>
                         </div>
@@ -912,3 +912,4 @@ include '../templates/sidebar.php';
 </form>
 
 <?php include '../templates/footer.php'; ?>
+

@@ -556,25 +556,17 @@ ob_start();
 <!-- TANDA TANGAN -->
 <table class="signature-table">
     <tr>
-        <td style="text-align: center; vertical-align: top; width: 50%;">
+        <td>
             Mengetahui,<br>
             Kepala Madrasah<br>
-            <div style="height: 72px; text-align: center; margin: 4px 0;">
-                <?php if ($qr_kepala !== '' && strpos($qr_kepala, 'data:image') === 0): ?>
-                    <img src="<?= $qr_kepala ?>" alt="QR TTD Kepala" style="width: 64px; height: 64px;">
-                <?php endif; ?>
-            </div>
+            <img src="<?= $qr_kepala ?>" alt="QR TTD Kepala" style="width: 60px; height: 60px; margin: 6px auto; display: block;">
             <strong><?= htmlspecialchars($kepala_madrasah) ?></strong><br>
             NIP: <?= htmlspecialchars($nip_kepala) ?>
         </td>
-        <td style="text-align: center; vertical-align: top; width: 50%;">
+        <td>
             <?= htmlspecialchars($tempat_jadwal) ?>, <?= date('d F Y') ?><br>
             Wali Kelas,<br>
-            <div style="height: 72px; text-align: center; margin: 4px 0;">
-                <?php if ($qr_wali !== '' && strpos($qr_wali, 'data:image') === 0): ?>
-                    <img src="<?= $qr_wali ?>" alt="QR TTD Wali" style="width: 64px; height: 64px;">
-                <?php endif; ?>
-            </div>
+            <img src="<?= $qr_wali ?>" alt="QR TTD Wali" style="width: 60px; height: 60px; margin: 6px auto; display: block;">
             <strong><?= htmlspecialchars($nama_wali) ?></strong>
         </td>
     </tr>

@@ -141,7 +141,7 @@ $stMasterKons = $pdo->prepare("
 $stMasterKons->execute([$guru_id]);
 $master_konseling = $stMasterKons->fetchAll(PDO::FETCH_ASSOC);
 
-$page_title = 'Daftar Konseling Awal';
+$page_title = 'Daftar Konseling Siswa';
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
 ];
@@ -252,7 +252,7 @@ $(document).ready(function() {
     $('#btnTambahKonseling').on('click', function() {
         $('#formKonselingAction').val('tambah');
         $('#konselingId').val('');
-        $('#modalKonselingTitle').text('Catat Sesi Konseling Awal');
+        $('#modalKonselingTitle').text('Catat Sesi Konseling Siswa');
         $('#formKonseling')[0].reset();
         var curTopik = $('#inp_topik').val() || '';
         populateKons(curTopik);
@@ -267,7 +267,7 @@ $(document).ready(function() {
         var data = $(this).data('json');
         $('#formKonselingAction').val('edit');
         $('#konselingId').val(data.id);
-        $('#modalKonselingTitle').text('Edit Konseling Awal');
+        $('#modalKonselingTitle').text('Edit Konseling Siswa');
         $('#inp_siswa').val(data.id_siswa);
         $('#inp_tanggal').val(data.tanggal);
         $('#inp_topik').val(data.topik);
@@ -345,7 +345,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Daftar Konseling Awal <?= !empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '' ?></h1>
+            <h1>Daftar Konseling Siswa <?= !empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '' ?></h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
@@ -474,7 +474,7 @@ include '../templates/sidebar.php';
                 <input type="hidden" name="id" id="konselingId" value="">
                 <input type="hidden" name="id_kelas" value="<?= (int)$selected_kelas_id ?>">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalKonselingTitle">Sesi Konseling Awal Siswa</h5>
+                    <h5 class="modal-title" id="modalKonselingTitle">Sesi Konseling Siswa</h5>
                     <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
@@ -554,7 +554,7 @@ include '../templates/sidebar.php';
     <div class="modal-dialog modal-md" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-user-shield mr-2"></i>Rincian Rahasia Konseling Awal</h5>
+                <h5 class="modal-title"><i class="fas fa-user-shield mr-2"></i>Rincian Rahasia Konseling Siswa</h5>
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
@@ -586,3 +586,4 @@ include '../templates/sidebar.php';
 </form>
 
 <?php include '../templates/footer.php'; ?>
+

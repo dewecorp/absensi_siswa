@@ -326,13 +326,14 @@ $(document).ready(function() {
                 var total = (res && typeof res.total !== 'undefined') ? res.total : 0;
                 var count = (res && typeof res.count !== 'undefined') ? res.count : 0;
                 var sanksi = (res && res.sanksi) ? res.sanksi : { level: '-', badge: 'secondary', desc: '' };
-                var acc = '<div class="alert alert-' + sanksi.badge + ' mb-2">';
-                acc += '<div class="d-flex justify-content-between align-items-center flex-wrap">';
-                acc += '<div><strong>Total ' + total + ' poin</strong> dari ' + count + ' pelanggaran</div>';
-                acc += '<span class="badge badge-' + sanksi.badge + '">' + sanksi.level + '</span>';
-                acc += '</div><div class="small mt-1">' + sanksi.desc + '</div>';
-                acc += '<div class="progress mt-2" style="height: 10px;"><div class="progress-bar bg-' + sanksi.badge + '" style="width: ' + Math.min(100, total) + '%"></div></div>';
-                acc += '<div class="small text-muted mt-1">25 Pemantauan &bull; 50 SP1 &bull; 75 Skorsing &bull; 100 DO</div></div>';
+                var pct = Math.max(4, Math.min(100, total));
+                var acc = '<div class="border rounded p-3 mb-2" style="background:#f8fafc;border-color:#e2e8f0 !important;">';
+                acc += '<div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">';
+                acc += '<div class="text-dark"><strong>Total ' + total + ' poin</strong> <span class="text-muted">dari ' + count + ' pelanggaran</span></div>';
+                acc += '<span class="badge badge-' + sanksi.badge + '" style="font-size:12px;">' + sanksi.level + '</span>';
+                acc += '</div><div class="small mt-1 text-dark">' + sanksi.desc + '</div>';
+                acc += '<div class="progress mt-2" style="height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden;"><div class="progress-bar bg-' + sanksi.badge + '" role="progressbar" aria-valuenow="' + total + '" aria-valuemin="0" aria-valuemax="100" style="width:' + pct + '%;font-size:10px;font-weight:700;line-height:12px;color:#fff;">' + total + '</div></div>';
+                acc += '<div class="d-flex justify-content-between small font-weight-bold text-dark mt-1"><span>0</span><span>25 Pemantauan</span><span>50 SP1</span><span>75 Skorsing</span><span>100 DO</span></div></div>';
                 $('#akumulasiLanggar').html(acc);
                 var tl = (res && res.timeline) ? res.timeline : [];
                 if (!tl.length) {

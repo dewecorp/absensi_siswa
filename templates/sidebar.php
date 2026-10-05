@@ -404,7 +404,7 @@ switch ($user_level) {
             ['title' => 'Data Tindak Lanjut', 'url' => '../wali/data_tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'data_tindak_lanjut.php'],
             ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php?session_type=admin', 'active' => $current_page === 'jadwal_piket_kelas.php'],
             ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php?session_type=admin', 'active' => $current_page === 'komunikasi_ortu.php'],
-            ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php?session_type=admin', 'active' => $current_page === 'konseling_awal.php'],
+            ['title' => 'Konseling Siswa', 'url' => '../wali/konseling_awal.php?session_type=admin', 'active' => $current_page === 'konseling_awal.php'],
             ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php?session_type=admin', 'active' => $current_page === 'pelanggaran_siswa.php'],
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php?session_type=admin', 'active' => $current_page === 'pembinaan_siswa.php'],
             ['title' => 'Tindak Lanjut', 'url' => '../wali/tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'tindak_lanjut.php'],
@@ -638,7 +638,7 @@ switch ($user_level) {
             ['title' => 'Data Konseling', 'url' => '../wali/data_konseling.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_konseling.php'],
             ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'jadwal_piket_kelas.php'],
             ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php?session_type=kepala_madrasah', 'active' => $current_page === 'komunikasi_ortu.php'],
-            ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php?session_type=kepala_madrasah', 'active' => $current_page === 'konseling_awal.php'],
+            ['title' => 'Konseling Siswa', 'url' => '../wali/konseling_awal.php?session_type=kepala_madrasah', 'active' => $current_page === 'konseling_awal.php'],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'projek_kokurikuler.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'struktur_kelas.php'],
         ];
@@ -1345,7 +1345,7 @@ switch ($user_level) {
             ['title' => 'Data Tindak Lanjut', 'url' => '../wali/data_tindak_lanjut.php', 'active' => $current_page === 'data_tindak_lanjut.php'],
             ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php', 'active' => $current_page === 'jadwal_piket_kelas.php'],
             ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php', 'active' => $current_page === 'komunikasi_ortu.php'],
-            ['title' => 'Konseling Awal', 'url' => '../wali/konseling_awal.php', 'active' => $current_page === 'konseling_awal.php'],
+            ['title' => 'Konseling Siswa', 'url' => '../wali/konseling_awal.php', 'active' => $current_page === 'konseling_awal.php'],
             ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php', 'active' => $current_page === 'pelanggaran_siswa.php'],
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php', 'active' => $current_page === 'pembinaan_siswa.php'],
             ['title' => 'Tindak Lanjut', 'url' => '../wali/tindak_lanjut.php', 'active' => $current_page === 'tindak_lanjut.php'],
@@ -1873,3 +1873,4 @@ $(function() {
 SIDEBARJS;
 ?>
 </div>
+
