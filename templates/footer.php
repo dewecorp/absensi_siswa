@@ -243,7 +243,8 @@
                         </div>
                         <div class="modal-body">
                             <table class="table table-bordered table-sm mb-3">
-                                <tr><th width="35%">Tanggal</th><td id="nav_baca_tanggal"></td></tr>
+                                <tr><th width="35%">Tanggal Mulai - Selesai</th><td id="nav_baca_tanggal"></td></tr>
+                                <tr><th>Waktu Kirim</th><td id="nav_baca_waktu"></td></tr>
                                 <tr><th>Pengirim</th><td id="nav_baca_pengirim" class="font-weight-bold"></td></tr>
                                 <tr><th>Kepada Ortu/Wali</th><td id="nav_baca_ortu"></td></tr>
                                 <tr><th>Jenis Informasi</th><td id="nav_baca_jenis"></td></tr>
@@ -251,6 +252,7 @@
                             </table>
                             <div class="font-weight-bold mb-1">Isi Pesan / Laporan:</div>
                             <div id="nav_baca_isi" class="p-3 border rounded bg-light" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.6;"></div>
+                            <div id="nav_baca_lampiran_wrap" class="mt-2" style="display:none;"></div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
@@ -262,17 +264,46 @@
             <script>
             function openStudentMsgFromNav(data, element) {
                 if (!data) return;
-                $('#nav_baca_tanggal').text(data.tanggal || '-');
-                $('#nav_baca_pengirim').text(data.nama_guru || 'Wali Kelas');
+                var tglStr = '-';
+                var tm = data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal;
+                var ts = data.tanggal_selesai || data.tgl_selesai_ef || tm;
+                if (tm) {
+                    var formatDate = function(dStr) {
+                        if (!dStr) return '';
+                        var parts = String(dStr).split(' ')[0].split('-');
+                        if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
+                        return dStr;
+                    };
+                    var fM = formatDate(tm);
+                    var fS = formatDate(ts);
+                    tglStr = (!fS || fM === fS) ? fM : (fM + ' s/d ' + fS);
+                }
+                var waktuStr = '-';
+                if (data.created_at) {
+                    var timePart = String(data.created_at).split(' ')[1];
+                    if (timePart) {
+                        waktuStr = timePart.substring(0, 5) + ' WIB';
+                    }
+                }
+                $('#nav_baca_tanggal').text(tglStr);
+                $('#nav_baca_waktu').text(waktuStr);
+                $('#nav_baca_pengirim').text(data.nama_guru || data.pengirim || 'Wali / Guru');
                 $('#nav_baca_ortu').text(data.nama_ortu || '-');
                 $('#nav_baca_jenis').html('<span class="badge badge-info">' + $('<div>').text(data.jenis_informasi || '').html() + '</span>');
                 $('#nav_baca_judul').text(data.judul || '-');
                 $('#nav_baca_isi').text(data.isi || '-');
                 
+                if (data.lampiran) {
+                    var lampDir = data.msg_type === 'tugas' ? 'tugas' : 'komunikasi';
+                    $('#nav_baca_lampiran_wrap').html('<a href="../uploads/' + lampDir + '/' + String(data.lampiran).split('/').map(encodeURIComponent).join('/') + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-paperclip mr-1"></i>Unduh Berkas Lampiran (' + String(data.lampiran).split('.').pop().toUpperCase() + ')</a>').show();
+                } else {
+                    $('#nav_baca_lampiran_wrap').hide().empty();
+                }
+
                 $('#modalBacaPesanSiswaNav').modal('show');
                 
                 if (data.status_dibaca !== 'Sudah Dibaca') {
-                    $.post('<?php echo htmlspecialchars(app_url('siswa/mark_message_read.php'), ENT_QUOTES, 'UTF-8'); ?>', { pesan_id: data.id }, function(res) {
+                    $.post('<?php echo htmlspecialchars(app_url('siswa/mark_message_read.php'), ENT_QUOTES, 'UTF-8'); ?>', { pesan_id: data.id, msg_type: data.msg_type || 'ortu' }, function(res) {
                         data.status_dibaca = 'Sudah Dibaca';
                         if (element) {
                             var $el = $(element);

@@ -677,6 +677,14 @@ if (!function_exists('ensure_learning_schema')) {
             ['tb_tindak_lanjut_wali', 'id_konseling', 'INT NULL'],
             ['tb_agenda_kelas', 'tanggal_mulai', 'DATE NULL'],
             ['tb_agenda_kelas', 'tanggal_selesai', 'DATE NULL'],
+            ['tb_komunikasi_kelas', 'tanggal_mulai', 'DATE NULL'],
+            ['tb_komunikasi_kelas', 'tanggal_selesai', 'DATE NULL'],
+            ['tb_komunikasi_kelas', 'waktu_mulai', 'TIME NULL'],
+            ['tb_komunikasi_kelas', 'waktu_selesai', 'TIME NULL'],
+            ['tb_komunikasi_ortu', 'tanggal_mulai', 'DATE NULL'],
+            ['tb_komunikasi_ortu', 'tanggal_selesai', 'DATE NULL'],
+            ['tb_komunikasi_ortu', 'waktu_mulai', 'TIME NULL'],
+            ['tb_komunikasi_ortu', 'waktu_selesai', 'TIME NULL'],
         ] as $rel) {
             try {
                 $chk = $pdo->query("SHOW COLUMNS FROM {$rel[0]} LIKE '{$rel[1]}'")->fetch();

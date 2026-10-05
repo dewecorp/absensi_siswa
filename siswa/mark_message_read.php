@@ -10,6 +10,7 @@ if (!isAuthorized(['siswa'])) {
 
 $id_siswa = (int)($_SESSION['user_id'] ?? 0);
 $pesan_id = (int)($_POST['pesan_id'] ?? 0);
+$msg_type = trim((string)($_POST['msg_type'] ?? 'ortu'));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pesan_id > 0 && $id_siswa > 0) {
     try {
@@ -17,7 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pesan_id > 0 && $id_siswa > 0) {
         $stCls->execute([$id_siswa]);
         $student_class_id = (int)$stCls->fetchColumn();
 
-        $pdo->prepare("UPDATE tb_komunikasi_ortu SET status_dibaca = 'Sudah Dibaca' WHERE id = ? AND (id_siswa = ? OR (id_kelas = ? AND jenis_informasi = 'Pengumuman Kelas'))")->execute([$pesan_id, $id_siswa, $student_class_id]);
+        if ($msg_type === 'kelas') {
+            $pdo->prepare("INSERT INTO tb_komunikasi_kelas_read (id_komunikasi, id_siswa, dibaca_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE dibaca_at = NOW()")->execute([$pesan_id, $id_siswa]);
+        } else {
+            $pdo->prepare("UPDATE tb_komunikasi_ortu SET status_dibaca = 'Sudah Dibaca' WHERE id = ? AND (id_siswa = ? OR (id_kelas = ? AND jenis_informasi = 'Pengumuman Kelas'))")->execute([$pesan_id, $id_siswa, $student_class_id]);
+        }
         echo json_encode(['status' => 'success', 'ok' => true]);
     } catch (Throwable $e) {
         http_response_code(500);

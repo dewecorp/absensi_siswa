@@ -15,8 +15,8 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
 }
 
-$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
-$can_crud = !$is_admin_or_kepala;
+$is_kepala = ($user_level === 'kepala_madrasah') || (($_GET['session_type'] ?? '') === 'kepala_madrasah');
+$can_crud = !$is_kepala;
 
 $id_tugas = (int)($_GET['id'] ?? 0);
 if ($id_tugas <= 0) {
@@ -25,7 +25,7 @@ if ($id_tugas <= 0) {
 
 // Deteksi kelas wali jika login sebagai wali
 $wali_kelas_id = 0;
-if (!$is_admin_or_kepala) {
+if ($user_level !== 'admin' && !$is_kepala) {
     try {
         $stWali = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ? OR wali_kelas = (SELECT nama_guru FROM tb_guru WHERE id_guru = ?)");
         $stWali->execute([$guru_id, $guru_id]);
@@ -33,7 +33,7 @@ if (!$is_admin_or_kepala) {
     } catch (Throwable $e) {}
 }
 
-if ($is_admin_or_kepala) {
+if ($user_level === 'admin' || $is_kepala) {
     $auth_sql = "t.id = ?";
     $auth_params = [$id_tugas];
 } else {
@@ -150,12 +150,13 @@ $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
 ];
 
-$js_page = [<<<'JS'
+$can_crud_js = json_encode((bool)$can_crud);
+$js_page = [<<<JS
 $(document).ready(function() {
     if ($('#table-pengumpulan').length) {
         $('#table-pengumpulan').DataTable({
             'order': [[1, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [8] }],
+            'columnDefs': [{ 'sortable': false, 'targets': [8, 9] }],
             'language': {
                 'lengthMenu': 'Tampilkan _MENU_ entri',
                 'zeroRecords': 'Tidak ada data pengumpulan',
@@ -175,9 +176,7 @@ $(document).ready(function() {
         $('#mdl_nilai').val(data.nilai !== null ? data.nilai : '');
         $('#mdl_status_periksa').val(data.status_periksa || 'Sudah Diperiksa');
         $('#mdl_feedback').val(data.feedback || '');
-        if (!<?= json_encode($can_crud) ?>) {
-            $('#mdl_nilai, #mdl_status_periksa, #mdl_feedback').prop('disabled', true);
-        }
+        $('#mdl_nilai, #mdl_status_periksa, #mdl_feedback').prop('disabled', !$can_crud_js);
 
         if (data.file_path) {
             var ext = data.file_path.split('.').pop().toLowerCase();
@@ -324,7 +323,8 @@ include '../templates/sidebar.php';
                                     <th>Keterlambatan</th>
                                     <th>Nilai</th>
                                     <th>Status Pemeriksaan</th>
-                                    <th width="14%">Aksi</th>
+                                    <th width="10%" class="text-center">Berkas Siswa</th>
+                                    <th width="12%" class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -374,6 +374,17 @@ include '../templates/sidebar.php';
                                             <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($st_periksa) ?></span>
                                         </td>
                                         <td class="text-center">
+                                            <?php $s_href = guru_file_href('tugas', $s['file_path'] ?? ''); ?>
+                                            <?php if ($s_href): ?>
+                                                <?php $ext = strtoupper(pathinfo($s['file_path'], PATHINFO_EXTENSION)); ?>
+                                                <a href="<?= htmlspecialchars($s_href) ?>" target="_blank" class="btn btn-outline-primary btn-sm" title="Unduh Berkas Siswa">
+                                                    <i class="fas fa-file-download mr-1"></i> <?= $ext ?>
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="text-muted small">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-center">
                                             <?php if ($can_crud): ?>
                                             <button type="button" class="btn btn-primary btn-sm btn-periksa"
                                                 data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'
@@ -386,12 +397,6 @@ include '../templates/sidebar.php';
                                                 title="Lihat Detail Nilai & Feedback">
                                                 <i class="fas fa-eye mr-1"></i> Detail
                                             </button>
-                                            <?php endif; ?>
-                                            <?php $s_href = guru_file_href('tugas', $s['file_path'] ?? ''); ?>
-                                            <?php if ($s_href): ?>
-                                                <a href="<?= htmlspecialchars($s_href) ?>" target="_blank" class="btn btn-info btn-sm" title="Lihat / Download File">
-                                                    <i class="fas fa-file-download"></i>
-                                                </a>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -422,20 +427,20 @@ include '../templates/sidebar.php';
                         Siswa: <strong id="mdl_nama_siswa"></strong>
                     </div>
                     <div class="form-group">
-                        <label>Berkas Pengumpulan Siswa</label>
+                        <label class="font-weight-bold">Berkas Pengumpulan Siswa</label>
                         <div id="mdl_file_wrap"></div>
                     </div>
                     <div class="form-group">
-                        <label>Catatan Siswa</label>
-                        <div id="mdl_catatan_siswa" class="small text-muted p-2 bg-light rounded"></div>
+                        <label class="font-weight-bold">Catatan Siswa</label>
+                        <div id="mdl_catatan_siswa" class="p-3 bg-light rounded border font-weight-normal" style="font-size: 14px; line-height: 1.6; color: #1e293b !important; white-space: pre-wrap;"></div>
                     </div>
                     <hr>
                     <div class="form-group">
-                        <label>Nilai (Maks: <?= (int)$tugas['nilai_maksimal'] ?>) <span class="text-danger">*</span></label>
+                        <label class="font-weight-bold">Nilai (Maks: <?= (int)$tugas['nilai_maksimal'] ?>) <span class="text-danger">*</span></label>
                         <input type="number" step="0.01" name="nilai" id="mdl_nilai" class="form-control" required min="0" max="<?= (int)$tugas['nilai_maksimal'] ?>">
                     </div>
                     <div class="form-group">
-                        <label>Status Pemeriksaan</label>
+                        <label class="font-weight-bold">Status Pemeriksaan</label>
                         <select name="status_periksa" id="mdl_status_periksa" class="form-control">
                             <option value="Sudah Diperiksa">Sudah Diperiksa</option>
                             <option value="Perlu Revisi">Perlu Revisi</option>
@@ -443,7 +448,7 @@ include '../templates/sidebar.php';
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Feedback / Komentar Guru</label>
+                        <label class="font-weight-bold">Feedback / Komentar Guru</label>
                         <textarea name="feedback" id="mdl_feedback" class="form-control" rows="3" placeholder="Berikan catatan perbaikan atau apresiasi..."></textarea>
                     </div>
                 </div>

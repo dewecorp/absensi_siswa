@@ -1,6 +1,9 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/functions.php';
+require_once '../config/learning_schema.php';
+
+ensure_learning_schema($pdo);
 
 // Check if user is logged in and has siswa level
 if (!isAuthorized(['siswa'])) {
@@ -244,22 +247,63 @@ if ($student_class_id > 0) {
     } catch (Throwable $e) {}
 }
 
-// Ambil pesan komunikasi ortu / sekolah untuk siswa
+// Ambil pesan komunikasi ortu / kelas untuk siswa
 $student_messages = [];
 $total_pesan_belum_baca = 0;
 if ($student_class_id > 0 && $id_siswa > 0) {
     try {
         $stPesan = $pdo->prepare("
-            SELECT k.*, g.nama_guru, c.nama_kelas
-            FROM tb_komunikasi_ortu k
-            LEFT JOIN tb_guru g ON g.id_guru = k.id_wali
-            LEFT JOIN tb_kelas c ON c.id_kelas = k.id_kelas
-            WHERE (k.id_siswa = ? OR (k.id_kelas = ? AND k.jenis_informasi = 'Pengumuman Kelas'))
-              AND k.status_kirim = 'Terkirim'
-            ORDER BY k.tanggal DESC, k.id DESC
-            LIMIT 10
+            SELECT * FROM (
+                SELECT
+                    k.id,
+                    'ortu' AS msg_type,
+                    k.tanggal,
+                    COALESCE(k.tanggal_mulai, k.tanggal) AS tanggal_mulai,
+                    COALESCE(k.tanggal_selesai, COALESCE(k.tanggal_mulai, k.tanggal)) AS tanggal_selesai,
+                    k.created_at,
+                    COALESCE(g.nama_guru, 'Wali Kelas') AS pengirim,
+                    g.nama_guru,
+                    k.jenis_informasi,
+                    k.judul,
+                    k.isi,
+                    NULL AS lampiran,
+                    k.nama_ortu,
+                    k.status_dibaca
+                FROM tb_komunikasi_ortu k
+                LEFT JOIN tb_guru g ON g.id_guru = k.id_wali
+                WHERE (k.id_siswa = :sid1 OR (k.id_kelas = :cid1 AND k.jenis_informasi = 'Pengumuman Kelas'))
+                  AND k.status_kirim = 'Terkirim'
+
+                UNION ALL
+
+                SELECT
+                    k.id,
+                    'kelas' AS msg_type,
+                    k.tanggal,
+                    COALESCE(k.tanggal_mulai, k.tanggal) AS tanggal_mulai,
+                    COALESCE(k.tanggal_selesai, COALESCE(k.tanggal_mulai, k.tanggal)) AS tanggal_selesai,
+                    k.created_at,
+                    COALESCE(g.nama_guru, 'Guru Mapel') AS pengirim,
+                    g.nama_guru,
+                    CONCAT('Komunikasi Guru (', k.jenis, ')') AS jenis_informasi,
+                    k.judul,
+                    k.isi,
+                    k.lampiran,
+                    NULL AS nama_ortu,
+                    IF(kr.id IS NOT NULL, 'Sudah Dibaca', 'Belum Dibaca') AS status_dibaca
+                FROM tb_komunikasi_kelas k
+                LEFT JOIN tb_guru g ON g.id_guru = k.id_guru
+                LEFT JOIN tb_komunikasi_kelas_read kr ON kr.id_komunikasi = k.id AND kr.id_siswa = :sid2
+                WHERE k.id_kelas = :cid2
+                  AND k.status = 'Terkirim'
+            ) AS combined_msg
+            ORDER BY tanggal DESC, id DESC
+            LIMIT 15
         ");
-        $stPesan->execute([$id_siswa, $student_class_id]);
+        $stPesan->execute([
+            ':sid1' => $id_siswa, ':cid1' => $student_class_id,
+            ':sid2' => $id_siswa, ':cid2' => $student_class_id,
+        ]);
         $student_messages = $stPesan->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($student_messages as $msg) {
@@ -590,12 +634,13 @@ include_once '../templates/sidebar.php';
                                     <thead>
                                         <tr class="bg-light">
                                             <th width="4%" class="text-center">No</th>
-                                            <th width="12%">Tanggal</th>
-                                            <th width="22%">Pengirim (Wali / Guru)</th>
+                                            <th width="16%">Tanggal Mulai - Selesai</th>
+                                            <th width="10%" class="text-center">Waktu Kirim</th>
+                                            <th width="18%">Pengirim (Wali / Guru)</th>
                                             <th width="18%">Jenis Informasi</th>
                                             <th>Judul Pesan</th>
-                                            <th width="15%" class="text-center">Status Dibaca</th>
-                                            <th class="text-center" width="8%">Aksi</th>
+                                            <th width="14%" class="text-center">Status Dibaca</th>
+                                            <th class="text-center" width="6%">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -604,11 +649,19 @@ include_once '../templates/sidebar.php';
                                             $is_read = ($m['status_dibaca'] === 'Sudah Dibaca');
                                             $raw_isi = strip_tags($m['isi']);
                                             $isi_cut = mb_strlen($raw_isi) > 50 ? mb_substr($raw_isi, 0, 50) . '...' : $raw_isi;
+                                            $tm_s = !empty($m['tanggal_mulai']) ? $m['tanggal_mulai'] : $m['tanggal'];
+                                            $ts_s = !empty($m['tanggal_selesai']) ? $m['tanggal_selesai'] : $tm_s;
+                                            $tgl_disp = date('d/m/Y', strtotime($tm_s));
+                                            if ($ts_s && $ts_s !== $tm_s) {
+                                                $tgl_disp .= ' - ' . date('d/m/Y', strtotime($ts_s));
+                                            }
+                                            $waktu_disp = !empty($m['created_at']) ? date('H:i', strtotime($m['created_at'])) . ' WIB' : '-';
                                             ?>
                                             <tr id="row-pesan-<?= (int)$m['id'] ?>">
                                                 <td class="text-center font-weight-bold"><?= $idx + 1 ?></td>
-                                                <td><?= date('d/m/Y', strtotime($m['tanggal'])) ?></td>
-                                                <td><small><i class="fas fa-user-tie mr-1 text-muted"></i><?= htmlspecialchars($m['nama_guru'] ?? 'Wali Kelas') ?></small></td>
+                                                <td><?= htmlspecialchars($tgl_disp) ?></td>
+                                                <td class="text-center"><small><i class="far fa-clock mr-1 text-muted"></i><?= htmlspecialchars($waktu_disp) ?></small></td>
+                                                <td><small><i class="fas fa-user-tie mr-1 text-muted"></i><?= htmlspecialchars($m['pengirim'] ?? $m['nama_guru'] ?? 'Wali / Guru') ?></small></td>
                                                 <td><span class="badge badge-light border"><?= htmlspecialchars($m['jenis_informasi']) ?></span></td>
                                                 <td>
                                                     <strong class="text-dark"><?= htmlspecialchars($m['judul']) ?></strong>

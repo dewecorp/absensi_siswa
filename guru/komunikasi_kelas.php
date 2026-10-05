@@ -32,6 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
         $tanggal = !empty($_POST['tanggal']) ? date('Y-m-d', strtotime($_POST['tanggal'])) : date('Y-m-d');
+        $tanggal_mulai = !empty($_POST['tanggal_mulai']) ? date('Y-m-d', strtotime($_POST['tanggal_mulai'])) : $tanggal;
+        $tanggal_selesai = !empty($_POST['tanggal_selesai']) ? date('Y-m-d', strtotime($_POST['tanggal_selesai'])) : $tanggal_mulai;
+        if ($tanggal_selesai < $tanggal_mulai) { $tmpT = $tanggal_mulai; $tanggal_mulai = $tanggal_selesai; $tanggal_selesai = $tmpT; }
+        $tanggal = $tanggal_mulai;
         $judul = trim((string)($_POST['judul'] ?? ''));
         $jenis = in_array($_POST['jenis'] ?? '', ['Pengumuman', 'Pesan', 'Diskusi'], true) ? $_POST['jenis'] : 'Pengumuman';
         $id_kelas = (int)($_POST['id_kelas'] ?? 0);
@@ -54,17 +58,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($action === 'tambah') {
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_komunikasi_kelas (
-                            id_guru, tanggal, judul, jenis, id_kelas, isi, lampiran, status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            id_guru, tanggal, tanggal_mulai, tanggal_selesai, judul, jenis, id_kelas, isi, lampiran, status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
-                    $stmt->execute([$guru_id, $tanggal, $judul, $jenis, $id_kelas, $isi, $lampiran, $status]);
+                    $stmt->execute([$guru_id, $tanggal, $tanggal_mulai, $tanggal_selesai, $judul, $jenis, $id_kelas, $isi, $lampiran, $status]);
                     $message = ['type' => 'success', 'text' => 'Komunikasi kelas berhasil dipublikasikan.'];
                 } else {
                     $sql = "
                         UPDATE tb_komunikasi_kelas SET
-                            tanggal = ?, judul = ?, jenis = ?, id_kelas = ?, isi = ?, status = ?
+                            tanggal = ?, tanggal_mulai = ?, tanggal_selesai = ?, judul = ?, jenis = ?, id_kelas = ?, isi = ?, status = ?
                     ";
-                    $params = [$tanggal, $judul, $jenis, $id_kelas, $isi, $status];
+                    $params = [$tanggal, $tanggal_mulai, $tanggal_selesai, $judul, $jenis, $id_kelas, $isi, $status];
                     if ($lampiran !== null) {
                         $sql .= ", lampiran = ?";
                         $params[] = $lampiran;
@@ -184,6 +188,8 @@ $(document).ready(function() {
         $('#komunikasiId').val(data.id);
         $('#modalKomunikasiTitle').text('Edit Komunikasi Kelas');
         $('#inp_tanggal').val(data.tanggal);
+        $('#inp_tanggal_mulai').val(data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal);
+        $('#inp_tanggal_selesai').val(data.tanggal_selesai || data.tgl_selesai_ef || data.tanggal);
         $('#inp_judul').val(data.judul);
         $('#inp_jenis').val(data.jenis);
         $('#inp_kelas').val(data.id_kelas);
@@ -194,7 +200,9 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-detail-pesan', function() {
         var data = $(this).data('json');
-        $('#det_tanggal').text(data.tanggal);
+        var tm = data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal;
+        var ts = data.tanggal_selesai || data.tgl_selesai_ef || tm;
+        $('#det_tanggal').text(tm === ts ? tm : (tm + ' s/d ' + ts));
         $('#det_judul').text(data.judul);
         $('#det_jenis').html('<span class="badge badge-info">' + data.jenis + '</span>');
         $('#det_kelas').text(data.nama_kelas || '-');
@@ -407,9 +415,14 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        <input type="hidden" name="tanggal" id="inp_tanggal" value="<?= date('Y-m-d') ?>">
                         <div class="col-md-4 form-group">
-                            <label>Tanggal</label>
-                            <input type="date" name="tanggal" id="inp_tanggal" class="form-control" value="<?= date('Y-m-d') ?>">
+                            <label>Tanggal Mulai <span class="text-danger">*</span></label>
+                            <input type="date" name="tanggal_mulai" id="inp_tanggal_mulai" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Tanggal Selesai <span class="text-danger">*</span></label>
+                            <input type="date" name="tanggal_selesai" id="inp_tanggal_selesai" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-md-4 form-group">
                             <label>Status</label>

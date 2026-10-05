@@ -61,26 +61,70 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $id_siswa_nav = (int)$_SESSION['user_id'];
     if ($id_siswa_nav > 0) {
         try {
+            ensure_learning_schema($pdo);
             $stClsNav = $pdo->prepare("SELECT id_kelas FROM tb_siswa WHERE id_siswa = ?");
             $stClsNav->execute([$id_siswa_nav]);
             $student_class_id_nav = (int)$stClsNav->fetchColumn();
 
-            $stMsgNav = $pdo->prepare("
-                SELECT k.*, g.nama_guru, c.nama_kelas
-                FROM tb_komunikasi_ortu k
-                LEFT JOIN tb_guru g ON g.id_guru = k.id_wali
-                LEFT JOIN tb_kelas c ON c.id_kelas = k.id_kelas
-                WHERE (k.id_siswa = ? OR (k.id_kelas = ? AND k.jenis_informasi = 'Pengumuman Kelas'))
-                  AND k.status_kirim = 'Terkirim'
-                ORDER BY k.tanggal DESC, k.id DESC
-                LIMIT 10
-            ");
-            $stMsgNav->execute([$id_siswa_nav, $student_class_id_nav]);
-            $student_unread_messages = $stMsgNav->fetchAll(PDO::FETCH_ASSOC);
+            if ($student_class_id_nav > 0) {
+                $stMsgNav = $pdo->prepare("
+                    SELECT * FROM (
+                        SELECT
+                            k.id,
+                            'ortu' AS msg_type,
+                            k.tanggal,
+                            COALESCE(k.tanggal_mulai, k.tanggal) AS tanggal_mulai,
+                            COALESCE(k.tanggal_selesai, COALESCE(k.tanggal_mulai, k.tanggal)) AS tanggal_selesai,
+                            k.created_at,
+                            COALESCE(g.nama_guru, 'Wali Kelas') AS pengirim,
+                            g.nama_guru,
+                            k.jenis_informasi,
+                            k.judul,
+                            k.isi,
+                            NULL AS lampiran,
+                            k.nama_ortu,
+                            k.status_dibaca
+                        FROM tb_komunikasi_ortu k
+                        LEFT JOIN tb_guru g ON g.id_guru = k.id_wali
+                        WHERE (k.id_siswa = :sid1 OR (k.id_kelas = :cid1 AND k.jenis_informasi = 'Pengumuman Kelas'))
+                          AND k.status_kirim = 'Terkirim'
 
-            foreach ($student_unread_messages as $m) {
-                if (($m['status_dibaca'] ?? '') === 'Belum Dibaca') {
-                    $student_unread_msg_count++;
+                        UNION ALL
+
+                        SELECT
+                            k.id,
+                            'kelas' AS msg_type,
+                            k.tanggal,
+                            COALESCE(k.tanggal_mulai, k.tanggal) AS tanggal_mulai,
+                            COALESCE(k.tanggal_selesai, COALESCE(k.tanggal_mulai, k.tanggal)) AS tanggal_selesai,
+                            k.created_at,
+                            COALESCE(g.nama_guru, 'Guru Mapel') AS pengirim,
+                            g.nama_guru,
+                            CONCAT('Komunikasi Guru (', k.jenis, ')') AS jenis_informasi,
+                            k.judul,
+                            k.isi,
+                            k.lampiran,
+                            NULL AS nama_ortu,
+                            IF(kr.id IS NOT NULL, 'Sudah Dibaca', 'Belum Dibaca') AS status_dibaca
+                        FROM tb_komunikasi_kelas k
+                        LEFT JOIN tb_guru g ON g.id_guru = k.id_guru
+                        LEFT JOIN tb_komunikasi_kelas_read kr ON kr.id_komunikasi = k.id AND kr.id_siswa = :sid2
+                        WHERE k.id_kelas = :cid2
+                          AND k.status = 'Terkirim'
+                    ) AS combined_msg
+                    ORDER BY tanggal DESC, id DESC
+                    LIMIT 15
+                ");
+                $stMsgNav->execute([
+                    ':sid1' => $id_siswa_nav, ':cid1' => $student_class_id_nav,
+                    ':sid2' => $id_siswa_nav, ':cid2' => $student_class_id_nav,
+                ]);
+                $student_unread_messages = $stMsgNav->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($student_unread_messages as $m) {
+                    if (($m['status_dibaca'] ?? '') === 'Belum Dibaca') {
+                        $student_unread_msg_count++;
+                    }
                 }
             }
         } catch (Throwable $e) {}
@@ -532,7 +576,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                                     <?php echo htmlspecialchars($msg['judul']); ?>
                                                 </span>
                                                 <div class="small text-muted"><?php echo htmlspecialchars(mb_strimwidth(strip_tags($msg['isi']), 0, 45, '...')); ?></div>
-                                                <div class="time text-primary"><?php echo date('d/m/Y', strtotime($msg['tanggal'])); ?> &bull; <?php echo htmlspecialchars($msg['nama_guru'] ?? 'Wali Kelas'); ?></div>
+                                                <div class="time text-primary"><?php echo date('d/m/Y', strtotime($msg['tanggal'])); ?> &bull; <?php echo htmlspecialchars($msg['pengirim'] ?? $msg['nama_guru'] ?? 'Wali / Guru'); ?></div>
                                             </div>
                                         </a>
                                     <?php endforeach; ?>
@@ -956,7 +1000,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                                 <small class="text-muted"><?= date('d/m/Y', strtotime($msg['tanggal'])) ?></small>
                                             </div>
                                             <p class="mb-1" style="<?php echo $is_unread_m ? 'font-weight: bold;' : ''; ?>"><?= htmlspecialchars($msg['judul']) ?></p>
-                                            <small class="text-muted"><?= htmlspecialchars(mb_strimwidth(strip_tags($msg['isi']), 0, 60, '...')) ?> &bull; <?= htmlspecialchars($msg['nama_guru'] ?? 'Wali Kelas') ?></small>
+                                            <small class="text-muted"><?= htmlspecialchars(mb_strimwidth(strip_tags($msg['isi']), 0, 60, '...')) ?> &bull; <?= htmlspecialchars($msg['pengirim'] ?? $msg['nama_guru'] ?? 'Wali / Guru') ?></small>
                                         </a>
                                     <?php endforeach; ?>
                                 <?php else: ?>
