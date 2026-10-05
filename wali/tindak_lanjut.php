@@ -46,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         $id_siswa = (int)($_POST['id_siswa'] ?? 0);
         $sumber = in_array($_POST['sumber'] ?? '', ['Pembinaan', 'Konseling'], true) ? $_POST['sumber'] : 'Pembinaan';
-        $id_pembinaan = ($sumber === 'Pembinaan') ? (int)($_POST['id_pembinaan'] ?? 0) : null;
-        $id_konseling = ($sumber === 'Konseling') ? (int)($_POST['id_konseling'] ?? 0) : null;
+        $id_pembinaan = isset($_POST['id_pembinaan']) && $_POST['id_pembinaan'] !== '' ? (int)$_POST['id_pembinaan'] : null;
+        $id_konseling = isset($_POST['id_konseling']) && $_POST['id_konseling'] !== '' ? (int)$_POST['id_konseling'] : null;
         $id_kelas = (int)($_POST['id_kelas'] ?? $selected_kelas_id);
         $tanggal = !empty($_POST['tanggal']) ? date('Y-m-d', strtotime($_POST['tanggal'])) : date('Y-m-d');
         $tindakan = trim((string)($_POST['tindakan'] ?? ''));
@@ -56,56 +56,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tanggal_selesai = !empty($_POST['tanggal_selesai']) ? date('Y-m-d', strtotime($_POST['tanggal_selesai'])) : null;
         $status = in_array($_POST['status'] ?? '', ['Rencana', 'Proses', 'Selesai', 'Dibatalkan'], true) ? $_POST['status'] : 'Rencana';
 
-        $sumber_id = ($sumber === 'Pembinaan') ? $id_pembinaan : $id_konseling;
-        if ($id_siswa <= 0 || ($sumber_id ?? 0) <= 0 || $tindakan === '' || $penanggung_jawab === '') {
-            $message = ['type' => 'warning', 'text' => 'Pilih Siswa, pilih sumber ' . $sumber . ', isi Tindakan, dan Penanggung Jawab.'];
-        } else {
-            // Validasi kepemilikan siswa
-            $boleh = true;
-            try {
-                if ($sumber === 'Pembinaan') {
-                    $stCek = $pdo->prepare("SELECT id_siswa FROM tb_pembinaan_siswa WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
-                    $stCek->execute([$id_pembinaan]);
-                    $idOwner = (int)$stCek->fetchColumn();
-                    if ($idOwner <= 0) {
-                        $message = ['type' => 'warning', 'text' => 'Data pembinaan sumber tidak ditemukan.'];
-                        $boleh = false;
-                    } elseif ($idOwner !== $id_siswa) {
-                        $message = ['type' => 'warning', 'text' => 'Pembinaan sumber milik siswa lain. Pilih ulang pembinaan.'];
-                        $boleh = false;
-                    }
-                } else {
-                    $stCek = $pdo->prepare("SELECT id_siswa FROM tb_konseling_awal WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
-                    $stCek->execute([$id_konseling]);
-                    $idOwner = (int)$stCek->fetchColumn();
-                    if ($idOwner <= 0) {
-                        $message = ['type' => 'warning', 'text' => 'Data konseling sumber tidak ditemukan.'];
-                        $boleh = false;
-                    } elseif ($idOwner !== $id_siswa) {
-                        $message = ['type' => 'warning', 'text' => 'Konseling sumber milik siswa lain. Pilih ulang konseling.'];
-                        $boleh = false;
-                    }
-                }
-            } catch (Throwable $e) {}
+        if ($action === 'edit' && $id > 0) {
+            $stOld = $pdo->prepare("SELECT * FROM tb_tindak_lanjut_wali WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
+            $stOld->execute([$id]);
+            $oldData = $stOld->fetch(PDO::FETCH_ASSOC);
+            if ($oldData) {
+                if ($id_siswa <= 0) $id_siswa = (int)$oldData['id_siswa'];
+                if ($id_kelas <= 0) $id_kelas = (int)$oldData['id_kelas'];
+                if (empty($_POST['sumber'])) $sumber = $oldData['sumber'];
+                if ($id_pembinaan === null || $id_pembinaan <= 0) $id_pembinaan = $oldData['id_pembinaan'] ? (int)$oldData['id_pembinaan'] : null;
+                if ($id_konseling === null || $id_konseling <= 0) $id_konseling = $oldData['id_konseling'] ? (int)$oldData['id_konseling'] : null;
+            }
+        }
 
-            // Anti-ganda: 1 pembinaan / 1 konseling hanya boleh di-TL 1x
-            if ($boleh) {
+        if ($id_siswa <= 0 || $tindakan === '' || $penanggung_jawab === '') {
+            $message = ['type' => 'warning', 'text' => 'Pilih Siswa, isi Tindakan, dan Penanggung Jawab.'];
+        } else {
+            // Validasi kepemilikan siswa (jika terhubung ke item spesifik)
+            $boleh = true;
+            $sumber_id = ($sumber === 'Pembinaan') ? $id_pembinaan : $id_konseling;
+            if (($sumber_id ?? 0) > 0) {
                 try {
-                    if ($sumber === 'Pembinaan') {
-                        $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_pembinaan = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "");
-                    } else {
-                        $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_konseling = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "");
-                    }
-                    if ($action === 'edit' && $id > 0) {
-                        $sqlDup .= " AND id <> " . (int)$id;
-                    }
-                    $stDup = $pdo->prepare($sqlDup);
-                    $stDup->execute([$sumber === 'Pembinaan' ? $id_pembinaan : $id_konseling]);
-                    if ($stDup->fetchColumn()) {
-                        $message = ['type' => 'warning', 'text' => 'Sumber ' . $sumber . ' ini SUDAH ditindaklanjuti. Pilih yang belum di-TL agar tidak ganda.'];
-                        $boleh = false;
+                    if ($sumber === 'Pembinaan' && $id_pembinaan > 0) {
+                        $stCek = $pdo->prepare("SELECT id_siswa FROM tb_pembinaan_siswa WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
+                        $stCek->execute([$id_pembinaan]);
+                        $idOwner = (int)$stCek->fetchColumn();
+                        if ($idOwner > 0 && $idOwner !== $id_siswa) {
+                            $message = ['type' => 'warning', 'text' => 'Pembinaan sumber milik siswa lain.'];
+                            $boleh = false;
+                        }
+                    } elseif ($sumber === 'Konseling' && $id_konseling > 0) {
+                        $stCek = $pdo->prepare("SELECT id_siswa FROM tb_konseling_awal WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
+                        $stCek->execute([$id_konseling]);
+                        $idOwner = (int)$stCek->fetchColumn();
+                        if ($idOwner > 0 && $idOwner !== $id_siswa) {
+                            $message = ['type' => 'warning', 'text' => 'Konseling sumber milik siswa lain.'];
+                            $boleh = false;
+                        }
                     }
                 } catch (Throwable $e) {}
+
+                // Anti-ganda: 1 pembinaan / 1 konseling hanya boleh di-TL 1x
+                if ($boleh) {
+                    try {
+                        if ($sumber === 'Pembinaan' && $id_pembinaan > 0) {
+                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_pembinaan = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "");
+                            if ($action === 'edit' && $id > 0) $sqlDup .= " AND id <> " . (int)$id;
+                            $stDup = $pdo->prepare($sqlDup);
+                            $stDup->execute([$id_pembinaan]);
+                            if ($stDup->fetchColumn()) {
+                                $message = ['type' => 'warning', 'text' => 'Pembinaan ini SUDAH ditindaklanjuti.'];
+                                $boleh = false;
+                            }
+                        } elseif ($sumber === 'Konseling' && $id_konseling > 0) {
+                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_konseling = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "");
+                            if ($action === 'edit' && $id > 0) $sqlDup .= " AND id <> " . (int)$id;
+                            $stDup = $pdo->prepare($sqlDup);
+                            $stDup->execute([$id_konseling]);
+                            if ($stDup->fetchColumn()) {
+                                $message = ['type' => 'warning', 'text' => 'Konseling ini SUDAH ditindaklanjuti.'];
+                                $boleh = false;
+                            }
+                        }
+                    } catch (Throwable $e) {}
+                }
             }
 
             if ($boleh) try {
@@ -422,16 +436,8 @@ $(document).ready(function() {
 
     function switchSumberWrap(sumber) {
         if (sumber === 'Konseling') {
-            $('#wrap_pembinaan').addClass('d-none');
-            $('#inp_pembinaan').prop('required', false);
-            $('#wrap_konseling').removeClass('d-none');
-            $('#inp_konseling').prop('required', true);
             $('#pj_default_hint').text('Penanggung Jawab biasanya: Guru BK / Wali Kelas');
         } else {
-            $('#wrap_konseling').addClass('d-none');
-            $('#inp_konseling').prop('required', false);
-            $('#wrap_pembinaan').removeClass('d-none');
-            $('#inp_pembinaan').prop('required', true);
             $('#pj_default_hint').text('Penanggung Jawab biasanya: Wali Kelas / Guru BK / Orang Tua');
         }
         populateTL(sumber);
@@ -498,6 +504,8 @@ $(document).ready(function() {
         $('#tlId').val('');
         $('#modalTLTitle').text('Tambah Rencana Tindak Lanjut');
         $('#formTL')[0].reset();
+        $('#inp_pembinaan').val('');
+        $('#inp_konseling').val('');
         $('#inp_sumber').val('Pembinaan');
         switchSumberWrap('Pembinaan');
         showKonteksSiswa('');
@@ -521,10 +529,12 @@ $(document).ready(function() {
         $('#inp_siswa').val(data.id_siswa);
         $('#inp_tanggal').val(data.tanggal);
         var src = (data.sumber === 'Konseling') ? 'Konseling' : 'Pembinaan';
-        $('#inp_sumber').val(src);
-        switchSumberWrap(src);
+        $('#inp_pembinaan').val(data.id_pembinaan || '');
+        $('#inp_konseling').val(data.id_konseling || '');
         fillBinaDropdown(data.id_siswa, data.id_pembinaan);
         fillKonsDropdown(data.id_siswa, data.id_konseling);
+        $('#inp_sumber').val(src);
+        switchSumberWrap(src);
         $('#sel_tl_tindakan option').each(function() {
             if ($(this).val() === (data.tindakan || '')) $(this).prop('selected', true);
         });
@@ -818,20 +828,8 @@ include '../templates/sidebar.php';
                             </select>
                             <small class="text-muted">Pilih apakah tindak lanjut dari Pembinaan atau dari Konseling.</small>
                         </div>
-                        <div class="col-md-6 form-group" id="wrap_pembinaan">
-                            <label class="font-weight-bold">Pembinaan Sumber <span class="text-danger">*</span></label>
-                            <select name="id_pembinaan" id="inp_pembinaan" class="form-control" required>
-                                <option value="">-- Pilih pembinaan sumber --</option>
-                            </select>
-                            <small class="text-muted">Hanya menampilkan pembinaan yang belum ditindaklanjuti.</small>
-                        </div>
-                        <div class="col-md-6 form-group d-none" id="wrap_konseling">
-                            <label class="font-weight-bold">Konseling Sumber <span class="text-danger">*</span></label>
-                            <select name="id_konseling" id="inp_konseling" class="form-control">
-                                <option value="">-- Pilih konseling sumber --</option>
-                            </select>
-                            <small class="text-muted">Hanya menampilkan sesi konseling yang belum ditindaklanjuti.</small>
-                        </div>
+                        <input type="hidden" name="id_pembinaan" id="inp_pembinaan" value="">
+                        <input type="hidden" name="id_konseling" id="inp_konseling" value="">
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold">Tanggal Rencana</label>
                             <input type="date" name="tanggal" id="inp_tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
