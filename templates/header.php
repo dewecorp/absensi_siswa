@@ -53,6 +53,39 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
     }
     $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
 }
+
+// Pre-fetch student unread messages if user is siswa
+$student_unread_messages = [];
+$student_unread_msg_count = 0;
+if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
+    $id_siswa_nav = (int)$_SESSION['user_id'];
+    if ($id_siswa_nav > 0) {
+        try {
+            $stClsNav = $pdo->prepare("SELECT id_kelas FROM tb_siswa WHERE id_siswa = ?");
+            $stClsNav->execute([$id_siswa_nav]);
+            $student_class_id_nav = (int)$stClsNav->fetchColumn();
+
+            $stMsgNav = $pdo->prepare("
+                SELECT k.*, g.nama_guru, c.nama_kelas
+                FROM tb_komunikasi_ortu k
+                LEFT JOIN tb_guru g ON g.id_guru = k.id_wali
+                LEFT JOIN tb_kelas c ON c.id_kelas = k.id_kelas
+                WHERE (k.id_siswa = ? OR (k.id_kelas = ? AND k.jenis_informasi = 'Pengumuman Kelas'))
+                  AND k.status_kirim = 'Terkirim'
+                ORDER BY k.tanggal DESC, k.id DESC
+                LIMIT 10
+            ");
+            $stMsgNav->execute([$id_siswa_nav, $student_class_id_nav]);
+            $student_unread_messages = $stMsgNav->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($student_unread_messages as $m) {
+                if (($m['status_dibaca'] ?? '') === 'Belum Dibaca') {
+                    $student_unread_msg_count++;
+                }
+            }
+        } catch (Throwable $e) {}
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -469,6 +502,50 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                 </ul>
                 <ul class="navbar-nav navbar-right">
                     
+                    <?php if (getUserLevel() === 'siswa'): ?>
+                    <li class="dropdown dropdown-list-toggle">
+                        <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg nav-msg-toggle notification-toggle <?php echo $student_unread_msg_count > 0 ? 'beep' : ''; ?>" title="Pesan & Laporan Masuk">
+                            <i class="far fa-envelope"></i>
+                            <?php if ($student_unread_msg_count > 0): ?>
+                                <span class="notif-count-badge nav-msg-count" data-count="<?php echo (int)$student_unread_msg_count; ?>"><?php echo $student_unread_msg_count > 99 ? '99+' : (string)$student_unread_msg_count; ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <div class="dropdown-menu dropdown-list dropdown-menu-right">
+                            <div class="dropdown-header">Pesan &amp; Laporan Masuk</div>
+                            <?php
+                            $n_msg_nav = count($student_unread_messages);
+                            $msg_list_h = $n_msg_nav <= 0 ? 'max-height:140px;overflow-y:auto;' : ($n_msg_nav <= 3 ? 'max-height:' . ($n_msg_nav * 92 + 12) . 'px;overflow-y:auto;' : 'height:300px;overflow-y:auto;');
+                            ?>
+                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll" style="<?= $msg_list_h ?>">
+                                <?php if (count($student_unread_messages) > 0): ?>
+                                    <?php foreach ($student_unread_messages as $msg): ?>
+                                        <?php
+                                        $is_unread = ($msg['status_dibaca'] === 'Belum Dibaca');
+                                        $msg_json = htmlspecialchars(json_encode($msg), ENT_QUOTES, 'UTF-8');
+                                        ?>
+                                        <a href="#" onclick="openStudentMsgFromNav(<?= $msg_json ?>, this); return false;" class="dropdown-item dropdown-item-unread nav-msg-item-<?= (int)$msg['id'] ?>" style="<?php echo $is_unread ? 'font-weight: bold; background-color: #f9f9f9;' : ''; ?>">
+                                            <div class="dropdown-item-icon bg-info text-white">
+                                                <i class="fas fa-envelope-open-text"></i>
+                                            </div>
+                                            <div class="dropdown-item-desc">
+                                                <span style="<?php echo $is_unread ? 'font-weight: bold; color: #333;' : ''; ?>">
+                                                    <?php echo htmlspecialchars($msg['judul']); ?>
+                                                </span>
+                                                <div class="small text-muted"><?php echo htmlspecialchars(mb_strimwidth(strip_tags($msg['isi']), 0, 45, '...')); ?></div>
+                                                <div class="time text-primary"><?php echo date('d/m/Y', strtotime($msg['tanggal'])); ?> &bull; <?php echo htmlspecialchars($msg['nama_guru'] ?? 'Wali Kelas'); ?></div>
+                                            </div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="p-3 text-center text-muted">
+                                        Tidak ada pesan / laporan baru
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </li>
+                    <?php endif; ?>
+
                     <?php if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah'): ?>
                     <li class="dropdown dropdown-list-toggle d-none d-lg-block">
                         <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg notification-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
@@ -845,6 +922,57 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
                 }
             });
             </script>
+            <?php endif; ?>
+            <?php if (getUserLevel() === 'siswa'): ?>
+            <!-- Mobile Floating Message Button -->
+            <a href="#" data-toggle="modal" data-target="#mobileMessageModal" class="btn btn-info btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                <i class="far fa-envelope fa-lg"></i>
+                <?php if ($student_unread_msg_count > 0): ?>
+                    <span class="notif-count-badge nav-msg-count" data-count="<?php echo (int)$student_unread_msg_count; ?>"><?php echo $student_unread_msg_count > 99 ? '99+' : (string)$student_unread_msg_count; ?></span>
+                <?php endif; ?>
+            </a>
+
+            <!-- Mobile Message Modal -->
+            <div class="modal fade" id="mobileMessageModal" tabindex="-1" role="dialog" aria-labelledby="mobileMessageModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="mobileMessageModalLabel">Pesan Masuk</h5>
+                            <button type="button" class="close ml-2" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                                <?php if (count($student_unread_messages) > 0): ?>
+                                    <?php foreach ($student_unread_messages as $msg): ?>
+                                        <?php
+                                            $is_unread_m = ($msg['status_dibaca'] === 'Belum Dibaca');
+                                            $msg_json_m = htmlspecialchars(json_encode($msg), ENT_QUOTES, 'UTF-8');
+                                        ?>
+                                        <a href="#" onclick="$('#mobileMessageModal').modal('hide'); setTimeout(function(){ openStudentMsgFromNav(<?= $msg_json_m ?>, null); }, 300); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $is_unread_m ? 'bg-light' : ''; ?>">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1 text-info"><i class="fas fa-envelope-open-text mr-1"></i> <?= htmlspecialchars($msg['jenis_informasi']) ?></h6>
+                                                <small class="text-muted"><?= date('d/m/Y', strtotime($msg['tanggal'])) ?></small>
+                                            </div>
+                                            <p class="mb-1" style="<?php echo $is_unread_m ? 'font-weight: bold;' : ''; ?>"><?= htmlspecialchars($msg['judul']) ?></p>
+                                            <small class="text-muted"><?= htmlspecialchars(mb_strimwidth(strip_tags($msg['isi']), 0, 60, '...')) ?> &bull; <?= htmlspecialchars($msg['nama_guru'] ?? 'Wali Kelas') ?></small>
+                                        </a>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="p-4 text-center text-muted">
+                                        <i class="far fa-envelope-open fa-3x mb-3"></i><br>
+                                        Tidak ada pesan / laporan baru
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <?php endif; ?>
 
             <?php include_once 'sidebar.php'; ?>

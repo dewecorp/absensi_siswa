@@ -231,6 +231,73 @@
                     </div>
                 </div>
             </div>
+
+            <?php if (getUserLevel() === 'siswa'): ?>
+            <!-- Modal Detail Pesan Siswa (Nav Global) -->
+            <div class="modal fade" id="modalBacaPesanSiswaNav" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-md" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-envelope-open mr-2 text-info"></i>Detail Pesan &amp; Informasi</h5>
+                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <table class="table table-bordered table-sm mb-3">
+                                <tr><th width="35%">Tanggal</th><td id="nav_baca_tanggal"></td></tr>
+                                <tr><th>Pengirim</th><td id="nav_baca_pengirim" class="font-weight-bold"></td></tr>
+                                <tr><th>Kepada Ortu/Wali</th><td id="nav_baca_ortu"></td></tr>
+                                <tr><th>Jenis Informasi</th><td id="nav_baca_jenis"></td></tr>
+                                <tr><th>Judul Pesan</th><td id="nav_baca_judul" class="font-weight-bold text-primary"></td></tr>
+                            </table>
+                            <div class="font-weight-bold mb-1">Isi Pesan / Laporan:</div>
+                            <div id="nav_baca_isi" class="p-3 border rounded bg-light" style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.6;"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            function openStudentMsgFromNav(data, element) {
+                if (!data) return;
+                $('#nav_baca_tanggal').text(data.tanggal || '-');
+                $('#nav_baca_pengirim').text(data.nama_guru || 'Wali Kelas');
+                $('#nav_baca_ortu').text(data.nama_ortu || '-');
+                $('#nav_baca_jenis').html('<span class="badge badge-info">' + $('<div>').text(data.jenis_informasi || '').html() + '</span>');
+                $('#nav_baca_judul').text(data.judul || '-');
+                $('#nav_baca_isi').text(data.isi || '-');
+                
+                $('#modalBacaPesanSiswaNav').modal('show');
+                
+                if (data.status_dibaca !== 'Sudah Dibaca') {
+                    $.post('<?php echo htmlspecialchars(app_url('siswa/mark_message_read.php'), ENT_QUOTES, 'UTF-8'); ?>', { pesan_id: data.id }, function(res) {
+                        data.status_dibaca = 'Sudah Dibaca';
+                        if (element) {
+                            var $el = $(element);
+                            $el.css('font-weight', 'normal').css('background-color', 'white');
+                            $el.find('span').css('font-weight', 'normal');
+                        }
+                        var $badge = $('.nav-msg-count');
+                        if ($badge.length) {
+                            var countAttr = parseInt($badge.attr('data-count'), 10) || 0;
+                            if (countAttr > 1) {
+                                var next = countAttr - 1;
+                                $badge.attr('data-count', next).text(next > 99 ? '99+' : String(next));
+                            } else {
+                                $badge.remove();
+                                $('.nav-msg-toggle').removeClass('beep');
+                            }
+                        }
+                        if ($('#row-pesan-' + data.id).length) {
+                            $('#row-pesan-' + data.id).find('.status-baca-col').html('<span class="badge badge-info"><i class="fas fa-check-double mr-1"></i>Sudah Dibaca</span>');
+                        }
+                    });
+                }
+            }
+            </script>
+            <?php endif; ?>
         </div>
     </div>
 

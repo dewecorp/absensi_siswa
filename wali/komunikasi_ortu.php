@@ -51,8 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jenis_informasi = in_array($_POST['jenis_informasi'] ?? '', ['Pengumuman Kelas', 'Pesan Individu', 'Informasi Kehadiran', 'Informasi Tugas', 'Informasi Perkembangan'], true) ? $_POST['jenis_informasi'] : 'Pengumuman Kelas';
         $judul = trim((string)($_POST['judul'] ?? ''));
         $isi = trim((string)($_POST['isi'] ?? ''));
-        $status_kirim = in_array($_POST['status_kirim'] ?? '', ['Terkirim', 'Draft', 'Gagal'], true) ? $_POST['status_kirim'] : 'Terkirim';
-        $status_dibaca = in_array($_POST['status_dibaca'] ?? '', ['Belum Dibaca', 'Sudah Dibaca'], true) ? $_POST['status_dibaca'] : 'Belum Dibaca';
 
         // Auto isi nama ortu jika kosong
         if ($nama_ortu === '' && $id_siswa > 0) {
@@ -66,6 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 if ($action === 'tambah') {
+                    $status_kirim = 'Terkirim';
+                    $status_dibaca = 'Belum Dibaca';
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_komunikasi_ortu (
                             id_wali, id_siswa, id_kelas, tanggal, nama_ortu,
@@ -81,12 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("
                         UPDATE tb_komunikasi_ortu SET
                             id_siswa = ?, id_kelas = ?, tanggal = ?, nama_ortu = ?,
-                            jenis_informasi = ?, judul = ?, isi = ?, status_kirim = ?, status_dibaca = ?
+                            jenis_informasi = ?, judul = ?, isi = ?
                         WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
                         $id_siswa, $id_kelas, $tanggal, $nama_ortu,
-                        $jenis_informasi, $judul, $isi, $status_kirim, $status_dibaca, $id
+                        $jenis_informasi, $judul, $isi, $id
                     ]);
                     $message = ['type' => 'success', 'text' => 'Data komunikasi orang tua diperbarui.'];
                 }
@@ -206,8 +206,6 @@ $(document).ready(function() {
         $('#inp_jenis').val(data.jenis_informasi);
         $('#inp_judul').val(data.judul);
         $('#inp_isi').val(data.isi);
-        $('#inp_status_kirim').val(data.status_kirim);
-        $('#inp_status_baca').val(data.status_dibaca);
         $('#modalKomOrtu').modal('show');
     });
 
@@ -412,11 +410,11 @@ include '../templates/sidebar.php';
                             <label>Nama Orang Tua / Wali</label>
                             <input type="text" name="nama_ortu" id="inp_nama_ortu" class="form-control" placeholder="Bpk / Ibu ...">
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-6 form-group">
                             <label>Tanggal</label>
                             <input type="date" name="tanggal" id="inp_tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-6 form-group">
                             <label>Jenis Informasi</label>
                             <select name="jenis_informasi" id="inp_jenis" class="form-control">
                                 <?php foreach ($jenis_options as $j): ?>
@@ -424,28 +422,13 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label>Status Pengiriman</label>
-                            <select name="status_kirim" id="inp_status_kirim" class="form-control">
-                                <option value="Terkirim">Terkirim</option>
-                                <option value="Draft">Draft</option>
-                                <option value="Gagal">Gagal</option>
-                            </select>
-                        </div>
-                        <div class="col-md-8 form-group">
+                        <div class="col-12 form-group">
                             <label>Judul / Subjek Pesan <span class="text-danger">*</span></label>
                             <input type="text" name="judul" id="inp_judul" class="form-control" required placeholder="Contoh: Pemberitahuan Perkembangan Belajar Ananda">
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label>Status Dibaca</label>
-                            <select name="status_dibaca" id="inp_status_baca" class="form-control">
-                                <option value="Belum Dibaca">Belum Dibaca</option>
-                                <option value="Sudah Dibaca">Sudah Dibaca</option>
-                            </select>
-                        </div>
                         <div class="col-12 form-group">
                             <label>Isi Pesan Informasi <span class="text-danger">*</span></label>
-                            <textarea name="isi" id="inp_isi" class="form-control" rows="4" required placeholder="Tuliskan pesan atau laporan yang disampaikan kepada orang tua..."></textarea>
+                            <textarea name="isi" id="inp_isi" class="form-control" rows="6" style="min-height: 150px;" required placeholder="Tuliskan pesan atau laporan yang disampaikan kepada orang tua..."></textarea>
                         </div>
                     </div>
                 </div>

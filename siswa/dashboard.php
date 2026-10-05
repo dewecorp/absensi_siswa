@@ -26,6 +26,24 @@ if (!$student) {
     exit;
 }
 
+// Handle AJAX baca pesan komunikasi ortu
+$student_class_id = (int)($student['id_kelas'] ?? 0);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'baca_pesan') {
+    header('Content-Type: application/json; charset=UTF-8');
+    $pesan_id = (int)($_POST['pesan_id'] ?? 0);
+    if ($pesan_id > 0 && $id_siswa > 0) {
+        try {
+            $pdo->prepare("UPDATE tb_komunikasi_ortu SET status_dibaca = 'Sudah Dibaca' WHERE id = ? AND (id_siswa = ? OR (id_kelas = ? AND jenis_informasi = 'Pengumuman Kelas'))")->execute([$pesan_id, $id_siswa, $student_class_id]);
+            echo json_encode(['ok' => true]);
+        } catch (Throwable $e) {
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['ok' => false]);
+    }
+    exit;
+}
+
 // Set page title
 $page_title = 'Dashboard Siswa';
 
@@ -221,6 +239,32 @@ if ($student_class_id > 0) {
         foreach ($student_tasks as $tk) {
             if (empty($tk['id_pengumpulan'])) {
                 $total_tugas_belum++;
+            }
+        }
+    } catch (Throwable $e) {}
+}
+
+// Ambil pesan komunikasi ortu / sekolah untuk siswa
+$student_messages = [];
+$total_pesan_belum_baca = 0;
+if ($student_class_id > 0 && $id_siswa > 0) {
+    try {
+        $stPesan = $pdo->prepare("
+            SELECT k.*, g.nama_guru, c.nama_kelas
+            FROM tb_komunikasi_ortu k
+            LEFT JOIN tb_guru g ON g.id_guru = k.id_wali
+            LEFT JOIN tb_kelas c ON c.id_kelas = k.id_kelas
+            WHERE (k.id_siswa = ? OR (k.id_kelas = ? AND k.jenis_informasi = 'Pengumuman Kelas'))
+              AND k.status_kirim = 'Terkirim'
+            ORDER BY k.tanggal DESC, k.id DESC
+            LIMIT 10
+        ");
+        $stPesan->execute([$id_siswa, $student_class_id]);
+        $student_messages = $stPesan->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($student_messages as $msg) {
+            if (($msg['status_dibaca'] ?? '') === 'Belum Dibaca') {
+                $total_pesan_belum_baca++;
             }
         }
     } catch (Throwable $e) {}
@@ -512,6 +556,85 @@ include_once '../templates/sidebar.php';
                 </div>
             </div>
             <?php endif; ?>
+        </div>
+
+        <!-- Box Komunikasi Orang Tua / Informasi Sekolah -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card card-info shadow-sm">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                        <h4 class="mb-0 text-info">
+                            <i class="fas fa-envelope-open-text mr-2"></i>Pesan &amp; Laporan dari Wali Kelas / Sekolah
+                        </h4>
+                        <div>
+                            <?php if ($total_pesan_belum_baca > 0): ?>
+                                <span class="badge badge-warning font-weight-bold" id="badgeTotalPesan" style="font-size:12px; padding:6px 12px;">
+                                    <i class="fas fa-bell mr-1"></i> <?= $total_pesan_belum_baca ?> Pesan Baru Belum Dibaca
+                                </span>
+                            <?php else: ?>
+                                <span class="badge badge-info font-weight-bold" id="badgeTotalPesan" style="font-size:12px; padding:6px 12px;">
+                                    <i class="fas fa-check-circle mr-1"></i> Semua Pesan Sudah Dibaca
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <?php if (empty($student_messages)): ?>
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-comments fa-2x mb-2 text-info"></i>
+                                <p class="mb-0 font-weight-bold">Belum ada informasi / laporan pesan dari sekolah untuk Anda.</p>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered table-sm mb-0">
+                                    <thead>
+                                        <tr class="bg-light">
+                                            <th width="4%" class="text-center">No</th>
+                                            <th width="12%">Tanggal</th>
+                                            <th width="22%">Pengirim (Wali / Guru)</th>
+                                            <th width="18%">Jenis Informasi</th>
+                                            <th>Judul Pesan</th>
+                                            <th width="15%" class="text-center">Status Dibaca</th>
+                                            <th class="text-center" width="8%">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($student_messages as $idx => $m): ?>
+                                            <?php
+                                            $is_read = ($m['status_dibaca'] === 'Sudah Dibaca');
+                                            $raw_isi = strip_tags($m['isi']);
+                                            $isi_cut = mb_strlen($raw_isi) > 50 ? mb_substr($raw_isi, 0, 50) . '...' : $raw_isi;
+                                            ?>
+                                            <tr id="row-pesan-<?= (int)$m['id'] ?>">
+                                                <td class="text-center font-weight-bold"><?= $idx + 1 ?></td>
+                                                <td><?= date('d/m/Y', strtotime($m['tanggal'])) ?></td>
+                                                <td><small><i class="fas fa-user-tie mr-1 text-muted"></i><?= htmlspecialchars($m['nama_guru'] ?? 'Wali Kelas') ?></small></td>
+                                                <td><span class="badge badge-light border"><?= htmlspecialchars($m['jenis_informasi']) ?></span></td>
+                                                <td>
+                                                    <strong class="text-dark"><?= htmlspecialchars($m['judul']) ?></strong>
+                                                    <small class="d-block text-muted"><?= htmlspecialchars($isi_cut) ?></small>
+                                                </td>
+                                                <td class="text-center status-baca-col">
+                                                    <?php if ($is_read): ?>
+                                                        <span class="badge badge-info"><i class="fas fa-check-double mr-1"></i>Sudah Dibaca</span>
+                                                    <?php else: ?>
+                                                        <span class="badge badge-warning"><i class="fas fa-envelope mr-1"></i>Belum Dibaca</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-info btn-sm btn-baca-pesan" data-json='<?= htmlspecialchars(json_encode($m), ENT_QUOTES, 'UTF-8') ?>' title="Baca Detail Pesan" style="width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Box Pemberitahuan Tugas Siswa -->
@@ -921,4 +1044,11 @@ function editKeteranganSiswa() {
         form.submit();
     }
 }
+
+$(document).on('click', '.btn-baca-pesan', function() {
+    var data = $(this).data('json');
+    if (typeof openStudentMsgFromNav === 'function') {
+        openStudentMsgFromNav(data, this);
+    }
+});
 </script>
