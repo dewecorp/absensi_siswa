@@ -116,13 +116,14 @@ if ($user_level !== 'admin') {
 }
 
 $where_sql = implode(' AND ', $where);
+$field_hari = implode(',', array_map([$pdo, 'quote'], $days_order));
 $stmt = $pdo->prepare("
     SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas
     FROM tb_jadwal_piket_kelas p
     JOIN tb_siswa s ON s.id_siswa = p.id_siswa
     LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas
     WHERE $where_sql
-    ORDER BY p.hari ASC, p.urutan ASC, s.nama_siswa ASC
+    ORDER BY FIELD(p.hari, $field_hari), p.urutan ASC, s.nama_siswa ASC
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -142,31 +143,11 @@ foreach ($rows as $r) {
 }
 
 $page_title = 'Jadwal Piket Kelas';
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-];
-$js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-];
+$css_libs = [];
+$js_libs = [];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    if ($('#table-piket').length) {
-        $('#table-piket').DataTable({
-            'order': [[0, 'asc'], [3, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [5] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada data piket',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari Siswa:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
-        });
-    }
-
     $('#btnTambahPiket').on('click', function() {
         $('#formPiketAction').val('tambah');
         $('#piketId').val('');
@@ -246,119 +227,113 @@ include '../templates/sidebar.php';
             <?php endif; ?>
 
             <?php if ($selected_kelas_id > 0 || $user_level !== 'admin'): ?>
+            <?php
+            $en_day = date('l');
+            $map_hari = ['Sunday' => 'Ahad', 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'];
+            $hari_ini = $map_hari[$en_day] ?? '';
+            $total_petugas = count($rows);
+            $hari_terisi = 0;
+            foreach ($days_order as $hd) { if (!empty($piket_by_day[$hd])) $hari_terisi++; }
+            ?>
+            <style>
+            .piket-card { border-radius: 12px; overflow: hidden; }
+            .piket-card .piket-head { background: linear-gradient(135deg, #6777ef, #3abaf4); color: #fff; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+            .piket-card.piket-today { border: 2px solid #6777ef !important; box-shadow: 0 4px 14px rgba(103,119,239,.35) !important; }
+            .piket-day-icon { width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,.22); display: inline-flex; align-items: center; justify-content: center; font-size: 17px; margin-right: 10px; flex-shrink: 0; }
+            .piket-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #eef1f6; border-radius: 10px; margin-bottom: 8px; background: #fff; }
+            .piket-item:last-child { margin-bottom: 0; }
+            .piket-num { width: 24px; height: 24px; border-radius: 50%; background: #eef2ff; color: #4338ca; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+            .piket-avatar { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0; }
+            .piket-name { font-size: 13.5px; line-height: 1.25; }
+            .piket-nisn { font-size: 11.5px; }
+            </style>
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <ul class="nav nav-pills" id="piketModeTab" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link active" id="tab-kartu-link" data-toggle="tab" href="#tab-kartu" role="tab"><i class="fas fa-th-large mr-1"></i> Tampilan Kartu Mingguan</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="tab-tabel-link" data-toggle="tab" href="#tab-tabel" role="tab"><i class="fas fa-table mr-1"></i> Tampilan Tabel</a>
-                        </li>
-                    </ul>
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                    <h4 class="mb-0">Jadwal Piket Mingguan <?= $user_level === 'admin' && !empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '' ?></h4>
                     <div>
-                        <button type="button" class="btn btn-outline-primary mr-2" onclick="window.print()">
-                            <i class="fas fa-print mr-1"></i> Cetak Jadwal
-                        </button>
+                        <?php
+                        $qs_piket = [];
+                        if ($selected_kelas_id > 0) { $qs_piket['kelas'] = $selected_kelas_id; }
+                        $url_piket_cetak = 'export_piket_pdf.php?' . http_build_query(array_merge($qs_piket, ['mode' => 'print']));
+                        $url_piket_xls = 'export_piket_excel.php?' . http_build_query($qs_piket);
+                        ?>
+                        <a href="<?= htmlspecialchars($url_piket_cetak) ?>" target="_blank" class="btn btn-danger btn-sm mr-1" title="Cetak / Simpan PDF">
+                            <i class="fas fa-print mr-1"></i> Cetak / PDF
+                        </a>
+                        <a href="<?= htmlspecialchars($url_piket_xls) ?>" class="btn btn-success btn-sm mr-2" title="Ekspor Excel">
+                            <i class="fas fa-file-excel mr-1"></i> Excel
+                        </a>
                         <?php if ($can_crud): ?>
-                        <button type="button" class="btn btn-primary" id="btnTambahPiket" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahPiket" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Tambah Petugas
                         </button>
                         <?php endif; ?>
                     </div>
                 </div>
-
                 <div class="card-body">
-                    <div class="tab-content" id="piketTabContent">
-                        <!-- Tampilan Kartu Mingguan -->
-                        <div class="tab-pane fade show active" id="tab-kartu" role="tabpanel">
-                            <div class="row">
-                                <?php foreach ($days_order as $hari): ?>
-                                    <?php $petugas = $piket_by_day[$hari] ?? []; ?>
-                                    <div class="col-md-4 col-sm-6 mb-4">
-                                        <div class="card shadow-sm h-100 border">
-                                            <div class="card-header bg-primary text-white py-2 justify-content-between">
-                                                <h5 class="mb-0 text-white font-weight-bold" style="font-size: 16px;">
-                                                    <i class="fas fa-calendar-day mr-1"></i> <?= strtoupper($hari) ?>
-                                                </h5>
-                                                <span class="badge badge-light text-primary"><?= count($petugas) ?> Siswa</span>
-                                            </div>
-                                            <div class="card-body p-3 font-monospace" style="font-family: 'Consolas', 'Courier New', monospace; font-size: 13px;">
-                                                <?php if (empty($petugas)): ?>
-                                                    <div class="text-muted text-center p-3">Belum ada petugas piket.</div>
-                                                <?php else: ?>
-                                                    <div class="font-weight-bold text-dark mb-1"><?= strtoupper($hari) ?></div>
-                                                    <?php foreach ($petugas as $idx => $p): ?>
-                                                        <?php
-                                                        $is_last = ($idx === count($petugas) - 1);
-                                                        $branch = $is_last ? '└── ' : '├── ';
-                                                        ?>
-                                                        <div class="d-flex justify-content-between align-items-center py-1">
-                                                            <div>
-                                                                <span class="text-secondary"><?= $branch ?></span>
-                                                                <strong class="text-dark"><?= htmlspecialchars($p['nama_siswa']) ?></strong>
-                                                                <?php if ($p['tugas'] && $p['tugas'] !== 'Piket Umum'): ?>
-                                                                    <small class="text-muted">(<?= htmlspecialchars($p['tugas']) ?>)</small>
-                                                                <?php endif; ?>
-                                                            </div>
-                                                             <?php if ($can_crud): ?>
-                                                             <div class="no-print">
-                                                                 <button type="button" class="btn btn-warning btn-sm py-0 px-1 btn-edit-piket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>'><i class="fas fa-pencil-alt" style="font-size: 10px;"></i></button>
-                                                                 <button type="button" class="btn btn-danger btn-sm py-0 px-1 btn-hapus-piket" data-id="<?= (int)$p['id'] ?>" data-nama="<?= htmlspecialchars($p['nama_siswa'], ENT_QUOTES) ?>"><i class="fas fa-times" style="font-size: 10px;"></i></button>
-                                                             </div>
-                                                             <?php endif; ?>
-                                                        </div>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
+                    <div class="alert alert-light border small text-muted mb-3">
+                        <i class="fas fa-info-circle mr-1 text-primary"></i>
+                        Total <strong><?= (int)$total_petugas ?> petugas</strong> &bull; <?= (int)$hari_terisi ?> dari <?= count($days_order) ?> hari terisi
+                        <?php if ($hari_ini !== ''): ?> &bull; Hari ini: <strong><?= htmlspecialchars($hari_ini) ?></strong><?php endif; ?>
+                    </div>
+                    <div class="row">
+                        <?php
+                        $avatar_colors = ['#6777ef', '#3abaf4', '#47c363', '#ffa426', '#fc544b', '#9467ef'];
+                        foreach ($days_order as $di => $hari):
+                            $petugas = $piket_by_day[$hari] ?? [];
+                            $is_today = ($hari === $hari_ini);
+                        ?>
+                            <div class="col-md-4 col-sm-6 mb-4">
+                                <div class="card shadow-sm h-100 border piket-card <?= $is_today ? 'piket-today' : '' ?>">
+                                    <div class="piket-head">
+                                        <div class="d-flex align-items-center">
+                                            <span class="piket-day-icon"><i class="fas fa-calendar-day"></i></span>
+                                            <div>
+                                                <div class="font-weight-bold" style="font-size: 15px; line-height: 1.2;"><?= htmlspecialchars($hari) ?></div>
+                                                <small style="opacity:.9;"><?= count($petugas) ?> petugas<?= $is_today ? ' &bull; Hari ini' : '' ?></small>
                                             </div>
                                         </div>
+                                        <?php if ($is_today): ?>
+                                            <span class="badge badge-warning">Hari Ini</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-light"><?= count($petugas) ?> Siswa</span>
+                                        <?php endif; ?>
                                     </div>
-                                <?php endforeach; ?>
+                                    <div class="card-body p-3" style="background:#f8fafc;">
+                                        <?php if (empty($petugas)): ?>
+                                            <div class="text-center text-muted py-3">
+                                                <div style="font-size:28px;"><i class="fas fa-user-slash"></i></div>
+                                                <div class="mt-1" style="font-size:13px;">Belum ada petugas piket.</div>
+                                                <?php if ($can_crud): ?>
+                                                    <div class="mt-1" style="font-size:12px;">Klik Tambah Petugas untuk mengisi hari <?= htmlspecialchars($hari) ?>.</div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <?php foreach ($petugas as $idx => $p): ?>
+                                                <?php
+                                                $inisial = strtoupper(implode('', array_slice(array_map(function($w){ return mb_substr($w,0,1); }, preg_split('/\s+/', trim((string)$p['nama_siswa']))), 0, 2)));
+                                                $bg = $avatar_colors[($idx + $di) % count($avatar_colors)];
+                                                ?>
+                                                <div class="piket-item">
+                                                    <span class="piket-num"><?= $idx + 1 ?></span>
+                                                    <span class="piket-avatar" style="background:<?= $bg ?>;"><?= htmlspecialchars($inisial) ?></span>
+                                                    <div class="flex-grow-1" style="min-width:0;">
+                                                        <div class="piket-name font-weight-bold text-dark text-truncate"><?= htmlspecialchars($p['nama_siswa']) ?></div>
+                                                        <div class="piket-nisn text-muted">NISN: <?= htmlspecialchars($p['nisn'] ?? '-') ?></div>
+                                                    </div>
+                                                    <?php if ($can_crud): ?>
+                                                    <div class="no-print d-flex" style="gap:4px;">
+                                                        <button type="button" class="btn btn-warning btn-sm py-0 px-1 btn-edit-piket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>' title="Edit"><i class="fas fa-pencil-alt" style="font-size: 10px;"></i></button>
+                                                        <button type="button" class="btn btn-danger btn-sm py-0 px-1 btn-hapus-piket" data-id="<?= (int)$p['id'] ?>" data-nama="<?= htmlspecialchars($p['nama_siswa'], ENT_QUOTES) ?>" title="Hapus"><i class="fas fa-times" style="font-size: 10px;"></i></button>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-
-                        <!-- Tampilan Tabel -->
-                        <div class="tab-pane fade" id="tab-tabel" role="tabpanel">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-bordered table-sm" id="table-piket">
-                                    <thead>
-                                        <tr>
-                                            <th>Hari</th>
-                                            <th>Nama Siswa</th>
-                                            <th>Tugas</th>
-                                            <th width="8%" class="text-center">Urutan</th>
-                                            <th width="10%" class="text-center">Status</th>
-                                            <?php if ($can_crud): ?>
-                                            <th width="12%" class="text-center">Aksi</th>
-                                            <?php endif; ?>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($rows as $r): ?>
-                                            <tr>
-                                                <td><span class="badge badge-light border font-weight-bold"><?= htmlspecialchars($r['hari']) ?></span></td>
-                                                <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong> (<?= htmlspecialchars($r['nisn'] ?? '-') ?>)</td>
-                                                <td><?= htmlspecialchars($r['tugas']) ?></td>
-                                                <td class="text-center"><?= (int)$r['urutan'] ?></td>
-                                                <td class="text-center">
-                                                    <span class="badge badge-<?= $r['status'] === 'Aktif' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($r['status']) ?></span>
-                                                </td>
-                                                  <?php if ($can_crud): ?>
-                                                  <td class="text-center">
-                                                     <button type="button" class="btn btn-warning btn-sm btn-edit-piket" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                         <i class="fas fa-edit"></i>
-                                                     </button>
-                                                     <button type="button" class="btn btn-danger btn-sm btn-hapus-piket" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
-                                                         <i class="fas fa-trash"></i>
-                                                     </button>
-                                                 </td>
-                                                  <?php endif; ?>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
