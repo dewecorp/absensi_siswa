@@ -51,11 +51,10 @@ $import_type = isset($_GET['type']) ? $_GET['type'] : '';
                     <div id="importResult" class="mt-3" style="display: none;"></div>
                 </div>
                 <div class="modal-footer bg-whitesmoke br">
-                    <?php 
-                    $initial_url = "download_template.php?type=" . ($import_type ?: 'siswa');
-                    if (isset($_GET['kelas_id'])) {
-                        $initial_url .= "&kelas_id=" . $_GET['kelas_id'];
-                    }
+                    <?php
+                    $initial_url = ($import_type === 'guru')
+                        ? "../assets/templates/template_impor_guru.xlsx"
+                        : "../assets/templates/template_impor_siswa.xlsx";
                     ?>
                     <a href="<?php echo $initial_url; ?>" id="downloadTemplateLink" class="btn btn-primary">Unduh Template Excel</a>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>

@@ -180,11 +180,20 @@ $(document).ready(function() {
         });
     }
 
-    $('#inp_siswa').on('change', function() {
-        var wali = $(this).find(':selected').data('wali') || '';
-        if (wali) {
+    function syncNamaOrtuFromSiswa(fallbackNama) {
+        var wali = $('#inp_siswa').find(':selected').data('wali') || '';
+        wali = String(wali).trim();
+        if (wali !== '') {
             $('#inp_nama_ortu').val(wali);
+        } else if (typeof fallbackNama !== 'undefined' && String(fallbackNama || '').trim() !== '') {
+            $('#inp_nama_ortu').val(String(fallbackNama).trim());
+        } else if ($('#inp_nama_ortu').val() === 'Orang Tua / Wali') {
+            $('#inp_nama_ortu').val('');
         }
+    }
+
+    $('#inp_siswa').on('change', function() {
+        syncNamaOrtuFromSiswa('');
     });
 
     $('#btnTambahKomOrtu').on('click', function() {
@@ -192,6 +201,7 @@ $(document).ready(function() {
         $('#komOrtuId').val('');
         $('#modalKomOrtuTitle').text('Kirim Informasi / Pesan ke Orang Tua');
         $('#formKomOrtu')[0].reset();
+        syncNamaOrtuFromSiswa('');
         $('#modalKomOrtu').modal('show');
     });
 
@@ -202,10 +212,10 @@ $(document).ready(function() {
         $('#modalKomOrtuTitle').text('Edit Komunikasi Orang Tua');
         $('#inp_siswa').val(data.id_siswa);
         $('#inp_tanggal').val(data.tanggal);
-        $('#inp_nama_ortu').val(data.nama_ortu || '');
         $('#inp_jenis').val(data.jenis_informasi);
         $('#inp_judul').val(data.judul);
         $('#inp_isi').val(data.isi);
+        syncNamaOrtuFromSiswa(data.nama_ortu || data.wali_asli || '');
         $('#modalKomOrtu').modal('show');
     });
 

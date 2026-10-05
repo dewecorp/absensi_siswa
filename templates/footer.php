@@ -418,26 +418,65 @@
     function setImportType(type) {
         // Perbarui bidang input tersembunyi modal impor dengan tipe impor
         $('#importModal #importType').val(type);
-        
-        // Perbarui tautan unduhan template berdasarkan tipe
-        let templateUrl = 'download_template.php?type=' + type;
-        
-        // Jika tipe adalah siswa dan ada kelas yang dipilih, tambahkan ID kelas ke URL
-        if (type === 'siswa' && $('#filter_kelas').length > 0) {
-            let selectedClassId = $('#filter_kelas').val();
-            if (selectedClassId) {
-                templateUrl += '&kelas_id=' + selectedClassId;
-            }
-        }
-        
-        $('#importModal #downloadTemplateLink').attr('href', templateUrl);
-        
+
+        // Template statis tanpa sesi/PHP agar unduhan tidak bisa macet.
+        var templateUrl = (type === 'guru')
+            ? '../assets/templates/template_impor_guru.xlsx'
+            : '../assets/templates/template_impor_siswa.xlsx';
+
+        var $dl = $('#importModal #downloadTemplateLink');
+        try { $dl.attr('href', templateUrl); } catch (e) {}
+        try { $dl.removeAttr('target'); } catch (e) {}
+        try { $dl.removeAttr('download'); } catch (e) {}
+        try { $dl.prop('disabled', false).removeClass('disabled').css('pointer-events', ''); } catch (e) {}
+
         // Reset form dan progress saat modal dibuka
-        $('#importForm')[0].reset();
+        try { $('#importForm')[0].reset(); } catch (e) {}
+        // Kunci ulang URL unduh setelah reset
+        try { $dl.attr('href', templateUrl); } catch (e) {}
         $('#importProgress').hide();
         $('#importResult').hide();
-        $('#excel_file').val('');
+        try { $('#excel_file').val(''); } catch (e) {}
     }
+    // Kunci ulang href unduh setiap modal impor dibuka (anti-timpa reset/JS lain).
+    $(document).on('show.bs.modal', '#importModal', function() {
+        var t = $('#importModal #importType').val() || 'siswa';
+        var u = (t === 'guru')
+            ? '../assets/templates/template_impor_guru.xlsx'
+            : '../assets/templates/template_impor_siswa.xlsx';
+        var dl = document.getElementById('downloadTemplateLink');
+        if (dl) { dl.setAttribute('href', u); dl.removeAttribute('target'); dl.removeAttribute('download'); }
+        try {
+            var $dl = $('#importModal #downloadTemplateLink');
+            $dl.attr('href', u);
+            $dl.removeAttr('target');
+            $dl.removeAttr('download');
+        } catch (e) {}
+    });
+    // Unduh paksa via blob agar tidak diblokir tab/iframe browser.
+    $(document).off('click.tplforce').on('click.tplforce', '#downloadTemplateLink, .tpl-direct', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var url = $(this).attr('href');
+        if (!url) return false;
+        var fname = url.split('/').pop().split('?')[0] || 'template.xlsx';
+        fetch(url, { credentials: 'same-origin' }).then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.blob();
+        }).then(function(b) {
+            var blob = (b.size > 0) ? b : null;
+            if (!blob) throw new Error('empty');
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fname;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+        }).catch(function() {
+            window.location.href = url;
+        });
+        return false;
+    });
     
     // Tangani perubahan file untuk auto-submit
     $(document).on('change', '#excel_file', function() {

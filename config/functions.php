@@ -1,6 +1,39 @@
 <?php
-// Start output buffering with Indonesian date translation
+// Start output buffering with Indonesian date translation.
+// PENTING: callback ini hanya untuk output HTML. Unduhan biner
+// (XLSX/PDF/DOCX/CSV/gambar/ZIP) wajib dilewati agar file tidak corrupt.
 ob_start(function($buffer) {
+    // Deteksi biner: ZIP/XLSX (PK..), PDF (%PDF), DOC lama (D0CF11E0),
+    // gambar umum, gzip, dan RAR — kembalikan apa adanya.
+    if ($buffer === '' || !is_string($buffer)) {
+        return $buffer;
+    }
+    $head = substr($buffer, 0, 8);
+    if (strncmp($head, "PK\x03\x04", 4) === 0
+        || strncmp($head, '%PDF', 4) === 0
+        || strncmp($head, "\xD0\xCF\x11\xE0", 4) === 0
+        || strncmp($head, "\xFF\xD8\xFF", 3) === 0
+        || strncmp($head, "\x89PNG", 4) === 0
+        || strncmp($head, "GIF8", 4) === 0
+        || strncmp($head, "\x1F\x8B", 2) === 0
+        || strncmp($head, "Rar!", 4) === 0
+    ) {
+        return $buffer;
+    }
+    // Lewati juga bila header unduhan file sudah dikirim.
+    if (!empty($GLOBALS['SIMAD_SKIP_DATE_TRANSLATE'])) {
+        return $buffer;
+    }
+    if (function_exists('headers_list')) {
+        foreach (headers_list() as $h) {
+            $hl = strtolower($h);
+            if (strpos($hl, 'content-disposition: attachment') !== false
+                || (strpos($hl, 'content-type:') !== false
+                    && preg_match('#(spreadsheet|excel|ms-excel|officedocument|msword|wordprocessingml|pdf|csv|octet-stream|zip)#', $hl))) {
+                return $buffer;
+            }
+        }
+    }
     $months_full = [
         'January' => 'Januari', 'February' => 'Februari', 'March' => 'Maret', 'May' => 'Mei',
         'June' => 'Juni', 'July' => 'Juli', 'August' => 'Agustus', 'October' => 'Oktober',

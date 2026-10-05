@@ -1410,14 +1410,12 @@ $(document).ready(function() {
     $js_page[] = "<script>
 function setImportType(type) {
     $('#importModal input[name=\"import_type\"]').val(type);
-    let templateUrl = 'download_template.php?type=' + type;
-    if (type === 'siswa' && $('#filter_kelas').length > 0) {
-        let selectedClassId = $('#filter_kelas').val();
-        if (selectedClassId) {
-            templateUrl += '&kelas_id=' + selectedClassId;
-        }
-    }
-    $('#importModal #downloadTemplateLink').attr('href', templateUrl);
+    var templateUrl = (type === 'guru')
+        ? '../assets/templates/template_impor_guru.xlsx'
+        : '../assets/templates/template_impor_siswa.xlsx';
+    var dl = document.getElementById('downloadTemplateLink');
+    if (dl) { dl.setAttribute('href', templateUrl); dl.removeAttribute('target'); dl.removeAttribute('download'); }
+    try { $('#importModal #downloadTemplateLink').attr('href', templateUrl); } catch (e) {}
 }
 </script>";
 

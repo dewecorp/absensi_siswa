@@ -1,15 +1,18 @@
 <?php
+// Buffer paling awal: tangkap output liar (notice/warning/BOM) sebelum header file.
 ob_start();
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is authorized
 if (!isAuthorized(['admin'])) {
-    die('Unauthorized access');
+    http_response_code(403);
+    die('Akses ditolak (403): sesi kedaluwarsa atau bukan admin. Silakan login ulang sebagai admin, lalu unduh lagi.');
 }
 
-// Clear any previous output
-if (ob_get_length()) ob_end_clean();
+// Bersihkan SEMUA output buffer (termasuk penerjemah tanggal global di
+// functions.php) agar biner XLSX tidak rusak saat diunduh.
+while (ob_get_level() > 0) { ob_end_clean(); }
 
 // Load PhpSpreadsheet
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
@@ -110,19 +113,32 @@ try {
     $sheet->getStyle('A1:' . $last_column . '1')->applyFromArray($styleArray);
 
     // Final check for any output
-    if (ob_get_length()) ob_end_clean();
+    while (ob_get_level() > 0) { ob_end_clean(); }
+
+    // Render ke memori dulu (tanpa temp file agar tak gagal permission),
+    // lalu kirim dengan Content-Length agar browser yakin ini file utuh.
+    ob_start();
+    $writer = new Xlsx($spreadsheet);
+    $writer->save('php://output');
+    $bin = (string)ob_get_clean();
+    if (strlen($bin) < 1000 || substr($bin, 0, 2) !== 'PK') {
+        http_response_code(500);
+        die('Gagal membuat template (data rusak). Silakan coba lagi.');
+    }
 
     // Output to browser
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment;filename="' . $filename . '"');
-    header('Cache-Control: max-age=0');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Transfer-Encoding: binary');
+    header('Content-Length: ' . strlen($bin));
+    header('Cache-Control: max-age=0, must-revalidate');
     header('Pragma: public');
+    header('Expires: 0');
 
-    $writer = new Xlsx($spreadsheet);
-    $writer->save('php://output');
+    echo $bin;
     exit;
 
 } catch (Exception $e) {
-    if (ob_get_length()) ob_end_clean();
+    while (ob_get_level() > 0) { ob_end_clean(); }
     die('Error creating template: ' . $e->getMessage());
 }

@@ -24,8 +24,7 @@ $css_libs = [
 $js_libs = [
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-    'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js',
-    'student_management_unified.js'
+    'https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js'
 ];
 
 // Auto-create tanggal_masuk column on hosting
