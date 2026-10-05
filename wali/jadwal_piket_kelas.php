@@ -10,6 +10,7 @@ if (!isAuthorized(['wali', 'admin'])) {
 }
 
 $user_level = getUserLevel();
+$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -28,8 +29,16 @@ if ($wali_class) {
 $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $selected_kelas_id = $wali_kelas_id;
-if ($user_level === 'admin' && isset($_GET['kelas'])) {
-    $selected_kelas_id = (int)$_GET['kelas'];
+$selected_kelas_name = $wali_kelas_name;
+if ($user_level === 'admin') {
+    $selected_kelas_id = (int)($_GET['kelas'] ?? 0);
+    $selected_kelas_name = '';
+    foreach ($all_classes as $c) {
+        if ((int)$c['id_kelas'] === $selected_kelas_id) {
+            $selected_kelas_name = (string)$c['nama_kelas'];
+            break;
+        }
+    }
 }
 
 $days_order = getUrutanHariJadwalSekolah($pdo);
@@ -38,7 +47,10 @@ $message = null;
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Akses ditolak. Pengguna hanya memiliki akses lihat (monitoring).'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -84,21 +96,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+}
 
 $siswa_list = [];
+$rows = [];
 if ($selected_kelas_id > 0) {
     $stS = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
     $stS->execute([$selected_kelas_id]);
     $siswa_list = $stS->fetchAll(PDO::FETCH_ASSOC);
-}
 
 // Fetch piket rows
 $where = ["1=1"];
 $params = [];
-if ($selected_kelas_id > 0) {
-    $where[] = "p.id_kelas = ?";
-    $params[] = $selected_kelas_id;
-}
+$where[] = "p.id_kelas = ?";
+$params[] = $selected_kelas_id;
 if ($user_level !== 'admin') {
     $where[] = "p.id_wali = ?";
     $params[] = $guru_id;
@@ -115,6 +126,7 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Kelompokkan per hari untuk tampilan Kartu Mingguan
 $piket_by_day = [];
@@ -209,18 +221,21 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Jadwal Piket Kelas <?= !empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '' ?></h1>
+            <h1>Jadwal Piket Kelas <?= $user_level === 'admin' ? (!empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '') : (!empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '') ?></h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
             <?php if ($user_level === 'admin'): ?>
-            <div class="card mb-3">
-                <div class="card-body p-3">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Filter Kelas</h4>
+                </div>
+                <div class="card-body">
                     <form method="GET" class="form-inline">
-                        <label class="mr-2">Pilih Kelas:</label>
-                        <select name="kelas" class="form-control" onchange="this.form.submit()">
-                            <option value="">-- Semua Kelas --</option>
+                        <label class="mr-2" for="selectKelasPiket">Pilih Kelas:</label>
+                        <select name="kelas" id="selectKelasPiket" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
+                            <option value="">-- Pilih Kelas --</option>
                             <?php foreach ($all_classes as $c): ?>
                                 <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
                             <?php endforeach; ?>
@@ -230,6 +245,7 @@ include '../templates/sidebar.php';
             </div>
             <?php endif; ?>
 
+            <?php if ($selected_kelas_id > 0 || $user_level !== 'admin'): ?>
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <ul class="nav nav-pills" id="piketModeTab" role="tablist">
@@ -244,9 +260,11 @@ include '../templates/sidebar.php';
                         <button type="button" class="btn btn-outline-primary mr-2" onclick="window.print()">
                             <i class="fas fa-print mr-1"></i> Cetak Jadwal
                         </button>
+                        <?php if ($can_crud): ?>
                         <button type="button" class="btn btn-primary" id="btnTambahPiket" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Tambah Petugas
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -283,10 +301,12 @@ include '../templates/sidebar.php';
                                                                     <small class="text-muted">(<?= htmlspecialchars($p['tugas']) ?>)</small>
                                                                 <?php endif; ?>
                                                             </div>
-                                                            <div class="no-print">
-                                                                <button type="button" class="btn btn-warning btn-sm py-0 px-1 btn-edit-piket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>'><i class="fas fa-pencil-alt" style="font-size: 10px;"></i></button>
-                                                                <button type="button" class="btn btn-danger btn-sm py-0 px-1 btn-hapus-piket" data-id="<?= (int)$p['id'] ?>" data-nama="<?= htmlspecialchars($p['nama_siswa'], ENT_QUOTES) ?>"><i class="fas fa-times" style="font-size: 10px;"></i></button>
-                                                            </div>
+                                                             <?php if ($can_crud): ?>
+                                                             <div class="no-print">
+                                                                 <button type="button" class="btn btn-warning btn-sm py-0 px-1 btn-edit-piket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>'><i class="fas fa-pencil-alt" style="font-size: 10px;"></i></button>
+                                                                 <button type="button" class="btn btn-danger btn-sm py-0 px-1 btn-hapus-piket" data-id="<?= (int)$p['id'] ?>" data-nama="<?= htmlspecialchars($p['nama_siswa'], ENT_QUOTES) ?>"><i class="fas fa-times" style="font-size: 10px;"></i></button>
+                                                             </div>
+                                                             <?php endif; ?>
                                                         </div>
                                                     <?php endforeach; ?>
                                                 <?php endif; ?>
@@ -308,7 +328,9 @@ include '../templates/sidebar.php';
                                             <th>Tugas</th>
                                             <th width="8%" class="text-center">Urutan</th>
                                             <th width="10%" class="text-center">Status</th>
+                                            <?php if ($can_crud): ?>
                                             <th width="12%" class="text-center">Aksi</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -321,14 +343,16 @@ include '../templates/sidebar.php';
                                                 <td class="text-center">
                                                     <span class="badge badge-<?= $r['status'] === 'Aktif' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($r['status']) ?></span>
                                                 </td>
-                                                <td class="text-center">
-                                                    <button type="button" class="btn btn-warning btn-sm btn-edit-piket" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-danger btn-sm btn-hapus-piket" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </td>
+                                                  <?php if ($can_crud): ?>
+                                                  <td class="text-center">
+                                                     <button type="button" class="btn btn-warning btn-sm btn-edit-piket" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                         <i class="fas fa-edit"></i>
+                                                     </button>
+                                                     <button type="button" class="btn btn-danger btn-sm btn-hapus-piket" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
+                                                         <i class="fas fa-trash"></i>
+                                                     </button>
+                                                 </td>
+                                                  <?php endif; ?>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -338,6 +362,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </section>
 </div>

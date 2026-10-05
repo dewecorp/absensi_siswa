@@ -42,9 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $st = $pdo->prepare("
                         UPDATE tb_master_tindak_lanjut SET
                             sumber = ?, tindakan = ?, penanggung_jawab = ?
-                        WHERE id = ? AND (id_guru = ? OR id_guru IS NULL OR id_guru = 0)
+                        WHERE id = ? " . ($user_level !== 'admin' ? "AND (id_guru = $guru_id OR id_guru IS NULL OR id_guru = 0)" : "") . "
                     ");
-                    $st->execute([$sumber, $tindakan, $penanggung_jawab, $id, $guru_id]);
+                    $st->execute([$sumber, $tindakan, $penanggung_jawab, $id]);
                     $message = ['type' => 'success', 'text' => 'Template tindak lanjut berhasil diperbarui.'];
                 }
             } catch (Exception $e) {
@@ -54,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus') {
         $id = (int)($_POST['id'] ?? 0);
         try {
-            $st = $pdo->prepare("DELETE FROM tb_master_tindak_lanjut WHERE id = ? AND (id_guru = ? OR id_guru IS NULL OR id_guru = 0)");
-            $st->execute([$id, $guru_id]);
+            $st = $pdo->prepare("DELETE FROM tb_master_tindak_lanjut WHERE id = ? " . ($user_level !== 'admin' ? "AND (id_guru = $guru_id OR id_guru IS NULL OR id_guru = 0)" : ""));
+            $st->execute([$id]);
             $message = ['type' => 'success', 'text' => 'Template tindak lanjut berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -66,8 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Filter sumber
 $sumber_list = ['Pembinaan', 'Pelanggaran', 'Konseling', 'Perkembangan'];
 $f_sumber = trim((string)($_GET['f_sumber'] ?? ''));
-$where = ["(id_guru = ? OR id_guru IS NULL OR id_guru = 0)"];
-$params = [$guru_id];
+$where = ["1=1"];
+$params = [];
+if ($user_level !== 'admin') {
+    $where[] = "(id_guru = ? OR id_guru IS NULL OR id_guru = 0)";
+    $params[] = $guru_id;
+}
 if ($f_sumber !== '') {
     $where[] = "sumber = ?";
     $params[] = $f_sumber;

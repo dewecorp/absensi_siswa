@@ -10,6 +10,7 @@ if (!isAuthorized(['wali', 'admin'])) {
 }
 
 $user_level = getUserLevel();
+$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -38,7 +39,10 @@ $message = null;
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Akses ditolak. Admin hanya mode lihat.'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -139,6 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
         }
+    }
     }
 }
 
@@ -798,9 +803,11 @@ include '../templates/sidebar.php';
                         <a href="<?= htmlspecialchars($url_bina_xls) ?>" class="btn btn-success btn-sm mr-2" title="Ekspor Excel">
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
+                        <?php if ($can_crud): ?>
                         <button type="button" class="btn btn-primary btn-sm" id="btnTambahPembinaan" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Catat Pembinaan
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="card-body">
@@ -849,12 +856,14 @@ include '../templates/sidebar.php';
                                                 <button type="button" class="btn btn-info btn-sm btn-detail-pembinaan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
+                                                <?php if ($can_crud): ?>
                                                 <button type="button" class="btn btn-warning btn-sm btn-edit-pembinaan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-danger btn-sm btn-hapus-pembinaan" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
+                                                <?php endif; ?>
                                                 <a href="export_pembinaan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini">
                                                     <i class="fas fa-print"></i>
                                                 </a>

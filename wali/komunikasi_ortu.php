@@ -10,6 +10,7 @@ if (!isAuthorized(['wali', 'admin'])) {
 }
 
 $user_level = getUserLevel();
+$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -36,7 +37,10 @@ $message = null;
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Akses ditolak. Pengguna hanya memiliki akses lihat (monitoring).'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -99,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
         }
     }
+}
 }
 
 $siswa_list = [];
@@ -317,9 +322,11 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Pesan & Laporan untuk Orang Tua / Wali Siswa</h4>
+                    <?php if ($can_crud): ?>
                     <button type="button" class="btn btn-primary" id="btnTambahKomOrtu" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
                         <i class="fas fa-paper-plane mr-1"></i> Kirim Pesan Baru
                     </button>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -356,12 +363,14 @@ include '../templates/sidebar.php';
                                             <button type="button" class="btn btn-info btn-sm btn-detail-kom-ortu" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
                                                 <i class="fas fa-eye"></i>
                                             </button>
+                                            <?php if ($can_crud): ?>
                                             <button type="button" class="btn btn-warning btn-sm btn-edit-kom-ortu" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             <button type="button" class="btn btn-danger btn-sm btn-hapus-kom-ortu" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
                                                 <i class="fas fa-trash"></i>
                                             </button>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

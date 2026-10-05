@@ -43,9 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $st = $pdo->prepare("
                         UPDATE tb_master_konseling SET
                             topik = ?, ringkasan = ?, tindak_lanjut = ?, follow_up = ?
-                        WHERE id = ? AND (id_guru = ? OR id_guru IS NULL OR id_guru = 0)
+                        WHERE id = ? " . ($user_level !== 'admin' ? "AND (id_guru = $guru_id OR id_guru IS NULL OR id_guru = 0)" : "") . "
                     ");
-                    $st->execute([$topik, $ringkasan, $tindak_lanjut, $follow_up, $id, $guru_id]);
+                    $st->execute([$topik, $ringkasan, $tindak_lanjut, $follow_up, $id]);
                     $message = ['type' => 'success', 'text' => 'Template konseling berhasil diperbarui.'];
                 }
             } catch (Exception $e) {
@@ -55,8 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus') {
         $id = (int)($_POST['id'] ?? 0);
         try {
-            $st = $pdo->prepare("DELETE FROM tb_master_konseling WHERE id = ? AND (id_guru = ? OR id_guru IS NULL OR id_guru = 0)");
-            $st->execute([$id, $guru_id]);
+            $st = $pdo->prepare("DELETE FROM tb_master_konseling WHERE id = ? " . ($user_level !== 'admin' ? "AND (id_guru = $guru_id OR id_guru IS NULL OR id_guru = 0)" : ""));
+            $st->execute([$id]);
             $message = ['type' => 'success', 'text' => 'Template konseling berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -70,8 +70,12 @@ if (empty($topik_list)) {
     $topik_list = ['Motivasi Belajar', 'Penyesuaian Sosial', 'Keluarga', 'Kedisiplinan', 'Kecemasan / Emosi', 'Minat & Bakat', 'Ibadah & Spiritual', 'Lainnya'];
 }
 $f_topik = trim((string)($_GET['f_topik'] ?? ''));
-$where = ["(id_guru = ? OR id_guru IS NULL OR id_guru = 0)"];
-$params = [$guru_id];
+$where = ["1=1"];
+$params = [];
+if ($user_level !== 'admin') {
+    $where[] = "(id_guru = ? OR id_guru IS NULL OR id_guru = 0)";
+    $params[] = $guru_id;
+}
 if ($f_topik !== '') {
     $where[] = "topik = ?";
     $params[] = $f_topik;
@@ -206,9 +210,9 @@ include '../templates/sidebar.php';
                                     <th style="width: 140px;">Topik</th>
                                     <th>Ringkasan Masalah / Hasil</th>
                                     <th>Tindak Lanjut / Solusi</th>
-                                    <th>Rencana Follow Up</th>
-                                    <th style="width: 90px;">Aksi</th>
-                                </tr>
+                                     <th>Rencana Follow Up</th>
+                                     <th style="width: 90px;">Aksi</th>
+                                 </tr>
                             </thead>
                             <tbody>
                                 <?php $no = 1; foreach ($rows as $r): ?>

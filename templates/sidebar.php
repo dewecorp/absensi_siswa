@@ -367,7 +367,6 @@ switch ($user_level) {
             ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php', 'active' => $current_page === 'siswa_baru.php'],
             ['title' => 'Data Alumni', 'url' => '../admin/data_alumni.php', 'active' => $current_page === 'data_alumni.php'],
             ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php', 'active' => $current_page === 'data_nilai_ujian.php'],
-            ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php', 'active' => $current_page === 'struktur_kelas.php'],
             ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php', 'active' => $current_page === 'mata_pelajaran.php'],
             ['title' => 'Jam Mengajar', 'url' => '../admin/jam_mengajar.php', 'active' => $current_page === 'jam_mengajar.php'],
             ['title' => 'Kenaikan Kelas', 'url' => '../admin/kenaikan_kelas.php', 'active' => $current_page === 'kenaikan_kelas.php'],
@@ -430,13 +429,13 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_admin,
-                'active' => in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'tindak_lanjut.php', 'data_tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php'])
+                'active' => in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'tindak_lanjut.php', 'data_tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'struktur_kelas.php'])
             ],
             [
                 'title' => 'Master Data',
                 'icon' => 'fas fa-database',
                 'submenu' => $master_data_submenu,
-                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'data_peserta_ujian.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php', 'data_prestasi_siswa.php', 'struktur_kelas.php'])
+                'active' => in_array($current_page, ['data_guru.php', 'data_kelas.php', 'data_siswa.php', 'data_peserta_ujian.php', 'siswa_baru.php', 'data_alumni.php', 'data_nilai_ujian.php', 'mata_pelajaran.php', 'jam_mengajar.php', 'kenaikan_kelas.php', 'kalender_pendidikan.php', 'data_prestasi_siswa.php'])
             ],
             [
                 'title' => 'Kehadiran',
@@ -1803,6 +1802,10 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             margin-left: 8px !important;
             margin-right: 0 !important;
         }
+        .main-sidebar .sidebar-menu ul.dropdown-menu li a.active {
+            color: #6777ef !important;
+            font-weight: 700 !important;
+        }
     </style>
     <aside id="sidebar-wrapper">
         <div class="sidebar-brand">
@@ -1819,7 +1822,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                 <?php if (isset($item['submenu'])): ?>
                     <li class="nav-item dropdown <?php echo $item['active'] ? 'active' : ''; ?>">
                         <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span><?php if (isset($item['badge']) && $item['badge'] !== null): ?><span class="badge badge-primary badge-circle ml-auto mr-3"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?></a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu"<?php echo $item['active'] ? ' style="display:block;"' : ''; ?>>
                             <?php foreach ($item['submenu'] as $subitem): ?>
                                 <li><a class="nav-link d-flex align-items-center justify-content-between <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo htmlspecialchars(app_url($subitem['url']), ENT_QUOTES, 'UTF-8'); ?>"><span><?php echo $subitem['title']; ?></span><?php if (isset($subitem['badge']) && $subitem['badge'] !== null): ?><span class="badge badge-primary badge-circle ml-2"><?php echo htmlspecialchars((string)$subitem['badge']); ?></span><?php endif; ?></a></li>
                             <?php endforeach; ?>
@@ -1841,4 +1844,32 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         </ul>
     </aside>
 </div>
+<?php
+// Scroll sidebar ke menu aktif SETELAH Stisla + niceScroll siap (dirender di footer).
+if (!isset($js_page) || !is_array($js_page)) { $js_page = []; }
+$js_page[] = <<<'SIDEBARJS'
+$(function() {
+    setTimeout(function() {
+        try {
+            var $sidebar = $('.main-sidebar');
+            if (!$sidebar.length) return;
+            var $active = $sidebar.find('ul.dropdown-menu li a.active').first();
+            if (!$active.length) return;
+            var $drop = $active.closest('li.dropdown');
+            $drop.addClass('active');
+            var $dd = $drop.children('ul.dropdown-menu');
+            try { $dd.stop(true, true).show(); } catch (e) {}
+            var targetTop = $active.offset().top - $sidebar.offset().top + ($sidebar.scrollTop() || 0) - ($sidebar.height() / 2 - 40);
+            if (targetTop < 0) targetTop = 0;
+            try {
+                var ns = $sidebar.getNiceScroll && $sidebar.getNiceScroll();
+                if (ns && ns.length && ns[0].doScrollTop) { ns[0].doScrollTop(Math.round(targetTop), 0); }
+            } catch (e) {}
+            try { $sidebar.scrollTop(targetTop); } catch (e) {}
+            try { $('#sidebar-wrapper').scrollTop(targetTop); } catch (e) {}
+        } catch (e) {}
+    }, 650);
+});
+SIDEBARJS;
+?>
 </div>

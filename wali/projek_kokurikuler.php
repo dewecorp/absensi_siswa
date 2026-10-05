@@ -10,6 +10,7 @@ if (!isAuthorized(['wali', 'admin'])) {
 }
 
 $user_level = getUserLevel();
+$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -36,7 +37,10 @@ $message = null;
 
 // Handle CRUD Projek & Anggota
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Akses ditolak. Pengguna hanya memiliki akses lihat (monitoring).'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     // 1. Projek CRUD
     if ($action === 'tambah_projek' || $action === 'edit_projek') {
@@ -127,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus anggota: ' . $e->getMessage()];
         }
     }
+}
 }
 
 // Siswa kelas ini
@@ -346,9 +351,11 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Projek P5 / Kokurikuler Kelas</h4>
+                    <?php if ($can_crud): ?>
                     <button type="button" class="btn btn-primary" id="btnTambahProjek">
                         <i class="fas fa-plus mr-1"></i> Buat Projek Baru
                     </button>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -387,17 +394,19 @@ include '../templates/sidebar.php';
                                             <span class="badge badge-primary"><?= (int)$r['jumlah_peserta'] ?> Siswa</span>
                                         </td>
                                         <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-info btn-sm btn-anggota-projek" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Kelola Anggota & Kelompok">
-                                                <i class="fas fa-users mr-1"></i> Anggota
-                                            </button>
-                                            <button type="button" class="btn btn-warning btn-sm btn-edit-projek" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm btn-hapus-projek" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_projek'], ENT_QUOTES) ?>" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </td>
+                                         <td class="text-center">
+                                             <button type="button" class="btn btn-info btn-sm btn-anggota-projek" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Lihat/Kelola Anggota & Kelompok">
+                                                 <i class="fas fa-users mr-1"></i> Anggota
+                                             </button>
+                                             <?php if ($can_crud): ?>
+                                             <button type="button" class="btn btn-warning btn-sm btn-edit-projek" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                 <i class="fas fa-edit"></i>
+                                             </button>
+                                             <button type="button" class="btn btn-danger btn-sm btn-hapus-projek" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_projek'], ENT_QUOTES) ?>" title="Hapus">
+                                                 <i class="fas fa-trash"></i>
+                                             </button>
+                                             <?php endif; ?>
+                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

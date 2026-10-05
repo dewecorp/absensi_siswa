@@ -10,6 +10,7 @@ if (!isAuthorized(['wali', 'admin'])) {
 }
 
 $user_level = getUserLevel();
+$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -37,63 +38,64 @@ $message = null;
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-
-    if ($action === 'tambah' || $action === 'edit') {
-        $id = (int)($_POST['id'] ?? 0);
-        $id_siswa = (int)($_POST['id_siswa'] ?? 0);
-        $id_kelas = (int)($_POST['id_kelas'] ?? $selected_kelas_id);
-        $tanggal = !empty($_POST['tanggal']) ? date('Y-m-d', strtotime($_POST['tanggal'])) : date('Y-m-d');
-        $jenis_pelanggaran = trim((string)($_POST['jenis_pelanggaran'] ?? ''));
-        $kategori = trim((string)($_POST['kategori'] ?? 'Ringan'));
-        $poin = (int)($_POST['poin'] ?? 0);
-        $tindakan = trim((string)($_POST['tindakan'] ?? ''));
-        $orang_tua = trim((string)($_POST['orang_tua'] ?? 'Belum Dipanggil'));
-        $status = in_array($_POST['status'] ?? '', ['Dicatat', 'Ditindaklanjuti', 'Selesai'], true) ? $_POST['status'] : 'Dicatat';
-
-        if ($id_siswa <= 0 || $jenis_pelanggaran === '') {
-            $message = ['type' => 'warning', 'text' => 'Pilih Siswa dan isi Jenis Pelanggaran.'];
-        } else {
-            // Deteksi otomatis jenis binaan dari teks pelanggaran (server, anti-bocor).
-            $detJ = function_exists('pelanggaran_deteksi_jenis') ? pelanggaran_deteksi_jenis($jenis_pelanggaran, $kategori) : ['jenis' => 'Kedisiplinan'];
-            $jenis_binaan = $detJ['jenis'];
-            try {
-                if ($action === 'tambah') {
-                    $stmt = $pdo->prepare("
-                        INSERT INTO tb_pelanggaran_siswa (
-                            id_wali, id_siswa, id_kelas, tanggal, jenis_pelanggaran,
-                            kategori, poin, tindakan, orang_tua, status, jenis_binaan
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ");
-                    $stmt->execute([
-                        $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
-                        $kategori, $poin, $tindakan, $orang_tua, $status, $jenis_binaan
-                    ]);
-                    $message = ['type' => 'success', 'text' => 'Pelanggaran siswa berhasil dicatat.'];
-                } else {
-                    $stmt = $pdo->prepare("
-                        UPDATE tb_pelanggaran_siswa SET
-                            id_siswa = ?, id_kelas = ?, tanggal = ?, jenis_pelanggaran = ?,
-                            kategori = ?, poin = ?, tindakan = ?, orang_tua = ?, status = ?, jenis_binaan = ?
-                        WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
-                    ");
-                    $stmt->execute([
-                        $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
-                        $kategori, $poin, $tindakan, $orang_tua, $status, $jenis_binaan, $id
-                    ]);
-                    $message = ['type' => 'success', 'text' => 'Data pelanggaran berhasil diperbarui.'];
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Akses ditolak. Admin hanya mode lihat.'];
+    } else {
+        $action = $_POST['action'] ?? '';
+        if ($action === 'tambah' || $action === 'edit') {
+            $id = (int)($_POST['id'] ?? 0);
+            $id_siswa = (int)($_POST['id_siswa'] ?? 0);
+            $id_kelas = (int)($_POST['id_kelas'] ?? $selected_kelas_id);
+            $tanggal = !empty($_POST['tanggal']) ? date('Y-m-d', strtotime($_POST['tanggal'])) : date('Y-m-d');
+            $jenis_pelanggaran = trim((string)($_POST['jenis_pelanggaran'] ?? ''));
+            $kategori = trim((string)($_POST['kategori'] ?? 'Ringan'));
+            $poin = (int)($_POST['poin'] ?? 0);
+            $tindakan = trim((string)($_POST['tindakan'] ?? ''));
+            $orang_tua = trim((string)($_POST['orang_tua'] ?? 'Belum Dipanggil'));
+            $status = in_array($_POST['status'] ?? '', ['Dicatat', 'Ditindaklanjuti', 'Selesai'], true) ? $_POST['status'] : 'Dicatat';
+            if ($id_siswa <= 0 || $jenis_pelanggaran === '') {
+                $message = ['type' => 'warning', 'text' => 'Pilih Siswa dan isi Jenis Pelanggaran.'];
+            } else {
+                $detJ = function_exists('pelanggaran_deteksi_jenis') ? pelanggaran_deteksi_jenis($jenis_pelanggaran, $kategori) : ['jenis' => 'Kedisiplinan'];
+                $jenis_binaan = $detJ['jenis'];
+                try {
+                    if ($action === 'tambah') {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO tb_pelanggaran_siswa (
+                                id_wali, id_siswa, id_kelas, tanggal, jenis_pelanggaran,
+                                kategori, poin, tindakan, orang_tua, status, jenis_binaan
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmt->execute([
+                            $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
+                            $kategori, $poin, $tindakan, $orang_tua, $status, $jenis_binaan
+                        ]);
+                        $message = ['type' => 'success', 'text' => 'Pelanggaran siswa berhasil dicatat.'];
+                    } else {
+                        $stmt = $pdo->prepare("
+                            UPDATE tb_pelanggaran_siswa SET
+                                id_siswa = ?, id_kelas = ?, tanggal = ?, jenis_pelanggaran = ?,
+                                kategori = ?, poin = ?, tindakan = ?, orang_tua = ?, status = ?, jenis_binaan = ?
+                            WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+                        ");
+                        $stmt->execute([
+                            $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
+                            $kategori, $poin, $tindakan, $orang_tua, $status, $jenis_binaan, $id
+                        ]);
+                        $message = ['type' => 'success', 'text' => 'Data pelanggaran berhasil diperbarui.'];
+                    }
+                } catch (Exception $e) {
+                    $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
                 }
-            } catch (Exception $e) {
-                $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
             }
-        }
-    } elseif ($action === 'hapus') {
-        $id = (int)($_POST['id'] ?? 0);
-        try {
-            $pdo->prepare("DELETE FROM tb_pelanggaran_siswa WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : ""))->execute([$id]);
-            $message = ['type' => 'success', 'text' => 'Data pelanggaran berhasil dihapus.'];
-        } catch (Exception $e) {
-            $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
+        } elseif ($action === 'hapus') {
+            $id = (int)($_POST['id'] ?? 0);
+            try {
+                $pdo->prepare("DELETE FROM tb_pelanggaran_siswa WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+                $message = ['type' => 'success', 'text' => 'Data pelanggaran berhasil dihapus.'];
+            } catch (Exception $e) {
+                $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
+            }
         }
     }
 }
@@ -101,9 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Siswa kelas ini
 $siswa_list = [];
 if ($selected_kelas_id > 0) {
-    $stS = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+    $stS = $pdo->prepare("SELECT s.id_siswa, s.nama_siswa, s.nisn, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
     $stS->execute([$selected_kelas_id]);
     $siswa_list = $stS->fetchAll(PDO::FETCH_ASSOC);
+} elseif ($user_level === 'admin') {
+    $siswa_list = $pdo->query("SELECT s.id_siswa, s.nama_siswa, s.nisn, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas ORDER BY k.nama_kelas ASC, s.nama_siswa ASC")->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Fetch rows pelanggaran
@@ -439,9 +443,11 @@ include '../templates/sidebar.php';
                         <a href="<?= htmlspecialchars($url_lg_xls) ?>" class="btn btn-success btn-sm mr-2" title="Ekspor Excel">
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
+                        <?php if ($can_crud): ?>
                         <button type="button" class="btn btn-primary btn-sm" id="btnTambahPelanggaran" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Catat Pelanggaran
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="card-body">
@@ -495,12 +501,14 @@ include '../templates/sidebar.php';
                                                 <button type="button" class="btn btn-info btn-sm btn-detail-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
+                                                <?php if ($can_crud): ?>
                                                 <button type="button" class="btn btn-warning btn-sm btn-edit-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-danger btn-sm btn-hapus-pelanggaran" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
+                                                <?php endif; ?>
                                                 <a href="export_pelanggaran_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini">
                                                     <i class="fas fa-print"></i>
                                                 </a>

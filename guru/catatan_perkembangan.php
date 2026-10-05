@@ -250,6 +250,13 @@ $(document).ready(function() {
             allowClear: true,
             width: '100%'
         });
+        $('.select2-filter-siswa').select2({
+            placeholder: '-- Siswa --',
+            allowClear: true,
+            width: '100%'
+        }).on('change', function() {
+            $('#formFilterCatatan').submit();
+        });
     }
 
     // Salin opsi siswa asli untuk filter dinamis per kelas
@@ -639,6 +646,31 @@ include '../templates/sidebar.php';
 .aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
 .aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
 #table-catatan td:last-child { white-space: nowrap; }
+.select2-container--default .select2-selection--single {
+    border: 1px solid #ced4da;
+    height: 31px;
+    border-radius: 0.2rem;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 29px;
+    font-size: 13px;
+    padding-left: 8px;
+    padding-right: 20px;
+    text-align: center;
+    color: #34395e !important;
+    font-weight: 600;
+}
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #34395e !important;
+    font-weight: 600;
+}
+.select2-dropdown .select2-results__option {
+    text-align: center;
+    color: #34395e;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 29px;
+}
 </style>
 <div class="main-content">
     <section class="section">
@@ -660,7 +692,7 @@ include '../templates/sidebar.php';
                         <?php endif; ?>
                         <div class="col-md-3 mb-2">
                             <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Kelas yang Diajar --</option>
+                                <option value="">-- Kelas --</option>
                                 <?php foreach ($kelas_list as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>" <?= $f_kelas === (int)$k['id_kelas'] ? 'selected' : '' ?>>
                                         Kelas <?= htmlspecialchars($k['nama_kelas']) ?>
@@ -670,7 +702,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <select name="f_mapel" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Mata Pelajaran --</option>
+                                <option value="">-- Mata Pelajaran --</option>
                                 <?php foreach ($mapel_list as $m): ?>
                                     <option value="<?= (int)$m['id_mapel'] ?>" <?= $f_mapel === (int)$m['id_mapel'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($m['nama_mapel']) ?>
@@ -680,7 +712,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <select name="f_kategori" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Aspek Perkembangan --</option>
+                                <option value="">-- Aspek Perkembangan --</option>
                                 <?php foreach ($aspek_options as $cat): ?>
                                     <option value="<?= htmlspecialchars($cat) ?>" <?= $f_kategori === $cat ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($cat) ?>
@@ -689,8 +721,8 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-md-3 mb-2">
-                            <select name="f_siswa" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Siswa --</option>
+                            <select name="f_siswa" id="f_siswa" class="form-control form-control-sm select2-filter-siswa">
+                                <option value="">-- Siswa --</option>
                                 <?php foreach ($siswa_list as $sw): ?>
                                     <option value="<?= (int)$sw['id_siswa'] ?>" <?= $f_siswa === (int)$sw['id_siswa'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($sw['nama_siswa']) ?> (Kelas <?= htmlspecialchars($sw['nama_kelas'] ?? '-') ?>)
@@ -700,7 +732,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Status --</option>
+                                <option value="">-- Status --</option>
                                 <option value="Aktif" <?= $f_status === 'Aktif' ? 'selected' : '' ?>>Aktif</option>
                                 <option value="Dalam Pemantauan" <?= $f_status === 'Dalam Pemantauan' ? 'selected' : '' ?>>Dalam Pemantauan</option>
                                 <option value="Selesai" <?= $f_status === 'Selesai' ? 'selected' : '' ?>>Selesai</option>

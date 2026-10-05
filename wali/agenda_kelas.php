@@ -10,6 +10,7 @@ if (!isAuthorized(['wali', 'admin'])) {
 }
 
 $user_level = getUserLevel();
+$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -28,15 +29,29 @@ if ($wali_class) {
 $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $selected_kelas_id = $wali_kelas_id;
-if ($user_level === 'admin' && isset($_GET['kelas'])) {
-    $selected_kelas_id = (int)$_GET['kelas'];
+$selected_kelas_name = $wali_kelas_name;
+if ($user_level === 'admin') {
+    $selected_kelas_id = (int)($_GET['kelas'] ?? 0);
+    if ($selected_kelas_id <= 0 && isset($_GET['f_kelas'])) {
+        $selected_kelas_id = (int)$_GET['f_kelas'];
+    }
+    $selected_kelas_name = '';
+    foreach ($all_classes as $c) {
+        if ((int)$c['id_kelas'] === $selected_kelas_id) {
+            $selected_kelas_name = (string)$c['nama_kelas'];
+            break;
+        }
+    }
 }
 
 $message = null;
 
 // Handle CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    if (!$can_crud) {
+        $message = ['type' => 'danger', 'text' => 'Akses ditolak. Pengguna hanya memiliki akses lihat (monitoring).'];
+    } else {
+        $action = $_POST['action'] ?? '';
 
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
@@ -96,11 +111,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+}
 
 // Filters
 $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
+$rows = [];
+if ($selected_kelas_id <= 0 && $user_level === 'admin') {
+    $rows = [];
+} else {
 $where = ["1=1"];
 $params = [];
 if ($selected_kelas_id > 0) {
@@ -153,6 +173,7 @@ foreach ($rows as $r) {
         'extendedProps' => $r
     ];
 }
+} // end else pilih kelas
 
 $page_title = 'Daftar Agenda Kelas';
 $css_libs = [
@@ -294,18 +315,21 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Daftar Agenda Kelas <?= !empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '' ?></h1>
+            <h1>Daftar Agenda Kelas <?= $user_level === 'admin' ? (!empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '') : (!empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '') ?></h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
             <?php if ($user_level === 'admin'): ?>
-            <div class="card mb-3">
-                <div class="card-body p-3">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Filter Kelas</h4>
+                </div>
+                <div class="card-body">
                     <form method="GET" class="form-inline">
-                        <label class="mr-2">Pilih Kelas:</label>
-                        <select name="kelas" class="form-control" onchange="this.form.submit()">
-                            <option value="">-- Semua Kelas --</option>
+                        <label class="mr-2" for="selectKelasAgenda">Pilih Kelas:</label>
+                        <select name="kelas" id="selectKelasAgenda" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
+                            <option value="">-- Pilih Kelas --</option>
                             <?php foreach ($all_classes as $c): ?>
                                 <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
                             <?php endforeach; ?>
@@ -315,6 +339,7 @@ include '../templates/sidebar.php';
             </div>
             <?php endif; ?>
 
+            <?php if ($selected_kelas_id > 0 || $user_level !== 'admin'): ?>
             <!-- Filter & Mode Tabs -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -326,9 +351,11 @@ include '../templates/sidebar.php';
                             <a class="nav-link" id="tab-kalender-link" data-toggle="tab" href="#tab-kalender" role="tab"><i class="fas fa-calendar-alt mr-1"></i> Tampilan Kalender</a>
                         </li>
                     </ul>
+                    <?php if ($can_crud): ?>
                     <button type="button" class="btn btn-primary" id="btnTambahAgenda">
                         <i class="fas fa-plus mr-1"></i> Tambah Agenda
                     </button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="card-body">
@@ -336,7 +363,7 @@ include '../templates/sidebar.php';
                         <!-- Tampilan Tabel -->
                         <div class="tab-pane fade show active" id="tab-tabel" role="tabpanel">
                             <form method="GET" class="row mb-3">
-                                <?php if (isset($_GET['kelas'])): ?><input type="hidden" name="kelas" value="<?= (int)$_GET['kelas'] ?>"><?php endif; ?>
+                                <input type="hidden" name="kelas" value="<?= (int)$selected_kelas_id ?>">
                                 <div class="col-md-4 mb-2">
                                     <label class="small font-weight-bold">Jenis Agenda</label>
                                     <select name="f_jenis" class="form-control form-control-sm">
@@ -357,7 +384,7 @@ include '../templates/sidebar.php';
                                 </div>
                                 <div class="col-md-4 mb-2 d-flex align-items-end">
                                     <button type="submit" class="btn btn-primary btn-sm mr-2"><i class="fas fa-search"></i> Filter</button>
-                                    <a href="agenda_kelas.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                                    <a href="agenda_kelas.php?kelas=<?= (int)$selected_kelas_id ?>" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
                                 </div>
                             </form>
 
@@ -405,12 +432,14 @@ include '../templates/sidebar.php';
                                                     <button type="button" class="btn btn-info btn-sm btn-detail-agenda" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
+                                                    <?php if ($can_crud): ?>
                                                     <button type="button" class="btn btn-warning btn-sm btn-edit-agenda" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
                                                     <button type="button" class="btn btn-danger btn-sm btn-hapus-agenda" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_agenda'], ENT_QUOTES) ?>" title="Hapus">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
+                                                    <?php endif; ?>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -426,6 +455,7 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </section>
 </div>
