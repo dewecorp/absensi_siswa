@@ -728,7 +728,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-plus mr-1"></i> Tambah Soal
                         </button>
                         <a href="generate_soal.php<?= $session_q ?>" class="btn btn-success">
-                            <i class="fas fa-robot mr-1"></i> Generate Soal
+                            <i class="fas fa-magic mr-1"></i> Generate Soal
                         </a>
                     </div>
                     <?php endif; ?>

@@ -1042,11 +1042,9 @@ switch ($user_level) {
         }
 
         $pembelajaran_submenu_guru = [
-            ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php', 'active' => $current_page === 'perangkat_pembelajaran.php'],
-            ['title' => 'Generate Perangkat AI', 'url' => '../guru/generate_perangkat.php', 'active' => $current_page === 'generate_perangkat.php'],
+            ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
-            ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php', 'active' => $current_page === 'bank_soal.php'],
-            ['title' => 'Generate Soal AI', 'url' => '../guru/generate_soal.php', 'active' => $current_page === 'generate_soal.php'],
+            ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
             ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php', 'active' => $current_page === 'bahan_ajar.php'],
             ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php', 'active' => $current_page === 'catatan_perkembangan.php'],
             ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php', 'active' => $current_page === 'data_perkembangan.php'],
@@ -1064,7 +1062,7 @@ switch ($user_level) {
                 'title' => 'Pembelajaran',
                 'icon' => 'fas fa-chalkboard-teacher',
                 'submenu' => $pembelajaran_submenu_guru,
-                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'generate_soal.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php'])
+                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'preview_bank_soal.php', 'generate_soal.php', 'generate_perangkat.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php'])
             ],
             [
                 'title' => 'Data Utama',
@@ -1326,11 +1324,9 @@ switch ($user_level) {
         }
 
         $pembelajaran_submenu_wali = [
-            ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=wali', 'active' => $current_page === 'perangkat_pembelajaran.php'],
-            ['title' => 'Generate Perangkat AI', 'url' => '../guru/generate_perangkat.php?session_type=wali', 'active' => $current_page === 'generate_perangkat.php'],
+            ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=wali', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=wali', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
-            ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=wali', 'active' => $current_page === 'bank_soal.php'],
-            ['title' => 'Generate Soal AI', 'url' => '../guru/generate_soal.php?session_type=wali', 'active' => $current_page === 'generate_soal.php'],
+            ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=wali', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
             ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php?session_type=wali', 'active' => $current_page === 'bahan_ajar.php'],
             ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php?session_type=wali', 'active' => $current_page === 'catatan_perkembangan.php'],
             ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php?session_type=wali', 'active' => $current_page === 'data_perkembangan.php'],
@@ -1370,7 +1366,7 @@ switch ($user_level) {
                 'title' => 'Pembelajaran',
                 'icon' => 'fas fa-chalkboard-teacher',
                 'submenu' => $pembelajaran_submenu_wali,
-                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'generate_soal.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php'])
+                'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'preview_bank_soal.php', 'generate_soal.php', 'generate_perangkat.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php'])
             ],
             [
                 'title' => 'Data Utama',

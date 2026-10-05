@@ -389,7 +389,7 @@ $(document).ready(function() {
             html += '      <i class="fas fa-robot"></i>';
             html += '    </div>';
             html += '    <div>';
-            html += '      <div style="font-size: 14px; font-weight: 700; color: #0f172a;">Dokumen Hasil Generate AI</div>';
+            html += '      <div style="font-size: 14px; font-weight: 700; color: #0f172a;">Dokumen Hasil Generate</div>';
             html += '      <div style="font-size: 12px; color: #475569; font-weight: 600;">Pratinjau teks + unduh PDF / Word / Excel</div>';
             html += '    </div>';
             html += '  </div>';
@@ -743,7 +743,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-plus mr-1"></i> Tambah Perangkat
                         </button>
                         <a href="generate_perangkat.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '' ?>" class="btn btn-success ml-2">
-                            <i class="fas fa-robot mr-1"></i> Generate AI
+                            <i class="fas fa-magic mr-1"></i> Generate Perangkat
                         </a>
                     </div>
                     <?php endif; ?>
@@ -785,9 +785,9 @@ include '../templates/sidebar.php';
                                                     <small class="d-block" style="font-size: 10px;"><?= strtoupper(pathinfo($r['file_path'], PATHINFO_EXTENSION)) ?></small>
                                                 </a>
                                             <?php else: ?>
-                                                <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="text-success font-weight-bold" title="Pratinjau hasil Generate AI">
-                                                    <i class="fas fa-robot fa-lg"></i>
-                                                    <small class="d-block" style="font-size: 10px;">AI</small>
+                                                <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="text-success font-weight-bold" title="Pratinjau hasil generate">
+                                                    <i class="fas fa-file-alt fa-lg"></i>
+                                                    <small class="d-block" style="font-size: 10px;">Generate</small>
                                                 </a>
                                             <?php endif; ?>
                                         </td>
@@ -816,7 +816,7 @@ include '../templates/sidebar.php';
                                                         <i class="fas fa-download"></i>
                                                     </button>
                                                 <?php else: ?>
-                                                    <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Pratinjau Hasil AI (Laman Penuh)">
+                                                    <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Pratinjau hasil generate (Laman Penuh)">
                                                         <i class="fas fa-book-reader"></i>
                                                     </a>
                                                     <div class="btn-group btn-group-sm" role="group" title="Unduh Dokumen">

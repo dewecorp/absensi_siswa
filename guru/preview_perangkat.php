@@ -303,7 +303,7 @@ $page_title = 'Baca: ' . htmlspecialchars($perangkat['judul']);
                     <?= !empty($perangkat['nama_guru']) ? ' &bull; Guru: ' . htmlspecialchars($perangkat['nama_guru']) : '' ?>
                 </p>
 
-                <!-- Komponen Hasil Generator AI -->
+                <!-- Komponen Hasil Generator -->
                 <div class="perangkat-komponen mb-4">
                     <?php
                     $komponen = [
@@ -333,7 +333,7 @@ $page_title = 'Baca: ' . htmlspecialchars($perangkat['judul']);
                 <div class="mb-3" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;">
                     <div style="background:#0f172a;color:#ffffff;padding:10px 14px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;justify-content:space-between;">
                         <span><i class="fas fa-file-alt mr-2 text-warning"></i> Isi Dokumen Lengkap</span>
-                        <span style="font-size:11px;color:#94a3b8;font-weight:600;">Hasil Generasi AI</span>
+                        <span style="font-size:11px;color:#94a3b8;font-weight:600;">Hasil Generate</span>
                     </div>
                     <div style="padding:18px 20px;font-size:14px;line-height:1.7;color:#0f172a;background:#ffffff;">
                         <?= ai_format_perangkat_html($isi_raw, false) ?>

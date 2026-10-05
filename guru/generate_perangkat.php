@@ -39,7 +39,7 @@ $kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_15
 $school_profile = getSchoolProfile($pdo);
 $tahun_default = $school_profile['tahun_ajaran'] ?? date('Y') . '/' . (date('Y') + 1);
 
-$page_title = 'Generate Perangkat AI';
+$page_title = 'Generate Perangkat';
 $ai_cfg = ai_guru_config($pdo, $guru_id);
 
 $js_page = [<<<'JS'
@@ -268,7 +268,7 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Generate Perangkat AI</h1>
+            <h1>Generate Perangkat</h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
@@ -277,14 +277,15 @@ include '../templates/sidebar.php';
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4><i class="fas fa-sliders-h mr-2"></i>Pengaturan Generate</h4>
                     <div>
+                        <a href="perangkat_pembelajaran.php<?= $session_q ?>" class="btn btn-secondary btn-sm mr-2"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Perangkat</a>
                         <?php if (!empty($ai_cfg['gemini_email'])): ?>
                             <span class="badge badge-success" title="Akun resmi Kemenag Gemini Pro"><i class="fas fa-check-circle mr-1"></i>Gemini Pro: <?= htmlspecialchars($ai_cfg['gemini_email']) ?></span>
                         <?php elseif (!empty($ai_cfg['gemini_key'])): ?>
-                            <span class="badge badge-info"><i class="fas fa-robot mr-1"></i>Gemini AI</span>
+                            <span class="badge badge-info"><i class="fas fa-robot mr-1"></i>Gemini</span>
                         <?php elseif (!empty($ai_cfg['openai_key'])): ?>
                             <span class="badge badge-info"><i class="fas fa-robot mr-1"></i>ChatGPT</span>
                         <?php else: ?>
-                            <a href="profil.php" class="badge badge-warning text-dark"><i class="fas fa-exclamation-triangle mr-1"></i>Atur Konektor AI &raquo;</a>
+                            <a href="profil.php" class="badge badge-warning text-dark"><i class="fas fa-exclamation-triangle mr-1"></i>Atur Konektor (Email Kemenag) &raquo;</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -362,12 +363,12 @@ include '../templates/sidebar.php';
                                 <textarea name="materi" id="ai_materi" class="form-control" rows="10" style="min-height: 220px;" placeholder="Opsional: tempel ringkasan materi, teks bab, atau poin-poin penting... (bisa digabung dengan file upload)"></textarea>
                             </div>
                             <div class="col-md-6 form-group">
-                                <label class="font-weight-bold">Instruksi Tambahan <span class="text-muted small font-weight-normal">(opsional — perintah khusus untuk AI)</span></label>
+                                <label class="font-weight-bold">Instruksi Tambahan <span class="text-muted small font-weight-normal">(opsional — perintah khusus tambahan)</span></label>
                                 <textarea name="instruksi_tambahan" id="ai_instruksi_tambahan" class="form-control" rows="10" style="min-height: 220px;" placeholder="Contoh: Tambahkan deskripsi gambar/ilustrasi pada bagian yang memerlukan gambar, sertakan studi kasus kontekstual, gunakan bahasa sederhana, dll."></textarea>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-success" id="btnProsesAI"><i class="fas fa-magic mr-1"></i> Generate Perangkat</button>
-                        <span id="aiLoading" class="ml-2 text-muted" style="display:none;">Memproses AI, mohon tunggu...</span>
+                        <span id="aiLoading" class="ml-2 text-muted" style="display:none;">Memproses generator, mohon tunggu...</span>
                     </form>
                 </div>
             </div>
@@ -375,7 +376,7 @@ include '../templates/sidebar.php';
             <div class="card" id="aiHasilWrap" style="display:none;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Hasil: <span id="aiJudulHasil">Dokumen</span></h4>
-                    <a href="perangkat_pembelajaran.php<?= $session_q ?>" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Perangkat</a>
+                    <a href="perangkat_pembelajaran.php<?= $session_q ?>" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Perangkat</a>
                 </div>
                 <div class="card-body">
                     <div id="aiHasil" class="border rounded p-3" style="max-height:560px;overflow:auto;"></div>
