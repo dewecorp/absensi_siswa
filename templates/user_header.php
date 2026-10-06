@@ -18,6 +18,22 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
 if (!isLoggedIn()) {
     redirect('../login.php');
 }
+
+// Pre-fetch notifications: guru/wali hanya notif tugas dikumpulkan
+$unread_notifs_u = [];
+$unread_count_u = 0;
+$unread_count_label_u = '0';
+if (in_array(getUserLevel(), ['guru', 'wali'], true)) {
+    $nav_guru_id_u = function_exists('getCurrentGuruId') ? getCurrentGuruId($pdo) : 0;
+    $unread_notifs_u = getTeacherTaskNotifications($pdo, (int)$nav_guru_id_u);
+    foreach ($unread_notifs_u as $n) {
+        if (!$n['is_read']) $unread_count_u++;
+    }
+    $unread_count_label_u = $unread_count_u > 99 ? '99+' : (string)$unread_count_u;
+}
+// Tinggi dropdown menyesuaikan jumlah notif (kosong ramping, <=3 auto, >3 scroll 300px)
+$n_notif_nav_u = count($unread_notifs_u);
+$notif_list_h_u = $n_notif_nav_u <= 0 ? 'max-height:140px;overflow-y:auto;' : ($n_notif_nav_u <= 3 ? 'max-height:' . ($n_notif_nav_u * 92 + 12) . 'px;overflow-y:auto;' : 'height:300px;overflow-y:auto;');
 ?>
 
 <!DOCTYPE html>
@@ -398,6 +414,28 @@ if (!isLoggedIn()) {
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .notif-count-badge {
+            position: absolute;
+            top: -6px;
+            right: -8px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 999px;
+            border: 2px solid #fff;
+            background: #fc544b;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 14px;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            box-shadow: 0 1px 3px rgba(0,0,0,.25);
+        }
+        .notification-toggle { position: relative; }
     </style>
 </head>
 
@@ -455,6 +493,50 @@ if (!isLoggedIn()) {
                     </li>
                 </ul>
                 <ul class="navbar-nav navbar-right">
+                    <?php if (in_array(getUserLevel(), ['guru', 'wali'], true)): ?>
+                    <li class="dropdown dropdown-list-toggle">
+                        <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg notification-toggle <?php echo $unread_count_u > 0 ? 'beep' : ''; ?>" title="Notifikasi Tugas Dikumpulkan">
+                            <i class="far fa-bell"></i>
+                            <?php if ($unread_count_u > 0): ?>
+                                <span class="notif-count-badge" data-count="<?php echo (int)$unread_count_u; ?>"><?php echo htmlspecialchars($unread_count_label_u, ENT_QUOTES, 'UTF-8'); ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <div class="dropdown-menu dropdown-list dropdown-menu-right">
+                            <div class="dropdown-header">Tugas Dikumpulkan
+                                <div class="float-right">
+                                    <a href="#" id="mark-all-read">Tandai semua dibaca</a>
+                                </div>
+                            </div>
+                            <div class="dropdown-list-content dropdown-list-icons" style="<?= $notif_list_h_u ?>">
+                                <?php if (count($unread_notifs_u) > 0): ?>
+                                    <?php foreach ($unread_notifs_u as $notif): ?>
+                                        <?php
+                                            $notif_link = $notif['link'];
+                                            if (strpos($notif_link, '../') !== 0 && strpos($notif_link, 'http') !== 0) {
+                                                $notif_link = '../guru/' . ltrim($notif_link, '/');
+                                            }
+                                        ?>
+                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="dropdown-item dropdown-item-unread" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; background-color: #f9f9f9;'; ?>">
+                                            <div class="dropdown-item-icon bg-primary text-white">
+                                                <i class="fas fa-info"></i>
+                                            </div>
+                                            <div class="dropdown-item-desc">
+                                                <span style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; color: #333;'; ?>">
+                                                    <?php echo htmlspecialchars($notif['message']); ?>
+                                                </span>
+                                                <div class="time text-primary"><?php echo timeAgo($notif['created_at']); ?></div>
+                                            </div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="p-3 text-center text-muted">
+                                        Tidak ada notifikasi baru
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </li>
+                    <?php endif; ?>
                     <li class="dropdown">
                         <?php
                         // Get user data to display personalized avatar

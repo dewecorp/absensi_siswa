@@ -278,6 +278,139 @@ if (!isset($school_profile)) {
         <?php endforeach; ?>
     <?php endif; ?>
 
+    <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'guru', 'wali'], true) && isset($unread_notifs_u) && is_array($unread_notifs_u)): ?>
+    <!-- Mobile Floating Notification Button -->
+    <a href="#" data-toggle="modal" data-target="#mobileNotificationModalU" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+        <i class="far fa-bell fa-lg"></i>
+        <?php if ($unread_count_u > 0): ?>
+            <span class="notif-count-badge" data-count="<?php echo (int)$unread_count_u; ?>"><?php echo htmlspecialchars($unread_count_label_u, ENT_QUOTES, 'UTF-8'); ?></span>
+        <?php endif; ?>
+    </a>
+
+    <!-- Mobile Notification Modal -->
+    <div class="modal fade" id="mobileNotificationModalU" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tugas Dikumpulkan</h5>
+                    <div class="ml-auto">
+                        <a href="#" id="mark-all-read-mobile-u" class="text-small">Tandai semua dibaca</a>
+                    </div>
+                    <button type="button" class="close ml-2" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-0">
+                    <?php
+                    $n_notif_mob_u = count($unread_notifs_u);
+                    $notif_mob_h_u = $n_notif_mob_u <= 0 ? 'max-height:180px;overflow-y:auto;' : ($n_notif_mob_u <= 3 ? 'max-height:' . ($n_notif_mob_u * 96 + 16) . 'px;overflow-y:auto;' : 'max-height:400px;overflow-y:auto;');
+                    ?>
+                    <div class="list-group list-group-flush" style="<?= $notif_mob_h_u ?>">
+                        <?php if (count($unread_notifs_u) > 0): ?>
+                            <?php foreach ($unread_notifs_u as $notif): ?>
+                                <?php
+                                    $notif_link_m = $notif['link'];
+                                    if (strpos($notif_link_m, '../') !== 0 && strpos($notif_link_m, 'http') !== 0) {
+                                        $notif_link_m = '../guru/' . ltrim($notif_link_m, '/');
+                                    }
+                                ?>
+                                <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link_m; ?>', this); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1 text-primary"><i class="fas fa-info-circle mr-1"></i> Info</h6>
+                                        <small class="text-muted"><?php echo timeAgo($notif['created_at']); ?></small>
+                                    </div>
+                                    <p class="mb-1" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold;'; ?>"><?php echo htmlspecialchars($notif['message']); ?></p>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="p-4 text-center text-muted">
+                                <i class="far fa-bell-slash fa-3x mb-3"></i><br>
+                                Tidak ada notifikasi baru
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Notification JS (lonceng ala admin untuk guru/wali) -->
+    <script>
+    function readNotification(id, link, element) {
+        function formatNotifCount(n) {
+            return n > 99 ? '99+' : String(n);
+        }
+        if (element) {
+            var $el = $(element);
+            $el.css('font-weight', 'normal').css('background-color', 'white');
+            $el.find('span, p').css('font-weight', 'normal');
+            $el.removeClass('bg-light');
+            var $badges = $('.dropdown-list-toggle .badge, .btn-lg .badge, .notif-count-badge');
+            $badges.each(function() {
+                var $badge = $(this);
+                var countAttr = parseInt($badge.attr('data-count'), 10);
+                var countText = parseInt($badge.text(), 10);
+                var count = !isNaN(countAttr) ? countAttr : countText;
+                if (isNaN(count)) return;
+                if (count > 1) {
+                    var next = count - 1;
+                    $badge.attr('data-count', next).text(formatNotifCount(next));
+                } else {
+                    $badge.remove();
+                    $('.dropdown-list-toggle').removeClass('beep');
+                }
+            });
+        }
+        $.ajax({
+            url: '../admin/mark_notification_read.php',
+            type: 'POST',
+            data: { id: id },
+            success: function(response) {
+                if (link && link !== '#') {
+                    window.location.href = link;
+                } else if (!element) {
+                    window.location.reload();
+                }
+            },
+            error: function() {
+                console.error("Failed to mark notification as read");
+                if (link && link !== '#') {
+                    window.location.href = link;
+                }
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        $('#mark-all-read').click(function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: '../admin/mark_notification_read.php',
+                type: 'POST',
+                data: { action: 'mark_all' },
+                success: function(response) {
+                    window.location.reload();
+                }
+            });
+        });
+        $('#mark-all-read-mobile-u').click(function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: '../admin/mark_notification_read.php',
+                type: 'POST',
+                data: { action: 'mark_all' },
+                success: function(response) {
+                    window.location.reload();
+                }
+            });
+        });
+    });
+    </script>
+
     <!-- Logout Confirmation Function -->
     <script>
     function confirmLogoutInline(logoutUrl) {

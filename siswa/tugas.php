@@ -78,6 +78,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     status_periksa = 'Belum Diperiksa'
             ");
             $stIns->execute([$id_tugas, $id_siswa, $file_path, $catatan_siswa, $keterlambatan]);
+            try {
+                $stNt = $pdo->prepare("SELECT t.judul, s.nama_siswa, k.nama_kelas FROM tb_tugas t LEFT JOIN tb_siswa s ON s.id_siswa = ? LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas WHERE t.id = ?");
+                $stNt->execute([$id_siswa, $id_tugas]);
+                $nt = $stNt->fetch(PDO::FETCH_ASSOC);
+                $nm_siswa = trim((string)($nt['nama_siswa'] ?? $student['nama_siswa'] ?? 'Siswa'));
+                $judul_t = trim((string)($nt['judul'] ?? 'Tugas'));
+                $kelas_n = trim((string)($nt['nama_kelas'] ?? $nama_kelas));
+                createNotification($pdo, "Tugas dikumpulkan: {$nm_siswa} - {$judul_t}" . ($kelas_n ? " (Kelas {$kelas_n})" : ""), 'detail_tugas.php?id=' . $id_tugas);
+            } catch (Throwable $e) {}
             $message = ['type' => 'success', 'text' => 'Tugas berhasil dikumpulkan.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal mengumpulkan tugas: ' . $e->getMessage()];

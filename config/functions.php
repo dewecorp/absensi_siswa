@@ -2016,6 +2016,70 @@ function getUnreadNotifications(PDO $pdo): array {
     return getNotifications($pdo);
 }
 
+// Notifikasi khusus guru/wali: hanya "Tugas dikumpulkan" milik kelas yang diajar.
+// Tabel tb_notifikasi bersifat global (dipakai admin), jadi saring per pemilik tugas.
+function getTeacherTaskNotifications(PDO $pdo, int $guru_id, int $limit = 15): array {
+    try {
+        $pdo->prepare("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)")->execute();
+    } catch (Throwable $e) {}
+    try {
+        $st = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE message LIKE 'Tugas dikumpulkan:%' ORDER BY created_at DESC LIMIT 50");
+        $st->execute();
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return [];
+    }
+    if (empty($rows)) return [];
+
+    // Petakan link -> id tugas
+    $ids = [];
+    $task_of = [];
+    foreach ($rows as $r) {
+        if (preg_match('/[?&]id=(\d+)/', (string)($r['link'] ?? ''), $m)) {
+            $tid = (int)$m[1];
+            if ($tid > 0) {
+                $ids[] = $tid;
+                $task_of[(int)$r['id']] = $tid;
+            }
+        }
+    }
+    if (empty($ids)) return [];
+    $ids = array_values(array_unique($ids));
+
+    try {
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $stT = $pdo->prepare("SELECT id, id_guru, id_kelas FROM tb_tugas WHERE id IN ($in)");
+        $stT->execute($ids);
+        $tasks = [];
+        foreach ($stT->fetchAll(PDO::FETCH_ASSOC) as $t) {
+            $tasks[(int)$t['id']] = $t;
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $taught = [];
+    if ($guru_id > 0 && function_exists('getGuruTaughtClasses')) {
+        try {
+            foreach (getGuruTaughtClasses($pdo, $guru_id) as $c) {
+                $taught[(int)($c['id_kelas'] ?? 0)] = true;
+            }
+        } catch (Throwable $e) {}
+    }
+
+    $out = [];
+    foreach ($rows as $r) {
+        $tid = $task_of[(int)$r['id']] ?? 0;
+        $t = $tasks[$tid] ?? null;
+        if (!$t) continue;
+        $mine = ($guru_id > 0 && (int)($t['id_guru'] ?? 0) === $guru_id) || isset($taught[(int)($t['id_kelas'] ?? 0)]);
+        if (!$mine) continue;
+        $out[] = $r;
+        if (count($out) >= $limit) break;
+    }
+    return $out;
+}
+
 // Function to mark notification as read
 function markNotificationAsRead(PDO $pdo, int $id): bool {
     $stmt = $pdo->prepare("UPDATE tb_notifikasi SET is_read = 1 WHERE id = ?");

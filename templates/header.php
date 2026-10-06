@@ -42,7 +42,7 @@ if (!isLoggedIn()) {
 // Get current page title
 $page_title = isset($page_title) ? $page_title : 'Dashboard';
 
-// Pre-fetch notifications if user is admin or kepala
+// Pre-fetch notifications: admin/kepala lihat semua, guru/wali hanya notif tugas dikumpulkan
 $unread_notifs = [];
 $unread_count = 0;
 $unread_count_label = '0';
@@ -52,7 +52,17 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
         if(!$n['is_read']) $unread_count++;
     }
     $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
+} elseif (in_array(getUserLevel(), ['guru', 'wali'], true)) {
+    $nav_guru_id = function_exists('getCurrentGuruId') ? getCurrentGuruId($pdo) : 0;
+    $unread_notifs = getTeacherTaskNotifications($pdo, (int)$nav_guru_id);
+    foreach($unread_notifs as $n) {
+        if(!$n['is_read']) $unread_count++;
+    }
+    $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
 }
+// Tinggi dropdown menyesuaikan jumlah notif (kosong ramping, <=3 auto, >3 scroll 300px)
+$n_notif_nav = count($unread_notifs);
+$notif_list_h = $n_notif_nav <= 0 ? 'max-height:140px;overflow-y:auto;' : ($n_notif_nav <= 3 ? 'max-height:' . ($n_notif_nav * 92 + 12) . 'px;overflow-y:auto;' : 'height:300px;overflow-y:auto;');
 
 // Pre-fetch student unread messages if user is siswa
 $student_unread_messages = [];
@@ -594,7 +604,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                     </li>
                     <?php endif; ?>
 
-                    <?php if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah'): ?>
+                    <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'guru', 'wali'], true)): ?>
                     <li class="dropdown dropdown-list-toggle d-none d-lg-block">
                         <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg notification-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
                             <i class="far fa-bell"></i>
@@ -608,7 +618,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                     <a href="#" id="mark-all-read">Tandai semua dibaca</a>
                                 </div>
                             </div>
-                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll" style="height: 300px; overflow-y: auto;">
+                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll" style="<?= $notif_list_h ?>">
                                 <?php if (count($unread_notifs) > 0): ?>
                                     <?php foreach ($unread_notifs as $notif): ?>
                                         <?php
@@ -617,6 +627,9 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                                 if ($notif_link === 'absensi_guru.php') {
                                                     $notif_link = 'rekap_absensi_guru.php';
                                                 }
+                                            }
+                                            if (in_array(getUserLevel(), ['guru', 'wali'], true)) {
+                                                $notif_link = '../guru/' . ltrim($notif_link, '/');
                                             }
                                         ?>
                                         <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="dropdown-item dropdown-item-unread" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; background-color: #f9f9f9;'; ?>">
@@ -891,7 +904,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                 }
             });
             </script>
-            <?php if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah'): ?>
+            <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'guru', 'wali'], true)): ?>
             <!-- Mobile Floating Notification Button -->
             <a href="#" data-toggle="modal" data-target="#mobileNotificationModal" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
                 <i class="far fa-bell fa-lg"></i>
@@ -905,7 +918,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="mobileNotificationModalLabel">Notifikasi</h5>
+                            <h5 class="modal-title" id="mobileNotificationModalLabel"><?= in_array(getUserLevel(), ['guru', 'wali'], true) ? 'Tugas Dikumpulkan' : 'Notifikasi' ?></h5>
                             <div class="ml-auto">
                                 <a href="#" id="mark-all-read-mobile" class="text-small">Tandai semua dibaca</a>
                             </div>
@@ -914,7 +927,11 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                             </button>
                         </div>
                         <div class="modal-body p-0">
-                            <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                            <?php
+                            $n_notif_mob = count($unread_notifs);
+                            $notif_mob_h = $n_notif_mob <= 0 ? 'max-height:180px;overflow-y:auto;' : ($n_notif_mob <= 3 ? 'max-height:' . ($n_notif_mob * 96 + 16) . 'px;overflow-y:auto;' : 'max-height:400px;overflow-y:auto;');
+                            ?>
+                            <div class="list-group list-group-flush" style="<?= $notif_mob_h ?>">
                                 <?php if (count($unread_notifs) > 0): ?>
                                     <?php foreach ($unread_notifs as $notif): ?>
                                         <?php
@@ -923,6 +940,9 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                                 if ($notif_link === 'absensi_guru.php') {
                                                     $notif_link = 'rekap_absensi_guru.php';
                                                 }
+                                            }
+                                            if (in_array(getUserLevel(), ['guru', 'wali'], true)) {
+                                                $notif_link = '../guru/' . ltrim($notif_link, '/');
                                             }
                                         ?>
                                         <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>">
