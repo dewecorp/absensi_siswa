@@ -303,7 +303,7 @@ if (!isset($school_profile)) {
                 <div class="modal-body p-0">
                     <?php
                     $n_notif_mob_u = count($unread_notifs_u);
-                    $notif_mob_h_u = $n_notif_mob_u <= 0 ? 'max-height:180px;overflow-y:auto;' : ($n_notif_mob_u <= 3 ? 'max-height:' . ($n_notif_mob_u * 96 + 16) . 'px;overflow-y:auto;' : 'max-height:400px;overflow-y:auto;');
+                    $notif_mob_h_u = $n_notif_mob_u <= 0 ? 'height:auto;max-height:180px;overflow:hidden;' : ($n_notif_mob_u <= 3 ? 'height:auto;max-height:none;overflow:visible;' : 'max-height:400px;overflow-y:auto;');
                     ?>
                     <div class="list-group list-group-flush" style="<?= $notif_mob_h_u ?>">
                         <?php if (count($unread_notifs_u) > 0): ?>
@@ -317,7 +317,7 @@ if (!isset($school_profile)) {
                                 <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link_m; ?>', this); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>">
                                     <div class="d-flex w-100 justify-content-between">
                                         <h6 class="mb-1 text-primary"><i class="fas fa-info-circle mr-1"></i> Info</h6>
-                                        <small class="text-muted"><?php echo timeAgo($notif['created_at']); ?></small>
+                                        <small class="text-muted"><?php echo formatHariTanggalWaktu($notif['created_at']); ?> &bull; <?php echo timeAgo($notif['created_at']); ?></small>
                                     </div>
                                     <p class="mb-1" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold;'; ?>"><?php echo htmlspecialchars($notif['message']); ?></p>
                                 </a>

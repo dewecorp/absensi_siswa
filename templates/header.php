@@ -60,9 +60,9 @@ if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
     }
     $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
 }
-// Tinggi dropdown menyesuaikan jumlah notif (kosong ramping, <=3 auto, >3 scroll 300px)
+// Tinggi dropdown menyesuaikan jumlah notif: sepi tanpa scroll (height auto), ramai scroll halus 300px
 $n_notif_nav = count($unread_notifs);
-$notif_list_h = $n_notif_nav <= 0 ? 'max-height:140px;overflow-y:auto;' : ($n_notif_nav <= 3 ? 'max-height:' . ($n_notif_nav * 92 + 12) . 'px;overflow-y:auto;' : 'height:300px;overflow-y:auto;');
+$notif_list_h = $n_notif_nav <= 0 ? 'height:auto;max-height:140px;overflow:hidden;' : ($n_notif_nav <= 3 ? 'height:auto;max-height:none;overflow:visible;' : 'height:300px;overflow-y:auto;');
 
 // Pre-fetch student unread messages if user is siswa
 $student_unread_messages = [];
@@ -355,6 +355,17 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
             z-index: 2;
             box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
+        .navbar-notifikasi-scroll {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: #c3cad6 transparent;
+        }
+        .navbar-notifikasi-scroll::-webkit-scrollbar { width: 6px; }
+        .navbar-notifikasi-scroll::-webkit-scrollbar-track { background: transparent; }
+        .navbar-notifikasi-scroll::-webkit-scrollbar-thumb { background: #c3cad6; border-radius: 999px; }
+        .navbar-notifikasi-scroll::-webkit-scrollbar-thumb:hover { background: #9aa5bb; }
         .user-dropdown-menu {
             min-width: 240px;
             max-width: calc(100vw - 24px);
@@ -640,7 +651,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                                 <span style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; color: #333;'; ?>">
                                                     <?php echo htmlspecialchars($notif['message']); ?>
                                                 </span>
-                                                <div class="time text-primary"><?php echo timeAgo($notif['created_at']); ?></div>
+                                                <div class="time text-primary"><?php echo formatHariTanggalWaktu($notif['created_at']); ?> &bull; <?php echo timeAgo($notif['created_at']); ?></div>
                                             </div>
                                         </a>
                                     <?php endforeach; ?>
@@ -929,7 +940,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                         <div class="modal-body p-0">
                             <?php
                             $n_notif_mob = count($unread_notifs);
-                            $notif_mob_h = $n_notif_mob <= 0 ? 'max-height:180px;overflow-y:auto;' : ($n_notif_mob <= 3 ? 'max-height:' . ($n_notif_mob * 96 + 16) . 'px;overflow-y:auto;' : 'max-height:400px;overflow-y:auto;');
+                            $notif_mob_h = $n_notif_mob <= 0 ? 'height:auto;max-height:180px;overflow:hidden;' : ($n_notif_mob <= 3 ? 'height:auto;max-height:none;overflow:visible;' : 'max-height:400px;overflow-y:auto;');
                             ?>
                             <div class="list-group list-group-flush" style="<?= $notif_mob_h ?>">
                                 <?php if (count($unread_notifs) > 0): ?>
@@ -948,7 +959,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                         <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>">
                                             <div class="d-flex w-100 justify-content-between">
                                                 <h6 class="mb-1 text-primary"><i class="fas fa-info-circle mr-1"></i> Info</h6>
-                                                <small class="text-muted"><?php echo timeAgo($notif['created_at']); ?></small>
+                                                <small class="text-muted"><?php echo formatHariTanggalWaktu($notif['created_at']); ?> &bull; <?php echo timeAgo($notif['created_at']); ?></small>
                                             </div>
                                             <p class="mb-1" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold;'; ?>"><?php echo htmlspecialchars($notif['message']); ?></p>
                                         </a>

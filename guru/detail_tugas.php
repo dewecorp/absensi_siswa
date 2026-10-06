@@ -306,8 +306,12 @@ include '../templates/sidebar.php';
 
             <!-- Tabel Pengumpulan Tugas -->
             <div class="card">
-                <div class="card-header">
-                    <h4><i class="fas fa-users-cog mr-2"></i>Tabel Pengumpulan Siswa</h4>
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                    <h4><i class="fas fa-users-cog mr-2"></i>Tabel Pengumpulan Tugas</h4>
+                    <div class="d-flex flex-wrap" style="gap:6px;">
+                        <a href="export_pengumpulan_tugas_pdf.php?id=<?= (int)$tugas['id'] ?>" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF (tab baru)"><i class="fas fa-print mr-1"></i> PDF</a>
+                        <a href="export_pengumpulan_tugas_excel.php?id=<?= (int)$tugas['id'] ?>" class="btn btn-success btn-sm" title="Unduh Excel"><i class="fas fa-file-excel mr-1"></i> Excel</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -316,7 +320,7 @@ include '../templates/sidebar.php';
                                 <tr>
                                     <th width="4%">No</th>
                                     <th>Nama Siswa</th>
-                                    <th>NIS/NISN</th>
+                                    <th>NISN</th>
                                     <th>Status Kumpul</th>
                                     <th>Tanggal Kumpul</th>
                                     <th>Keterlambatan</th>

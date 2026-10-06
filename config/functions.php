@@ -2086,6 +2086,16 @@ function markNotificationAsRead(PDO $pdo, int $id): bool {
     return $stmt->execute([$id]);
 }
 
+// Format "Selasa, 6 Oktober 2026 - 17:10:23" untuk label waktu notifikasi
+function formatHariTanggalWaktu(?string $ts): string {
+    if (trim((string)$ts) === '' || strpos((string)$ts, '0000-00-00') === 0) return '-';
+    $time = strtotime((string)$ts);
+    if (!$time) return '-';
+    $hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    $bulan = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    return $hari[(int)date('w', $time)] . ', ' . (int)date('j', $time) . ' ' . $bulan[(int)date('n', $time)] . ' ' . date('Y', $time) . ' - ' . date('H:i:s', $time);
+}
+
 // Function to calculate time ago
 function timeAgo(string $timestamp): string {
     $time_ago = strtotime($timestamp);

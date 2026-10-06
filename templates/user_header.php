@@ -31,9 +31,9 @@ if (in_array(getUserLevel(), ['guru', 'wali'], true)) {
     }
     $unread_count_label_u = $unread_count_u > 99 ? '99+' : (string)$unread_count_u;
 }
-// Tinggi dropdown menyesuaikan jumlah notif (kosong ramping, <=3 auto, >3 scroll 300px)
+// Tinggi dropdown menyesuaikan jumlah notif (kosong ramping, sedikit tanpa scroll, ramai scroll halus)
 $n_notif_nav_u = count($unread_notifs_u);
-$notif_list_h_u = $n_notif_nav_u <= 0 ? 'max-height:140px;overflow-y:auto;' : ($n_notif_nav_u <= 3 ? 'max-height:' . ($n_notif_nav_u * 92 + 12) . 'px;overflow-y:auto;' : 'height:300px;overflow-y:auto;');
+$notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:hidden;' : ($n_notif_nav_u <= 3 ? 'height:auto;max-height:none;overflow:visible;' : 'height:300px;overflow-y:auto;');
 ?>
 
 <!DOCTYPE html>
@@ -436,6 +436,17 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'max-height:140px;overflow-y:auto;' : ($
             box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
         .notification-toggle { position: relative; }
+        .navbar-notifikasi-scroll {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: #c3cad6 transparent;
+        }
+        .navbar-notifikasi-scroll::-webkit-scrollbar { width: 6px; }
+        .navbar-notifikasi-scroll::-webkit-scrollbar-track { background: transparent; }
+        .navbar-notifikasi-scroll::-webkit-scrollbar-thumb { background: #c3cad6; border-radius: 999px; }
+        .navbar-notifikasi-scroll::-webkit-scrollbar-thumb:hover { background: #9aa5bb; }
     </style>
 </head>
 
@@ -507,7 +518,7 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'max-height:140px;overflow-y:auto;' : ($
                                     <a href="#" id="mark-all-read">Tandai semua dibaca</a>
                                 </div>
                             </div>
-                            <div class="dropdown-list-content dropdown-list-icons" style="<?= $notif_list_h_u ?>">
+                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll" style="<?= $notif_list_h_u ?>">
                                 <?php if (count($unread_notifs_u) > 0): ?>
                                     <?php foreach ($unread_notifs_u as $notif): ?>
                                         <?php
@@ -524,7 +535,7 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'max-height:140px;overflow-y:auto;' : ($
                                                 <span style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; color: #333;'; ?>">
                                                     <?php echo htmlspecialchars($notif['message']); ?>
                                                 </span>
-                                                <div class="time text-primary"><?php echo timeAgo($notif['created_at']); ?></div>
+                                                <div class="time text-primary"><?php echo formatHariTanggalWaktu($notif['created_at']); ?> &bull; <?php echo timeAgo($notif['created_at']); ?></div>
                                             </div>
                                         </a>
                                     <?php endforeach; ?>
