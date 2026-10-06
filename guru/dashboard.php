@@ -589,17 +589,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="row align-items-center">
                                         <div class="col-md-3 text-center position-relative">
                                             <div class="d-inline-block position-relative my-3">
-                                                <?php 
-                                                // Wrapper to ensure image style
+                                                <?php
+                                                // Wrapper to ensure image style (read-only di hero, ubah via Profil)
                                                 $avatar_img = getTeacherAvatarImage($teacher, 120);
                                                 // Add border and shadow to image
                                                 $avatar_img = str_replace('class=\'rounded-circle\'', 'class=\'rounded-circle shadow-lg border border-white\' style=\'border-width: 3px !important;\'', $avatar_img);
-                                                echo $avatar_img; 
+                                                echo $avatar_img;
                                                 ?>
-                                                <div class="camera-icon-overlay" onclick="document.getElementById('foto_upload').click()">
-                                                    <i class="fas fa-camera"></i>
-                                                </div>
-                                                <input type="file" id="foto_upload" name="foto" style="display: none;" accept="image/*">
                                             </div>
                                         </div>
                                         <div class="col-md-9">
@@ -642,8 +638,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="mt-2">
-                                                <a href="profil.php" class="text-white-50 small" title="Edit Profil"><i class="fas fa-pen mr-1"></i>Edit Profil</a>
+                                            <div class="mt-3">
+                                                <a href="profil.php" class="btn btn-light btn-sm font-weight-bold" title="Lihat Profil & Pengaturan"><i class="fas fa-user-circle mr-1"></i>Lihat Profil</a>
                                             </div>
                                         </div>
                                     </div>
@@ -1173,29 +1169,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <style>
-                    .camera-icon-overlay {
-                        position: absolute;
-                        bottom: 5px;
-                        right: 5px;
-                        background: #fff;
-                        color: #6777ef;
-                        border-radius: 50%;
-                        width: 36px;
-                        height: 36px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        cursor: pointer;
-                        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                        transition: all 0.3s;
-                        z-index: 10;
-                    }
-                    .camera-icon-overlay:hover {
-                        background: #6777ef;
-                        color: #fff;
-                        transform: scale(1.1);
-                    }
-                    
                     /* Custom styles for attendance buttons */
                     .selectgroup-button-icon {
                         border: 1px solid #e4e6fc !important;
@@ -1228,57 +1201,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        const fotoUpload = document.getElementById('foto_upload');
-                        if(fotoUpload) {
-                            fotoUpload.addEventListener('change', function() {
-                                if (this.files && this.files[0]) {
-                                    var formData = new FormData();
-                                    formData.append('foto', this.files[0]);
-                                    
-                                    Swal.fire({
-                                        title: 'Mengupload...',
-                                        text: 'Mohon tunggu sebentar',
-                                        allowOutsideClick: false,
-                                        didOpen: () => {
-                                            Swal.showLoading();
-                                        }
-                                    });
-
-                                    fetch('../ajax/update_foto_guru.php', {
-                                        method: 'POST',
-                                        body: formData
-                                    })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success) {
-                                            Swal.fire({
-                                                icon: 'success',
-                                                title: 'Berhasil',
-                                                text: data.message,
-                                                timer: 2000,
-                                                showConfirmButton: false
-                                            }).then(() => {
-                                                location.reload();
-                                            });
-                                        } else {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'Gagal',
-                                                text: data.message
-                                            });
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error:', error);
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'Error',
-                                            text: 'Terjadi kesalahan saat mengupload foto.'
-                                        });
-                                    });
-                                }
-                            });
-                        }
                     });
                     </script>
 

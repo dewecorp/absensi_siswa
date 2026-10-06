@@ -210,7 +210,11 @@ include '../templates/user_header.php';
                         </div>
                         <div class="card-body">
                             <div class="text-center mb-3">
-                                <?php echo getTeacherAvatarImage($teacher, 110); ?>
+                                <div class="d-inline-block position-relative">
+                                    <?php echo getTeacherAvatarImage($teacher, 110); ?>
+                                    <button type="button" class="btn btn-light btn-sm rounded-circle shadow position-absolute" style="bottom:4px;right:4px;width:34px;height:34px;padding:0;" title="Ubah Foto Profil" onclick="document.getElementById('foto_profil_input').click()"><i class="fas fa-camera text-primary"></i></button>
+                                    <input type="file" id="foto_profil_input" accept="image/jpeg,image/png,image/jpg" style="display:none;">
+                                </div>
                                 <h4 class="mt-2 mb-1 font-weight-bold"><?php echo htmlspecialchars($teacher['nama_guru']); ?></h4>
                                 <span class="badge badge-primary"><?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></span>
                                 <span class="badge badge-info"><?php echo htmlspecialchars($teacher['pendidikan'] ?? '-'); ?></span>
@@ -454,6 +458,27 @@ $(document).ready(function() {
         }
     }
     $(document).on('change', 'input[name=\"ai_provider\"]', toggleAiProvider);
+    $('#foto_profil_input').on('change', function() {
+        if (this.files && this.files[0]) {
+            var formData = new FormData();
+            formData.append('foto', this.files[0]);
+            Swal.fire({ title: 'Mengupload...', text: 'Mohon tunggu sebentar', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            fetch('../ajax/update_foto_guru.php', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, timer: 2000, showConfirmButton: false }).then(() => { location.reload(); });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Terjadi kesalahan saat mengupload foto.' });
+            });
+        }
+        $(this).val('');
+    });
     $('#editProfileForm').on('submit', function(e) {
         e.preventDefault();
         var btn = $(this).find('button[type=submit]');
