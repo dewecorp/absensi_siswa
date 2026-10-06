@@ -818,7 +818,7 @@ include '../templates/sidebar.php';
                                     <th width="4%">No</th>
                                     <th>Tanggal</th>
                                     <th>Nama Siswa</th>
-                                    <th>NIS/NISN</th>
+                                    <th>NISN</th>
                                     <th>Kelas</th>
                                     <th>Jenis Pembinaan</th>
                                     <th>Permasalahan</th>
@@ -1020,7 +1020,7 @@ include '../templates/sidebar.php';
                 <table class="table table-bordered table-sm">
                     <tr><th width="30%">Tanggal</th><td id="det_tanggal"></td></tr>
                     <tr><th>Nama Siswa</th><td id="det_nama" class="font-weight-bold"></td></tr>
-                    <tr><th>NIS/NISN</th><td id="det_nisn"></td></tr>
+                    <tr><th>NISN</th><td id="det_nisn"></td></tr>
                     <tr><th>Kelas</th><td id="det_kelas"></td></tr>
                     <tr><th>Jenis Pembinaan</th><td id="det_jenis"></td></tr>
                     <tr><th>Status</th><td id="det_status"></td></tr>
@@ -1046,3 +1046,4 @@ include '../templates/sidebar.php';
 </form>
 
 <?php include '../templates/footer.php'; ?>
+

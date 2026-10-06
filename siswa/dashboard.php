@@ -252,6 +252,7 @@ $student_messages = [];
 $total_pesan_belum_baca = 0;
 if ($student_class_id > 0 && $id_siswa > 0) {
     try {
+        ensure_learning_schema($pdo);
         $stPesan = $pdo->prepare("
             SELECT * FROM (
                 SELECT
@@ -260,6 +261,8 @@ if ($student_class_id > 0 && $id_siswa > 0) {
                     k.tanggal,
                     COALESCE(k.tanggal_mulai, k.tanggal) AS tanggal_mulai,
                     COALESCE(k.tanggal_selesai, COALESCE(k.tanggal_mulai, k.tanggal)) AS tanggal_selesai,
+                    k.waktu_mulai,
+                    k.waktu_selesai,
                     k.created_at,
                     COALESCE(g.nama_guru, 'Wali Kelas') AS pengirim,
                     g.nama_guru,
@@ -282,6 +285,8 @@ if ($student_class_id > 0 && $id_siswa > 0) {
                     k.tanggal,
                     COALESCE(k.tanggal_mulai, k.tanggal) AS tanggal_mulai,
                     COALESCE(k.tanggal_selesai, COALESCE(k.tanggal_mulai, k.tanggal)) AS tanggal_selesai,
+                    k.waktu_mulai,
+                    k.waktu_selesai,
                     k.created_at,
                     COALESCE(g.nama_guru, 'Guru Mapel') AS pengirim,
                     g.nama_guru,
@@ -634,12 +639,12 @@ include_once '../templates/sidebar.php';
                                     <thead>
                                         <tr class="bg-light">
                                             <th width="4%" class="text-center">No</th>
-                                            <th width="16%">Tanggal Mulai - Selesai</th>
-                                            <th width="10%" class="text-center">Waktu Kirim</th>
-                                            <th width="18%">Pengirim (Wali / Guru)</th>
-                                            <th width="18%">Jenis Informasi</th>
+                                            <th width="15%">Tanggal Mulai - Selesai</th>
+                                            <th width="12%" class="text-center">Waktu</th>
+                                            <th width="16%">Pengirim (Wali / Guru)</th>
+                                            <th width="16%">Jenis Informasi</th>
                                             <th>Judul Pesan</th>
-                                            <th width="14%" class="text-center">Status Dibaca</th>
+                                            <th width="13%" class="text-center">Status Dibaca</th>
                                             <th class="text-center" width="6%">Aksi</th>
                                         </tr>
                                     </thead>
@@ -655,7 +660,17 @@ include_once '../templates/sidebar.php';
                                             if ($ts_s && $ts_s !== $tm_s) {
                                                 $tgl_disp .= ' - ' . date('d/m/Y', strtotime($ts_s));
                                             }
-                                            $waktu_disp = !empty($m['created_at']) ? date('H:i', strtotime($m['created_at'])) . ' WIB' : '-';
+                                            $wm_s = isset($m['waktu_mulai']) && $m['waktu_mulai'] ? substr((string)$m['waktu_mulai'], 0, 5) : '';
+                                            $ws_s = isset($m['waktu_selesai']) && $m['waktu_selesai'] ? substr((string)$m['waktu_selesai'], 0, 5) : '';
+                                            if ($wm_s !== '' && $ws_s !== '' && $wm_s !== $ws_s) {
+                                                $waktu_disp = str_replace(':', '.', $wm_s) . ' - ' . str_replace(':', '.', $ws_s);
+                                            } elseif ($wm_s !== '') {
+                                                $waktu_disp = str_replace(':', '.', $wm_s);
+                                            } elseif ($ws_s !== '') {
+                                                $waktu_disp = str_replace(':', '.', $ws_s);
+                                            } else {
+                                                $waktu_disp = '-';
+                                            }
                                             ?>
                                             <tr id="row-pesan-<?= (int)$m['id'] ?>">
                                                 <td class="text-center font-weight-bold"><?= $idx + 1 ?></td>

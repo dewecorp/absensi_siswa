@@ -490,7 +490,7 @@ if (!function_exists('ensure_learning_schema')) {
                 id_guru INT NOT NULL,
                 tanggal DATE NOT NULL,
                 judul VARCHAR(255) NOT NULL,
-                jenis ENUM('Pengumuman','Pesan','Diskusi') NOT NULL DEFAULT 'Pengumuman',
+                jenis ENUM('Pengumuman','Pesan') NOT NULL DEFAULT 'Pengumuman',
                 id_kelas INT NOT NULL,
                 isi TEXT NOT NULL,
                 lampiran VARCHAR(255) NULL,
@@ -508,6 +508,59 @@ if (!function_exists('ensure_learning_schema')) {
                 id_siswa INT NOT NULL,
                 dibaca_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE KEY uniq_baca (id_komunikasi, id_siswa)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        // Migrasi: jenis 'Diskusi' dipindah ke menu Diskusi tersendiri.
+        try {
+            $pdo->exec("UPDATE tb_komunikasi_kelas SET jenis = 'Pesan' WHERE jenis = 'Diskusi'");
+        } catch (Throwable $e) {}
+        try {
+            $pdo->exec("ALTER TABLE tb_komunikasi_kelas MODIFY COLUMN jenis ENUM('Pengumuman','Pesan') NOT NULL DEFAULT 'Pengumuman'");
+        } catch (Throwable $e) {}
+
+        // 9b. Diskusi Kelas ala timeline (dua arah guru/wali/siswa).
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_diskusi_post (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_kelas INT NOT NULL,
+                author_role ENUM('guru','siswa') NOT NULL,
+                id_guru INT NULL,
+                id_siswa INT NULL,
+                isi TEXT NOT NULL,
+                file_path VARCHAR(255) NULL,
+                file_kind ENUM('none','image','video','file') NOT NULL DEFAULT 'none',
+                file_name VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_kelas (id_kelas),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_diskusi_komentar (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_post INT NOT NULL,
+                author_role ENUM('guru','siswa') NOT NULL,
+                id_guru INT NULL,
+                id_siswa INT NULL,
+                isi TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_post (id_post)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_diskusi_suka (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                target ENUM('post','komentar') NOT NULL,
+                target_id INT NOT NULL,
+                author_role ENUM('guru','siswa') NOT NULL,
+                id_guru INT NULL,
+                id_siswa INT NULL,
+                author_key VARCHAR(50) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_suka (target, target_id, author_key),
+                INDEX idx_target (target, target_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 

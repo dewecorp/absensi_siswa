@@ -46,13 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         $id_siswa = (int)($_POST['id_siswa'] ?? 0);
         $id_kelas = (int)($_POST['id_kelas'] ?? $selected_kelas_id);
-        $tanggal = !empty($_POST['tanggal']) ? date('Y-m-d', strtotime($_POST['tanggal'])) : date('Y-m-d');
-        $tanggal_mulai = !empty($_POST['tanggal_mulai']) ? date('Y-m-d', strtotime($_POST['tanggal_mulai'])) : $tanggal;
-        $tanggal_selesai = !empty($_POST['tanggal_selesai']) ? date('Y-m-d', strtotime($_POST['tanggal_selesai'])) : $tanggal_mulai;
-        if ($tanggal_selesai < $tanggal_mulai) { $tmpT = $tanggal_mulai; $tanggal_mulai = $tanggal_selesai; $tanggal_selesai = $tmpT; }
-        $tanggal = $tanggal_mulai;
+        $tanggal = date('Y-m-d');
         $nama_ortu = trim((string)($_POST['nama_ortu'] ?? ''));
-        $jenis_informasi = in_array($_POST['jenis_informasi'] ?? '', ['Pengumuman Kelas', 'Pesan Individu', 'Informasi Kehadiran', 'Informasi Tugas', 'Informasi Perkembangan'], true) ? $_POST['jenis_informasi'] : 'Pengumuman Kelas';
+        $jenis_informasi = in_array($_POST['jenis_informasi'] ?? '', ['Pesan Individu', 'Informasi Kehadiran', 'Informasi Tugas', 'Informasi Perkembangan'], true) ? $_POST['jenis_informasi'] : 'Pesan Individu';
         $judul = trim((string)($_POST['judul'] ?? ''));
         $isi = trim((string)($_POST['isi'] ?? ''));
 
@@ -72,24 +68,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $status_dibaca = 'Belum Dibaca';
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_komunikasi_ortu (
-                            id_wali, id_siswa, id_kelas, tanggal, tanggal_mulai, tanggal_selesai, nama_ortu,
+                            id_wali, id_siswa, id_kelas, tanggal, nama_ortu,
                             jenis_informasi, judul, isi, status_kirim, status_dibaca
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([
-                        $guru_id, $id_siswa, $id_kelas, $tanggal, $tanggal_mulai, $tanggal_selesai, $nama_ortu,
+                        $guru_id, $id_siswa, $id_kelas, $tanggal, $nama_ortu,
                         $jenis_informasi, $judul, $isi, $status_kirim, $status_dibaca
                     ]);
                     $message = ['type' => 'success', 'text' => 'Komunikasi orang tua berhasil dikirim/disimpan.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_komunikasi_ortu SET
-                            id_siswa = ?, id_kelas = ?, tanggal = ?, tanggal_mulai = ?, tanggal_selesai = ?, nama_ortu = ?,
+                            id_siswa = ?, id_kelas = ?, nama_ortu = ?,
                             jenis_informasi = ?, judul = ?, isi = ?
                         WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
-                        $id_siswa, $id_kelas, $tanggal, $tanggal_mulai, $tanggal_selesai, $nama_ortu,
+                        $id_siswa, $id_kelas, $nama_ortu,
                         $jenis_informasi, $judul, $isi, $id
                     ]);
                     $message = ['type' => 'success', 'text' => 'Data komunikasi orang tua diperbarui.'];
@@ -145,10 +141,11 @@ if ($f_baca !== '') {
 }
 
 $where_sql = implode(' AND ', $where);
+if ($f_jenis === 'Pengumuman Kelas') {
+    $where_sql .= " AND 1=0";
+}
 $stmt = $pdo->prepare("
-    SELECT k.*, s.nama_siswa, s.nisn, s.wali AS wali_asli, c.nama_kelas,
-           COALESCE(k.tanggal_mulai, k.tanggal) AS tgl_mulai_ef,
-           COALESCE(k.tanggal_selesai, COALESCE(k.tanggal_mulai, k.tanggal)) AS tgl_selesai_ef
+    SELECT k.*, s.nama_siswa, s.nisn, s.wali AS wali_asli, c.nama_kelas
     FROM tb_komunikasi_ortu k
     JOIN tb_siswa s ON s.id_siswa = k.id_siswa
     LEFT JOIN tb_kelas c ON c.id_kelas = k.id_kelas
@@ -158,7 +155,7 @@ $stmt = $pdo->prepare("
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$jenis_options = ['Pengumuman Kelas', 'Pesan Individu', 'Informasi Kehadiran', 'Informasi Tugas', 'Informasi Perkembangan'];
+$jenis_options = ['Pesan Individu', 'Informasi Kehadiran', 'Informasi Tugas', 'Informasi Perkembangan'];
 
 $page_title = 'Daftar Komunikasi Orang Tua';
 $css_libs = [
@@ -217,9 +214,6 @@ $(document).ready(function() {
         $('#komOrtuId').val(data.id);
         $('#modalKomOrtuTitle').text('Edit Komunikasi Orang Tua');
         $('#inp_siswa').val(data.id_siswa);
-        $('#inp_tanggal').val(data.tanggal);
-        $('#inp_tanggal_mulai').val(data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal);
-        $('#inp_tanggal_selesai').val(data.tanggal_selesai || data.tgl_selesai_ef || data.tanggal);
         $('#inp_jenis').val(data.jenis_informasi);
         $('#inp_judul').val(data.judul);
         $('#inp_isi').val(data.isi);
@@ -229,9 +223,7 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-detail-kom-ortu', function() {
         var data = $(this).data('json');
-        var tm = data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal;
-        var ts = data.tanggal_selesai || data.tgl_selesai_ef || tm;
-        $('#det_tanggal').text(tm === ts ? tm : (tm + ' s/d ' + ts));
+        $('#det_tanggal').text(data.tanggal);
         $('#det_nama').text(data.nama_siswa);
         $('#det_ortu').text(data.nama_ortu || '-');
         $('#det_kelas').text(data.nama_kelas || '-');
@@ -429,15 +421,6 @@ include '../templates/sidebar.php';
                         <div class="col-md-6 form-group">
                             <label>Nama Orang Tua / Wali</label>
                             <input type="text" name="nama_ortu" id="inp_nama_ortu" class="form-control" placeholder="Bpk / Ibu ...">
-                        </div>
-                        <input type="hidden" name="tanggal" id="inp_tanggal" value="<?= date('Y-m-d') ?>">
-                        <div class="col-md-3 form-group">
-                            <label>Tanggal Mulai <span class="text-danger">*</span></label>
-                            <input type="date" name="tanggal_mulai" id="inp_tanggal_mulai" class="form-control" value="<?= date('Y-m-d') ?>" required>
-                        </div>
-                        <div class="col-md-3 form-group">
-                            <label>Tanggal Selesai <span class="text-danger">*</span></label>
-                            <input type="date" name="tanggal_selesai" id="inp_tanggal_selesai" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-md-6 form-group">
                             <label>Jenis Informasi</label>

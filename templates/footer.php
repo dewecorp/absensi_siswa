@@ -244,7 +244,7 @@
                         <div class="modal-body">
                             <table class="table table-bordered table-sm mb-3">
                                 <tr><th width="35%">Tanggal Mulai - Selesai</th><td id="nav_baca_tanggal"></td></tr>
-                                <tr><th>Waktu Kirim</th><td id="nav_baca_waktu"></td></tr>
+                                <tr><th>Waktu</th><td id="nav_baca_waktu"></td></tr>
                                 <tr><th>Pengirim</th><td id="nav_baca_pengirim" class="font-weight-bold"></td></tr>
                                 <tr><th>Kepada Ortu/Wali</th><td id="nav_baca_ortu"></td></tr>
                                 <tr><th>Jenis Informasi</th><td id="nav_baca_jenis"></td></tr>
@@ -278,12 +278,19 @@
                     var fS = formatDate(ts);
                     tglStr = (!fS || fM === fS) ? fM : (fM + ' s/d ' + fS);
                 }
+                var shortT = function(tStr) {
+                    if (!tStr) return '';
+                    return String(tStr).substring(0, 5).replace(':', '.');
+                };
+                var wm = shortT(data.waktu_mulai || '');
+                var ws = shortT(data.waktu_selesai || '');
                 var waktuStr = '-';
-                if (data.created_at) {
-                    var timePart = String(data.created_at).split(' ')[1];
-                    if (timePart) {
-                        waktuStr = timePart.substring(0, 5) + ' WIB';
-                    }
+                if (wm !== '' && ws !== '' && wm !== ws) {
+                    waktuStr = wm + ' - ' + ws + ' WIB';
+                } else if (wm !== '') {
+                    waktuStr = wm + ' WIB';
+                } else if (ws !== '') {
+                    waktuStr = ws + ' WIB';
                 }
                 $('#nav_baca_tanggal').text(tglStr);
                 $('#nav_baca_waktu').text(waktuStr);

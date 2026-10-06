@@ -36,8 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tanggal_selesai = !empty($_POST['tanggal_selesai']) ? date('Y-m-d', strtotime($_POST['tanggal_selesai'])) : $tanggal_mulai;
         if ($tanggal_selesai < $tanggal_mulai) { $tmpT = $tanggal_mulai; $tanggal_mulai = $tanggal_selesai; $tanggal_selesai = $tmpT; }
         $tanggal = $tanggal_mulai;
+        $waktu_mulai = !empty($_POST['waktu_mulai']) ? date('H:i:s', strtotime($_POST['waktu_mulai'])) : null;
+        $waktu_selesai = !empty($_POST['waktu_selesai']) ? date('H:i:s', strtotime($_POST['waktu_selesai'])) : null;
         $judul = trim((string)($_POST['judul'] ?? ''));
-        $jenis = in_array($_POST['jenis'] ?? '', ['Pengumuman', 'Pesan', 'Diskusi'], true) ? $_POST['jenis'] : 'Pengumuman';
+        $jenis = in_array($_POST['jenis'] ?? '', ['Pengumuman', 'Pesan'], true) ? $_POST['jenis'] : 'Pengumuman';
         $id_kelas = (int)($_POST['id_kelas'] ?? 0);
         $isi = trim((string)($_POST['isi'] ?? ''));
         $status = in_array($_POST['status'] ?? '', ['Terkirim', 'Draft', 'Arsip'], true) ? $_POST['status'] : 'Terkirim';
@@ -58,17 +60,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($action === 'tambah') {
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_komunikasi_kelas (
-                            id_guru, tanggal, tanggal_mulai, tanggal_selesai, judul, jenis, id_kelas, isi, lampiran, status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            id_guru, tanggal, tanggal_mulai, tanggal_selesai, waktu_mulai, waktu_selesai, judul, jenis, id_kelas, isi, lampiran, status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
-                    $stmt->execute([$guru_id, $tanggal, $tanggal_mulai, $tanggal_selesai, $judul, $jenis, $id_kelas, $isi, $lampiran, $status]);
+                    $stmt->execute([$guru_id, $tanggal, $tanggal_mulai, $tanggal_selesai, $waktu_mulai, $waktu_selesai, $judul, $jenis, $id_kelas, $isi, $lampiran, $status]);
                     $message = ['type' => 'success', 'text' => 'Komunikasi kelas berhasil dipublikasikan.'];
                 } else {
                     $sql = "
                         UPDATE tb_komunikasi_kelas SET
-                            tanggal = ?, tanggal_mulai = ?, tanggal_selesai = ?, judul = ?, jenis = ?, id_kelas = ?, isi = ?, status = ?
+                            tanggal = ?, tanggal_mulai = ?, tanggal_selesai = ?, waktu_mulai = ?, waktu_selesai = ?, judul = ?, jenis = ?, id_kelas = ?, isi = ?, status = ?
                     ";
-                    $params = [$tanggal, $tanggal_mulai, $tanggal_selesai, $judul, $jenis, $id_kelas, $isi, $status];
+                    $params = [$tanggal, $tanggal_mulai, $tanggal_selesai, $waktu_mulai, $waktu_selesai, $judul, $jenis, $id_kelas, $isi, $status];
                     if ($lampiran !== null) {
                         $sql .= ", lampiran = ?";
                         $params[] = $lampiran;
@@ -106,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Master lists
 $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
-$jenis_options = ['Pengumuman', 'Pesan', 'Diskusi'];
+$jenis_options = ['Pengumuman', 'Pesan'];
 
 // Filters
 $f_kelas = (int)($_GET['f_kelas'] ?? 0);
@@ -137,6 +139,8 @@ if ($f_status !== '') {
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
     SELECT k.*, c.nama_kelas, g.nama_guru,
+           COALESCE(k.tanggal_mulai, k.tanggal) AS tgl_mulai_ef,
+           COALESCE(k.tanggal_selesai, COALESCE(k.tanggal_mulai, k.tanggal)) AS tgl_selesai_ef,
            (SELECT COUNT(*) FROM tb_siswa s WHERE s.id_kelas = k.id_kelas) AS total_penerima,
            (SELECT COUNT(*) FROM tb_komunikasi_kelas_read kr WHERE kr.id_komunikasi = k.id) AS total_dibaca
     FROM tb_komunikasi_kelas k
@@ -190,6 +194,8 @@ $(document).ready(function() {
         $('#inp_tanggal').val(data.tanggal);
         $('#inp_tanggal_mulai').val(data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal);
         $('#inp_tanggal_selesai').val(data.tanggal_selesai || data.tgl_selesai_ef || data.tanggal);
+        $('#inp_waktu_mulai').val(data.waktu_mulai ? String(data.waktu_mulai).substring(0, 5) : '');
+        $('#inp_waktu_selesai').val(data.waktu_selesai ? String(data.waktu_selesai).substring(0, 5) : '');
         $('#inp_judul').val(data.judul);
         $('#inp_jenis').val(data.jenis);
         $('#inp_kelas').val(data.id_kelas);
@@ -202,7 +208,12 @@ $(document).ready(function() {
         var data = $(this).data('json');
         var tm = data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal;
         var ts = data.tanggal_selesai || data.tgl_selesai_ef || tm;
+        var shortT = function(v) { return v ? String(v).substring(0, 5).replace(':', '.') : ''; };
+        var wm = shortT(data.waktu_mulai || '');
+        var ws = shortT(data.waktu_selesai || '');
+        var jamStr = (wm !== '' && ws !== '' && wm !== ws) ? (wm + ' - ' + ws + ' WIB') : (wm !== '' ? (wm + ' WIB') : (ws !== '' ? (ws + ' WIB') : '-'));
         $('#det_tanggal').text(tm === ts ? tm : (tm + ' s/d ' + ts));
+        $('#det_waktu').text(jamStr);
         $('#det_judul').text(data.judul);
         $('#det_jenis').html('<span class="badge badge-info">' + data.jenis + '</span>');
         $('#det_kelas').text(data.nama_kelas || '-');
@@ -316,7 +327,8 @@ include '../templates/sidebar.php';
                             <thead>
                                 <tr>
                                     <th width="4%">No</th>
-                                    <th>Tanggal</th>
+                                    <th>Tanggal Mulai - Selesai</th>
+                                    <th class="text-center">Waktu</th>
                                     <th>Judul</th>
                                     <th>Jenis</th>
                                     <th>Kelas</th>
@@ -336,7 +348,17 @@ include '../templates/sidebar.php';
                                     ?>
                                     <tr>
                                         <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
+                                        <?php
+                                        $tm_g = $r['tanggal_mulai'] ?? $r['tgl_mulai_ef'] ?? $r['tanggal'];
+                                        $ts_g = $r['tanggal_selesai'] ?? $r['tgl_selesai_ef'] ?? $tm_g;
+                                        $tgl_g = date('d/m/Y', strtotime($tm_g));
+                                        if ($ts_g && $ts_g !== $tm_g) $tgl_g .= ' - ' . date('d/m/Y', strtotime($ts_g));
+                                        $wm_g = !empty($r['waktu_mulai']) ? substr((string)$r['waktu_mulai'], 0, 5) : '';
+                                        $ws_g = !empty($r['waktu_selesai']) ? substr((string)$r['waktu_selesai'], 0, 5) : '';
+                                        $waktu_g = ($wm_g !== '' && $ws_g !== '' && $wm_g !== $ws_g) ? (str_replace(':', '.', $wm_g) . ' - ' . str_replace(':', '.', $ws_g)) : ($wm_g !== '' ? str_replace(':', '.', $wm_g) : ($ws_g !== '' ? str_replace(':', '.', $ws_g) : '-'));
+                                        ?>
+                                        <td><?= htmlspecialchars($tgl_g) ?></td>
+                                        <td class="text-center"><small><i class="far fa-clock mr-1 text-muted"></i><?= htmlspecialchars($waktu_g) ?></small></td>
                                         <td><strong><?= htmlspecialchars($r['judul']) ?></strong></td>
                                         <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis']) ?></span></td>
                                         <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
@@ -416,13 +438,21 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <input type="hidden" name="tanggal" id="inp_tanggal" value="<?= date('Y-m-d') ?>">
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-3 form-group">
                             <label>Tanggal Mulai <span class="text-danger">*</span></label>
                             <input type="date" name="tanggal_mulai" id="inp_tanggal_mulai" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-3 form-group">
                             <label>Tanggal Selesai <span class="text-danger">*</span></label>
                             <input type="date" name="tanggal_selesai" id="inp_tanggal_selesai" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>Waktu Mulai</label>
+                            <input type="time" name="waktu_mulai" id="inp_waktu_mulai" class="form-control">
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>Waktu Selesai</label>
+                            <input type="time" name="waktu_selesai" id="inp_waktu_selesai" class="form-control">
                         </div>
                         <div class="col-md-4 form-group">
                             <label>Status</label>
@@ -461,7 +491,8 @@ include '../templates/sidebar.php';
             </div>
             <div class="modal-body">
                 <table class="table table-bordered table-sm">
-                    <tr><th width="30%">Tanggal</th><td id="det_tanggal"></td></tr>
+                    <tr><th width="30%">Tanggal Mulai - Selesai</th><td id="det_tanggal"></td></tr>
+                    <tr><th>Waktu</th><td id="det_waktu"></td></tr>
                     <tr><th>Judul</th><td id="det_judul" class="font-weight-bold"></td></tr>
                     <tr><th>Jenis</th><td id="det_jenis"></td></tr>
                     <tr><th>Kelas</th><td id="det_kelas"></td></tr>

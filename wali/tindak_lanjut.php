@@ -885,7 +885,7 @@ include '../templates/sidebar.php';
                 <table class="table table-bordered table-sm">
                     <tr><th width="35%">Tanggal Rencana</th><td id="det_tanggal"></td></tr>
                     <tr><th>Nama Siswa</th><td id="det_nama" class="font-weight-bold"></td></tr>
-                    <tr><th>NIS/NISN</th><td id="det_nisn"></td></tr>
+                    <tr><th>NISN</th><td id="det_nisn"></td></tr>
                     <tr><th>Kelas</th><td id="det_kelas"></td></tr>
                     <tr><th>Sumber Masalah</th><td id="det_sumber"></td></tr>
                     <tr><th id="lbl_det_sumber">Rincian Sumber</th><td id="det_bina"></td></tr>
@@ -910,4 +910,5 @@ include '../templates/sidebar.php';
 </form>
 
 <?php include '../templates/footer.php'; ?>
+
 
