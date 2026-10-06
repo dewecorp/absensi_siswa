@@ -82,6 +82,48 @@ function diskusi_avatar_color(string $key): string {
     return $palette[abs(crc32($key)) % count($palette)];
 }
 
+function diskusi_bg_list(): array {
+    return [
+        'none' => ['label' => 'Putih', 'css' => '#ffffff', 'dark' => false],
+        'sunset' => ['label' => 'Senja', 'css' => 'linear-gradient(135deg,#ff9a3c,#fc4a6d)', 'dark' => true],
+        'ocean' => ['label' => 'Laut', 'css' => 'linear-gradient(135deg,#2193b0,#6dd5ed)', 'dark' => true],
+        'grape' => ['label' => 'Anggur', 'css' => 'linear-gradient(135deg,#7b2ff7,#f107a3)', 'dark' => true],
+        'forest' => ['label' => 'Hutan', 'css' => 'linear-gradient(135deg,#11998e,#38ef7d)', 'dark' => true],
+        'night' => ['label' => 'Malam', 'css' => 'linear-gradient(135deg,#232526,#414345)', 'dark' => true],
+        'candy' => ['label' => 'Permen', 'css' => 'linear-gradient(135deg,#ff6fd8,#ffc3a0)', 'dark' => false],
+        'mint' => ['label' => 'Mint', 'css' => 'linear-gradient(135deg,#a8ff78,#78ffd6)', 'dark' => false],
+        'pattern-dot' => ['label' => 'Titik', 'css' => 'radial-gradient(#6777ef 1.5px, #eef2ff 1.5px)', 'dark' => false, 'size' => '18px 18px'],
+        'pattern-line' => ['label' => 'Garis', 'css' => 'repeating-linear-gradient(45deg,#eef2ff 0 10px,#ffffff 10px 20px)', 'dark' => false],
+    ];
+}
+
+function diskusi_bg_style(string $bg): array {
+    $list = diskusi_bg_list();
+    if (!isset($list[$bg])) {
+        $bg = 'none';
+    }
+    return [$bg, $list[$bg]];
+}
+
+function diskusi_allowed_bg(?string $bg): string {
+    $bg = trim((string)$bg);
+    $list = diskusi_bg_list();
+    return isset($list[$bg]) ? $bg : 'none';
+}
+
+function diskusi_emoji_list(): array {
+    return [
+        '😀','😁','😂','🤣','😊','😉','😋','😎','😍','🥰',
+        '🤔','🤨','😐','🙄','😴','🤯','🥳','😭','😢','😮',
+        '😡','😱','🤗','🤫','😇','🤠','🥺','😜','🤪','😝',
+        '👍','👎','👏','🙌','🙏','👋','✌️','🤝','💪','👀',
+        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💯',
+        '🔥','⭐','✨','🎉','🎊','🎁','🏆','🥇','✅','❌',
+        '📚','✏️','📝','🎒','🏫','📖','💡','🔔','📌','📎',
+        '😇','🕌','🕋','🤲','🌙','⭐','🌟','💫','🙂','🙃',
+    ];
+}
+
 function diskusi_toggle_like(PDO $pdo, string $target, int $target_id, string $author_key, string $role, int $gid, int $sid): bool {
     $chk = $pdo->prepare("SELECT id FROM tb_diskusi_suka WHERE target = ? AND target_id = ? AND author_key = ?");
     $chk->execute([$target, $target_id, $author_key]);

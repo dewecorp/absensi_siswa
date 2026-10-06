@@ -528,6 +528,7 @@ if (!function_exists('ensure_learning_schema')) {
                 id_guru INT NULL,
                 id_siswa INT NULL,
                 isi TEXT NOT NULL,
+                bg VARCHAR(30) NOT NULL DEFAULT 'none',
                 file_path VARCHAR(255) NULL,
                 file_kind ENUM('none','image','video','file') NOT NULL DEFAULT 'none',
                 file_name VARCHAR(255) NULL,
@@ -537,18 +538,42 @@ if (!function_exists('ensure_learning_schema')) {
                 INDEX idx_created (created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        try {
+            $chk = $pdo->query("SHOW COLUMNS FROM tb_diskusi_post LIKE 'bg'")->fetch();
+            if (!$chk) {
+                $pdo->exec("ALTER TABLE tb_diskusi_post ADD COLUMN bg VARCHAR(30) NOT NULL DEFAULT 'none'");
+            }
+        } catch (Throwable $e) {}
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_diskusi_komentar (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 id_post INT NOT NULL,
+                parent_id INT NULL,
                 author_role ENUM('guru','siswa') NOT NULL,
                 id_guru INT NULL,
                 id_siswa INT NULL,
                 isi TEXT NOT NULL,
+                file_path VARCHAR(255) NULL,
+                file_kind ENUM('none','image','video','file') NOT NULL DEFAULT 'none',
+                file_name VARCHAR(255) NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_post (id_post)
+                INDEX idx_post (id_post),
+                INDEX idx_parent (parent_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        foreach ([
+            ['tb_diskusi_komentar', 'parent_id', 'INT NULL'],
+            ['tb_diskusi_komentar', 'file_path', 'VARCHAR(255) NULL'],
+            ['tb_diskusi_komentar', 'file_kind', "ENUM('none','image','video','file') NOT NULL DEFAULT 'none'"],
+            ['tb_diskusi_komentar', 'file_name', 'VARCHAR(255) NULL'],
+        ] as $rel) {
+            try {
+                $chk = $pdo->query("SHOW COLUMNS FROM {$rel[0]} LIKE '{$rel[1]}'")->fetch();
+                if (!$chk) {
+                    $pdo->exec("ALTER TABLE {$rel[0]} ADD COLUMN {$rel[1]} {$rel[2]}");
+                }
+            } catch (Throwable $e) {}
+        }
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_diskusi_suka (
                 id INT AUTO_INCREMENT PRIMARY KEY,
