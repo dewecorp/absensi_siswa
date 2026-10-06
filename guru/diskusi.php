@@ -649,7 +649,7 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
                                     <button type="button" class="diskusi-emoji-btn" data-target="#diskusiIsi" title="Emoticon">😀</button>
                                     <span class="diskusi-emoji-panel"></span>
                                 </span>
-                                <button type="button" class="diskusi-tag-btn" data-target="#diskusiIsi" title="Culek teman (@)">Culek</button>
+                                <button type="button" class="diskusi-tag-btn" data-target="#diskusiIsi" title="Colek teman (@)">Colek</button>
                             </div>
                             <button type="submit" class="btn btn-primary btn-sm px-4" style="border-radius:999px;"><i class="fas fa-paper-plane mr-1"></i> Posting</button>
                         </div>
@@ -800,7 +800,7 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
                                     <button type="button" class="diskusi-emoji-btn" data-target="#komen-isi-<?= (int)$p['id'] ?>" title="Emoticon">😀</button>
                                     <span class="diskusi-emoji-panel"></span>
                                 </span>
-                                <button type="button" class="diskusi-tag-btn" data-target="#komen-isi-<?= (int)$p['id'] ?>" title="Culek teman (@)">Culek</button>
+                                <button type="button" class="diskusi-tag-btn" data-target="#komen-isi-<?= (int)$p['id'] ?>" title="Colek teman (@)">Colek</button>
                                 
                                 <button type="submit" class="btn btn-sm btn-primary" style="border-radius:50%;width:32px;height:32px;padding:0;flex-shrink:0;" title="Kirim"><i class="fas fa-paper-plane" style="font-size:12px;"></i></button>
                             </div>

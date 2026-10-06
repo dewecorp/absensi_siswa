@@ -174,15 +174,14 @@ function forum_get_mentionable_users(PDO $pdo): array {
 function diskusi_get_mentionable_users(PDO $pdo, int $id_kelas): array {
     $users = [];
     try {
-        $st = $pdo->query("SELECT nama_guru AS name, 'Guru' AS role, foto FROM tb_guru WHERE nama_guru IS NOT NULL AND nama_guru != '' ORDER BY nama_guru ASC");
-        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $users[] = ['name' => trim($r['name']), 'role' => $r['role'], 'foto' => $r['foto'] ?? ''];
-        }
         if ($id_kelas > 0) {
-            $st2 = $pdo->prepare("SELECT nama_siswa AS name, 'Siswa' AS role, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+            $st2 = $pdo->prepare("SELECT nama_siswa AS name, 'Siswa' AS role, foto FROM tb_siswa WHERE id_kelas = ? AND nama_siswa IS NOT NULL AND nama_siswa != '' ORDER BY nama_siswa ASC");
             $st2->execute([$id_kelas]);
             foreach ($st2->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                $users[] = ['name' => trim($r['name']), 'role' => 'Siswa', 'foto' => $r['foto'] ?? ''];
+                $nm = trim((string)$r['name']);
+                if ($nm !== '') {
+                    $users[] = ['name' => $nm, 'role' => 'Siswa', 'foto' => $r['foto'] ?? ''];
+                }
             }
         }
     } catch (Throwable $e) {}
