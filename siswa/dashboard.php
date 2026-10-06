@@ -716,11 +716,11 @@ include_once '../templates/sidebar.php';
                         <div>
                             <?php if ($total_tugas_belum > 0): ?>
                                 <span class="badge badge-danger font-weight-bold mr-2" style="font-size:12px; padding:6px 12px;">
-                                    <i class="fas fa-bell mr-1"></i> <?= $total_tugas_belum ?> Tugas Belum Dikumpulkan
+                                    <i class="fas fa-bell mr-1"></i> <?= $total_tugas_belum ?> Tugas Belum
                                 </span>
                             <?php else: ?>
                                 <span class="badge badge-success font-weight-bold mr-2" style="font-size:12px; padding:6px 12px;">
-                                    <i class="fas fa-check-circle mr-1"></i> Semua Tugas Sudah Selesai
+                                    <i class="fas fa-check-circle mr-1"></i> Semua Tugas Sudah
                                 </span>
                             <?php endif; ?>
                             <a href="tugas.php" class="btn btn-sm btn-primary">
@@ -774,9 +774,9 @@ include_once '../templates/sidebar.php';
                                                 </td>
                                                 <td class="text-center">
                                                     <?php if ($is_submitted): ?>
-                                                        <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Sudah Dikumpulkan</span>
+                                                        <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Sudah</span>
                                                     <?php else: ?>
-                                                        <span class="badge badge-warning"><i class="fas fa-hourglass-half mr-1"></i>Belum Dikumpulkan</span>
+                                                        <span class="badge badge-warning"><i class="fas fa-hourglass-half mr-1"></i>Belum</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td class="text-center font-weight-bold">

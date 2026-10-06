@@ -270,13 +270,13 @@ include '../templates/sidebar.php';
                                 </div>
                                 <div class="col-6 mb-3">
                                     <div class="border rounded p-3 text-center">
-                                        <div class="text-muted small">Sudah Mengumpulkan</div>
+                                        <div class="text-muted small">Sudah</div>
                                         <h3 class="mb-0 text-success"><?= $sudah_kumpul ?></h3>
                                     </div>
                                 </div>
                                 <div class="col-6 mb-3">
                                     <div class="border rounded p-3 text-center">
-                                        <div class="text-muted small">Belum Mengumpulkan</div>
+                                        <div class="text-muted small">Belum</div>
                                         <h3 class="mb-0 text-danger"><?= $belum_kumpul ?></h3>
                                     </div>
                                 </div>
@@ -347,7 +347,7 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($s['nisn'] ?? '-') ?></td>
                                         <td class="text-center">
                                             <?php if ($is_kumpul): ?>
-                                                <span class="badge badge-success">Sudah Mengumpulkan</span>
+                                                <span class="badge badge-success">Sudah</span>
                                             <?php else: ?>
                                                 <span class="badge badge-danger">Belum</span>
                                             <?php endif; ?>

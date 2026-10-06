@@ -215,12 +215,12 @@ include '../templates/sidebar.php';
                         </li>
                         <li class="nav-item">
                             <a class="nav-link <?= $filter_status === 'belum' ? 'active' : '' ?>" href="tugas.php?status=belum">
-                                <i class="fas fa-clock mr-1"></i> Belum Dikumpulkan
+                                <i class="fas fa-clock mr-1"></i> Belum
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link <?= $filter_status === 'sudah' ? 'active' : '' ?>" href="tugas.php?status=sudah">
-                                <i class="fas fa-check mr-1"></i> Sudah Dikumpulkan
+                                <i class="fas fa-check mr-1"></i> Sudah
                             </a>
                         </li>
                         <li class="nav-item">
@@ -279,7 +279,7 @@ include '../templates/sidebar.php';
                                         </td>
                                         <td class="text-center">
                                             <?php if ($is_submitted): ?>
-                                                <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Dikumpulkan</span>
+                                                <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Sudah</span>
                                                 <small class="d-block text-muted"><?= date('d/m H:i', strtotime($t['tgl_kumpul'])) ?></small>
                                             <?php else: ?>
                                                 <span class="badge badge-warning"><i class="fas fa-hourglass-half mr-1"></i>Belum</span>
