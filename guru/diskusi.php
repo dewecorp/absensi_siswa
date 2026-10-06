@@ -289,6 +289,10 @@ $(document).on('click', '.diskusi-emoji-btn', function(e) {
     e.stopPropagation();
     diskusiInsertEmoji($(this), $(this).data('target'));
 });
+$(document).on('input', 'textarea.diskusi-pill', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+});
 $(document).on('click', function(e) {
     if (!$(e.target).closest('.diskusi-emoji-wrap').length) $('.diskusi-emoji-panel').hide();
 });
@@ -415,7 +419,7 @@ include '../templates/sidebar.php';
 .diskusi-avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0; font-size: 14px; box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(0,0,0,.15); }
 .diskusi-card { border: 0; border-radius: 16px; box-shadow: 0 2px 12px rgba(15,23,42,.08); overflow: hidden; }
 .diskusi-composer { border: 0; border-radius: 16px; box-shadow: 0 2px 12px rgba(15,23,42,.08); }
-.diskusi-pill { background: #f0f2f5; border-radius: 999px; border: 0; padding: 12px 16px; resize: none; }
+.diskusi-pill { background: #f0f2f5; border-radius: 20px; border: 0; padding: 10px 16px; resize: none; overflow: hidden; font-size: 14px; line-height: 1.45; }
 .diskusi-pill:focus { background: #fff; box-shadow: 0 0 0 2px #6777ef33; outline: none; }
 .diskusi-actionbar { border-top: 1px solid #eef2f7; }
 .diskusi-act { flex: 1; border: 0 !important; outline: none !important; background: transparent; padding: 8px 4px; font-weight: 700; font-size: 13px; color: #65676b; border-radius: 8px; box-shadow: none !important; }
@@ -475,7 +479,7 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
                         <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
                         <div class="d-flex align-items-start" style="gap:10px;">
                             <span class="diskusi-avatar" style="background:<?= htmlspecialchars(diskusi_avatar_color('g_' . $guru_id)) ?>;"><?= htmlspecialchars(diskusi_initials($nama_guru)) ?></span>
-                            <textarea name="isi" id="diskusiIsi" class="form-control diskusi-pill flex-grow-1" rows="2" placeholder="Apa yang ingin Anda sampaikan ke kelas <?= htmlspecialchars($nama_kelas_aktif) ?>?"></textarea>
+                            <textarea name="isi" id="diskusiIsi" class="form-control diskusi-pill flex-grow-1" rows="1" placeholder="Apa yang ingin Anda sampaikan?"></textarea>
                             <input type="hidden" name="bg" id="diskusiBg" value="none">
                         </div>
                         <div class="d-flex align-items-center mt-2 flex-wrap" style="gap:6px;">
