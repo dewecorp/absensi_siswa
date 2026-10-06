@@ -149,7 +149,7 @@ $(document).ready(function() {
         $('#det_instruksi').text(data.instruksi || '-');
 
         if (data.lampiran) {
-            $('#det_lampiran').html('<a href="../uploads/tugas/' + String(data.lampiran).split('/').map(encodeURIComponent).join('/') + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-download mr-1"></i> Unduh Lampiran Guru</a>');
+            $('#det_lampiran').html('<a href="../guru/preview_tugas.php?id=' + data.id + '" target="_blank" class="btn btn-sm btn-primary"><i class="fas fa-book-reader mr-1"></i> Baca Dokumen</a>');
         } else {
             $('#det_lampiran').html('<span class="text-muted">Tidak ada berkas lampiran</span>');
         }

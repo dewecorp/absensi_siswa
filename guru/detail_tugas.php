@@ -180,7 +180,7 @@ $(document).ready(function() {
 
         if (data.file_path) {
             var ext = data.file_path.split('.').pop().toLowerCase();
-            $('#mdl_file_wrap').html('<a href="../uploads/tugas/' + String(data.file_path).split('/').map(encodeURIComponent).join('/') + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-file mr-1"></i>Unduh Berkas Siswa (' + ext.toUpperCase() + ')</a>');
+            $('#mdl_file_wrap').html('<a href="preview_tugas.php?id_pengumpulan=' + data.id_pengumpulan + '" target="_blank" class="btn btn-sm btn-primary"><i class="fas fa-book-reader mr-1"></i>Baca (' + ext.toUpperCase() + ')</a>');
         } else {
             $('#mdl_file_wrap').html('<span class="text-muted">Tidak ada berkas yang diunggah siswa</span>');
         }
@@ -236,10 +236,9 @@ include '../templates/sidebar.php';
                                 <tr>
                                     <th>Lampiran Berkas</th>
                                     <td>
-                                        <?php $lamp_href = guru_file_href('tugas', $tugas['lampiran'] ?? ''); ?>
-                                        <?php if ($lamp_href): ?>
-                                            <a href="<?= htmlspecialchars($lamp_href) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-download mr-1"></i> Unduh Lampiran
+                                        <?php if (!empty($tugas['lampiran'])): ?>
+                                            <a href="preview_tugas.php?id=<?= (int)$tugas['id'] ?>" target="_blank" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-book-reader mr-1"></i> Baca Dokumen
                                             </a>
                                         <?php else: ?>
                                             <span class="text-muted">Tidak ada lampiran</span>
@@ -374,11 +373,10 @@ include '../templates/sidebar.php';
                                             <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($st_periksa) ?></span>
                                         </td>
                                         <td class="text-center">
-                                            <?php $s_href = guru_file_href('tugas', $s['file_path'] ?? ''); ?>
-                                            <?php if ($s_href): ?>
+                                            <?php if (!empty($s['file_path'])): ?>
                                                 <?php $ext = strtoupper(pathinfo($s['file_path'], PATHINFO_EXTENSION)); ?>
-                                                <a href="<?= htmlspecialchars($s_href) ?>" target="_blank" class="btn btn-outline-primary btn-sm" title="Unduh Berkas Siswa">
-                                                    <i class="fas fa-file-download mr-1"></i> <?= $ext ?>
+                                                <a href="preview_tugas.php?id_pengumpulan=<?= (int)$s['id_pengumpulan'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Baca Berkas Siswa (Tab Baru)">
+                                                    <i class="fas fa-book-reader mr-1"></i> <?= $ext ?>
                                                 </a>
                                             <?php else: ?>
                                                 <span class="text-muted small">-</span>
