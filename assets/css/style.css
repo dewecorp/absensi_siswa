@@ -3662,10 +3662,10 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
     align-items: center;
     position: relative;
     width: 100%;
-    margin: 0 0 18px 0;
-    padding: 8px 16px 24px;
+    margin: 0 0 12px 0;
+    padding: 8px 16px;
     background: linear-gradient(135deg, #2f6ef0 0%, #5a8ff7 100%);
-    border-radius: 0 0 44px 44px;
+    border-radius: 0 0 20px 20px;
     box-shadow: 0 4px 14px rgba(47, 110, 240, 0.28);
     color: #ffffff;
     z-index: 5;
@@ -3698,26 +3698,15 @@ body:not(.sidebar-mini) .sidebar-style-2 .sidebar-menu li.active ul.dropdown-men
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  /* Gelombang penghias di bawah header */
-  .mobile-app-header::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -13px;
-    height: 18px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 40' preserveAspectRatio='none'%3E%3Cpath d='M0,20 C180,42 360,-6 560,18 C760,42 940,4 1140,22 C1260,33 1360,26 1440,30 L1440,40 L0,40 Z' fill='%235a8ff7'/%3E%3C/svg%3E") repeat-x;
-    background-size: auto 100%;
-    pointer-events: none;
-  }
+
 }
 
 @media (max-width: 575.98px) {
   .mobile-app-header {
     width: 100%;
-    margin: 0 0 14px 0;
-    padding: 7px 14px 20px;
-    border-radius: 0 0 36px 36px;
+    margin: 0 0 10px 0;
+    padding: 7px 14px;
+    border-radius: 0 0 18px 18px;
   }
   .mobile-app-header .mobile-app-title {
     font-size: 14px;
