@@ -116,11 +116,18 @@ function diskusi_emoji_list(): array {
         '😀','😁','😂','🤣','😊','😉','😋','😎','😍','🥰',
         '🤔','🤨','😐','🙄','😴','🤯','🥳','😭','😢','😮',
         '😡','😱','🤗','🤫','😇','🤠','🥺','😜','🤪','😝',
+        '🙂','🙃','😌','😔','😤','🥲','😷','🤒','🤕','😇',
         '👍','👎','👏','🙌','🙏','👋','✌️','🤝','💪','👀',
+        '👌','✊','🤞','🤟','👈','👉','👆','👇','☝️','🫶',
         '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💯',
         '🔥','⭐','✨','🎉','🎊','🎁','🏆','🥇','✅','❌',
-        '📚','✏️','📝','🎒','🏫','📖','💡','🔔','📌','📎',
-        '😇','🕌','🕋','🤲','🌙','⭐','🌟','💫','🙂','🙃',
+        '❗','❓','‼️','💬','💭','🔴','🟢','🟡','🔵','⚪',
+        '📍','🗺️','🧭','🏠','🏫','🕌','🕋','📌','📎','🧷',
+        '🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙',
+        '🕚','🕛','⏰','⏱️','🕰️','📅','📆','🗓️','⌛','⏳',
+        '📷','📸','🎥','📹','🎬','🎤','🎧','📞','📢','🔔',
+        '📚','✏️','📝','🎒','📖','💡','🔖','📊','📈','🧾',
+        '🤲','🌙','⭐','🌟','💫','🙏','🕊️','🌸','🌺','🌈',
     ];
 }
 
@@ -230,7 +237,7 @@ function diskusi_format_text(?string $text): string {
                 $out .= '</span></span>';
             } elseif (preg_match('~\.(jpg|jpeg|png|gif|webp)(\?.*)?$~i', $url)) {
                 $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="color:#1877f2;font-weight:600;word-break:break-all;">' . $safe . '</a>';
-                $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="display:block;margin-top:8px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;"><img src="' . $safe . '" alt="pratinjau tautan" loading="lazy" style="display:block;width:100%;max-height:320px;object-fit:cover;"></a>';
+                $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="display:block;margin-top:8px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;background:#f8fafc;"><img src="' . $safe . '" alt="pratinjau tautan" loading="lazy" style="display:block;width:100%;height:auto;max-height:600px;object-fit:contain;"></a>';
             } elseif (preg_match('~\.(mp4|webm|mov)(\?.*)?$~i', $url)) {
                 $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="color:#1877f2;font-weight:600;word-break:break-all;">' . $safe . '</a>';
                 $out .= '<video src="' . $safe . '" controls preload="metadata" style="display:block;margin-top:8px;width:100%;max-height:320px;border-radius:12px;background:#000;"></video>';
@@ -246,7 +253,7 @@ function diskusi_format_text(?string $text): string {
                     $m_desc = htmlspecialchars((string)$meta['desc'], ENT_QUOTES, 'UTF-8');
                     $m_img = htmlspecialchars((string)$meta['image'], ENT_QUOTES, 'UTF-8');
                     $out .= '<a href="' . $m_url . '" target="_blank" rel="noopener" style="display:block;margin-top:8px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff;text-decoration:none;max-width:100%;">';
-                    if ($m_img !== '') $out .= '<img src="' . $m_img . '" alt="" loading="lazy" style="display:block;width:100%;max-height:260px;object-fit:cover;border:0;">';
+                    if ($m_img !== '') $out .= '<img src="' . $m_img . '" alt="" loading="lazy" style="display:block;width:100%;height:auto;max-height:420px;object-fit:contain;background:#f8fafc;border:0;">';
                     $out .= '<span style="display:block;padding:10px 12px;">';
                     $out .= '<span style="display:block;font-weight:700;font-size:14px;color:#111;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' . $m_title . '</span>';
                     if ($m_desc !== '') $out .= '<span style="display:block;font-size:13px;color:#65676b;line-height:1.45;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' . $m_desc . '</span>';
@@ -398,13 +405,13 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
                 $html .= '<span class="text-muted">' . $time_str . '</span>';
             }
             if ($can_del) {
-                $html .= '<form method="POST" class="d-inline" onsubmit="return confirm(\'Hapus komentar ini?\')">';
+                $html .= '<form method="POST" class="d-inline diskusi-delete-form" data-type="komentar">';
                 $html .= '<input type="hidden" name="action" value="comment_delete">';
                 $html .= '<input type="hidden" name="id" value="' . $cid . '">';
                 if ($user_role === 'guru') {
                     $html .= '<input type="hidden" name="id_kelas" value="' . (int)$selected_kelas . '">';
                 }
-                $html .= '<button class="btn btn-link btn-sm text-muted p-0" style="font-size:11px;border:0;outline:none;box-shadow:none;text-decoration:none;" title="Hapus">Hapus</button>';
+                $html .= '<button type="button" class="btn btn-link btn-sm text-muted p-0 diskusi-delete-btn" style="font-size:11px;border:0;outline:none;box-shadow:none;text-decoration:none;" title="Hapus">Hapus</button>';
                 $html .= '</form>';
             }
             $html .= '</div>';
@@ -505,10 +512,10 @@ function forum_render_comments_tree(array $komen_list, int $post_id, string $cur
                 $html .= '<span class="text-muted">' . $time_str . '</span>';
             }
             if ($can_del) {
-                $html .= '<form method="POST" class="d-inline" onsubmit="return confirm(\'Hapus komentar ini?\')">';
+                $html .= '<form method="POST" class="d-inline diskusi-delete-form" data-type="komentar">';
                 $html .= '<input type="hidden" name="action" value="comment_delete">';
                 $html .= '<input type="hidden" name="id" value="' . $cid . '">';
-                $html .= '<button class="btn btn-link btn-sm text-muted p-0" style="font-size:11px;border:0;outline:none;box-shadow:none;text-decoration:none;" title="Hapus">Hapus</button>';
+                $html .= '<button type="button" class="btn btn-link btn-sm text-muted p-0 diskusi-delete-btn" style="font-size:11px;border:0;outline:none;box-shadow:none;text-decoration:none;" title="Hapus">Hapus</button>';
                 $html .= '</form>';
             }
             $html .= '</div>';

@@ -514,6 +514,23 @@ $(document).on('click', '.diskusi-edit-cancel', function(e) {
     e.preventDefault();
     $('#' + $(this).data('target')).hide();
 });
+$(document).on('click', '.diskusi-delete-btn', function(e) {
+    e.preventDefault();
+    var form = $(this).closest('.diskusi-delete-form');
+    var tipe = form.data('type') === 'komentar' ? 'komentar ini' : 'postingan ini';
+    Swal.fire({
+        title: 'Hapus ' + tipe + '?',
+        text: 'Data yang dihapus tidak dapat dikembalikan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal'
+    }).then(function(res) {
+        if (res.isConfirmed) form.submit();
+    });
+});
 JS
 ];
 
@@ -539,7 +556,9 @@ include '../templates/sidebar.php';
 .diskusi-act.liked { color: #1877f2 !important; background: #e7f3ff !important; }
 button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !important; }
 .diskusi-reply-box { margin-left: 40px; border-left: 2px solid #e5e7eb; padding-left: 10px; }
-.diskusi-media img, .diskusi-media video { width: 100%; max-height: 420px; object-fit: cover; border-radius: 0; display: block; }
+.diskusi-media { background: #f8fafc; }
+.diskusi-media img { width: 100%; height: auto; max-height: 900px; object-fit: contain; object-position: top center; border-radius: 0; display: block; background: #f8fafc; }
+.diskusi-media video { width: 100%; height: auto; max-height: 640px; background: #000; border-radius: 0; display: block; }
 .diskusi-bubble { background: #f0f2f5; border-radius: 16px; }
 .diskusi-bubble .diskusi-teks { color: #111 !important; font-size: 14.5px; line-height: 1.55; font-weight: 500; }
 .diskusi-nama { color: #111 !important; font-size: 13.5px; }
@@ -648,10 +667,10 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
                                         <a href="#" class="diskusi-edit-toggle small font-weight-bold text-muted" data-type="post" data-id="<?= (int)$p['id'] ?>" data-isi="<?= htmlspecialchars((string)$p['isi'], ENT_QUOTES, 'UTF-8') ?>" data-bg="<?= htmlspecialchars((string)($p['bg'] ?? 'none'), ENT_QUOTES, 'UTF-8') ?>" style="text-decoration:none;" title="Edit"><i class="fas fa-pen"></i></a>
                                     <?php endif; ?>
                                     <?php if ($can_del_post): ?>
-                                    <form method="POST" onsubmit="return confirm('Hapus postingan forum ini?')">
+                                    <form method="POST" class="diskusi-delete-form" data-type="postingan">
                                         <input type="hidden" name="action" value="post_delete">
                                         <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
-                                        <button class="btn btn-sm btn-link text-muted p-1" title="Hapus"><i class="fas fa-trash"></i></button>
+                                        <button type="button" class="btn btn-sm btn-link text-muted p-1 diskusi-delete-btn" title="Hapus"><i class="fas fa-trash"></i></button>
                                     </form>
                                     <?php endif; ?>
                                 </div>
