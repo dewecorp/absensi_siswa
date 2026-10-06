@@ -137,16 +137,134 @@ function diskusi_toggle_like(PDO $pdo, string $target, int $target_id, string $a
     return true;
 }
 
+function diskusi_youtube_id(?string $url): ?string {
+    $url = trim((string)$url);
+    if ($url === '') return null;
+    if (preg_match('~(?:youtube\.com/(?:watch\?[^#]*v=|shorts/|embed/|live/)|youtu\.be/)([A-Za-z0-9_-]{6,20})~i', $url, $m)) {
+        return $m[1];
+    }
+    return null;
+}
+
+function diskusi_fetch_link_meta(string $url): array {
+    $url = trim((string)$url);
+    $host = '';
+    try { $host = (string)(parse_url($url, PHP_URL_HOST) ?: ''); } catch (Throwable $e) {}
+    $host = strtolower($host);
+    $fallback = ['url' => $url, 'host' => $host, 'title' => $host !== '' ? $host : $url, 'desc' => '', 'image' => ''];
+    if (!preg_match('~^https?://~i', $url)) return $fallback;
+    if (!function_exists('diskusi_upload_base')) return $fallback;
+    try {
+        $cache_dir = diskusi_upload_base() . '.linkmeta/';
+        if (!is_dir($cache_dir)) @mkdir($cache_dir, 0755, true);
+        $cache_file = $cache_dir . md5(strtolower($url)) . '.json';
+        if (is_file($cache_file) && (time() - (int)@filemtime($cache_file)) < 7 * 86400) {
+            $cached = json_decode((string)@file_get_contents($cache_file), true);
+            if (is_array($cached) && !empty($cached['url'])) return $cached;
+        }
+    } catch (Throwable $e) { $cache_file = ''; }
+    $html = '';
+    try {
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (SIMAD Link Preview)');
+            curl_setopt($ch, CURLOPT_ENCODING, '');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $html = (string)curl_exec($ch);
+            curl_close($ch);
+        } else {
+            $ctx = stream_context_create(['http' => ['method' => 'GET', 'timeout' => 4, 'header' => "User-Agent: Mozilla/5.0 (SIMAD Link Preview)\r\n", 'follow_location' => 1, 'max_redirects' => 3]]);
+            $html = (string)@file_get_contents($url, false, $ctx, 0, 300000);
+        }
+    } catch (Throwable $e) { $html = ''; }
+    if ($html === '') return $fallback;
+    $html = substr($html, 0, 300000);
+    $get_meta = function ($names) use ($html) {
+        foreach ((array)$names as $nm) {
+            if (preg_match('~<meta[^>]+(?:property|name)=["\']' . preg_quote($nm, '~') . '["\'][^>]*content=["\']([^"\']+)~i', $html, $m)) return trim(html_entity_decode($m[1], ENT_QUOTES, 'UTF-8'));
+            if (preg_match('~<meta[^>]+content=["\']([^"\']+)["\'][^>]*?(?:property|name)=["\']' . preg_quote($nm, '~') . '["\']~i', $html, $m)) return trim(html_entity_decode($m[1], ENT_QUOTES, 'UTF-8'));
+        }
+        return '';
+    };
+    $title = $get_meta(['og:title', 'twitter:title']);
+    if ($title === '' && preg_match('~<title[^>]*>(.*?)</title>~is', $html, $m)) $title = trim(html_entity_decode(strip_tags($m[1]), ENT_QUOTES, 'UTF-8'));
+    if ($title === '') $title = $host !== '' ? $host : $url;
+    $desc = $get_meta(['og:description', 'twitter:description', 'description']);
+    if (mb_strlen($desc) > 180) $desc = mb_substr($desc, 0, 177) . '...';
+    $img = $get_meta(['og:image', 'twitter:image']);
+    if ($img !== '') {
+        if (strpos($img, '//') === 0) $img = 'https:' . $img;
+        elseif (strpos($img, '/') === 0 && $host !== '') {
+            $scheme = (string)(parse_url($url, PHP_URL_SCHEME) ?: 'https');
+            $img = $scheme . '://' . $host . $img;
+        }
+        if (!preg_match('~^https?://~i', $img)) $img = '';
+    }
+    $meta = ['url' => $url, 'host' => $host, 'title' => $title, 'desc' => $desc, 'image' => $img];
+    if (!empty($cache_file)) @file_put_contents($cache_file, json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    return $meta;
+}
+
 function diskusi_format_text(?string $text): string {
     $text = trim((string)$text);
     if ($text === '') return '';
-    $escaped = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
-    $formatted = preg_replace_callback('/@([A-Za-z0-9\.\_\-\s]{2,40})/u', function($matches) {
-        $tag_name = trim($matches[1], " \t\n\r\0\x0B.,");
-        if ($tag_name === '') return $matches[0];
-        return '<span class="diskusi-mention" style="display:inline-flex;align-items:center;gap:3px;background:#e7f3ff;color:#1877f2;font-weight:700;font-size:13px;padding:1px 8px;border-radius:999px;white-space:nowrap;"><i class="fas fa-at" style="font-size:11px;"></i>' . $tag_name . '</span>';
-    }, $escaped);
-    return nl2br($formatted);
+
+    $parts = preg_split('~(https?://[^\s<>"\']+)~i', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+    $out = '';
+    $previewed = [];
+    foreach ($parts as $i => $part) {
+        if (($i % 2) === 1) {
+            $url = rtrim(trim($part), '.,;:!?)]}');
+            $safe = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+            $yt = diskusi_youtube_id($url);
+            if ($yt !== null) {
+                $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="color:#1877f2;font-weight:600;word-break:break-all;">' . $safe . '</a>';
+                $out .= '<span class="diskusi-yt-wrap" style="display:block;margin-top:8px;border-radius:12px;overflow:hidden;background:#000;">';
+                $out .= '<span style="display:block;position:relative;width:100%;padding-bottom:56.25%;">';
+                $out .= '<iframe src="https://www.youtube.com/embed/' . htmlspecialchars($yt, ENT_QUOTES, 'UTF-8') . '" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>';
+                $out .= '</span></span>';
+            } elseif (preg_match('~\.(jpg|jpeg|png|gif|webp)(\?.*)?$~i', $url)) {
+                $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="color:#1877f2;font-weight:600;word-break:break-all;">' . $safe . '</a>';
+                $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="display:block;margin-top:8px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;"><img src="' . $safe . '" alt="pratinjau tautan" loading="lazy" style="display:block;width:100%;max-height:320px;object-fit:cover;"></a>';
+            } elseif (preg_match('~\.(mp4|webm|mov)(\?.*)?$~i', $url)) {
+                $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="color:#1877f2;font-weight:600;word-break:break-all;">' . $safe . '</a>';
+                $out .= '<video src="' . $safe . '" controls preload="metadata" style="display:block;margin-top:8px;width:100%;max-height:320px;border-radius:12px;background:#000;"></video>';
+            } else {
+                $out .= '<a href="' . $safe . '" target="_blank" rel="noopener" style="color:#1877f2;font-weight:600;word-break:break-all;">' . $safe . '</a>';
+                $lkey = strtolower($url);
+                if (!isset($previewed[$lkey])) {
+                    $previewed[$lkey] = true;
+                    $meta = diskusi_fetch_link_meta($url);
+                    $m_url = htmlspecialchars($meta['url'], ENT_QUOTES, 'UTF-8');
+                    $m_host = htmlspecialchars(strtoupper((string)$meta['host']), ENT_QUOTES, 'UTF-8');
+                    $m_title = htmlspecialchars((string)$meta['title'], ENT_QUOTES, 'UTF-8');
+                    $m_desc = htmlspecialchars((string)$meta['desc'], ENT_QUOTES, 'UTF-8');
+                    $m_img = htmlspecialchars((string)$meta['image'], ENT_QUOTES, 'UTF-8');
+                    $out .= '<a href="' . $m_url . '" target="_blank" rel="noopener" style="display:block;margin-top:8px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff;text-decoration:none;max-width:100%;">';
+                    if ($m_img !== '') $out .= '<img src="' . $m_img . '" alt="" loading="lazy" style="display:block;width:100%;max-height:260px;object-fit:cover;border:0;">';
+                    $out .= '<span style="display:block;padding:10px 12px;">';
+                    $out .= '<span style="display:block;font-weight:700;font-size:14px;color:#111;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' . $m_title . '</span>';
+                    if ($m_desc !== '') $out .= '<span style="display:block;font-size:13px;color:#65676b;line-height:1.45;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' . $m_desc . '</span>';
+                    if ($m_host !== '') $out .= '<span style="display:block;font-size:11px;color:#9ca3af;margin-top:4px;letter-spacing:.3px;">' . $m_host . '</span>';
+                    $out .= '</span></a>';
+                }
+            }
+            continue;
+        }
+        $escaped = htmlspecialchars($part, ENT_QUOTES, 'UTF-8');
+        $formatted = preg_replace_callback('/@([A-Za-z0-9\.\_\-\s]{2,40})/u', function($matches) {
+            $tag_name = trim($matches[1], " \t\n\r\0\x0B.,");
+            if ($tag_name === '') return $matches[0];
+            return '<span class="diskusi-mention" style="display:inline-flex;align-items:center;gap:3px;background:#e7f3ff;color:#1877f2;font-weight:700;font-size:13px;padding:1px 8px;border-radius:999px;white-space:nowrap;"><i class="fas fa-at" style="font-size:11px;"></i>' . $tag_name . '</span>';
+        }, $escaped);
+        $out .= $formatted;
+    }
+    return nl2br($out);
 }
 
 function forum_get_mentionable_users(PDO $pdo): array {
