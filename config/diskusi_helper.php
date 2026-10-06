@@ -137,6 +137,58 @@ function diskusi_toggle_like(PDO $pdo, string $target, int $target_id, string $a
     return true;
 }
 
+function diskusi_format_text(?string $text): string {
+    $text = trim((string)$text);
+    if ($text === '') return '';
+    $escaped = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    $formatted = preg_replace_callback('/@([A-Za-z0-9\.\_\-\s]{2,40})/u', function($matches) {
+        $tag_name = trim($matches[1], " \t\n\r\0\x0B.,");
+        if ($tag_name === '') return $matches[0];
+        return '<span class="diskusi-mention" style="display:inline-flex;align-items:center;gap:3px;background:#e7f3ff;color:#1877f2;font-weight:700;font-size:13px;padding:1px 8px;border-radius:999px;white-space:nowrap;"><i class="fas fa-at" style="font-size:11px;"></i>' . $tag_name . '</span>';
+    }, $escaped);
+    return nl2br($formatted);
+}
+
+function forum_get_mentionable_users(PDO $pdo): array {
+    $users = [];
+    try {
+        $st = $pdo->query("SELECT nama_guru AS name, 'Guru' AS role, foto FROM tb_guru WHERE nama_guru IS NOT NULL AND nama_guru != '' ORDER BY nama_guru ASC");
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $users[] = ['name' => trim($r['name']), 'role' => $r['role'], 'foto' => $r['foto'] ?? ''];
+        }
+        $st2 = $pdo->query("SELECT COALESCE(NULLIF(nama,''), username) AS name, level AS role, foto FROM tb_pengguna WHERE (nama IS NOT NULL AND nama != '') OR (username IS NOT NULL AND username != '') ORDER BY nama ASC");
+        foreach ($st2->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $nm = trim($r['name']);
+            $already = false;
+            foreach ($users as $u) {
+                if (strcasecmp($u['name'], $nm) === 0) { $already = true; break; }
+            }
+            if (!$already && $nm !== '') {
+                $users[] = ['name' => $nm, 'role' => ucfirst($r['role'] ?? 'Staf'), 'foto' => $r['foto'] ?? ''];
+            }
+        }
+    } catch (Throwable $e) {}
+    return $users;
+}
+
+function diskusi_get_mentionable_users(PDO $pdo, int $id_kelas): array {
+    $users = [];
+    try {
+        $st = $pdo->query("SELECT nama_guru AS name, 'Guru' AS role, foto FROM tb_guru WHERE nama_guru IS NOT NULL AND nama_guru != '' ORDER BY nama_guru ASC");
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $users[] = ['name' => trim($r['name']), 'role' => $r['role'], 'foto' => $r['foto'] ?? ''];
+        }
+        if ($id_kelas > 0) {
+            $st2 = $pdo->prepare("SELECT nama_siswa AS name, 'Siswa' AS role, foto FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+            $st2->execute([$id_kelas]);
+            foreach ($st2->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $users[] = ['name' => trim($r['name']), 'role' => 'Siswa', 'foto' => $r['foto'] ?? ''];
+            }
+        }
+    } catch (Throwable $e) {}
+    return $users;
+}
+
 function diskusi_avatar_html(string $name, ?string $foto = null, string $avatar_key = 'g_0', int $size = 44, string $extra_style = ''): string {
     $foto = trim((string)$foto);
     $img_path = null;
@@ -203,7 +255,7 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
             }
             $html .= '</div>';
             if (trim((string)$c['isi']) !== '') {
-                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . nl2br(htmlspecialchars($c['isi'])) . '</div>';
+                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . diskusi_format_text($c['isi']) . '</div>';
             }
             if ($cfurl) {
                 $html .= '<div class="mt-2 diskusi-comment-media">';
@@ -218,9 +270,13 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
             }
             $html .= '</div>';
 
+            $raw_isi_attr = htmlspecialchars((string)$c['isi'], ENT_QUOTES, 'UTF-8');
             $html .= '<div class="small mt-1 d-flex align-items-center flex-wrap" style="gap:10px;">';
             $html .= '<a href="#" class="diskusi-like font-weight-bold ' . ($c_liked ? 'text-primary' : 'text-muted') . '" data-target="komentar" data-id="' . $cid . '" data-kelas="' . (int)$selected_kelas . '" style="text-decoration:none;">Suka (<span class="like-count">' . (int)$c['jml_suka'] . '</span>)</a>';
             $html .= '<a href="#" class="diskusi-reply-btn font-weight-bold text-muted" data-post="' . $post_id . '" data-parent="' . $cid . '" data-name="' . htmlspecialchars($cname) . '" style="text-decoration:none;">Balas</a>';
+            if ($own_c) {
+                $html .= '<a href="#" class="diskusi-edit-toggle font-weight-bold text-muted" data-type="comment" data-id="' . $cid . '" style="text-decoration:none;">Edit</a>';
+            }
             if ($time_str !== '') {
                 $html .= '<span class="text-muted">' . $time_str . '</span>';
             }
@@ -233,6 +289,22 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
                 }
                 $html .= '<button class="btn btn-link btn-sm text-muted p-0" style="font-size:11px;border:0;outline:none;box-shadow:none;text-decoration:none;" title="Hapus">Hapus</button>';
                 $html .= '</form>';
+            }
+            $html .= '</div>';
+            $html .= '<div class="diskusi-edit-box mt-2" id="edit-comment-' . $cid . '" style="display:none;">';
+            if ($own_c) {
+                $html .= '<form method="POST" enctype="multipart/form-data" class="diskusi-edit-form">';
+                $html .= '<input type="hidden" name="action" value="comment_edit">';
+                $html .= '<input type="hidden" name="id" value="' . $cid . '">';
+                if ($user_role === 'guru') {
+                    $html .= '<input type="hidden" name="id_kelas" value="' . (int)$selected_kelas . '">';
+                }
+                $html .= '<textarea name="isi" class="form-control form-control-sm" rows="2" maxlength="1000" style="border-radius:12px;font-size:13px;">' . htmlspecialchars((string)$c['isi']) . '</textarea>';
+                $html .= '<div class="mt-1 d-flex align-items-center" style="gap:6px;">';
+                $html .= '<label class="mb-0 small text-muted" style="cursor:pointer;" title="Ganti lampiran"><i class="fas fa-paperclip mr-1"></i><span style="font-size:11px;">File</span><input type="file" name="file_komen" class="d-none" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"></label>';
+                $html .= '<button type="submit" class="btn btn-primary btn-sm px-3" style="border-radius:999px;font-size:12px;">Simpan</button>';
+                $html .= '<button type="button" class="btn btn-light btn-sm px-3 diskusi-edit-cancel" data-target="edit-comment-' . $cid . '" style="border-radius:999px;font-size:12px;">Batal</button>';
+                $html .= '</div></form>';
             }
             $html .= '</div>';
 
@@ -291,7 +363,7 @@ function forum_render_comments_tree(array $komen_list, int $post_id, string $cur
             $html .= '<div class="diskusi-bubble px-3 py-2">';
             $html .= '<div class="diskusi-nama"><strong>' . htmlspecialchars($cname) . '</strong> ' . $role_badge . '</div>';
             if (trim((string)$c['isi']) !== '') {
-                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . nl2br(htmlspecialchars($c['isi'])) . '</div>';
+                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . diskusi_format_text($c['isi']) . '</div>';
             }
             if ($cfurl) {
                 $html .= '<div class="mt-2 diskusi-comment-media">';
@@ -309,6 +381,9 @@ function forum_render_comments_tree(array $komen_list, int $post_id, string $cur
             $html .= '<div class="small mt-1 d-flex align-items-center flex-wrap" style="gap:10px;">';
             $html .= '<a href="#" class="diskusi-like font-weight-bold ' . ($c_liked ? 'text-primary' : 'text-muted') . '" data-target="komentar" data-id="' . $cid . '" style="text-decoration:none;">Suka (<span class="like-count">' . (int)$c['jml_suka'] . '</span>)</a>';
             $html .= '<a href="#" class="diskusi-reply-btn font-weight-bold text-muted" data-post="' . $post_id . '" data-parent="' . $cid . '" data-name="' . htmlspecialchars($cname) . '" style="text-decoration:none;">Balas</a>';
+            if ($own_c) {
+                $html .= '<a href="#" class="diskusi-edit-toggle font-weight-bold text-muted" data-type="comment" data-id="' . $cid . '" style="text-decoration:none;">Edit</a>';
+            }
             if ($time_str !== '') {
                 $html .= '<span class="text-muted">' . $time_str . '</span>';
             }
@@ -318,6 +393,19 @@ function forum_render_comments_tree(array $komen_list, int $post_id, string $cur
                 $html .= '<input type="hidden" name="id" value="' . $cid . '">';
                 $html .= '<button class="btn btn-link btn-sm text-muted p-0" style="font-size:11px;border:0;outline:none;box-shadow:none;text-decoration:none;" title="Hapus">Hapus</button>';
                 $html .= '</form>';
+            }
+            $html .= '</div>';
+            $html .= '<div class="diskusi-edit-box mt-2" id="edit-comment-' . $cid . '" style="display:none;">';
+            if ($own_c) {
+                $html .= '<form method="POST" enctype="multipart/form-data" class="diskusi-edit-form">';
+                $html .= '<input type="hidden" name="action" value="comment_edit">';
+                $html .= '<input type="hidden" name="id" value="' . $cid . '">';
+                $html .= '<textarea name="isi" class="form-control form-control-sm" rows="2" maxlength="1000" style="border-radius:12px;font-size:13px;">' . htmlspecialchars((string)$c['isi']) . '</textarea>';
+                $html .= '<div class="mt-1 d-flex align-items-center" style="gap:6px;">';
+                $html .= '<label class="mb-0 small text-muted" style="cursor:pointer;" title="Ganti lampiran"><i class="fas fa-paperclip mr-1"></i><span style="font-size:11px;">File</span><input type="file" name="file_komen" class="d-none" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"></label>';
+                $html .= '<button type="submit" class="btn btn-primary btn-sm px-3" style="border-radius:999px;font-size:12px;">Simpan</button>';
+                $html .= '<button type="button" class="btn btn-light btn-sm px-3 diskusi-edit-cancel" data-target="edit-comment-' . $cid . '" style="border-radius:999px;font-size:12px;">Batal</button>';
+                $html .= '</div></form>';
             }
             $html .= '</div>';
 
