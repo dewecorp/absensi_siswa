@@ -575,7 +575,7 @@ include '../templates/sidebar.php';
 ?>
 
 <style>
-.diskusi-feed { max-width: 680px; margin: 0 auto; }
+.diskusi-feed { max-width: none; width: 100%; margin: 0; }
 .diskusi-avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0; font-size: 14px; box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(0,0,0,.15); }
 .diskusi-card { border: 0; border-radius: 16px; box-shadow: 0 2px 12px rgba(15,23,42,.08); overflow: hidden; }
 .diskusi-composer { border: 0; border-radius: 16px; box-shadow: 0 2px 12px rgba(15,23,42,.08); }
