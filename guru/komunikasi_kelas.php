@@ -18,6 +18,17 @@ if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
 $is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah', 'tata_usaha'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
 $can_crud = !$is_admin_or_kepala;
 
+// Daftar kelas: guru/wali hanya kelas diajar, admin/kepala semua kelas.
+if ($is_admin_or_kepala) {
+    $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $kelas_list = function_exists('getGuruTaughtClasses') ? getGuruTaughtClasses($pdo, $guru_id) : [];
+    if (empty($kelas_list)) {
+        $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+$kelas_ids = array_map(static function ($c) { return (int)($c['id_kelas'] ?? 0); }, $kelas_list);
+
 $upload_dir = guru_upload_dir($pdo, $guru_id, 'komunikasi');
 
 $message = null;
@@ -42,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jenis = in_array($_POST['jenis'] ?? '', ['Pengumuman', 'Pesan'], true) ? $_POST['jenis'] : 'Pengumuman';
         $id_kelas = (int)($_POST['id_kelas'] ?? 0);
         $isi = trim((string)($_POST['isi'] ?? ''));
-        $status = in_array($_POST['status'] ?? '', ['Terkirim', 'Draft', 'Arsip'], true) ? $_POST['status'] : 'Terkirim';
+        $status = 'Terkirim';
 
         $lampiran = null;
         if (isset($_FILES['lampiran_file']) && $_FILES['lampiran_file']['error'] === UPLOAD_ERR_OK) {
@@ -55,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($judul === '' || $id_kelas <= 0 || $isi === '') {
             $message = ['type' => 'warning', 'text' => 'Judul, Kelas, dan Isi Pesan wajib diisi.'];
+        } elseif (!$is_admin_or_kepala && !in_array($id_kelas, $kelas_ids, true)) {
+            $message = ['type' => 'danger', 'text' => 'Anda hanya boleh mengirim ke kelas yang Anda ajar.'];
         } else {
             try {
                 if ($action === 'tambah') {
@@ -106,8 +119,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 }
 
-// Master lists
-$kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 $jenis_options = ['Pengumuman', 'Pesan'];
 
 // Filters
@@ -200,7 +211,6 @@ $(document).ready(function() {
         $('#inp_jenis').val(data.jenis);
         $('#inp_kelas').val(data.id_kelas);
         $('#inp_isi').val(data.isi);
-        $('#inp_status').val(data.status);
         $('#modalKomunikasi').modal('show');
     });
 
@@ -405,7 +415,7 @@ include '../templates/sidebar.php';
 
 <!-- Modal Form Tambah / Edit Komunikasi -->
 <div class="modal fade" id="modalKomunikasi" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <form method="POST" id="formKomunikasi" enctype="multipart/form-data">
                 <input type="hidden" name="action" id="formKomunikasiAction" value="tambah">
@@ -416,12 +426,12 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-8 form-group">
-                            <label>Judul Pesan / Pengumuman <span class="text-danger">*</span></label>
+                        <div class="col-md-4 form-group">
+                            <label class="small font-weight-bold">Judul Pesan / Pengumuman <span class="text-danger">*</span></label>
                             <input type="text" name="judul" id="inp_judul" class="form-control" required placeholder="Contoh: Pengumuman Jadwal Ulangan Harian">
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Jenis</label>
+                            <label class="small font-weight-bold">Jenis</label>
                             <select name="jenis" id="inp_jenis" class="form-control">
                                 <?php foreach ($jenis_options as $j): ?>
                                     <option value="<?= $j ?>"><?= $j ?></option>
@@ -429,7 +439,7 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Kelas Penerima <span class="text-danger">*</span></label>
+                            <label class="small font-weight-bold">Kelas Penerima <span class="text-danger">*</span></label>
                             <select name="id_kelas" id="inp_kelas" class="form-control" required>
                                 <option value="">-- Pilih Kelas --</option>
                                 <?php foreach ($kelas_list as $k): ?>
@@ -437,38 +447,36 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                    </div>
+                    <div class="row">
                         <input type="hidden" name="tanggal" id="inp_tanggal" value="<?= date('Y-m-d') ?>">
-                        <div class="col-md-3 form-group">
-                            <label>Tanggal Mulai <span class="text-danger">*</span></label>
+                        <div class="col-md-4 form-group">
+                            <label class="small font-weight-bold">Tanggal Mulai <span class="text-danger">*</span></label>
                             <input type="date" name="tanggal_mulai" id="inp_tanggal_mulai" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
-                        <div class="col-md-3 form-group">
-                            <label>Tanggal Selesai <span class="text-danger">*</span></label>
+                        <div class="col-md-4 form-group">
+                            <label class="small font-weight-bold">Tanggal Selesai <span class="text-danger">*</span></label>
                             <input type="date" name="tanggal_selesai" id="inp_tanggal_selesai" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
-                        <div class="col-md-3 form-group">
-                            <label>Waktu Mulai</label>
+                        <div class="col-md-4 form-group">
+                            <label class="small font-weight-bold">Unggah Lampiran <span class="text-muted font-weight-normal">(Opsional)</span></label>
+                            <input type="file" name="lampiran_file" class="form-control-file form-control-sm pt-1">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label class="small font-weight-bold">Waktu Mulai</label>
                             <input type="time" name="waktu_mulai" id="inp_waktu_mulai" class="form-control">
                         </div>
-                        <div class="col-md-3 form-group">
-                            <label>Waktu Selesai</label>
+                        <div class="col-md-4 form-group">
+                            <label class="small font-weight-bold">Waktu Selesai</label>
                             <input type="time" name="waktu_selesai" id="inp_waktu_selesai" class="form-control">
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label>Status</label>
-                            <select name="status" id="inp_status" class="form-control">
-                                <option value="Terkirim">Terkirim</option>
-                                <option value="Draft">Draft</option>
-                                <option value="Arsip">Arsip</option>
-                            </select>
-                        </div>
-                        <div class="col-12 form-group">
-                            <label>Isi Pesan / Pengumuman <span class="text-danger">*</span></label>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 form-group mb-0">
+                            <label class="small font-weight-bold">Isi Pesan / Pengumuman <span class="text-danger">*</span></label>
                             <textarea name="isi" id="inp_isi" class="form-control" rows="4" required placeholder="Tuliskan isi pengumuman atau instruksi kelas..."></textarea>
-                        </div>
-                        <div class="col-12 form-group">
-                            <label>Unggah Lampiran (Opsional)</label>
-                            <input type="file" name="lampiran_file" class="form-control-file">
                         </div>
                     </div>
                 </div>
