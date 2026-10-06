@@ -311,10 +311,16 @@ $(document).on('click', '.diskusi-bg-pick', function(e) {
 $(document).on('click', '.diskusi-like', function(e) {
     e.preventDefault();
     var btn = $(this);
+    var isPost = (btn.data('target') === 'post');
     $.post('', { ajax_like: 1, target: btn.data('target'), target_id: btn.data('id'), id_kelas: btn.data('kelas') }, function(res) {
         if (res && res.ok) {
             btn.find('.like-count').text(res.count);
-            btn.toggleClass('btn-primary', !!res.liked).toggleClass('btn-outline-primary', !res.liked);
+            if (isPost) {
+                btn.toggleClass('liked', !!res.liked);
+                btn.find('i').attr('class', res.liked ? 'fas fa-thumbs-up mr-1' : 'far fa-thumbs-up mr-1');
+            } else {
+                btn.toggleClass('text-primary', !!res.liked).toggleClass('text-muted', !res.liked);
+            }
         }
     }, 'json');
 });
@@ -322,6 +328,76 @@ $(document).on('click', '.diskusi-toggle-komen', function(e) {
     e.preventDefault();
     var box = $($(this).attr('href'));
     if (box.length) { box.toggle(); box.find('input[name="isi"]').focus(); }
+});
+$(document).on('click', '.diskusi-reply-btn', function(e) {
+    e.preventDefault();
+    var btn = $(this);
+    var postId = btn.data('post');
+    var parentId = btn.data('parent');
+    var targetName = btn.data('name');
+    var form = $('#komen-form-' + postId);
+    if (!form.length) return;
+    $('#komen-' + postId).show();
+    form.find('.diskusi-parent-id').val(parentId);
+    var ind = form.find('.diskusi-reply-indicator');
+    ind.find('.reply-name').text(targetName);
+    ind.removeClass('d-none').addClass('d-flex');
+    var input = form.find('input[name="isi"]');
+    if (!input.val().trim()) {
+        input.val('@' + targetName + ' ');
+    }
+    input.focus();
+});
+$(document).on('click', '.cancel-reply', function(e) {
+    e.preventDefault();
+    var form = $(this).closest('.diskusi-comment-form');
+    form.find('.diskusi-parent-id').val(0);
+    form.find('.diskusi-reply-indicator').addClass('d-none').removeClass('d-flex');
+});
+$(document).on('change', '.diskusi-file-komen', function() {
+    var f = this.files && this.files[0];
+    var form = $(this).closest('.diskusi-comment-form');
+    var prev = form.find('.diskusi-komen-file-prev');
+    if (f) {
+        prev.find('.file-name').text(f.name);
+        prev.removeClass('d-none');
+    } else {
+        prev.addClass('d-none');
+    }
+});
+$(document).on('click', '.clear-file', function(e) {
+    e.preventDefault();
+    var form = $(this).closest('.diskusi-comment-form');
+    form.find('.diskusi-file-komen').val('');
+    form.find('.diskusi-komen-file-prev').addClass('d-none');
+});
+$(document).on('click', '.diskusi-share-btn', function(e) {
+    e.preventDefault();
+    var postId = $(this).data('post');
+    var url = window.location.href.split('#')[0] + '#post-' + postId;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function() {
+            Swal.fire({ icon: 'success', title: 'Tautan disalin!', text: 'Tautan postingan berhasil disalin.', timer: 1800, showConfirmButton: false });
+        });
+    } else {
+        var temp = $('<input>');
+        $('body').append(temp);
+        temp.val(url).select();
+        document.execCommand('copy');
+        temp.remove();
+        Swal.fire({ icon: 'success', title: 'Tautan disalin!', text: 'Tautan postingan berhasil disalin.', timer: 1800, showConfirmButton: false });
+    }
+});
+$(document).on('click', '[data-lightbox="1"]', function(e) {
+    e.preventDefault();
+    var imgUrl = $(this).attr('href');
+    Swal.fire({
+        imageUrl: imgUrl,
+        imageAlt: 'Foto Diskusi',
+        showCloseButton: true,
+        showConfirmButton: false,
+        customClass: { image: 'img-fluid rounded' }
+    });
 });
 JS
 ];
@@ -345,7 +421,7 @@ include '../templates/sidebar.php';
 .diskusi-act { flex: 1; border: 0 !important; outline: none !important; background: transparent; padding: 8px 4px; font-weight: 700; font-size: 13px; color: #65676b; border-radius: 8px; box-shadow: none !important; }
 .diskusi-act:hover { background: #f0f2f5; }
 .diskusi-act:focus, .diskusi-act:active { outline: none !important; box-shadow: none !important; border: 0 !important; }
-.diskusi-act.liked { color: #1877f2; }
+.diskusi-act.liked { color: #1877f2 !important; background: #e7f3ff !important; }
 button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !important; }
 .diskusi-reply-box { margin-left: 40px; border-left: 2px solid #e5e7eb; padding-left: 10px; }
 .diskusi-file-mini img { max-width: 160px; border-radius: 8px; display: block; }
@@ -484,7 +560,7 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
                     <?php if ($furl): ?>
                         <div class="diskusi-media">
                             <?php if ($fk === 'image'): ?>
-                                <a href="<?= htmlspecialchars($furl) ?>" target="_blank"><img src="<?= htmlspecialchars($furl) ?>" alt="lampiran"></a>
+                                <a href="<?= htmlspecialchars($furl) ?>" data-lightbox="1" target="_blank"><img src="<?= htmlspecialchars($furl) ?>" alt="lampiran"></a>
                             <?php elseif ($fk === 'video'): ?>
                                 <video src="<?= htmlspecialchars($furl) ?>" controls></video>
                             <?php else: ?>
@@ -503,56 +579,49 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
                     </div>
 
                     <div class="mx-3 mb-1 diskusi-actionbar d-flex">
-                        <button class="diskusi-act diskusi-like <?= $liked ? 'liked' : '' ?>" data-target="post" data-id="<?= (int)$p['id'] ?>" data-kelas="<?= (int)$selected_kelas ?>">
+                        <button type="button" class="diskusi-act diskusi-like <?= $liked ? 'liked' : '' ?>" data-target="post" data-id="<?= (int)$p['id'] ?>" data-kelas="<?= (int)$selected_kelas ?>">
                             <i class="<?= $liked ? 'fas' : 'far' ?> fa-thumbs-up mr-1"></i> Suka (<span class="like-count"><?= (int)$p['jml_suka'] ?></span>)
                         </button>
                         <a href="#komen-<?= (int)$p['id'] ?>" class="diskusi-act text-center diskusi-toggle-komen" style="text-decoration:none;"><i class="far fa-comment mr-1"></i> Komentar</a>
+                        <button type="button" class="diskusi-act diskusi-share-btn text-center" data-post="<?= (int)$p['id'] ?>"><i class="far fa-share-square mr-1"></i> Bagikan</button>
                     </div>
 
                     <div id="komen-<?= (int)$p['id'] ?>" class="px-3 pb-3">
-                        <?php foreach ($komen as $c): ?>
-                            <?php
-                            $c_guru = ($c['author_role'] === 'guru');
-                            $cname = $c_guru ? ($c['nama_guru'] ?: 'Guru') : ($c['nama_siswa'] ?: 'Siswa');
-                            $own_c = ($c_guru && (int)$c['id_guru'] === (int)$guru_id);
-                            $can_del_c = $own_c || in_array($selected_kelas, $kelas_ids, true);
-                            $c_liked = ((int)$c['saya_suka'] > 0);
-                            ?>
-                            <div class="d-flex mt-2" style="gap:8px;">
-                                <span class="diskusi-avatar" style="width:32px;height:32px;font-size:12px;background:<?= htmlspecialchars(diskusi_avatar_color(($c_guru ? 'g_' : 's_') . ($c_guru ? (int)$c['id_guru'] : (int)$c['id_siswa']))) ?>;"><?= htmlspecialchars(diskusi_initials($cname)) ?></span>
-                                <div class="flex-grow-1">
-                                    <div class="diskusi-bubble px-3 py-2">
-                                        <div class="diskusi-nama"><strong><?= htmlspecialchars($cname) ?></strong>
-                                            <?php if ($c_guru): ?><i class="fas fa-check-circle text-primary ml-1" title="Guru"></i><?php endif; ?>
-                                        </div>
-                                        <div class="diskusi-teks" style="white-space:pre-wrap;"><?= nl2br(htmlspecialchars($c['isi'])) ?></div>
-                                    </div>
-                                    <div class="small mt-1 d-flex align-items-center" style="gap:10px;">
-                                        <a href="#" class="diskusi-like font-weight-bold <?= $c_liked ? 'text-primary' : 'text-muted' ?>" data-target="komentar" data-id="<?= (int)$c['id'] ?>" data-kelas="<?= (int)$selected_kelas ?>" style="text-decoration:none;">Suka (<span class="like-count"><?= (int)$c['jml_suka'] ?></span>)</a>
-                                        <span class="text-muted"><?= function_exists('timeAgo') ? htmlspecialchars(timeAgo($c['created_at'])) : '' ?></span>
-                                        <?php if ($can_del_c): ?>
-                                        <form method="POST" class="d-inline" onsubmit="return confirm('Hapus komentar ini?')">
-                                            <input type="hidden" name="action" value="comment_delete">
-                                            <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                                            <input type="hidden" name="id_kelas" value="<?= (int)$selected_kelas ?>">
-                                            <button class="btn btn-link btn-sm text-muted p-0" style="font-size:11px;" title="Hapus">Hapus</button>
-                                        </form>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                        <form method="POST" class="d-flex mt-2 align-items-center diskusi-emoji-wrap" style="gap:8px;">
+                        <div class="diskusi-comment-list mb-2">
+                            <?= diskusi_render_comments_tree($komen, (int)$p['id'], $selected_kelas, $kelas_ids, (int)$guru_id, 'guru') ?>
+                        </div>
+                        <form method="POST" enctype="multipart/form-data" class="diskusi-comment-form" id="komen-form-<?= (int)$p['id'] ?>">
                             <input type="hidden" name="action" value="comment_add">
                             <input type="hidden" name="id_post" value="<?= (int)$p['id'] ?>">
+                            <input type="hidden" name="parent_id" class="diskusi-parent-id" value="0">
                             <input type="hidden" name="id_kelas" value="<?= (int)$selected_kelas ?>">
-                            <span class="diskusi-avatar" style="width:32px;height:32px;font-size:12px;background:<?= htmlspecialchars(diskusi_avatar_color('g_' . $guru_id)) ?>;"><?= htmlspecialchars(diskusi_initials($nama_guru)) ?></span>
-                            <input type="text" name="isi" id="komen-isi-<?= (int)$p['id'] ?>" class="form-control form-control-sm diskusi-pill" placeholder="Tulis komentar..." required maxlength="1000">
-                            <span style="position:relative;">
-                                <button type="button" class="diskusi-emoji-btn" data-target="#komen-isi-<?= (int)$p['id'] ?>" title="Emoticon">😀</button>
-                                <span class="diskusi-emoji-panel"></span>
-                            </span>
-                            <button class="btn btn-sm btn-primary" style="border-radius:50%;width:32px;height:32px;padding:0;" title="Kirim balasan"><i class="fas fa-paper-plane" style="font-size:12px;"></i></button>
+                            
+                            <div class="diskusi-reply-indicator small font-weight-bold text-primary mb-1 d-none align-items-center" style="gap:6px; background:#eef2ff; padding:4px 10px; border-radius:8px;">
+                                <span><i class="fas fa-reply mr-1"></i> Membalas <span class="reply-name text-dark"></span></span>
+                                <button type="button" class="btn btn-link btn-sm text-danger p-0 ml-auto cancel-reply" title="Batal Balas" style="font-size:12px;text-decoration:none;border:0;"><i class="fas fa-times"></i> Batal</button>
+                            </div>
+
+                            <div class="diskusi-komen-file-prev small text-muted mb-1 d-none" style="background:#f8fafc; padding:4px 8px; border-radius:6px;">
+                                <i class="fas fa-paperclip text-primary mr-1"></i> <span class="file-name"></span>
+                                <button type="button" class="btn btn-link btn-sm text-danger p-0 ml-1 clear-file" style="font-size:11px;border:0;">&times;</button>
+                            </div>
+
+                            <div class="d-flex align-items-center diskusi-emoji-wrap" style="gap:6px;">
+                                <span class="diskusi-avatar" style="width:32px;height:32px;font-size:12px;background:<?= htmlspecialchars(diskusi_avatar_color('g_' . $guru_id)) ?>;"><?= htmlspecialchars(diskusi_initials($nama_guru)) ?></span>
+                                <input type="text" name="isi" id="komen-isi-<?= (int)$p['id'] ?>" class="form-control form-control-sm diskusi-pill" placeholder="Tulis komentar atau balasan..." required maxlength="1000">
+                                
+                                <label class="mb-0 text-muted p-1" style="cursor:pointer;" title="Lampirkan foto/file">
+                                    <i class="fas fa-paperclip" style="font-size:16px;"></i>
+                                    <input type="file" name="file_komen" class="d-none diskusi-file-komen" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar">
+                                </label>
+                                
+                                <span style="position:relative;">
+                                    <button type="button" class="diskusi-emoji-btn" data-target="#komen-isi-<?= (int)$p['id'] ?>" title="Emoticon">😀</button>
+                                    <span class="diskusi-emoji-panel"></span>
+                                </span>
+                                
+                                <button type="submit" class="btn btn-sm btn-primary" style="border-radius:50%;width:32px;height:32px;padding:0;flex-shrink:0;" title="Kirim"><i class="fas fa-paper-plane" style="font-size:12px;"></i></button>
+                            </div>
                         </form>
                     </div>
                 </div>

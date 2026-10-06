@@ -136,3 +136,91 @@ function diskusi_toggle_like(PDO $pdo, string $target, int $target_id, string $a
         ->execute([$target, $target_id, $role, $gid ?: null, $sid ?: null, $author_key]);
     return true;
 }
+
+function diskusi_render_comments_tree(array $komen_list, int $post_id, int $selected_kelas, array $kelas_ids, int $user_id, string $user_role): string {
+    if (empty($komen_list)) return '';
+
+    $by_parent = [];
+    foreach ($komen_list as $c) {
+        $pid = (int)($c['parent_id'] ?? 0);
+        $by_parent[$pid][] = $c;
+    }
+
+    $render_node = function($parent_id) use (&$render_node, $by_parent, $post_id, $selected_kelas, $kelas_ids, $user_id, $user_role) {
+        if (empty($by_parent[$parent_id])) return '';
+        $html = '';
+        foreach ($by_parent[$parent_id] as $c) {
+            $cid = (int)$c['id'];
+            $c_guru = ($c['author_role'] === 'guru');
+            $cname = $c_guru ? ($c['nama_guru'] ?: 'Guru') : ($c['nama_siswa'] ?: 'Siswa');
+            if ($user_role === 'guru') {
+                $own_c = ($c_guru && (int)$c['id_guru'] === (int)$user_id);
+                $can_del = $own_c || in_array($selected_kelas, $kelas_ids, true);
+            } else {
+                $own_c = (!$c_guru && (int)$c['id_siswa'] === (int)$user_id);
+                $can_del = $own_c;
+            }
+            $c_liked = ((int)($c['saya_suka'] ?? 0) > 0);
+            $avatar_key = ($c_guru ? 'g_' : 's_') . ($c_guru ? (int)$c['id_guru'] : (int)$c['id_siswa']);
+            $avatar_col = diskusi_avatar_color($avatar_key);
+            $initials = diskusi_initials($cname);
+            $cfurl = diskusi_file_url($c['file_path'] ?? null);
+            $cfk = $c['file_kind'] ?? 'none';
+            $cfn = htmlspecialchars($c['file_name'] ?: 'Lampiran');
+            $time_str = function_exists('timeAgo') ? htmlspecialchars(timeAgo($c['created_at'])) : '';
+
+            $html .= '<div class="d-flex mt-2 diskusi-komen-item" id="comment-' . $cid . '" style="gap:8px;">';
+            $html .= '<span class="diskusi-avatar" style="width:32px;height:32px;font-size:12px;background:' . htmlspecialchars($avatar_col) . ';">' . htmlspecialchars($initials) . '</span>';
+            $html .= '<div class="flex-grow-1">';
+            $html .= '<div class="diskusi-bubble px-3 py-2">';
+            $html .= '<div class="diskusi-nama"><strong>' . htmlspecialchars($cname) . '</strong>';
+            if ($c_guru) {
+                $html .= '<i class="fas fa-check-circle text-primary ml-1" title="Guru terverifikasi"></i>';
+            }
+            $html .= '</div>';
+            if (trim((string)$c['isi']) !== '') {
+                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . nl2br(htmlspecialchars($c['isi'])) . '</div>';
+            }
+            if ($cfurl) {
+                $html .= '<div class="mt-2 diskusi-comment-media">';
+                if ($cfk === 'image') {
+                    $html .= '<a href="' . htmlspecialchars($cfurl) . '" data-lightbox="1" target="_blank"><img src="' . htmlspecialchars($cfurl) . '" style="max-width:220px;max-height:220px;border-radius:10px;object-fit:cover;display:block;" alt="lampiran"></a>';
+                } elseif ($cfk === 'video') {
+                    $html .= '<video src="' . htmlspecialchars($cfurl) . '" controls style="max-width:260px;max-height:220px;border-radius:10px;display:block;"></video>';
+                } else {
+                    $html .= '<a href="' . htmlspecialchars($cfurl) . '" target="_blank" class="btn btn-sm btn-light border" style="border-radius:8px;font-size:12px;"><i class="fas fa-paperclip mr-1 text-primary"></i>' . $cfn . '</a>';
+                }
+                $html .= '</div>';
+            }
+            $html .= '</div>';
+
+            $html .= '<div class="small mt-1 d-flex align-items-center flex-wrap" style="gap:10px;">';
+            $html .= '<a href="#" class="diskusi-like font-weight-bold ' . ($c_liked ? 'text-primary' : 'text-muted') . '" data-target="komentar" data-id="' . $cid . '" data-kelas="' . (int)$selected_kelas . '" style="text-decoration:none;">Suka (<span class="like-count">' . (int)$c['jml_suka'] . '</span>)</a>';
+            $html .= '<a href="#" class="diskusi-reply-btn font-weight-bold text-muted" data-post="' . $post_id . '" data-parent="' . $cid . '" data-name="' . htmlspecialchars($cname) . '" style="text-decoration:none;">Balas</a>';
+            if ($time_str !== '') {
+                $html .= '<span class="text-muted">' . $time_str . '</span>';
+            }
+            if ($can_del) {
+                $html .= '<form method="POST" class="d-inline" onsubmit="return confirm(\'Hapus komentar ini?\')">';
+                $html .= '<input type="hidden" name="action" value="comment_delete">';
+                $html .= '<input type="hidden" name="id" value="' . $cid . '">';
+                if ($user_role === 'guru') {
+                    $html .= '<input type="hidden" name="id_kelas" value="' . (int)$selected_kelas . '">';
+                }
+                $html .= '<button class="btn btn-link btn-sm text-muted p-0" style="font-size:11px;border:0;outline:none;box-shadow:none;text-decoration:none;" title="Hapus">Hapus</button>';
+                $html .= '</form>';
+            }
+            $html .= '</div>';
+
+            $sub_html = $render_node($cid);
+            if ($sub_html !== '') {
+                $html .= '<div class="diskusi-reply-box mt-1 pl-2" style="border-left: 2px solid #e5e7eb; margin-left: 12px;">' . $sub_html . '</div>';
+            }
+
+            $html .= '</div></div>';
+        }
+        return $html;
+    };
+
+    return $render_node(0);
+}
