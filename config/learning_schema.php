@@ -589,12 +589,15 @@ if (!function_exists('ensure_learning_schema')) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
-        // 9c. Forum Guru (komunikasi antar guru & wali kelas)
+        // 9c. Forum Guru & Staf (komunikasi antar guru, wali, admin, kepala, tata usaha)
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_forum_post (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                id_guru INT NOT NULL,
-                kategori VARCHAR(50) NOT NULL DEFAULT 'Umum',
+                author_role VARCHAR(30) NOT NULL DEFAULT 'guru',
+                id_guru INT NULL,
+                id_user INT NULL,
+                author_name VARCHAR(100) NULL,
+                author_key VARCHAR(50) NOT NULL,
                 isi TEXT NOT NULL,
                 bg VARCHAR(30) NOT NULL DEFAULT 'none',
                 file_path VARCHAR(255) NULL,
@@ -603,6 +606,7 @@ if (!function_exists('ensure_learning_schema')) {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_guru (id_guru),
+                INDEX idx_key (author_key),
                 INDEX idx_created (created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
@@ -611,7 +615,11 @@ if (!function_exists('ensure_learning_schema')) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 id_post INT NOT NULL,
                 parent_id INT NULL,
-                id_guru INT NOT NULL,
+                author_role VARCHAR(30) NOT NULL DEFAULT 'guru',
+                id_guru INT NULL,
+                id_user INT NULL,
+                author_name VARCHAR(100) NULL,
+                author_key VARCHAR(50) NOT NULL,
                 isi TEXT NOT NULL,
                 file_path VARCHAR(255) NULL,
                 file_kind ENUM('none','image','video','file') NOT NULL DEFAULT 'none',
@@ -626,13 +634,39 @@ if (!function_exists('ensure_learning_schema')) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 target ENUM('post','komentar') NOT NULL,
                 target_id INT NOT NULL,
-                id_guru INT NOT NULL,
+                author_role VARCHAR(30) NOT NULL DEFAULT 'guru',
+                id_guru INT NULL,
+                id_user INT NULL,
                 author_key VARCHAR(50) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE KEY uniq_suka (target, target_id, author_key),
                 INDEX idx_target (target, target_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        foreach ([
+            ['tb_forum_post', 'author_role', "VARCHAR(30) NOT NULL DEFAULT 'guru'"],
+            ['tb_forum_post', 'author_name', "VARCHAR(100) NULL"],
+            ['tb_forum_post', 'author_key', "VARCHAR(50) NOT NULL DEFAULT ''"],
+            ['tb_forum_post', 'id_user', "INT NULL"],
+            ['tb_forum_komentar', 'author_role', "VARCHAR(30) NOT NULL DEFAULT 'guru'"],
+            ['tb_forum_komentar', 'author_name', "VARCHAR(100) NULL"],
+            ['tb_forum_komentar', 'author_key', "VARCHAR(50) NOT NULL DEFAULT ''"],
+            ['tb_forum_komentar', 'id_user', "INT NULL"],
+            ['tb_forum_suka', 'author_role', "VARCHAR(30) NOT NULL DEFAULT 'guru'"],
+            ['tb_forum_suka', 'id_user', "INT NULL"],
+        ] as $frel) {
+            try {
+                $chk = $pdo->query("SHOW COLUMNS FROM {$frel[0]} LIKE '{$frel[1]}'")->fetch();
+                if (!$chk) {
+                    $pdo->exec("ALTER TABLE {$frel[0]} ADD COLUMN {$frel[1]} {$frel[2]}");
+                }
+            } catch (Throwable $e) {}
+        }
+        try {
+            $pdo->exec("ALTER TABLE tb_forum_post MODIFY COLUMN id_guru INT NULL");
+            $pdo->exec("ALTER TABLE tb_forum_komentar MODIFY COLUMN id_guru INT NULL");
+            $pdo->exec("ALTER TABLE tb_forum_suka MODIFY COLUMN id_guru INT NULL");
+        } catch (Throwable $e) {}
 
         // 10. Pembinaan Siswa (Level Wali)
         $pdo->exec("

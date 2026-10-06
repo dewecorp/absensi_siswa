@@ -137,6 +137,30 @@ function diskusi_toggle_like(PDO $pdo, string $target, int $target_id, string $a
     return true;
 }
 
+function diskusi_avatar_html(string $name, ?string $foto = null, string $avatar_key = 'g_0', int $size = 44, string $extra_style = ''): string {
+    $foto = trim((string)$foto);
+    $img_path = null;
+    if ($foto !== '') {
+        $base = dirname(__DIR__);
+        if (is_file($base . '/uploads/' . $foto)) {
+            $img_path = '../uploads/' . rawurlencode($foto);
+        } elseif (is_file($base . '/assets/img/' . $foto)) {
+            $img_path = '../assets/img/' . rawurlencode($foto);
+        } elseif (is_file($base . '/assets/img/siswa/' . $foto)) {
+            $img_path = '../assets/img/siswa/' . rawurlencode($foto);
+        }
+    }
+
+    if ($img_path) {
+        return '<img src="' . htmlspecialchars($img_path) . '" alt="' . htmlspecialchars($name) . '" class="diskusi-avatar" style="width:' . $size . 'px;height:' . $size . 'px;object-fit:cover;border-radius:50%;' . $extra_style . '">';
+    }
+
+    $avatar_col = diskusi_avatar_color($avatar_key);
+    $initials = diskusi_initials($name);
+    $font_size = max(10, (int)round($size * 0.38));
+    return '<span class="diskusi-avatar" style="width:' . $size . 'px;height:' . $size . 'px;font-size:' . $font_size . 'px;background:' . htmlspecialchars($avatar_col) . ';' . $extra_style . '">' . htmlspecialchars($initials) . '</span>';
+}
+
 function diskusi_render_comments_tree(array $komen_list, int $post_id, int $selected_kelas, array $kelas_ids, int $user_id, string $user_role): string {
     if (empty($komen_list)) return '';
 
@@ -153,6 +177,7 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
             $cid = (int)$c['id'];
             $c_guru = ($c['author_role'] === 'guru');
             $cname = $c_guru ? ($c['nama_guru'] ?: 'Guru') : ($c['nama_siswa'] ?: 'Siswa');
+            $cfoto = $c_guru ? ($c['foto_guru'] ?? ($c['foto'] ?? null)) : ($c['foto_siswa'] ?? ($c['foto'] ?? null));
             if ($user_role === 'guru') {
                 $own_c = ($c_guru && (int)$c['id_guru'] === (int)$user_id);
                 $can_del = $own_c || in_array($selected_kelas, $kelas_ids, true);
@@ -162,15 +187,14 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
             }
             $c_liked = ((int)($c['saya_suka'] ?? 0) > 0);
             $avatar_key = ($c_guru ? 'g_' : 's_') . ($c_guru ? (int)$c['id_guru'] : (int)$c['id_siswa']);
-            $avatar_col = diskusi_avatar_color($avatar_key);
-            $initials = diskusi_initials($cname);
+            $avatar_html = diskusi_avatar_html($cname, $cfoto, $avatar_key, 32);
             $cfurl = diskusi_file_url($c['file_path'] ?? null);
             $cfk = $c['file_kind'] ?? 'none';
             $cfn = htmlspecialchars($c['file_name'] ?: 'Lampiran');
             $time_str = function_exists('timeAgo') ? htmlspecialchars(timeAgo($c['created_at'])) : '';
 
             $html .= '<div class="d-flex mt-2 diskusi-komen-item" id="comment-' . $cid . '" style="gap:8px;">';
-            $html .= '<span class="diskusi-avatar" style="width:32px;height:32px;font-size:12px;background:' . htmlspecialchars($avatar_col) . ';">' . htmlspecialchars($initials) . '</span>';
+            $html .= $avatar_html;
             $html .= '<div class="flex-grow-1">';
             $html .= '<div class="diskusi-bubble px-3 py-2">';
             $html .= '<div class="diskusi-nama"><strong>' . htmlspecialchars($cname) . '</strong>';
@@ -225,7 +249,7 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
     return $render_node(0);
 }
 
-function forum_render_comments_tree(array $komen_list, int $post_id, int $current_guru_id, bool $is_admin = false): string {
+function forum_render_comments_tree(array $komen_list, int $post_id, string $current_author_key = '', bool $is_admin = false): string {
     if (empty($komen_list)) return '';
 
     $by_parent = [];
@@ -234,28 +258,38 @@ function forum_render_comments_tree(array $komen_list, int $post_id, int $curren
         $by_parent[$pid][] = $c;
     }
 
-    $render_node = function($parent_id) use (&$render_node, $by_parent, $post_id, $current_guru_id, $is_admin) {
+    $render_node = function($parent_id) use (&$render_node, $by_parent, $post_id, $current_author_key, $is_admin) {
         if (empty($by_parent[$parent_id])) return '';
         $html = '';
         foreach ($by_parent[$parent_id] as $c) {
             $cid = (int)$c['id'];
-            $cname = (string)($c['nama_guru'] ?: 'Guru');
-            $own_c = ((int)$c['id_guru'] === (int)$current_guru_id);
+            $cname = (string)($c['display_name'] ?: ($c['nama'] ?: ($c['nama_guru'] ?: ($c['author_name'] ?: 'Pengguna'))));
+            $c_key = (string)($c['author_key'] ?: ('g_' . (int)$c['id_guru']));
+            $cfoto = $c['foto_guru'] ?? ($c['foto_user'] ?? ($c['foto'] ?? null));
+            $own_c = ($c_key !== '' && $c_key === $current_author_key);
             $can_del = $own_c || $is_admin;
             $c_liked = ((int)($c['saya_suka'] ?? 0) > 0);
-            $avatar_key = 'g_' . (int)$c['id_guru'];
-            $avatar_col = diskusi_avatar_color($avatar_key);
-            $initials = diskusi_initials($cname);
+            $avatar_html = diskusi_avatar_html($cname, $cfoto, $c_key, 32);
             $cfurl = diskusi_file_url($c['file_path'] ?? null);
             $cfk = $c['file_kind'] ?? 'none';
             $cfn = htmlspecialchars($c['file_name'] ?: 'Lampiran');
             $time_str = function_exists('timeAgo') ? htmlspecialchars(timeAgo($c['created_at'])) : '';
+            $role_str = (string)($c['author_role'] ?? 'guru');
+
+            $role_badge = '<i class="fas fa-check-circle text-primary ml-1" title="Guru"></i>';
+            if ($role_str === 'admin') {
+                $role_badge = '<span class="badge badge-danger ml-1" style="font-size:10px;">Admin</span>';
+            } elseif (in_array($role_str, ['kepala_madrasah', 'kepala'], true)) {
+                $role_badge = '<span class="badge badge-warning ml-1" style="font-size:10px;">Kepala</span>';
+            } elseif (in_array($role_str, ['tata_usaha', 'tu'], true)) {
+                $role_badge = '<span class="badge badge-info ml-1" style="font-size:10px;">TU</span>';
+            }
 
             $html .= '<div class="d-flex mt-2 diskusi-komen-item" id="comment-' . $cid . '" style="gap:8px;">';
-            $html .= '<span class="diskusi-avatar" style="width:32px;height:32px;font-size:12px;background:' . htmlspecialchars($avatar_col) . ';">' . htmlspecialchars($initials) . '</span>';
+            $html .= $avatar_html;
             $html .= '<div class="flex-grow-1">';
             $html .= '<div class="diskusi-bubble px-3 py-2">';
-            $html .= '<div class="diskusi-nama"><strong>' . htmlspecialchars($cname) . '</strong> <i class="fas fa-check-circle text-primary ml-1" title="Guru"></i></div>';
+            $html .= '<div class="diskusi-nama"><strong>' . htmlspecialchars($cname) . '</strong> ' . $role_badge . '</div>';
             if (trim((string)$c['isi']) !== '') {
                 $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . nl2br(htmlspecialchars($c['isi'])) . '</div>';
             }

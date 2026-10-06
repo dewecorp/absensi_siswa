@@ -565,6 +565,12 @@ switch ($user_level) {
                 'active' => $current_page === 'pengguna.php'
             ],
             [
+                'title' => 'Forum Guru',
+                'icon' => 'fas fa-comments',
+                'url' => '../guru/forum.php?session_type=admin',
+                'active' => $current_page === 'forum.php'
+            ],
+            [
                 'title' => 'Backup & Restore',
                 'icon' => 'fas fa-hdd',
                 'url' => '../admin/backup_restore.php',
@@ -795,6 +801,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['data_agenda.php', 'agenda_kepala.php', 'jenis_rapat.php', 'rapat.php'])
             ],
             [
+                'title' => 'Forum Guru',
+                'icon' => 'fas fa-comments',
+                'url' => '../guru/forum.php?session_type=kepala_madrasah',
+                'active' => $current_page === 'forum.php'
+            ],
+            [
                 'title' => 'Logout',
                 'icon' => 'fas fa-sign-out-alt',
                 'url' => '#',
@@ -933,6 +945,12 @@ switch ($user_level) {
                     ['title' => 'Data Inventaris Sarpras', 'url' => '../admin/data_inventaris.php?session_type=tata_usaha', 'active' => $current_page === 'data_inventaris.php']
                 ],
                 'active' => $current_page === 'data_inventaris.php'
+            ],
+            [
+                'title' => 'Forum Guru',
+                'icon' => 'fas fa-comments',
+                'url' => '../guru/forum.php?session_type=tata_usaha',
+                'active' => $current_page === 'forum.php'
             ],
             [
                 'title' => 'Backup & Restore',

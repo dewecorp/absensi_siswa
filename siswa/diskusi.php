@@ -20,6 +20,7 @@ if (!$student || empty($student['id_kelas'])) {
 }
 $id_kelas = (int)$student['id_kelas'];
 $nama_siswa = (string)($student['nama_siswa'] ?? 'Siswa');
+$current_user_foto = !empty($student['foto']) ? (string)$student['foto'] : null;
 
 $message = null;
 $author_key = 's_' . (int)$id_siswa;
@@ -138,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $st = $pdo->prepare("
-    SELECT p.*, g.nama_guru, s.nama_siswa,
+    SELECT p.*, g.nama_guru, g.foto AS foto_guru, s.nama_siswa, s.foto AS foto_siswa,
            (SELECT COUNT(*) FROM tb_diskusi_komentar c WHERE c.id_post = p.id) AS jml_komentar,
            (SELECT COUNT(*) FROM tb_diskusi_suka l WHERE l.target = 'post' AND l.target_id = p.id) AS jml_suka,
            (SELECT COUNT(*) FROM tb_diskusi_suka l WHERE l.target = 'post' AND l.target_id = p.id AND l.author_key = ?) AS saya_suka
@@ -157,7 +158,7 @@ if (!empty($posts)) {
     $ids = array_map(static function ($p) { return (int)$p['id']; }, $posts);
     $in = implode(',', array_fill(0, count($ids), '?'));
     $st2 = $pdo->prepare("
-        SELECT c.*, g.nama_guru, s.nama_siswa,
+        SELECT c.*, g.nama_guru, g.foto AS foto_guru, s.nama_siswa, s.foto AS foto_siswa,
                (SELECT COUNT(*) FROM tb_diskusi_suka l WHERE l.target = 'komentar' AND l.target_id = c.id) AS jml_suka,
                (SELECT COUNT(*) FROM tb_diskusi_suka l WHERE l.target = 'komentar' AND l.target_id = c.id AND l.author_key = ?) AS saya_suka
         FROM tb_diskusi_komentar c
@@ -389,7 +390,7 @@ include '../templates/sidebar.php';
                     <form method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="post_add">
                         <div class="d-flex align-items-start" style="gap:10px;">
-                            <span class="diskusi-avatar" style="background:<?= htmlspecialchars(diskusi_avatar_color('s_' . $id_siswa)) ?>;"><?= htmlspecialchars(diskusi_initials($nama_siswa)) ?></span>
+                            <?= diskusi_avatar_html($nama_siswa, $current_user_foto, 's_' . $id_siswa, 44) ?>
                             <textarea name="isi" id="diskusiIsi" class="form-control diskusi-pill flex-grow-1" rows="1" placeholder="Apa yang ingin Anda sampaikan?"></textarea>
                             <input type="hidden" name="bg" id="diskusiBg" value="none">
                         </div>
@@ -425,6 +426,8 @@ include '../templates/sidebar.php';
                 <?php
                 $is_guru = ($p['author_role'] === 'guru');
                 $aname = $is_guru ? ($p['nama_guru'] ?: 'Guru') : ($p['nama_siswa'] ?: 'Siswa');
+                $pfoto = $is_guru ? ($p['foto_guru'] ?? ($p['foto'] ?? null)) : ($p['foto_siswa'] ?? ($p['foto'] ?? null));
+                $akey = ($is_guru ? 'g_' : 's_') . ($is_guru ? (int)$p['id_guru'] : (int)$p['id_siswa']);
                 $furl = diskusi_file_url($p['file_path'] ?? null);
                 $fk = $p['file_kind'] ?? 'none';
                 $own_post = (!$is_guru && (int)$p['id_siswa'] === (int)$id_siswa);
@@ -435,7 +438,7 @@ include '../templates/sidebar.php';
                     <div class="card-body pb-2">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center" style="gap:10px;">
-                                <span class="diskusi-avatar" style="background:<?= htmlspecialchars(diskusi_avatar_color(($is_guru ? 'g_' : 's_') . ($is_guru ? (int)$p['id_guru'] : (int)$p['id_siswa']))) ?>;"><?= htmlspecialchars(diskusi_initials($aname)) ?></span>
+                                <?= diskusi_avatar_html($aname, $pfoto, $akey, 44) ?>
                                 <div style="line-height:1.25;">
                                     <div class="font-weight-bold" style="font-size:14px;"><?= htmlspecialchars($aname) ?>
                                         <?php if ($is_guru): ?><i class="fas fa-check-circle text-primary ml-1" title="Guru terverifikasi"></i><?php endif; ?>
@@ -519,7 +522,7 @@ include '../templates/sidebar.php';
                             </div>
 
                             <div class="d-flex align-items-center diskusi-emoji-wrap" style="gap:6px;">
-                                <span class="diskusi-avatar" style="width:32px;height:32px;font-size:12px;background:<?= htmlspecialchars(diskusi_avatar_color('s_' . $id_siswa)) ?>;"><?= htmlspecialchars(diskusi_initials($nama_siswa)) ?></span>
+                                <?= diskusi_avatar_html($nama_siswa, $current_user_foto, 's_' . $id_siswa, 32) ?>
                                 <input type="text" name="isi" id="komen-isi-s-<?= (int)$p['id'] ?>" class="form-control form-control-sm diskusi-pill" placeholder="Tulis komentar atau balasan..." required maxlength="1000">
                                 
                                 <label class="mb-0 text-muted p-1" style="cursor:pointer;" title="Lampirkan foto/file">

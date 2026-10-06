@@ -6,29 +6,50 @@ require_once '../config/diskusi_helper.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'kepala', 'tata_usaha', 'tu', 'guru', 'wali'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
+$user_id = (int)($_SESSION['user_id'] ?? 0);
 $guru_id = getCurrentGuruId($pdo);
-if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
-    $guru_id = (int)$_SESSION['user_id'];
-}
 
 $session_q = isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '';
 $session_qs = isset($_GET['session_type']) ? '&session_type=' . urlencode((string)$_GET['session_type']) : '';
 
-$nama_guru = '';
-try {
-    $stG = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ?");
-    $stG->execute([$guru_id]);
-    $nama_guru = (string)($stG->fetchColumn() ?: ($_SESSION['nama_guru'] ?? 'Guru'));
-} catch (Throwable $e) {
-    $nama_guru = (string)($_SESSION['nama_guru'] ?? 'Guru');
+$display_name = '';
+$current_user_foto = null;
+if ($guru_id > 0) {
+    try {
+        $stG = $pdo->prepare("SELECT nama_guru, foto FROM tb_guru WHERE id_guru = ?");
+        $stG->execute([$guru_id]);
+        $rG = $stG->fetch(PDO::FETCH_ASSOC);
+        if ($rG) {
+            $display_name = (string)($rG['nama_guru'] ?: '');
+            $current_user_foto = !empty($rG['foto']) ? (string)$rG['foto'] : null;
+        }
+    } catch (Throwable $e) {}
+}
+if ($user_id > 0 && (empty($display_name) || empty($current_user_foto))) {
+    try {
+        $stU = $pdo->prepare("SELECT nama, username, foto FROM tb_pengguna WHERE id_pengguna = ?");
+        $stU->execute([$user_id]);
+        $rU = $stU->fetch(PDO::FETCH_ASSOC);
+        if ($rU) {
+            if ($display_name === '') {
+                $display_name = (string)($rU['nama'] ?: ($rU['username'] ?: 'Pengguna'));
+            }
+            if (empty($current_user_foto) && !empty($rU['foto'])) {
+                $current_user_foto = (string)$rU['foto'];
+            }
+        }
+    } catch (Throwable $e) {}
+}
+if ($display_name === '') {
+    $display_name = (string)($_SESSION['nama_guru'] ?? $_SESSION['nama'] ?? $_SESSION['nama_lengkap'] ?? $_SESSION['username'] ?? 'Pengguna');
 }
 
-$author_key = 'g_' . (int)$guru_id;
+$author_key = ($guru_id > 0) ? ('g_' . $guru_id) : ('u_' . $user_id);
 $message = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -48,8 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("DELETE FROM tb_forum_suka WHERE id = ?")->execute([$id]);
                 $liked = false;
             } else {
-                $pdo->prepare("INSERT INTO tb_forum_suka (target, target_id, id_guru, author_key) VALUES (?, ?, ?, ?)")
-                    ->execute([$target, $target_id, $guru_id, $author_key]);
+                $pdo->prepare("INSERT INTO tb_forum_suka (target, target_id, author_role, id_guru, id_user, author_key) VALUES (?, ?, ?, ?, ?, ?)")
+                    ->execute([$target, $target_id, $user_level, $guru_id > 0 ? $guru_id : null, $user_id > 0 ? $user_id : null, $author_key]);
                 $liked = true;
             }
             $cnt = $pdo->prepare("SELECT COUNT(*) FROM tb_forum_suka WHERE target = ? AND target_id = ?");
@@ -66,14 +87,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($action === 'post_add') {
             $isi = trim((string)($_POST['isi'] ?? ''));
-            $kategori = trim((string)($_POST['kategori'] ?? 'Umum'));
             $bg = diskusi_allowed_bg($_POST['bg'] ?? 'none');
             if ($isi === '' && empty($_FILES['file_diskusi']['name'])) {
                 throw new RuntimeException('Tulis pesan atau lampirkan file.');
             }
             [$fp, $fk, $fn] = diskusi_handle_upload($_FILES['file_diskusi'] ?? []);
-            $pdo->prepare("INSERT INTO tb_forum_post (id_guru, kategori, isi, bg, file_path, file_kind, file_name) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                ->execute([$guru_id, $kategori, $isi, $bg, $fp, $fk, $fn]);
+            $pdo->prepare("INSERT INTO tb_forum_post (author_role, id_guru, id_user, author_name, author_key, isi, bg, file_path, file_kind, file_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                ->execute([$user_level, $guru_id > 0 ? $guru_id : null, $user_id > 0 ? $user_id : null, $display_name, $author_key, $isi, $bg, $fp, $fk, $fn]);
             $message = ['type' => 'success', 'text' => 'Postingan forum terkirim.'];
         } elseif ($action === 'post_delete') {
             $id = (int)($_POST['id'] ?? 0);
@@ -83,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$p) {
                 throw new RuntimeException('Postingan tidak ditemukan.');
             }
-            $own = ((int)$p['id_guru'] === (int)$guru_id);
+            $own = (!empty($p['author_key']) && $p['author_key'] === $author_key) || ((int)($p['id_guru'] ?? 0) === (int)$guru_id && $guru_id > 0);
             $is_admin = ($user_level === 'admin');
             if (!$own && !$is_admin) {
                 throw new RuntimeException('Anda tidak berhak menghapus postingan ini.');
@@ -113,8 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             [$cfp, $cfk, $cfn] = diskusi_handle_upload($_FILES['file_komen'] ?? []);
-            $pdo->prepare("INSERT INTO tb_forum_komentar (id_post, parent_id, id_guru, isi, file_path, file_kind, file_name) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                ->execute([$id_post, $parent_id > 0 ? $parent_id : null, $guru_id, $isi, $cfp, $cfk, $cfn]);
+            $pdo->prepare("INSERT INTO tb_forum_komentar (id_post, parent_id, author_role, id_guru, id_user, author_name, author_key, isi, file_path, file_kind, file_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                ->execute([$id_post, $parent_id > 0 ? $parent_id : null, $user_level, $guru_id > 0 ? $guru_id : null, $user_id > 0 ? $user_id : null, $display_name, $author_key, $isi, $cfp, $cfk, $cfn]);
             $back_anchor = '#post-' . $id_post;
             $message = ['type' => 'success', 'text' => 'Komentar terkirim.'];
         } elseif ($action === 'comment_delete') {
@@ -125,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$c) {
                 throw new RuntimeException('Komentar tidak ditemukan.');
             }
-            $own = ((int)$c['id_guru'] === (int)$guru_id);
+            $own = (!empty($c['author_key']) && $c['author_key'] === $author_key) || ((int)($c['id_guru'] ?? 0) === (int)$guru_id && $guru_id > 0);
             $is_admin = ($user_level === 'admin');
             if (!$own && !$is_admin) {
                 throw new RuntimeException('Anda tidak berhak menghapus komentar ini.');
@@ -154,12 +174,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $st = $pdo->prepare("
-    SELECT p.*, g.nama_guru,
+    SELECT p.*, COALESCE(NULLIF(u.nama, ''), NULLIF(g.nama_guru, ''), NULLIF(p.author_name, ''), u.username, 'Pengguna') AS display_name,
+           g.foto AS foto_guru, u.foto AS foto_user,
            (SELECT COUNT(*) FROM tb_forum_komentar c WHERE c.id_post = p.id) AS jml_komentar,
            (SELECT COUNT(*) FROM tb_forum_suka l WHERE l.target = 'post' AND l.target_id = p.id) AS jml_suka,
            (SELECT COUNT(*) FROM tb_forum_suka l WHERE l.target = 'post' AND l.target_id = p.id AND l.author_key = ?) AS saya_suka
     FROM tb_forum_post p
     LEFT JOIN tb_guru g ON g.id_guru = p.id_guru
+    LEFT JOIN tb_pengguna u ON u.id_pengguna = p.id_user
     ORDER BY p.created_at DESC, p.id DESC
     LIMIT 30
 ");
@@ -171,11 +193,13 @@ if (!empty($posts)) {
     $ids = array_map(static function ($p) { return (int)$p['id']; }, $posts);
     $in = implode(',', array_fill(0, count($ids), '?'));
     $st2 = $pdo->prepare("
-        SELECT c.*, g.nama_guru,
+        SELECT c.*, COALESCE(NULLIF(u.nama, ''), NULLIF(g.nama_guru, ''), NULLIF(c.author_name, ''), u.username, 'Pengguna') AS display_name,
+               g.foto AS foto_guru, u.foto AS foto_user,
                (SELECT COUNT(*) FROM tb_forum_suka l WHERE l.target = 'komentar' AND l.target_id = c.id) AS jml_suka,
                (SELECT COUNT(*) FROM tb_forum_suka l WHERE l.target = 'komentar' AND l.target_id = c.id AND l.author_key = ?) AS saya_suka
         FROM tb_forum_komentar c
         LEFT JOIN tb_guru g ON g.id_guru = c.id_guru
+        LEFT JOIN tb_pengguna u ON u.id_pengguna = c.id_user
         WHERE c.id_post IN ($in)
         ORDER BY c.created_at ASC, c.id ASC
     ");
@@ -408,7 +432,7 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
                             <input type="hidden" name="action" value="post_add">
                             <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
                             <div class="d-flex align-items-start" style="gap:10px;">
-                                <span class="diskusi-avatar" style="background:<?= htmlspecialchars(diskusi_avatar_color('g_' . $guru_id)) ?>;"><?= htmlspecialchars(diskusi_initials($nama_guru)) ?></span>
+                                <?= diskusi_avatar_html($display_name, $current_user_foto, $author_key, 44) ?>
                                 <textarea name="isi" id="diskusiIsi" class="form-control diskusi-pill flex-grow-1" rows="1" placeholder="Apa yang ingin Anda sampaikan?"></textarea>
                                 <input type="hidden" name="bg" id="diskusiBg" value="none">
                             </div>
@@ -443,21 +467,33 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
 
                 <?php foreach ($posts as $p): ?>
                     <?php
-                    $aname = $p['nama_guru'] ?: 'Guru';
+                    $aname = $p['display_name'] ?: 'Pengguna';
+                    $pkey = $p['author_key'] ?: ('g_' . (int)$p['id_guru']);
+                    $pfoto = $p['foto_guru'] ?? ($p['foto_user'] ?? null);
+                    $prole = (string)($p['author_role'] ?? 'guru');
                     $furl = diskusi_file_url($p['file_path'] ?? null);
                     $fk = $p['file_kind'] ?? 'none';
-                    $own_post = ((int)$p['id_guru'] === (int)$guru_id);
+                    $own_post = ($pkey === $author_key) || ((int)($p['id_guru'] ?? 0) === (int)$guru_id && $guru_id > 0);
                     $can_del_post = $own_post || ($user_level === 'admin');
                     $komen = $comments_map[(int)$p['id']] ?? [];
                     $liked = ((int)$p['saya_suka'] > 0);
+
+                    $role_badge = '<i class="fas fa-check-circle text-primary ml-1" title="Guru"></i>';
+                    if ($prole === 'admin') {
+                        $role_badge = '<span class="badge badge-danger ml-1" style="font-size:10px;">Admin</span>';
+                    } elseif (in_array($prole, ['kepala_madrasah', 'kepala'], true)) {
+                        $role_badge = '<span class="badge badge-warning ml-1" style="font-size:10px;">Kepala</span>';
+                    } elseif (in_array($prole, ['tata_usaha', 'tu'], true)) {
+                        $role_badge = '<span class="badge badge-info ml-1" style="font-size:10px;">TU</span>';
+                    }
                     ?>
                     <div class="card mb-3 diskusi-card" id="post-<?= (int)$p['id'] ?>">
                         <div class="card-body pb-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center" style="gap:10px;">
-                                    <span class="diskusi-avatar" style="background:<?= htmlspecialchars(diskusi_avatar_color('g_' . (int)$p['id_guru'])) ?>;"><?= htmlspecialchars(diskusi_initials($aname)) ?></span>
+                                    <?= diskusi_avatar_html($aname, $pfoto, $pkey, 44) ?>
                                     <div style="line-height:1.25;">
-                                        <div class="font-weight-bold" style="font-size:14px;"><?= htmlspecialchars($aname) ?> <i class="fas fa-check-circle text-primary ml-1" title="Guru"></i></div>
+                                        <div class="font-weight-bold" style="font-size:14px;"><?= htmlspecialchars($aname) ?> <?= $role_badge ?></div>
                                         <small class="text-muted"><?= function_exists('timeAgo') ? htmlspecialchars(timeAgo($p['created_at'])) : htmlspecialchars($p['created_at']) ?></small>
                                     </div>
                                 </div>
@@ -518,7 +554,7 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
 
                         <div id="komen-<?= (int)$p['id'] ?>" class="px-3 pb-3">
                             <div class="diskusi-comment-list mb-2">
-                                <?= forum_render_comments_tree($komen, (int)$p['id'], (int)$guru_id, $user_level === 'admin') ?>
+                                <?= forum_render_comments_tree($komen, (int)$p['id'], $author_key, $user_level === 'admin') ?>
                             </div>
                             <form method="POST" enctype="multipart/form-data" class="diskusi-comment-form" id="komen-form-<?= (int)$p['id'] ?>">
                                 <input type="hidden" name="action" value="comment_add">
@@ -536,7 +572,7 @@ button:focus, .btn:focus, a:focus { outline: none !important; box-shadow: none !
                                 </div>
 
                                 <div class="d-flex align-items-center diskusi-emoji-wrap" style="gap:6px;">
-                                    <span class="diskusi-avatar" style="width:32px;height:32px;font-size:12px;background:<?= htmlspecialchars(diskusi_avatar_color('g_' . $guru_id)) ?>;"><?= htmlspecialchars(diskusi_initials($nama_guru)) ?></span>
+                                    <?= diskusi_avatar_html($display_name, $current_user_foto, $author_key, 32) ?>
                                     <input type="text" name="isi" id="komen-isi-f-<?= (int)$p['id'] ?>" class="form-control form-control-sm diskusi-pill" placeholder="Tulis komentar atau balasan..." required maxlength="1000">
 
                                     <label class="mb-0 text-muted p-1" style="cursor:pointer;" title="Lampirkan foto/file">
