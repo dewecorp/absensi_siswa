@@ -318,15 +318,20 @@ function importStudentsFromExcelFile($filePath) {
         
         foreach ($rows as $index => $row) {
             if (count($row) >= 7) { // 7 columns: nama_siswa, nisn, jenis_kelamin, tempat_lahir, tanggal_lahir, wali, id_kelas
-                $nama_siswa = trim($row[0]);
+                $is_empty = true;
+                foreach ($row as $cell) {
+                    if (trim((string)($cell ?? '')) !== '') { $is_empty = false; break; }
+                }
+                if ($is_empty) continue;
+                $nama_siswa = trim((string)($row[0] ?? ''));
                 $nisn = normalizeNisnFromImportCell($row[1] ?? '');
-                $jenis_kelamin = trim($row[2]);
+                $jenis_kelamin = trim((string)($row[2] ?? ''));
                 $jenis_kelamin = normalizeGender($jenis_kelamin);
-                $tempat_lahir = trim($row[3]);
-                $tanggal_lahir = trim($row[4]);
+                $tempat_lahir = trim((string)($row[3] ?? ''));
+                $tanggal_lahir = trim((string)($row[4] ?? ''));
                 $tanggal_lahir_db = normalizeDateForImport($tanggal_lahir);
-                $wali = trim($row[5]);
-                $id_kelas = trim($row[6]);
+                $wali = trim((string)($row[5] ?? ''));
+                $id_kelas = trim((string)($row[6] ?? ''));
                 
                 // Validate required fields
                 if (empty($nama_siswa) || empty($nisn) || empty($id_kelas)) {
