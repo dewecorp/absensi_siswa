@@ -1066,6 +1066,12 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'preview_bank_soal.php', 'generate_soal.php', 'generate_perangkat.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php', 'diskusi.php'])
             ],
             [
+                'title' => 'Forum Guru',
+                'icon' => 'fas fa-comments',
+                'url' => '../guru/forum.php',
+                'active' => $current_page === 'forum.php'
+            ],
+            [
                 'title' => 'Data Utama',
                 'icon' => 'fas fa-database',
                 'submenu' => [
@@ -1369,6 +1375,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-chalkboard-teacher',
                 'submenu' => $pembelajaran_submenu_wali,
                 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php', 'tugas.php', 'detail_tugas.php', 'bank_soal.php', 'preview_bank_soal.php', 'generate_soal.php', 'generate_perangkat.php', 'bahan_ajar.php', 'catatan_perkembangan.php', 'data_perkembangan.php', 'komunikasi_kelas.php', 'diskusi.php'])
+            ],
+            [
+                'title' => 'Forum Guru',
+                'icon' => 'fas fa-comments',
+                'url' => '../guru/forum.php?session_type=wali',
+                'active' => $current_page === 'forum.php'
             ],
             [
                 'title' => 'Data Utama',

@@ -589,6 +589,51 @@ if (!function_exists('ensure_learning_schema')) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
+        // 9c. Forum Guru (komunikasi antar guru & wali kelas)
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_forum_post (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_guru INT NOT NULL,
+                kategori VARCHAR(50) NOT NULL DEFAULT 'Umum',
+                isi TEXT NOT NULL,
+                bg VARCHAR(30) NOT NULL DEFAULT 'none',
+                file_path VARCHAR(255) NULL,
+                file_kind ENUM('none','image','video','file') NOT NULL DEFAULT 'none',
+                file_name VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_guru (id_guru),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_forum_komentar (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                id_post INT NOT NULL,
+                parent_id INT NULL,
+                id_guru INT NOT NULL,
+                isi TEXT NOT NULL,
+                file_path VARCHAR(255) NULL,
+                file_kind ENUM('none','image','video','file') NOT NULL DEFAULT 'none',
+                file_name VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_post (id_post),
+                INDEX idx_parent (parent_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_forum_suka (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                target ENUM('post','komentar') NOT NULL,
+                target_id INT NOT NULL,
+                id_guru INT NOT NULL,
+                author_key VARCHAR(50) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_suka (target, target_id, author_key),
+                INDEX idx_target (target, target_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
         // 10. Pembinaan Siswa (Level Wali)
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_pembinaan_siswa (
