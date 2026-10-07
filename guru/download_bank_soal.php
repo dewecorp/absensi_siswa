@@ -4,7 +4,7 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 require_once '../config/learning_schema.php';
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 

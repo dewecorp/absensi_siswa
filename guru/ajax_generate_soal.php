@@ -10,7 +10,7 @@ require_once '../config/ai_helper.php';
 ensure_learning_schema($pdo);
 ai_helper_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'admin', 'kepala_madrasah'])) {
     while (ob_get_level()) { ob_end_clean(); }
     header('Content-Type: application/json');
     http_response_code(403);

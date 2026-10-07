@@ -12,11 +12,12 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -64,7 +65,7 @@ if ($id_catatan > 0) {
         $params[] = $f_status;
     }
 }
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "t.id_wali = ?";
     $params[] = $guru_id;
 }

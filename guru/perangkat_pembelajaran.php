@@ -173,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Master lists for filter & forms
 $is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah', 'tata_usaha'], true);
 if ($is_admin_or_kepala) {
-    $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik') AND nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
     $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 } else {
     $mapel_list = getGuruTaughtMapels($pdo, $guru_id);

@@ -5,11 +5,12 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
+$is_monitor = in_array($user_level, ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -63,7 +64,7 @@ if ($f_kelas > 0) {
     $where[] = "p.id_kelas = ?";
     $params[] = $f_kelas;
 }
-if ($user_level !== 'admin') {
+if (!$is_monitor) {
     $where[] = "p.id_wali = ?";
     $params[] = $guru_id;
 }

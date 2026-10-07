@@ -5,11 +5,12 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -43,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $st = $pdo->prepare("
                         UPDATE tb_master_konseling SET
                             topik = ?, ringkasan = ?, tindak_lanjut = ?, follow_up = ?
-                        WHERE id = ? " . ($user_level !== 'admin' ? "AND (id_guru = $guru_id OR id_guru IS NULL OR id_guru = 0)" : "") . "
+                        WHERE id = ? " . (!$is_admin_or_kepala ? "AND (id_guru = $guru_id OR id_guru IS NULL OR id_guru = 0)" : "") . "
                     ");
                     $st->execute([$topik, $ringkasan, $tindak_lanjut, $follow_up, $id]);
                     $message = ['type' => 'success', 'text' => 'Template konseling berhasil diperbarui.'];
@@ -55,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus') {
         $id = (int)($_POST['id'] ?? 0);
         try {
-            $st = $pdo->prepare("DELETE FROM tb_master_konseling WHERE id = ? " . ($user_level !== 'admin' ? "AND (id_guru = $guru_id OR id_guru IS NULL OR id_guru = 0)" : ""));
+            $st = $pdo->prepare("DELETE FROM tb_master_konseling WHERE id = ? " . (!$is_admin_or_kepala ? "AND (id_guru = $guru_id OR id_guru IS NULL OR id_guru = 0)" : ""));
             $st->execute([$id]);
             $message = ['type' => 'success', 'text' => 'Template konseling berhasil dihapus.'];
         } catch (Exception $e) {
@@ -72,7 +73,7 @@ if (empty($topik_list)) {
 $f_topik = trim((string)($_GET['f_topik'] ?? ''));
 $where = ["1=1"];
 $params = [];
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "(id_guru = ? OR id_guru IS NULL OR id_guru = 0)";
     $params[] = $guru_id;
 }

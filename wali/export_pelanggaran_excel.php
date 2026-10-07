@@ -12,11 +12,12 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -64,7 +65,7 @@ if ($id_catatan > 0) {
         $params[] = $f_status;
     }
 }
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "p.id_wali = ?";
     $params[] = $guru_id;
 }
@@ -205,7 +206,7 @@ $sh->getStyle('H' . $row)->getFont()->setBold(true);
 
 // Sheet 2: Akumulasi poin + status sanksi per siswa (semua waktu)
 try {
-    $stAll = $pdo->prepare("SELECT s.nama_siswa, s.nisn, k.nama_kelas, COUNT(*) AS jml, COALESCE(SUM(p.poin),0) AS tot FROM tb_pelanggaran_siswa p JOIN tb_siswa s ON s.id_siswa = p.id_siswa LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas WHERE 1=1 " . ($user_level !== 'admin' ? "AND p.id_wali = " . (int)$guru_id : "") . " GROUP BY p.id_siswa ORDER BY tot DESC");
+    $stAll = $pdo->prepare("SELECT s.nama_siswa, s.nisn, k.nama_kelas, COUNT(*) AS jml, COALESCE(SUM(p.poin),0) AS tot FROM tb_pelanggaran_siswa p JOIN tb_siswa s ON s.id_siswa = p.id_siswa LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas WHERE 1=1 " . (!$is_admin_or_kepala ? "AND p.id_wali = " . (int)$guru_id : "") . " GROUP BY p.id_siswa ORDER BY tot DESC");
     $stAll->execute();
     $akum = $stAll->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) { $akum = []; }

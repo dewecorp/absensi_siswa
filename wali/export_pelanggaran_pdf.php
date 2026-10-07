@@ -5,11 +5,12 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -69,7 +70,7 @@ if ($id_catatan > 0) {
         $params[] = $f_status;
     }
 }
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "p.id_wali = ?";
     $params[] = $guru_id;
 }
@@ -90,7 +91,7 @@ $langgar_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Akumulasi total poin SEMUA WAKTU per siswa (untuk status sanksi valid, bukan hanya filter tampil)
 $poin_all_map = [];
 try {
-    $stAll = $pdo->prepare("SELECT id_siswa, COALESCE(SUM(poin),0) AS tot, COUNT(*) AS cnt FROM tb_pelanggaran_siswa WHERE 1=1 " . ($user_level !== 'admin' ? "AND id_wali = " . (int)$guru_id : "") . " GROUP BY id_siswa");
+    $stAll = $pdo->prepare("SELECT id_siswa, COALESCE(SUM(poin),0) AS tot, COUNT(*) AS cnt FROM tb_pelanggaran_siswa WHERE 1=1 " . (!$is_admin_or_kepala ? "AND id_wali = " . (int)$guru_id : "") . " GROUP BY id_siswa");
     $stAll->execute();
     foreach ($stAll->fetchAll(PDO::FETCH_ASSOC) as $pa) {
         $poin_all_map[(int)$pa['id_siswa']] = ['total' => (int)$pa['tot'], 'count' => (int)$pa['cnt']];

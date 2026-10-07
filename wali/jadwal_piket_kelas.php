@@ -5,12 +5,13 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
+$is_monitor = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_monitor;
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -30,7 +31,7 @@ $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY n
 
 $selected_kelas_id = $wali_kelas_id;
 $selected_kelas_name = $wali_kelas_name;
-if ($user_level === 'admin') {
+if ($is_monitor) {
     $selected_kelas_id = (int)($_GET['kelas'] ?? 0);
     $selected_kelas_name = '';
     foreach ($all_classes as $c) {
@@ -77,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("
                         UPDATE tb_jadwal_piket_kelas SET
                             id_kelas = ?, hari = ?, id_siswa = ?, tugas = ?, urutan = ?, status = ?
-                        WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+                        WHERE id = ? " . (!$is_monitor ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([$id_kelas, $hari, $id_siswa, $tugas, $urutan, $status, $id]);
                     $message = ['type' => 'success', 'text' => 'Jadwal piket berhasil diperbarui.'];
@@ -89,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus') {
         $id = (int)($_POST['id'] ?? 0);
         try {
-            $pdo->prepare("DELETE FROM tb_jadwal_piket_kelas WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+            $pdo->prepare("DELETE FROM tb_jadwal_piket_kelas WHERE id = ? " . (!$is_monitor ? "AND id_wali = $guru_id" : ""))->execute([$id]);
             $message = ['type' => 'success', 'text' => 'Jadwal piket berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -110,7 +111,7 @@ $where = ["1=1"];
 $params = [];
 $where[] = "p.id_kelas = ?";
 $params[] = $selected_kelas_id;
-if ($user_level !== 'admin') {
+if (!$is_monitor) {
     $where[] = "p.id_wali = ?";
     $params[] = $guru_id;
 }
@@ -202,18 +203,19 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Jadwal Piket Kelas <?= $user_level === 'admin' ? (!empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '') : (!empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '') ?></h1>
+            <h1>Jadwal Piket Kelas <?= $is_monitor ? (!empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '') : (!empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '') ?></h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
-            <?php if ($user_level === 'admin'): ?>
+            <?php if ($is_monitor): ?>
             <div class="card">
                 <div class="card-header">
                     <h4>Filter Kelas</h4>
                 </div>
                 <div class="card-body">
                     <form method="GET" class="form-inline">
+                        <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
                         <label class="mr-2" for="selectKelasPiket">Pilih Kelas:</label>
                         <select name="kelas" id="selectKelasPiket" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
                             <option value="">-- Pilih Kelas --</option>
@@ -226,7 +228,7 @@ include '../templates/sidebar.php';
             </div>
             <?php endif; ?>
 
-            <?php if ($selected_kelas_id > 0 || $user_level !== 'admin'): ?>
+            <?php if ($selected_kelas_id > 0 || !$is_monitor): ?>
             <?php
             $en_day = date('l');
             $map_hari = ['Sunday' => 'Ahad', 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'];
@@ -249,7 +251,7 @@ include '../templates/sidebar.php';
             </style>
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                    <h4 class="mb-0">Jadwal Piket Mingguan <?= $user_level === 'admin' && !empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '' ?></h4>
+                    <h4 class="mb-0">Jadwal Piket Mingguan <?= $is_monitor && !empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '' ?></h4>
                     <div>
                         <?php
                         $qs_piket = [];
@@ -264,7 +266,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
                         <?php if ($can_crud): ?>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahPiket" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahPiket" <?= empty($siswa_list) && !$is_monitor ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Tambah Petugas
                         </button>
                         <?php endif; ?>

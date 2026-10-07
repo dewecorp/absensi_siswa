@@ -7,7 +7,7 @@ require_once '../config/ai_helper.php';
 ensure_learning_schema($pdo);
 ai_helper_schema($pdo);
 
-if (!isAuthorized(['guru', 'wali'])) {
+if (!isAuthorized(['guru', 'wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 

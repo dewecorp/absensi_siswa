@@ -5,12 +5,13 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -31,7 +32,7 @@ $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY n
 
 // Admin bisa pilih kelas, wali default ke kelasnya
 $selected_kelas_id = $wali_kelas_id;
-if ($user_level === 'admin' && isset($_GET['kelas'])) {
+if ($is_admin_or_kepala && isset($_GET['kelas'])) {
     $selected_kelas_id = (int)$_GET['kelas'];
 }
 
@@ -66,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Ambil data pelanggaran sumber bila dipilih (untuk validasi + auto-isi)
                 $srcLanggar = null;
                 if ($id_pelanggaran > 0) {
-                    $stSrc = $pdo->prepare("SELECT * FROM tb_pelanggaran_siswa WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
+                    $stSrc = $pdo->prepare("SELECT * FROM tb_pelanggaran_siswa WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
                     $stSrc->execute([$id_pelanggaran]);
                     $srcLanggar = $stSrc->fetch(PDO::FETCH_ASSOC) ?: null;
                     if ($srcLanggar && (int)$srcLanggar['id_siswa'] !== $id_siswa) {
@@ -92,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Anti-ganda: 1 pelanggaran hanya boleh dibina 1x (kecuali edit data itu sendiri).
                 if ($boleh && $id_pelanggaran > 0) {
                     try {
-                        $sqlDup = "SELECT id FROM tb_pembinaan_siswa WHERE id_pelanggaran = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "");
+                        $sqlDup = "SELECT id FROM tb_pembinaan_siswa WHERE id_pelanggaran = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "");
                         if ($action === 'edit' && $id > 0) {
                             $sqlDup .= " AND id <> " . (int)$id;
                         }
@@ -123,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         UPDATE tb_pembinaan_siswa SET
                             id_siswa = ?, id_kelas = ?, tanggal = ?, jenis_pembinaan = ?,
                             permasalahan = ?, tindakan = ?, tindak_lanjut = ?, status = ?, id_pelanggaran = ?
-                        WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+                        WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
                         $id_siswa, $id_kelas, $tanggal, $jenis,
@@ -138,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus') {
         $id = (int)($_POST['id'] ?? 0);
         try {
-            $pdo->prepare("DELETE FROM tb_pembinaan_siswa WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+            $pdo->prepare("DELETE FROM tb_pembinaan_siswa WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
             $message = ['type' => 'success', 'text' => 'Data pembinaan berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -159,15 +160,15 @@ try {
         FROM tb_siswa s
         LEFT JOIN (
             SELECT id_siswa, COALESCE(SUM(poin),0) AS total_poin, COUNT(*) AS jml
-            FROM tb_pelanggaran_siswa WHERE 1=1" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "") . "
+            FROM tb_pelanggaran_siswa WHERE 1=1" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "") . "
             GROUP BY id_siswa
         ) pl ON pl.id_siswa = s.id_siswa
         LEFT JOIN (
-            SELECT id_siswa, COUNT(*) AS n_bina FROM tb_pembinaan_siswa WHERE 1=1" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "") . "
+            SELECT id_siswa, COUNT(*) AS n_bina FROM tb_pembinaan_siswa WHERE 1=1" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "") . "
             GROUP BY id_siswa
         ) bn ON bn.id_siswa = s.id_siswa
         LEFT JOIN (
-            SELECT id_siswa, COUNT(DISTINCT id_pembinaan) AS n_tl FROM tb_tindak_lanjut_wali WHERE id_pembinaan IS NOT NULL" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "") . "
+            SELECT id_siswa, COUNT(DISTINCT id_pembinaan) AS n_tl FROM tb_tindak_lanjut_wali WHERE id_pembinaan IS NOT NULL" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "") . "
             GROUP BY id_siswa
         ) tl ON tl.id_siswa = s.id_siswa
         WHERE 1=1
@@ -191,7 +192,7 @@ $pelanggar_info = [];
 try {
     $sqlPI = "SELECT id_siswa, jenis_pelanggaran, kategori, poin, tanggal FROM tb_pelanggaran_siswa WHERE 1=1";
     $parPI = [];
-    if ($user_level !== 'admin') {
+    if (!$is_admin_or_kepala) {
         $sqlPI .= " AND id_wali = ?";
         $parPI[] = $guru_id;
     }
@@ -213,7 +214,7 @@ $bina_used = [];
 try {
     $sqlU = "SELECT id_pelanggaran, id FROM tb_pembinaan_siswa WHERE id_pelanggaran IS NOT NULL";
     $parU = [];
-    if ($user_level !== 'admin') {
+    if (!$is_admin_or_kepala) {
         $sqlU .= " AND id_wali = ?";
         $parU[] = $guru_id;
     }
@@ -232,7 +233,7 @@ try {
         $sqlB .= " AND b.id_kelas = ?";
         $parB[] = $selected_kelas_id;
     }
-    if ($user_level !== 'admin') {
+    if (!$is_admin_or_kepala) {
         $sqlB .= " AND b.id_wali = ?";
         $parB[] = $guru_id;
     }
@@ -254,7 +255,7 @@ try {
         $sqlL .= " AND p.id_kelas = ?";
         $parL[] = $selected_kelas_id;
     }
-    if ($user_level !== 'admin') {
+    if (!$is_admin_or_kepala) {
         $sqlL .= " AND p.id_wali = ?";
         $parL[] = $guru_id;
     }
@@ -264,6 +265,9 @@ try {
     $pelanggaran_list = $stL->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) { $pelanggaran_list = []; }
 
+$f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
+$f_status = trim((string)($_GET['f_status'] ?? ''));
+
 // Fetch rows pembinaan
 $where = ["1=1"];
 $params = [];
@@ -271,9 +275,17 @@ if ($selected_kelas_id > 0) {
     $where[] = "p.id_kelas = ?";
     $params[] = $selected_kelas_id;
 }
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "p.id_wali = ?";
     $params[] = $guru_id;
+}
+if ($f_jenis !== '') {
+    $where[] = "p.jenis_pembinaan = ?";
+    $params[] = $f_jenis;
+}
+if ($f_status !== '') {
+    $where[] = "p.status = ?";
+    $params[] = $f_status;
 }
 
 $where_sql = implode(' AND ', $where);
@@ -762,27 +774,51 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <?php if ($user_level === 'admin'): ?>
+            <!-- Filter Card -->
             <div class="card mb-3">
                 <div class="card-body p-3">
-                    <form method="GET" class="form-inline">
-                        <label class="mr-2">Pilih Kelas:</label>
-                        <select name="kelas" class="form-control" onchange="this.form.submit()">
-                            <option value="">-- Semua Kelas --</option>
-                            <?php foreach ($all_classes as $c): ?>
-                                <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <form method="GET" class="row align-items-end">
+                        <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
+                        <?php if ($is_admin_or_kepala): ?>
+                        <div class="col-md-4 mb-2">
+                            <label class="small font-weight-bold">Kelas</label>
+                            <select name="kelas" class="form-control form-control-sm" onchange="this.form.submit()">
+                                <option value="">-- Semua Kelas --</option>
+                                <?php foreach ($all_classes as $c): ?>
+                                    <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+                        <div class="col-md-4 mb-2">
+                            <label class="small font-weight-bold">Jenis Pembinaan</label>
+                            <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
+                                <option value="">-- Semua Jenis --</option>
+                                <?php foreach ($jenis_options as $j): ?>
+                                    <option value="<?= $j ?>" <?= $f_jenis === $j ? 'selected' : '' ?>><?= $j ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="small font-weight-bold">Status</label>
+                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
+                                <option value="">-- Semua Status --</option>
+                                <?php foreach ($status_options as $st): ?>
+                                    <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </form>
                 </div>
             </div>
-            <?php endif; ?>
 
+            <?php if (!$is_admin_or_kepala): ?>
             <div class="alert alert-light border small text-muted mb-3">
                 <i class="fas fa-stream mr-1 text-primary"></i> <strong>Hibrid:</strong> Pembinaan bisa dari
                 <strong>1. Pelanggaran Siswa</strong> (pilih sumbernya, jenis terkunci otomatis) ATAU <strong>mandiri</strong>
                 (kosongkan sumber: kesulitan belajar, sulit fokus, kurang disiplin, adab) + pilih jenis manual.
             </div>
+            <?php endif; ?>
 
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
@@ -804,7 +840,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
                         <?php if ($can_crud): ?>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahPembinaan" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahPembinaan" <?= empty($siswa_list) && !$is_admin_or_kepala ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Catat Pembinaan
                         </button>
                         <?php endif; ?>

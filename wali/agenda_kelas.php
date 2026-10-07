@@ -5,12 +5,13 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -30,7 +31,7 @@ $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY n
 
 $selected_kelas_id = $wali_kelas_id;
 $selected_kelas_name = $wali_kelas_name;
-if ($user_level === 'admin') {
+if ($is_admin_or_kepala) {
     $selected_kelas_id = (int)($_GET['kelas'] ?? 0);
     if ($selected_kelas_id <= 0 && isset($_GET['f_kelas'])) {
         $selected_kelas_id = (int)$_GET['f_kelas'];
@@ -92,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             id_kelas = ?, tanggal = ?, tanggal_mulai = ?, tanggal_selesai = ?, waktu_mulai = ?, waktu_selesai = ?,
                             nama_agenda = ?, jenis = ?, tempat = ?, penanggung_jawab = ?,
                             status = ?, keterangan = ?
-                        WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+                        WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
                         $id_kelas, $tanggal, $tanggal_mulai, $tanggal_selesai, $waktu_mulai, $waktu_selesai,
@@ -108,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus') {
         $id = (int)($_POST['id'] ?? 0);
         try {
-            $pdo->prepare("DELETE FROM tb_agenda_kelas WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+            $pdo->prepare("DELETE FROM tb_agenda_kelas WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
             $message = ['type' => 'success', 'text' => 'Agenda kelas berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -122,16 +123,14 @@ $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
 $rows = [];
-if ($selected_kelas_id <= 0 && $user_level === 'admin') {
-    $rows = [];
-} else {
+$calendar_events = [];
 $where = ["1=1"];
 $params = [];
 if ($selected_kelas_id > 0) {
     $where[] = "a.id_kelas = ?";
     $params[] = $selected_kelas_id;
 }
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "a.id_wali = ?";
     $params[] = $guru_id;
 }
@@ -208,7 +207,6 @@ foreach ($rows as $r) {
         'extendedProps' => $r
     ];
 }
-} // end else pilih kelas
 
 $page_title = 'Daftar Agenda Kelas';
 $css_libs = [
@@ -358,18 +356,19 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Daftar Agenda Kelas <?= $user_level === 'admin' ? (!empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '') : (!empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '') ?></h1>
+            <h1>Daftar Agenda Kelas <?= $is_admin_or_kepala ? (!empty($selected_kelas_name) ? '- Kelas ' . htmlspecialchars($selected_kelas_name) : '') : (!empty($wali_kelas_name) ? '- Kelas ' . htmlspecialchars($wali_kelas_name) : '') ?></h1>
             <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
-            <?php if ($user_level === 'admin'): ?>
+            <?php if ($is_admin_or_kepala): ?>
             <div class="card">
                 <div class="card-header">
                     <h4>Filter Kelas</h4>
                 </div>
                 <div class="card-body">
                     <form method="GET" class="form-inline">
+                        <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
                         <label class="mr-2" for="selectKelasAgenda">Pilih Kelas:</label>
                         <select name="kelas" id="selectKelasAgenda" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
                             <option value="">-- Pilih Kelas --</option>
@@ -382,7 +381,7 @@ include '../templates/sidebar.php';
             </div>
             <?php endif; ?>
 
-            <?php if ($selected_kelas_id > 0 || $user_level !== 'admin'): ?>
+            <?php if (true): ?>
             <!-- Filter & Mode Tabs -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">

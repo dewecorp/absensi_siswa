@@ -5,12 +5,13 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -29,7 +30,7 @@ if ($wali_class) {
 $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $selected_kelas_id = $wali_kelas_id;
-if ($user_level === 'admin' && isset($_GET['kelas'])) {
+if ($is_admin_or_kepala && isset($_GET['kelas'])) {
     $selected_kelas_id = (int)$_GET['kelas'];
 }
 
@@ -75,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         UPDATE tb_projek_kokurikuler SET
                             nama_projek = ?, tema = ?, id_kelas = ?, pembimbing = ?,
                             tgl_mulai = ?, tgl_selesai = ?, deskripsi = ?, status = ?
-                        WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+                        WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
                         $nama_projek, $tema, $id_kelas, $pembimbing,
@@ -90,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus_projek') {
         $id = (int)($_POST['id'] ?? 0);
         try {
-            $pdo->prepare("DELETE FROM tb_projek_kokurikuler WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+            $pdo->prepare("DELETE FROM tb_projek_kokurikuler WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
             $pdo->prepare("DELETE FROM tb_projek_anggota WHERE id_projek = ?")->execute([$id]);
             $message = ['type' => 'success', 'text' => 'Projek dan anggotanya berhasil dihapus.'];
         } catch (Exception $e) {
@@ -149,7 +150,7 @@ if ($selected_kelas_id > 0) {
     $where[] = "p.id_kelas = ?";
     $params[] = $selected_kelas_id;
 }
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "p.id_wali = ?";
     $params[] = $guru_id;
 }
@@ -332,10 +333,11 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <?php if ($user_level === 'admin'): ?>
+            <?php if ($is_admin_or_kepala): ?>
             <div class="card mb-3">
                 <div class="card-body p-3">
                     <form method="GET" class="form-inline">
+                        <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
                         <label class="mr-2">Pilih Kelas:</label>
                         <select name="kelas" class="form-control" onchange="this.form.submit()">
                             <option value="">-- Semua Kelas --</option>

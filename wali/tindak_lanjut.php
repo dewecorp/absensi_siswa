@@ -5,12 +5,13 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -29,7 +30,7 @@ if ($wali_class) {
 $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $selected_kelas_id = $wali_kelas_id;
-if ($user_level === 'admin' && isset($_GET['kelas'])) {
+if ($is_admin_or_kepala && isset($_GET['kelas'])) {
     $selected_kelas_id = (int)$_GET['kelas'];
 }
 
@@ -57,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = in_array($_POST['status'] ?? '', ['Rencana', 'Proses', 'Selesai', 'Dibatalkan'], true) ? $_POST['status'] : 'Rencana';
 
         if ($action === 'edit' && $id > 0) {
-            $stOld = $pdo->prepare("SELECT * FROM tb_tindak_lanjut_wali WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
+            $stOld = $pdo->prepare("SELECT * FROM tb_tindak_lanjut_wali WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
             $stOld->execute([$id]);
             $oldData = $stOld->fetch(PDO::FETCH_ASSOC);
             if ($oldData) {
@@ -78,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (($sumber_id ?? 0) > 0) {
                 try {
                     if ($sumber === 'Pembinaan' && $id_pembinaan > 0) {
-                        $stCek = $pdo->prepare("SELECT id_siswa FROM tb_pembinaan_siswa WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
+                        $stCek = $pdo->prepare("SELECT id_siswa FROM tb_pembinaan_siswa WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
                         $stCek->execute([$id_pembinaan]);
                         $idOwner = (int)$stCek->fetchColumn();
                         if ($idOwner > 0 && $idOwner !== $id_siswa) {
@@ -86,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $boleh = false;
                         }
                     } elseif ($sumber === 'Konseling' && $id_konseling > 0) {
-                        $stCek = $pdo->prepare("SELECT id_siswa FROM tb_konseling_awal WHERE id = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
+                        $stCek = $pdo->prepare("SELECT id_siswa FROM tb_konseling_awal WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
                         $stCek->execute([$id_konseling]);
                         $idOwner = (int)$stCek->fetchColumn();
                         if ($idOwner > 0 && $idOwner !== $id_siswa) {
@@ -100,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($boleh) {
                     try {
                         if ($sumber === 'Pembinaan' && $id_pembinaan > 0) {
-                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_pembinaan = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "");
+                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_pembinaan = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "");
                             if ($action === 'edit' && $id > 0) $sqlDup .= " AND id <> " . (int)$id;
                             $stDup = $pdo->prepare($sqlDup);
                             $stDup->execute([$id_pembinaan]);
@@ -109,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $boleh = false;
                             }
                         } elseif ($sumber === 'Konseling' && $id_konseling > 0) {
-                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_konseling = ?" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : "");
+                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_konseling = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "");
                             if ($action === 'edit' && $id > 0) $sqlDup .= " AND id <> " . (int)$id;
                             $stDup = $pdo->prepare($sqlDup);
                             $stDup->execute([$id_konseling]);
@@ -141,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             id_siswa = ?, id_kelas = ?, tanggal = ?, sumber = ?,
                             tindakan = ?, penanggung_jawab = ?, target_selesai = ?,
                             tanggal_selesai = ?, status = ?, id_pembinaan = ?, id_konseling = ?
-                        WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+                        WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
                         $id_siswa, $id_kelas, $tanggal, $sumber,
@@ -157,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hapus') {
         $id = (int)($_POST['id'] ?? 0);
         try {
-            $pdo->prepare("DELETE FROM tb_tindak_lanjut_wali WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+            $pdo->prepare("DELETE FROM tb_tindak_lanjut_wali WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
             $message = ['type' => 'success', 'text' => 'Data tindak lanjut berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -171,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tl_used_bina = [];
 $tl_used_kons = [];
 try {
-    $stU = $pdo->prepare("SELECT id_pembinaan, id_konseling FROM tb_tindak_lanjut_wali WHERE 1=1" . ($user_level !== 'admin' ? " AND id_wali = " . (int)$guru_id : ""));
+    $stU = $pdo->prepare("SELECT id_pembinaan, id_konseling FROM tb_tindak_lanjut_wali WHERE 1=1" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
     $stU->execute();
     foreach ($stU->fetchAll(PDO::FETCH_ASSOC) as $ur) {
         if (!empty($ur['id_pembinaan'])) $tl_used_bina[(int)$ur['id_pembinaan']] = true;
@@ -190,15 +191,15 @@ try {
         LEFT JOIN (
             SELECT b.id_siswa, COUNT(b.id) AS n_bina_belum
             FROM tb_pembinaan_siswa b
-            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id" . ($user_level !== 'admin' ? " AND t.id_wali = " . (int)$guru_id : "") . "
-            WHERE t.id IS NULL" . ($user_level !== 'admin' ? " AND b.id_wali = " . (int)$guru_id : "") . "
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id" . (!$is_admin_or_kepala ? " AND t.id_wali = " . (int)$guru_id : "") . "
+            WHERE t.id IS NULL" . (!$is_admin_or_kepala ? " AND b.id_wali = " . (int)$guru_id : "") . "
             GROUP BY b.id_siswa
         ) bn ON bn.id_siswa = s.id_siswa
         LEFT JOIN (
             SELECT c.id_siswa, COUNT(c.id) AS n_kons_belum
             FROM tb_konseling_awal c
-            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_konseling = c.id" . ($user_level !== 'admin' ? " AND t.id_wali = " . (int)$guru_id : "") . "
-            WHERE t.id IS NULL" . ($user_level !== 'admin' ? " AND c.id_wali = " . (int)$guru_id : "") . "
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_konseling = c.id" . (!$is_admin_or_kepala ? " AND t.id_wali = " . (int)$guru_id : "") . "
+            WHERE t.id IS NULL" . (!$is_admin_or_kepala ? " AND c.id_wali = " . (int)$guru_id : "") . "
             GROUP BY c.id_siswa
         ) ks ON ks.id_siswa = s.id_siswa
         WHERE 1=1
@@ -225,7 +226,7 @@ try {
         $sqlB .= " AND b.id_kelas = ?";
         $parB[] = $selected_kelas_id;
     }
-    if ($user_level !== 'admin') {
+    if (!$is_admin_or_kepala) {
         $sqlB .= " AND b.id_wali = ?";
         $parB[] = $guru_id;
     }
@@ -247,7 +248,7 @@ try {
         $sqlK .= " AND c.id_kelas = ?";
         $parK[] = $selected_kelas_id;
     }
-    if ($user_level !== 'admin') {
+    if (!$is_admin_or_kepala) {
         $sqlK .= " AND c.id_wali = ?";
         $parK[] = $guru_id;
     }
@@ -269,7 +270,7 @@ if ($selected_kelas_id > 0) {
     $where[] = "t.id_kelas = ?";
     $params[] = $selected_kelas_id;
 }
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "t.id_wali = ?";
     $params[] = $guru_id;
 }
@@ -316,7 +317,7 @@ $pelanggar_info = [];
 try {
     $sqlPI = "SELECT id_siswa, jenis_pelanggaran, kategori, poin, tanggal FROM tb_pelanggaran_siswa WHERE 1=1";
     $parPI = [];
-    if ($user_level !== 'admin') {
+    if (!$is_admin_or_kepala) {
         $sqlPI .= " AND id_wali = ?";
         $parPI[] = $guru_id;
     }
@@ -626,10 +627,11 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <?php if ($user_level === 'admin'): ?>
+            <?php if ($is_admin_or_kepala): ?>
             <div class="card mb-3">
                 <div class="card-body p-3">
                     <form method="GET" class="form-inline">
+                        <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
                         <label class="mr-2">Pilih Kelas:</label>
                         <select name="kelas" class="form-control" onchange="this.form.submit()">
                             <option value="">-- Semua Kelas --</option>
@@ -700,7 +702,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
                         <?php if ($can_crud): ?>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahTL" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahTL" <?= empty($siswa_list) && !$is_admin_or_kepala ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Rencana Baru
                         </button>
                         <?php endif; ?>

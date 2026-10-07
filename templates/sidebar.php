@@ -632,7 +632,6 @@ switch ($user_level) {
             ['title' => 'Bahan Ajar', 'url' => '../guru/bahan_ajar.php?session_type=kepala_madrasah', 'active' => $current_page === 'bahan_ajar.php'],
             ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
             ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php?session_type=kepala_madrasah', 'active' => $current_page === 'catatan_perkembangan.php'],
-            ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_perkembangan.php'],
             ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'komunikasi_kelas.php'],
             ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
@@ -641,12 +640,14 @@ switch ($user_level) {
 
         $pengelolaan_kelas_submenu_kepala = [
             ['title' => 'Agenda Kelas', 'url' => '../wali/agenda_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'agenda_kelas.php'],
-            ['title' => 'Data Konseling', 'url' => '../wali/data_konseling.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_konseling.php'],
             ['title' => 'Jadwal Piket', 'url' => '../wali/jadwal_piket_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'jadwal_piket_kelas.php'],
             ['title' => 'Komunikasi Orang Tua', 'url' => '../wali/komunikasi_ortu.php?session_type=kepala_madrasah', 'active' => $current_page === 'komunikasi_ortu.php'],
             ['title' => 'Konseling Siswa', 'url' => '../wali/konseling_awal.php?session_type=kepala_madrasah', 'active' => $current_page === 'konseling_awal.php'],
+            ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'pelanggaran_siswa.php'],
+            ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'pembinaan_siswa.php'],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'projek_kokurikuler.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'struktur_kelas.php'],
+            ['title' => 'Tindak Lanjut', 'url' => '../wali/tindak_lanjut.php?session_type=kepala_madrasah', 'active' => $current_page === 'tindak_lanjut.php'],
         ];
         usort($pengelolaan_kelas_submenu_kepala, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 

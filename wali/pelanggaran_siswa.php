@@ -5,12 +5,13 @@ require_once '../config/learning_schema.php';
 
 ensure_learning_schema($pdo);
 
-if (!isAuthorized(['wali', 'admin'])) {
+if (!isAuthorized(['wali', 'admin', 'kepala_madrasah'])) {
     redirect('../login.php');
 }
 
 $user_level = getUserLevel();
-$can_crud = !in_array($user_level, ['admin', 'kepala_madrasah'], true);
+$is_admin_or_kepala = in_array($user_level, ['admin', 'kepala_madrasah'], true) || in_array($_GET['session_type'] ?? '', ['admin', 'kepala_madrasah'], true);
+$can_crud = !$is_admin_or_kepala;
 $guru_id = getCurrentGuruId($pdo);
 if ($guru_id <= 0 && isset($_SESSION['user_id'])) {
     $guru_id = (int)$_SESSION['user_id'];
@@ -30,7 +31,7 @@ if ($wali_class) {
 $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $selected_kelas_id = $wali_kelas_id;
-if ($user_level === 'admin' && isset($_GET['kelas'])) {
+if ($is_admin_or_kepala && isset($_GET['kelas'])) {
     $selected_kelas_id = (int)$_GET['kelas'];
 }
 
@@ -76,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             UPDATE tb_pelanggaran_siswa SET
                                 id_siswa = ?, id_kelas = ?, tanggal = ?, jenis_pelanggaran = ?,
                                 kategori = ?, poin = ?, tindakan = ?, orang_tua = ?, status = ?, jenis_binaan = ?
-                            WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+                            WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
                         ");
                         $stmt->execute([
                             $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
@@ -91,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'hapus') {
             $id = (int)($_POST['id'] ?? 0);
             try {
-                $pdo->prepare("DELETE FROM tb_pelanggaran_siswa WHERE id = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+                $pdo->prepare("DELETE FROM tb_pelanggaran_siswa WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
                 $message = ['type' => 'success', 'text' => 'Data pelanggaran berhasil dihapus.'];
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -106,9 +107,12 @@ if ($selected_kelas_id > 0) {
     $stS = $pdo->prepare("SELECT s.id_siswa, s.nama_siswa, s.nisn, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas WHERE s.id_kelas = ? ORDER BY s.nama_siswa ASC");
     $stS->execute([$selected_kelas_id]);
     $siswa_list = $stS->fetchAll(PDO::FETCH_ASSOC);
-} elseif ($user_level === 'admin') {
+} elseif ($is_admin_or_kepala) {
     $siswa_list = $pdo->query("SELECT s.id_siswa, s.nama_siswa, s.nisn, k.nama_kelas FROM tb_siswa s LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas ORDER BY k.nama_kelas ASC, s.nama_siswa ASC")->fetchAll(PDO::FETCH_ASSOC);
 }
+
+$f_kategori = trim((string)($_GET['f_kategori'] ?? ''));
+$f_status = trim((string)($_GET['f_status'] ?? ''));
 
 // Fetch rows pelanggaran
 $where = ["1=1"];
@@ -117,9 +121,17 @@ if ($selected_kelas_id > 0) {
     $where[] = "p.id_kelas = ?";
     $params[] = $selected_kelas_id;
 }
-if ($user_level !== 'admin') {
+if (!$is_admin_or_kepala) {
     $where[] = "p.id_wali = ?";
     $params[] = $guru_id;
+}
+if ($f_kategori !== '') {
+    $where[] = "p.kategori = ?";
+    $params[] = $f_kategori;
+}
+if ($f_status !== '') {
+    $where[] = "p.status = ?";
+    $params[] = $f_status;
 }
 
 $where_sql = implode(' AND ', $where);
@@ -164,7 +176,7 @@ if (isset($_GET['ajax_timeline']) && (int)$_GET['ajax_timeline'] === 1) {
     $stT = $pdo->prepare("
         SELECT id, tanggal, jenis_pelanggaran, kategori, poin, tindakan, orang_tua, status
         FROM tb_pelanggaran_siswa
-        WHERE id_siswa = ? " . ($user_level !== 'admin' ? "AND id_wali = $guru_id" : "") . "
+        WHERE id_siswa = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
         ORDER BY tanggal DESC, id DESC
     ");
     $stT->execute([$sid]);
@@ -409,21 +421,43 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <?php if ($user_level === 'admin'): ?>
+            <!-- Filter Card -->
             <div class="card mb-3">
                 <div class="card-body p-3">
-                    <form method="GET" class="form-inline">
-                        <label class="mr-2">Pilih Kelas:</label>
-                        <select name="kelas" class="form-control" onchange="this.form.submit()">
-                            <option value="">-- Semua Kelas --</option>
-                            <?php foreach ($all_classes as $c): ?>
-                                <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <form method="GET" class="row align-items-end">
+                        <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
+                        <?php if ($is_admin_or_kepala): ?>
+                        <div class="col-md-4 mb-2">
+                            <label class="small font-weight-bold">Kelas</label>
+                            <select name="kelas" class="form-control form-control-sm" onchange="this.form.submit()">
+                                <option value="">-- Semua Kelas --</option>
+                                <?php foreach ($all_classes as $c): ?>
+                                    <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+                        <div class="col-md-4 mb-2">
+                            <label class="small font-weight-bold">Kategori Pelanggaran</label>
+                            <select name="f_kategori" class="form-control form-control-sm" onchange="this.form.submit()">
+                                <option value="">-- Semua Kategori --</option>
+                                <?php foreach ($kategori_options as $k): ?>
+                                    <option value="<?= $k ?>" <?= $f_kategori === $k ? 'selected' : '' ?>><?= $k ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="small font-weight-bold">Status</label>
+                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
+                                <option value="">-- Semua Status --</option>
+                                <?php foreach ($status_options as $st): ?>
+                                    <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </form>
                 </div>
             </div>
-            <?php endif; ?>
 
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
@@ -445,7 +479,7 @@ include '../templates/sidebar.php';
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
                         <?php if ($can_crud): ?>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahPelanggaran" <?= empty($siswa_list) && $user_level !== 'admin' ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahPelanggaran" <?= empty($siswa_list) && !$is_admin_or_kepala ? 'disabled' : '' ?>>
                             <i class="fas fa-plus mr-1"></i> Catat Pelanggaran
                         </button>
                         <?php endif; ?>
