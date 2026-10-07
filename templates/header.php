@@ -307,19 +307,22 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 11px;
+            padding: 5px 12px;
             border-radius: 999px;
-            font-size: 0.78rem;
-            font-weight: 600;
+            font-size: 0.88rem;
+            font-weight: 700;
             line-height: 1.5;
-            margin: 0 6px 4px 0;
+            margin: 0 6px 6px 0;
         }
         .wb-chip i { font-size: 0.9em; }
-        .wb-chip-default { background: #eef2f7; color: #334155; }
+        .wb-chip-default { background: #eef2f7; color: #1e293b; }
         .wb-chip-glass {
-            background: rgba(255, 255, 255, .24);
-            color: #fff;
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28);
+            background: rgba(15, 23, 42, 0.28);
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
         }
         #table-siswa_wrapper {
             max-width: 100%;

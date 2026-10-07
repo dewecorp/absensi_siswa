@@ -537,29 +537,24 @@ include_once '../templates/sidebar.php';
 
                     <div class="row d-lg-none">
                         <div class="col-12 mb-3">
-                            <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #2f6ef0, #5a8ff7);">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center mr-3 flex-shrink-0" style="width: 48px; height: 48px; font-weight: 600; font-size: 1.25rem; box-shadow: 0 4px 12px rgba(0, 0, 0, .25);">
+                            <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #2f6ef0 0%, #3abaf4 100%); color: #fff; position: relative;">
+                                <div style="position: absolute; top: -20px; right: -20px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); pointer-events: none;"></div>
+                                <div style="position: absolute; bottom: -30px; right: 50px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); pointer-events: none;"></div>
+                                <div class="card-body p-3" style="position: relative; z-index: 1;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center mr-3 flex-shrink-0" style="width: 54px; height: 54px; font-weight: 700; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(0, 0, 0, .2);">
                                             <?php echo strtoupper(substr($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'K'), 0, 1)); ?>
                                         </div>
                                         <div>
-                                            <div class="mb-1 text-white" style="font-size: 0.95rem;">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.1rem;"><?php echo htmlspecialchars($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Kepala Madrasah')); ?></span></div>
-                                            <div class="text-white" style="font-size: 0.95rem;">Selamat datang di Sistem Informasi Madrasah</div>
-                                            <div class="mt-1">
-                                            <span class="wb-chip wb-chip-glass"><i class="far fa-calendar-alt"></i> <span id="wb-date">-</span></span>
-                                                <span class="wb-chip wb-chip-glass"><i class="fas fa-graduation-cap"></i> <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
-                                                <span class="wb-chip wb-chip-glass"><i class="fas fa-calendar-check"></i> <?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
+                                            <div class="mb-1 text-white" style="font-size: 1.25rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.35);">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.45rem; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.4);"><?php echo htmlspecialchars($display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Kepala Madrasah')); ?></span></div>
+                                            <div style="color: #ffffff; font-size: 1.15rem; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.35);">Selamat datang di Sistem Informasi Madrasah</div>
+                                            <div style="color: #fde047; font-size: 1.1rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.4); margin-top: 2px;"><i class="fas fa-school mr-1.5"></i><?php echo htmlspecialchars($school_profile['nama_madrasah'] ?? ''); ?></div>
+                                            <div class="mt-3">
+                                                <span class="wb-chip wb-chip-glass" style="font-size: 0.95rem !important; padding: 6px 14px;"><i class="far fa-calendar-alt mr-1"></i> <span id="wb-date">-</span></span>
+                                                <span class="wb-chip wb-chip-glass" style="font-size: 0.95rem !important; padding: 6px 14px;"><i class="fas fa-graduation-cap mr-1"></i> <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
+                                                <span class="wb-chip wb-chip-glass" style="font-size: 0.95rem !important; padding: 6px 14px;"><i class="fas fa-calendar-check mr-1"></i> <?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
                                             </div>
                                         </div>
-                                    </div>
-                                    <?php
-                                    $hero_image = !empty($school_profile['dashboard_hero_image'])
-                                        ? '../assets/img/' . $school_profile['dashboard_hero_image']
-                                        : '../assets/img/unsplash/eberhard-grossgasteiger-1207565-unsplash.jpg';
-                                    ?>
-                                    <div class="rounded-lg overflow-hidden">
-                                        <img src="<?php echo $hero_image; ?>" alt="Hero" class="img-fluid" style="width: 100%; height: 170px; object-fit: cover;">
                                     </div>
                                 </div>
                             </div>
