@@ -288,7 +288,7 @@ include '../templates/sidebar.php';
                     <form method="GET" class="row">
                         <div class="col-md-4 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
-                            <select name="f_kelas" class="form-control form-control-sm">
+                            <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Kelas --</option>
                                 <?php foreach ($kelas_list as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>" <?= $f_kelas === (int)$k['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
@@ -297,7 +297,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Jenis</label>
-                            <select name="f_jenis" class="form-control form-control-sm">
+                            <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Jenis --</option>
                                 <?php foreach ($jenis_options as $j): ?>
                                     <option value="<?= $j ?>" <?= $f_jenis === $j ? 'selected' : '' ?>><?= $j ?></option>
@@ -306,7 +306,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Status</label>
-                            <select name="f_status" class="form-control form-control-sm">
+                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua --</option>
                                 <?php foreach (['Terkirim', 'Draft', 'Arsip'] as $st): ?>
                                     <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
@@ -314,7 +314,6 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-12 mt-2 d-flex">
-                            <button type="submit" class="btn btn-primary btn-sm mr-2"><i class="fas fa-search"></i> Terapkan Filter</button>
                             <a href="komunikasi_kelas.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
                         </div>
                     </form>

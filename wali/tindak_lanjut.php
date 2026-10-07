@@ -651,7 +651,7 @@ include '../templates/sidebar.php';
                         <?php if (isset($_GET['kelas'])): ?><input type="hidden" name="kelas" value="<?= (int)$_GET['kelas'] ?>"><?php endif; ?>
                         <div class="col-md-4 mb-2">
                             <label class="small font-weight-bold">Sumber Tindak Lanjut</label>
-                            <select name="f_sumber" class="form-control form-control-sm">
+                            <select name="f_sumber" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Sumber --</option>
                                 <?php foreach ($sumber_options as $s): ?>
                                     <option value="<?= $s ?>" <?= $f_sumber === $s ? 'selected' : '' ?>><?= $s ?></option>
@@ -660,7 +660,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-4 mb-2">
                             <label class="small font-weight-bold">Status</label>
-                            <select name="f_status" class="form-control form-control-sm">
+                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Status --</option>
                                 <?php foreach ($status_options as $st): ?>
                                     <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
@@ -668,7 +668,6 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-md-4 mb-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-sm mr-2"><i class="fas fa-search"></i> Filter</button>
                             <a href="tindak_lanjut.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
                         </div>
                     </form>

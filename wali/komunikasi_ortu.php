@@ -298,7 +298,7 @@ include '../templates/sidebar.php';
                         <?php if (isset($_GET['kelas'])): ?><input type="hidden" name="kelas" value="<?= (int)$_GET['kelas'] ?>"><?php endif; ?>
                         <div class="col-md-4 mb-2">
                             <label class="small font-weight-bold">Jenis Informasi</label>
-                            <select name="f_jenis" class="form-control form-control-sm">
+                            <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Jenis --</option>
                                 <?php foreach ($jenis_options as $j): ?>
                                     <option value="<?= $j ?>" <?= $f_jenis === $j ? 'selected' : '' ?>><?= $j ?></option>
@@ -307,7 +307,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Status Kirim</label>
-                            <select name="f_kirim" class="form-control form-control-sm">
+                            <select name="f_kirim" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua --</option>
                                 <?php foreach (['Terkirim', 'Draft', 'Gagal'] as $sk): ?>
                                     <option value="<?= $sk ?>" <?= $f_kirim === $sk ? 'selected' : '' ?>><?= $sk ?></option>
@@ -316,7 +316,7 @@ include '../templates/sidebar.php';
                         </div>
                         <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Status Dibaca</label>
-                            <select name="f_baca" class="form-control form-control-sm">
+                            <select name="f_baca" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua --</option>
                                 <?php foreach (['Belum Dibaca', 'Sudah Dibaca'] as $sb): ?>
                                     <option value="<?= $sb ?>" <?= $f_baca === $sb ? 'selected' : '' ?>><?= $sb ?></option>
@@ -324,7 +324,6 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-md-2 mb-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-sm mr-2"><i class="fas fa-search"></i> Filter</button>
                             <a href="komunikasi_ortu.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
                         </div>
                     </form>

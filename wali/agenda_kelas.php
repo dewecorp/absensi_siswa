@@ -408,7 +408,7 @@ include '../templates/sidebar.php';
                                 <input type="hidden" name="kelas" value="<?= (int)$selected_kelas_id ?>">
                                 <div class="col-md-4 mb-2">
                                     <label class="small font-weight-bold">Jenis Agenda</label>
-                                    <select name="f_jenis" class="form-control form-control-sm">
+                                    <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
                                         <option value="">-- Semua Jenis --</option>
                                         <?php foreach ($jenis_options as $j): ?>
                                             <option value="<?= $j ?>" <?= $f_jenis === $j ? 'selected' : '' ?>><?= $j ?></option>
@@ -417,7 +417,7 @@ include '../templates/sidebar.php';
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <label class="small font-weight-bold">Status</label>
-                                    <select name="f_status" class="form-control form-control-sm">
+                                    <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                         <option value="">-- Semua Status --</option>
                                         <?php foreach ($status_options as $st): ?>
                                             <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
@@ -425,7 +425,6 @@ include '../templates/sidebar.php';
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-2 d-flex align-items-end">
-                                    <button type="submit" class="btn btn-primary btn-sm mr-2"><i class="fas fa-search"></i> Filter</button>
                                     <a href="agenda_kelas.php?kelas=<?= (int)$selected_kelas_id ?>" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
                                 </div>
                             </form>
