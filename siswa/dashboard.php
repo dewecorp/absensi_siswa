@@ -338,15 +338,15 @@ include_once '../templates/sidebar.php';
                     <div style="position: absolute; top: -20px; right: -20px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); pointer-events: none;"></div>
                     <div style="position: absolute; bottom: -30px; right: 50px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); pointer-events: none;"></div>
                     <div class="card-body p-3" style="position: relative; z-index: 1;">
-                        <div class="d-flex align-items-center">
-                            <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center mr-3 flex-shrink-0" style="width: 54px; height: 54px; font-weight: 700; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(0, 0, 0, .2);">
+                        <div class="d-flex flex-column align-items-center text-center">
+                            <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center mb-2 flex-shrink-0" style="width: 96px; height: 96px; font-weight: 700; font-size: 2.2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, .2); border: 3px solid #fff;">
                                 <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
                             </div>
                             <div>
                                 <div class="mb-1 text-white" style="font-size: 1.25rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.35);">Assalamualaikum, <span class="font-weight-bold" style="font-size: 1.45rem; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.4);"><?php echo htmlspecialchars($student['nama_siswa']); ?></span></div>
                                 <div style="color: #ffffff; font-size: 1.15rem; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.35);">Selamat datang di Sistem Informasi Madrasah</div>
-                                <div style="color: #fde047; font-size: 1.1rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.4); margin-top: 2px;"><i class="fas fa-school mr-1.5"></i><?php echo htmlspecialchars($school_profile['nama_madrasah'] ?? ''); ?></div>
-                                <div class="mt-3">
+                                <div style="color: #fde047; font-size: 1.1rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.4); margin-top: 2px;"><?php echo htmlspecialchars($school_profile['nama_madrasah'] ?? ''); ?></div>
+                                <div class="mt-3 d-flex flex-wrap justify-content-center" style="gap:4px;">
                                     <span class="wb-chip wb-chip-glass" style="font-size: 0.95rem !important; padding: 6px 14px;"><i class="far fa-calendar-alt mr-1"></i> <span id="wb-date">-</span></span>
                                     <span class="wb-chip wb-chip-glass" style="font-size: 0.95rem !important; padding: 6px 14px;"><i class="fas fa-graduation-cap mr-1"></i> <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
                                     <span class="wb-chip wb-chip-glass" style="font-size: 0.95rem !important; padding: 6px 14px;"><i class="fas fa-calendar-check mr-1"></i> <?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
