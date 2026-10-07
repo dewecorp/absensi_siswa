@@ -1993,39 +1993,101 @@ function fetchEtabsData(string $nis, string $type = 'summary'): array {
     return $response;
 }
 
+function get_current_user_key(): string {
+    if (isset($_SESSION['user_id'])) {
+        $lvl = function_exists('getUserLevel') ? getUserLevel() : ($_SESSION['level'] ?? '');
+        if ($lvl === 'siswa') {
+            return 'siswa_' . (int)$_SESSION['user_id'];
+        }
+        $gid = function_exists('getCurrentGuruId') ? (int)getCurrentGuruId($GLOBALS['pdo'] ?? null) : 0;
+        if ($gid > 0) {
+            return 'guru_' . $gid;
+        }
+        return 'user_' . (int)$_SESSION['user_id'];
+    }
+    return 'guest';
+}
+
 // Function to create notification
-function createNotification(PDO $pdo, string $message, string $link, string $type = 'info'): bool {
-    // Ignoring $type as column doesn't exist in current schema
-    $stmt = $pdo->prepare("INSERT INTO tb_notifikasi (message, link, created_at) VALUES (?, ?, NOW())");
-    return $stmt->execute([$message, $link]);
+function createNotification(PDO $pdo, string $message, string $link, string $type = 'info', ?string $actor_key = null): bool {
+    if ($actor_key === null) {
+        $actor_key = get_current_user_key();
+    }
+    try {
+        $stmt = $pdo->prepare("INSERT INTO tb_notifikasi (message, link, actor_key, created_at) VALUES (?, ?, ?, NOW())");
+        return $stmt->execute([$message, $link, $actor_key]);
+    } catch (Throwable $e) {
+        $stmt = $pdo->prepare("INSERT INTO tb_notifikasi (message, link, created_at) VALUES (?, ?, NOW())");
+        return $stmt->execute([$message, $link]);
+    }
 }
 
 // Function to get system notifications (auto delete > 24 hours)
 function getNotifications(PDO $pdo): array {
-    // Delete notifications older than 24 hours
-    $cleanup_stmt = $pdo->prepare("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
-    $cleanup_stmt->execute();
+    try {
+        $pdo->exec("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+        $pdo->exec("DELETE FROM tb_notifikasi_read WHERE read_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+    } catch (Throwable $e) {}
 
-    // Get all notifications from last 24 hours
-    $stmt = $pdo->prepare("SELECT * FROM tb_notifikasi ORDER BY created_at DESC");
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $ukey = get_current_user_key();
+    try {
+        $stmt = $pdo->prepare("
+            SELECT n.*, (CASE WHEN r.notif_id IS NOT NULL THEN 1 ELSE 0 END) AS is_read
+            FROM tb_notifikasi n
+            LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
+            WHERE (n.actor_key IS NULL OR n.actor_key != ?)
+            ORDER BY n.created_at DESC
+        ");
+        $stmt->execute([$ukey, $ukey]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $stmt = $pdo->prepare("SELECT * FROM tb_notifikasi ORDER BY created_at DESC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
-// Function to get unread notifications (Deprecated, alias to getNotifications)
+// Function to get unread notifications
 function getUnreadNotifications(PDO $pdo): array {
-    return getNotifications($pdo);
+    try {
+        $pdo->exec("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+        $pdo->exec("DELETE FROM tb_notifikasi_read WHERE read_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+    } catch (Throwable $e) {}
+
+    $ukey = get_current_user_key();
+    try {
+        $stmt = $pdo->prepare("
+            SELECT n.*
+            FROM tb_notifikasi n
+            LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
+            WHERE r.notif_id IS NULL
+              AND (n.actor_key IS NULL OR n.actor_key != ?)
+            ORDER BY n.created_at DESC
+        ");
+        $stmt->execute([$ukey, $ukey]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return getNotifications($pdo);
+    }
 }
 
-// Notifikasi khusus guru/wali: hanya "Tugas dikumpulkan" milik kelas yang diajar.
-// Tabel tb_notifikasi bersifat global (dipakai admin), jadi saring per pemilik tugas.
 function getTeacherTaskNotifications(PDO $pdo, int $guru_id, int $limit = 15): array {
     try {
-        $pdo->prepare("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)")->execute();
+        $pdo->exec("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+        $pdo->exec("DELETE FROM tb_notifikasi_read WHERE read_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
     } catch (Throwable $e) {}
+
+    $ukey = get_current_user_key();
     try {
-        $st = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE (message LIKE 'Tugas dikumpulkan:%' OR message LIKE 'Forum Guru:%' OR message LIKE 'Diskusi Kelas:%' OR message LIKE '%mencolek%') ORDER BY created_at DESC LIMIT 50");
-        $st->execute();
+        $st = $pdo->prepare("
+            SELECT n.*, (CASE WHEN r.notif_id IS NOT NULL THEN 1 ELSE 0 END) AS is_read
+            FROM tb_notifikasi n
+            LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
+            WHERE (n.actor_key IS NULL OR n.actor_key != ?)
+              AND (n.message LIKE 'Tugas dikumpulkan:%' OR n.message LIKE 'Forum Guru:%' OR n.message LIKE 'Diskusi Kelas:%' OR n.message LIKE '%mencolek%')
+            ORDER BY n.created_at DESC LIMIT 50
+        ");
+        $st->execute([$ukey, $ukey]);
         $rows = $st->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
         return [];
@@ -2083,9 +2145,20 @@ function getTeacherTaskNotifications(PDO $pdo, int $guru_id, int $limit = 15): a
 }
 
 // Function to mark notification as read
-function markNotificationAsRead(PDO $pdo, int $id): bool {
-    $stmt = $pdo->prepare("UPDATE tb_notifikasi SET is_read = 1 WHERE id = ?");
-    return $stmt->execute([$id]);
+function markNotificationAsRead(PDO $pdo, int $id, ?string $user_key = null): bool {
+    if ($user_key === null) {
+        $user_key = get_current_user_key();
+    }
+    try {
+        $st = $pdo->prepare("INSERT IGNORE INTO tb_notifikasi_read (notif_id, user_key) VALUES (?, ?)");
+        $st->execute([$id, $user_key]);
+    } catch (Throwable $e) {}
+    try {
+        $stmt = $pdo->prepare("UPDATE tb_notifikasi SET is_read = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    } catch (Throwable $e) {
+        return false;
+    }
 }
 
 // Format "Selasa, 6 Oktober 2026 - 17:10:23" untuk label waktu notifikasi
@@ -3390,10 +3463,24 @@ function upsert_nilai_semester_setting_minmax(PDO $pdo, int $id_kelas, int $id_m
     }
 }
 
-function get_forum_unread_notifications(PDO $pdo, int $limit = 10): array {
+function get_forum_unread_notifications(PDO $pdo, int $limit = 10, ?string $user_key = null): array {
+    if ($user_key === null) {
+        $user_key = function_exists('get_current_user_key') ? get_current_user_key() : 'user_' . ($_SESSION['user_id'] ?? 0);
+    }
     try {
-        $st = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE COALESCE(is_read, 0) = 0 AND (message LIKE 'Forum Guru:%' OR (message LIKE '%mencolek%' AND message LIKE '%[Forum%')) ORDER BY created_at DESC LIMIT ?");
-        $st->bindValue(1, $limit, PDO::PARAM_INT);
+        $st = $pdo->prepare("
+            SELECT n.*
+            FROM tb_notifikasi n
+            LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
+            WHERE r.notif_id IS NULL
+              AND (n.actor_key IS NULL OR n.actor_key != ?)
+              AND (n.message LIKE 'Forum Guru:%' OR (n.message LIKE '%mencolek%' AND n.message LIKE '%[Forum%'))
+            ORDER BY n.created_at DESC
+            LIMIT ?
+        ");
+        $st->bindValue(1, $user_key, PDO::PARAM_STR);
+        $st->bindValue(2, $user_key, PDO::PARAM_STR);
+        $st->bindValue(3, $limit, PDO::PARAM_INT);
         $st->execute();
         return $st->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
@@ -3401,10 +3488,24 @@ function get_forum_unread_notifications(PDO $pdo, int $limit = 10): array {
     }
 }
 
-function get_diskusi_unread_notifications(PDO $pdo, int $limit = 10): array {
+function get_diskusi_unread_notifications(PDO $pdo, int $limit = 10, ?string $user_key = null): array {
+    if ($user_key === null) {
+        $user_key = function_exists('get_current_user_key') ? get_current_user_key() : 'user_' . ($_SESSION['user_id'] ?? 0);
+    }
     try {
-        $st = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE COALESCE(is_read, 0) = 0 AND (message LIKE 'Diskusi Kelas:%' OR (message LIKE '%mencolek%' AND message LIKE '%[Diskusi%')) ORDER BY created_at DESC LIMIT ?");
-        $st->bindValue(1, $limit, PDO::PARAM_INT);
+        $st = $pdo->prepare("
+            SELECT n.*
+            FROM tb_notifikasi n
+            LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
+            WHERE r.notif_id IS NULL
+              AND (n.actor_key IS NULL OR n.actor_key != ?)
+              AND (n.message LIKE 'Diskusi Kelas:%' OR (n.message LIKE '%mencolek%' AND n.message LIKE '%[Diskusi%'))
+            ORDER BY n.created_at DESC
+            LIMIT ?
+        ");
+        $st->bindValue(1, $user_key, PDO::PARAM_STR);
+        $st->bindValue(2, $user_key, PDO::PARAM_STR);
+        $st->bindValue(3, $limit, PDO::PARAM_INT);
         $st->execute();
         return $st->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {

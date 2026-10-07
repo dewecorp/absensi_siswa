@@ -302,11 +302,11 @@ if (!function_exists('build_ekskul_anggota_menu')) {
     }
 }
 
-$forum_new_count = (isset($pdo) && $pdo && function_exists('get_forum_new_count')) ? get_forum_new_count($pdo) : 0;
-$forum_badge = $forum_new_count > 0 ? ($forum_new_count > 99 ? '99+' : $forum_new_count) : null;
+$forum_unread_list = (isset($pdo) && $pdo && function_exists('get_forum_unread_notifications')) ? get_forum_unread_notifications($pdo, 10) : [];
+$forum_badge = count($forum_unread_list) > 0 ? (count($forum_unread_list) > 99 ? '99+' : count($forum_unread_list)) : null;
 
-$diskusi_new_count = (isset($pdo) && $pdo && function_exists('get_diskusi_new_count')) ? get_diskusi_new_count($pdo) : 0;
-$diskusi_badge = $diskusi_new_count > 0 ? ($diskusi_new_count > 99 ? '99+' : $diskusi_new_count) : null;
+$diskusi_unread_list = (isset($pdo) && $pdo && function_exists('get_diskusi_unread_notifications')) ? get_diskusi_unread_notifications($pdo, 10) : [];
+$diskusi_badge = count($diskusi_unread_list) > 0 ? (count($diskusi_unread_list) > 99 ? '99+' : count($diskusi_unread_list)) : null;
 
 switch ($user_level) {
     case 'admin':
@@ -1880,23 +1880,23 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             <?php foreach ($menu_items as $item): ?>
                 <?php if (isset($item['submenu'])): ?>
                     <li class="nav-item dropdown <?php echo $item['active'] ? 'active' : ''; ?>">
-                        <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span><?php if (isset($item['badge']) && $item['badge'] !== null): ?><span class="badge badge-primary badge-circle ml-auto mr-3"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?></a>
+                        <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span><?php if (isset($item['badge']) && $item['badge'] !== null): ?><?php $ntype = (strpos($item['title'], 'Forum') !== false) ? 'forum' : ((strpos($item['title'], 'Diskusi') !== false) ? 'diskusi' : 'other'); ?><span class="badge badge-danger badge-circle ml-auto mr-3 sidebar-notif-badge" data-notif-type="<?php echo $ntype; ?>" data-count="<?php echo (int)$item['badge']; ?>"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?></a>
                         <ul class="dropdown-menu"<?php echo $item['active'] ? ' style="display:block;"' : ''; ?>>
                             <?php foreach ($item['submenu'] as $subitem): ?>
-                                <li><a class="nav-link d-flex align-items-center justify-content-between <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo htmlspecialchars(app_url($subitem['url']), ENT_QUOTES, 'UTF-8'); ?>"><span><?php echo $subitem['title']; ?></span><?php if (isset($subitem['badge']) && $subitem['badge'] !== null): ?><span class="badge badge-primary badge-circle ml-2"><?php echo htmlspecialchars((string)$subitem['badge']); ?></span><?php endif; ?></a></li>
+                                <li><a class="nav-link d-flex align-items-center justify-content-between <?php echo (isset($subitem['badge']) && $subitem['badge'] !== null) ? 'has-notif-badge' : ''; ?> <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo htmlspecialchars(app_url($subitem['url']), ENT_QUOTES, 'UTF-8'); ?>"><span><?php echo $subitem['title']; ?></span><?php if (isset($subitem['badge']) && $subitem['badge'] !== null): ?><?php $sntype = (strpos($subitem['title'], 'Forum') !== false) ? 'forum' : ((strpos($subitem['title'], 'Diskusi') !== false) ? 'diskusi' : 'other'); ?><span class="badge badge-danger badge-circle ml-2 sidebar-notif-badge" data-notif-type="<?php echo $sntype; ?>" data-count="<?php echo (int)$subitem['badge']; ?>"><?php echo htmlspecialchars((string)$subitem['badge']); ?></span><?php endif; ?></a></li>
                             <?php endforeach; ?>
                         </ul>
                     </li>
                 <?php else: ?>
                     <li class="<?php echo $item['active'] ? 'active' : ''; ?>">
-                        <a class="nav-link" 
+                        <a class="nav-link <?php echo (isset($item['badge']) && $item['badge'] !== null) ? 'has-notif-badge' : ''; ?>" 
                            href="<?php echo htmlspecialchars(app_url($item['url']), ENT_QUOTES, 'UTF-8'); ?>" 
                            <?php if (isset($item['attributes'])): ?>
                                <?php echo $item['attributes']; ?>
                            <?php endif; ?>>
                              <i class="<?php echo $item['icon']; ?>"></i> 
                              <span><?php echo $item['title']; ?></span>
-                             <?php if (isset($item['badge']) && $item['badge'] !== null): ?><span class="badge badge-danger badge-circle ml-auto"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?>
+                             <?php if (isset($item['badge']) && $item['badge'] !== null): ?><?php $ntype = (strpos($item['title'], 'Forum') !== false) ? 'forum' : ((strpos($item['title'], 'Diskusi') !== false) ? 'diskusi' : 'other'); ?><span class="badge badge-danger badge-circle ml-auto sidebar-notif-badge" data-notif-type="<?php echo $ntype; ?>" data-count="<?php echo (int)$item['badge']; ?>"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?>
                         </a>
                     </li>
                 <?php endif; ?>
@@ -1904,33 +1904,9 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         </ul>
     </aside>
 </div>
-<?php
-// Scroll sidebar ke menu aktif SETELAH Stisla + niceScroll siap (dirender di footer).
-if (!isset($js_page) || !is_array($js_page)) { $js_page = []; }
-$js_page[] = <<<'SIDEBARJS'
-$(function() {
-    setTimeout(function() {
-        try {
-            var $sidebar = $('.main-sidebar');
-            if (!$sidebar.length) return;
-            var $active = $sidebar.find('ul.dropdown-menu li a.active').first();
-            if (!$active.length) return;
-            var $drop = $active.closest('li.dropdown');
-            $drop.addClass('active');
-            var $dd = $drop.children('ul.dropdown-menu');
-            try { $dd.stop(true, true).show(); } catch (e) {}
-            var targetTop = $active.offset().top - $sidebar.offset().top + ($sidebar.scrollTop() || 0) - ($sidebar.height() / 2 - 40);
-            if (targetTop < 0) targetTop = 0;
-            try {
-                var ns = $sidebar.getNiceScroll && $sidebar.getNiceScroll();
-                if (ns && ns.length && ns[0].doScrollTop) { ns[0].doScrollTop(Math.round(targetTop), 0); }
-            } catch (e) {}
-            try { $sidebar.scrollTop(targetTop); } catch (e) {}
-            try { $('#sidebar-wrapper').scrollTop(targetTop); } catch (e) {}
-        } catch (e) {}
-    }, 650);
-});
-SIDEBARJS;
-?>
+<script>
+window.forumUnreadList = <?php echo json_encode($forum_unread_list ?? []); ?>;
+window.diskusiUnreadList = <?php echo json_encode($diskusi_unread_list ?? []); ?>;
+</script>
 </div>
 

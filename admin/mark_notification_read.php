@@ -12,28 +12,24 @@ if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lvl = getUserLevel();
     if (isset($_POST['action']) && $_POST['action'] === 'mark_all') {
-        // Guru/wali: hanya tandai notif tugas miliknya, jangan sentuh notif admin
         try {
-            if (in_array($lvl, ['guru', 'wali'], true)) {
-                $gid = function_exists('getCurrentGuruId') ? (int)getCurrentGuruId($pdo) : 0;
-                $mine = function_exists('getTeacherTaskNotifications') ? getTeacherTaskNotifications($pdo, $gid, 200) : [];
-                $ids = [];
-                foreach ($mine as $m) {
-                    if (empty($m['is_read'])) $ids[] = (int)$m['id'];
+            $ukey = function_exists('get_current_user_key') ? get_current_user_key() : 'user_' . ($_SESSION['user_id'] ?? 0);
+            $st = $pdo->prepare("SELECT id FROM tb_notifikasi WHERE created_at >= NOW() - INTERVAL 24 HOUR");
+            $st->execute();
+            $all_ids = $st->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($all_ids)) {
+                $stIns = $pdo->prepare("INSERT IGNORE INTO tb_notifikasi_read (notif_id, user_key) VALUES (?, ?)");
+                foreach ($all_ids as $nid) {
+                    $stIns->execute([(int)$nid, $ukey]);
                 }
-                if (!empty($ids)) {
-                    $in = implode(',', array_fill(0, count($ids), '?'));
-                    $stmt = $pdo->prepare("UPDATE tb_notifikasi SET is_read = 1 WHERE id IN ($in)");
-                    $stmt->execute($ids);
-                }
-            } else {
-                $stmt = $pdo->prepare("UPDATE tb_notifikasi SET is_read = 1");
-                $stmt->execute();
             }
+            $pdo->exec("UPDATE tb_notifikasi SET is_read = 1");
             echo json_encode(['status' => 'success']);
-        } catch (PDOException $e) {
+            exit();
+        } catch (Throwable $e) {
             http_response_code(500);
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit();
         }
     } elseif (isset($_POST['id'])) {
         // Mark single as read

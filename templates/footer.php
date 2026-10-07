@@ -434,6 +434,69 @@
             }
         });
     }
+
+    function showSidebarNotifDropdown(type, $targetElem) {
+        $('.popover-notif-dropdown').remove();
+        
+        var list = (type === 'forum') ? (window.forumUnreadList || []) : (window.diskusiUnreadList || []);
+        var pageUrl = (type === 'forum') ? '../guru/forum.php' : '../guru/diskusi.php';
+        
+        var rect = $targetElem[0] ? $targetElem[0].getBoundingClientRect() : null;
+        if (!rect) return;
+        var top = Math.max(10, rect.top);
+        var left = rect.right + 10;
+        if (left + 310 > $(window).width()) {
+            left = Math.max(10, rect.left - 315);
+        }
+        
+        var html = '<div class="popover-notif-dropdown shadow-lg rounded" style="position:fixed; top:' + top + 'px; left:' + left + 'px; z-index:99999; background:#fff; width:300px; border:1px solid #c3cad6;">';
+        html += '<div class="bg-primary text-white px-3 py-2 font-weight-bold d-flex justify-content-between align-items-center" style="font-size:13px; border-top-left-radius:.25rem; border-top-right-radius:.25rem;">';
+        html += '<span>Notifikasi ' + (type === 'forum' ? 'Forum Guru' : 'Diskusi Kelas') + '</span>';
+        html += '<button type="button" class="close text-white p-0 m-0" style="font-size:18px; line-height:1; opacity:0.9;" onclick="$(this).closest(\'.popover-notif-dropdown\').remove()">&times;</button>';
+        html += '</div>';
+        html += '<div class="list-group list-group-flush" style="max-height:260px; overflow-y:auto;">';
+        
+        if (list && list.length > 0) {
+            $.each(list, function(i, item) {
+                html += '<a href="#" class="list-group-item list-group-item-action p-2 text-wrap" onclick="readNotification(' + item.id + ', \'' + item.link + '\', \'.sidebar-notif-badge\'); $(this).closest(\'.popover-notif-dropdown\').remove(); return false;" style="font-size:12px; line-height:1.3; background-color:#f9f9f9; font-weight:bold; color:#333;">';
+                html += '<div class="mb-1">' + $('<div>').text(item.message).html() + '</div>';
+                html += '<small class="text-primary"><i class="far fa-clock mr-1"></i>' + (item.created_at || '') + '</small>';
+                html += '</a>';
+            });
+        } else {
+            html += '<div class="p-3 text-center text-muted small">Tidak ada notifikasi baru</div>';
+        }
+        
+        html += '</div>';
+        html += '<div class="p-2 text-center bg-light border-top">';
+        html += '<a href="' + pageUrl + '" class="small font-weight-bold text-primary">Buka Halaman ' + (type === 'forum' ? 'Forum' : 'Diskusi') + ' &rarr;</a>';
+        html += '</div></div>';
+        
+        $('body').append(html);
+    }
+
+    $(document).on('click', '.sidebar-notif-badge', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var type = $(this).attr('data-notif-type');
+        showSidebarNotifDropdown(type, $(this));
+    });
+
+    $(document).on('click', '.has-notif-badge', function(e) {
+        var $badge = $(this).find('.sidebar-notif-badge');
+        if ($badge.length && parseInt($badge.text(), 10) > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            var type = $badge.attr('data-notif-type');
+            showSidebarNotifDropdown(type, $badge);
+        }
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.popover-notif-dropdown, .sidebar-notif-badge, .has-notif-badge').length) {
+            $('.popover-notif-dropdown').remove();
+        }
+    });
     
     $(document).ready(function() {
         $('#mark-all-read').click(function(e) {

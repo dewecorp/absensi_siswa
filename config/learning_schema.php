@@ -668,6 +668,22 @@ if (!function_exists('ensure_learning_schema')) {
             $pdo->exec("ALTER TABLE tb_forum_suka MODIFY COLUMN id_guru INT NULL");
         } catch (Throwable $e) {}
 
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_notifikasi_read (
+                notif_id INT NOT NULL,
+                user_key VARCHAR(100) NOT NULL,
+                read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (notif_id, user_key),
+                INDEX idx_user (user_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        try {
+            $chk = $pdo->query("SHOW COLUMNS FROM tb_notifikasi LIKE 'actor_key'")->fetch();
+            if (!$chk) {
+                $pdo->exec("ALTER TABLE tb_notifikasi ADD COLUMN actor_key VARCHAR(100) NULL AFTER link");
+            }
+        } catch (Throwable $e) {}
+
         // 10. Pembinaan Siswa (Level Wali)
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_pembinaan_siswa (

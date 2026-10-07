@@ -34,6 +34,7 @@ try {
 } catch (Throwable $e) {
     $nama_guru = (string)($_SESSION['nama_guru'] ?? 'Guru');
 }
+$display_name = $nama_guru;
 
 $kelas_list = function_exists('getGuruTaughtClasses') ? getGuruTaughtClasses($pdo, $guru_id) : $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 $kelas_ids = array_map(static function ($c) { return (int)($c['id_kelas'] ?? 0); }, $kelas_list);
