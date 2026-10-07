@@ -393,7 +393,7 @@
             $el.removeClass('bg-light'); // For mobile list item
             
             // Update badge count
-            var $badges = $('.dropdown-list-toggle .badge, .btn-lg .badge');
+            var $badges = $('.dropdown-list-toggle .badge, .btn-lg .badge, .badge-circle, .notif-count-badge');
             $badges.each(function() {
                 var $badge = $(this);
                 var countAttr = parseInt($badge.attr('data-count'), 10);

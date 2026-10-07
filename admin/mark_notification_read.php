@@ -38,18 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['id'])) {
         // Mark single as read
         $id = (int)$_POST['id'];
-        if (in_array($lvl, ['guru', 'wali'], true)) {
-            $gid = function_exists('getCurrentGuruId') ? (int)getCurrentGuruId($pdo) : 0;
-            $mine = function_exists('getTeacherTaskNotifications') ? getTeacherTaskNotifications($pdo, $gid, 200) : [];
-            $allowed = false;
-            foreach ($mine as $m) {
-                if ((int)$m['id'] === $id) { $allowed = true; break; }
-            }
-            if (!$allowed) {
-                echo json_encode(['status' => 'success']);
-                exit();
-            }
-        }
         if (markNotificationAsRead($pdo, $id)) {
             echo json_encode(['status' => 'success']);
         } else {

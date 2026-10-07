@@ -302,6 +302,12 @@ if (!function_exists('build_ekskul_anggota_menu')) {
     }
 }
 
+$forum_new_count = (isset($pdo) && $pdo && function_exists('get_forum_new_count')) ? get_forum_new_count($pdo) : 0;
+$forum_badge = $forum_new_count > 0 ? ($forum_new_count > 99 ? '99+' : $forum_new_count) : null;
+
+$diskusi_new_count = (isset($pdo) && $pdo && function_exists('get_diskusi_new_count')) ? get_diskusi_new_count($pdo) : 0;
+$diskusi_badge = $diskusi_new_count > 0 ? ($diskusi_new_count > 99 ? '99+' : $diskusi_new_count) : null;
+
 switch ($user_level) {
     case 'admin':
         $agenda_submenu_admin = [
@@ -568,6 +574,7 @@ switch ($user_level) {
                 'title' => 'Forum Guru',
                 'icon' => 'fas fa-comments',
                 'url' => '../guru/forum.php?session_type=admin',
+                'badge' => $forum_badge,
                 'active' => $current_page === 'forum.php'
             ],
             [
@@ -805,6 +812,7 @@ switch ($user_level) {
                 'title' => 'Forum Guru',
                 'icon' => 'fas fa-comments',
                 'url' => '../guru/forum.php?session_type=kepala_madrasah',
+                'badge' => $forum_badge,
                 'active' => $current_page === 'forum.php'
             ],
             [
@@ -834,6 +842,7 @@ switch ($user_level) {
             ['title' => 'Rekap Sholat Berjamaah', 'url' => '../admin/rekap_sholat.php', 'active' => $current_page === 'rekap_sholat.php'],
             ['title' => 'Rekap Sholat Dhuha', 'url' => '../admin/rekap_sholat_dhuha.php', 'active' => $current_page === 'rekap_sholat_dhuha.php']
         ];
+        usort($absensi_submenu_tu, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
         $ekstrakurikuler_submenu_tu = [
             ['title' => 'Data Ekstrakurikuler', 'url' => '../admin/data_ekstrakurikuler.php?session_type=tata_usaha', 'active' => $current_page === 'data_ekstrakurikuler.php'],
@@ -846,8 +855,9 @@ switch ($user_level) {
             ['title' => 'Syarat Kecakapan Umum', 'url' => '../admin/syarat_kecakapan_umum.php?session_type=tata_usaha', 'active' => $current_page === 'syarat_kecakapan_umum.php'],
             ['title' => 'Surat Keterangan', 'url' => '../admin/surat_keterangan.php?session_type=tata_usaha', 'active' => $current_page === 'surat_keterangan.php'],
         ];
+        usort($ekstrakurikuler_submenu_tu, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
-        $menu_items = [
+        $menu_top_tu = [
             [
                 'title' => 'Dashboard',
                 'icon' => 'fas fa-fire',
@@ -858,22 +868,19 @@ switch ($user_level) {
                 'title' => 'Data Utama',
                 'icon' => 'fas fa-database',
                 'submenu' => [
-                    ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=tata_usaha', 'active' => $current_page === 'struktur_kelas.php'],
-                    ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=tata_usaha', 'active' => $current_page === 'mata_pelajaran.php'],
-                    ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'kalender_pendidikan.php'],
-                    ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'siswa_baru.php'],
+                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_nilai_ujian.php'],
                     ['title' => 'Data Peserta Ujian', 'url' => '../admin/data_peserta_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_peserta_ujian.php'],
                     ['title' => 'Data Prestasi Siswa', 'url' => '../admin/data_prestasi_siswa.php?session_type=tata_usaha', 'active' => $current_page === 'data_prestasi_siswa.php'],
-                    ['title' => 'Data Nilai Ujian', 'url' => '../admin/data_nilai_ujian.php?session_type=tata_usaha', 'active' => $current_page === 'data_nilai_ujian.php']
+                    ['title' => 'Data Siswa Baru', 'url' => '../admin/siswa_baru.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'siswa_baru.php'],
+                    ['title' => 'Kalender Pendidikan', 'url' => '../admin/kalender_pendidikan.php?session_type=' . $_SESSION['level'], 'active' => $current_page === 'kalender_pendidikan.php'],
+                    ['title' => 'Mata Pelajaran', 'url' => '../admin/mata_pelajaran.php?session_type=tata_usaha', 'active' => $current_page === 'mata_pelajaran.php'],
+                    ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=tata_usaha', 'active' => $current_page === 'struktur_kelas.php']
                 ],
                 'active' => in_array($current_page, ['struktur_kelas.php', 'mata_pelajaran.php', 'kalender_pendidikan.php', 'siswa_baru.php', 'data_peserta_ujian.php', 'data_prestasi_siswa.php', 'data_nilai_ujian.php'])
-            ],
-            [
-                'title' => 'Kehadiran',
-                'icon' => 'fas fa-calendar-check',
-                'submenu' => $absensi_submenu_tu,
-                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
-            ],
+            ]
+        ];
+
+        $menu_mid_tu = [
             [
                 'title' => 'Ekstrakurikuler',
                 'icon' => 'fas fa-users',
@@ -881,63 +888,11 @@ switch ($user_level) {
                 'active' => in_array($current_page, ['data_ekstrakurikuler.php', 'data_pembina_ekstrakurikuler.php', 'data_pembina_pramuka.php', 'data_tingkat_barung.php', 'data_barung.php', 'syarat_kecakapan_umum.php', 'data_anggota_ekskul.php', 'data_anggota_pencak_silat.php', 'data_anggota_rebana.php', 'surat_keterangan.php', 'pengaturan_cetak_suket.php'])
             ],
             [
-                'title' => 'Jadwal',
-                'icon' => 'fas fa-calendar-alt',
-                'submenu' => [
-                    ['title' => 'Jadwal Reguler', 'url' => '../tata_usaha/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
-                    ['title' => 'Jadwal Ramadhan', 'url' => '../tata_usaha/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
-                    ['title' => 'Jadwal Les Kelas 6', 'url' => '../tata_usaha/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
-                    ['title' => 'Jadwal Imam Dhuha', 'url' => '../tata_usaha/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
-                    ['title' => 'Jadwal Seragam Guru', 'url' => '../tata_usaha/jadwal_seragam.php', 'active' => $current_page === 'jadwal_seragam.php'],
-                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../tata_usaha/jadwal_seragam_siswa.php', 'active' => $current_page === 'jadwal_seragam_siswa.php'],
-                    ['title' => 'Jadwal Piket', 'url' => '../admin/jadwal_piket.php?session_type=tata_usaha', 'active' => $current_page === 'jadwal_piket.php']
-                ],
-                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php', 'jadwal_piket.php'])
-            ],
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-            ],
-            [
-                'title' => 'Nilai Siswa',
-                'icon' => 'fas fa-chart-bar',
-                'submenu' => [
-                    ['title' => 'Nilai Harian', 'url' => '../admin/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
-                    ['title' => 'Nilai Tengah Semester', 'url' => '../admin/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
-                    ['title' => 'Nilai Akhir Semester', 'url' => '../admin/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
-                    ['title' => 'Nilai Akhir Tahun', 'url' => '../admin/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
-                    ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
-                    ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
-                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $nilai_ujian_biasa_menu_active],
-                    ['title' => 'Nilai Ujian Praktik', 'url' => '../admin/nilai_ujian.php?session_type=tata_usaha&nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active],
-                    ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
-                ],
-                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
-            ],
-            [
-                'title' => 'Remidial',
-                'icon' => 'fas fa-graduation-cap',
-                'submenu' => [
-                    ['title' => 'Program Remidi', 'url' => '../tata_usaha/program_remidi.php', 'active' => $current_page === 'program_remidi.php'],
-                    ['title' => 'Program Pengayaan', 'url' => '../tata_usaha/program_pengayaan.php', 'active' => $current_page === 'program_pengayaan.php']
-                ],
-                'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
-            ],
-            [
-                'title' => 'Keuangan',
-                'icon' => 'fas fa-money-bill-wave',
-                'submenu' => [
-                    ['title' => 'Kategori Anggaran', 'url' => '../admin/kategori_anggaran.php', 'active' => $current_page === 'kategori_anggaran.php'],
-                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
-                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
-                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
-                ],
-                'active' => in_array($current_page, ['kategori_anggaran.php', 'rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
+                'title' => 'Forum Guru',
+                'icon' => 'fas fa-comments',
+                'url' => '../guru/forum.php?session_type=tata_usaha',
+                'badge' => $forum_badge,
+                'active' => $current_page === 'forum.php'
             ],
             [
                 'title' => 'Inventaris',
@@ -948,11 +903,75 @@ switch ($user_level) {
                 'active' => $current_page === 'data_inventaris.php'
             ],
             [
-                'title' => 'Forum Guru',
-                'icon' => 'fas fa-comments',
-                'url' => '../guru/forum.php?session_type=tata_usaha',
-                'active' => $current_page === 'forum.php'
+                'title' => 'Jadwal',
+                'icon' => 'fas fa-calendar-alt',
+                'submenu' => [
+                    ['title' => 'Jadwal Guru Piket', 'url' => '../admin/jadwal_piket.php?session_type=tata_usaha', 'active' => $current_page === 'jadwal_piket.php'],
+                    ['title' => 'Jadwal Imam Dhuha', 'url' => '../tata_usaha/jadwal_imam.php', 'active' => $current_page === 'jadwal_imam.php'],
+                    ['title' => 'Jadwal Les Kelas 6', 'url' => '../tata_usaha/jadwal_les.php', 'active' => $current_page === 'jadwal_les.php'],
+                    ['title' => 'Jadwal Ramadhan', 'url' => '../tata_usaha/jadwal_ramadhan.php', 'active' => $current_page === 'jadwal_ramadhan.php'],
+                    ['title' => 'Jadwal Reguler', 'url' => '../tata_usaha/jadwal_reguler.php', 'active' => $current_page === 'jadwal_reguler.php'],
+                    ['title' => 'Jadwal Seragam Guru', 'url' => '../tata_usaha/jadwal_seragam.php', 'active' => $current_page === 'jadwal_seragam.php'],
+                    ['title' => 'Jadwal Seragam Siswa', 'url' => '../tata_usaha/jadwal_seragam_siswa.php', 'active' => $current_page === 'jadwal_seragam_siswa.php']
+                ],
+                'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php', 'jadwal_piket.php'])
             ],
+            [
+                'title' => 'Jurnal',
+                'icon' => 'fas fa-book-open',
+                'submenu' => [
+                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php'],
+                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_mengajar.php']
+                ],
+                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
+            ],
+            [
+                'title' => 'Kehadiran',
+                'icon' => 'fas fa-calendar-check',
+                'submenu' => $absensi_submenu_tu,
+                'active' => in_array($current_page, ['scan_qr.php', 'absensi_guru.php', 'rekap_absensi_guru.php', 'absensi_harian.php', 'rekap_absensi.php', 'sholat_berjamaah.php', 'rekap_sholat.php', 'sholat_dhuha.php', 'rekap_sholat_dhuha.php'])
+            ],
+            [
+                'title' => 'Keuangan',
+                'icon' => 'fas fa-money-bill-wave',
+                'submenu' => [
+                    ['title' => 'Kategori Anggaran', 'url' => '../admin/kategori_anggaran.php', 'active' => $current_page === 'kategori_anggaran.php'],
+                    ['title' => 'RAB Ekstrakurikuler', 'url' => '../admin/rab_ekstrakurikuler.php', 'active' => $current_page === 'rab_ekstrakurikuler.php'],
+                    ['title' => 'RAB Madrasah', 'url' => '../admin/rab_madrasah.php', 'active' => $current_page === 'rab_madrasah.php'],
+                    ['title' => 'RAB Ujian', 'url' => '../admin/rab_ujian.php', 'active' => $current_page === 'rab_ujian.php']
+                ],
+                'active' => in_array($current_page, ['kategori_anggaran.php', 'rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php'])
+            ],
+            [
+                'title' => 'Nilai Siswa',
+                'icon' => 'fas fa-chart-bar',
+                'submenu' => [
+                    ['title' => 'Nilai Akhir Semester', 'url' => '../admin/nilai_uas.php', 'active' => $current_page === 'nilai_uas.php'],
+                    ['title' => 'Nilai Akhir Tahun', 'url' => '../admin/nilai_pat.php', 'active' => $current_page === 'nilai_pat.php'],
+                    ['title' => 'Nilai Harian', 'url' => '../admin/nilai_harian.php', 'active' => $current_page === 'nilai_harian.php'],
+                    ['title' => 'Nilai Kokurikuler', 'url' => '../admin/nilai_kokurikuler.php', 'active' => $current_page === 'nilai_kokurikuler.php'],
+                    ['title' => 'Nilai Pra Ujian', 'url' => '../admin/nilai_pra_ujian.php', 'active' => $current_page === 'nilai_pra_ujian.php'],
+                    ['title' => 'Nilai Tengah Semester', 'url' => '../admin/nilai_uts.php', 'active' => $current_page === 'nilai_uts.php'],
+                    ['title' => 'Nilai Ujian', 'url' => '../admin/nilai_ujian.php', 'active' => $nilai_ujian_biasa_menu_active],
+                    ['title' => 'Nilai Ujian Praktik', 'url' => '../admin/nilai_ujian.php?session_type=tata_usaha&nilai_mode=praktik', 'active' => $nilai_ujian_praktik_menu_active],
+                    ['title' => 'Rekap Nilai', 'url' => '../admin/rekap_nilai.php', 'active' => $current_page === 'rekap_nilai.php']
+                ],
+                'active' => in_array($current_page, ['nilai_harian.php', 'nilai_uts.php', 'nilai_uas.php', 'nilai_pat.php', 'nilai_kokurikuler.php', 'nilai_pra_ujian.php', 'nilai_ujian.php', 'rekap_nilai.php'])
+            ],
+            [
+                'title' => 'Remidial',
+                'icon' => 'fas fa-graduation-cap',
+                'submenu' => [
+                    ['title' => 'Program Pengayaan', 'url' => '../tata_usaha/program_pengayaan.php', 'active' => $current_page === 'program_pengayaan.php'],
+                    ['title' => 'Program Remidi', 'url' => '../tata_usaha/program_remidi.php', 'active' => $current_page === 'program_remidi.php']
+                ],
+                'active' => in_array($current_page, ['program_remidi.php', 'program_pengayaan.php'])
+            ]
+        ];
+
+        usort($menu_mid_tu, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
+
+        $menu_bottom_tu = [
             [
                 'title' => 'Backup & Restore',
                 'icon' => 'fas fa-hdd',
@@ -967,6 +986,8 @@ switch ($user_level) {
                 'attributes' => 'onclick="confirmLogoutInline(\'../logout.php?level=' . htmlspecialchars($user_level, ENT_QUOTES, 'UTF-8') . '\'); return false;"'
             ]
         ];
+
+        $menu_items = array_merge($menu_top_tu, $menu_mid_tu, $menu_bottom_tu);
         break;
 
     case 'guru':
@@ -1068,7 +1089,7 @@ switch ($user_level) {
             ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php', 'active' => $current_page === 'catatan_perkembangan.php'],
             ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php', 'active' => $current_page === 'data_perkembangan.php'],
             ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php', 'active' => $current_page === 'komunikasi_kelas.php'],
-            ['title' => 'Diskusi Kelas', 'url' => '../guru/diskusi.php', 'active' => $current_page === 'diskusi.php'],
+            ['title' => 'Diskusi Kelas', 'url' => '../guru/diskusi.php', 'badge' => $diskusi_badge, 'active' => $current_page === 'diskusi.php'],
         ];
 
         $menu_items = [
@@ -1088,6 +1109,7 @@ switch ($user_level) {
                 'title' => 'Forum Guru',
                 'icon' => 'fas fa-comments',
                 'url' => '../guru/forum.php',
+                'badge' => $forum_badge,
                 'active' => $current_page === 'forum.php'
             ],
             [
@@ -1357,7 +1379,7 @@ switch ($user_level) {
             ['title' => 'Catatan Perkembangan', 'url' => '../guru/catatan_perkembangan.php?session_type=wali', 'active' => $current_page === 'catatan_perkembangan.php'],
             ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php?session_type=wali', 'active' => $current_page === 'data_perkembangan.php'],
             ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=wali', 'active' => $current_page === 'komunikasi_kelas.php'],
-            ['title' => 'Diskusi Kelas', 'url' => '../guru/diskusi.php?session_type=wali', 'active' => $current_page === 'diskusi.php'],
+            ['title' => 'Diskusi Kelas', 'url' => '../guru/diskusi.php?session_type=wali', 'badge' => $diskusi_badge, 'active' => $current_page === 'diskusi.php'],
         ];
 
         $pengelolaan_kelas_submenu_wali = [
@@ -1399,6 +1421,7 @@ switch ($user_level) {
                 'title' => 'Forum Guru',
                 'icon' => 'fas fa-comments',
                 'url' => '../guru/forum.php?session_type=wali',
+                'badge' => $forum_badge,
                 'active' => $current_page === 'forum.php'
             ],
             [
@@ -1598,6 +1621,7 @@ switch ($user_level) {
                 'title' => 'Diskusi Kelas',
                 'icon' => 'fas fa-comments',
                 'url' => '../siswa/diskusi.php',
+                'badge' => $diskusi_badge,
                 'active' => $current_page === 'diskusi.php'
             ],
             [
@@ -1870,8 +1894,9 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                            <?php if (isset($item['attributes'])): ?>
                                <?php echo $item['attributes']; ?>
                            <?php endif; ?>>
-                            <i class="<?php echo $item['icon']; ?>"></i> 
-                            <span><?php echo $item['title']; ?></span>
+                             <i class="<?php echo $item['icon']; ?>"></i> 
+                             <span><?php echo $item['title']; ?></span>
+                             <?php if (isset($item['badge']) && $item['badge'] !== null): ?><span class="badge badge-danger badge-circle ml-auto"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?>
                         </a>
                     </li>
                 <?php endif; ?>

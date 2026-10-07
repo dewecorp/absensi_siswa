@@ -101,6 +101,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [$fp, $fk, $fn] = diskusi_handle_upload($_FILES['file_diskusi'] ?? []);
             $pdo->prepare("INSERT INTO tb_diskusi_post (id_kelas, author_role, id_guru, id_siswa, isi, bg, file_path, file_kind, file_name) VALUES (?, 'guru', ?, NULL, ?, ?, ?, ?, ?)")
                 ->execute([$id_kelas, $guru_id, $isi, $bg, $fp, $fk, $fn]);
+            $new_id = (int)$pdo->lastInsertId();
+            $link = "../guru/diskusi.php#post-" . $new_id;
+            if (function_exists('createNotification')) {
+                createNotification($pdo, "Diskusi Kelas: " . $display_name . " memposting status baru", $link);
+            }
+            if (function_exists('diskusi_process_mentions_notification')) {
+                diskusi_process_mentions_notification($pdo, $isi, $display_name, "Diskusi Kelas", $link);
+            }
             $selected_kelas = $id_kelas;
             $message = ['type' => 'success', 'text' => 'Postingan terkirim.'];
         } elseif ($action === 'post_delete') {
@@ -149,6 +157,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [$cfp, $cfk, $cfn] = diskusi_handle_upload($_FILES['file_komen'] ?? []);
             $pdo->prepare("INSERT INTO tb_diskusi_komentar (id_post, parent_id, author_role, id_guru, id_siswa, isi, file_path, file_kind, file_name) VALUES (?, ?, 'guru', ?, NULL, ?, ?, ?, ?)")
                 ->execute([$id_post, $parent_id > 0 ? $parent_id : null, $guru_id, $isi, $cfp, $cfk, $cfn]);
+            $link = "../guru/diskusi.php#post-" . $id_post;
+            if (function_exists('createNotification')) {
+                createNotification($pdo, "Diskusi Kelas: " . $display_name . " berkomentar", $link);
+            }
+            if (function_exists('diskusi_process_mentions_notification')) {
+                diskusi_process_mentions_notification($pdo, $isi, $display_name, "Diskusi Kelas", $link);
+            }
             $back_anchor = '#post-' . $id_post;
             $message = ['type' => 'success', 'text' => 'Komentar terkirim.'];
         } elseif ($action === 'post_edit') {

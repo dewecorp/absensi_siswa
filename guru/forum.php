@@ -94,6 +94,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [$fp, $fk, $fn] = diskusi_handle_upload($_FILES['file_diskusi'] ?? []);
             $pdo->prepare("INSERT INTO tb_forum_post (author_role, id_guru, id_user, author_name, author_key, isi, bg, file_path, file_kind, file_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$user_level, $guru_id > 0 ? $guru_id : null, $user_id > 0 ? $user_id : null, $display_name, $author_key, $isi, $bg, $fp, $fk, $fn]);
+            $new_id = (int)$pdo->lastInsertId();
+            $link = "../guru/forum.php#post-" . $new_id;
+            if (function_exists('createNotification')) {
+                createNotification($pdo, "Forum Guru: " . $display_name . " memposting status baru", $link);
+            }
+            if (function_exists('diskusi_process_mentions_notification')) {
+                diskusi_process_mentions_notification($pdo, $isi, $display_name, "Forum Guru", $link);
+            }
             $message = ['type' => 'success', 'text' => 'Postingan forum terkirim.'];
         } elseif ($action === 'post_delete') {
             $id = (int)($_POST['id'] ?? 0);
@@ -135,6 +143,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [$cfp, $cfk, $cfn] = diskusi_handle_upload($_FILES['file_komen'] ?? []);
             $pdo->prepare("INSERT INTO tb_forum_komentar (id_post, parent_id, author_role, id_guru, id_user, author_name, author_key, isi, file_path, file_kind, file_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$id_post, $parent_id > 0 ? $parent_id : null, $user_level, $guru_id > 0 ? $guru_id : null, $user_id > 0 ? $user_id : null, $display_name, $author_key, $isi, $cfp, $cfk, $cfn]);
+            $link = "../guru/forum.php#post-" . $id_post;
+            if (function_exists('createNotification')) {
+                createNotification($pdo, "Forum Guru: " . $display_name . " berkomentar", $link);
+            }
+            if (function_exists('diskusi_process_mentions_notification')) {
+                diskusi_process_mentions_notification($pdo, $isi, $display_name, "Forum Guru", $link);
+            }
             $back_anchor = '#post-' . $id_post;
             $message = ['type' => 'success', 'text' => 'Komentar terkirim.'];
         } elseif ($action === 'post_edit') {

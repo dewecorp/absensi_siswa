@@ -637,3 +637,28 @@ function forum_render_comments_tree(array $komen_list, int $post_id, string $cur
 
     return $render_node(0);
 }
+
+function diskusi_process_mentions_notification(PDO $pdo, string $isi, string $author_name, string $source_name, string $link): void {
+    if (strpos($isi, '@') === false) return;
+    
+    if (preg_match('/@semua\b/i', $isi)) {
+        if (function_exists('createNotification')) {
+            createNotification($pdo, "[$source_name] $author_name mencolek @semua", $link);
+        }
+        return;
+    }
+
+    $names = diskusi_collect_mention_names($pdo);
+    if (preg_match_all('/@([^\s,.:;!?()\x{2010}-\x{2015}]+)/u', $isi, $matches)) {
+        $notified = [];
+        foreach ($matches[1] as $candidate) {
+            $matched = diskusi_match_mention_name($candidate, $names);
+            if ($matched && !isset($notified[$matched])) {
+                $notified[$matched] = true;
+                if (function_exists('createNotification')) {
+                    createNotification($pdo, "[$source_name] $author_name mencolek Anda (@$matched)", $link);
+                }
+            }
+        }
+    }
+}

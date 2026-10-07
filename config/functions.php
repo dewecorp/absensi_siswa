@@ -2024,7 +2024,7 @@ function getTeacherTaskNotifications(PDO $pdo, int $guru_id, int $limit = 15): a
         $pdo->prepare("DELETE FROM tb_notifikasi WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)")->execute();
     } catch (Throwable $e) {}
     try {
-        $st = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE message LIKE 'Tugas dikumpulkan:%' ORDER BY created_at DESC LIMIT 50");
+        $st = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE (message LIKE 'Tugas dikumpulkan:%' OR message LIKE 'Forum Guru:%' OR message LIKE 'Diskusi Kelas:%' OR message LIKE '%mencolek%') ORDER BY created_at DESC LIMIT 50");
         $st->execute();
         $rows = $st->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
@@ -2044,19 +2044,17 @@ function getTeacherTaskNotifications(PDO $pdo, int $guru_id, int $limit = 15): a
             }
         }
     }
-    if (empty($ids)) return [];
-    $ids = array_values(array_unique($ids));
-
-    try {
-        $in = implode(',', array_fill(0, count($ids), '?'));
-        $stT = $pdo->prepare("SELECT id, id_guru, id_kelas FROM tb_tugas WHERE id IN ($in)");
-        $stT->execute($ids);
-        $tasks = [];
-        foreach ($stT->fetchAll(PDO::FETCH_ASSOC) as $t) {
-            $tasks[(int)$t['id']] = $t;
-        }
-    } catch (Throwable $e) {
-        return [];
+    $tasks = [];
+    if (!empty($ids)) {
+        $ids = array_values(array_unique($ids));
+        try {
+            $in = implode(',', array_fill(0, count($ids), '?'));
+            $stT = $pdo->prepare("SELECT id, id_guru, id_kelas FROM tb_tugas WHERE id IN ($in)");
+            $stT->execute($ids);
+            foreach ($stT->fetchAll(PDO::FETCH_ASSOC) as $t) {
+                $tasks[(int)$t['id']] = $t;
+            }
+        } catch (Throwable $e) {}
     }
 
     $taught = [];
@@ -2070,11 +2068,14 @@ function getTeacherTaskNotifications(PDO $pdo, int $guru_id, int $limit = 15): a
 
     $out = [];
     foreach ($rows as $r) {
-        $tid = $task_of[(int)$r['id']] ?? 0;
-        $t = $tasks[$tid] ?? null;
-        if (!$t) continue;
-        $mine = ($guru_id > 0 && (int)($t['id_guru'] ?? 0) === $guru_id) || isset($taught[(int)($t['id_kelas'] ?? 0)]);
-        if (!$mine) continue;
+        $msg = (string)($r['message'] ?? '');
+        if (strpos($msg, 'Tugas dikumpulkan:') === 0) {
+            $tid = $task_of[(int)$r['id']] ?? 0;
+            $t = $tasks[$tid] ?? null;
+            if (!$t) continue;
+            $mine = ($guru_id > 0 && (int)($t['id_guru'] ?? 0) === $guru_id) || isset($taught[(int)($t['id_kelas'] ?? 0)]);
+            if (!$mine) continue;
+        }
         $out[] = $r;
         if (count($out) >= $limit) break;
     }
@@ -3387,4 +3388,34 @@ function upsert_nilai_semester_setting_minmax(PDO $pdo, int $id_kelas, int $id_m
         $stmt->execute([$id_kelas, $id_mapel, $jenis_semester, $tahun_ajaran, $semester, $min_target, $max_target, $updated_by]);
     } catch (Throwable $e) {
     }
+}
+
+function get_forum_unread_notifications(PDO $pdo, int $limit = 10): array {
+    try {
+        $st = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE COALESCE(is_read, 0) = 0 AND (message LIKE 'Forum Guru:%' OR (message LIKE '%mencolek%' AND message LIKE '%[Forum%')) ORDER BY created_at DESC LIMIT ?");
+        $st->bindValue(1, $limit, PDO::PARAM_INT);
+        $st->execute();
+        return $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+function get_diskusi_unread_notifications(PDO $pdo, int $limit = 10): array {
+    try {
+        $st = $pdo->prepare("SELECT * FROM tb_notifikasi WHERE COALESCE(is_read, 0) = 0 AND (message LIKE 'Diskusi Kelas:%' OR (message LIKE '%mencolek%' AND message LIKE '%[Diskusi%')) ORDER BY created_at DESC LIMIT ?");
+        $st->bindValue(1, $limit, PDO::PARAM_INT);
+        $st->execute();
+        return $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+function get_forum_new_count(PDO $pdo): int {
+    return count(get_forum_unread_notifications($pdo, 50));
+}
+
+function get_diskusi_new_count(PDO $pdo, int $id_kelas = 0): int {
+    return count(get_diskusi_unread_notifications($pdo, 50));
 }

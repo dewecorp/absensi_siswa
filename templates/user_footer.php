@@ -278,7 +278,7 @@ if (!isset($school_profile)) {
         <?php endforeach; ?>
     <?php endif; ?>
 
-    <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'guru', 'wali'], true) && isset($unread_notifs_u) && is_array($unread_notifs_u)): ?>
+    <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali'], true) && isset($unread_notifs_u) && is_array($unread_notifs_u)): ?>
     <!-- Mobile Floating Notification Button -->
     <a href="#" data-toggle="modal" data-target="#mobileNotificationModalU" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
         <i class="far fa-bell fa-lg"></i>
@@ -349,7 +349,7 @@ if (!isset($school_profile)) {
             $el.css('font-weight', 'normal').css('background-color', 'white');
             $el.find('span, p').css('font-weight', 'normal');
             $el.removeClass('bg-light');
-            var $badges = $('.dropdown-list-toggle .badge, .btn-lg .badge, .notif-count-badge');
+            var $badges = $('.dropdown-list-toggle .badge, .btn-lg .badge, .notif-count-badge, .badge-circle');
             $badges.each(function() {
                 var $badge = $(this);
                 var countAttr = parseInt($badge.attr('data-count'), 10);

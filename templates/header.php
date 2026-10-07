@@ -46,7 +46,7 @@ $page_title = isset($page_title) ? $page_title : 'Dashboard';
 $unread_notifs = [];
 $unread_count = 0;
 $unread_count_label = '0';
-if (getUserLevel() === 'admin' || getUserLevel() === 'kepala_madrasah') {
+if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha'], true)) {
     $unread_notifs = getUnreadNotifications($pdo);
     foreach($unread_notifs as $n) {
         if(!$n['is_read']) $unread_count++;
@@ -618,7 +618,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                     </li>
                     <?php endif; ?>
 
-                    <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'guru', 'wali'], true)): ?>
+                    <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali'], true)): ?>
                     <li class="dropdown dropdown-list-toggle d-none d-lg-block">
                         <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg notification-toggle <?php echo $unread_count > 0 ? 'beep' : ''; ?>">
                             <i class="far fa-bell"></i>
@@ -918,7 +918,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                 }
             });
             </script>
-            <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'guru', 'wali'], true)): ?>
+            <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali'], true)): ?>
             <!-- Mobile Floating Notification Button -->
             <a href="#" data-toggle="modal" data-target="#mobileNotificationModal" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
                 <i class="far fa-bell fa-lg"></i>

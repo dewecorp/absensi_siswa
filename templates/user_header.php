@@ -23,7 +23,7 @@ if (!isLoggedIn()) {
 $unread_notifs_u = [];
 $unread_count_u = 0;
 $unread_count_label_u = '0';
-if (in_array(getUserLevel(), ['guru', 'wali'], true)) {
+if (in_array(getUserLevel(), ['guru', 'wali', 'tata_usaha'], true)) {
     $nav_guru_id_u = function_exists('getCurrentGuruId') ? getCurrentGuruId($pdo) : 0;
     $unread_notifs_u = getTeacherTaskNotifications($pdo, (int)$nav_guru_id_u);
     foreach ($unread_notifs_u as $n) {
@@ -507,7 +507,7 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
                     </li>
                 </ul>
                 <ul class="navbar-nav navbar-right">
-                    <?php if (in_array(getUserLevel(), ['guru', 'wali'], true)): ?>
+                    <?php if (in_array(getUserLevel(), ['guru', 'wali', 'tata_usaha'], true)): ?>
                     <li class="dropdown dropdown-list-toggle">
                         <a href="#" data-toggle="dropdown" class="nav-link nav-link-lg notification-toggle <?php echo $unread_count_u > 0 ? 'beep' : ''; ?>" title="Notifikasi Tugas Dikumpulkan">
                             <i class="far fa-bell"></i>
