@@ -419,7 +419,7 @@ $(document).on('input click keyup', 'textarea[name="isi"], input[name="isi"]', f
     var pos = input.selectionStart;
     if (pos == null) return;
     var val = input.value.substring(0, pos);
-    var m = val.match(/@([A-Za-z0-9\.\_\-\s]{0,40})$/);
+    var m = val.match(/@([A-Za-z0-9\.\,\_\-\s]{0,60})$/);
     if (!m) { if (MENTION_INPUT === input) mentionHide(); return; }
     MENTION_INPUT = input; MENTION_START = pos - m[0].length;
     mentionRender(input, m[1] || '');
@@ -626,9 +626,9 @@ include '../templates/sidebar.php';
                         ?>
                         <?php if (trim((string)$p['isi']) !== ''): ?>
                             <?php if ($bg_key !== 'none' && empty($furl)): ?>
-                                <div class="diskusi-status mt-2" style="background:<?= htmlspecialchars($bg_css) ?>;<?= $bg_size ?>color:<?= $bg_dark ? '#fff' : '#111' ?>;<?= $bg_dark ? 'text-shadow:0 1px 3px rgba(0,0,0,.35);' : '' ?>"><?= diskusi_format_text($p['isi']) ?></div>
+                                <div class="diskusi-status mt-2" style="background:<?= htmlspecialchars($bg_css) ?>;<?= $bg_size ?>color:<?= $bg_dark ? '#fff' : '#111' ?>;<?= $bg_dark ? 'text-shadow:0 1px 3px rgba(0,0,0,.35);' : '' ?>"><?= diskusi_format_text($p['isi'], $pdo) ?></div>
                             <?php else: ?>
-                                <div class="mt-2" style="white-space:pre-wrap;font-size:15px;line-height:1.55;"><?= diskusi_format_text($p['isi']) ?></div>
+                                <div class="mt-2" style="white-space:pre-wrap;font-size:15px;line-height:1.55;"><?= diskusi_format_text($p['isi'], $pdo) ?></div>
                             <?php endif; ?>
                         <?php endif; ?>
                         <?php if ($own_post): ?>
@@ -684,7 +684,7 @@ include '../templates/sidebar.php';
 
                     <div id="komen-<?= (int)$p['id'] ?>" class="px-3 pb-3">
                         <div class="diskusi-comment-list mb-2">
-                            <?= diskusi_render_comments_tree($komen, (int)$p['id'], $id_kelas, [$id_kelas], (int)$id_siswa, 'siswa') ?>
+                            <?= diskusi_render_comments_tree($komen, (int)$p['id'], $id_kelas, [$id_kelas], (int)$id_siswa, 'siswa', $pdo) ?>
                         </div>
                         <form method="POST" enctype="multipart/form-data" class="diskusi-comment-form" id="komen-form-<?= (int)$p['id'] ?>">
                             <input type="hidden" name="action" value="comment_add">

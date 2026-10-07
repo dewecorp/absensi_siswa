@@ -217,9 +217,74 @@ function diskusi_fetch_link_meta(string $url): array {
     return $meta;
 }
 
-function diskusi_format_text(?string $text): string {
+function diskusi_match_mention_name(string $candidate, array $names): ?string {
+    $cand = mb_strtolower(trim($candidate));
+    if ($cand === '') return null;
+    $cand_norm = preg_replace('/[.\s]+/u', ' ', $cand);
+    $cand_norm = trim(preg_replace('/\s+/u', ' ', (string)$cand_norm));
+    $best = null;
+    $best_len = 0;
+    foreach ($names as $nm) {
+        $n = mb_strtolower(trim((string)$nm));
+        if ($n === '') continue;
+        if (mb_strpos($cand, $n) === 0) {
+            $len = mb_strlen($n);
+            if ($len > $best_len) { $best = (string)$nm; $best_len = $len; }
+            continue;
+        }
+        $n_norm = preg_replace('/[.\s]+/u', ' ', $n);
+        $n_norm = trim(preg_replace('/\s+/u', ' ', (string)$n_norm));
+        if ($n_norm !== '' && mb_strpos($cand_norm, $n_norm) === 0) {
+            $len = mb_strlen($n_norm);
+            if ($len > $best_len) { $best = (string)$nm; $best_len = $len; }
+        }
+    }
+    return $best;
+}
+
+function diskusi_collect_mention_names(PDO $pdo): array {
+    static $cache = null;
+    if (is_array($cache)) return $cache;
+    $cache = [];
+    try {
+        $st = $pdo->query("SELECT nama_guru FROM tb_guru WHERE nama_guru IS NOT NULL AND nama_guru != ''");
+        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $nm) {
+            $nm = trim((string)$nm);
+            if ($nm !== '') $cache[] = $nm;
+        }
+        $st2 = $pdo->query("SELECT COALESCE(NULLIF(nama,''), username) FROM tb_pengguna WHERE (nama IS NOT NULL AND nama != '') OR (username IS NOT NULL AND username != '')");
+        foreach ($st2->fetchAll(PDO::FETCH_COLUMN) as $nm) {
+            $nm = trim((string)$nm);
+            if ($nm === '') continue;
+            $dup = false;
+            foreach ($cache as $c) {
+                if (strcasecmp($c, $nm) === 0) { $dup = true; break; }
+            }
+            if (!$dup) $cache[] = $nm;
+        }
+        $st3 = $pdo->query("SELECT nama_siswa FROM tb_siswa WHERE nama_siswa IS NOT NULL AND nama_siswa != ''");
+        foreach ($st3->fetchAll(PDO::FETCH_COLUMN) as $nm) {
+            $nm = trim((string)$nm);
+            if ($nm === '') continue;
+            $dup = false;
+            foreach ($cache as $c) {
+                if (strcasecmp($c, $nm) === 0) { $dup = true; break; }
+            }
+            if (!$dup) $cache[] = $nm;
+        }
+    } catch (Throwable $e) {}
+    usort($cache, function($a, $b) { return mb_strlen((string)$b) <=> mb_strlen((string)$a); });
+    return $cache;
+}
+
+function diskusi_format_text(?string $text, ?PDO $pdo = null): string {
     $text = trim((string)$text);
     if ($text === '') return '';
+
+    $names = [];
+    if ($pdo instanceof PDO) {
+        $names = diskusi_collect_mention_names($pdo);
+    }
 
     $parts = preg_split('~(https?://[^\s<>"\']+)~i', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
     $out = '';
@@ -264,10 +329,38 @@ function diskusi_format_text(?string $text): string {
             continue;
         }
         $escaped = htmlspecialchars($part, ENT_QUOTES, 'UTF-8');
-        $formatted = preg_replace_callback('/@([A-Za-z0-9\.\_\-\s]{2,40})/u', function($matches) {
-            $tag_name = trim($matches[1], " \t\n\r\0\x0B.,");
+        $formatted = preg_replace_callback('/@([A-Za-z0-9\.\,\_\-\s]{2,80})/u', function($matches) use ($names) {
+            $full = $matches[1];
+            // Pisahkan trailing "..." (elipsis konten) dari nama tag, tapi pertahankan gelar "A.Ma." di dalam nama.
+            $trail = '';
+            if (preg_match('/(\.{2,})\s*$/u', $full, $tm)) {
+                $trail = $tm[1];
+                $full = substr($full, 0, -strlen($trail));
+            }
+            $tag_name = trim($full, " \t\n\r\0\x0B");
+            // Tag khusus @semua selalu jadi badge (tak perlu cocok nama DB).
+            if (preg_match('/^(semua)\b/iu', $tag_name, $sm)) {
+                $rest = trim(mb_substr($tag_name, mb_strlen($sm[1])));
+                return '<span class="diskusi-mention" style="display:inline-flex;align-items:center;gap:3px;background:#e7f3ff;color:#1877f2;font-weight:700;font-size:13px;padding:1px 8px;border-radius:999px;white-space:nowrap;"><i class="fas fa-at" style="font-size:11px;"></i>semua</span>' . ($rest !== '' ? ' ' . $rest : '') . $trail;
+            }
+            // Jika ada daftar nama asli, potong kandidat ke nama terpanjang yang cocok di depannya.
+            // Ini mencegah kata konten ("alaikumussalam ...") ikut masuk ke dalam badge mention.
+            if (!empty($names)) {
+                $matched = diskusi_match_mention_name($tag_name, $names);
+                if ($matched !== null) {
+                    $rest = trim(mb_substr($tag_name, mb_strlen($matched)));
+                    // Jika huruf pertama sisa adalah huruf kecil lanjutan kata nama yang sama
+                    // (mis. "Madrasah" vs "MADRASAH"), tetap pakai yang cocok; selain itu kembalikan sisa ke teks.
+                    return '<span class="diskusi-mention" style="display:inline-flex;align-items:center;gap:3px;background:#e7f3ff;color:#1877f2;font-weight:700;font-size:13px;padding:1px 8px;border-radius:999px;white-space:nowrap;"><i class="fas fa-at" style="font-size:11px;"></i>' . $matched . '</span>' . ($rest !== '' ? ' ' . $rest : '') . $trail;
+                }
+                // Tidak cocok nama mana pun: jangan jadikan badge (biarkan teks @ mentah).
+                return $matches[0];
+            }
+            $tag_name = rtrim($tag_name, "!?;:,");
+            $tag_name = rtrim($tag_name);
+            // Gelar singkatan boleh diakhiri satu titik (mis. "A.Ma."); titik ganda sudah dipisah di atas.
             if ($tag_name === '') return $matches[0];
-            return '<span class="diskusi-mention" style="display:inline-flex;align-items:center;gap:3px;background:#e7f3ff;color:#1877f2;font-weight:700;font-size:13px;padding:1px 8px;border-radius:999px;white-space:nowrap;"><i class="fas fa-at" style="font-size:11px;"></i>' . $tag_name . '</span>';
+            return '<span class="diskusi-mention" style="display:inline-flex;align-items:center;gap:3px;background:#e7f3ff;color:#1877f2;font-weight:700;font-size:13px;padding:1px 8px;border-radius:999px;white-space:nowrap;"><i class="fas fa-at" style="font-size:11px;"></i>' . $tag_name . '</span>' . $trail;
         }, $escaped);
         $out .= $formatted;
     }
@@ -275,7 +368,7 @@ function diskusi_format_text(?string $text): string {
 }
 
 function forum_get_mentionable_users(PDO $pdo): array {
-    $users = [];
+    $users = [['name' => 'semua', 'role' => 'Semua', 'foto' => '']];
     try {
         $st = $pdo->query("SELECT nama_guru AS name, 'Guru' AS role, foto FROM tb_guru WHERE nama_guru IS NOT NULL AND nama_guru != '' ORDER BY nama_guru ASC");
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
@@ -297,7 +390,7 @@ function forum_get_mentionable_users(PDO $pdo): array {
 }
 
 function diskusi_get_mentionable_users(PDO $pdo, int $id_kelas): array {
-    $users = [];
+    $users = [['name' => 'semua', 'role' => 'Semua', 'foto' => '']];
     try {
         if ($id_kelas > 0) {
             $st2 = $pdo->prepare("SELECT nama_siswa AS name, 'Siswa' AS role, foto FROM tb_siswa WHERE id_kelas = ? AND nama_siswa IS NOT NULL AND nama_siswa != '' ORDER BY nama_siswa ASC");
@@ -337,7 +430,7 @@ function diskusi_avatar_html(string $name, ?string $foto = null, string $avatar_
     return '<span class="diskusi-avatar" style="width:' . $size . 'px;height:' . $size . 'px;font-size:' . $font_size . 'px;background:' . htmlspecialchars($avatar_col) . ';' . $extra_style . '">' . htmlspecialchars($initials) . '</span>';
 }
 
-function diskusi_render_comments_tree(array $komen_list, int $post_id, int $selected_kelas, array $kelas_ids, int $user_id, string $user_role): string {
+function diskusi_render_comments_tree(array $komen_list, int $post_id, int $selected_kelas, array $kelas_ids, int $user_id, string $user_role, ?PDO $pdo = null): string {
     if (empty($komen_list)) return '';
 
     $by_parent = [];
@@ -346,7 +439,7 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
         $by_parent[$pid][] = $c;
     }
 
-    $render_node = function($parent_id) use (&$render_node, $by_parent, $post_id, $selected_kelas, $kelas_ids, $user_id, $user_role) {
+    $render_node = function($parent_id) use (&$render_node, $by_parent, $post_id, $selected_kelas, $kelas_ids, $user_id, $user_role, $pdo) {
         if (empty($by_parent[$parent_id])) return '';
         $html = '';
         foreach ($by_parent[$parent_id] as $c) {
@@ -379,7 +472,7 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
             }
             $html .= '</div>';
             if (trim((string)$c['isi']) !== '') {
-                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . diskusi_format_text($c['isi']) . '</div>';
+                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . diskusi_format_text($c['isi'], $pdo) . '</div>';
             }
             if ($cfurl) {
                 $html .= '<div class="mt-2 diskusi-comment-media">';
@@ -394,7 +487,6 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
             }
             $html .= '</div>';
 
-            $raw_isi_attr = htmlspecialchars((string)$c['isi'], ENT_QUOTES, 'UTF-8');
             $html .= '<div class="small mt-1 d-flex align-items-center flex-wrap" style="gap:10px;">';
             $html .= '<a href="#" class="diskusi-like font-weight-bold ' . ($c_liked ? 'text-primary' : 'text-muted') . '" data-target="komentar" data-id="' . $cid . '" data-kelas="' . (int)$selected_kelas . '" style="text-decoration:none;">Suka (<span class="like-count">' . (int)$c['jml_suka'] . '</span>)</a>';
             $html .= '<a href="#" class="diskusi-reply-btn font-weight-bold text-muted" data-post="' . $post_id . '" data-parent="' . $cid . '" data-name="' . htmlspecialchars($cname) . '" style="text-decoration:none;">Balas</a>';
@@ -445,7 +537,7 @@ function diskusi_render_comments_tree(array $komen_list, int $post_id, int $sele
     return $render_node(0);
 }
 
-function forum_render_comments_tree(array $komen_list, int $post_id, string $current_author_key = '', bool $is_admin = false): string {
+function forum_render_comments_tree(array $komen_list, int $post_id, string $current_author_key = '', bool $is_admin = false, ?PDO $pdo = null): string {
     if (empty($komen_list)) return '';
 
     $by_parent = [];
@@ -454,7 +546,7 @@ function forum_render_comments_tree(array $komen_list, int $post_id, string $cur
         $by_parent[$pid][] = $c;
     }
 
-    $render_node = function($parent_id) use (&$render_node, $by_parent, $post_id, $current_author_key, $is_admin) {
+    $render_node = function($parent_id) use (&$render_node, $by_parent, $post_id, $current_author_key, $is_admin, $pdo) {
         if (empty($by_parent[$parent_id])) return '';
         $html = '';
         foreach ($by_parent[$parent_id] as $c) {
@@ -487,7 +579,7 @@ function forum_render_comments_tree(array $komen_list, int $post_id, string $cur
             $html .= '<div class="diskusi-bubble px-3 py-2">';
             $html .= '<div class="diskusi-nama"><strong>' . htmlspecialchars($cname) . '</strong> ' . $role_badge . '</div>';
             if (trim((string)$c['isi']) !== '') {
-                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . diskusi_format_text($c['isi']) . '</div>';
+                $html .= '<div class="diskusi-teks" style="white-space:pre-wrap;">' . diskusi_format_text($c['isi'], $pdo) . '</div>';
             }
             if ($cfurl) {
                 $html .= '<div class="mt-2 diskusi-comment-media">';
