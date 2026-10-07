@@ -317,33 +317,6 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
         }
     }
 
-    // Handle hero image upload
-    $hero_image = $school_profile['dashboard_hero_image'];
-    if (isset($_FILES['hero_image']) && $_FILES['hero_image']['error'] == 0) {
-        $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
-        $file_extension = strtolower(pathinfo($_FILES['hero_image']['name'], PATHINFO_EXTENSION));
-        
-        if (in_array($file_extension, $allowed_extensions)) {
-            $new_hero_name = 'hero_' . time() . '.' . $file_extension;
-            $target_dir = '../assets/img/';
-            $target_file = $target_dir . $new_hero_name;
-            
-            if (move_uploaded_file($_FILES['hero_image']['tmp_name'], $target_file)) {
-                // Hapus semua file hero lama (hero_*) agar direktori tidak menumpuk
-                foreach (glob($target_dir . 'hero_*') as $old_hero_file) {
-                    if (basename($old_hero_file) !== $new_hero_name) {
-                        @unlink($old_hero_file);
-                    }
-                }
-                $hero_image = $new_hero_name;
-            } else {
-                $message = ['type' => 'danger', 'text' => 'Gagal mengupload background hero!'];
-            }
-        } else {
-            $message = ['type' => 'danger', 'text' => 'Format file background tidak didukung!'];
-        }
-    }
-
     // Handle ttd kepala upload
     $ttd_kepala = $school_profile['ttd_kepala'] ?? null;
     if (isset($_FILES['ttd_kepala']) && $_FILES['ttd_kepala']['error'] == 0) {
@@ -370,8 +343,8 @@ rsort($tahun_untuk_opsi_profil, SORT_STRING);
     }
     
             if (empty($message)) {
-        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, id_kepala=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, id_bendahara=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, hari_libur_mingguan=?, logo=?, dashboard_hero_image=?, ttd_kepala=? WHERE id=1");
-        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $id_kepala, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $id_bendahara, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $hari_libur_mingguan, $logo, $hero_image, $ttd_kepala])) {
+        $stmt = $pdo->prepare("UPDATE tb_profil_madrasah SET nama_yayasan=?, nama_madrasah=?, id_kepala=?, alamat=?, email_madrasah=?, website_madrasah=?, kepala_madrasah=?, nip_kepala=?, id_bendahara=?, tahun_ajaran=?, semester=?, tanggal_jadwal=?, tempat_jadwal=?, hari_libur_mingguan=?, logo=?, ttd_kepala=? WHERE id=1");
+        if ($stmt->execute([$nama_yayasan, $nama_madrasah, $id_kepala, $alamat, $email_madrasah, $website_madrasah, $kepala_madrasah, $nip_kepala, $id_bendahara, $tahun_ajaran, $semester, $tanggal_jadwal, $tempat_jadwal, $hari_libur_mingguan, $logo, $ttd_kepala])) {
             $message = ['type' => 'success', 'text' => 'Profil madrasah berhasil diperbarui!'];
             // Refresh school profile
             $school_profile = getSchoolProfile($pdo);
@@ -548,23 +521,10 @@ include '../templates/sidebar.php';
                                                         <option value="Semester 2" <?php echo (isset($school_profile['semester']) && $school_profile['semester'] == 'Semester 2') ? 'selected' : ''; ?>>Semester 2</option>
                                                     </select>
                                                 </div>
-                                                <div class="form-group">
+                                                <div class="form-group mb-0">
                                                     <label>Tempat Jadwal</label>
                                                     <input type="text" class="form-control" name="tempat_jadwal" value="<?php echo htmlspecialchars($school_profile['tempat_jadwal'] ?? ''); ?>" placeholder="Contoh: Jakarta">
                                                     <small class="text-muted">Tempat pada cetakan jadwal.</small>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Background Dashboard (Hero)</label>
-                                                    <div class="mb-2">
-                                                        <?php if (!empty($school_profile['dashboard_hero_image'])): ?>
-                                                        <img src="../assets/img/<?php echo $school_profile['dashboard_hero_image']; ?>" alt="Hero Image" height="80" class="img-thumbnail" style="object-fit: cover; width: 100%;">
-                                                        <?php else: ?>
-                                                        <img src="../assets/img/unsplash/eberhard-grossgasteiger-1207565-unsplash.jpg" alt="Default Hero" height="80" class="img-thumbnail" style="object-fit: cover; width: 100%;">
-                                                        <p class="text-muted small">Gambar default</p>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                    <input type="file" class="form-control" name="hero_image">
-                                                    <small class="text-muted">Format: JPG, PNG, GIF. Maksimal: 2MB. Gambar landscape disarankan.</small>
                                                 </div>
                                             </div>
                                         </div>

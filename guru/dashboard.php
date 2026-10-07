@@ -582,64 +582,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <!-- Profile Box -->
                     <div class="row">
-                        <div class="col-12 mb-4">
-                            <div class="hero text-white hero-bg-image hero-bg-parallax" style="background-image: url('<?php echo $hero_bg; ?>'); background-position: center; background-size: cover; position: relative;">
-                                <div class="hero-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);"></div>
-                                <div class="hero-inner" style="position: relative; z-index: 1;">
+                        <div class="col-12 mb-3">
+                            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%); border-radius: 16px; overflow: hidden; color: #fff;">
+                                <div class="card-body p-4">
                                     <div class="row align-items-center">
-                                        <div class="col-md-3 text-center position-relative">
-                                            <div class="d-inline-block position-relative my-3">
+                                        <div class="col-12 col-md-auto text-center mb-3 mb-md-0">
+                                            <div class="d-inline-block position-relative">
                                                 <?php
-                                                // Wrapper to ensure image style (read-only di hero, ubah via Profil)
-                                                $avatar_img = getTeacherAvatarImage($teacher, 120);
-                                                // Add border and shadow to image
-                                                $avatar_img = str_replace('class=\'rounded-circle\'', 'class=\'rounded-circle shadow-lg border border-white\' style=\'border-width: 3px !important;\'', $avatar_img);
+                                                $avatar_img = getTeacherAvatarImage($teacher, 96);
+                                                $avatar_img = str_replace("class='rounded-circle'", "class='rounded-circle shadow border border-white' style='border-width: 3px !important; object-fit: cover; width: 96px; height: 96px;'", $avatar_img);
                                                 echo $avatar_img;
                                                 ?>
                                             </div>
                                         </div>
-                                        <div class="col-md-9">
-                                            <h2>Assalamualaikum, <?php echo isset($teacher['nama_guru']) ? htmlspecialchars($teacher['nama_guru']) : 'Guru'; ?></h2>
-                                            <p class="lead">Anda mengajar <b><?php echo $total_kelas; ?></b> kelas dengan total <b><?php echo $total_siswa; ?></b> siswa.</p>
-                                            <div class="d-lg-none" style="font-size: .95rem;"><i class="far fa-calendar-alt mr-1"></i><span id="wb-date">-</span></div>
-                                            <div class="mt-2 d-lg-none">
-                                                <span class="wb-chip wb-chip-glass"><i class="fas fa-graduation-cap"></i> <?php echo htmlspecialchars($school_profile['tahun_ajaran'] ?? '-'); ?></span>
-                                                <span class="wb-chip wb-chip-glass"><i class="fas fa-calendar-check"></i> <?php echo htmlspecialchars($school_profile['semester'] ?? '-'); ?></span>
-                                            </div>
-                                            
-                                            <div class="mt-4">
-                                                <div class="row">
-                                                    <div class="col-auto">
-                                                        <div class="font-weight-bold text-white-50">NUPTK</div>
-                                                        <div><?php echo !empty($teacher['nuptk']) ? htmlspecialchars($teacher['nuptk']) : '-'; ?></div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="font-weight-bold text-white-50">Tempat, Tanggal Lahir</div>
-                                                        <div>
-                                                            <?php 
-                                                            $ttl = [];
-                                                            if (!empty($teacher['tempat_lahir'])) $ttl[] = $teacher['tempat_lahir'];
-                                                            if (!empty($teacher['tanggal_lahir'])) $ttl[] = date('d-m-Y', strtotime($teacher['tanggal_lahir']));
-                                                            echo !empty($ttl) ? implode(', ', $ttl) : '-';
-                                                            ?>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="font-weight-bold text-white-50">Status</div>
-                                                        <div><?php echo !empty($teacher['status_kepegawaian']) ? htmlspecialchars($teacher['status_kepegawaian']) : 'Aktif'; ?></div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="font-weight-bold text-white-50">TMT</div>
-                                                        <div><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="font-weight-bold text-white-50">Masa Bakti</div>
-                                                        <div><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                                        <div class="col-12 col-md text-center text-md-left">
+                                            <div class="d-flex flex-column flex-md-row align-items-center align-items-md-center justify-content-between mb-2">
+                                                <div class="text-center text-md-left mb-2 mb-md-0">
+                                                    <h3 class="font-weight-bold text-white mb-1" style="font-size: 1.4rem; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">Assalamualaikum, <?php echo isset($teacher['nama_guru']) ? htmlspecialchars($teacher['nama_guru']) : 'Guru'; ?></h3>
+                                                    <div style="color: #f8fafc; font-size: 13.5px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                                                        <i class="fas fa-chalkboard-teacher mr-1" style="color: #fde047;"></i> Guru Pengampu &bull; Mengajar <b><?php echo $total_kelas; ?></b> kelas (<b><?php echo $total_siswa; ?></b> siswa)
                                                     </div>
                                                 </div>
+                                                <div class="mt-2 mt-md-0 text-center text-md-right">
+                                                    <a href="profil.php" class="btn btn-sm btn-light font-weight-bold px-3 shadow-sm" style="border-radius: 20px; font-size: 12px; color: #1e3a8a;">
+                                                        <i class="fas fa-user-cog mr-1" style="color: #2563eb;"></i> Profil & Pengaturan
+                                                    </a>
+                                                </div>
                                             </div>
-                                            <div class="mt-3">
-                                                <a href="profil.php" class="btn btn-light btn-sm font-weight-bold" title="Lihat Profil & Pengaturan"><i class="fas fa-user-circle mr-1"></i>Lihat Profil</a>
+
+                                            <div class="p-3 mt-3 rounded" style="background: rgba(15, 23, 42, 0.22); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(4px);">
+                                                <div class="row text-center text-md-left">
+                                                    <div class="col-6 col-sm-4 col-md-auto mb-2 mb-md-0 pr-md-4">
+                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">NUPTK</span>
+                                                        <span class="font-weight-bold text-white" style="font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);"><?php echo !empty($teacher['nuptk']) ? htmlspecialchars($teacher['nuptk']) : '-'; ?></span>
+                                                    </div>
+                                                    <div class="col-6 col-sm-4 col-md-auto mb-2 mb-md-0 pr-md-4">
+                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Status</span>
+                                                        <span class="badge badge-success px-2 py-1" style="font-size: 10.5px; font-weight: 800; border: 1px solid #16a34a;"><?php echo !empty($teacher['status_kepegawaian']) ? htmlspecialchars($teacher['status_kepegawaian']) : 'Aktif'; ?></span>
+                                                    </div>
+                                                    <div class="col-6 col-sm-4 col-md-auto mb-2 mb-md-0 pr-md-4">
+                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">TMT</span>
+                                                        <span class="font-weight-bold text-white" style="font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);"><?php echo !empty($teacher['tmt']) ? date('d/m/Y', strtotime($teacher['tmt'])) : '-'; ?></span>
+                                                    </div>
+                                                    <div class="col-6 col-sm-4 col-md-auto mb-2 mb-md-0 pr-md-4">
+                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Masa Bakti</span>
+                                                        <span class="font-weight-bold" style="color: #fef08a; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></span>
+                                                    </div>
+                                                    <div class="col-12 col-sm-8 col-md-auto mt-2 mt-md-0">
+                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Tempat, Tgl Lahir</span>
+                                                        <span class="font-weight-bold text-white" style="font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                                                            <?php
+                                                            $ttl = [];
+                                                            if (!empty($teacher['tempat_lahir'])) $ttl[] = $teacher['tempat_lahir'];
+                                                            if (!empty($teacher['tanggal_lahir'])) $ttl[] = date('d/m/Y', strtotime($teacher['tanggal_lahir']));
+                                                            echo !empty($ttl) ? implode(', ', $ttl) : '-';
+                                                            ?>
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -651,7 +651,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <!-- KBM Info -->
                     <?php if (!$holiday['is_holiday']): ?>
                     <div class="row">
-                        <div class="col-12 mb-4">
+                        <div class="col-12 mb-3">
                             <div class="card border-left-primary shadow-sm">
                                 <div class="card-body py-3">
                                     <div class="row align-items-center">
