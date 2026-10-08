@@ -8,7 +8,7 @@
     if (sel.multiple) return false;
     if (sel.classList.contains('select2-hidden-accessible')) return false;
     if (sel.closest('.select2-container')) return false;
-    if (sel.classList.contains('select2') && hasSelect2Lib()) return false;
+    if (sel.className && (sel.className.indexOf('select2') !== -1 || sel.id === 'f_siswa' || sel.id === 'inp_siswa') && hasSelect2Lib()) return false;
     if (sel.dataset.gdsDone === '1') return false;
     if (sel.options.length === 0) return false;
     return true;
@@ -35,10 +35,21 @@
 
     function refreshLabel() {
       var opt = sel.options[sel.selectedIndex];
+      if (!opt || String(opt.value) !== String(sel.value)) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (String(sel.options[i].value) === String(sel.value)) {
+            opt = sel.options[i];
+            sel.selectedIndex = i;
+            break;
+          }
+        }
+      }
       var label = btn.querySelector('.gds-label');
-      label.textContent = opt ? opt.textContent : '';
+      if (label) {
+        label.textContent = opt ? opt.textContent : '';
+      }
       Array.prototype.forEach.call(list.querySelectorAll('.gds-option'), function(b) {
-        b.classList.toggle('selected', b.dataset.value === sel.value);
+        b.classList.toggle('selected', String(b.dataset.value) === String(sel.value));
       });
     }
 
@@ -138,6 +149,9 @@
     }, true);
 
     sel.addEventListener('change', refreshLabel);
+    if (window.jQuery) {
+      window.jQuery(sel).on('change', refreshLabel);
+    }
     refreshLabel();
 
     if (!document.body.dataset.gdsBound) {

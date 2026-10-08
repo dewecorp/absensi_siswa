@@ -64,25 +64,18 @@ $(function() {
   var update_sidebar_nicescroll_timer = null;
   var update_sidebar_nicescroll = function() {
     if (update_sidebar_nicescroll_timer != null) {
-      clearInterval(update_sidebar_nicescroll_timer);
+      clearTimeout(update_sidebar_nicescroll_timer);
       update_sidebar_nicescroll_timer = null;
     }
-    update_sidebar_nicescroll_timer = setInterval(function() {
-      // Selalu ambil instance terbaru dari DOM — hindari stale ref / error setelah .remove()
+    update_sidebar_nicescroll_timer = setTimeout(function() {
       try {
         var $ms = $('.main-sidebar');
         if (!$ms.length) return;
         var live = $ms.getNiceScroll();
         if (live && live.length) live.resize();
       } catch (e) { /* noop */ }
-    }, 24);
-
-    setTimeout(function() {
-      if (update_sidebar_nicescroll_timer != null) {
-        clearInterval(update_sidebar_nicescroll_timer);
-        update_sidebar_nicescroll_timer = null;
-      }
-    }, 480);
+      update_sidebar_nicescroll_timer = null;
+    }, 220);
   }
 
   var sidebar_refresh_scroll_state = function() {
@@ -91,8 +84,8 @@ $(function() {
       $('body').addClass('sidebar-scroll-on');
     } else {
       $('body').removeClass('sidebar-scroll-on');
-      $('.main-sidebar').scrollTop(0);
     }
+    update_sidebar_nicescroll();
   };
 
   var sidebar_dropdown = function() {
@@ -108,7 +101,7 @@ $(function() {
         // Close all other active menus
         $('.main-sidebar .sidebar-menu li.active').not(parent).each(function() {
           $(this).removeClass('active');
-          $(this).find('> .dropdown-menu').slideUp(500, function() {
+          $(this).find('> .dropdown-menu').slideUp(200, function() {
             sidebar_refresh_scroll_state();
           });
         });
@@ -116,12 +109,12 @@ $(function() {
         // Toggle the clicked menu
         if(active) {
           parent.removeClass('active');
-          parent.find('> .dropdown-menu').slideUp(500, function() {
+          parent.find('> .dropdown-menu').slideUp(200, function() {
             sidebar_refresh_scroll_state();
           });
         }else{
           parent.addClass('active');
-          parent.find('> .dropdown-menu').slideDown(500, function() {
+          parent.find('> .dropdown-menu').slideDown(200, function() {
             sidebar_refresh_scroll_state();
           });
         }
@@ -129,7 +122,7 @@ $(function() {
         return false;
       });
 
-      $('.main-sidebar .sidebar-menu li.active > .dropdown-menu').slideDown(500, function() {
+      $('.main-sidebar .sidebar-menu li.active > .dropdown-menu').slideDown(200, function() {
         sidebar_refresh_scroll_state();
         return false;
       });

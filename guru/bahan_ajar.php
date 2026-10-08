@@ -117,8 +117,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Master lists
-$mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik') AND nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
-$kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+$all_mapel_modal = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik') AND nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+$all_kelas_modal = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+if ($is_admin_or_kepala) {
+    $mapel_list = $all_mapel_modal;
+    $kelas_list = $all_kelas_modal;
+} else {
+    $mapel_list = getGuruTaughtMapels($pdo, $guru_id);
+    $kelas_list = getGuruTaughtClasses($pdo, $guru_id);
+    if (empty($mapel_list)) {
+        $mapel_list = $all_mapel_modal;
+    }
+    if (empty($kelas_list)) {
+        $kelas_list = $all_kelas_modal;
+    }
+}
 $jenis_options = ['PDF', 'Video', 'Link', 'Presentasi', 'LKPD', 'Dokumen'];
 $semester_options = ['Semester 1', 'Semester 2'];
 
@@ -212,27 +226,33 @@ $(document).ready(function() {
         $('#bahanId').val('');
         $('#modalBahanTitle').text('Tambah Bahan Ajar Baru');
         $('#formBahan')[0].reset();
+        $('#modalBahan select').trigger('change');
         $('#modalBahan').modal('show');
     });
 
     $(document).on('click', '.btn-edit-bahan', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
         $('#formBahanAction').val('edit');
         $('#bahanId').val(data.id);
         $('#modalBahanTitle').text('Edit Bahan Ajar');
-        $('#inp_judul').val(data.judul);
-        $('#inp_jenis').val(data.jenis);
-        $('#inp_mapel').val(data.id_mapel || '');
-        $('#inp_kelas').val(data.id_kelas || '');
+        $('#inp_judul').val(data.judul || '');
         $('#inp_materi_tp').val(data.materi_tp || '');
-        $('#inp_semester').val(data.semester);
-        $('#inp_tahun').val(data.tahun_ajaran);
-        $('#inp_status').val(data.status);
+        $('#inp_tahun').val(data.tahun_ajaran || '');
         if (data.file_link && (data.file_link.indexOf('http://') === 0 || data.file_link.indexOf('https://') === 0)) {
             $('#inp_link').val(data.file_link);
         } else {
             $('#inp_link').val('');
         }
+
+        $('#inp_jenis').val(data.jenis || 'PDF').trigger('change');
+        $('#inp_mapel').val(data.id_mapel ? String(data.id_mapel) : '').trigger('change');
+        $('#inp_kelas').val(data.id_kelas ? String(data.id_kelas) : '').trigger('change');
+        $('#inp_semester').val(data.semester || 'Semester 1').trigger('change');
+        $('#inp_status').val(data.status || 'Aktif').trigger('change');
+
         $('#modalBahan').modal('show');
     });
 
@@ -412,8 +432,8 @@ include '../templates/sidebar.php';
                                                     <i class="fas fa-link"></i> Link
                                                 </a>
                                             <?php elseif (!empty($r['file_link'])): ?>
-                                                <a href="<?= $file_dest ?>" target="_blank" class="btn btn-sm btn-outline-primary" title="File">
-                                                    <i class="fas fa-file-alt"></i> <?= strtoupper(pathinfo($r['file_link'], PATHINFO_EXTENSION)) ?>
+                                                <a href="preview_bahan.php?id=<?= (int)$r['id'] ?><?= isset($_GET['session_type']) ? '&session_type=' . urlencode($_GET['session_type']) : '' ?>" target="_blank" class="btn btn-sm btn-outline-primary" title="Baca Dokumen (<?= strtoupper(pathinfo($r['file_link'], PATHINFO_EXTENSION)) ?>)">
+                                                    <i class="fas fa-book-reader mr-1"></i> <?= strtoupper(pathinfo($r['file_link'], PATHINFO_EXTENSION)) ?>
                                                 </a>
                                             <?php else: ?>
                                                 -
@@ -425,30 +445,20 @@ include '../templates/sidebar.php';
                                             <span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span>
                                         </td>
                                         <td><?= date('d/m/Y', strtotime($r['created_at'])) ?></td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-info btn-sm btn-preview-bahan"
-                                                data-url="<?= htmlspecialchars($r['file_link'], ENT_QUOTES) ?>"
-                                                data-title="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>"
-                                                data-jenis="<?= htmlspecialchars($r['jenis'], ENT_QUOTES) ?>"
-                                                title="Preview">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <a href="<?= $file_dest ?>" target="_blank" class="btn btn-secondary btn-sm" title="Buka">
-                                                <i class="fas fa-external-link-alt"></i>
-                                            </a>
-                                             <?php if (!$is_url && !empty($r['file_link'])): ?>
-                                                 <a href="<?= $file_dest ?>" download class="btn btn-success btn-sm" title="Download">
-                                                     <i class="fas fa-download"></i>
-                                                 </a>
-                                             <?php endif; ?>
-                                             <?php if ($can_crud): ?>
-                                             <button type="button" class="btn btn-warning btn-sm btn-edit-bahan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                 <i class="fas fa-edit"></i>
-                                             </button>
-                                             <button type="button" class="btn btn-danger btn-sm btn-hapus-bahan" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
-                                                 <i class="fas fa-trash"></i>
-                                             </button>
-                                             <?php endif; ?>
+                                        <td class="text-center text-nowrap" style="white-space:nowrap;">
+                                            <div class="d-inline-flex align-items-center justify-content-center" style="gap:4px;">
+                                                <a href="preview_bahan.php?id=<?= (int)$r['id'] ?><?= isset($_GET['session_type']) ? '&session_type=' . urlencode($_GET['session_type']) : '' ?>" target="_blank" class="btn btn-info btn-sm" title="Pratinjau Dokumen (Tab Baru)">
+                                                    <i class="fas fa-eye"></i> Pratinjau
+                                                </a>
+                                                <?php if ($can_crud): ?>
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-bahan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-bahan" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
+                                                    <i class="fas fa-trash"></i> Hapus
+                                                </button>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -490,7 +500,7 @@ include '../templates/sidebar.php';
                             <label>Mata Pelajaran</label>
                             <select name="id_mapel" id="inp_mapel" class="form-control">
                                 <option value="">-- Pilih Mapel --</option>
-                                <?php foreach ($mapel_list as $m): ?>
+                                <?php foreach ($all_mapel_modal as $m): ?>
                                     <option value="<?= (int)$m['id_mapel'] ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -499,7 +509,7 @@ include '../templates/sidebar.php';
                             <label>Kelas</label>
                             <select name="id_kelas" id="inp_kelas" class="form-control">
                                 <option value="">-- Pilih Kelas --</option>
-                                <?php foreach ($kelas_list as $k): ?>
+                                <?php foreach ($all_kelas_modal as $k): ?>
                                     <option value="<?= (int)$k['id_kelas'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
                                 <?php endforeach; ?>
                             </select>

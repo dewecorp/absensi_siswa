@@ -21,14 +21,25 @@
   white-space: normal !important;
   line-height: 1.35;
 }
-/* Submenu sidebar kembalikan asli template: transparan, tanpa card */
+/* Submenu sidebar kembalikan asli template: transparan, tanpa card, posisi static dalam alur dokumen */
+.main-sidebar .sidebar-menu li {
+  position: relative !important;
+  float: none !important;
+  display: block !important;
+  height: auto !important;
+}
 .main-sidebar .sidebar-menu li ul.dropdown-menu {
+  position: static !important;
+  float: none !important;
+  width: 100% !important;
+  height: auto !important;
   border-radius: 0 !important;
   border: 0 !important;
   box-shadow: none !important;
   overflow: visible !important;
   background-color: transparent !important;
   padding: 0 !important;
+  margin: 0 !important;
 }
 .navbar .dropdown-menu .dropdown-list-content,
 .navbar-notifikasi-scroll,
@@ -126,13 +137,6 @@
 .popover-notif-dropdown .list-group-item {
   font-size: 12px;
   line-height: 1.35;
-}
-.main-sidebar .sidebar-menu li ul.dropdown-menu {
-  border-radius: 0 !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  overflow: visible !important;
-  background-color: transparent !important;
 }
 .main-sidebar .sidebar-brand,
 .main-sidebar .sidebar-brand-sm {
@@ -269,8 +273,8 @@
   flex: 1 !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
   padding: 10px 30px 10px 15px !important;
   line-height: 1.4 !important;
   min-height: 40px !important;
@@ -280,7 +284,7 @@
   white-space: nowrap !important;
 }
 .select2-container--default .select2-selection--single .select2-selection__placeholder {
-  text-align: center !important;
+  text-align: left !important;
   color: #6c757d !important;
 }
 .select2-container--default .select2-selection--single .select2-selection__arrow {
@@ -308,6 +312,7 @@
   border: 1px solid #e4e6fc !important;
   box-shadow: 0 12px 40px rgba(20,30,70,.18) !important;
   padding: 6px !important;
+  text-align: left !important;
 }
 .select2-container--open .select2-dropdown--below {
   margin-top: 6px !important;
@@ -352,12 +357,14 @@
 .select2-results > .select2-results__options::-webkit-scrollbar-thumb:hover {
   background: #8fa0bd !important;
 }
+.select2-results__option,
 .select2-container--default .select2-results__option {
   border-radius: 3px !important;
   padding: 8px 15px !important;
   margin: 1px 0 !important;
   font-size: 14px !important;
   line-height: 1.35 !important;
+  text-align: left !important;
 }
 .select2-container--default .select2-results__option--highlighted[aria-selected] {
   background: #f2f6ff !important;
@@ -447,7 +454,7 @@ select[name$="_length"] {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center;
+  text-align: left !important;
 }
 .gds-caret {
   flex: 0 0 auto;

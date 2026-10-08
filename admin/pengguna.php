@@ -188,53 +188,9 @@ $page_title = 'Data Pengguna';
 // Define page-specific JS
 $js_page = [
     "
-    \$(document).ready(function() {
-        // Reinitialize sidebar dropdown functionality
-        if($('.main-sidebar .sidebar-menu li a.has-dropdown').length) {
-            $('.main-sidebar .sidebar-menu li a.has-dropdown').off('click').on('click', function() {
-                var me     = \$(this);
-                var active = false;
-                if(me.parent().hasClass('active')){
-                    active = true;
-                }
-
-                $(\'.main-sidebar .sidebar-menu li.active > .dropdown-menu\').slideUp(500, function() {
-                    if (typeof update_sidebar_nicescroll === 'function') {
-                        update_sidebar_nicescroll();
-                    }
-                    return false;
-                });
-
-                $(\'.main-sidebar .sidebar-menu li.active.dropdown\').removeClass(\'active\');
-
-                if(active==true) {
-                    me.parent().removeClass(\'active\');
-                    me.parent().find(\'> .dropdown-menu\').slideUp(500, function() {
-                        if (typeof update_sidebar_nicescroll === 'function') {
-                            update_sidebar_nicescroll();
-                        }
-                        return false;
-                    });
-                }else{
-                    me.parent().addClass(\'active\');
-                    me.parent().find(\'> .dropdown-menu\').slideDown(500, function() {
-                        if (typeof update_sidebar_nicescroll === 'function') {
-                            update_sidebar_nicescroll();
-                        }
-                            $(\".main-sidebar\").niceScroll(sidebar_nicescroll_opts);
-                            var sidebar_nicescroll = $(\".main-sidebar\").getNiceScroll();
-                            sidebar_nicescroll.resize();
-                        }
-                        return false;
-                    });
-                }
-
-                return false;
-            });
-        }
-        
+    $(document).ready(function() {
         // Initialize DataTable
-        \$('#table-1').DataTable({
+        $('#table-1').DataTable({
             \"columnDefs\": [
                 { \"sortable\": false, \"targets\": [3] }
             ],
