@@ -77,6 +77,12 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
     $_modal_fix_v = is_readable($_modal_fix_path) ? (string) filemtime($_modal_fix_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/modal_fix.css?v=<?php echo htmlspecialchars($_modal_fix_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Global Dropdown CSS -->
+    <?php
+    $_global_dropdown_path = __DIR__ . '/../assets/css/global_dropdown.css';
+    $_global_dropdown_v = is_readable($_global_dropdown_path) ? (string) filemtime($_global_dropdown_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/global_dropdown.css?v=<?php echo htmlspecialchars($_global_dropdown_v, ENT_QUOTES, 'UTF-8'); ?>">
     
     <!-- Additional CSS for this specific page -->
     <?php if (isset($css_page) && is_array($css_page)): ?>
@@ -439,32 +445,6 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
             box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
         .notification-toggle { position: relative; }
-        .navbar-notifikasi-scroll {
-            overflow-y: auto;
-            overscroll-behavior: contain;
-            scroll-behavior: smooth;
-            scrollbar-width: thin;
-            scrollbar-color: #c3cad6 transparent;
-        }
-        .navbar-notifikasi-scroll::-webkit-scrollbar { width: 6px; }
-        .navbar-notifikasi-scroll::-webkit-scrollbar-track { background: transparent; }
-        .navbar-notifikasi-scroll::-webkit-scrollbar-thumb { background: #c3cad6; border-radius: 999px; }
-        .navbar-notifikasi-scroll::-webkit-scrollbar-thumb:hover { background: #9aa5bb; }
-        .modern-notif-dropdown { border-radius: 14px !important; overflow: hidden; border: 1px solid #e5e9f2 !important; box-shadow: 0 12px 40px rgba(20,30,70,.18) !important; }
-        .modern-notif-dropdown .dropdown-header { background: #f6f8fd; border-bottom: 1px solid #e9edf5; font-weight: 800; font-size: 14px; padding: 10px 14px; }
-        .modern-notif-scroll { max-height: 380px; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: #b9c4d8 transparent; }
-        .modern-notif-scroll::-webkit-scrollbar { width: 6px; }
-        .modern-notif-scroll::-webkit-scrollbar-track { background: transparent; }
-        .modern-notif-scroll::-webkit-scrollbar-thumb { background: #b9c4d8; border-radius: 999px; }
-        .modern-notif-scroll::-webkit-scrollbar-thumb:hover { background: #8fa0bd; }
-        .modern-notif-item { display: flex !important; gap: 10px; align-items: flex-start; padding: 10px 14px !important; border-bottom: 1px solid #eef1f7; white-space: normal !important; line-height: 1.35; transition: background .15s ease; }
-        .modern-notif-item:hover { background: #f2f6ff !important; }
-        .modern-notif-item.is-unread { background: #eef4ff !important; font-weight: 700; color: #111; }
-        .modern-notif-item.is-read { background: #fff !important; font-weight: 400; color: #555; }
-        .modern-notif-item .unread-dot { width: 9px; height: 9px; border-radius: 50%; background: #1877f2; margin-top: 6px; flex: 0 0 9px; }
-        .modern-notif-item.is-read .unread-dot { background: transparent; }
-        .popover-notif-dropdown { border-radius: 14px !important; overflow: hidden; }
-        .popover-notif-dropdown .modern-notif-scroll { max-height: 320px; }
     </style>
 </head>
 

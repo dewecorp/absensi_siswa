@@ -836,56 +836,65 @@ include '../templates/header.php';
                 <div class="modal-body">
                     <input type="hidden" name="save_journal" value="1">
                     <input type="hidden" name="id_jurnal" id="id_jurnal">
-                    
-                    <div class="form-group">
-                        <label>Kelas</label>
-                        <select name="id_kelas" class="form-control" required>
-                            <?php foreach ($classes as $class): ?>
-                                <option value="<?php echo $class['id_kelas']; ?>"><?php echo htmlspecialchars($class['nama_kelas']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Tanggal</label>
-                        <input type="date" name="tanggal" class="form-control" required>
-                    </div>
 
-                    <div class="form-group">
-                        <label>Jenis Jadwal</label>
-                        <select name="jenis" id="jenis_jadwal" class="form-control" required>
-                            <option value="Reguler">Reguler</option>
-                            <option value="Ramadhan">Ramadhan</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Jam Ke</label>
-                        <select name="jam_ke[]" class="form-control select2" multiple required>
-                            <?php foreach ($jam_mengajar_list as $jam): ?>
-                                <?php if (in_array($jam['jam_ke'], ['A', 'B', 'C'])) continue; ?>
-                                <option value="<?php echo $jam['jam_ke']; ?>">
-                                    <?php echo $jam['jam_ke'] . ' (' . date('H:i', strtotime($jam['waktu_mulai'])) . ' - ' . date('H:i', strtotime($jam['waktu_selesai'])) . ')'; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Mata Pelajaran</label>
-                        <select name="mapel" class="form-control select2" required>
-                            <option value="">-- Pilih Mata Pelajaran --</option>
-                            <?php foreach ($mapel_list as $mpl): ?>
-                                <option value="<?php echo htmlspecialchars($mpl['nama_mapel']); ?>">
-                                    <?php echo htmlspecialchars($mpl['nama_mapel']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Materi Pokok</label>
-                        <textarea name="materi" class="form-control" style="height: 100px" required></textarea>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Kelas</label>
+                                <select name="id_kelas" class="form-control" required>
+                                    <?php foreach ($classes as $class): ?>
+                                        <option value="<?php echo $class['id_kelas']; ?>"><?php echo htmlspecialchars($class['nama_kelas']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Tanggal</label>
+                                <input type="date" name="tanggal" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Jenis Jadwal</label>
+                                <select name="jenis" id="jenis_jadwal" class="form-control" required>
+                                    <option value="Reguler">Reguler</option>
+                                    <option value="Ramadhan">Ramadhan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Jam Ke</label>
+                                <select name="jam_ke[]" class="form-control select2" multiple required>
+                                    <?php foreach ($jam_mengajar_list as $jam): ?>
+                                        <?php if (in_array($jam['jam_ke'], ['A', 'B', 'C'])) continue; ?>
+                                        <option value="<?php echo $jam['jam_ke']; ?>">
+                                            <?php echo $jam['jam_ke'] . ' (' . date('H:i', strtotime($jam['waktu_mulai'])) . ' - ' . date('H:i', strtotime($jam['waktu_selesai'])) . ')'; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Mata Pelajaran</label>
+                                <select name="mapel" class="form-control select2" required>
+                                    <option value="">-- Pilih Mata Pelajaran --</option>
+                                    <?php foreach ($mapel_list as $mpl): ?>
+                                        <option value="<?php echo htmlspecialchars($mpl['nama_mapel']); ?>">
+                                            <?php echo htmlspecialchars($mpl['nama_mapel']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-group mb-0">
+                                <label>Materi Pokok</label>
+                                <textarea name="materi" class="form-control" style="height: 100px" required></textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

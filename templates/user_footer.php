@@ -268,6 +268,7 @@ if (!isset($school_profile)) {
     <!-- Template JS File -->
     <script src="../assets/js/scripts.js"></script>
     <script src="../assets/js/custom.js"></script>
+    <script src="../assets/js/global_dropdown.js"></script>
 
     <!-- Page Specific JS File -->
     <?php if (isset($js_page) && is_array($js_page)): ?>
@@ -401,19 +402,18 @@ if (!isset($school_profile)) {
         if (left + 330 > $(window).width()) {
             left = Math.max(10, rect.left - 335);
         }
-        var html = '<div class="popover-notif-dropdown shadow-lg" style="position:fixed; top:' + top + 'px; left:' + left + 'px; z-index:99999; background:#fff; width:320px; border-radius:14px; border:1px solid #e5e9f2; box-shadow:0 12px 40px rgba(20,30,70,.18); overflow:hidden;">';
-        html += '<div class="px-3 py-2 font-weight-bold d-flex justify-content-between align-items-center text-white" style="font-size:13px; background:linear-gradient(135deg,#6777ef,#3abaf4);">';
+        var html = '<div class="popover-notif-dropdown shadow-lg" style="top:' + top + 'px; left:' + left + 'px;">';
+        html += '<div class="px-3 py-2 font-weight-bold d-flex justify-content-between align-items-center text-white popover-notif-head">';
         html += '<span>Notifikasi ' + (type === 'forum' ? 'Forum Guru' : 'Diskusi Kelas') + '</span>';
-        html += '<button type="button" class="close text-white p-0 m-0" style="font-size:18px; line-height:1; opacity:.9;" onclick="$(this).closest(\'.popover-notif-dropdown\').remove()">&times;</button>';
+        html += '<button type="button" class="close text-white p-0 m-0 popover-notif-close" onclick="$(this).closest(\'.popover-notif-dropdown\').remove()">&times;</button>';
         html += '</div>';
-        html += '<div class="list-group list-group-flush modern-notif-scroll" style="max-height:320px; overflow-y:auto; overscroll-behavior:contain; scroll-behavior:smooth;">';
+        html += '<div class="list-group list-group-flush modern-notif-scroll">';
         if (list && list.length > 0) {
             $.each(list, function(i, item) {
                 var isUnread = (!item.is_read || item.is_read == '0');
-                var bgStyle = isUnread ? 'background:#eef4ff; font-weight:700; color:#111;' : 'background:#fff; font-weight:400; color:#555;';
-                var dot = isUnread ? '<span style="width:8px;height:8px;border-radius:50%;background:#1877f2;margin-top:5px;flex:0 0 8px;"></span>' : '<span style="width:8px;flex:0 0 8px;"></span>';
-                html += '<a href="#" class="list-group-item list-group-item-action p-2 text-wrap" onclick="readNotification(' + item.id + ', \'' + item.link + '\', this); return false;" style="font-size:12px; line-height:1.35; display:flex; gap:8px; border-bottom:1px solid #eef1f7; ' + bgStyle + '">';
-                html += dot + '<span style="flex:1;"><span style="display:block;" class="mb-1">' + $('<div>').text(item.message).html() + '</span>';
+                var cls = isUnread ? 'is-unread' : 'is-read';
+                html += '<a href="#" class="list-group-item list-group-item-action modern-notif-item ' + cls + '" onclick="readNotification(' + item.id + ', \'' + item.link + '\', this); return false;">';
+                html += '<span class="unread-dot"></span><span class="popover-notif-body"><span class="d-block mb-1">' + $('<div>').text(item.message).html() + '</span>';
                 html += '<small class="text-primary"><i class="far fa-clock mr-1"></i>' + (item.created_at || '') + '</small></span>';
                 html += '</a>';
             });
