@@ -42,12 +42,12 @@ if (!isLoggedIn()) {
 // Get current page title
 $page_title = isset($page_title) ? $page_title : 'Dashboard';
 
-// Pre-fetch notifications: admin/kepala lihat semua, guru/wali hanya notif tugas dikumpulkan
+// Pre-fetch notifications: tampil 24 jam (sudah dibaca tetap ada, badge hitung yg belum dibaca)
 $unread_notifs = [];
 $unread_count = 0;
 $unread_count_label = '0';
 if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha'], true)) {
-    $unread_notifs = getUnreadNotifications($pdo);
+    $unread_notifs = function_exists('getNotifications') ? getNotifications($pdo) : getUnreadNotifications($pdo);
     foreach($unread_notifs as $n) {
         if(!$n['is_read']) $unread_count++;
     }
@@ -60,9 +60,9 @@ if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha'], true)) 
     }
     $unread_count_label = $unread_count > 99 ? '99+' : (string)$unread_count;
 }
-// Tinggi dropdown menyesuaikan jumlah notif: sepi tanpa scroll (height auto), ramai scroll halus 300px
+// Dropdown modern: selalu tampil 24 jam (sudah dibaca tetap ada), scroll halus max 380px
 $n_notif_nav = count($unread_notifs);
-$notif_list_h = $n_notif_nav <= 0 ? 'height:auto;max-height:140px;overflow:hidden;' : ($n_notif_nav <= 3 ? 'height:auto;max-height:none;overflow:visible;' : 'height:300px;overflow-y:auto;');
+$notif_list_h = $n_notif_nav <= 0 ? 'height:auto;max-height:140px;overflow:hidden;' : 'max-height:380px;overflow-y:auto;';
 
 // Pre-fetch student unread messages if user is siswa
 $student_unread_messages = [];
@@ -369,6 +369,20 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
         .navbar-notifikasi-scroll::-webkit-scrollbar-track { background: transparent; }
         .navbar-notifikasi-scroll::-webkit-scrollbar-thumb { background: #c3cad6; border-radius: 999px; }
         .navbar-notifikasi-scroll::-webkit-scrollbar-thumb:hover { background: #9aa5bb; }
+        .modern-notif-dropdown { border-radius: 14px !important; overflow: hidden; border: 1px solid #e5e9f2 !important; box-shadow: 0 12px 40px rgba(20,30,70,.18) !important; }
+        .modern-notif-dropdown .dropdown-header { background: #f6f8fd; border-bottom: 1px solid #e9edf5; font-weight: 800; font-size: 14px; padding: 10px 14px; }
+        .modern-notif-scroll { max-height: 380px; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: #b9c4d8 transparent; }
+        .modern-notif-scroll::-webkit-scrollbar { width: 6px; }
+        .modern-notif-scroll::-webkit-scrollbar-track { background: transparent; }
+        .modern-notif-scroll::-webkit-scrollbar-thumb { background: #b9c4d8; border-radius: 999px; }
+        .modern-notif-scroll::-webkit-scrollbar-thumb:hover { background: #8fa0bd; }
+        .modern-notif-item { display: flex !important; gap: 10px; align-items: flex-start; padding: 10px 14px !important; border-bottom: 1px solid #eef1f7; white-space: normal !important; line-height: 1.35; transition: background .15s ease; }
+        .modern-notif-item:hover { background: #f2f6ff !important; }
+        .modern-notif-item.is-unread { background: #eef4ff !important; }
+        .modern-notif-item .unread-dot { width: 9px; height: 9px; border-radius: 50%; background: #1877f2; margin-top: 6px; flex: 0 0 9px; }
+        .modern-notif-item.is-read .unread-dot { background: transparent; }
+        .popover-notif-dropdown { border-radius: 14px !important; overflow: hidden; }
+        .popover-notif-dropdown .modern-notif-scroll { max-height: 320px; }
         .user-dropdown-menu {
             min-width: 240px;
             max-width: calc(100vw - 24px);
@@ -626,13 +640,13 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                 <span class="notif-count-badge" data-count="<?php echo (int)$unread_count; ?>"><?php echo htmlspecialchars($unread_count_label, ENT_QUOTES, 'UTF-8'); ?></span>
                             <?php endif; ?>
                         </a>
-                        <div class="dropdown-menu dropdown-list dropdown-menu-right">
+                        <div class="dropdown-menu dropdown-list dropdown-menu-right modern-notif-dropdown">
                             <div class="dropdown-header">Notifikasi
                                 <div class="float-right">
                                     <a href="#" id="mark-all-read">Tandai semua dibaca</a>
                                 </div>
                             </div>
-                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll" style="<?= $notif_list_h ?>">
+                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll modern-notif-scroll" style="<?= $notif_list_h ?>">
                                 <?php if (count($unread_notifs) > 0): ?>
                                     <?php foreach ($unread_notifs as $notif): ?>
                                         <?php
@@ -645,13 +659,15 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                             if (in_array(getUserLevel(), ['guru', 'wali'], true)) {
                                                 $notif_link = '../guru/' . ltrim($notif_link, '/');
                                             }
+                                            $is_unread_nav = empty($notif['is_read']);
                                         ?>
-                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="dropdown-item dropdown-item-unread" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; background-color: #f9f9f9;'; ?>">
+                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="dropdown-item modern-notif-item <?php echo $is_unread_nav ? 'is-unread' : 'is-read'; ?>">
+                                            <span class="unread-dot"></span>
                                             <div class="dropdown-item-icon bg-primary text-white">
                                                 <i class="fas fa-info"></i>
                                             </div>
                                             <div class="dropdown-item-desc">
-                                                <span style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; color: #333;'; ?>">
+                                                <span>
                                                     <?php echo htmlspecialchars($notif['message']); ?>
                                                 </span>
                                                 <div class="time text-primary"><?php echo formatHariTanggalWaktu($notif['created_at']); ?> &bull; <?php echo timeAgo($notif['created_at']); ?></div>
@@ -660,7 +676,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <div class="p-3 text-center text-muted">
-                                        Tidak ada notifikasi baru
+                                        Belum ada aktivitas 24 jam terakhir
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -943,9 +959,9 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                         <div class="modal-body p-0">
                             <?php
                             $n_notif_mob = count($unread_notifs);
-                            $notif_mob_h = $n_notif_mob <= 0 ? 'height:auto;max-height:180px;overflow:hidden;' : ($n_notif_mob <= 3 ? 'height:auto;max-height:none;overflow:visible;' : 'max-height:400px;overflow-y:auto;');
+                            $notif_mob_h = $n_notif_mob <= 0 ? 'height:auto;max-height:180px;overflow:hidden;' : 'max-height:400px;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;';
                             ?>
-                            <div class="list-group list-group-flush" style="<?= $notif_mob_h ?>">
+                            <div class="list-group list-group-flush modern-notif-scroll" style="<?= $notif_mob_h ?>">
                                 <?php if (count($unread_notifs) > 0): ?>
                                     <?php foreach ($unread_notifs as $notif): ?>
                                         <?php
@@ -959,18 +975,22 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                                 $notif_link = '../guru/' . ltrim($notif_link, '/');
                                             }
                                         ?>
-                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="list-group-item list-group-item-action flex-column align-items-start <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>">
-                                            <div class="d-flex w-100 justify-content-between">
-                                                <h6 class="mb-1 text-primary"><i class="fas fa-info-circle mr-1"></i> Info</h6>
-                                                <small class="text-muted"><?php echo formatHariTanggalWaktu($notif['created_at']); ?> &bull; <?php echo timeAgo($notif['created_at']); ?></small>
-                                            </div>
-                                            <p class="mb-1" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold;'; ?>"><?php echo htmlspecialchars($notif['message']); ?></p>
+                                        <?php $is_unread_m = empty($notif['is_read']); ?>
+                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="list-group-item list-group-item-action modern-notif-item <?php echo $is_unread_m ? 'is-unread' : 'is-read'; ?>">
+                                            <span class="unread-dot"></span>
+                                            <span style="flex:1;">
+                                                <span class="d-flex w-100 justify-content-between">
+                                                    <span class="mb-1 text-primary"><i class="fas fa-info-circle mr-1"></i> Info</span>
+                                                    <small class="text-muted"><?php echo formatHariTanggalWaktu($notif['created_at']); ?> &bull; <?php echo timeAgo($notif['created_at']); ?></small>
+                                                </span>
+                                                <span class="mb-1 d-block"><?php echo htmlspecialchars($notif['message']); ?></span>
+                                            </span>
                                         </a>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <div class="p-4 text-center text-muted">
                                         <i class="far fa-bell-slash fa-3x mb-3"></i><br>
-                                        Tidak ada notifikasi baru
+                                        Belum ada aktivitas 24 jam terakhir
                                     </div>
                                 <?php endif; ?>
                             </div>

@@ -302,11 +302,13 @@ if (!function_exists('build_ekskul_anggota_menu')) {
     }
 }
 
-$forum_unread_list = (isset($pdo) && $pdo && function_exists('get_forum_unread_notifications')) ? get_forum_unread_notifications($pdo, 10) : [];
-$forum_badge = count($forum_unread_list) > 0 ? (count($forum_unread_list) > 99 ? '99+' : count($forum_unread_list)) : null;
+$forum_unread_list = (isset($pdo) && $pdo && function_exists('get_forum_notifications')) ? get_forum_notifications($pdo, 15) : [];
+$forum_new_count = (isset($pdo) && $pdo && function_exists('get_forum_new_count')) ? get_forum_new_count($pdo) : 0;
+$forum_badge = $forum_new_count > 0 ? ($forum_new_count > 99 ? '99+' : $forum_new_count) : null;
 
-$diskusi_unread_list = (isset($pdo) && $pdo && function_exists('get_diskusi_unread_notifications')) ? get_diskusi_unread_notifications($pdo, 10) : [];
-$diskusi_badge = count($diskusi_unread_list) > 0 ? (count($diskusi_unread_list) > 99 ? '99+' : count($diskusi_unread_list)) : null;
+$diskusi_unread_list = (isset($pdo) && $pdo && function_exists('get_diskusi_notifications')) ? get_diskusi_notifications($pdo, 15) : [];
+$diskusi_new_count = (isset($pdo) && $pdo && function_exists('get_diskusi_new_count')) ? get_diskusi_new_count($pdo) : 0;
+$diskusi_badge = $diskusi_new_count > 0 ? ($diskusi_new_count > 99 ? '99+' : $diskusi_new_count) : null;
 
 switch ($user_level) {
     case 'admin':
@@ -1878,25 +1880,37 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         </div>
         <ul class="sidebar-menu">
             <?php foreach ($menu_items as $item): ?>
+                <?php
+                $is_forum_item = (strpos($item['title'], 'Forum') !== false);
+                $is_diskusi_item = (strpos($item['title'], 'Diskusi') !== false);
+                $ntype_main = $is_forum_item ? 'forum' : ($is_diskusi_item ? 'diskusi' : 'other');
+                $has_notif_main = $is_forum_item || $is_diskusi_item;
+                ?>
                 <?php if (isset($item['submenu'])): ?>
                     <li class="nav-item dropdown <?php echo $item['active'] ? 'active' : ''; ?>">
-                        <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span><?php if (isset($item['badge']) && $item['badge'] !== null): ?><?php $ntype = (strpos($item['title'], 'Forum') !== false) ? 'forum' : ((strpos($item['title'], 'Diskusi') !== false) ? 'diskusi' : 'other'); ?><span class="badge badge-danger badge-circle ml-auto mr-3 sidebar-notif-badge" data-notif-type="<?php echo $ntype; ?>" data-count="<?php echo (int)$item['badge']; ?>"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?></a>
+                        <a href="#" class="nav-link has-dropdown"><i class="<?php echo $item['icon']; ?>"></i><span><?php echo $item['title']; ?></span><?php if (isset($item['badge']) && $item['badge'] !== null): ?><span class="badge badge-danger badge-circle ml-auto mr-3 sidebar-notif-badge" data-notif-type="<?php echo $ntype_main; ?>" data-count="<?php echo (int)$item['badge']; ?>"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?></a>
                         <ul class="dropdown-menu"<?php echo $item['active'] ? ' style="display:block;"' : ''; ?>>
                             <?php foreach ($item['submenu'] as $subitem): ?>
-                                <li><a class="nav-link d-flex align-items-center justify-content-between <?php echo (isset($subitem['badge']) && $subitem['badge'] !== null) ? 'has-notif-badge' : ''; ?> <?php echo $subitem['active'] ? 'active' : ''; ?>" href="<?php echo htmlspecialchars(app_url($subitem['url']), ENT_QUOTES, 'UTF-8'); ?>"><span><?php echo $subitem['title']; ?></span><?php if (isset($subitem['badge']) && $subitem['badge'] !== null): ?><?php $sntype = (strpos($subitem['title'], 'Forum') !== false) ? 'forum' : ((strpos($subitem['title'], 'Diskusi') !== false) ? 'diskusi' : 'other'); ?><span class="badge badge-danger badge-circle ml-2 sidebar-notif-badge" data-notif-type="<?php echo $sntype; ?>" data-count="<?php echo (int)$subitem['badge']; ?>"><?php echo htmlspecialchars((string)$subitem['badge']); ?></span><?php endif; ?></a></li>
+                                <?php
+                                $is_f = (strpos($subitem['title'], 'Forum') !== false);
+                                $is_d = (strpos($subitem['title'], 'Diskusi') !== false);
+                                $sntype = $is_f ? 'forum' : ($is_d ? 'diskusi' : 'other');
+                                $has_sub = (isset($subitem['badge']) && $subitem['badge'] !== null) || $is_f || $is_d;
+                                ?>
+                                <li><a class="nav-link d-flex align-items-center justify-content-between <?php echo $has_sub ? 'has-notif-badge' : ''; ?> <?php echo $subitem['active'] ? 'active' : ''; ?>" <?php echo $has_sub ? 'data-notif-type="'.$sntype.'"' : ''; ?> href="<?php echo htmlspecialchars(app_url($subitem['url']), ENT_QUOTES, 'UTF-8'); ?>"><span><?php echo $subitem['title']; ?></span><?php if (isset($subitem['badge']) && $subitem['badge'] !== null): ?><span class="badge badge-danger badge-circle ml-2 sidebar-notif-badge" data-notif-type="<?php echo $sntype; ?>" data-count="<?php echo (int)$subitem['badge']; ?>"><?php echo htmlspecialchars((string)$subitem['badge']); ?></span><?php elseif ($is_f || $is_d): ?><span class="sidebar-notif-badge d-none" data-notif-type="<?php echo $sntype; ?>" data-count="0"></span><?php endif; ?></a></li>
                             <?php endforeach; ?>
                         </ul>
                     </li>
                 <?php else: ?>
                     <li class="<?php echo $item['active'] ? 'active' : ''; ?>">
-                        <a class="nav-link <?php echo (isset($item['badge']) && $item['badge'] !== null) ? 'has-notif-badge' : ''; ?>" 
-                           href="<?php echo htmlspecialchars(app_url($item['url']), ENT_QUOTES, 'UTF-8'); ?>" 
+                        <a class="nav-link <?php echo ((isset($item['badge']) && $item['badge'] !== null) || $has_notif_main) ? 'has-notif-badge' : ''; ?>" <?php echo $has_notif_main ? 'data-notif-type="'.$ntype_main.'"' : ''; ?>
+                           href="<?php echo htmlspecialchars(app_url($item['url']), ENT_QUOTES, 'UTF-8'); ?>"
                            <?php if (isset($item['attributes'])): ?>
                                <?php echo $item['attributes']; ?>
                            <?php endif; ?>>
-                             <i class="<?php echo $item['icon']; ?>"></i> 
+                             <i class="<?php echo $item['icon']; ?>"></i>
                              <span><?php echo $item['title']; ?></span>
-                             <?php if (isset($item['badge']) && $item['badge'] !== null): ?><?php $ntype = (strpos($item['title'], 'Forum') !== false) ? 'forum' : ((strpos($item['title'], 'Diskusi') !== false) ? 'diskusi' : 'other'); ?><span class="badge badge-danger badge-circle ml-auto sidebar-notif-badge" data-notif-type="<?php echo $ntype; ?>" data-count="<?php echo (int)$item['badge']; ?>"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php endif; ?>
+                             <?php if (isset($item['badge']) && $item['badge'] !== null): ?><span class="badge badge-danger badge-circle ml-auto sidebar-notif-badge" data-notif-type="<?php echo $ntype_main; ?>" data-count="<?php echo (int)$item['badge']; ?>"><?php echo htmlspecialchars((string)$item['badge']); ?></span><?php elseif ($has_notif_main): ?><span class="sidebar-notif-badge d-none" data-notif-type="<?php echo $ntype_main; ?>" data-count="0"></span><?php endif; ?>
                         </a>
                     </li>
                 <?php endif; ?>

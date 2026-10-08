@@ -31,9 +31,9 @@ if (in_array(getUserLevel(), ['guru', 'wali', 'tata_usaha'], true)) {
     }
     $unread_count_label_u = $unread_count_u > 99 ? '99+' : (string)$unread_count_u;
 }
-// Tinggi dropdown menyesuaikan jumlah notif (kosong ramping, sedikit tanpa scroll, ramai scroll halus)
+// Dropdown modern: selalu tampil 24 jam (sudah dibaca tetap ada), scroll halus max 380px
 $n_notif_nav_u = count($unread_notifs_u);
-$notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:hidden;' : ($n_notif_nav_u <= 3 ? 'height:auto;max-height:none;overflow:visible;' : 'height:300px;overflow-y:auto;');
+$notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:hidden;' : 'max-height:380px;overflow-y:auto;';
 ?>
 
 <!DOCTYPE html>
@@ -450,6 +450,21 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
         .navbar-notifikasi-scroll::-webkit-scrollbar-track { background: transparent; }
         .navbar-notifikasi-scroll::-webkit-scrollbar-thumb { background: #c3cad6; border-radius: 999px; }
         .navbar-notifikasi-scroll::-webkit-scrollbar-thumb:hover { background: #9aa5bb; }
+        .modern-notif-dropdown { border-radius: 14px !important; overflow: hidden; border: 1px solid #e5e9f2 !important; box-shadow: 0 12px 40px rgba(20,30,70,.18) !important; }
+        .modern-notif-dropdown .dropdown-header { background: #f6f8fd; border-bottom: 1px solid #e9edf5; font-weight: 800; font-size: 14px; padding: 10px 14px; }
+        .modern-notif-scroll { max-height: 380px; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: #b9c4d8 transparent; }
+        .modern-notif-scroll::-webkit-scrollbar { width: 6px; }
+        .modern-notif-scroll::-webkit-scrollbar-track { background: transparent; }
+        .modern-notif-scroll::-webkit-scrollbar-thumb { background: #b9c4d8; border-radius: 999px; }
+        .modern-notif-scroll::-webkit-scrollbar-thumb:hover { background: #8fa0bd; }
+        .modern-notif-item { display: flex !important; gap: 10px; align-items: flex-start; padding: 10px 14px !important; border-bottom: 1px solid #eef1f7; white-space: normal !important; line-height: 1.35; transition: background .15s ease; }
+        .modern-notif-item:hover { background: #f2f6ff !important; }
+        .modern-notif-item.is-unread { background: #eef4ff !important; font-weight: 700; color: #111; }
+        .modern-notif-item.is-read { background: #fff !important; font-weight: 400; color: #555; }
+        .modern-notif-item .unread-dot { width: 9px; height: 9px; border-radius: 50%; background: #1877f2; margin-top: 6px; flex: 0 0 9px; }
+        .modern-notif-item.is-read .unread-dot { background: transparent; }
+        .popover-notif-dropdown { border-radius: 14px !important; overflow: hidden; }
+        .popover-notif-dropdown .modern-notif-scroll { max-height: 320px; }
     </style>
 </head>
 
@@ -515,13 +530,13 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
                                 <span class="notif-count-badge" data-count="<?php echo (int)$unread_count_u; ?>"><?php echo htmlspecialchars($unread_count_label_u, ENT_QUOTES, 'UTF-8'); ?></span>
                             <?php endif; ?>
                         </a>
-                        <div class="dropdown-menu dropdown-list dropdown-menu-right">
+                        <div class="dropdown-menu dropdown-list dropdown-menu-right modern-notif-dropdown">
                             <div class="dropdown-header">Tugas Dikumpulkan
                                 <div class="float-right">
                                     <a href="#" id="mark-all-read">Tandai semua dibaca</a>
                                 </div>
                             </div>
-                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll" style="<?= $notif_list_h_u ?>">
+                            <div class="dropdown-list-content dropdown-list-icons navbar-notifikasi-scroll modern-notif-scroll" style="<?= $notif_list_h_u ?>">
                                 <?php if (count($unread_notifs_u) > 0): ?>
                                     <?php foreach ($unread_notifs_u as $notif): ?>
                                         <?php
@@ -529,13 +544,15 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
                                             if (strpos($notif_link, '../') !== 0 && strpos($notif_link, 'http') !== 0) {
                                                 $notif_link = '../guru/' . ltrim($notif_link, '/');
                                             }
+                                            $is_unread_u = empty($notif['is_read']);
                                         ?>
-                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="dropdown-item dropdown-item-unread" style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; background-color: #f9f9f9;'; ?>">
+                                        <a href="#" onclick="readNotification(<?php echo $notif['id']; ?>, '<?php echo $notif_link; ?>', this); return false;" class="dropdown-item modern-notif-item <?php echo $is_unread_u ? 'is-unread' : 'is-read'; ?>">
+                                            <span class="unread-dot"></span>
                                             <div class="dropdown-item-icon bg-primary text-white">
                                                 <i class="fas fa-info"></i>
                                             </div>
                                             <div class="dropdown-item-desc">
-                                                <span style="<?php echo $notif['is_read'] ? '' : 'font-weight: bold; color: #333;'; ?>">
+                                                <span>
                                                     <?php echo htmlspecialchars($notif['message']); ?>
                                                 </span>
                                                 <div class="time text-primary"><?php echo formatHariTanggalWaktu($notif['created_at']); ?> &bull; <?php echo timeAgo($notif['created_at']); ?></div>
@@ -544,7 +561,7 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <div class="p-3 text-center text-muted">
-                                        Tidak ada notifikasi baru
+                                        Belum ada aktivitas 24 jam terakhir
                                     </div>
                                 <?php endif; ?>
                             </div>

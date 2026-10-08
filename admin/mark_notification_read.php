@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stIns->execute([(int)$nid, $ukey]);
                 }
             }
-            $pdo->exec("UPDATE tb_notifikasi SET is_read = 1");
             echo json_encode(['status' => 'success']);
             exit();
         } catch (Throwable $e) {

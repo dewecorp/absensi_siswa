@@ -2144,18 +2144,14 @@ function getTeacherTaskNotifications(PDO $pdo, int $guru_id, int $limit = 15): a
     return $out;
 }
 
-// Function to mark notification as read
+// Function to mark notification as read (per-user, global row tetap 24 jam)
 function markNotificationAsRead(PDO $pdo, int $id, ?string $user_key = null): bool {
     if ($user_key === null) {
         $user_key = get_current_user_key();
     }
     try {
         $st = $pdo->prepare("INSERT IGNORE INTO tb_notifikasi_read (notif_id, user_key) VALUES (?, ?)");
-        $st->execute([$id, $user_key]);
-    } catch (Throwable $e) {}
-    try {
-        $stmt = $pdo->prepare("UPDATE tb_notifikasi SET is_read = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        return $st->execute([$id, $user_key]);
     } catch (Throwable $e) {
         return false;
     }
@@ -3463,16 +3459,16 @@ function upsert_nilai_semester_setting_minmax(PDO $pdo, int $id_kelas, int $id_m
     }
 }
 
-function get_forum_unread_notifications(PDO $pdo, int $limit = 10, ?string $user_key = null): array {
+function get_forum_notifications(PDO $pdo, int $limit = 10, ?string $user_key = null): array {
     if ($user_key === null) {
         $user_key = function_exists('get_current_user_key') ? get_current_user_key() : 'user_' . ($_SESSION['user_id'] ?? 0);
     }
     try {
         $st = $pdo->prepare("
-            SELECT n.*
+            SELECT n.*, (CASE WHEN r.notif_id IS NOT NULL THEN 1 ELSE 0 END) AS is_read
             FROM tb_notifikasi n
             LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
-            WHERE r.notif_id IS NULL
+            WHERE n.created_at >= NOW() - INTERVAL 24 HOUR
               AND (n.actor_key IS NULL OR n.actor_key != ?)
               AND (n.message LIKE 'Forum Guru:%' OR (n.message LIKE '%mencolek%' AND n.message LIKE '%[Forum%'))
             ORDER BY n.created_at DESC
@@ -3488,16 +3484,16 @@ function get_forum_unread_notifications(PDO $pdo, int $limit = 10, ?string $user
     }
 }
 
-function get_diskusi_unread_notifications(PDO $pdo, int $limit = 10, ?string $user_key = null): array {
+function get_diskusi_notifications(PDO $pdo, int $limit = 10, ?string $user_key = null): array {
     if ($user_key === null) {
         $user_key = function_exists('get_current_user_key') ? get_current_user_key() : 'user_' . ($_SESSION['user_id'] ?? 0);
     }
     try {
         $st = $pdo->prepare("
-            SELECT n.*
+            SELECT n.*, (CASE WHEN r.notif_id IS NOT NULL THEN 1 ELSE 0 END) AS is_read
             FROM tb_notifikasi n
             LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
-            WHERE r.notif_id IS NULL
+            WHERE n.created_at >= NOW() - INTERVAL 24 HOUR
               AND (n.actor_key IS NULL OR n.actor_key != ?)
               AND (n.message LIKE 'Diskusi Kelas:%' OR (n.message LIKE '%mencolek%' AND n.message LIKE '%[Diskusi%'))
             ORDER BY n.created_at DESC
@@ -3513,10 +3509,28 @@ function get_diskusi_unread_notifications(PDO $pdo, int $limit = 10, ?string $us
     }
 }
 
+function get_forum_unread_notifications(PDO $pdo, int $limit = 10, ?string $user_key = null): array {
+    return get_forum_notifications($pdo, $limit, $user_key);
+}
+
+function get_diskusi_unread_notifications(PDO $pdo, int $limit = 10, ?string $user_key = null): array {
+    return get_diskusi_notifications($pdo, $limit, $user_key);
+}
+
 function get_forum_new_count(PDO $pdo): int {
-    return count(get_forum_unread_notifications($pdo, 50));
+    $list = get_forum_notifications($pdo, 50);
+    $cnt = 0;
+    foreach ($list as $item) {
+        if (empty($item['is_read'])) $cnt++;
+    }
+    return $cnt;
 }
 
 function get_diskusi_new_count(PDO $pdo, int $id_kelas = 0): int {
-    return count(get_diskusi_unread_notifications($pdo, 50));
+    $list = get_diskusi_notifications($pdo, 50);
+    $cnt = 0;
+    foreach ($list as $item) {
+        if (empty($item['is_read'])) $cnt++;
+    }
+    return $cnt;
 }
