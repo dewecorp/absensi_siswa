@@ -315,12 +315,16 @@ $(document).on('click', '.diskusi-like', function(e) {
     e.preventDefault();
     var btn = $(this);
     var isPost = (btn.data('target') === 'post');
+    var postCard = btn.closest('.diskusi-card');
     $.post('', { ajax_like: 1, target: btn.data('target'), target_id: btn.data('id') }, function(res) {
         if (res && res.ok) {
             btn.find('.like-count').text(res.count);
             if (isPost) {
                 btn.toggleClass('liked', !!res.liked);
                 btn.find('i').attr('class', res.liked ? 'fas fa-thumbs-up mr-1' : 'far fa-thumbs-up mr-1');
+                if (postCard.length) {
+                    postCard.find('.post-like-count').text(res.count);
+                }
             } else {
                 btn.toggleClass('text-primary', !!res.liked).toggleClass('text-muted', !res.liked);
             }
@@ -685,7 +689,7 @@ include '../templates/sidebar.php';
                     <?php endif; ?>
 
                     <div class="px-3 py-1 d-flex justify-content-between diskusi-count">
-                        <span><i class="fas fa-thumbs-up text-primary mr-1"></i><?= (int)$p['jml_suka'] ?> suka</span>
+                        <span><i class="fas fa-thumbs-up text-primary mr-1"></i><span class="post-like-count"><?= (int)$p['jml_suka'] ?></span> suka</span>
                         <span><?= (int)$p['jml_komentar'] ?> komentar</span>
                     </div>
 
