@@ -72,6 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($id_siswa <= 0 || $tindakan === '' || $penanggung_jawab === '') {
             $message = ['type' => 'warning', 'text' => 'Pilih Siswa, isi Tindakan, dan Penanggung Jawab.'];
+        } elseif ($action === 'tambah' && (($sumber === 'Pembinaan' && ($id_pembinaan ?? 0) <= 0) || ($sumber === 'Konseling' && ($id_konseling ?? 0) <= 0))) {
+            $message = ['type' => 'warning', 'text' => 'Pilih ' . ($sumber === 'Konseling' ? 'konseling' : 'pembinaan') . ' sumber terlebih dahulu.'];
         } else {
             // Validasi kepemilikan siswa (jika terhubung ke item spesifik)
             $boleh = true;
@@ -480,13 +482,13 @@ $(document).ready(function() {
         if (sumber === 'Konseling') {
             $('#wrap_pembinaan').hide();
             $('#wrap_konseling').show();
-            $('#inp_pembinaan').val('').prop('required', false);
+            $('#inp_pembinaan').prop('required', false);
             $('#inp_konseling').prop('required', true);
             $('#pj_default_hint').text('Penanggung Jawab biasanya: Guru BK / Wali Kelas');
         } else {
             $('#wrap_pembinaan').show();
             $('#wrap_konseling').hide();
-            $('#inp_konseling').val('').prop('required', false);
+            $('#inp_konseling').prop('required', false);
             $('#inp_pembinaan').prop('required', true);
             $('#pj_default_hint').text('Penanggung Jawab biasanya: Wali Kelas / Guru BK / Orang Tua');
         }
@@ -507,6 +509,10 @@ $(document).ready(function() {
     }
 
     $('#inp_siswa').on('change', function() {
+        if ($(this).data('skip-change')) {
+            $(this).removeData('skip-change');
+            return;
+        }
         var sid = $(this).val();
         showKonteksSiswa(sid);
         fillBinaDropdown(sid, '');
@@ -561,11 +567,12 @@ $(document).ready(function() {
         $('#tlId').val('');
         $('#modalTLTitle').text('Tambah Rencana Tindak Lanjut');
         $('#formTL')[0].reset();
-        $('#inp_siswa').val('').trigger('change');
-        $('#inp_sumber').val('Pembinaan').trigger('change');
+        $('#inp_siswa').val('');
         fillBinaDropdown('', '');
         fillKonsDropdown('', '');
         showKonteksSiswa('');
+        $('#inp_sumber').val('Pembinaan');
+        switchSumberWrap('Pembinaan');
         $('#modalTL').modal('show');
         setTimeout(function() {
             $('#modalTL textarea').each(function() { autogrowTL($(this)); });
@@ -582,17 +589,25 @@ $(document).ready(function() {
         $('#modalTLTitle').text('Edit Tindak Lanjut');
 
         var optLbl = data.nama_siswa + (data.nisn ? ' (' + data.nisn + ')' : '');
-        if ($('#inp_siswa option[value="' + data.id_siswa + '"]').length === 0) {
-            var optEdit = new Option(optLbl, data.id_siswa, true, true);
-            $('#inp_siswa').append(optEdit);
+        var $siswaSel = $('#inp_siswa');
+        if ($siswaSel.find('option[value="' + data.id_siswa + '"]').length === 0) {
+            $siswaSel.append(new Option(optLbl, data.id_siswa, true, true));
         }
-        $('#inp_siswa').val(data.id_siswa).trigger('change');
+        $siswaSel.val(data.id_siswa).trigger('change');
+        if (window.GDSRefresh) { try { window.GDSRefresh($('#modalTL')[0]); } catch(e2) {} }
+        showKonteksSiswa(data.id_siswa);
 
         var src = (data.sumber === 'Konseling') ? 'Konseling' : 'Pembinaan';
         fillBinaDropdown(data.id_siswa, data.id_pembinaan || '', data);
         fillKonsDropdown(data.id_siswa, data.id_konseling || '', data);
 
-        $('#inp_sumber').val(src).trigger('change');
+        $('#inp_sumber').val(src);
+        switchSumberWrap(src);
+        if (src === 'Pembinaan' && data.id_pembinaan) {
+            $('#inp_pembinaan').val(String(data.id_pembinaan)).trigger('change');
+        } else if (src === 'Konseling' && data.id_konseling) {
+            $('#inp_konseling').val(String(data.id_konseling)).trigger('change');
+        }
 
         $('#inp_tanggal').val(data.tanggal);
         $('#sel_tl_tindakan option').each(function() {
