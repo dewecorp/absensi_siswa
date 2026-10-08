@@ -1,3 +1,31 @@
+/* Mobile notification modal: single smooth scrollbar */
+#mobileNotificationModalU .modal-body,
+#mobileNotificationModal .modal-body {
+  overflow: hidden !important;
+}
+#mobileNotificationModalU .modern-notif-scroll,
+#mobileNotificationModal .modern-notif-scroll {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #b9c4d8 transparent;
+}
+#mobileNotificationModalU .modern-notif-scroll::-webkit-scrollbar,
+#mobileNotificationModal .modern-notif-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+#mobileNotificationModalU .modern-notif-scroll::-webkit-scrollbar-track,
+#mobileNotificationModal .modern-notif-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+#mobileNotificationModalU .modern-notif-scroll::-webkit-scrollbar-thumb,
+#mobileNotificationModal .modern-notif-scroll::-webkit-scrollbar-thumb {
+  background: #b9c4d8;
+  border-radius: 999px;
+}
+
 /* Global modern rounded dropdown (kecuali submenu sidebar, ikut bawaan template) */
 .navbar .dropdown-menu,
 .dropdown-list,

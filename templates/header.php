@@ -937,12 +937,12 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
-                        <div class="modal-body p-0">
+                        <div class="modal-body p-0" style="overflow:hidden;max-height:70vh;">
                             <?php
                             $n_notif_mob = count($unread_notifs);
-                            $notif_mob_h = $n_notif_mob <= 0 ? 'height:auto;max-height:180px;overflow:hidden;' : 'max-height:400px;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;';
+                            $notif_mob_h = $n_notif_mob <= 0 ? 'height:auto;max-height:180px;overflow:hidden;' : 'max-height:calc(70vh - 2px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#b9c4d8 transparent;';
                             ?>
-                            <div class="list-group list-group-flush modern-notif-scroll" style="<?= $notif_mob_h ?>">
+                            <div class="list-group list-group-flush modern-notif-scroll" style="<?= $notif_mob_h ?>;scrollbar-width:thin;">
                                 <?php if (count($unread_notifs) > 0): ?>
                                     <?php foreach ($unread_notifs as $notif): ?>
                                         <?php

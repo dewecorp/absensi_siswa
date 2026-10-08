@@ -301,12 +301,12 @@ if (!isset($school_profile)) {
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body p-0">
+                <div class="modal-body p-0" style="overflow:hidden;max-height:70vh;">
                     <?php
                     $n_notif_mob_u = count($unread_notifs_u);
-                    $notif_mob_h_u = $n_notif_mob_u <= 0 ? 'height:auto;max-height:180px;overflow:hidden;' : 'max-height:400px;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;';
+                    $notif_mob_h_u = $n_notif_mob_u <= 0 ? 'height:auto;max-height:180px;overflow:hidden;' : 'max-height:calc(70vh - 2px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#b9c4d8 transparent;';
                     ?>
-                    <div class="list-group list-group-flush modern-notif-scroll" style="<?= $notif_mob_h_u ?>">
+                    <div class="list-group list-group-flush modern-notif-scroll" style="<?= $notif_mob_h_u ?>;scrollbar-width:thin;">
                         <?php if (count($unread_notifs_u) > 0): ?>
                             <?php foreach ($unread_notifs_u as $notif): ?>
                                 <?php
