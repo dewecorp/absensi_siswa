@@ -566,47 +566,63 @@ select[name$="_length"] {
 .modal-content::-webkit-scrollbar-thumb:hover {
   background: #8fa0bd;
 }
-/* Sidebar niceScroll rail: HIDDEN by default when no submenu is open */
-.sidebar-nicescroll-rail,
-div.nicescroll-rails.sidebar-nicescroll-rail,
-div.nicescroll-rails.nicescroll-rails-vr {
+/* Sembunyikan scrollbar bawaan browser pada sidebar agar tidak ganda dengan niceScroll */
+.main-sidebar,
+#sidebar-wrapper,
+.sidebar-menu,
+.sidebar-menu ul.dropdown-menu {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.main-sidebar::-webkit-scrollbar,
+#sidebar-wrapper::-webkit-scrollbar,
+.sidebar-menu::-webkit-scrollbar,
+.sidebar-menu ul.dropdown-menu::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Sidebar scrollbar hidden by default (saat tidak ada anak menu terbuka) */
+.main-sidebar {
+  overflow: hidden !important;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.main-sidebar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+/* HANYA saat ada anak menu terbuka (body.sidebar-scroll-on), tampilkan scrollbar halus dibatasi bawah header */
+body.sidebar-scroll-on .main-sidebar {
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #c3cad6 transparent !important;
+}
+body.sidebar-scroll-on .main-sidebar::-webkit-scrollbar {
+  display: block !important;
+  width: 5px !important;
+}
+body.sidebar-scroll-on .main-sidebar::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin-top: 64px !important;
+  margin-bottom: 24px !important;
+}
+body.sidebar-scroll-on .main-sidebar::-webkit-scrollbar-thumb {
+  background-color: #c3cad6 !important;
+  border-radius: 999px !important;
+}
+body.sidebar-scroll-on .main-sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8 !important;
+}
+
+/* Sembunyikan rel niceScroll agar tidak ada scrollbar ganda */
+.nicescroll-rails,
+div[id*="ascrail"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
-}
-
-/* ONLY when body has sidebar-scroll-on (meaning a submenu is open), show sidebar rail starting BELOW header */
-body.sidebar-scroll-on .sidebar-nicescroll-rail,
-body.sidebar-scroll-on div.nicescroll-rails.sidebar-nicescroll-rail,
-body.sidebar-scroll-on div.nicescroll-rails.nicescroll-rails-vr {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  top: 60px !important;
-  bottom: 24px !important;
-  height: auto !important;
-  max-height: calc(100vh - 84px) !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 999px !important;
-  width: 5px !important;
-  right: 1px !important;
-  padding: 0 !important;
-  z-index: 892 !important;
-}
-
-body.sidebar-scroll-on .sidebar-nicescroll-rail > div,
-body.sidebar-scroll-on div.nicescroll-rails.nicescroll-rails-vr > div {
-  background-color: #c3cad6 !important;
-  border: none !important;
-  border-radius: 999px !important;
-  width: 5px !important;
-  margin: 0 !important;
-  opacity: 0.8 !important;
-}
-
-body.sidebar-scroll-on .sidebar-nicescroll-rail:hover > div,
-body.sidebar-scroll-on div.nicescroll-rails.nicescroll-rails-vr:hover > div {
-  background-color: #94a3b8 !important;
-  opacity: 1 !important;
 }

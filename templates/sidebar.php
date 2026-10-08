@@ -1922,5 +1922,48 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 window.forumUnreadList = <?php echo json_encode($forum_unread_list ?? []); ?>;
 window.diskusiUnreadList = <?php echo json_encode($diskusi_unread_list ?? []); ?>;
 </script>
+<?php
+// Auto-scroll sidebar ke menu aktif (pas di posisi menu) setelah halaman dimuat
+if (!isset($js_page) || !is_array($js_page)) { $js_page = []; }
+$js_page[] = <<<'SIDEBARJS'
+$(function() {
+    function scrollToActiveMenu() {
+        try {
+            var $sidebar = $('.main-sidebar');
+            if (!$sidebar.length) return;
+
+            var $active = $sidebar.find('.sidebar-menu a.active').first();
+            if (!$active.length) {
+                $active = $sidebar.find('.sidebar-menu li.active > a').first();
+            }
+            if (!$active.length) {
+                $('body').removeClass('sidebar-scroll-on');
+                return;
+            }
+
+            var $drop = $active.closest('li.dropdown');
+            if ($drop.length) {
+                $drop.addClass('active');
+                $drop.children('ul.dropdown-menu').show();
+                $('body').addClass('sidebar-scroll-on');
+            }
+
+            var sidebarTop = $sidebar.offset().top;
+            var activeTop = $active.offset().top;
+            var currentScroll = $sidebar.scrollTop() || 0;
+            var targetTop = (activeTop - sidebarTop + currentScroll) - 140;
+            if (targetTop < 0) targetTop = 0;
+
+            $sidebar.scrollTop(targetTop);
+            $('#sidebar-wrapper').scrollTop(targetTop);
+        } catch (e) {}
+    }
+
+    scrollToActiveMenu();
+    setTimeout(scrollToActiveMenu, 300);
+    setTimeout(scrollToActiveMenu, 700);
+});
+SIDEBARJS;
+?>
 </div>
 

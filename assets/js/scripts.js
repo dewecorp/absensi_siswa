@@ -44,7 +44,7 @@ $(function() {
     cursoropacitymin: 0,
     cursoropacitymax: .8,
     background: "transparent",
-    railpadding: { top: 0, right: 0, left: 0, bottom: 0 },
+    railpadding: { top: 0, right: 2, left: 0, bottom: 0 },
     autohidemode: false,
     smoothscroll: true,
     zindex: 892
@@ -85,26 +85,14 @@ $(function() {
     }, 480);
   }
 
-  var sidebar_tag_rail = function() {
-    try {
-      var ns = $(".main-sidebar").getNiceScroll();
-      if (ns && ns.length && ns[0].rail) {
-        ns[0].rail.addClass('sidebar-nicescroll-rail');
-      }
-    } catch (e) {}
-  };
-
   var sidebar_refresh_scroll_state = function() {
-    sidebar_tag_rail();
     var open = $('.main-sidebar .sidebar-menu li.active > .dropdown-menu:visible').length > 0;
-    try {
-      if (open) {
-        $('body').addClass('sidebar-scroll-on');
-      } else {
-        $('body').removeClass('sidebar-scroll-on');
-      }
-    } catch (e) {}
-    update_sidebar_nicescroll();
+    if (open) {
+      $('body').addClass('sidebar-scroll-on');
+    } else {
+      $('body').removeClass('sidebar-scroll-on');
+      $('.main-sidebar').scrollTop(0);
+    }
   };
 
   var sidebar_dropdown = function() {
