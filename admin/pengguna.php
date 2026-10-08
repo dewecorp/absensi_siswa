@@ -198,51 +198,31 @@ $js_page = [
                     active = true;
                 }
 
-                $('.main-sidebar .sidebar-menu li.active > .dropdown-menu').slideUp(500, function() {
-                    // update sidebar nicescroll
-                    if(\$(\".main-sidebar\").length) {
-                        var sidebar_nicescroll_opts = {
-                            cursoropacitymin: 0,
-                            cursoropacitymax: .8,
-                            zindex: 892
-                        };
-                        \$(\".main-sidebar\").niceScroll(sidebar_nicescroll_opts);
-                        var sidebar_nicescroll = \$(\".main-sidebar\").getNiceScroll();
-                        sidebar_nicescroll.resize();
+                $(\'.main-sidebar .sidebar-menu li.active > .dropdown-menu\').slideUp(500, function() {
+                    if (typeof update_sidebar_nicescroll === 'function') {
+                        update_sidebar_nicescroll();
                     }
                     return false;
                 });
 
-                $('.main-sidebar .sidebar-menu li.active.dropdown').removeClass('active');
+                $(\'.main-sidebar .sidebar-menu li.active.dropdown\').removeClass(\'active\');
 
                 if(active==true) {
-                    me.parent().removeClass('active');
-                    me.parent().find('> .dropdown-menu').slideUp(500, function() {
-                        // update sidebar nicescroll
-                        if(\$(\".main-sidebar\").length) {
-                            var sidebar_nicescroll_opts = {
-                                cursoropacitymin: 0,
-                                cursoropacitymax: .8,
-                                zindex: 892
-                            };
-                            \$(\".main-sidebar\").niceScroll(sidebar_nicescroll_opts);
-                            var sidebar_nicescroll = \$(\".main-sidebar\").getNiceScroll();
-                            sidebar_nicescroll.resize();
+                    me.parent().removeClass(\'active\');
+                    me.parent().find(\'> .dropdown-menu\').slideUp(500, function() {
+                        if (typeof update_sidebar_nicescroll === 'function') {
+                            update_sidebar_nicescroll();
                         }
                         return false;
                     });
                 }else{
-                    me.parent().addClass('active');
-                    me.parent().find('> .dropdown-menu').slideDown(500, function() {
-                        // update sidebar nicescroll
-                        if(\$(\".main-sidebar\").length) {
-                            var sidebar_nicescroll_opts = {
-                                cursoropacitymin: 0,
-                                cursoropacitymax: .8,
-                                zindex: 892
-                            };
-                            \$(\".main-sidebar\").niceScroll(sidebar_nicescroll_opts);
-                            var sidebar_nicescroll = \$(\".main-sidebar\").getNiceScroll();
+                    me.parent().addClass(\'active\');
+                    me.parent().find(\'> .dropdown-menu\').slideDown(500, function() {
+                        if (typeof update_sidebar_nicescroll === 'function') {
+                            update_sidebar_nicescroll();
+                        }
+                            $(\".main-sidebar\").niceScroll(sidebar_nicescroll_opts);
+                            var sidebar_nicescroll = $(\".main-sidebar\").getNiceScroll();
                             sidebar_nicescroll.resize();
                         }
                         return false;

@@ -1436,7 +1436,7 @@ function setImportType(type) {
             
             echo '<!-- Add Modal -->
             <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
-                <div class="modal-dialog" role="document">
+                <div class="modal-dialog modal-lg" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="addModalLabel">Tambah Data Guru</h5>
@@ -1447,71 +1447,104 @@ function setImportType(type) {
                         <form method="POST" action="" enctype="multipart/form-data">
                             <div class="modal-body">
                                 <input type="hidden" name="add_guru" value="1">
-                                <div class="form-group">
-                                    <label>Foto</label>
-                                    <input type="file" class="form-control" name="foto" accept="image/jpeg,image/jpg,image/png,image/gif">
-                                    <small class="form-text text-muted">Format: JPG, JPEG, PNG, atau GIF (maksimal 2MB)</small>
-                                </div>
-                                <div class="form-group">
-                                    <label>Nama Guru</label>
-                                    <input type="text" class="form-control" name="nama_guru" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Kode Guru</label>
-                                    <input type="text" class="form-control" name="kode_guru" value="' . htmlspecialchars($next_kode_guru) . '" readonly required>
-                                </div>
-                                <div class="form-group">
-                                    <label>NUPTK</label>
-                                    <input type="text" class="form-control" name="nuptk" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Tempat Lahir</label>
-                                    <input type="text" class="form-control" name="tempat_lahir">
-                                </div>
-                                <div class="form-group">
-                                    <label>Tanggal Lahir</label>
-                                    <input type="date" class="form-control" name="tanggal_lahir">
-                                </div>
-                                <div class="form-group">
-                                    <label>Jenis Kelamin</label>
-                                    <select class="form-control" name="jenis_kelamin" required>
-                                        <option value="">Pilih Jenis Kelamin</option>
-                                        <option value="Laki-laki">Laki-laki</option>
-                                        <option value="Perempuan">Perempuan</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Pendidikan</label>
-                                    <select class="form-control" name="pendidikan">
-                                        <option value="">Pilih pendidikan (opsional)</option>
-                                        ' . $pend_opts_add . '
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Tanggal Mulai Tugas (TMT)</label>
-                                    <input type="date" class="form-control tmt-date" name="tmt">
-                                </div>
-                                <div class="form-group">
-                                    <label>Masa Bakti</label>
-                                    <input type="text" class="form-control" id="addMasaBakti" readonly placeholder="Terhitung otomatis setelah TMT diisi">
-                                </div>
-                                <div class="form-group">
-                                    <label>Mengajar Kelas</label>
-                                    <select class="form-control select2" name="mengajar[]" multiple="multiple" data-placeholder="Pilih kelas yang diajarkan" style="width: 100%;">
-                                    '; foreach ($kelas_list as $kelas) { echo '<option value="' . htmlspecialchars($kelas['id_kelas']) . '">' . htmlspecialchars($kelas['nama_kelas']) . '</option>'; } echo '
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Jabatan</label>
-                                    <select class="form-control select2" name="jabatan[]" multiple="multiple" data-placeholder="Pilih jabatan" style="width: 100%;">
-                                        '; foreach (getJabatanList($pdo) as $j) { echo '<option value="' . htmlspecialchars($j['nama_jabatan'], ENT_QUOTES) . '">' . htmlspecialchars($j['nama_jabatan']) . '</option>'; } echo '
-                                    </select>
-                                    <small class="text-muted">Bisa pilih lebih dari satu.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label>Password</label>
-                                    <input type="password" class="form-control" name="password" placeholder="Kosongkan jika tidak ingin diubah">
-                                    <small class="form-text text-muted">Kosongkan jika tidak ingin mengatur password</small>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label>Foto</label>
+                                            <div class="d-flex align-items-start" style="gap:12px;">
+                                                <div style="flex:1;">
+                                                    <input type="file" class="form-control guru-foto-input" name="foto" accept="image/jpeg,image/jpg,image/png,image/gif" data-preview="addFotoPreview">
+                                                    <small class="form-text text-muted">Format: JPG, JPEG, PNG, atau GIF (maksimal 2MB)</small>
+                                                </div>
+                                                <img id="addFotoPreview" src="../assets/img/avatar/avatar-1.png" alt="Preview" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e4e6fc;flex:0 0 72px;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Nama Guru</label>
+                                            <input type="text" class="form-control" name="nama_guru" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Kode Guru</label>
+                                            <input type="text" class="form-control" name="kode_guru" value="' . htmlspecialchars($next_kode_guru) . '" readonly required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>NUPTK</label>
+                                            <input type="text" class="form-control" name="nuptk" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Tempat Lahir</label>
+                                            <input type="text" class="form-control" name="tempat_lahir">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Tanggal Lahir</label>
+                                            <input type="date" class="form-control" name="tanggal_lahir">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Jenis Kelamin</label>
+                                            <select class="form-control" name="jenis_kelamin" required>
+                                                <option value="">Pilih Jenis Kelamin</option>
+                                                <option value="Laki-laki">Laki-laki</option>
+                                                <option value="Perempuan">Perempuan</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Pendidikan</label>
+                                            <select class="form-control" name="pendidikan">
+                                                <option value="">Pilih pendidikan (opsional)</option>
+                                                ' . $pend_opts_add . '
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Tanggal Mulai Tugas (TMT)</label>
+                                            <input type="date" class="form-control tmt-date" name="tmt">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Masa Bakti</label>
+                                            <input type="text" class="form-control" id="addMasaBakti" readonly placeholder="Terhitung otomatis setelah TMT diisi">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Mengajar Kelas</label>
+                                            <select class="form-control select2" name="mengajar[]" multiple="multiple" data-placeholder="Pilih kelas" style="width: 100%;">
+                                            '; foreach ($kelas_list as $kelas) { echo '<option value="' . htmlspecialchars($kelas['id_kelas']) . '">' . htmlspecialchars($kelas['nama_kelas']) . '</option>'; } echo '
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Jabatan</label>
+                                            <select class="form-control select2" name="jabatan[]" multiple="multiple" data-placeholder="Pilih jabatan" style="width: 100%;">
+                                                '; foreach (getJabatanList($pdo) as $j) { echo '<option value="' . htmlspecialchars($j['nama_jabatan'], ENT_QUOTES) . '">' . htmlspecialchars($j['nama_jabatan']) . '</option>'; } echo '
+                                            </select>
+                                            <small class="text-muted">Bisa pilih lebih dari satu.</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-0">
+                                            <label>Password</label>
+                                            <input type="password" class="form-control" name="password" placeholder="Kosongkan jika tidak ingin diubah">
+                                            <small class="form-text text-muted">Kosongkan jika tidak ingin mengatur password</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer bg-whitesmoke br">
@@ -1563,7 +1596,7 @@ function setImportType(type) {
                 
                 echo '<!-- Edit Modal -->
                 <div class="modal fade edit-modal" id="editModal' . $teacher['id_guru'] . '" tabindex="-1" role="dialog" aria-labelledby="editModalLabel' . $teacher['id_guru'] . '" aria-hidden="true">
-                    <div class="modal-dialog" role="document">
+                    <div class="modal-dialog modal-lg" role="document">
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="editModalLabel' . $teacher['id_guru'] . '">Edit Data Guru</h5>
@@ -1575,81 +1608,110 @@ function setImportType(type) {
                                 <div class="modal-body">
                                     <input type="hidden" name="id_guru" value="' . $teacher['id_guru'] . '">
                                     <input type="hidden" name="update_guru" value="1">
-                                    <div class="form-group">
-                                        <label>Foto</label>';
-                                        if (!empty($teacher['foto']) && file_exists('../uploads/' . $teacher['foto'])) {
-                                            echo '<div class="mb-2">
-                                                <img src="../uploads/' . htmlspecialchars($teacher['foto']) . '" alt="Foto Guru" style="max-width: 100px; max-height: 100px; border-radius: 5px;">
-                                            </div>';
-                                        }
-                                        echo '<input type="file" class="form-control" name="foto" accept="image/jpeg,image/jpg,image/png,image/gif">
-                                        <small class="form-text text-muted">Format: JPG, JPEG, PNG, atau GIF (maksimal 2MB). Kosongkan jika tidak ingin mengubah foto.</small>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Nama Guru</label>
-                                        <input type="text" class="form-control" name="nama_guru" value="' . htmlspecialchars($teacher['nama_guru']) . '" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Kode Guru</label>
-                                        <input type="text" class="form-control" name="kode_guru" value="' . htmlspecialchars($teacher['kode_guru'] ?? '') . '" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>NUPTK</label>
-                                        <input type="text" class="form-control" name="nuptk" value="' . htmlspecialchars($teacher['nuptk']) . '" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Tempat Lahir</label>
-                                        <input type="text" class="form-control" name="tempat_lahir" value="' . htmlspecialchars($teacher['tempat_lahir']) . '">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Tanggal Lahir</label>
-                                        <input type="date" class="form-control" name="tanggal_lahir" value="' . $teacher['tanggal_lahir'] . '">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Jenis Kelamin</label>
-                                        <select class="form-control" name="jenis_kelamin" required>
-                                            <option value="">Pilih Jenis Kelamin</option>
-                                            <option value="Laki-laki" ' . ($teacher['jenis_kelamin'] == 'Laki-laki' ? 'selected' : '') . '>Laki-laki</option>
-                                            <option value="Perempuan" ' . ($teacher['jenis_kelamin'] == 'Perempuan' ? 'selected' : '') . '>Perempuan</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Pendidikan</label>
-                                        <select class="form-control" name="pendidikan">' . $pend_opts_edit . '</select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Tanggal Mulai Tugas (TMT)</label>
-                                        <input type="date" class="form-control tmt-date" name="tmt" value="' . htmlspecialchars($teacher['tmt'] ?? '') . '">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Masa Bakti</label>
-                                        <input type="text" class="form-control masa-bakti" id="masaBakti' . $teacher['id_guru'] . '" readonly value="' . calculateMasaBakti($teacher['tmt'] ?? null) . '">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Mengajar Kelas</label>
-                                        <select class="form-control select2" name="mengajar[]" multiple="multiple" data-placeholder="Pilih kelas yang diajarkan" style="width: 100%;">
-                                        '; 
-                                        // Normalize mengajar_classes to integers for comparison
-                                        $mengajar_classes_int = array_map('intval', $mengajar_classes);
-                                        foreach ($kelas_list as $kelas) { 
-                                            $kelas_id_int = (int)$kelas['id_kelas'];
-                                            $is_selected = in_array($kelas_id_int, $mengajar_classes_int) || in_array($kelas['id_kelas'], $mengajar_classes) || in_array((string)$kelas['id_kelas'], $mengajar_classes);
-                                            echo '<option value="' . htmlspecialchars($kelas['id_kelas']) . '" ' . ($is_selected ? 'selected' : '') . '>' . htmlspecialchars($kelas['nama_kelas']) . '</option>'; 
-                                        } 
-                                        echo '
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Jabatan</label>
-                                        <select class="form-control select2" name="jabatan[]" multiple="multiple" data-placeholder="Pilih jabatan" style="width: 100%;">
-                                            '; $curJ = isset($teacher['jabatan']) ? array_map('trim', explode(',', (string)$teacher['jabatan'])) : []; foreach (getJabatanList($pdo) as $j) { $sel = in_array($j['nama_jabatan'], $curJ, true) ? ' selected' : ''; echo '<option value="' . htmlspecialchars($j['nama_jabatan'], ENT_QUOTES) . '"' . $sel . '>' . htmlspecialchars($j['nama_jabatan']) . '</option>'; } echo '
-                                        </select>
-                                        <small class="text-muted">Bisa pilih lebih dari satu.</small>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Password</label>
-                                        <input type="password" class="form-control" name="password" placeholder="Kosongkan jika tidak ingin diubah">
-                                        <small class="form-text text-muted">Kosongkan jika tidak ingin mengubah password</small>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="form-group">
+                                                <label>Foto</label>
+                                                <div class="d-flex align-items-start" style="gap:12px;">
+                                                    <div style="flex:1;">';
+                                                        $edit_foto_src = (!empty($teacher['foto']) && file_exists('../uploads/' . $teacher['foto'])) ? '../uploads/' . htmlspecialchars($teacher['foto']) : '../assets/img/avatar/avatar-1.png';
+                                                        echo '<input type="file" class="form-control guru-foto-input" name="foto" accept="image/jpeg,image/jpg,image/png,image/gif" data-preview="editFotoPreview' . $teacher['id_guru'] . '">
+                                                        <small class="form-text text-muted">Format: JPG, JPEG, PNG, atau GIF (maksimal 2MB). Kosongkan jika tidak ingin mengubah foto.</small>
+                                                    </div>
+                                                    <img id="editFotoPreview' . $teacher['id_guru'] . '" src="' . $edit_foto_src . '" alt="Foto Guru" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e4e6fc;flex:0 0 72px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Nama Guru</label>
+                                                <input type="text" class="form-control" name="nama_guru" value="' . htmlspecialchars($teacher['nama_guru']) . '" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Kode Guru</label>
+                                                <input type="text" class="form-control" name="kode_guru" value="' . htmlspecialchars($teacher['kode_guru'] ?? '') . '" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>NUPTK</label>
+                                                <input type="text" class="form-control" name="nuptk" value="' . htmlspecialchars($teacher['nuptk']) . '" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Tempat Lahir</label>
+                                                <input type="text" class="form-control" name="tempat_lahir" value="' . htmlspecialchars($teacher['tempat_lahir']) . '">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Tanggal Lahir</label>
+                                                <input type="date" class="form-control" name="tanggal_lahir" value="' . $teacher['tanggal_lahir'] . '">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Jenis Kelamin</label>
+                                                <select class="form-control" name="jenis_kelamin" required>
+                                                    <option value="">Pilih Jenis Kelamin</option>
+                                                    <option value="Laki-laki" ' . ($teacher['jenis_kelamin'] == 'Laki-laki' ? 'selected' : '') . '>Laki-laki</option>
+                                                    <option value="Perempuan" ' . ($teacher['jenis_kelamin'] == 'Perempuan' ? 'selected' : '') . '>Perempuan</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Pendidikan</label>
+                                                <select class="form-control" name="pendidikan">' . $pend_opts_edit . '</select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Tanggal Mulai Tugas (TMT)</label>
+                                                <input type="date" class="form-control tmt-date" name="tmt" value="' . htmlspecialchars($teacher['tmt'] ?? '') . '">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Masa Bakti</label>
+                                                <input type="text" class="form-control masa-bakti" id="masaBakti' . $teacher['id_guru'] . '" readonly value="' . calculateMasaBakti($teacher['tmt'] ?? null) . '">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Mengajar Kelas</label>
+                                                <select class="form-control select2" name="mengajar[]" multiple="multiple" data-placeholder="Pilih kelas" style="width: 100%;">
+                                                ';
+                                                // Normalize mengajar_classes to integers for comparison
+                                                $mengajar_classes_int = array_map('intval', $mengajar_classes);
+                                                foreach ($kelas_list as $kelas) {
+                                                    $kelas_id_int = (int)$kelas['id_kelas'];
+                                                    $is_selected = in_array($kelas_id_int, $mengajar_classes_int) || in_array($kelas['id_kelas'], $mengajar_classes) || in_array((string)$kelas['id_kelas'], $mengajar_classes);
+                                                    echo '<option value="' . htmlspecialchars($kelas['id_kelas']) . '" ' . ($is_selected ? 'selected' : '') . '>' . htmlspecialchars($kelas['nama_kelas']) . '</option>';
+                                                }
+                                                echo '
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Jabatan</label>
+                                                <select class="form-control select2" name="jabatan[]" multiple="multiple" data-placeholder="Pilih jabatan" style="width: 100%;">
+                                                    '; $curJ = isset($teacher['jabatan']) ? array_map('trim', explode(',', (string)$teacher['jabatan'])) : []; foreach (getJabatanList($pdo) as $j) { $sel = in_array($j['nama_jabatan'], $curJ, true) ? ' selected' : ''; echo '<option value="' . htmlspecialchars($j['nama_jabatan'], ENT_QUOTES) . '"' . $sel . '>' . htmlspecialchars($j['nama_jabatan']) . '</option>'; } echo '
+                                                </select>
+                                                <small class="text-muted">Bisa pilih lebih dari satu.</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group mb-0">
+                                                <label>Password</label>
+                                                <input type="password" class="form-control" name="password" placeholder="Kosongkan jika tidak ingin diubah">
+                                                <small class="form-text text-muted">Kosongkan jika tidak ingin mengubah password</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="modal-footer bg-whitesmoke br">
@@ -1692,28 +1754,32 @@ function setImportType(type) {
 
                 // Initialize Select2 when modals are shown
                 $(\'#addModal\').on(\'shown.bs.modal\', function() {
-                    var $select = $(this).find(\'select.select2\');
-                    if ($select.length > 0 && !$select.hasClass(\'select2-hidden-accessible\')) {
-                        $select.select2({
-                            placeholder: "Pilih kelas yang diajarkan",
+                    var $modal = $(this);
+                    $modal.find(\'select.select2\').each(function() {
+                        var $s = $(this);
+                        if ($s.hasClass(\'select2-hidden-accessible\')) return;
+                        $s.select2({
+                            placeholder: $s.data(\'placeholder\') || "Pilih kelas",
                             allowClear: true,
                             width: "100%",
-                            dropdownParent: $(this)
+                            dropdownParent: $modal
                         });
-                    }
+                    });
                 });
                 
                 // Initialize Select2 for edit modals when shown
                 $(\'.edit-modal\').on(\'shown.bs.modal\', function() {
-                    var $select = $(this).find(\'select.select2\');
-                    if ($select.length > 0 && !$select.hasClass(\'select2-hidden-accessible\')) {
-                        $select.select2({
-                            placeholder: "Pilih kelas yang diajarkan",
+                    var $modal = $(this);
+                    $modal.find(\'select.select2\').each(function() {
+                        var $s = $(this);
+                        if ($s.hasClass(\'select2-hidden-accessible\')) return;
+                        $s.select2({
+                            placeholder: $s.data(\'placeholder\') || "Pilih kelas",
                             allowClear: true,
                             width: "100%",
-                            dropdownParent: $(this)
+                            dropdownParent: $modal
                         });
-                    }
+                    });
                 });
                 
                 // Destroy Select2 when modals are hidden to prevent conflicts
@@ -1722,6 +1788,16 @@ function setImportType(type) {
                     if ($select.length > 0 && $select.hasClass(\'select2-hidden-accessible\')) {
                         $select.select2(\'destroy\');
                     }
+                });
+
+                // Live preview foto guru (tambah + edit)
+                $(document).on(\'change\', \'.guru-foto-input\', function() {
+                    var pid = $(this).data(\'preview\');
+                    var img = pid ? document.getElementById(pid) : null;
+                    if (!img || !this.files || !this.files[0]) return;
+                    var rd = new FileReader();
+                    rd.onload = function(e) { img.src = e.target.result; };
+                    rd.readAsDataURL(this.files[0]);
                 });
             });
             </script>';

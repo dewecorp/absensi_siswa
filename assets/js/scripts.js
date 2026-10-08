@@ -37,8 +37,16 @@ $('[data-confirm]').each(function() {
 // Global
 $(function() {
   let sidebar_nicescroll_opts = {
+    cursorcolor: "#c3cad6",
+    cursorwidth: "5px",
+    cursorborder: "none",
+    cursorborderradius: "999px",
     cursoropacitymin: 0,
     cursoropacitymax: .8,
+    background: "transparent",
+    railpadding: { top: 0, right: 0, left: 0, bottom: 0 },
+    autohidemode: false,
+    smoothscroll: true,
     zindex: 892
   }, now_layout_class = null;
 
@@ -77,6 +85,28 @@ $(function() {
     }, 480);
   }
 
+  var sidebar_tag_rail = function() {
+    try {
+      var ns = $(".main-sidebar").getNiceScroll();
+      if (ns && ns.length && ns[0].rail) {
+        ns[0].rail.addClass('sidebar-nicescroll-rail');
+      }
+    } catch (e) {}
+  };
+
+  var sidebar_refresh_scroll_state = function() {
+    sidebar_tag_rail();
+    var open = $('.main-sidebar .sidebar-menu li.active > .dropdown-menu:visible').length > 0;
+    try {
+      if (open) {
+        $('body').addClass('sidebar-scroll-on');
+      } else {
+        $('body').removeClass('sidebar-scroll-on');
+      }
+    } catch (e) {}
+    update_sidebar_nicescroll();
+  };
+
   var sidebar_dropdown = function() {
     if($(".main-sidebar").length) {
       $(".main-sidebar").niceScroll(sidebar_nicescroll_opts);
@@ -91,7 +121,7 @@ $(function() {
         $('.main-sidebar .sidebar-menu li.active').not(parent).each(function() {
           $(this).removeClass('active');
           $(this).find('> .dropdown-menu').slideUp(500, function() {
-            update_sidebar_nicescroll();
+            sidebar_refresh_scroll_state();
           });
         });
 
@@ -99,12 +129,12 @@ $(function() {
         if(active) {
           parent.removeClass('active');
           parent.find('> .dropdown-menu').slideUp(500, function() {
-            update_sidebar_nicescroll();
+            sidebar_refresh_scroll_state();
           });
         }else{
           parent.addClass('active');
           parent.find('> .dropdown-menu').slideDown(500, function() {
-            update_sidebar_nicescroll();
+            sidebar_refresh_scroll_state();
           });
         }
 
@@ -112,9 +142,10 @@ $(function() {
       });
 
       $('.main-sidebar .sidebar-menu li.active > .dropdown-menu').slideDown(500, function() {
-        update_sidebar_nicescroll();
+        sidebar_refresh_scroll_state();
         return false;
       });
+      sidebar_refresh_scroll_state();
     }
   }
   sidebar_dropdown();
