@@ -3534,3 +3534,84 @@ function get_diskusi_new_count(PDO $pdo, int $id_kelas = 0): int {
     }
     return $cnt;
 }
+
+/**
+ * Auto-update status tindak lanjut:
+ * Jika tanggal_selesai IS NOT NULL dan tanggal_selesai <= CURRENT_DATE()
+ * dan status belum 'Selesai' (dan tidak 'Dibatalkan'), maka status otomatis menjadi 'Selesai'.
+ */
+function sync_tindak_lanjut_statuses(PDO $pdo): void {
+    try {
+        $pdo->exec("
+            UPDATE tb_tindak_lanjut_wali
+            SET status = 'Selesai'
+            WHERE tanggal_selesai IS NOT NULL
+              AND tanggal_selesai != ''
+              AND tanggal_selesai <= CURRENT_DATE()
+              AND status NOT IN ('Selesai', 'Dibatalkan')
+        ");
+    } catch (Throwable $e) {}
+}
+
+/**
+ * Sinkronisasi otomatis status pembinaan siswa:
+ * 1. 'Berjalan': Belum masuk tindak lanjut.
+ * 2. 'Dalam Pemantauan': Sudah masuk tindak lanjut (status 'Rencana' atau 'Proses').
+ * 3. 'Selesai': Status tindak lanjut berstatus 'Selesai'.
+ */
+function sync_pembinaan_statuses(PDO $pdo): void {
+    try {
+        sync_tindak_lanjut_statuses($pdo);
+        $pdo->exec("
+            UPDATE tb_pembinaan_siswa b
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            SET b.status = 'Berjalan'
+            WHERE t.id IS NULL
+        ");
+        $pdo->exec("
+            UPDATE tb_pembinaan_siswa b
+            JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            SET b.status = 'Dalam Pemantauan'
+            WHERE (t.status IS NULL OR t.status != 'Selesai')
+        ");
+        $pdo->exec("
+            UPDATE tb_pembinaan_siswa b
+            JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            SET b.status = 'Selesai'
+            WHERE t.status = 'Selesai'
+        ");
+    } catch (Throwable $e) {}
+}
+
+/**
+ * Sinkronisasi otomatis status pelanggaran siswa:
+ * 1. 'Dicatat': Belum masuk pembinaan.
+ * 2. 'Ditindaklanjuti': Sudah masuk pembinaan ATAU tindak lanjut yang belum status 'Selesai'.
+ * 3. 'Selesai': Status tindak lanjut (atau pembinaan) berstatus 'Selesai'.
+ */
+function sync_pelanggaran_statuses(PDO $pdo): void {
+    try {
+        sync_pembinaan_statuses($pdo);
+        $pdo->exec("
+            UPDATE tb_pelanggaran_siswa p
+            LEFT JOIN tb_pembinaan_siswa b ON b.id_pelanggaran = p.id
+            SET p.status = 'Dicatat'
+            WHERE b.id IS NULL
+        ");
+        $pdo->exec("
+            UPDATE tb_pelanggaran_siswa p
+            JOIN tb_pembinaan_siswa b ON b.id_pelanggaran = p.id
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            SET p.status = 'Ditindaklanjuti'
+            WHERE (t.status IS NULL OR t.status != 'Selesai')
+              AND (b.status IS NULL OR b.status != 'Selesai')
+        ");
+        $pdo->exec("
+            UPDATE tb_pelanggaran_siswa p
+            JOIN tb_pembinaan_siswa b ON b.id_pelanggaran = p.id
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            SET p.status = 'Selesai'
+            WHERE t.status = 'Selesai' OR b.status = 'Selesai'
+        ");
+    } catch (Throwable $e) {}
+}

@@ -53,7 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $poin = (int)($_POST['poin'] ?? 0);
             $tindakan = trim((string)($_POST['tindakan'] ?? ''));
             $orang_tua = trim((string)($_POST['orang_tua'] ?? 'Belum Dipanggil'));
-            $status = in_array($_POST['status'] ?? '', ['Dicatat', 'Ditindaklanjuti', 'Selesai'], true) ? $_POST['status'] : 'Dicatat';
             if ($id_siswa <= 0 || $jenis_pelanggaran === '') {
                 $message = ['type' => 'warning', 'text' => 'Pilih Siswa dan isi Jenis Pelanggaran.'];
             } else {
@@ -65,26 +64,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             INSERT INTO tb_pelanggaran_siswa (
                                 id_wali, id_siswa, id_kelas, tanggal, jenis_pelanggaran,
                                 kategori, poin, tindakan, orang_tua, status, jenis_binaan
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Dicatat', ?)
                         ");
                         $stmt->execute([
                             $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
-                            $kategori, $poin, $tindakan, $orang_tua, $status, $jenis_binaan
+                            $kategori, $poin, $tindakan, $orang_tua, $jenis_binaan
                         ]);
                         $message = ['type' => 'success', 'text' => 'Pelanggaran siswa berhasil dicatat.'];
                     } else {
                         $stmt = $pdo->prepare("
                             UPDATE tb_pelanggaran_siswa SET
                                 id_siswa = ?, id_kelas = ?, tanggal = ?, jenis_pelanggaran = ?,
-                                kategori = ?, poin = ?, tindakan = ?, orang_tua = ?, status = ?, jenis_binaan = ?
+                                kategori = ?, poin = ?, tindakan = ?, orang_tua = ?, jenis_binaan = ?
                             WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
                         ");
                         $stmt->execute([
                             $id_siswa, $id_kelas, $tanggal, $jenis_pelanggaran,
-                            $kategori, $poin, $tindakan, $orang_tua, $status, $jenis_binaan, $id
+                            $kategori, $poin, $tindakan, $orang_tua, $jenis_binaan, $id
                         ]);
                         $message = ['type' => 'success', 'text' => 'Data pelanggaran berhasil diperbarui.'];
                     }
+                    sync_pelanggaran_statuses($pdo);
                 } catch (Exception $e) {
                     $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
                 }
@@ -115,6 +115,7 @@ $f_kategori = trim((string)($_GET['f_kategori'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
 // Fetch rows pelanggaran
+sync_pelanggaran_statuses($pdo);
 $where = ["1=1"];
 $params = [];
 if ($selected_kelas_id > 0) {
@@ -619,17 +620,9 @@ include '../templates/sidebar.php';
                             </select>
                             <textarea name="tindakan" id="inp_tindakan" class="form-control" rows="4" placeholder="Pilih dari dropdown di atas sesuai kondisi, atau ketik manual..."></textarea>
                         </div>
-                        <div class="col-md-6 form-group">
+                        <div class="col-12 form-group mb-0">
                             <label class="font-weight-bold">Keterangan Orang Tua</label>
                             <input type="text" name="orang_tua" id="inp_ortu" class="form-control" placeholder="Contoh: Surat pemberitahuan terkirim">
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label class="font-weight-bold">Status</label>
-                            <select name="status" id="inp_status" class="form-control">
-                                <?php foreach ($status_options as $st): ?>
-                                    <option value="<?= $st ?>"><?= $st ?></option>
-                                <?php endforeach; ?>
-                            </select>
                         </div>
                     </div>
                 </div>

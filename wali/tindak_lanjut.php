@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($boleh) {
                     try {
                         if ($sumber === 'Pembinaan' && $id_pembinaan > 0) {
-                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_pembinaan = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "");
+                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_pembinaan = ?";
                             if ($action === 'edit' && $id > 0) $sqlDup .= " AND id <> " . (int)$id;
                             $stDup = $pdo->prepare($sqlDup);
                             $stDup->execute([$id_pembinaan]);
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $boleh = false;
                             }
                         } elseif ($sumber === 'Konseling' && $id_konseling > 0) {
-                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_konseling = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "");
+                            $sqlDup = "SELECT id FROM tb_tindak_lanjut_wali WHERE id_konseling = ?";
                             if ($action === 'edit' && $id > 0) $sqlDup .= " AND id <> " . (int)$id;
                             $stDup = $pdo->prepare($sqlDup);
                             $stDup->execute([$id_konseling]);
@@ -151,6 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $message = ['type' => 'success', 'text' => 'Tindak lanjut berhasil diperbarui.'];
                 }
+                sync_pelanggaran_statuses($pdo);
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
             }
@@ -159,6 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         try {
             $pdo->prepare("DELETE FROM tb_tindak_lanjut_wali WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+            sync_pelanggaran_statuses($pdo);
             $message = ['type' => 'success', 'text' => 'Data tindak lanjut berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -167,12 +169,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Pembersihan otomatis data ganda di tb_tindak_lanjut_wali jika ada
+try {
+    $pdo->exec("
+        DELETE t1 FROM tb_tindak_lanjut_wali t1
+        INNER JOIN tb_tindak_lanjut_wali t2
+        WHERE t1.id > t2.id
+          AND (
+            (t1.id_pembinaan IS NOT NULL AND t1.id_pembinaan = t2.id_pembinaan)
+            OR
+            (t1.id_konseling IS NOT NULL AND t1.id_konseling = t2.id_konseling)
+          )
+    ");
+} catch (Throwable $e) {}
+
 // Alur 3: dropdown HIBRID (bisa dari Pembinaan ATAU Konseling).
 // Peta item yang SUDAH di-TL (anti-ganda)
 $tl_used_bina = [];
 $tl_used_kons = [];
 try {
-    $stU = $pdo->prepare("SELECT id_pembinaan, id_konseling FROM tb_tindak_lanjut_wali WHERE 1=1" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
+    $stU = $pdo->prepare("SELECT id_pembinaan, id_konseling FROM tb_tindak_lanjut_wali WHERE id_pembinaan IS NOT NULL OR id_konseling IS NOT NULL");
     $stU->execute();
     foreach ($stU->fetchAll(PDO::FETCH_ASSOC) as $ur) {
         if (!empty($ur['id_pembinaan'])) $tl_used_bina[(int)$ur['id_pembinaan']] = true;
@@ -191,15 +207,15 @@ try {
         LEFT JOIN (
             SELECT b.id_siswa, COUNT(b.id) AS n_bina_belum
             FROM tb_pembinaan_siswa b
-            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id" . (!$is_admin_or_kepala ? " AND t.id_wali = " . (int)$guru_id : "") . "
-            WHERE t.id IS NULL" . (!$is_admin_or_kepala ? " AND b.id_wali = " . (int)$guru_id : "") . "
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            WHERE t.id IS NULL
             GROUP BY b.id_siswa
         ) bn ON bn.id_siswa = s.id_siswa
         LEFT JOIN (
             SELECT c.id_siswa, COUNT(c.id) AS n_kons_belum
             FROM tb_konseling_awal c
-            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_konseling = c.id" . (!$is_admin_or_kepala ? " AND t.id_wali = " . (int)$guru_id : "") . "
-            WHERE t.id IS NULL" . (!$is_admin_or_kepala ? " AND c.id_wali = " . (int)$guru_id : "") . "
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_konseling = c.id
+            WHERE t.id IS NULL
             GROUP BY c.id_siswa
         ) ks ON ks.id_siswa = s.id_siswa
         WHERE 1=1
@@ -261,6 +277,7 @@ try {
     $konseling_list = $stK->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) { $konseling_list = []; }
 
+sync_pelanggaran_statuses($pdo);
 $f_sumber = trim((string)($_GET['f_sumber'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
@@ -407,15 +424,27 @@ $(document).ready(function() {
             return String(b.id_siswa) === String(idSiswa);
         });
     }
-    function fillBinaDropdown(idSiswa, selectedId) {
+    function fillBinaDropdown(idSiswa, selectedId, extraObj) {
         $('#inp_pembinaan').empty().append('<option value="">-- Pilih pembinaan sumber --</option>');
-        pembinaanBySiswa(idSiswa).forEach(function(b) {
-            var lbl = b.tanggal + ' - ' + b.jenis_pembinaan + ' - ' + (b.permasalahan || '').substr(0, 60) + ' (' + (b.status || '-') + ')';
+        var list = pembinaanBySiswa(idSiswa);
+        var found = false;
+        list.forEach(function(b) {
+            var lbl = b.tanggal + ' - ' + b.jenis_pembinaan + ' - ' + (b.permasalahan || '').substr(0, 60);
             var o = $('<option>').val(b.id).text(lbl.length > 110 ? lbl.substr(0, 110) + '...' : lbl);
             o.data('item', b);
-            if (selectedId && String(selectedId) === String(b.id)) o.prop('selected', true);
+            if (selectedId && String(selectedId) === String(b.id)) {
+                o.prop('selected', true);
+                found = true;
+            }
             $('#inp_pembinaan').append(o);
         });
+        if (selectedId && !found && extraObj) {
+            var lbl = (extraObj.b_tanggal || '') + ' - ' + (extraObj.b_jenis || 'Pembinaan') + ' - ' + (extraObj.b_masalah || '');
+            var oEdit = $('<option>').val(selectedId).text(lbl.length > 110 ? lbl.substr(0, 110) + '...' : lbl).prop('selected', true);
+            oEdit.data('item', { permasalahan: extraObj.b_masalah || '' });
+            $('#inp_pembinaan').append(oEdit);
+        }
+        $('#inp_pembinaan').trigger('change');
     }
 
     // Filter konseling sumber per siswa
@@ -424,21 +453,41 @@ $(document).ready(function() {
             return String(k.id_siswa) === String(idSiswa);
         });
     }
-    function fillKonsDropdown(idSiswa, selectedId) {
+    function fillKonsDropdown(idSiswa, selectedId, extraObj) {
         $('#inp_konseling').empty().append('<option value="">-- Pilih konseling sumber --</option>');
-        konselingBySiswa(idSiswa).forEach(function(k) {
-            var lbl = k.tanggal + ' - ' + k.topik + ' - ' + (k.ringkasan_masalah || '').substr(0, 60) + ' (' + (k.status || '-') + ')';
+        var list = konselingBySiswa(idSiswa);
+        var found = false;
+        list.forEach(function(k) {
+            var lbl = k.tanggal + ' - ' + k.topik + ' - ' + (k.ringkasan_masalah || '').substr(0, 60);
             var o = $('<option>').val(k.id).text(lbl.length > 110 ? lbl.substr(0, 110) + '...' : lbl);
             o.data('item', k);
-            if (selectedId && String(selectedId) === String(k.id)) o.prop('selected', true);
+            if (selectedId && String(selectedId) === String(k.id)) {
+                o.prop('selected', true);
+                found = true;
+            }
             $('#inp_konseling').append(o);
         });
+        if (selectedId && !found && extraObj) {
+            var lbl = (extraObj.c_tanggal || '') + ' - ' + (extraObj.c_topik || 'Konseling') + ' - ' + (extraObj.c_masalah || '');
+            var oEdit = $('<option>').val(selectedId).text(lbl.length > 110 ? lbl.substr(0, 110) + '...' : lbl).prop('selected', true);
+            oEdit.data('item', { topik: extraObj.c_topik || '', ringkasan_masalah: extraObj.c_masalah || '' });
+            $('#inp_konseling').append(oEdit);
+        }
+        $('#inp_konseling').trigger('change');
     }
 
     function switchSumberWrap(sumber) {
         if (sumber === 'Konseling') {
+            $('#wrap_pembinaan').hide();
+            $('#wrap_konseling').show();
+            $('#inp_pembinaan').val('').prop('required', false);
+            $('#inp_konseling').prop('required', true);
             $('#pj_default_hint').text('Penanggung Jawab biasanya: Guru BK / Wali Kelas');
         } else {
+            $('#wrap_pembinaan').show();
+            $('#wrap_konseling').hide();
+            $('#inp_konseling').val('').prop('required', false);
+            $('#inp_pembinaan').prop('required', true);
             $('#pj_default_hint').text('Penanggung Jawab biasanya: Wali Kelas / Guru BK / Orang Tua');
         }
         populateTL(sumber);
@@ -462,6 +511,13 @@ $(document).ready(function() {
         showKonteksSiswa(sid);
         fillBinaDropdown(sid, '');
         fillKonsDropdown(sid, '');
+        var listB = pembinaanBySiswa(sid);
+        var listK = konselingBySiswa(sid);
+        if (listB.length === 0 && listK.length > 0) {
+            $('#inp_sumber').val('Konseling').trigger('change');
+        } else {
+            $('#inp_sumber').val('Pembinaan').trigger('change');
+        }
     });
 
     $('#inp_sumber').on('change', function() {
@@ -483,7 +539,7 @@ $(document).ready(function() {
         var item = $('#inp_konseling option:selected').data('item');
         if (!item) return;
         if (!$('#inp_tindakan').val() && item.ringkasan_masalah) {
-            $('#inp_tindakan').val('Tindak lanjut konseling: ' + item.topik + ' - ' + item.ringkasan_masalah);
+            $('#inp_tindakan').val('Tindak lanjut konseling: ' + (item.topik ? item.topik + ' - ' : '') + item.ringkasan_masalah);
             autogrowTL($('#inp_tindakan'));
         }
         if (!$('#inp_pj').val()) {
@@ -505,13 +561,11 @@ $(document).ready(function() {
         $('#tlId').val('');
         $('#modalTLTitle').text('Tambah Rencana Tindak Lanjut');
         $('#formTL')[0].reset();
-        $('#inp_pembinaan').val('');
-        $('#inp_konseling').val('');
-        $('#inp_sumber').val('Pembinaan');
-        switchSumberWrap('Pembinaan');
-        showKonteksSiswa('');
+        $('#inp_siswa').val('').trigger('change');
+        $('#inp_sumber').val('Pembinaan').trigger('change');
         fillBinaDropdown('', '');
         fillKonsDropdown('', '');
+        showKonteksSiswa('');
         $('#modalTL').modal('show');
         setTimeout(function() {
             $('#modalTL textarea').each(function() { autogrowTL($(this)); });
@@ -520,31 +574,37 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-edit-tl', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
         $('#formTLAction').val('edit');
         $('#tlId').val(data.id);
         $('#modalTLTitle').text('Edit Tindak Lanjut');
+
+        var optLbl = data.nama_siswa + (data.nisn ? ' (' + data.nisn + ')' : '');
         if ($('#inp_siswa option[value="' + data.id_siswa + '"]').length === 0) {
-            var optEdit = new Option(data.nama_siswa + (data.nisn ? ' (' + data.nisn + ')' : ''), data.id_siswa, true, true);
+            var optEdit = new Option(optLbl, data.id_siswa, true, true);
             $('#inp_siswa').append(optEdit);
         }
-        $('#inp_siswa').val(data.id_siswa);
-        $('#inp_tanggal').val(data.tanggal);
+        $('#inp_siswa').val(data.id_siswa).trigger('change');
+
         var src = (data.sumber === 'Konseling') ? 'Konseling' : 'Pembinaan';
-        $('#inp_pembinaan').val(data.id_pembinaan || '');
-        $('#inp_konseling').val(data.id_konseling || '');
-        fillBinaDropdown(data.id_siswa, data.id_pembinaan);
-        fillKonsDropdown(data.id_siswa, data.id_konseling);
-        $('#inp_sumber').val(src);
-        switchSumberWrap(src);
+        fillBinaDropdown(data.id_siswa, data.id_pembinaan || '', data);
+        fillKonsDropdown(data.id_siswa, data.id_konseling || '', data);
+
+        $('#inp_sumber').val(src).trigger('change');
+
+        $('#inp_tanggal').val(data.tanggal);
         $('#sel_tl_tindakan option').each(function() {
             if ($(this).val() === (data.tindakan || '')) $(this).prop('selected', true);
         });
-        $('#inp_tindakan').val(data.tindakan);
-        $('#inp_pj').val(data.penanggung_jawab);
+        $('#inp_tindakan').val(data.tindakan || '');
+        $('#inp_pj').val(data.penanggung_jawab || '');
         $('#inp_target').val(data.target_selesai || '');
         $('#inp_selesai').val(data.tanggal_selesai || '');
-        $('#inp_status').val(data.status);
+        $('#inp_status').val(data.status || 'Rencana').trigger('change');
         showKonteksSiswa(data.id_siswa);
+
         $('#modalTL').modal('show');
         setTimeout(function() {
             $('#modalTL textarea').each(function() { autogrowTL($(this)); });
@@ -827,10 +887,19 @@ include '../templates/sidebar.php';
                                 <option value="Pembinaan">Pembinaan Siswa</option>
                                 <option value="Konseling">Konseling Siswa</option>
                             </select>
-                            <small class="text-muted">Pilih apakah tindak lanjut dari Pembinaan atau dari Konseling.</small>
                         </div>
-                        <input type="hidden" name="id_pembinaan" id="inp_pembinaan" value="">
-                        <input type="hidden" name="id_konseling" id="inp_konseling" value="">
+                        <div class="col-md-6 form-group" id="wrap_pembinaan">
+                            <label class="font-weight-bold">Pembinaan Sumber <span class="text-danger">*</span></label>
+                            <select name="id_pembinaan" id="inp_pembinaan" class="form-control">
+                                <option value="">-- Pilih pembinaan sumber --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group" id="wrap_konseling" style="display:none;">
+                            <label class="font-weight-bold">Konseling Sumber <span class="text-danger">*</span></label>
+                            <select name="id_konseling" id="inp_konseling" class="form-control">
+                                <option value="">-- Pilih konseling sumber --</option>
+                            </select>
+                        </div>
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold">Tanggal Rencana</label>
                             <input type="date" name="tanggal" id="inp_tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>

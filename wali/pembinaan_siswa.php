@@ -112,26 +112,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         INSERT INTO tb_pembinaan_siswa (
                             id_wali, id_siswa, id_kelas, tanggal, jenis_pembinaan,
                             permasalahan, tindakan, tindak_lanjut, status, id_pelanggaran
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Berjalan', ?)
                     ");
                     $stmt->execute([
                         $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis,
-                        $permasalahan, $tindakan, $tindak_lanjut, $status, ($id_pelanggaran > 0 ? $id_pelanggaran : null)
+                        $permasalahan, $tindakan, $tindak_lanjut, ($id_pelanggaran > 0 ? $id_pelanggaran : null)
                     ]);
                     $message = ['type' => 'success', 'text' => 'Data pembinaan siswa berhasil dicatat.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_pembinaan_siswa SET
                             id_siswa = ?, id_kelas = ?, tanggal = ?, jenis_pembinaan = ?,
-                            permasalahan = ?, tindakan = ?, tindak_lanjut = ?, status = ?, id_pelanggaran = ?
+                            permasalahan = ?, tindakan = ?, tindak_lanjut = ?, id_pelanggaran = ?
                         WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
                         $id_siswa, $id_kelas, $tanggal, $jenis,
-                        $permasalahan, $tindakan, $tindak_lanjut, $status, ($id_pelanggaran > 0 ? $id_pelanggaran : null), $id
+                        $permasalahan, $tindakan, $tindak_lanjut, ($id_pelanggaran > 0 ? $id_pelanggaran : null), $id
                     ]);
                     $message = ['type' => 'success', 'text' => 'Data pembinaan berhasil diperbarui.'];
                 }
+                sync_pelanggaran_statuses($pdo);
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
             }
@@ -140,6 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         try {
             $pdo->prepare("DELETE FROM tb_pembinaan_siswa WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
+            sync_pelanggaran_statuses($pdo);
             $message = ['type' => 'success', 'text' => 'Data pembinaan berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -168,7 +170,7 @@ try {
             GROUP BY id_siswa
         ) bn ON bn.id_siswa = s.id_siswa
         LEFT JOIN (
-            SELECT id_siswa, COUNT(DISTINCT id_pembinaan) AS n_tl FROM tb_tindak_lanjut_wali WHERE id_pembinaan IS NOT NULL" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "") . "
+            SELECT id_siswa, COUNT(DISTINCT id_pembinaan) AS n_tl FROM tb_tindak_lanjut_wali WHERE id_pembinaan IS NOT NULL
             GROUP BY id_siswa
         ) tl ON tl.id_siswa = s.id_siswa
         WHERE 1=1
@@ -1018,20 +1020,12 @@ include '../templates/sidebar.php';
                             </select>
                             <textarea name="tindakan" id="inp_tindakan" class="form-control" rows="5" style="min-height:120px;" required placeholder="Pilih dari dropdown di atas sesuai kondisi siswa, atau ketik manual..."></textarea>
                         </div>
-                        <div class="col-md-8 form-group">
+                        <div class="col-12 form-group">
                             <label>Rencana Tindak Lanjut</label>
                             <select id="sel_bina_tl" class="form-control form-control-sm mb-1">
                                 <option value="">-- Pilih rencana tindak lanjut --</option>
                             </select>
                             <textarea name="tindak_lanjut" id="inp_tindak_lanjut" class="form-control" rows="5" style="min-height:120px;" placeholder="Pilih dari dropdown di atas sesuai kondisi siswa, atau ketik manual..."></textarea>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Status</label>
-                            <select name="status" id="inp_status" class="form-control">
-                                <?php foreach ($status_options as $st): ?>
-                                    <option value="<?= $st ?>"><?= $st ?></option>
-                                <?php endforeach; ?>
-                            </select>
                         </div>
                     </div>
                 </div>
