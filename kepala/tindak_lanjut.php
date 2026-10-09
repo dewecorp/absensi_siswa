@@ -223,20 +223,47 @@ $(document).ready(function () {
         $('#form-tl [name=id_tindak_lanjut]').val('');
         tlFillOptions('');
         tlSyncRek();
+        if (window.GDSRefresh) {
+            try {
+                GDSRefresh($('#tl_id_pelaksanaan'));
+                GDSRefresh($('#form-tl [name="bentuk_tindak_lanjut"]'));
+                GDSRefresh($('#form-tl [name="penanggung_jawab"]'));
+                GDSRefresh($('#form-tl [name="status"]'));
+            } catch(e){}
+        }
         $('#sv-bukti-current').hide();
         $('#modal-tl .modal-title').text('Tambah Tindak Lanjut');
         $('#modal-tl').modal('show');
+        setTimeout(function() {
+            if (window.GDSRefresh) {
+                try {
+                    GDSRefresh($('#tl_id_pelaksanaan'));
+                    GDSRefresh($('#form-tl [name="bentuk_tindak_lanjut"]'));
+                    GDSRefresh($('#form-tl [name="penanggung_jawab"]'));
+                    GDSRefresh($('#form-tl [name="status"]'));
+                } catch(e){}
+            }
+        }, 120);
     });
     $(document).on('click', '.btn-edit', function () {
         var d = $(this).data('row');
         $('#form-tl')[0].reset();
         $('#form-tl [name=aksi]').val('edit');
         tlFillOptions(d.id_pelaksanaan);
+        $('#tl_id_pelaksanaan').val(d.id_pelaksanaan);
         Object.keys(d).forEach(function (k) {
             var el = $('#form-tl [name="' + k + '"]');
-            if (el.length) { el.val(d[k]); }
+            if (el.length && el.attr('type') !== 'file') { el.val(d[k]); }
         });
         tlSyncRek();
+        if (window.GDSRefresh) {
+            try {
+                GDSRefresh($('#tl_id_pelaksanaan'));
+                GDSRefresh($('#form-tl [name="bentuk_tindak_lanjut"]'));
+                GDSRefresh($('#form-tl [name="penanggung_jawab"]'));
+                GDSRefresh($('#form-tl [name="status"]'));
+            } catch(e){}
+        }
         if (d.bukti_file) {
             $('#sv-bukti-file').text(d.bukti_file);
             $('#sv-bukti-current').show();
@@ -245,6 +272,16 @@ $(document).ready(function () {
         }
         $('#modal-tl .modal-title').text('Edit Tindak Lanjut');
         $('#modal-tl').modal('show');
+        setTimeout(function() {
+            if (window.GDSRefresh) {
+                try {
+                    GDSRefresh($('#tl_id_pelaksanaan'));
+                    GDSRefresh($('#form-tl [name="bentuk_tindak_lanjut"]'));
+                    GDSRefresh($('#form-tl [name="penanggung_jawab"]'));
+                    GDSRefresh($('#form-tl [name="status"]'));
+                } catch(e){}
+            }
+        }, 120);
     });
     $('#modal-tl').on('hidden.bs.modal', function () { $('#sv-bukti-current').hide(); });
     $(document).on('click', '.btn-hapus', function () {
@@ -347,11 +384,11 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars((string)$r['penanggung_jawab']) ?></td>
                                         <td><?= $r['target_selesai'] ? date('d/m/Y', strtotime($r['target_selesai'])) : '-' ?></td>
                                         <td><?= $r['realisasi'] ? date('d/m/Y', strtotime($r['realisasi'])) : '-' ?></td>
-                                        <td>
-                                            <?php if (!empty($r['bukti_file'])): ?><a href="<?= htmlspecialchars(sv_upload_url($r['bukti_file']), ENT_QUOTES) ?>" target="_blank"><i class="fas fa-file"></i> <?= htmlspecialchars(basename($r['bukti_file'])) ?></a><br><?php endif; ?>
-                                            <?= htmlspecialchars((string)$r['bukti']) ?>
-                                            <?php if (!empty($r['tautan_dokumen'])): ?><br><a href="<?= htmlspecialchars($r['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank"><i class="fas fa-link"></i> Tautan</a><?php endif; ?>
-                                        </td>
+                                         <td>
+                                             <?php if (!empty($r['bukti_file'])): ?><a href="<?= htmlspecialchars(sv_upload_url($r['bukti_file']), ENT_QUOTES) ?>" target="_blank" title="<?= htmlspecialchars(basename($r['bukti_file'])) ?>"><i class="fas fa-file-alt fa-lg"></i></a><br><?php endif; ?>
+                                             <?= htmlspecialchars((string)$r['bukti']) ?>
+                                             <?php if (!empty($r['tautan_dokumen'])): ?><br><a href="<?= htmlspecialchars($r['tautan_dokumen'], ENT_QUOTES) ?>" target="_blank"><i class="fas fa-link"></i> Tautan</a><?php endif; ?>
+                                         </td>
                                         <td><span class="badge badge-<?= $badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
                                         <td><?= $r['tanggal_selesai'] ? date('d/m/Y', strtotime($r['tanggal_selesai'])) : '-' ?></td>
                                         <td><?= htmlspecialchars((string)$r['catatan']) ?></td>
