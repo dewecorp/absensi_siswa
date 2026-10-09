@@ -266,7 +266,7 @@ function barung_siswa_lolos_usia_tingkat(?string $slug, ?string $tanggal_lahir):
         return true;
     }
 
-    $batas_penggalang_bulan = 11 * 12;
+    $batas_penggalang_bulan = 131; // 10 tahun 11 bulan (131 bulan)
     if ($golongan === 'Siaga') {
         return $umur_bulan < $batas_penggalang_bulan;
     }
@@ -375,7 +375,7 @@ function barung_auto_assign_pra_ramu_usia_11(PDO $pdo): array
         FROM tb_siswa s
         WHERE s.tanggal_lahir IS NOT NULL
           AND YEAR(s.tanggal_lahir) > 0
-          AND s.tanggal_lahir <= DATE_SUB(CURDATE(), INTERVAL 11 YEAR)
+          AND s.tanggal_lahir <= DATE_SUB(CURDATE(), INTERVAL 131 MONTH)
         ORDER BY s.nama_siswa ASC
     ");
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -433,6 +433,13 @@ function barung_auto_assign_pra_ramu_usia_11(PDO $pdo): array
         }
 
         if ($hasPraRamuOrRamu) {
+            foreach ($activeRows as $active) {
+                $slug = barung_resolve_tingkat_slug($active['nama_tingkat'] ?? '');
+                if (in_array($slug, ['pra_mula', 'mula', 'bantu', 'tata'], true)) {
+                    $stmtClose->execute([(int)$active['id_peserta_didik_barung']]);
+                    $closed_siaga++;
+                }
+            }
             continue;
         }
         if ($hasOtherActive) {
@@ -811,9 +818,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
                     $id_s_insert = ensureInt($row['id_siswa'] ?? 0);
                     if ($id_s_insert > 0) {
                         $chkOtherActive->execute([$id_tingkat, $id_s_insert]);
-                        if ($chkOtherActive->fetchColumn()) {
-                            $blocked_other_tingkat++;
-                            continue;
+                        $otherActiveTingkatName = $chkOtherActive->fetchColumn();
+                        if ($otherActiveTingkatName) {
+                            $otherSlug = barung_resolve_tingkat_slug($otherActiveTingkatName);
+                            // Jika mendaftar tingkat Penggalang (Pra Ramu/Ramu) dan sebelumnya aktif di Siaga,
+                            // otomatis tutup tingkat Siaga lamanya agar tidak tertahan.
+                            if (in_array($slug_thr, ['pra_ramu', 'ramu'], true) && in_array($otherSlug, ['pra_mula', 'mula', 'bantu', 'tata'], true)) {
+                                $pdo->prepare("UPDATE tb_peserta_didik_barung SET status = 'keluar', tanggal_keluar = NOW() WHERE id_siswa = ? AND id_tingkat_barung <> ? AND IFNULL(status, 'aktif') = 'aktif'")
+                                    ->execute([$id_s_insert, $id_tingkat]);
+                            } else {
+                                $blocked_other_tingkat++;
+                                continue;
+                            }
                         }
                     }
                     $nisn_tr = trim((string)($row['nisn'] ?? ''));
