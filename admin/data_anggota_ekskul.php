@@ -513,30 +513,38 @@ include '../templates/sidebar.php';
                     <h4>Filter Kelas</h4>
                 </div>
                 <div class="card-body">
-                    <form method="GET" class="form-inline" id="formFilterKelasAnggota">
-                        <label class="mr-2" for="selectEkskulAnggota">Ekstrakurikuler:</label>
-                        <select name="ekskul" id="selectEkskulAnggota" class="form-control mr-3" style="min-width: 220px;" onchange="this.form.submit();">
-                            <?php if (empty($ekskul_list)): ?>
-                                <option value="">-- Belum ada ekskul --</option>
-                            <?php endif; ?>
-                            <?php foreach ($ekskul_list as $e): ?>
-                                <option value="<?= (int)$e['id_ekstrakurikuler'] ?>" <?= $ekskul_id === (int)$e['id_ekstrakurikuler'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($e['nama_ekstrakurikuler']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <label class="mr-2" for="selectKelasAnggota">Pilih Kelas:</label>
-                        <select name="kelas" id="selectKelasAnggota" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
-                            <option value="">-- Pilih Kelas --</option>
-                            <?php foreach ($classes as $c): ?>
-                                <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_class_id === (int)$c['id_kelas'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($c['nama_kelas']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <span class="badge badge-primary ml-2">
-                            Jumlah Anggota: <?= $selected_class_id > 0 ? (int)count($members) : (int)$total_members_count ?>
-                        </span>
+                    <form method="GET" id="formFilterKelasAnggota">
+                        <div class="row align-items-end">
+                            <div class="col-md-6 form-group mb-2 mb-md-0">
+                                <label class="font-weight-bold" for="selectEkskulAnggota">Ekstrakurikuler:</label>
+                                <select name="ekskul" id="selectEkskulAnggota" class="form-control" onchange="this.form.submit();">
+                                    <?php if (empty($ekskul_list)): ?>
+                                        <option value="">-- Belum ada ekskul --</option>
+                                    <?php endif; ?>
+                                    <?php foreach ($ekskul_list as $e): ?>
+                                        <option value="<?= (int)$e['id_ekstrakurikuler'] ?>" <?= $ekskul_id === (int)$e['id_ekstrakurikuler'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($e['nama_ekstrakurikuler']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-6 form-group mb-0">
+                                <label class="font-weight-bold" for="selectKelasAnggota">Pilih Kelas:</label>
+                                <select name="kelas" id="selectKelasAnggota" class="form-control" onchange="this.form.submit();">
+                                    <option value="">-- Pilih Kelas --</option>
+                                    <?php foreach ($classes as $c): ?>
+                                        <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_class_id === (int)$c['id_kelas'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($c['nama_kelas']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <span class="badge badge-primary px-3 py-2" style="font-size: 13px;">
+                                Jumlah Anggota: <?= $selected_class_id > 0 ? (int)count($members) : (int)$total_members_count ?>
+                            </span>
+                        </div>
                     </form>
                 </div>
             </div>
