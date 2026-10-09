@@ -152,6 +152,10 @@
     if (window.jQuery) {
       window.jQuery(sel).on('change', refreshLabel);
     }
+    sel.gdsRefresh = function() {
+      renderOptions();
+      refreshLabel();
+    };
     refreshLabel();
 
     if (!document.body.dataset.gdsBound) {
@@ -183,15 +187,39 @@
     } catch (e) {}
     if (isDataTableLength(sel)) wrap.classList.add('gds-inline');
   }
+  function processOne(s) {
+    if (!s || s.tagName !== 'SELECT') return;
+    if (s.dataset.gdsDone === '1') {
+      if (typeof s.gdsRefresh === 'function') s.gdsRefresh();
+      return;
+    }
+    if (isEnhanceable(s)) {
+      try {
+        buildOne(s);
+        var w = s.closest ? s.closest('.gds-wrap') : null;
+        if (w) applyInlineMode(s, w);
+      } catch (e) {}
+    }
+  }
+
   function enhanceAll(root) {
-    (root || document).querySelectorAll('select.form-control, select.form-control-sm, .dataTables_length select, select[name$="_length"]').forEach(function(s) {
-      if (isEnhanceable(s)) {
-        try {
-          buildOne(s);
-          var w = s.closest ? s.closest('.gds-wrap') : null;
-          if (w) applyInlineMode(s, w);
-        } catch (e) {}
+    var el = document;
+    if (root) {
+      if (typeof root === 'string') {
+        el = document.querySelector(root) || document;
+      } else if (root.jquery) {
+        el = root[0] || document;
+      } else if (typeof root.querySelectorAll === 'function' || (root && root.tagName === 'SELECT')) {
+        el = root;
       }
+    }
+    if (!el || (typeof el.querySelectorAll !== 'function' && el.tagName !== 'SELECT')) el = document;
+    if (el.tagName === 'SELECT') {
+      processOne(el);
+      return;
+    }
+    el.querySelectorAll('select.form-control, select.form-control-sm, .dataTables_length select, select[name$="_length"]').forEach(function(s) {
+      processOne(s);
     });
   }
 
@@ -219,5 +247,5 @@
   document.addEventListener('shown.bs.modal', function(e) {
     try { enhanceAll(e.target || document); } catch (err) {}
   });
-  window.GDSRefresh = function(root) { enhanceAll(root || document); };
+  window.GDSRefresh = function(root) { try { enhanceAll(root || document); } catch (err) {} };
 })();

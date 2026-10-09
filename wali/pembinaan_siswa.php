@@ -52,7 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id_konseling = (int)($_POST['id_konseling'] ?? 0);
         $id_kelas = (int)($_POST['id_kelas'] ?? $selected_kelas_id);
         $tanggal = !empty($_POST['tanggal']) ? date('Y-m-d', strtotime($_POST['tanggal'])) : date('Y-m-d');
-        $jenis = in_array($_POST['jenis_pembinaan'] ?? '', ['Akademik', 'Kedisiplinan', 'Sikap', 'Kehadiran', 'Sosial', 'Lainnya'], true) ? $_POST['jenis_pembinaan'] : 'Akademik';
+        $raw_jenis = trim((string)($_POST['jenis_pembinaan'] ?? $_POST['jenis_pembinaan_hidden'] ?? ''));
+        $jenis = in_array($raw_jenis, ['Akademik', 'Kedisiplinan', 'Sikap', 'Kehadiran', 'Sosial', 'Lainnya'], true) ? $raw_jenis : 'Akademik';
         $permasalahan = trim((string)($_POST['permasalahan'] ?? ''));
         $tindakan = trim((string)($_POST['tindakan'] ?? ''));
         $tindak_lanjut = trim((string)($_POST['tindak_lanjut'] ?? ''));
@@ -62,9 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // HIBRID: sumber bisa Pelanggaran, Konseling, atau Mandiri.
             $boleh = true;
-            // Bila sumber tidak dipilih: jenis manual dari form (tidak dikunci).
             if ($boleh) try {
-                // Ambil data pelanggaran sumber bila dipilih (untuk validasi + auto-isi)
+                // Ambil data pelanggaran sumber bila dipilih
                 $srcLanggar = null;
                 if ($id_pelanggaran > 0) {
                     $stSrc = $pdo->prepare("SELECT * FROM tb_pelanggaran_siswa WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $boleh = false;
                     }
                 }
-                // Ambil data konseling sumber bila dipilih (untuk validasi kepemilikan siswa).
+                // Ambil data konseling sumber bila dipilih
                 $srcKonseling = null;
                 if ($boleh && $id_konseling > 0) {
                     $stKon = $pdo->prepare("SELECT * FROM tb_konseling_awal WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
@@ -86,9 +86,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $boleh = false;
                     }
                 }
-                // KUNCI mapping: jenis pembinaan WAJIB ikut jenis_binaan pelanggaran sumber.
-                // Cegah bocor seperti 'tidak memakai atribut seragam' jadi Akademik.
-                if ($boleh && $srcLanggar) {
+                // KUNCI mapping: jenis pembinaan WAJIB ikut sumber (pelanggaran / konseling).
+                if ($boleh && $srcKonseling) {
+                    $topikKon = $srcKonseling['topik'] ?? '';
+                    $mapTopik = [
+                        'Motivasi Belajar' => 'Akademik',
+                        'Penyesuaian Sosial' => 'Sosial',
+                        'Keluarga' => 'Sosial',
+                        'Kedisiplinan' => 'Kedisiplinan',
+                        'Kecemasan / Emosi' => 'Sikap',
+                        'Minat & Bakat' => 'Akademik',
+                        'Ibadah & Spiritual' => 'Sikap',
+                    ];
+                    $jenis = $mapTopik[$topikKon] ?? 'Sikap';
+                } elseif ($boleh && $srcLanggar) {
                     $exp = trim((string)($srcLanggar['jenis_binaan'] ?? ''));
                     if ($exp === '' && function_exists('pelanggaran_deteksi_jenis')) {
                         $det = pelanggaran_deteksi_jenis((string)($srcLanggar['jenis_pelanggaran'] ?? ''), (string)($srcLanggar['kategori'] ?? ''));
@@ -97,8 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $pdo->prepare("UPDATE tb_pelanggaran_siswa SET jenis_binaan = ? WHERE id = ?")->execute([$exp, (int)$srcLanggar['id']]);
                         } catch (Throwable $e) {}
                     }
-                    if ($exp !== '' && $jenis !== $exp) {
-                        $jenis = $exp; // override otomatis, bukan tolak
+                    if ($exp !== '') {
+                        $jenis = $exp;
                     }
                 }
                 // Anti-ganda: 1 pelanggaran / 1 konseling hanya boleh dibina 1x (kecuali edit data itu sendiri).
@@ -172,7 +183,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
         }
     }
-    }
+}
+
+try {
+    $pdo->exec("
+        UPDATE tb_pembinaan_siswa b
+        JOIN tb_konseling_awal k ON k.id = b.id_konseling
+        SET b.jenis_pembinaan = CASE k.topik
+            WHEN 'Motivasi Belajar' THEN 'Akademik'
+            WHEN 'Penyesuaian Sosial' THEN 'Sosial'
+            WHEN 'Keluarga' THEN 'Sosial'
+            WHEN 'Kedisiplinan' THEN 'Kedisiplinan'
+            WHEN 'Kecemasan / Emosi' THEN 'Sikap'
+            WHEN 'Minat & Bakat' THEN 'Akademik'
+            WHEN 'Ibadah & Spiritual' THEN 'Sikap'
+            ELSE 'Sikap'
+        END
+        WHERE b.id_konseling IS NOT NULL
+    ");
+} catch (Throwable $e) {}
 }
 
 // HIBRID: dropdown HANYA tampilkan siswa yang BELUM ditindaklanjuti (n_bina == 0 ATAU n_bina > n_tl).
@@ -182,7 +211,9 @@ try {
     $sqlS = "
         SELECT s.id_siswa, s.nama_siswa, s.nisn,
                COALESCE(pl.total_poin, 0) AS total_poin, COALESCE(pl.jml, 0) AS jml,
+               COALESCE(ks.n_konseling_perlu, 0) AS n_konseling_perlu,
                COALESCE(bn.n_bina, 0) AS n_bina,
+               COALESCE(bnk.n_bina_konseling, 0) AS n_bina_konseling,
                COALESCE(tl.n_tl, 0) AS n_tl
         FROM tb_siswa s
         LEFT JOIN (
@@ -191,9 +222,20 @@ try {
             GROUP BY id_siswa
         ) pl ON pl.id_siswa = s.id_siswa
         LEFT JOIN (
+            SELECT c.id_siswa, COUNT(*) AS n_konseling_perlu
+            FROM tb_konseling_awal c
+            LEFT JOIN tb_pembinaan_siswa b ON b.id_konseling = c.id
+            WHERE c.status = 'Pembinaan' AND b.id IS NULL" . (!$is_admin_or_kepala ? " AND c.id_wali = " . (int)$guru_id : "") . "
+            GROUP BY c.id_siswa
+        ) ks ON ks.id_siswa = s.id_siswa
+        LEFT JOIN (
             SELECT id_siswa, COUNT(*) AS n_bina FROM tb_pembinaan_siswa WHERE 1=1" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "") . "
             GROUP BY id_siswa
         ) bn ON bn.id_siswa = s.id_siswa
+        LEFT JOIN (
+            SELECT id_siswa, COUNT(*) AS n_bina_konseling FROM tb_pembinaan_siswa WHERE id_konseling IS NOT NULL" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "") . "
+            GROUP BY id_siswa
+        ) bnk ON bnk.id_siswa = s.id_siswa
         LEFT JOIN (
             SELECT id_siswa, COUNT(DISTINCT id_pembinaan) AS n_tl FROM tb_tindak_lanjut_wali WHERE id_pembinaan IS NOT NULL
             GROUP BY id_siswa
@@ -206,7 +248,7 @@ try {
         $parS[] = $selected_kelas_id;
     }
     // Filter out siswa yang sudah seluruh pembinaannya ditindaklanjuti (n_bina > 0 AND n_bina <= n_tl)
-    $sqlS .= " HAVING (n_bina = 0 OR n_bina > n_tl OR jml > n_bina) ORDER BY s.nama_siswa ASC";
+    $sqlS .= " HAVING (n_bina = 0 OR n_bina > n_tl OR jml > n_bina OR n_konseling_perlu > 0) ORDER BY s.nama_siswa ASC";
     $stS = $pdo->prepare($sqlS);
     $stS->execute($parS);
     $siswa_list = $stS->fetchAll(PDO::FETCH_ASSOC);
@@ -570,10 +612,13 @@ $(document).ready(function() {
         box.html('<div class="alert alert-info mb-0 py-2"><strong>' + tot + ' poin &bull; ' + lvl + '</strong> dari ' + nLanggar + ' pelanggaran &bull; ' + nBina + ' sudah dibina ' + stTag
             + '<div class="small">Terakhir: ' + $('<div>').text(info.jenis_pelanggaran || '-').html() + ' (' + (info.kategori || '-') + ', +' + (info.poin || 0) + ' poin)</div></div>');
     }
+    var isEditingPembinaan = false;
     $('#inp_siswa').on('change', function() {
+        if (isEditingPembinaan) return;
         var sid = $(this).val();
         showKonteksBina(sid);
         fillLanggarDropdown(sid, '');
+        fillKonselingDropdown(sid, '', true);
     });
     // Deteksi jenis binaan di browser (mirror helper PHP, anti-bocor Ringan->Akademik).
     // 'Tidak memakai atribut seragam' WAJIB Kedisiplinan; 'terlambat masuk kelas' juga Kedisiplinan.
@@ -607,12 +652,14 @@ $(document).ready(function() {
         populateBina(jenis, currentLanggarItem ? currentLanggarItem.jenis_pelanggaran : '');
         var note = $('#jenisAutoNote');
         if (note.length) {
-            note.html('Terkunci otomatis dari pelanggaran: <strong>' + jenis + '</strong>' + (viaText ? ' <span class="text-muted">(' + viaText + ')</span>' : ''));
+            note.html('Terkunci otomatis dari sumber: <strong>' + jenis + '</strong>' + (viaText ? ' <span class="text-muted">(' + viaText + ')</span>' : ''));
         }
+        if (window.GDSRefresh) { try { GDSRefresh($('#inp_jenis')); } catch(e) {} }
     }
     // HIBRID: kunci jenis saat ada sumber; bebaskan manual saat mandiri (tanpa sumber).
     function setJenisMode(locked) {
         $('#inp_jenis').prop('disabled', !!locked);
+        if (window.GDSRefresh) { try { GDSRefresh($('#inp_jenis')); } catch(e) {} }
         var note = $('#jenisAutoNote');
         if (locked) return; // teks note diisi kunciJenisBinaan
         if (note.length) note.html('Mandiri (tanpa sumber): pilih jenis manual sesuai kondisi siswa.');
@@ -644,7 +691,71 @@ $(document).ready(function() {
         } else {
             $('#semuaBinaNote').remove();
         }
+        if (window.GDSRefresh) { try { GDSRefresh($('#inp_pelanggaran')); } catch(e) {} }
     }
+    function konselingBySiswa(idSiswa) {
+        if (typeof konselingListBina === 'undefined' || !idSiswa) return [];
+        return konselingListBina.filter(function(k) { return String(k.id_siswa) === String(idSiswa); });
+    }
+
+    function fillKonselingDropdown(idSiswa, selectedId, autoSelect) {
+        $('#inp_konseling').empty().append('<option value="">-- Tanpa konseling --</option>');
+        var list = konselingBySiswa(idSiswa);
+        var autoSelectId = null;
+        var foundSelected = false;
+        list.forEach(function(k) {
+            var used = (typeof binaUsedKonselingMap !== 'undefined' && binaUsedKonselingMap[k.id] && String(binaUsedKonselingMap[k.id]) !== String(selectedId));
+            var tag = used ? ' [SUDAH DIBINA]' : ' [Belum dibina]';
+            var lbl = k.tanggal + ' - Topik: ' + k.topik + ' (' + k.ringkasan_masalah + ')' + tag;
+            var o = $('<option>').val(k.id).text(lbl.length > 115 ? lbl.substr(0, 115) + '...' : lbl);
+            o.data('item', k);
+            if (used) o.prop('disabled', true);
+            if (selectedId && String(selectedId) === String(k.id)) {
+                o.prop('selected', true);
+                foundSelected = true;
+            }
+            if (!used && !autoSelectId) autoSelectId = k.id;
+            $('#inp_konseling').append(o);
+        });
+        if (selectedId && !foundSelected) {
+            var optK = $('<option>').val(selectedId).text('Konseling #' + selectedId + ' [Tersimpan]').prop('selected', true);
+            $('#inp_konseling').append(optK);
+        } else if (autoSelect && !selectedId && autoSelectId) {
+            $('#inp_konseling').val(autoSelectId).trigger('change');
+        }
+        if (window.GDSRefresh) { try { GDSRefresh($('#inp_konseling')); } catch(e) {} }
+    }
+
+    var mapKonselingTopik = {
+        'Motivasi Belajar': 'Akademik',
+        'Penyesuaian Sosial': 'Sosial',
+        'Keluarga': 'Sosial',
+        'Kedisiplinan': 'Kedisiplinan',
+        'Kecemasan / Emosi': 'Sikap',
+        'Minat & Bakat': 'Akademik',
+        'Ibadah & Spiritual': 'Sikap'
+    };
+
+    $('#inp_konseling').on('change', function() {
+        var item = $('#inp_konseling option:selected').data('item');
+        if (!item) return;
+        setJenisMode(true);
+        var jb = mapKonselingTopik[item.topik] || 'Sikap';
+        kunciJenisBinaan(jb, 'sumber konseling: ' + item.topik);
+        if (!$('#inp_masalah').val()) {
+            $('#inp_masalah').val('Hasil Konseling (' + item.topik + ', ' + item.tanggal + '): ' + item.ringkasan_masalah);
+            autogrowBina($('#inp_masalah'));
+        }
+        if (!$('#inp_tindakan').val() && item.tindak_lanjut) {
+            $('#inp_tindakan').val(item.tindak_lanjut);
+            autogrowBina($('#inp_tindakan'));
+        }
+        if (!$('#inp_tindak_lanjut').val() && item.follow_up) {
+            $('#inp_tindak_lanjut').val(item.follow_up);
+            autogrowBina($('#inp_tindak_lanjut'));
+        }
+    });
+
     // Pilih pelanggaran sumber -> auto-isi permasalahan + KUNCI jenis binaan.
     // Kosongkan (=Mandiri): jenis dibebaskan manual + template tampil semua.
     $('#inp_pelanggaran').on('change', function() {
@@ -700,15 +811,16 @@ $(document).ready(function() {
         currentLanggarItem = null;
         showKonteksBina('');
         fillLanggarDropdown('', '');
-        // Jenis dikunci: kosongkan sampai pelanggaran sumber dipilih (cegah default Akademik bocor).
+        fillKonselingDropdown('', '');
+        // Jenis dikunci: kosongkan sampai pelanggaran/konseling sumber dipilih.
         $('#inp_jenis').val('');
         $('#inp_jenis_hidden').val('');
         populateBina('');
-        $('#sel_bina_masalah').empty().append('<option value="">-- Pilih pelanggaran sumber dulu --</option>');
-        $('#sel_bina_tindakan').empty().append('<option value="">-- Pilih pelanggaran sumber dulu --</option>');
-        $('#sel_bina_tl').empty().append('<option value="">-- Pilih pelanggaran sumber dulu --</option>');
+        $('#sel_bina_masalah').empty().append('<option value="">-- Pilih sumber dulu --</option>');
+        $('#sel_bina_tindakan').empty().append('<option value="">-- Pilih sumber dulu --</option>');
+        $('#sel_bina_tl').empty().append('<option value="">-- Pilih sumber dulu --</option>');
         var note = $('#jenisAutoNote');
-        if (note.length) note.html('Pilih pelanggaran sumber dulu &mdash; jenis terkunci otomatis.');
+        if (note.length) note.html('Pilih pelanggaran/konseling sumber &mdash; jenis terkunci otomatis.');
         $('#modalPembinaan').modal('show');
         setTimeout(function() {
             $('#modalPembinaan textarea').each(function() { autogrowBina($(this)); });
@@ -716,52 +828,90 @@ $(document).ready(function() {
     });
 
     $(document).on('click', '.btn-edit-pembinaan', function() {
-        var data = $(this).data('json');
-        $('#formPembinaanAction').val('edit');
-        $('#pembinaanId').val(data.id);
-        $('#modalPembinaanTitle').text('Edit Pembinaan Siswa');
-        if ($('#inp_siswa option[value="' + data.id_siswa + '"]').length === 0) {
-            var optEdit = new Option(data.nama_siswa + (data.nisn ? ' (' + data.nisn + ')' : ''), data.id_siswa, true, true);
-            $('#inp_siswa').append(optEdit);
-        }
-        $('#inp_siswa').val(data.id_siswa).trigger('change.select2');
-        showKonteksBina(data.id_siswa);
-        fillLanggarDropdown(data.id_siswa, data.id_pelanggaran);
-        $('#inp_tanggal').val(data.tanggal);
-        // Kunci ulang dari sumber (bukan dari nilai lama yang bisa bocor).
-        var jbEdit = data.jenis_pembinaan || '';
-        var selItem = null;
+        isEditingPembinaan = true;
         try {
-            pelanggaranBySiswa(data.id_siswa).forEach(function(p) {
-                if (String(p.id) === String(data.id_pelanggaran)) selItem = p;
-            });
-            if (selItem) {
+            var data = $(this).data('json');
+            $('#formPembinaanAction').val('edit');
+            $('#pembinaanId').val(data.id);
+            $('#modalPembinaanTitle').text('Edit Pembinaan Siswa');
+            if ($('#inp_siswa option[value="' + data.id_siswa + '"]').length === 0) {
+                var optEdit = new Option(data.nama_siswa + (data.nisn ? ' (' + data.nisn + ')' : ''), data.id_siswa, true, true);
+                $('#inp_siswa').append(optEdit);
+            }
+            $('#inp_siswa').val(data.id_siswa).trigger('change.select2');
+            showKonteksBina(data.id_siswa);
+            fillLanggarDropdown(data.id_siswa, data.id_pelanggaran);
+            fillKonselingDropdown(data.id_siswa, data.id_konseling, false);
+            if (data.id_konseling) {
+                $('#inp_konseling').val(data.id_konseling);
+            }
+            $('#inp_tanggal').val(data.tanggal);
+            // Kunci ulang dari sumber (konseling / pelanggaran / mandiri).
+            var selItem = null;
+            try {
+                pelanggaranBySiswa(data.id_siswa).forEach(function(p) {
+                    if (String(p.id) === String(data.id_pelanggaran)) selItem = p;
+                });
+            } catch (e) {}
+            currentLanggarItem = selItem;
+
+            var jbEdit = data.jenis_pembinaan || '';
+            if (data.id_konseling) {
+                var kSel = konselingBySiswa(data.id_siswa).find(function(k) { return String(k.id) === String(data.id_konseling); });
+                var topikSel = kSel ? kSel.topik : '';
+                jbEdit = mapKonselingTopik[topikSel] || jbEdit || 'Sikap';
+                setJenisMode(true);
+                kunciJenisBinaan(jbEdit, 'sumber konseling: ' + (topikSel || 'tersimpan'));
+                $('#inp_konseling').val(data.id_konseling);
+            } else if (selItem) {
                 var d = deteksiJenisBinaan(selItem.jenis_pelanggaran, selItem.kategori);
                 jbEdit = selItem.jenis_binaan || d.jenis;
+                setJenisMode(true);
+                kunciJenisBinaan(jbEdit, (selItem.jenis_binaan ? 'tersimpan' : 'deteksi: ' + d.via));
+                $('#inp_pelanggaran').val(data.id_pelanggaran);
+            } else {
+                setJenisMode(false);
+                $('#inp_jenis').val(jbEdit || 'Akademik');
+                $('#inp_jenis_hidden').val(jbEdit || 'Akademik');
+                populateBina(jbEdit || 'Akademik', '');
             }
-        } catch (e) {}
-        currentLanggarItem = selItem;
-        $('#inp_jenis').val(jbEdit);
-        $('#inp_jenis_hidden').val(jbEdit);
-        populateBina(jbEdit, selItem ? selItem.jenis_pelanggaran : '');
-        // Samakan dropdown dengan nilai tersimpan bila cocok persis
-        $('#sel_bina_masalah option').each(function() {
-            if ($(this).val() === (data.permasalahan || '')) $(this).prop('selected', true);
-        });
-        $('#sel_bina_tindakan option').each(function() {
-            if ($(this).val() === (data.tindakan || '')) $(this).prop('selected', true);
-        });
-        $('#sel_bina_tl option').each(function() {
-            if ($(this).val() === (data.tindak_lanjut || '')) $(this).prop('selected', true);
-        });
-        $('#inp_masalah').val(data.permasalahan);
-        $('#inp_tindakan').val(data.tindakan);
-        $('#inp_tindak_lanjut').val(data.tindak_lanjut || '');
-        $('#inp_status').val(data.status);
-        $('#modalPembinaan').modal('show');
-        setTimeout(function() {
-            $('#modalPembinaan textarea').each(function() { autogrowBina($(this)); });
-        }, 120);
+
+            if (window.GDSRefresh) {
+                try {
+                    GDSRefresh($('#inp_jenis'));
+                    GDSRefresh($('#inp_konseling'));
+                    GDSRefresh($('#inp_pelanggaran'));
+                } catch(e) {}
+            }
+
+            // Samakan dropdown dengan nilai tersimpan bila cocok persis
+            $('#sel_bina_masalah option').each(function() {
+                if ($(this).val() === (data.permasalahan || '')) $(this).prop('selected', true);
+            });
+            $('#sel_bina_tindakan option').each(function() {
+                if ($(this).val() === (data.tindakan || '')) $(this).prop('selected', true);
+            });
+            $('#sel_bina_tl option').each(function() {
+                if ($(this).val() === (data.tindak_lanjut || '')) $(this).prop('selected', true);
+            });
+            $('#inp_masalah').val(data.permasalahan);
+            $('#inp_tindakan').val(data.tindakan);
+            $('#inp_tindak_lanjut').val(data.tindak_lanjut || '');
+            $('#inp_status').val(data.status);
+            $('#modalPembinaan').modal('show');
+            setTimeout(function() {
+                $('#modalPembinaan textarea').each(function() { autogrowBina($(this)); });
+                if (window.GDSRefresh) {
+                    try {
+                        GDSRefresh($('#inp_jenis'));
+                        GDSRefresh($('#inp_konseling'));
+                        GDSRefresh($('#inp_pelanggaran'));
+                    } catch(e) {}
+                }
+            }, 120);
+        } finally {
+            isEditingPembinaan = false;
+        }
     });
 
     $(document).on('click', '.btn-detail-pembinaan', function() {
@@ -803,6 +953,20 @@ $(document).ready(function() {
             }
         });
     });
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var paramKonselingId = urlParams.get('konseling_id');
+    if (paramKonselingId && typeof konselingListBina !== 'undefined') {
+        var kMatch = konselingListBina.find(function(k) { return String(k.id) === String(paramKonselingId); });
+        if (kMatch) {
+            $('#btnTambahPembinaan').trigger('click');
+            $('#inp_siswa').val(kMatch.id_siswa).trigger('change.select2');
+            showKonteksBina(kMatch.id_siswa);
+            fillLanggarDropdown(kMatch.id_siswa, '');
+            fillKonselingDropdown(kMatch.id_siswa, kMatch.id);
+            $('#inp_konseling').val(kMatch.id).trigger('change');
+        }
+    }
 });
 JS
 ];
@@ -827,12 +991,16 @@ include '../templates/sidebar.php';
 .st-sudah .siswa-dot, .siswa-dot.dot-sudah { background: #28a745; }
 .st-kosong .siswa-dot, .siswa-dot.dot-kosong { background: #adb5bd; }
 .st-mandiri .siswa-dot, .siswa-dot.dot-mandiri { background: #17a2b8; }
+.st-konseling .siswa-dot, .siswa-dot.dot-konseling { background: #6f42c1; box-shadow: 0 0 0 3px rgba(111,66,193,.25); }
+.st-konseling-sudah .siswa-dot, .siswa-dot.dot-konseling-sudah { background: #6f42c1; }
 .siswa-tag { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 1px 8px; margin-left: 6px; color: #fff; }
 .st-belum .siswa-tag { background: #dc3545; }
 .st-kurang .siswa-tag { background: #fd7e14; }
 .st-sudah .siswa-tag { background: #28a745; }
 .st-kosong .siswa-tag { background: #6c757d; }
 .st-mandiri .siswa-tag { background: #17a2b8; }
+.st-konseling .siswa-tag { background: #6f42c1; }
+.st-konseling-sudah .siswa-tag { background: #6f42c1; }
 .select2-container--default .select2-results__option[aria-disabled="true"] { color: #aaa; }
 #modalPembinaan .select2-container { width: 100% !important; }
 </style>
@@ -945,11 +1113,15 @@ include '../templates/sidebar.php';
                                     <tr>
                                         <td class="text-center"><?= $i + 1 ?></td>
                                         <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                        <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong>
-                                            <?php if (!empty($r['lg_jenis'])): ?>
-                                                <div class="mt-1"><small class="badge badge-light border" title="Sumber Alur 1">Dari: <?= htmlspecialchars(mb_strimwidth($r['lg_jenis'], 0, 30, '...')) ?> (<?= htmlspecialchars($r['lg_kategori'] ?? '-') ?>, +<?= (int)($r['lg_poin'] ?? 0) ?>)</small></div>
-                                            <?php endif; ?>
-                                        </td>
+                                         <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong>
+                                             <?php if (!empty($r['kg_topik'])): ?>
+                                                 <div class="mt-1"><span class="badge badge-primary" title="Sumber Konseling"><i class="fas fa-comments mr-1"></i>Konseling: <?= htmlspecialchars($r['kg_topik']) ?></span></div>
+                                             <?php elseif (!empty($r['lg_jenis'])): ?>
+                                                 <div class="mt-1"><span class="badge badge-warning text-dark" title="Sumber Pelanggaran"><i class="fas fa-exclamation-triangle mr-1"></i>Pelanggaran: <?= htmlspecialchars(mb_strimwidth($r['lg_jenis'], 0, 25, '...')) ?> (+<?= (int)($r['lg_poin'] ?? 0) ?>)</span></div>
+                                             <?php else: ?>
+                                                 <div class="mt-1"><span class="badge badge-secondary" title="Pembinaan Mandiri"><i class="fas fa-user-edit mr-1"></i>Mandiri</span></div>
+                                             <?php endif; ?>
+                                         </td>
                                         <td><?= htmlspecialchars($r['nisn'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
                                         <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_pembinaan']) ?></span></td>
@@ -1008,29 +1180,53 @@ include '../templates/sidebar.php';
                             <select name="id_siswa" id="inp_siswa" class="form-control siswa-select" required style="width:100%;">
                                 <option value="">-- Pilih Siswa --</option>
                                 <?php
-                                // Kelompokkan agar status jelas: pelanggar belum dibina -> pelanggar sudah dibina -> belum pernah dibina -> mandiri.
-                                $grp = ['langgar_belum' => [], 'langgar_sudah' => [], 'belum' => [], 'mandiri' => []];
+                                // Kelompokkan agar status jelas: konseling perlu pembinaan -> pelanggar belum dibina -> pelanggar sudah dibina -> konseling sudah dibina -> mandiri -> belum pernah.
+                                $grp = [
+                                    'konseling_perlu' => [],
+                                    'langgar_belum'   => [],
+                                    'langgar_sudah'   => [],
+                                    'konseling_sudah' => [],
+                                    'mandiri'         => [],
+                                    'belum'           => []
+                                ];
                                 foreach ($siswa_list as $s) {
                                     $sid = (int)$s['id_siswa'];
-                                    $nL = (int)($s['jml'] ?? 0);
-                                    $nB = (int)($s['n_bina'] ?? 0);
-                                    if ($nL > 0) {
+                                    $nL  = (int)($s['jml'] ?? 0);
+                                     $nKP = (int)($s['n_konseling_perlu'] ?? 0);
+                                     $nBK = (int)($s['n_bina_konseling'] ?? 0);
+                                     $nB  = (int)($s['n_bina'] ?? 0);
+                                     if ($nKP > 0) {
+                                         $k = 'konseling_perlu';
+                                         $cls = 'st-konseling';
+                                         $tagB = "Konseling, perlu pembinaan ({$nKP})";
+                                    } elseif ($nL > 0) {
                                         $sisaB = max(0, $nL - $nB);
                                         if ($nB > 0 && $sisaB === 0) { $k = 'langgar_sudah'; $cls = 'st-sudah'; $tagB = 'Pelanggar, sudah dibina | ' . (int)$s['total_poin'] . ' poin'; }
                                         elseif ($nB > 0) { $k = 'langgar_belum'; $cls = 'st-kurang'; $tagB = "Pelanggar, $sisaB belum dibina | " . (int)$s['total_poin'] . ' poin'; }
                                         else { $k = 'langgar_belum'; $cls = 'st-belum'; $tagB = 'Pelanggar, belum dibina | ' . (int)$s['total_poin'] . ' poin'; }
+                                    } elseif ($nBK > 0) {
+                                        $k = 'konseling_sudah';
+                                        $cls = 'st-konseling-sudah';
+                                        $tagB = "Konseling, sudah dibina ({$nBK}x)";
+                                    } elseif ($nB > 0) {
+                                        $k = 'mandiri';
+                                        $cls = 'st-mandiri';
+                                        $tagB = "Mandiri, sudah dibina ({$nB}x)";
                                     } else {
-                                        if ($nB > 0) { $k = 'mandiri'; $cls = 'st-mandiri'; $tagB = "Mandiri, sudah dibina {$nB}x"; }
-                                        else { $k = 'belum'; $cls = 'st-kosong'; $tagB = 'Belum pernah dibina'; }
+                                        $k = 'belum';
+                                        $cls = 'st-kosong';
+                                        $tagB = 'Belum pernah dibina';
                                     }
                                     $s['tagB'] = $tagB; $s['cls'] = $cls;
                                     $grp[$k][] = $s;
                                 }
                                 $grpLabel = [
-                                    'langgar_belum' => '🔴 Pelanggar — belum dibina',
-                                    'langgar_sudah' => '🟢 Pelanggar — sudah dibina',
-                                    'belum' => '⚪ Belum pernah dibina',
-                                    'mandiri' => '🔵 Mandiri — sudah dibina',
+                                    'konseling_perlu' => '🟣 Konseling — perlu pembinaan',
+                                    'langgar_belum'   => '🔴 Pelanggar — belum dibina',
+                                    'langgar_sudah'   => '🟢 Pelanggar — sudah dibina',
+                                    'konseling_sudah' => '🟣 Konseling — sudah dibina',
+                                    'mandiri'         => '🔵 Mandiri — sudah dibina',
+                                    'belum'           => '⚪ Belum pernah dibina',
                                 ];
                                 foreach ($grp as $gk => $gs):
                                     if (empty($gs)) continue;
@@ -1045,23 +1241,24 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                             <div class="mt-2 small">
-                                <span class="siswa-dot dot-belum"></span>Pelanggar belum dibina
+                                <span class="siswa-dot dot-konseling"></span>Konseling perlu pembinaan
+                                <span class="siswa-dot dot-belum ml-2"></span>Pelanggar belum dibina
                                 <span class="siswa-dot dot-kurang ml-2"></span>Sebagian belum
                                 <span class="siswa-dot dot-sudah ml-2"></span>Sudah dibina
-                                <span class="siswa-dot dot-kosong ml-2"></span>Belum pernah
                                 <span class="siswa-dot dot-mandiri ml-2"></span>Mandiri
+                                <span class="siswa-dot dot-kosong ml-2"></span>Belum pernah
                             </div>
                             <div id="konteksLanggarBina" class="mt-2"><small class="text-muted">Hibrid: bisa dari pelanggaran ATAU mandiri (kesulitan belajar/fokus/disiplin/adab).</small></div>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label class="font-weight-bold">Pelanggaran Sumber (opsional)</label>
+                            <label class="font-weight-bold">Sumber Pembinaan</label>
                             <select name="id_pelanggaran" id="inp_pelanggaran" class="form-control">
                                 <option value="">-- Mandiri (tanpa pelanggaran) --</option>
                             </select>
                             <small class="text-muted">Opsional: pilih bila pembinaan berasal dari pelanggaran. Kosongkan untuk mandiri/konseling.</small>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label class="font-weight-bold">Konseling Sumber (opsional)</label>
+                            <label class="font-weight-bold">Topik Konseling</label>
                             <select name="id_konseling" id="inp_konseling" class="form-control">
                                 <option value="">-- Tanpa konseling --</option>
                             </select>

@@ -69,32 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $guru_id, $id_siswa, $id_kelas, $tanggal, $topik,
                         $ringkasan_masalah, $tindak_lanjut, $status, $follow_up
                     ]);
-                    $new_konseling_id = (int)$pdo->lastInsertId();
-                    if ($status === 'Pembinaan') {
-                        $jenis_map = [
-                            'Motivasi Belajar' => 'Akademik',
-                            'Penyesuaian Sosial' => 'Sosial',
-                            'Keluarga' => 'Sosial',
-                            'Kedisiplinan' => 'Kedisiplinan',
-                            'Kecemasan / Emosi' => 'Sikap',
-                            'Minat & Bakat' => 'Akademik',
-                            'Ibadah & Spiritual' => 'Sikap',
-                        ];
-                        $jenis_bina = $jenis_map[$topik] ?? 'Sikap';
-                        $stmtB = $pdo->prepare("
-                            INSERT INTO tb_pembinaan_siswa (
-                                id_wali, id_siswa, id_kelas, tanggal, jenis_pembinaan,
-                                permasalahan, tindakan, tindak_lanjut, status, id_pelanggaran, id_konseling
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Berjalan', NULL, ?)
-                        ");
-                        $stmtB->execute([
-                            $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis_bina,
-                            $ringkasan_masalah, $tindak_lanjut !== '' ? $tindak_lanjut : 'Pembinaan lanjutan hasil konseling: ' . $topik,
-                            $follow_up !== '' ? $follow_up : null, $new_konseling_id
-                        ]);
-                    }
                     if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); }
-                    $message = ['type' => 'success', 'text' => $status === 'Pembinaan' ? 'Konseling berat/berulang diteruskan ke Pembinaan.' : 'Data konseling awal berhasil disimpan.'];
+                    $message = ['type' => 'success', 'text' => $status === 'Pembinaan' ? 'Konseling status Pembinaan tersimpan. Silakan catat pembinaan di menu Pembinaan.' : 'Data konseling awal berhasil disimpan.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_konseling_awal SET
@@ -106,33 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $id_siswa, $id_kelas, $tanggal, $topik,
                         $ringkasan_masalah, $tindak_lanjut, $status, $follow_up, $id
                     ]);
-                    if ($status === 'Pembinaan') {
-                        $chkB = $pdo->prepare("SELECT id FROM tb_pembinaan_siswa WHERE id_konseling = ? LIMIT 1");
-                        $chkB->execute([$id]);
-                        if (!$chkB->fetchColumn()) {
-                            $jenis_map = [
-                                'Motivasi Belajar' => 'Akademik',
-                                'Penyesuaian Sosial' => 'Sosial',
-                                'Keluarga' => 'Sosial',
-                                'Kedisiplinan' => 'Kedisiplinan',
-                                'Kecemasan / Emosi' => 'Sikap',
-                                'Minat & Bakat' => 'Akademik',
-                                'Ibadah & Spiritual' => 'Sikap',
-                            ];
-                            $jenis_bina = $jenis_map[$topik] ?? 'Sikap';
-                            $stmtB = $pdo->prepare("
-                                INSERT INTO tb_pembinaan_siswa (
-                                    id_wali, id_siswa, id_kelas, tanggal, jenis_pembinaan,
-                                    permasalahan, tindakan, tindak_lanjut, status, id_pelanggaran, id_konseling
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Berjalan', NULL, ?)
-                            ");
-                            $stmtB->execute([
-                                $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis_bina,
-                                $ringkasan_masalah, $tindak_lanjut !== '' ? $tindak_lanjut : 'Pembinaan lanjutan hasil konseling: ' . $topik,
-                                $follow_up !== '' ? $follow_up : null, $id
-                            ]);
-                        }
-                    }
                     if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); }
                     $message = ['type' => 'success', 'text' => 'Data konseling berhasil diperbarui.'];
                 }
@@ -509,6 +458,11 @@ include '../templates/sidebar.php';
                                                  <button type="button" class="btn btn-info btn-sm btn-detail-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail Rahasia">
                                                      <i class="fas fa-eye"></i>
                                                  </button>
+                                                 <?php if ($can_crud && $r['status'] === 'Pembinaan'): ?>
+                                                 <a href="pembinaan_siswa.php?konseling_id=<?= (int)$r['id'] ?>" class="btn btn-primary btn-sm" title="Proses Pembinaan">
+                                                     <i class="fas fa-user-edit"></i>
+                                                 </a>
+                                                 <?php endif; ?>
                                                  <?php if ($can_crud): ?>
                                                  <button type="button" class="btn btn-warning btn-sm btn-edit-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                      <i class="fas fa-edit"></i>

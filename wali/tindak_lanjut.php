@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $penanggung_jawab = trim((string)($_POST['penanggung_jawab'] ?? ''));
         $target_selesai = !empty($_POST['target_selesai']) ? date('Y-m-d', strtotime($_POST['target_selesai'])) : null;
         $tanggal_selesai = !empty($_POST['tanggal_selesai']) ? date('Y-m-d', strtotime($_POST['tanggal_selesai'])) : null;
-        $status = in_array($_POST['status'] ?? '', ['Rencana', 'Proses', 'Selesai', 'Dibatalkan'], true) ? $_POST['status'] : 'Rencana';
+        $status = (!empty($tanggal_selesai) && $tanggal_selesai <= date('Y-m-d')) ? 'Selesai' : 'Proses';
 
         if ($action === 'edit' && $id > 0) {
             $stOld = $pdo->prepare("SELECT * FROM tb_tindak_lanjut_wali WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $message = ['type' => 'success', 'text' => 'Tindak lanjut berhasil diperbarui.'];
                 }
-                sync_pelanggaran_statuses($pdo);
+                if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); } else { sync_pembinaan_statuses($pdo); }
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
             }
@@ -162,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         try {
             $pdo->prepare("DELETE FROM tb_tindak_lanjut_wali WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
-            sync_pelanggaran_statuses($pdo);
+            if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); } else { sync_pembinaan_statuses($pdo); }
             $message = ['type' => 'success', 'text' => 'Data tindak lanjut berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -919,6 +919,11 @@ include '../templates/sidebar.php';
                             <label class="font-weight-bold">Tanggal Rencana</label>
                             <input type="date" name="tanggal" id="inp_tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Penanggung Jawab <span class="text-danger">*</span></label>
+                            <input type="text" name="penanggung_jawab" id="inp_pj" class="form-control" required placeholder="Wali Kelas / Guru BK / Orang Tua">
+                            <small class="text-muted" id="pj_default_hint"></small>
+                        </div>
                         <div class="col-12 form-group">
                             <label class="font-weight-bold">Tindakan / Langkah Perbaikan <span class="text-danger">*</span></label>
                             <select id="sel_tl_tindakan" class="form-control form-control-sm mb-1">
@@ -926,26 +931,14 @@ include '../templates/sidebar.php';
                             </select>
                             <textarea name="tindakan" id="inp_tindakan" class="form-control" rows="5" style="min-height:120px;" required placeholder="Pilih dari dropdown di atas sesuai sumber, atau ketik manual..."></textarea>
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label class="font-weight-bold">Penanggung Jawab <span class="text-danger">*</span></label>
-                            <input type="text" name="penanggung_jawab" id="inp_pj" class="form-control" required placeholder="Wali Kelas / Guru BK / Orang Tua">
-                            <small class="text-muted" id="pj_default_hint"></small>
-                        </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-6 form-group">
                             <label class="font-weight-bold">Target Selesai</label>
                             <input type="date" name="target_selesai" id="inp_target" class="form-control">
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-6 form-group">
                             <label class="font-weight-bold">Tanggal Realisasi Selesai</label>
                             <input type="date" name="tanggal_selesai" id="inp_selesai" class="form-control">
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label class="font-weight-bold">Status</label>
-                            <select name="status" id="inp_status" class="form-control">
-                                <?php foreach ($status_options as $st): ?>
-                                    <option value="<?= $st ?>"><?= $st ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <small class="text-muted">Status default <strong>Proses</strong>. Pukul 00.00 pada tanggal realisasi selesai, status otomatis berubah <strong>Selesai</strong>.</small>
                         </div>
                     </div>
                 </div>

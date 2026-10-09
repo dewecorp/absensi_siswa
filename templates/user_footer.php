@@ -268,7 +268,7 @@ if (!isset($school_profile)) {
     <!-- Template JS File -->
     <script src="../assets/js/scripts.js"></script>
     <script src="../assets/js/custom.js"></script>
-    <script src="../assets/js/global_dropdown.js"></script>
+    <script src="../assets/js/global_dropdown.js?v=<?= filemtime(__DIR__ . '/../assets/js/global_dropdown.js') ?>"></script>
 
     <!-- Page Specific JS File -->
     <?php if (isset($js_page) && is_array($js_page)): ?>

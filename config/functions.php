@@ -3576,7 +3576,13 @@ function sync_tindak_lanjut_statuses(PDO $pdo): void {
             WHERE tanggal_selesai IS NOT NULL
               AND tanggal_selesai != ''
               AND tanggal_selesai <= CURRENT_DATE()
-              AND status NOT IN ('Selesai', 'Dibatalkan')
+              AND status != 'Dibatalkan'
+        ");
+        $pdo->exec("
+            UPDATE tb_tindak_lanjut_wali
+            SET status = 'Proses'
+            WHERE (tanggal_selesai IS NULL OR tanggal_selesai = '' OR tanggal_selesai > CURRENT_DATE())
+              AND status != 'Dibatalkan'
         ");
     } catch (Throwable $e) {}
 }
@@ -3591,20 +3597,26 @@ function sync_pembinaan_statuses(PDO $pdo): void {
     try {
         sync_tindak_lanjut_statuses($pdo);
         $pdo->exec("
+            UPDATE tb_tindak_lanjut_wali t
+            JOIN tb_pembinaan_siswa b ON (t.id_konseling IS NOT NULL AND t.id_konseling = b.id_konseling)
+            SET t.id_pembinaan = b.id
+            WHERE t.id_pembinaan IS NULL
+        ");
+        $pdo->exec("
             UPDATE tb_pembinaan_siswa b
-            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            LEFT JOIN tb_tindak_lanjut_wali t ON (t.id_pembinaan = b.id OR (b.id_konseling IS NOT NULL AND t.id_konseling = b.id_konseling))
             SET b.status = 'Berjalan'
             WHERE t.id IS NULL
         ");
         $pdo->exec("
             UPDATE tb_pembinaan_siswa b
-            JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            JOIN tb_tindak_lanjut_wali t ON (t.id_pembinaan = b.id OR (b.id_konseling IS NOT NULL AND t.id_konseling = b.id_konseling))
             SET b.status = 'Dalam Pemantauan'
             WHERE (t.status IS NULL OR t.status != 'Selesai')
         ");
         $pdo->exec("
             UPDATE tb_pembinaan_siswa b
-            JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            JOIN tb_tindak_lanjut_wali t ON (t.id_pembinaan = b.id OR (b.id_konseling IS NOT NULL AND t.id_konseling = b.id_konseling))
             SET b.status = 'Selesai'
             WHERE t.status = 'Selesai'
         ");
@@ -3621,12 +3633,10 @@ function sync_konseling_statuses(PDO $pdo): void {
         sync_pembinaan_statuses($pdo);
         $pdo->exec("
             UPDATE tb_konseling_awal k
-            LEFT JOIN tb_pembinaan_siswa b ON b.id_konseling = k.id
+            JOIN tb_pembinaan_siswa b ON b.id_konseling = k.id
             LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
             SET k.status = 'Selesai'
-            WHERE b.id IS NULL
-               OR b.status = 'Selesai'
-               OR t.status = 'Selesai'
+            WHERE b.status = 'Selesai' OR t.status = 'Selesai'
         ");
         $pdo->exec("
             UPDATE tb_konseling_awal k
