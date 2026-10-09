@@ -353,14 +353,33 @@ $(document).ready(function(){
  $('form').on('submit', function(){ $(this).find('input[name="anggaran"]').each(function(){ this.value=this.value.replace(/\D/g,''); }); });
  var t=$('#table-proker').DataTable({scrollX:true, autoWidth:false, paging:true, pageLength:10, language:{search:"Cari:", lengthMenu:"Tampilkan _MENU_", zeroRecords:"Tidak ada data", info:"Menampilkan _START_ - _END_ dari _TOTAL_", paginate:{first:"Awal",last:"Akhir",next:"Next",previous:"Prev"}}});
  <?php if($message):?>Swal.fire({icon:'<?= $message['type']=='success'?'success':'error'?>',title:'<?= addslashes($message['text'])?>', timer:2000, showConfirmButton:false});<?php endif;?>
- $(document).on('click','.btn-edit',function(){
-  var r=$(this).data('row'); if(typeof r==='string') try{r=JSON.parse(r)}catch(e){r=$(this).attr('data-row'); r=JSON.parse(r)}
-  $('#edit_id').val(r.id); $('#edit_komponen').val(r.komponen); fillProgram(r.komponen,'#edit_program_sel',r.program);
-  syncMatriksEdit();
-  $('#edit_waktu_mulai').val(r.waktu_mulai||r.waktu||''); $('#edit_waktu_selesai').val(r.waktu_selesai||'');
-  $('#edit_pj').val(r.penanggung_jawab); $('#edit_anggaran').val(fmtRupiah(r.anggaran)); $('#edit_sumber').val(r.sumber_dana);
-  $('#editModal').modal('show');
- });
+  $(document).on('click','.btn-edit',function(){
+   var r=$(this).data('row'); if(typeof r==='string') try{r=JSON.parse(r)}catch(e){r=$(this).attr('data-row'); r=JSON.parse(r)}
+   $('#edit_id').val(r.id);
+   $('#edit_komponen').val(r.komponen);
+   fillProgram(r.komponen,'#edit_program_sel',r.program);
+   syncMatriksEdit();
+   if(r.target) $('#edit_target').val(r.target);
+   $('#edit_waktu_mulai').val(r.waktu_mulai||r.waktu||''); $('#edit_waktu_selesai').val(r.waktu_selesai||'');
+   $('#edit_pj').val(r.penanggung_jawab); $('#edit_anggaran').val(fmtRupiah(r.anggaran)); $('#edit_sumber').val(r.sumber_dana);
+   if (window.GDSRefresh) {
+    try {
+     GDSRefresh($('#edit_komponen'));
+     GDSRefresh($('#edit_program_sel'));
+     GDSRefresh($('#edit_pj'));
+    } catch(e){}
+   }
+   $('#editModal').modal('show');
+   setTimeout(function(){
+    if (window.GDSRefresh) {
+     try {
+      GDSRefresh($('#edit_komponen'));
+      GDSRefresh($('#edit_program_sel'));
+      GDSRefresh($('#edit_pj'));
+     } catch(e){}
+    }
+   }, 120);
+  });
   $(document).on('click','.btn-del',function(){
   var id=$(this).data('id'), prog=$(this).data('prog');
   Swal.fire({title:'Hapus?',text:'Hapus program "'+prog+'"?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',confirmButtonText:'Ya, Hapus'}).then(function(res){ if(res.isConfirmed){ $('#del_id').val(id); $('#delForm').submit(); }});

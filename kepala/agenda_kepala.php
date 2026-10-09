@@ -209,7 +209,8 @@ $(document).ready(function () {
         if (row) {
             $('#edit_id_agenda').val(row.id_agenda);
             $('#edit_nama_agenda').val(row.nama_agenda);
-            $('#edit_id_jenis').val(row.id_jenis);
+            $('#edit_id_jenis').val(row.id_jenis).trigger('change');
+            if (window.GDSRefresh) { try { GDSRefresh($('#edit_id_jenis')); } catch(e) {} }
             $('#edit_hari_tanggal').val(row.hari_tanggal);
             $('#edit_waktu').val(row.waktu || '');
             $('#edit_tempat').val(row.tempat);
@@ -521,12 +522,12 @@ include '../templates/sidebar.php';
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label>Nama Agenda <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="nama_agenda" required placeholder="Contoh: Rapat Koordinasi Bersama Pengawas">
-                    </div>
                     <div class="form-row">
-                        <div class="form-group col-md-4">
+                        <div class="form-group col-md-6">
+                            <label>Nama Agenda <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="nama_agenda" required placeholder="Contoh: Rapat Koordinasi Bersama Pengawas">
+                        </div>
+                        <div class="form-group col-md-6">
                             <label>Jenis Agenda <span class="text-danger">*</span></label>
                             <select class="form-control" name="id_jenis" required>
                                 <option value="">Pilih Jenis Agenda</option>
@@ -538,6 +539,8 @@ include '../templates/sidebar.php';
                                 <small class="text-danger">Belum ada Jenis Agenda. Silakan atur di menu Data Agenda terlebih dahulu.</small>
                             <?php endif; ?>
                         </div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group col-md-4">
                             <label>Hari / Tanggal <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="hari_tanggal" value="<?= date('Y-m-d') ?>" required>
@@ -546,10 +549,10 @@ include '../templates/sidebar.php';
                             <label>Waktu</label>
                             <input type="time" class="form-control" name="waktu">
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Tempat</label>
-                        <input type="text" class="form-control" name="tempat" placeholder="Contoh: Ruang Kepala / Aula Kemenag">
+                        <div class="form-group col-md-4">
+                            <label>Tempat</label>
+                            <input type="text" class="form-control" name="tempat" placeholder="Contoh: Ruang Kepala / Aula Kemenag">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="font-weight-bold">Uraian Kegiatan</label>
@@ -581,12 +584,12 @@ include '../templates/sidebar.php';
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label>Nama Agenda <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="nama_agenda" id="edit_nama_agenda" required>
-                    </div>
                     <div class="form-row">
-                        <div class="form-group col-md-4">
+                        <div class="form-group col-md-6">
+                            <label>Nama Agenda <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="nama_agenda" id="edit_nama_agenda" required>
+                        </div>
+                        <div class="form-group col-md-6">
                             <label>Jenis Agenda <span class="text-danger">*</span></label>
                             <select class="form-control" name="id_jenis" id="edit_id_jenis" required>
                                 <option value="">Pilih Jenis Agenda</option>
@@ -595,6 +598,8 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group col-md-4">
                             <label>Hari / Tanggal <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="hari_tanggal" id="edit_hari_tanggal" required>
@@ -603,10 +608,10 @@ include '../templates/sidebar.php';
                             <label>Waktu</label>
                             <input type="time" class="form-control" name="waktu" id="edit_waktu">
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Tempat</label>
-                        <input type="text" class="form-control" name="tempat" id="edit_tempat">
+                        <div class="form-group col-md-4">
+                            <label>Tempat</label>
+                            <input type="text" class="form-control" name="tempat" id="edit_tempat">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="font-weight-bold">Uraian Kegiatan</label>

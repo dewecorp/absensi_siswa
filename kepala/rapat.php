@@ -219,7 +219,8 @@ $(document).ready(function () {
         if (row) {
             $('#edit_id_rapat').val(row.id_rapat);
             $('#edit_nama_rapat').val(row.nama_rapat || '');
-            $('#edit_id_jenis').val(row.id_jenis ? String(row.id_jenis) : '');
+            $('#edit_id_jenis').val(row.id_jenis ? String(row.id_jenis) : '').trigger('change');
+            if (window.GDSRefresh) { try { GDSRefresh($('#edit_id_jenis')); } catch(e) {} }
             $('#edit_hari_tanggal').val(row.hari_tanggal);
             $('#edit_waktu').val(row.waktu || '');
             $('#edit_pemimpin_rapat').val(row.pemimpin_rapat || '');
