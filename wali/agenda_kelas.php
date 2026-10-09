@@ -68,7 +68,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jenis = in_array($_POST['jenis'] ?? '', ['Ujian', 'Kegiatan Kelas', 'Kegiatan Madrasah', 'Piket', 'Projek', 'Kokurikuler'], true) ? $_POST['jenis'] : 'Kegiatan Kelas';
         $tempat = trim((string)($_POST['tempat'] ?? 'Ruang Kelas'));
         $penanggung_jawab = trim((string)($_POST['penanggung_jawab'] ?? 'Wali Kelas'));
-        $status = in_array($_POST['status'] ?? '', ['Rencana', 'Berjalan', 'Selesai', 'Batal'], true) ? $_POST['status'] : 'Rencana';
+        $today = date('Y-m-d');
+        if ($tanggal_selesai <= $today) { $status_post = 'Selesai'; }
+        elseif ($tanggal_mulai <= $today) { $status_post = 'Berjalan'; }
+        else { $status_post = 'Rencana'; }
         $keterangan = trim((string)($_POST['keterangan'] ?? ''));
 
         if ($nama_agenda === '') {
@@ -84,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ");
                     $stmt->execute([
                         $guru_id, $id_kelas, $tanggal, $tanggal_mulai, $tanggal_selesai, $waktu_mulai, $waktu_selesai,
-                        $nama_agenda, $jenis, $tempat, $penanggung_jawab, $status, $keterangan
+                        $nama_agenda, $jenis, $tempat, $penanggung_jawab, $status_post, $keterangan
                     ]);
                     $message = ['type' => 'success', 'text' => 'Agenda kelas berhasil ditambahkan.'];
                 } else {
@@ -98,10 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([
                         $id_kelas, $tanggal, $tanggal_mulai, $tanggal_selesai, $waktu_mulai, $waktu_selesai,
                         $nama_agenda, $jenis, $tempat, $penanggung_jawab,
-                        $status, $keterangan, $id
+                        $status_post, $keterangan, $id
                     ]);
                     $message = ['type' => 'success', 'text' => 'Agenda kelas berhasil diperbarui.'];
                 }
+                if (function_exists('sync_agenda_statuses')) { sync_agenda_statuses($pdo); }
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
             }
@@ -117,6 +121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 }
+
+if (function_exists('sync_agenda_statuses')) { sync_agenda_statuses($pdo); }
 
 // Filters
 $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
@@ -306,21 +312,27 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-edit-agenda', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
         $('#formAgendaAction').val('edit');
         $('#agendaId').val(data.id);
         $('#modalAgendaTitle').text('Edit Agenda Kelas');
         $('#inp_tanggal').val(data.tanggal);
         $('#inp_tanggal_mulai').val(data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal);
         $('#inp_tanggal_selesai').val(data.tanggal_selesai || data.tgl_selesai_ef || data.tanggal);
-        $('#inp_mulai').val(data.waktu_mulai ? data.waktu_mulai.substring(0,5) : '');
-        $('#inp_selesai').val(data.waktu_selesai ? data.waktu_selesai.substring(0,5) : '');
-        $('#inp_nama').val(data.nama_agenda);
-        $('#inp_jenis').val(data.jenis);
+        $('#inp_mulai').val(data.waktu_mulai ? String(data.waktu_mulai).substring(0,5) : '');
+        $('#inp_selesai').val(data.waktu_selesai ? String(data.waktu_selesai).substring(0,5) : '');
+        $('#inp_nama').val(data.nama_agenda || '');
+        $('#inp_jenis').val(data.jenis || 'Kegiatan Kelas');
         $('#inp_tempat').val(data.tempat || '');
         $('#inp_pj').val(data.penanggung_jawab || '');
-        $('#inp_status').val(data.status);
         $('#inp_ket').val(data.keterangan || '');
         $('#modalAgenda').modal('show');
+        $('#modalAgenda').one('shown.bs.modal', function() {
+            $('#inp_jenis').trigger('change');
+            if (window.GDSRefresh) { try { window.GDSRefresh($('#modalAgenda')[0]); } catch(e2) {} }
+        });
     });
 
     $(document).on('click', '.btn-hapus-agenda', function() {
@@ -557,21 +569,13 @@ include '../templates/sidebar.php';
                             <label>Waktu Selesai</label>
                             <input type="time" name="waktu_selesai" id="inp_selesai" class="form-control">
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-6 form-group">
                             <label>Tempat / Ruang</label>
                             <input type="text" name="tempat" id="inp_tempat" class="form-control" value="Ruang Kelas">
                         </div>
-                        <div class="col-md-4 form-group">
+                        <div class="col-md-6 form-group">
                             <label>Penanggung Jawab</label>
                             <input type="text" name="penanggung_jawab" id="inp_pj" class="form-control" value="Wali Kelas">
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label>Status</label>
-                            <select name="status" id="inp_status" class="form-control">
-                                <?php foreach ($status_options as $st): ?>
-                                    <option value="<?= $st ?>"><?= $st ?></option>
-                                <?php endforeach; ?>
-                            </select>
                         </div>
                         <div class="col-12 form-group">
                             <label>Keterangan Tambahan</label>

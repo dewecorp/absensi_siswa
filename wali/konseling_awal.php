@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $topik = trim((string)($_POST['topik'] ?? ''));
         $ringkasan_masalah = trim((string)($_POST['ringkasan_masalah'] ?? ''));
         $tindak_lanjut = trim((string)($_POST['tindak_lanjut'] ?? ''));
-        $status = in_array($_POST['status'] ?? '', ['Terbuka', 'Proses', 'Selesai'], true) ? $_POST['status'] : 'Terbuka';
+        $status = in_array($_POST['status'] ?? '', ['Pembinaan', 'Selesai'], true) ? $_POST['status'] : 'Selesai';
         $follow_up = trim((string)($_POST['follow_up'] ?? ''));
 
         if ($id_siswa <= 0 || $topik === '' || $ringkasan_masalah === '') {
@@ -69,7 +69,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $guru_id, $id_siswa, $id_kelas, $tanggal, $topik,
                         $ringkasan_masalah, $tindak_lanjut, $status, $follow_up
                     ]);
-                    $message = ['type' => 'success', 'text' => 'Data konseling awal berhasil disimpan.'];
+                    $new_konseling_id = (int)$pdo->lastInsertId();
+                    if ($status === 'Pembinaan') {
+                        $jenis_map = [
+                            'Motivasi Belajar' => 'Akademik',
+                            'Penyesuaian Sosial' => 'Sosial',
+                            'Keluarga' => 'Sosial',
+                            'Kedisiplinan' => 'Kedisiplinan',
+                            'Kecemasan / Emosi' => 'Sikap',
+                            'Minat & Bakat' => 'Akademik',
+                            'Ibadah & Spiritual' => 'Sikap',
+                        ];
+                        $jenis_bina = $jenis_map[$topik] ?? 'Sikap';
+                        $stmtB = $pdo->prepare("
+                            INSERT INTO tb_pembinaan_siswa (
+                                id_wali, id_siswa, id_kelas, tanggal, jenis_pembinaan,
+                                permasalahan, tindakan, tindak_lanjut, status, id_pelanggaran, id_konseling
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Berjalan', NULL, ?)
+                        ");
+                        $stmtB->execute([
+                            $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis_bina,
+                            $ringkasan_masalah, $tindak_lanjut !== '' ? $tindak_lanjut : 'Pembinaan lanjutan hasil konseling: ' . $topik,
+                            $follow_up !== '' ? $follow_up : null, $new_konseling_id
+                        ]);
+                    }
+                    if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); }
+                    $message = ['type' => 'success', 'text' => $status === 'Pembinaan' ? 'Konseling berat/berulang diteruskan ke Pembinaan.' : 'Data konseling awal berhasil disimpan.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_konseling_awal SET
@@ -81,6 +106,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $id_siswa, $id_kelas, $tanggal, $topik,
                         $ringkasan_masalah, $tindak_lanjut, $status, $follow_up, $id
                     ]);
+                    if ($status === 'Pembinaan') {
+                        $chkB = $pdo->prepare("SELECT id FROM tb_pembinaan_siswa WHERE id_konseling = ? LIMIT 1");
+                        $chkB->execute([$id]);
+                        if (!$chkB->fetchColumn()) {
+                            $jenis_map = [
+                                'Motivasi Belajar' => 'Akademik',
+                                'Penyesuaian Sosial' => 'Sosial',
+                                'Keluarga' => 'Sosial',
+                                'Kedisiplinan' => 'Kedisiplinan',
+                                'Kecemasan / Emosi' => 'Sikap',
+                                'Minat & Bakat' => 'Akademik',
+                                'Ibadah & Spiritual' => 'Sikap',
+                            ];
+                            $jenis_bina = $jenis_map[$topik] ?? 'Sikap';
+                            $stmtB = $pdo->prepare("
+                                INSERT INTO tb_pembinaan_siswa (
+                                    id_wali, id_siswa, id_kelas, tanggal, jenis_pembinaan,
+                                    permasalahan, tindakan, tindak_lanjut, status, id_pelanggaran, id_konseling
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Berjalan', NULL, ?)
+                            ");
+                            $stmtB->execute([
+                                $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis_bina,
+                                $ringkasan_masalah, $tindak_lanjut !== '' ? $tindak_lanjut : 'Pembinaan lanjutan hasil konseling: ' . $topik,
+                                $follow_up !== '' ? $follow_up : null, $id
+                            ]);
+                        }
+                    }
+                    if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); }
                     $message = ['type' => 'success', 'text' => 'Data konseling berhasil diperbarui.'];
                 }
             } catch (Exception $e) {
@@ -140,7 +193,9 @@ $stmt = $pdo->prepare("
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$status_options = ['Terbuka', 'Proses', 'Selesai'];
+if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); }
+
+$status_options = ['Pembinaan', 'Selesai'];
 $topik_options = ['Motivasi Belajar', 'Penyesuaian Sosial', 'Keluarga', 'Kedisiplinan', 'Kecemasan / Emosi', 'Minat & Bakat', 'Ibadah & Spiritual', 'Lainnya'];
 
 // Master template konseling (sinkron dengan menu Data Konseling)
@@ -222,22 +277,8 @@ $(document).ready(function() {
         });
     }
 
-    function fillFullKons() {
-        $('#sel_kons_full').empty().append('<option value="">-- Pilih satu template lengkap (opsional) --</option>');
-        var cur = $('#inp_topik').val() || '';
-        if (!cur) return;
-        masterKonseling.filter(function(m) {
-            return (m.topik || '').toLowerCase() === cur.toLowerCase();
-        }).forEach(function(m) {
-            var o = $('<option>').val(m.id).text(shortKons(m.ringkasan, 110));
-            o.data('item', m);
-            $('#sel_kons_full').append(o);
-        });
-    }
-
     $('#inp_topik').on('change', function() {
         populateKons($(this).val());
-        fillFullKons();
     });
 
     $('#sel_kons_masalah').on('change', function() {
@@ -252,14 +293,6 @@ $(document).ready(function() {
         var v = $(this).val() || '';
         if (v) { $('#inp_follow_up').val(v); autogrowKons($('#inp_follow_up')); }
     });
-    $(document).on('change', '#sel_kons_full', function() {
-        var item = $('#sel_kons_full option:selected').data('item');
-        if (!item) return;
-        $('#inp_masalah').val(item.ringkasan || '');
-        $('#inp_tindak_lanjut').val(item.tindak_lanjut || '');
-        $('#inp_follow_up').val(item.follow_up || '');
-        $('#modalKonseling textarea').each(function() { autogrowKons($(this)); });
-    });
 
     $('#btnTambahKonseling').on('click', function() {
         $('#formKonselingAction').val('tambah');
@@ -268,7 +301,6 @@ $(document).ready(function() {
         $('#formKonseling')[0].reset();
         var curTopik = $('#inp_topik').val() || '';
         populateKons(curTopik);
-        fillFullKons();
         $('#modalKonseling').modal('show');
         setTimeout(function() {
             $('#modalKonseling textarea').each(function() { autogrowKons($(this)); });
@@ -277,13 +309,16 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-edit-konseling', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
         $('#formKonselingAction').val('edit');
         $('#konselingId').val(data.id);
         $('#modalKonselingTitle').text('Edit Konseling Siswa');
-        $('#inp_siswa').val(data.id_siswa);
-        $('#inp_tanggal').val(data.tanggal);
-        $('#inp_topik').val(data.topik);
-        populateKons(data.topik);
+        $('#inp_siswa').val(data.id_siswa ? String(data.id_siswa) : '');
+        $('#inp_tanggal').val(data.tanggal || '');
+        $('#inp_topik').val(data.topik || '');
+        populateKons(data.topik || '');
         $('#sel_kons_masalah option').each(function() {
             if ($(this).val() === (data.ringkasan_masalah || '')) $(this).prop('selected', true);
         });
@@ -293,12 +328,17 @@ $(document).ready(function() {
         $('#sel_kons_fu option').each(function() {
             if ($(this).val() === (data.follow_up || '')) $(this).prop('selected', true);
         });
-        fillFullKons();
-        $('#inp_masalah').val(data.ringkasan_masalah);
+        $('#inp_masalah').val(data.ringkasan_masalah || '');
         $('#inp_tindak_lanjut').val(data.tindak_lanjut || '');
         $('#inp_follow_up').val(data.follow_up || '');
-        $('#inp_status').val(data.status);
+        $('#inp_status').val(data.status === 'Pembinaan' ? 'Pembinaan' : 'Selesai');
         $('#modalKonseling').modal('show');
+        $('#modalKonseling').one('shown.bs.modal', function() {
+            $('#inp_siswa').trigger('change');
+            $('#inp_topik').trigger('change');
+            $('#inp_status').trigger('change');
+            if (window.GDSRefresh) { try { window.GDSRefresh($('#modalKonseling')[0]); } catch(e2) {} }
+        });
         setTimeout(function() {
             $('#modalKonseling textarea').each(function() { autogrowKons($(this)); });
         }, 120);
@@ -447,7 +487,7 @@ include '../templates/sidebar.php';
                             <tbody>
                                 <?php foreach ($rows as $i => $r): ?>
                                     <?php
-                                    $st_badge = $r['status'] === 'Selesai' ? 'success' : ($r['status'] === 'Proses' ? 'warning' : 'primary');
+                                    $st_badge = $r['status'] === 'Selesai' ? 'success' : 'warning';
                                     $raw_m = strip_tags($r['ringkasan_masalah']);
                                     $m_cut = mb_strlen($raw_m) > 35 ? mb_substr($raw_m, 0, 35) . '...' : $raw_m;
                                     $raw_tl = strip_tags($r['tindak_lanjut'] ?? '');
@@ -526,12 +566,13 @@ include '../templates/sidebar.php';
                             <input type="date" name="tanggal" id="inp_tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-md-3 form-group">
-                            <label>Status</label>
-                            <select name="status" id="inp_status" class="form-control">
+                            <label>Status <span class="text-danger">*</span></label>
+                            <select name="status" id="inp_status" class="form-control" required>
                                 <?php foreach ($status_options as $st): ?>
-                                    <option value="<?= $st ?>"><?= $st ?></option>
+                                    <option value="<?= $st ?>"><?= $st === 'Pembinaan' ? 'Pembinaan (kasus berat/berulang)' : 'Selesai (kasus ringan/sekali)' ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <small class="text-muted">Berat/berulang &rarr; Pembinaan. Ringan/sekali &rarr; Selesai.</small>
                         </div>
                         <div class="col-md-6 form-group">
                             <label>Topik / Fokus Konseling <span class="text-danger">*</span></label>
@@ -540,12 +581,6 @@ include '../templates/sidebar.php';
                                 <?php foreach ($topik_options as $t): ?>
                                     <option value="<?= htmlspecialchars($t) ?>"><?= htmlspecialchars($t) ?></option>
                                 <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-12 form-group">
-                            <label>Pilih Cepat: Satu Template Lengkap <small class="text-muted">(opsional, isi 3 kolom sekaligus)</small></label>
-                            <select id="sel_kons_full" class="form-control">
-                                <option value="">-- Pilih satu template lengkap (opsional) --</option>
                             </select>
                         </div>
                         <div class="col-12 form-group">

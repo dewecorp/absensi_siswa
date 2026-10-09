@@ -3536,6 +3536,34 @@ function get_diskusi_new_count(PDO $pdo, int $id_kelas = 0): int {
 }
 
 /**
+ * Sinkronisasi otomatis status agenda kelas:
+ * 1. 'Rencana': Hari ini < tanggal_mulai.
+ * 2. 'Berjalan': tanggal_mulai <= hari ini < tanggal_selesai (atau mulai <= hari ini bila tanpa selesai).
+ * 3. 'Selesai': hari ini >= tanggal_selesai (berlaku sejak pukul 00.00).
+ */
+function sync_agenda_statuses(PDO $pdo): void {
+    try {
+        $pdo->exec("
+            UPDATE tb_agenda_kelas
+            SET status = 'Selesai'
+            WHERE COALESCE(tanggal_selesai, tanggal_mulai, tanggal, CURRENT_DATE()) <= CURRENT_DATE()
+              AND (status IS NULL OR status != 'Selesai')
+        ");
+        $pdo->exec("
+            UPDATE tb_agenda_kelas
+            SET status = 'Berjalan'
+            WHERE COALESCE(tanggal_mulai, tanggal, CURRENT_DATE()) <= CURRENT_DATE()
+              AND COALESCE(tanggal_selesai, tanggal_mulai, tanggal, DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY)) > CURRENT_DATE()
+        ");
+        $pdo->exec("
+            UPDATE tb_agenda_kelas
+            SET status = 'Rencana'
+            WHERE COALESCE(tanggal_mulai, tanggal, CURRENT_DATE()) > CURRENT_DATE()
+        ");
+    } catch (Throwable $e) {}
+}
+
+/**
  * Auto-update status tindak lanjut:
  * Jika tanggal_selesai IS NOT NULL dan tanggal_selesai <= CURRENT_DATE()
  * dan status belum 'Selesai' (dan tidak 'Dibatalkan'), maka status otomatis menjadi 'Selesai'.
@@ -3579,6 +3607,34 @@ function sync_pembinaan_statuses(PDO $pdo): void {
             JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
             SET b.status = 'Selesai'
             WHERE t.status = 'Selesai'
+        ");
+    } catch (Throwable $e) {}
+}
+
+/**
+ * Sinkronisasi status konseling:
+ * - 'Pembinaan' bila sudah dibuatkan data pembinaan dan belum Selesai.
+ * - 'Selesai' bila belum masuk pembinaan (ringan) atau pembinaan/TL terkait sudah Selesai.
+ */
+function sync_konseling_statuses(PDO $pdo): void {
+    try {
+        sync_pembinaan_statuses($pdo);
+        $pdo->exec("
+            UPDATE tb_konseling_awal k
+            LEFT JOIN tb_pembinaan_siswa b ON b.id_konseling = k.id
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            SET k.status = 'Selesai'
+            WHERE b.id IS NULL
+               OR b.status = 'Selesai'
+               OR t.status = 'Selesai'
+        ");
+        $pdo->exec("
+            UPDATE tb_konseling_awal k
+            JOIN tb_pembinaan_siswa b ON b.id_konseling = k.id
+            LEFT JOIN tb_tindak_lanjut_wali t ON t.id_pembinaan = b.id
+            SET k.status = 'Pembinaan'
+            WHERE (b.status IS NULL OR b.status != 'Selesai')
+              AND (t.status IS NULL OR t.status != 'Selesai')
         ");
     } catch (Throwable $e) {}
 }

@@ -842,10 +842,12 @@ if (!function_exists('ensure_learning_schema')) {
 
         // Relasi alur: 1 Pelanggaran -> 2 Pembinaan -> 3 Tindak Lanjut (bisa dari Pembinaan / Konseling).
         // Tambah kolom penghubung bila belum ada (aman untuk data lama).
+        // Alur baru: Konseling (berat/berulang, status Pembinaan) -> Pembinaan (id_konseling) -> Tindak Lanjut.
         foreach ([
             ['tb_pelanggaran_siswa', 'jenis_binaan', 'VARCHAR(50) NULL'],
             ['tb_master_pelanggaran', 'jenis_binaan', 'VARCHAR(50) NULL'],
             ['tb_pembinaan_siswa', 'id_pelanggaran', 'INT NULL'],
+            ['tb_pembinaan_siswa', 'id_konseling', 'INT NULL'],
             ['tb_tindak_lanjut_wali', 'id_pembinaan', 'INT NULL'],
             ['tb_tindak_lanjut_wali', 'id_konseling', 'INT NULL'],
             ['tb_agenda_kelas', 'tanggal_mulai', 'DATE NULL'],
@@ -971,6 +973,15 @@ if (!function_exists('ensure_learning_schema')) {
         }
 
         // 13. Konseling Awal (Level Wali)
+        // Alur: ringan/sekali => Selesai (tidak ke pembinaan).
+        // Berat/berulang => Pembinaan (otomatis dibuatkan data pembinaan, selesai ikut hasil TL).
+        try {
+            $chkK = $pdo->query("SHOW COLUMNS FROM tb_konseling_awal LIKE 'status'")->fetch();
+            if ($chkK && stripos((string)($chkK['Type'] ?? ''), 'Pembinaan') === false) {
+                $pdo->exec("ALTER TABLE tb_konseling_awal MODIFY COLUMN status ENUM('Pembinaan','Selesai') NOT NULL DEFAULT 'Selesai'");
+                $pdo->exec("UPDATE tb_konseling_awal SET status = 'Selesai' WHERE status NOT IN ('Pembinaan','Selesai')");
+            }
+        } catch (Throwable $e) {}
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS tb_konseling_awal (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -981,7 +992,7 @@ if (!function_exists('ensure_learning_schema')) {
                 topik VARCHAR(255) NOT NULL,
                 ringkasan_masalah TEXT NOT NULL,
                 tindak_lanjut TEXT NULL,
-                status ENUM('Terbuka','Proses','Selesai') NOT NULL DEFAULT 'Terbuka',
+                status ENUM('Pembinaan','Selesai') NOT NULL DEFAULT 'Selesai',
                 follow_up TEXT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

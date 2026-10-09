@@ -49,18 +49,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         $id_siswa = (int)($_POST['id_siswa'] ?? 0);
         $id_pelanggaran = (int)($_POST['id_pelanggaran'] ?? 0);
+        $id_konseling = (int)($_POST['id_konseling'] ?? 0);
         $id_kelas = (int)($_POST['id_kelas'] ?? $selected_kelas_id);
         $tanggal = !empty($_POST['tanggal']) ? date('Y-m-d', strtotime($_POST['tanggal'])) : date('Y-m-d');
         $jenis = in_array($_POST['jenis_pembinaan'] ?? '', ['Akademik', 'Kedisiplinan', 'Sikap', 'Kehadiran', 'Sosial', 'Lainnya'], true) ? $_POST['jenis_pembinaan'] : 'Akademik';
         $permasalahan = trim((string)($_POST['permasalahan'] ?? ''));
         $tindakan = trim((string)($_POST['tindakan'] ?? ''));
         $tindak_lanjut = trim((string)($_POST['tindak_lanjut'] ?? ''));
-        $status = in_array($_POST['status'] ?? '', ['Berjalan', 'Selesai', 'Dalam Pemantauan'], true) ? $_POST['status'] : 'Berjalan';
 
         if ($id_siswa <= 0 || $permasalahan === '' || $tindakan === '') {
             $message = ['type' => 'warning', 'text' => 'Pilih Siswa, isi Permasalahan, dan Tindakan yang diambil.'];
         } else {
-            // HIBRID: sumber pelanggaran OPSIONAL. Mandiri = tanpa pelanggaran (kesulitan belajar/fokus/disiplin/adab).
+            // HIBRID: sumber bisa Pelanggaran, Konseling, atau Mandiri.
             $boleh = true;
             // Bila sumber tidak dipilih: jenis manual dari form (tidak dikunci).
             if ($boleh) try {
@@ -72,6 +72,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $srcLanggar = $stSrc->fetch(PDO::FETCH_ASSOC) ?: null;
                     if ($srcLanggar && (int)$srcLanggar['id_siswa'] !== $id_siswa) {
                         $message = ['type' => 'warning', 'text' => 'Pelanggaran sumber milik siswa lain. Pilih ulang pelanggaran.'];
+                        $boleh = false;
+                    }
+                }
+                // Ambil data konseling sumber bila dipilih (untuk validasi kepemilikan siswa).
+                $srcKonseling = null;
+                if ($boleh && $id_konseling > 0) {
+                    $stKon = $pdo->prepare("SELECT * FROM tb_konseling_awal WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
+                    $stKon->execute([$id_konseling]);
+                    $srcKonseling = $stKon->fetch(PDO::FETCH_ASSOC) ?: null;
+                    if ($srcKonseling && (int)$srcKonseling['id_siswa'] !== $id_siswa) {
+                        $message = ['type' => 'warning', 'text' => 'Konseling sumber milik siswa lain. Pilih ulang konseling.'];
                         $boleh = false;
                     }
                 }
@@ -90,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $jenis = $exp; // override otomatis, bukan tolak
                     }
                 }
-                // Anti-ganda: 1 pelanggaran hanya boleh dibina 1x (kecuali edit data itu sendiri).
+                // Anti-ganda: 1 pelanggaran / 1 konseling hanya boleh dibina 1x (kecuali edit data itu sendiri).
                 if ($boleh && $id_pelanggaran > 0) {
                     try {
                         $sqlDup = "SELECT id FROM tb_pembinaan_siswa WHERE id_pelanggaran = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : "");
@@ -105,34 +116,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     } catch (Throwable $e) {}
                 }
+                if ($boleh && $id_konseling > 0) {
+                    try {
+                        $sqlDupK = "SELECT id FROM tb_pembinaan_siswa WHERE id_konseling = ?";
+                        if ($action === 'edit' && $id > 0) {
+                            $sqlDupK .= " AND id <> " . (int)$id;
+                        }
+                        $stDupK = $pdo->prepare($sqlDupK);
+                        $stDupK->execute([$id_konseling]);
+                        if ($stDupK->fetchColumn()) {
+                            $message = ['type' => 'warning', 'text' => 'Konseling ini SUDAH dibina. Pilih konseling lain agar tidak ganda.'];
+                            $boleh = false;
+                        }
+                    } catch (Throwable $e) {}
+                }
                 if (!$boleh) {
                     // batal simpan, pesan sudah diset
                 } elseif ($action === 'tambah') {
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_pembinaan_siswa (
                             id_wali, id_siswa, id_kelas, tanggal, jenis_pembinaan,
-                            permasalahan, tindakan, tindak_lanjut, status, id_pelanggaran
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Berjalan', ?)
+                            permasalahan, tindakan, tindak_lanjut, status, id_pelanggaran, id_konseling
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Berjalan', ?, ?)
                     ");
                     $stmt->execute([
                         $guru_id, $id_siswa, $id_kelas, $tanggal, $jenis,
-                        $permasalahan, $tindakan, $tindak_lanjut, ($id_pelanggaran > 0 ? $id_pelanggaran : null)
+                        $permasalahan, $tindakan, $tindak_lanjut, ($id_pelanggaran > 0 ? $id_pelanggaran : null), ($id_konseling > 0 ? $id_konseling : null)
                     ]);
                     $message = ['type' => 'success', 'text' => 'Data pembinaan siswa berhasil dicatat.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_pembinaan_siswa SET
                             id_siswa = ?, id_kelas = ?, tanggal = ?, jenis_pembinaan = ?,
-                            permasalahan = ?, tindakan = ?, tindak_lanjut = ?, id_pelanggaran = ?
+                            permasalahan = ?, tindakan = ?, tindak_lanjut = ?, id_pelanggaran = ?, id_konseling = ?
                         WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : "") . "
                     ");
                     $stmt->execute([
                         $id_siswa, $id_kelas, $tanggal, $jenis,
-                        $permasalahan, $tindakan, $tindak_lanjut, ($id_pelanggaran > 0 ? $id_pelanggaran : null), $id
+                        $permasalahan, $tindakan, $tindak_lanjut, ($id_pelanggaran > 0 ? $id_pelanggaran : null), ($id_konseling > 0 ? $id_konseling : null), $id
                     ]);
                     $message = ['type' => 'success', 'text' => 'Data pembinaan berhasil diperbarui.'];
                 }
-                sync_pelanggaran_statuses($pdo);
+                if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); } else { sync_pelanggaran_statuses($pdo); }
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menyimpan: ' . $e->getMessage()];
             }
@@ -141,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         try {
             $pdo->prepare("DELETE FROM tb_pembinaan_siswa WHERE id = ? " . (!$is_admin_or_kepala ? "AND id_wali = $guru_id" : ""))->execute([$id]);
-            sync_pelanggaran_statuses($pdo);
+            if (function_exists('sync_konseling_statuses')) { sync_konseling_statuses($pdo); } else { sync_pelanggaran_statuses($pdo); }
             $message = ['type' => 'success', 'text' => 'Data pembinaan berhasil dihapus.'];
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menghapus: ' . $e->getMessage()];
@@ -267,6 +292,41 @@ try {
     $pelanggaran_list = $stL->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) { $pelanggaran_list = []; }
 
+// Peta konseling yang SUDAH dibina: id_konseling => id_bina (anti-ganda).
+$bina_used_konseling = [];
+try {
+    $sqlUK = "SELECT id_konseling, id FROM tb_pembinaan_siswa WHERE id_konseling IS NOT NULL";
+    $parUK = [];
+    if (!$is_admin_or_kepala) {
+        $sqlUK .= " AND id_wali = ?";
+        $parUK[] = $guru_id;
+    }
+    $stUK = $pdo->prepare($sqlUK);
+    $stUK->execute($parUK);
+    foreach ($stUK->fetchAll(PDO::FETCH_ASSOC) as $ur) {
+        $bina_used_konseling[(int)$ur['id_konseling']] = (int)$ur['id'];
+    }
+} catch (Throwable $e) { $bina_used_konseling = []; }
+
+// Daftar konseling status Pembinaan per siswa untuk dropdown sumber (Alur Konseling -> Pembinaan).
+$konseling_list = [];
+try {
+    $sqlKL = "SELECT c.id, c.id_siswa, c.tanggal, c.topik, c.ringkasan_masalah, c.status FROM tb_konseling_awal c WHERE c.status = 'Pembinaan'";
+    $parKL = [];
+    if ($selected_kelas_id > 0) {
+        $sqlKL .= " AND c.id_kelas = ?";
+        $parKL[] = $selected_kelas_id;
+    }
+    if (!$is_admin_or_kepala) {
+        $sqlKL .= " AND c.id_wali = ?";
+        $parKL[] = $guru_id;
+    }
+    $sqlKL .= " ORDER BY c.tanggal DESC, c.id DESC";
+    $stKL = $pdo->prepare($sqlKL);
+    $stKL->execute($parKL);
+    $konseling_list = $stKL->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) { $konseling_list = []; }
+
 $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
@@ -293,11 +353,13 @@ if ($f_status !== '') {
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
     SELECT p.*, s.nama_siswa, s.nisn, k.nama_kelas,
-           lg.tanggal AS lg_tanggal, lg.jenis_pelanggaran AS lg_jenis, lg.kategori AS lg_kategori, lg.poin AS lg_poin
+           lg.tanggal AS lg_tanggal, lg.jenis_pelanggaran AS lg_jenis, lg.kategori AS lg_kategori, lg.poin AS lg_poin,
+           kg.tanggal AS kg_tanggal, kg.topik AS kg_topik, kg.ringkasan_masalah AS kg_masalah
     FROM tb_pembinaan_siswa p
     JOIN tb_siswa s ON s.id_siswa = p.id_siswa
     LEFT JOIN tb_kelas k ON k.id_kelas = p.id_kelas
     LEFT JOIN tb_pelanggaran_siswa lg ON lg.id = p.id_pelanggaran
+    LEFT JOIN tb_konseling_awal kg ON kg.id = p.id_konseling
     WHERE $where_sql
     ORDER BY p.tanggal DESC, p.id DESC
 ");
@@ -335,12 +397,18 @@ JS
 var pelanggaranList =
 JS
 . json_encode($pelanggaran_list) . ";\n" . <<<'JS'
+var konselingListBina =
+JS
+. json_encode($konseling_list) . ";\n" . <<<'JS'
 var pelanggarInfoBina =
 JS
 . json_encode($pelanggar_info) . ";\n" . <<<'JS'
 var binaUsedMap =
 JS
 . json_encode($bina_used) . ";\n" . <<<'JS'
+var binaUsedKonselingMap =
+JS
+. json_encode($bina_used_konseling) . ";\n" . <<<'JS'
 var siswaBinaCount =
 JS
 . json_encode($siswa_bina_count) . ";\n" . <<<'JS'
@@ -990,7 +1058,14 @@ include '../templates/sidebar.php';
                             <select name="id_pelanggaran" id="inp_pelanggaran" class="form-control">
                                 <option value="">-- Mandiri (tanpa pelanggaran) --</option>
                             </select>
-                            <small class="text-muted">Opsional: pilih bila pembinaan berasal dari pelanggaran. Kosongkan untuk mandiri.</small>
+                            <small class="text-muted">Opsional: pilih bila pembinaan berasal dari pelanggaran. Kosongkan untuk mandiri/konseling.</small>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Konseling Sumber (opsional)</label>
+                            <select name="id_konseling" id="inp_konseling" class="form-control">
+                                <option value="">-- Tanpa konseling --</option>
+                            </select>
+                            <small class="text-muted">Otomatis terisi bila dari konseling berat/berulang. Kosongkan untuk mandiri/pelanggaran.</small>
                         </div>
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold">Tanggal</label>
