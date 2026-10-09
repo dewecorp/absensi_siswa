@@ -39,13 +39,28 @@ $program_list = array_values(array_filter($program_all_raw, function ($p) use ($
 }));
 $jadwal_list = [];
 try {
-    $stmt = $pdo->prepare("SELECT id_jadwal, id_guru, id_program, id_instrumen, nama_guru, jenis_supervisi, tanggal, fokus FROM tb_sv_jadwal WHERE jenis_supervisi = ? ORDER BY tanggal DESC LIMIT 200");
+    $stmt = $pdo->prepare("
+        SELECT j.id_jadwal, j.id_guru, j.id_program, j.id_instrumen, j.nama_guru, j.jenis_supervisi, j.tanggal, j.fokus
+        FROM tb_sv_jadwal j
+        LEFT JOIN tb_sv_pelaksanaan p ON p.id_jadwal = j.id_jadwal
+        WHERE j.jenis_supervisi = ?
+          AND p.id_pelaksanaan IS NULL
+        ORDER BY j.tanggal DESC LIMIT 200
+    ");
     $stmt->execute([$sv_jenis]);
     $jadwal_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
 }
 if (!$jadwal_list) {
-    try { $jadwal_list = $pdo->query("SELECT id_jadwal, id_guru, id_program, id_instrumen, nama_guru, jenis_supervisi, tanggal, fokus FROM tb_sv_jadwal ORDER BY tanggal DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC); } catch (Throwable $e) {}
+    try {
+        $jadwal_list = $pdo->query("
+            SELECT j.id_jadwal, j.id_guru, j.id_program, j.id_instrumen, j.nama_guru, j.jenis_supervisi, j.tanggal, j.fokus
+            FROM tb_sv_jadwal j
+            LEFT JOIN tb_sv_pelaksanaan p ON p.id_jadwal = j.id_jadwal
+            WHERE p.id_pelaksanaan IS NULL
+            ORDER BY j.tanggal DESC LIMIT 200
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {}
 }
 $jadwal_json = json_encode($jadwal_list, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
 
@@ -503,7 +518,7 @@ function svApplyJadwal(jadwalId, keepMapel) {
     if (!row) return;
     if (row.tanggal) { $('#form-pelaksanaan [name=tanggal]').val(row.tanggal); }
     if (!svIsManajerial && row.id_guru) {
-        $('#sv-guru-select').val(String(row.id_guru));
+        $('#sv-guru-select').val(String(row.id_guru)).trigger('change');
         svPopulateMapel(row.id_guru, keepMapel);
         if (keepMapel) {
             var cur = $('#sv-mapel-select').val();
@@ -526,6 +541,14 @@ function svApplyJadwal(jadwalId, keepMapel) {
         selJ.forEach(function(v){ var $s=$('#sv-fokus-pelaksanaan'); if($s.find('option').filter(function(){return $(this).val()===v;}).length===0) $s.append('<option value="'+$('<div>').text(v).html()+'" selected>'+$('<div>').text(v).html()+'</option>'); });
     } else {
         svFillFokusPelaksanaan($('#sv-program-select').val() || row.id_program || '', $('#sv-instrumen-select').val() || row.id_instrumen || '', false);
+    }
+    if (window.GDSRefresh) {
+        try {
+            GDSRefresh($('#sv-guru-select'));
+            GDSRefresh($('#sv-mapel-select'));
+            GDSRefresh($('#sv-program-select'));
+            GDSRefresh($('#sv-instrumen-select'));
+        } catch(e){}
     }
 }
 
@@ -747,19 +770,17 @@ $(document).ready(function () {
             if (el.length && k !== 'kekuatan' && k !== 'kelemahan' && k !== 'rekomendasi' && k !== 'prioritas_perbaikan') {
                 el.val(d[k]);
             } else if (['kekuatan','kelemahan','rekomendasi','prioritas_perbaikan'].indexOf(k)!==-1 && d[k] && typeof svEnsurePelaksanaanOption==='function') {
-                svEnsurePelaksanaanOption(k, d[k], null);
+                svEnsurePelaksanaanOption(k, d[k]);
             }
         });
         // Handle multi-select fields: kekuatan, kelemahan, rekomendasi, prioritas_perbaikan
         ['kekuatan','kelemahan','rekomendasi','prioritas_perbaikan'].forEach(function(k){
             if (d[k] && typeof svEnsurePelaksanaanOption === 'function') {
-                setTimeout(function(){ 
-                    var s = $('#form-pelaksanaan select[name="'+k+'[]"]');
-                    if (s.length) {
-                        svEnsurePelaksanaanOption(k, d[k]);
-                        s.trigger('change.select2');
-                    }
-                }, 150);
+                var s = $('#form-pelaksanaan select[name="'+k+'[]"]');
+                if (s.length) {
+                    svEnsurePelaksanaanOption(k, d[k]);
+                    s.trigger('change');
+                }
             }
         });
         if (d.fokus) {
@@ -771,9 +792,21 @@ $(document).ready(function () {
             svPopulateMapel(d.id_guru || $('#sv-guru-select').val(), false);
             if (d.mapel_di_supervisi) { $('#sv-mapel-select').val(d.mapel_di_supervisi); }
         }
-            svRenderPenilaian();
+        svRenderPenilaian();
+        if (window.GDSRefresh) {
+            try {
+                GDSRefresh($('#modal-pelaksanaan'));
+            } catch(e){}
+        }
         $('#modal-pelaksanaan .modal-title').text('Edit Pelaksanaan Supervisi');
         $('#modal-pelaksanaan').modal('show');
+        setTimeout(function(){
+            if (window.GDSRefresh) {
+                try {
+                    GDSRefresh($('#modal-pelaksanaan'));
+                } catch(e){}
+            }
+        }, 120);
     });
     
     // Helper: pilih/append opsi multi-select (kekuatan, kelemahan, rekomendasi, prioritas)

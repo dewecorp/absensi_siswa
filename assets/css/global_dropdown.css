@@ -227,20 +227,24 @@
 .select2-container--default .select2-selection--multiple .select2-selection__rendered > li {
   text-align: left !important;
   justify-content: flex-start !important;
+  writing-mode: horizontal-tb !important;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__rendered > li.select2-search--inline:only-child {
   flex: 1 1 100% !important;
   width: 100% !important;
   max-width: 100% !important;
 }
+.select2-container--default .select2-selection--multiple .select2-selection__rendered > li.select2-search--inline:only-child .select2-search__field {
+  width: 100% !important;
+}
 .select2-container--default .select2-selection--multiple .select2-search--inline {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
   float: left !important;
-  flex: 1 1 100% !important;
-  width: 100% !important;
-  min-width: 100% !important;
+  flex: 0 1 auto !important;
+  width: auto !important;
+  min-width: 60px !important;
   height: 32px !important;
   min-height: 32px !important;
   margin: 0 !important;
@@ -249,9 +253,9 @@
   text-align: left !important;
 }
 .select2-container--default .select2-selection--multiple .select2-search__field {
-  display: block !important;
-  width: 100% !important;
-  min-width: 100% !important;
+  display: inline-block !important;
+  width: auto !important;
+  min-width: 60px !important;
   height: 32px !important;
   line-height: 32px !important;
   text-align: left !important;
@@ -275,14 +279,21 @@
 }
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
   display: inline-flex !important;
+  flex-direction: row !important;
   align-items: center !important;
   vertical-align: middle !important;
-  line-height: 1.5 !important;
-  padding: 3px 8px !important;
+  line-height: 1.4 !important;
+  padding: 4px 8px !important;
   margin: 2px 4px 2px 0 !important;
   max-width: 100% !important;
   white-space: normal !important;
   word-break: break-word !important;
+  writing-mode: horizontal-tb !important;
+  width: auto !important;
+  height: auto !important;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice * {
+  writing-mode: horizontal-tb !important;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
   line-height: 1 !important;
@@ -430,6 +441,13 @@ select[name$="_length"] {
   pointer-events: none !important;
   margin: 0 !important;
   padding: 0 !important;
+}
+select[multiple].gds-source {
+  position: static !important;
+  width: 100% !important;
+  height: auto !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 .gds-wrap {
   position: relative;
@@ -583,6 +601,7 @@ select[name$="_length"] {
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: #b9c4d8 transparent;
+  overflow-x: hidden !important;
 }
 .modal-body::-webkit-scrollbar,
 .modal-content::-webkit-scrollbar {
