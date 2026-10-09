@@ -2,7 +2,7 @@
 require_once '../config/database.php';
 require_once '../config/functions.php';
 
-if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha'])) {
+if (!isAuthorized(['admin', 'kepala_madrasah', 'tata_usaha', 'wali', 'guru'])) {
     http_response_code(403);
     exit('Unauthorized');
 }
@@ -118,7 +118,8 @@ function cetakBarungUsia(?string $tanggal_lahir): string
 
 $qrContent = "Dokumen Sah: " . $schoolName . "\nKetua Gudep: " . $ketuaGudep . "\nNTA: " . $ntaKetuaGudep;
 $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" . urlencode($qrContent);
-$title = 'Data Anggota Pramuka-' . $academicYear;
+$tingkatLabel = $tingkatName !== '' ? $tingkatName : 'Semua Tingkat';
+$title = 'Data Anggota Pramuka - Tingkat ' . $tingkatLabel . ' - ' . str_replace('/', '-', $academicYear);
 ?>
 <!DOCTYPE html>
 <html lang="id">

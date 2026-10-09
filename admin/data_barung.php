@@ -700,6 +700,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
                             }
                             $nta = trim((string)$nta);
 
+                            $stmtT_imp = $pdo->prepare("SELECT nama_tingkat FROM tb_tingkat_barung WHERE id_tingkat_barung = ?");
+                            $stmtT_imp->execute([$id_tingkat]);
+                            $nama_t_imp = $stmtT_imp->fetchColumn();
+                            $slug_t_imp = barung_resolve_tingkat_slug($nama_t_imp ?: '');
+                            if (!barung_siswa_lolos_usia_tingkat($slug_t_imp, $tgl)) {
+                                $skipped++;
+                                continue;
+                            }
+
                             $stmtIns->execute([$id_tingkat, $nama, $nta, ($tempat !== '' ? $tempat : null), $tgl]);
                             $inserted++;
                         }
@@ -905,20 +914,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_barung) {
             $message = ['type' => 'warning', 'text' => 'Harap lengkapi tingkat dan nama peserta didik. NTA bisa dikosongkan dulu.'];
         } else {
             try {
-                $stmt = $pdo->prepare("
-                    INSERT INTO tb_peserta_didik_barung
-                        (id_tingkat_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, status, tanggal_masuk, tanggal_keluar)
-                    VALUES (?, ?, ?, ?, ?, 'aktif', NOW(), NULL)
-                ");
-                $ok = $stmt->execute([$id_tingkat, $nama, $nta, ($tempat !== '' ? $tempat : null), $tgl]);
-                if ($ok) {
-                    $username = $_SESSION['username'] ?? 'system';
-                    logActivity($pdo, $username, 'Tambah Peserta Didik Barung', "{$nama} ({$nta}) tingkat ID {$id_tingkat}");
-                    $message = ['type' => 'success', 'text' => 'Peserta didik berhasil ditambahkan!'];
+                // Cek kesesuaian usia manual
+                $stmtT = $pdo->prepare("SELECT nama_tingkat FROM tb_tingkat_barung WHERE id_tingkat_barung = ?");
+                $stmtT->execute([$id_tingkat]);
+                $nama_t = $stmtT->fetchColumn();
+                $slug_t = barung_resolve_tingkat_slug($nama_t ?: '');
+                if (!barung_siswa_lolos_usia_tingkat($slug_t, $tgl)) {
+                    $gol = barung_golongan_for_slug($slug_t);
+                    if ($gol === 'Siaga') {
+                        $message = ['type' => 'warning', 'text' => 'Siswa tidak dapat ditambahkan ke Siaga karena usianya sudah 10 tahun 11 bulan atau lebih (wajib masuk Penggalang).'];
+                    } else {
+                        $message = ['type' => 'warning', 'text' => 'Siswa tidak dapat ditambahkan ke Penggalang karena usianya masih di bawah 10 tahun 11 bulan.'];
+                    }
                 } else {
-                    $message = ['type' => 'danger', 'text' => 'Gagal menambahkan peserta didik.'];
+                    $stmt = $pdo->prepare("
+                        INSERT INTO tb_peserta_didik_barung
+                            (id_tingkat_barung, nama_peserta_didik, nta, tempat_lahir, tanggal_lahir, status, tanggal_masuk, tanggal_keluar)
+                        VALUES (?, ?, ?, ?, ?, 'aktif', NOW(), NULL)
+                    ");
+                    $ok = $stmt->execute([$id_tingkat, $nama, $nta, ($tempat !== '' ? $tempat : null), $tgl]);
+                    if ($ok) {
+                        $username = $_SESSION['username'] ?? 'system';
+                        logActivity($pdo, $username, 'Tambah Peserta Didik Barung', "{$nama} ({$nta}) tingkat ID {$id_tingkat}");
+                        $message = ['type' => 'success', 'text' => 'Peserta didik berhasil ditambahkan!'];
+                    } else {
+                        $message = ['type' => 'danger', 'text' => 'Gagal menambahkan peserta didik.'];
+                    }
+                    $selected_tingkat_id = $id_tingkat;
                 }
-                $selected_tingkat_id = $id_tingkat;
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Error DB: ' . $e->getMessage()];
             }
@@ -1748,12 +1771,12 @@ function exportToExcel() {
         XLSX.utils.sheet_add_dom(finalWS, newTable, { origin: -1 });
         
         XLSX.utils.book_append_sheet(wb, finalWS, "Anggota Pramuka");
-        XLSX.writeFile(wb, 'data_peserta_didik_barung_' + tingkatName.replace(/\s+/g, '_') + '_' + academicYear.replace(/\//g, '-') + '.xlsx');
+        XLSX.writeFile(wb, 'data_anggota_pramuka_tingkat_' + tingkatName.replace(/\s+/g, '_') + '_' + academicYear.replace(/\//g, '-') + '.xlsx');
     } else {
         var html = newTable.outerHTML;
         var a = document.createElement('a');
         a.href = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(html);
-        a.download = 'data_peserta_didik_barung.xls';
+        a.download = 'data_anggota_pramuka_tingkat_' + tingkatName.replace(/\s+/g, '_') + '_' + academicYear.replace(/\//g, '-') + '.xls';
         a.click();
     }
 }
