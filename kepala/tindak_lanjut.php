@@ -13,12 +13,15 @@ $can_manage = sv_is_supervisor($pdo);
 $school_profile = getSchoolProfile($pdo);
 $periode = sv_periode($pdo);
 
-$css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
+$css_libs = [
+    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
+];
 $js_libs = [
-
     'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
     'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
 ];
 
 $pelaksanaan_list = [];
@@ -95,6 +98,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 $buktiFile = null;
             }
 
+            $rencanaArr = (array)($_POST['rencana_tindakan_select'] ?? []);
+            $rencanaArr = array_map(function($v){ return trim((string)$v); }, $rencanaArr);
+            $rencanaArr = array_filter($rencanaArr, function($v){ return $v !== '' && $v !== '__manual__'; });
+            $rencanaManual = trim((string)($_POST['rencana_tindakan_manual'] ?? ''));
+            if ($rencanaManual !== '') {
+                $rencanaArr[] = $rencanaManual;
+            }
+            $rencanaTindakanVal = implode(", ", array_unique($rencanaArr));
+
             $data = [
                 $id_pelaksanaan ?: null,
                 $id_guru,
@@ -103,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
                 trim((string)($_POST['temuan'] ?? '')),
                 trim((string)($_POST['rekomendasi'] ?? '')),
                 trim((string)($_POST['bentuk_tindak_lanjut'] ?? 'Pembinaan')),
-                trim((string)($_POST['rencana_tindakan'] ?? '')),
+                $rencanaTindakanVal,
                 trim((string)($_POST['penanggung_jawab'] ?? '')),
                 trim((string)($_POST['target_selesai'] ?? '')) ?: null,
                 trim((string)($_POST['realisasi'] ?? '')) ?: null,
@@ -178,7 +190,11 @@ $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 
 $rows = [];
 try {
-    $stmt = $pdo->prepare("SELECT * FROM tb_sv_tindak_lanjut {$whereSql} ORDER BY target_selesai ASC, id_tindak_lanjut DESC");
+    $stmt = $pdo->prepare("SELECT t.*, p.jenis_supervisi 
+        FROM tb_sv_tindak_lanjut t 
+        LEFT JOIN tb_sv_pelaksanaan p ON p.id_pelaksanaan = t.id_pelaksanaan 
+        {$whereSql} 
+        ORDER BY t.target_selesai ASC, t.id_tindak_lanjut DESC");
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
@@ -216,7 +232,12 @@ $(document).ready(function () {
             if (!tlPelaksanaan[kId]) {
                 var oEdit = document.createElement('option');
                 oEdit.value = kId;
-                oEdit.textContent = '#' + kId + ' - ' + (keepData.nama_guru || keepData.unit_bagian || '-') + ' (' + (keepData.jenis_supervisi || '') + ')';
+                var guruLbl = keepData.nama_guru || keepData.unit_bagian || '';
+                if (!guruLbl && keepData.id_guru) guruLbl = 'Guru #' + keepData.id_guru;
+                if (!guruLbl) guruLbl = '-';
+                var jenisLbl = keepData.jenis_supervisi || '';
+                var tglLbl = keepData.tanggal ? keepData.tanggal : '';
+                oEdit.textContent = '#' + kId + ' - ' + guruLbl + (jenisLbl ? ' (' + jenisLbl + (tglLbl ? ', ' + tglLbl : '') + ')' : '');
                 tlSel.appendChild(oEdit);
             }
         }
@@ -225,12 +246,59 @@ $(document).ready(function () {
     function tlSyncRek() {
         var id = tlSel ? tlSel.value : '';
         var el = document.getElementById('tl_rekomendasi');
-        if (el) el.value = (id && tlPelaksanaan[id]) ? (tlPelaksanaan[id].rekomendasi || '') : '';
+        if (el && (!el.value || $('#form-tl [name=aksi]').val() === 'tambah')) {
+            el.value = (id && tlPelaksanaan[id]) ? (tlPelaksanaan[id].rekomendasi || '') : '';
+        }
     }
+    function svEnsureRencanaOption(currentVals){
+        var s = $('#sel_rencana_tindakan'); if (!s.length) return;
+        var vals = (typeof currentVals === 'string') ? currentVals.split(',') : (Array.isArray(currentVals) ? currentVals : []);
+        vals = vals.map(function(v){ return String(v).trim(); }).filter(Boolean);
+        var unmapped = [];
+        s.find('option').prop('selected', false);
+        vals.forEach(function(v){
+            var exists = s.find('option').filter(function(){ return $(this).val() === v; });
+            if (exists.length) {
+                exists.prop('selected', true);
+            } else {
+                unmapped.push(v);
+            }
+        });
+        if (unmapped.length > 0) {
+            s.find('option[value="__manual__"]').prop('selected', true);
+            $('#inp_rencana_tindakan_manual').val(unmapped.join(', ')).removeClass('d-none');
+        } else {
+            $('#inp_rencana_tindakan_manual').val('').addClass('d-none');
+        }
+        if ($.fn.select2) {
+            s.trigger('change.select2');
+        }
+    }
+
+    function svInitRencanaSelect2() {
+        if (!$.fn.select2) return;
+        var $s = $('#sel_rencana_tindakan');
+        if ($s.hasClass('select2-hidden-accessible')) $s.select2('destroy');
+        $s.select2({
+            placeholder: 'Pilih Rencana Tindakan',
+            width: '100%',
+            dropdownParent: $('#modal-tl'),
+            allowClear: true,
+            closeOnSelect: false
+        });
+    }
+
+    $('#modal-tl').on('shown.bs.modal', function () {
+        svInitRencanaSelect2();
+    });
+
     $(document).on('change', '#sel_rencana_tindakan', function () {
-        var v = $(this).val() || '';
-        if (v) {
-            $('#inp_rencana_tindakan').val(v);
+        var vals = $(this).val() || [];
+        var isManual = Array.isArray(vals) ? vals.indexOf('__manual__') !== -1 : vals === '__manual__';
+        if (isManual) {
+            $('#inp_rencana_tindakan_manual').removeClass('d-none');
+        } else {
+            $('#inp_rencana_tindakan_manual').addClass('d-none').val('');
         }
     });
     tlFillOptions();
@@ -239,6 +307,8 @@ $(document).ready(function () {
         $('#form-tl')[0].reset();
         $('#form-tl [name=aksi]').val('tambah');
         $('#form-tl [name=id_tindak_lanjut]').val('');
+        $('#sel_rencana_tindakan').val([]).trigger('change');
+        $('#inp_rencana_tindakan_manual').val('').addClass('d-none');
         tlFillOptions('');
         tlSyncRek();
         if (window.GDSRefresh) {
@@ -273,7 +343,12 @@ $(document).ready(function () {
             var el = $('#form-tl [name="' + k + '"]');
             if (el.length && el.attr('type') !== 'file') { el.val(d[k]); }
         });
-        tlSyncRek();
+        if (d.rekomendasi) {
+            $('#tl_rekomendasi').val(d.rekomendasi);
+        }
+        if (d.rencana_tindakan) {
+            svEnsureRencanaOption(d.rencana_tindakan);
+        }
         if (window.GDSRefresh) {
             try {
                 GDSRefresh($('#tl_id_pelaksanaan'));
@@ -457,14 +532,14 @@ include '../templates/sidebar.php';
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Rencana Tindakan</label>
-                        <select id="sel_rencana_tindakan" class="form-control mb-1">
-                            <option value="">-- Pilih Rencana Tindakan --</option>
+                        <label>Rencana Tindakan (Ctrl+Klik untuk pilih beberapa)</label>
+                        <select class="form-control" name="rencana_tindakan_select[]" id="sel_rencana_tindakan" multiple size="5">
                             <?php foreach (sv_rencana_tindakan_list($pdo) as $rt): ?>
                                 <option value="<?= htmlspecialchars($rt, ENT_QUOTES) ?>"><?= htmlspecialchars($rt) ?></option>
                             <?php endforeach; ?>
+                            <option value="__manual__">Lainnya (isi manual)</option>
                         </select>
-                        <textarea class="form-control" name="rencana_tindakan" id="inp_rencana_tindakan" rows="2" placeholder="Pilih dari dropdown di atas atau ketik manual..."></textarea>
+                        <textarea class="form-control mt-2 d-none" name="rencana_tindakan_manual" id="inp_rencana_tindakan_manual" rows="2" placeholder="Isi rencana tindakan manual..."></textarea>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
