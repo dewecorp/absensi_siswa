@@ -293,17 +293,30 @@ $(document).ready(function() {
         }, 120);
     });
 
+    function escKs(s) {
+        return $('<div>').text(s == null ? '' : String(s)).html();
+    }
+    function fmtTglKs(v) {
+        v = (v || '').toString().substring(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return v || '-';
+        var p = v.split('-');
+        return p[2] + '/' + p[1] + '/' + p[0];
+    }
     $(document).on('click', '.btn-detail-konseling', function() {
         var data = $(this).data('json');
-        $('#det_tanggal').text(data.tanggal);
-        $('#det_nama').text(data.nama_siswa);
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
+        $('#det_tanggal').text(fmtTglKs(data.tanggal));
+        $('#det_nama').text(data.nama_siswa || '-');
         $('#det_nisn').text(data.nisn || '-');
         $('#det_kelas').text(data.nama_kelas || '-');
-        $('#det_topik').text(data.topik);
-        $('#det_status').text(data.status);
-        $('#det_masalah').text(data.ringkasan_masalah);
-        $('#det_tindak_lanjut').text(data.tindak_lanjut || '-');
-        $('#det_follow_up').text(data.follow_up || '-');
+        $('#det_topik').html('<span class="badge badge-info" style="font-size:13px;"><i class="fas fa-comments mr-1"></i>' + escKs(data.topik || '-') + '</span>');
+        var stCls = (data.status === 'Selesai') ? 'success' : 'warning';
+        $('#det_status').html('<span class="badge badge-' + stCls + '">' + escKs(data.status || '-') + '</span>');
+        $('#det_masalah').html(data.ringkasan_masalah ? escKs(data.ringkasan_masalah) : '<span class="text-muted">-</span>');
+        $('#det_tindak_lanjut').html(data.tindak_lanjut ? escKs(data.tindak_lanjut) : '<span class="text-muted">-</span>');
+        $('#det_follow_up').html(data.follow_up ? escKs(data.follow_up) : '<span class="text-muted">-</span>');
         $('#modalDetailKonseling').modal('show');
     });
 
@@ -574,24 +587,33 @@ include '../templates/sidebar.php';
     <div class="modal-dialog modal-md" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-user-shield mr-2"></i>Rincian Rahasia Konseling Siswa</h5>
+                <h5 class="modal-title"><i class="fas fa-user-shield mr-2"></i>Rincian Konseling Siswa</h5>
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <table class="table table-bordered table-sm">
-                    <tr><th width="30%">Tanggal</th><td id="det_tanggal"></td></tr>
-                    <tr><th>Nama Siswa</th><td id="det_nama" class="font-weight-bold"></td></tr>
-                    <tr><th>NISN</th><td id="det_nisn"></td></tr>
-                    <tr><th>Kelas</th><td id="det_kelas"></td></tr>
-                    <tr><th>Topik</th><td id="det_topik" class="font-weight-bold text-primary"></td></tr>
-                    <tr><th>Status</th><td id="det_status"></td></tr>
-                    <tr><th colspan="2">Ringkasan Masalah / Hasil Diskusi:</th></tr>
-                    <tr><td colspan="2" id="det_masalah" style="white-space: pre-wrap;" class="bg-light p-2"></td></tr>
-                    <tr><th colspan="2">Tindak Lanjut yang Disepakati:</th></tr>
-                    <tr><td colspan="2" id="det_tindak_lanjut" style="white-space: pre-wrap;" class="bg-light p-2 text-success"></td></tr>
-                    <tr><th colspan="2">Rencana Follow Up:</th></tr>
-                    <tr><td colspan="2" id="det_follow_up" style="white-space: pre-wrap;" class="bg-light p-2 text-info"></td></tr>
-                </table>
+                <div class="d-flex align-items-center mb-3 p-2 rounded" style="background:#f0f7ff; border:1px solid #cfe3ff;">
+                    <div class="mr-3 text-center" style="min-width:64px;">
+                        <div class="font-weight-bold" id="det_tanggal" style="font-size:14px;"></div>
+                        <small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>Sesi</small>
+                    </div>
+                    <div>
+                        <div class="font-weight-bold" id="det_nama" style="font-size:15px;"></div>
+                        <div><small class="text-muted">NISN: <span id="det_nisn"></span> &bull; Kelas: <span id="det_kelas"></span></small></div>
+                        <div class="mt-1"><span id="det_topik"></span> <span id="det_status" class="ml-1"></span></div>
+                    </div>
+                </div>
+                <div class="card mb-2 border-danger">
+                    <div class="card-header py-1 px-2 bg-danger text-white" style="font-size:12px;"><i class="fas fa-exclamation-circle mr-1"></i>Ringkasan Masalah / Hasil Diskusi</div>
+                    <div class="card-body p-2" id="det_masalah" style="white-space: pre-wrap; font-size:13.5px;"></div>
+                </div>
+                <div class="card mb-2 border-success">
+                    <div class="card-header py-1 px-2 bg-success text-white" style="font-size:12px;"><i class="fas fa-check-circle mr-1"></i>Tindak Lanjut yang Disepakati</div>
+                    <div class="card-body p-2" id="det_tindak_lanjut" style="white-space: pre-wrap; font-size:13.5px;"></div>
+                </div>
+                <div class="card mb-0 border-info">
+                    <div class="card-header py-1 px-2 bg-info text-white" style="font-size:12px;"><i class="fas fa-forward mr-1"></i>Rencana Follow Up</div>
+                    <div class="card-body p-2" id="det_follow_up" style="white-space: pre-wrap; font-size:13.5px;"></div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>

@@ -688,35 +688,59 @@ $(document).ready(function() {
         }, 120);
     });
 
+    function escTl(s) {
+        return $('<div>').text(s == null ? '' : String(s)).html();
+    }
+    function fmtTglTl(v) {
+        v = (v || '').toString().substring(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return v || '-';
+        var p = v.split('-');
+        return p[2] + '/' + p[1] + '/' + p[0];
+    }
+    function statusBadgeTl(st) {
+        var cls = 'secondary';
+        if (st === 'Selesai') cls = 'success';
+        else if (st === 'Proses') cls = 'warning';
+        else if (st === 'Rencana') cls = 'primary';
+        else if (st === 'Dibatalkan') cls = 'danger';
+        return '<span class="badge badge-' + cls + '">' + escTl(st || '-') + '</span>';
+    }
     $(document).on('click', '.btn-detail-tl', function() {
         var data = $(this).data('json');
-        $('#det_tanggal').text(data.tanggal);
-        $('#det_nama').text(data.nama_siswa);
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
+        $('#det_tanggal').text(fmtTglTl(data.tanggal));
+        $('#det_nama').text(data.nama_siswa || '-');
         $('#det_nisn').text(data.nisn || '-');
         $('#det_kelas').text(data.nama_kelas || '-');
-        $('#det_sumber').html('<span class="badge badge-' + (data.sumber === 'Konseling' ? 'info' : 'primary') + '">' + data.sumber + '</span>');
-        var srcTxt = '-';
+        $('#det_sumber').html('<span class="badge badge-' + (data.sumber === 'Konseling' ? 'info' : 'primary') + '">' + escTl(data.sumber || '-') + '</span>');
+        var srcHtml = '<span class="text-muted">-</span>';
         if (data.sumber === 'Konseling') {
-            if (data.c_topik) {
-                srcTxt = data.c_topik + ' &mdash; ' + (data.c_masalah || '-') + ' (' + (data.c_tanggal || '-') + ', ' + (data.c_status || '-') + ')';
+            if (data.c_topik || data.c_masalah || data.id_konseling) {
+                srcHtml = '<div class="font-weight-bold text-info mb-1"><i class="fas fa-comments mr-1"></i>' + escTl(data.c_topik || 'Konseling') + '</div>';
+                if (data.c_masalah) srcHtml += '<div class="mb-1" style="white-space: pre-wrap;">' + escTl(data.c_masalah) + '</div>';
+                srcHtml += '<div><small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>' + escTl(fmtTglTl(data.c_tanggal)) + ' &nbsp; <span class="badge badge-light border">' + escTl(data.c_status || '-') + '</span></small></div>';
             } else if (data.id_konseling) {
-                srcTxt = 'Konseling #' + data.id_konseling;
+                srcHtml = '<span class="badge badge-info">Konseling #' + escTl(data.id_konseling) + '</span>';
             }
             $('#lbl_det_sumber').text('Konseling Sumber');
         } else {
-            if (data.b_masalah) {
-                srcTxt = data.b_masalah + ' (' + (data.b_tanggal || '-') + ', ' + (data.b_status || '-') + ')';
+            if (data.b_masalah || data.b_jenis) {
+                srcHtml = '<div class="font-weight-bold text-primary mb-1"><i class="fas fa-user-edit mr-1"></i>' + escTl(data.b_jenis || 'Pembinaan') + '</div>';
+                if (data.b_masalah) srcHtml += '<div class="mb-1" style="white-space: pre-wrap;">' + escTl(data.b_masalah) + '</div>';
+                srcHtml += '<div><small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>' + escTl(fmtTglTl(data.b_tanggal)) + ' &nbsp; <span class="badge badge-light border">' + escTl(data.b_status || '-') + '</span></small></div>';
             } else if (data.id_pembinaan) {
-                srcTxt = 'Pembinaan #' + data.id_pembinaan;
+                srcHtml = '<span class="badge badge-primary">Pembinaan #' + escTl(data.id_pembinaan) + '</span>';
             }
             $('#lbl_det_sumber').text('Pembinaan Sumber');
         }
-        $('#det_bina').html(srcTxt);
-        $('#det_status').text(data.status);
-        $('#det_pj').text(data.penanggung_jawab);
-        $('#det_target').text(data.target_selesai || '-');
-        $('#det_selesai').text(data.tanggal_selesai || '-');
-        $('#det_tindakan').text(data.tindakan);
+        $('#det_bina').html(srcHtml);
+        $('#det_status').html(statusBadgeTl(data.status));
+        $('#det_pj').text(data.penanggung_jawab || '-');
+        $('#det_target').text(fmtTglTl(data.target_selesai));
+        $('#det_selesai').text(fmtTglTl(data.tanggal_selesai));
+        $('#det_tindakan').text(data.tindakan || '-');
         $('#modalDetailTL').modal('show');
     });
 
@@ -876,10 +900,21 @@ include '../templates/sidebar.php';
                                         <td class="text-center"><?= $i + 1 ?></td>
                                         <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
                                         <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong>
-                                            <?php if ($r['sumber'] === 'Konseling' && !empty($r['c_topik'])): ?>
-                                                <div class="mt-1"><small class="badge badge-info" title="Sumber Konseling">Konseling: <?= htmlspecialchars(mb_strimwidth($r['c_topik'] . ' - ' . ($r['c_masalah'] ?? ''), 0, 32, '...')) ?></small></div>
-                                            <?php elseif (!empty($r['b_masalah'])): ?>
-                                                <div class="mt-1"><small class="badge badge-light border" title="Sumber Pembinaan">Pembinaan: <?= htmlspecialchars(mb_strimwidth($r['b_masalah'], 0, 32, '...')) ?></small></div>
+                                            <?php if ($r['sumber'] === 'Konseling' && (!empty($r['c_topik']) || !empty($r['c_masalah']))): ?>
+                                                <div class="mt-1" style="max-width: 230px;">
+                                                    <div><small class="badge badge-info" title="Topik konseling"><i class="fas fa-comments mr-1"></i><?= htmlspecialchars(mb_strimwidth((string)$r['c_topik'], 0, 28, '...')) ?></small></div>
+                                                    <?php if (!empty($r['c_masalah'])): ?>
+                                                    <div><small class="text-muted" title="<?= htmlspecialchars((string)$r['c_masalah']) ?>"><i class="fas fa-align-left mr-1"></i><?= htmlspecialchars(mb_strimwidth((string)$r['c_masalah'], 0, 48, '...')) ?></small></div>
+                                                    <?php endif; ?>
+                                                    <div><small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i><?= !empty($r['c_tanggal']) ? date('d/m/Y', strtotime($r['c_tanggal'])) : '-' ?> &bull; <?= htmlspecialchars($r['c_status'] ?? '-') ?></small></div>
+                                                </div>
+                                            <?php elseif (!empty($r['b_masalah']) || !empty($r['b_jenis'])): ?>
+                                                <div class="mt-1" style="max-width: 230px;">
+                                                    <div><small class="badge badge-primary" title="Jenis pembinaan"><i class="fas fa-user-edit mr-1"></i><?= htmlspecialchars(mb_strimwidth((string)($r['b_jenis'] ?? 'Pembinaan'), 0, 28, '...')) ?></small></div>
+                                                    <?php if (!empty($r['b_masalah'])): ?>
+                                                    <div><small class="text-muted" title="<?= htmlspecialchars((string)$r['b_masalah']) ?>"><i class="fas fa-align-left mr-1"></i><?= htmlspecialchars(mb_strimwidth((string)$r['b_masalah'], 0, 48, '...')) ?></small></div>
+                                                    <?php endif; ?>
+                                                </div>
                                             <?php endif; ?>
                                         </td>
                                         <td>
@@ -1032,20 +1067,34 @@ include '../templates/sidebar.php';
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <table class="table table-bordered table-sm">
-                    <tr><th width="35%">Tanggal Rencana</th><td id="det_tanggal"></td></tr>
-                    <tr><th>Nama Siswa</th><td id="det_nama" class="font-weight-bold"></td></tr>
-                    <tr><th>NISN</th><td id="det_nisn"></td></tr>
-                    <tr><th>Kelas</th><td id="det_kelas"></td></tr>
-                    <tr><th>Sumber Masalah</th><td id="det_sumber"></td></tr>
-                    <tr><th id="lbl_det_sumber">Rincian Sumber</th><td id="det_bina"></td></tr>
-                    <tr><th>Penanggung Jawab</th><td id="det_pj"></td></tr>
-                    <tr><th>Target Selesai</th><td id="det_target"></td></tr>
-                    <tr><th>Tanggal Selesai</th><td id="det_selesai"></td></tr>
-                    <tr><th>Status</th><td id="det_status"></td></tr>
-                    <tr><th colspan="2">Tindakan:</th></tr>
-                    <tr><td colspan="2" id="det_tindakan" style="white-space: pre-wrap;" class="bg-light p-2"></td></tr>
-                </table>
+                <div class="d-flex align-items-center mb-3 p-2 rounded" style="background:#f0f7ff; border:1px solid #cfe3ff;">
+                    <div class="mr-3 text-center" style="min-width:70px;">
+                        <div class="font-weight-bold" id="det_tanggal" style="font-size:14px;"></div>
+                        <small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>Rencana</small>
+                    </div>
+                    <div>
+                        <div class="font-weight-bold" id="det_nama" style="font-size:15px;"></div>
+                        <div><small class="text-muted">NISN: <span id="det_nisn"></span> &bull; Kelas: <span id="det_kelas"></span></small></div>
+                        <div class="mt-1"><span id="det_sumber"></span> <span id="det_status" class="ml-1"></span></div>
+                    </div>
+                </div>
+                <div class="card mb-2 border-info">
+                    <div class="card-header py-1 px-2 bg-info text-white" style="font-size:12px;"><i class="fas fa-link mr-1"></i><span id="lbl_det_sumber">Rincian Sumber</span></div>
+                    <div class="card-body p-2" id="det_bina" style="font-size:13.5px;"></div>
+                </div>
+                <div class="card mb-2">
+                    <div class="card-body p-2" style="font-size:13px;">
+                        <div class="row">
+                            <div class="col-6 mb-1"><i class="fas fa-user-tie mr-1 text-muted"></i><strong>PJ:</strong> <span id="det_pj"></span></div>
+                            <div class="col-6 mb-1"><i class="fas fa-bullseye mr-1 text-muted"></i><strong>Target:</strong> <span id="det_target"></span></div>
+                            <div class="col-6"><i class="fas fa-check-double mr-1 text-muted"></i><strong>Realisasi:</strong> <span id="det_selesai"></span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-0 border-success">
+                    <div class="card-header py-1 px-2 bg-success text-white" style="font-size:12px;"><i class="fas fa-tasks mr-1"></i>Tindakan / Langkah Perbaikan</div>
+                    <div class="card-body p-2" id="det_tindakan" style="white-space: pre-wrap; font-size:13.5px;"></div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>

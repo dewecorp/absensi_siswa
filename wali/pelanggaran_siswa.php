@@ -278,43 +278,75 @@ $(document).ready(function() {
         }
     });
 
+    function gdsRefreshPelanggaran() {
+        if (window.GDSRefresh) {
+            try { window.GDSRefresh($('#modalPelanggaran')[0]); } catch(e) {}
+            try {
+                GDSRefresh($('#inp_siswa'));
+                GDSRefresh($('#inp_kategori'));
+                GDSRefresh($('#sel_langgar_jenis'));
+                GDSRefresh($('#sel_langgar_tindakan'));
+            } catch(e2) {}
+        }
+    }
+    function setSelectVal($sel, val, placeholderKeep) {
+        val = (val == null ? '' : String(val));
+        if (val !== '' && $sel.find('option').filter(function() { return String($(this).val()) === val; }).length === 0) {
+            var lbl = val.length > 110 ? val.substr(0, 110) + '...' : val;
+            $sel.append($('<option>').val(val).text(lbl));
+        }
+        $sel.val(val);
+    }
+
     $('#btnTambahPelanggaran').on('click', function() {
         $('#formPelanggaranAction').val('tambah');
         $('#pelanggaranId').val('');
         $('#modalPelanggaranTitle').text('Catat Pelanggaran Siswa');
         $('#formPelanggaran')[0].reset();
         var curKat = $('#inp_kategori').val() || 'Ringan';
+        $('#inp_kategori').val(curKat);
         populateLanggar(curKat);
+        gdsRefreshPelanggaran();
         $('#modalPelanggaran').modal('show');
         setTimeout(function() {
             $('#modalPelanggaran textarea').each(function() { autogrowLanggar($(this)); });
+            gdsRefreshPelanggaran();
         }, 120);
     });
 
     $(document).on('click', '.btn-edit-pelanggaran', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
+        if (!data || typeof data !== 'object') return;
+        $('#formPelanggaran')[0].reset();
         $('#formPelanggaranAction').val('edit');
         $('#pelanggaranId').val(data.id);
         $('#modalPelanggaranTitle').text('Edit Pelanggaran Siswa');
-        $('#inp_siswa').val(data.id_siswa);
-        $('#inp_tanggal').val(data.tanggal);
-        $('#inp_kategori').val(data.kategori || 'Ringan');
-        populateLanggar(data.kategori || 'Ringan');
-        // Samakan dropdown dengan nilai tersimpan bila cocok persis
-        $('#sel_langgar_jenis option').each(function() {
-            if ($(this).val() === (data.jenis_pelanggaran || '')) $(this).prop('selected', true);
-        });
-        $('#sel_langgar_tindakan option').each(function() {
-            if ($(this).val() === (data.tindakan || '')) $(this).prop('selected', true);
-        });
-        $('#inp_jenis').val(data.jenis_pelanggaran);
-        $('#inp_poin').val(data.poin || 0);
+        // Siswa: tambah opsi bila tak ada di daftar (beda kelas / pindah)
+        var sid = (data.id_siswa != null ? String(data.id_siswa) : '');
+        if (sid !== '' && $('#inp_siswa').find('option[value="' + sid + '"]').length === 0) {
+            var lblS = (data.nama_siswa || ('Siswa #' + sid)) + (data.nisn ? ' (' + data.nisn + ')' : '');
+            $('#inp_siswa').append(new Option(lblS, sid, true, true));
+        }
+        $('#inp_siswa').val(sid);
+        $('#inp_tanggal').val(data.tanggal || '');
+        var kat = data.kategori || 'Ringan';
+        $('#inp_kategori').val(kat);
+        populateLanggar(kat);
+        // Samakan dropdown template, tampung manual bila tak cocok master
+        setSelectVal($('#sel_langgar_jenis'), data.jenis_pelanggaran || '');
+        setSelectVal($('#sel_langgar_tindakan'), data.tindakan || '');
+        $('#inp_jenis').val(data.jenis_pelanggaran || '');
+        $('#inp_poin').val((data.poin != null && data.poin !== '') ? data.poin : 0);
         $('#inp_tindakan').val(data.tindakan || '');
         $('#inp_ortu').val(data.orang_tua || '');
-        $('#inp_status').val(data.status);
+        gdsRefreshPelanggaran();
         $('#modalPelanggaran').modal('show');
         setTimeout(function() {
             $('#modalPelanggaran textarea').each(function() { autogrowLanggar($(this)); });
+            gdsRefreshPelanggaran();
         }, 120);
     });
 
