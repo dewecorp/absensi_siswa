@@ -3570,21 +3570,39 @@ function sync_agenda_statuses(PDO $pdo): void {
  */
 function sync_tindak_lanjut_statuses(PDO $pdo): void {
     try {
-        $pdo->exec("
+        $today = date('Y-m-d');
+        $st = $pdo->prepare("
             UPDATE tb_tindak_lanjut_wali
             SET status = 'Selesai'
-            WHERE tanggal_selesai IS NOT NULL
-              AND tanggal_selesai != ''
-              AND tanggal_selesai <= CURRENT_DATE()
-              AND status != 'Dibatalkan'
+            WHERE status NOT IN ('Selesai','Dibatalkan')
+              AND (
+                (tanggal_selesai IS NOT NULL AND CAST(tanggal_selesai AS CHAR) NOT IN ('', '0000-00-00') AND tanggal_selesai <= ?)
+                OR ((tanggal_selesai IS NULL OR CAST(tanggal_selesai AS CHAR) IN ('', '0000-00-00')) AND target_selesai IS NOT NULL AND CAST(target_selesai AS CHAR) NOT IN ('', '0000-00-00') AND target_selesai <= ?)
+              )
         ");
-        $pdo->exec("
-            UPDATE tb_tindak_lanjut_wali
-            SET status = 'Proses'
-            WHERE (tanggal_selesai IS NULL OR tanggal_selesai = '' OR tanggal_selesai > CURRENT_DATE())
-              AND status != 'Dibatalkan'
-        ");
-    } catch (Throwable $e) {}
+        $st->execute([$today, $today]);
+    } catch (Throwable $e) {
+        error_log('sync_tindak_lanjut_statuses: ' . $e->getMessage());
+    }
+}
+
+function tl_wali_effective_status(array $row, ?string $today = null): string {
+    $today = $today ?: date('Y-m-d');
+    $st = trim((string)($row['status'] ?? ''));
+    if ($st === 'Dibatalkan' || $st === 'Selesai') {
+        return $st;
+    }
+    $tgl = trim((string)($row['tanggal_selesai'] ?? ''));
+    $tgt = trim((string)($row['target_selesai'] ?? ''));
+    if ($tgl === '0000-00-00') $tgl = '';
+    if ($tgt === '0000-00-00') $tgt = '';
+    if ($tgl !== '' && $tgl <= $today) {
+        return 'Selesai';
+    }
+    if ($tgl === '' && $tgt !== '' && $tgt <= $today) {
+        return 'Selesai';
+    }
+    return $st !== '' ? $st : 'Proses';
 }
 
 /**

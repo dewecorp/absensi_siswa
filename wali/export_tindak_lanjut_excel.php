@@ -86,6 +86,14 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute($params);
 $tl_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if (function_exists('sync_tindak_lanjut_statuses')) { sync_tindak_lanjut_statuses($pdo); }
+if (function_exists('tl_wali_effective_status')) {
+    $today_eff = date('Y-m-d');
+    foreach ($tl_list as &$er) {
+        $er['status'] = tl_wali_effective_status($er, $today_eff);
+    }
+    unset($er);
+}
 
 if (empty($tl_list)) {
     echo "<script>alert('Tidak ada data tindak lanjut untuk diekspor.'); window.history.back();</script>";

@@ -4,6 +4,10 @@
 
 // Determine active menu based on current page
 $current_page = basename($_SERVER['PHP_SELF']);
+$current_dir = basename(dirname($_SERVER['PHP_SELF'] ?? ''));
+$current_uri = (string)($_SERVER['REQUEST_URI'] ?? '');
+$is_wali_tl_page = ($current_page === 'tindak_lanjut.php' && (str_contains($current_uri, 'wali/tindak_lanjut.php') || $current_dir === 'wali'));
+$is_kepala_tl_page = ($current_page === 'tindak_lanjut.php' && !$is_wali_tl_page);
 require_once __DIR__ . '/../config/sims_surat_helper.php';
 $nilai_ujian_praktik_menu_active = ($current_page === 'nilai_ujian.php' && isset($_GET['nilai_mode']) && $_GET['nilai_mode'] === 'praktik');
 $nilai_ujian_biasa_menu_active = ($current_page === 'nilai_ujian.php' && !$nilai_ujian_praktik_menu_active);
@@ -27,34 +31,43 @@ if (!function_exists('get_dynamic_breadcrumb')) {
             return $breadcrumb;
         }
 
-        $match = function($url, $page){ $p = parse_url($url, PHP_URL_PATH); return basename((string)$p) === $page; };
-        // Search through menu items
-        foreach ($menu_items as $menu) {
-            // Check if this menu is the direct match (no submenu)
-            if (isset($menu['url']) && $match($menu['url'], $current_page)) {
-                $breadcrumb[] = [
-                    'title' => $menu['title'],
-                    'url' => $menu['url'],
-                    'active' => true
-                ];
-                return $breadcrumb;
-            }
+        $cur_dir = basename(dirname($_SERVER['PHP_SELF'] ?? ''));
+        $score = function($url) use ($current_page, $cur_dir){
+            $p = parse_url((string)$url, PHP_URL_PATH);
+            if (basename((string)$p) !== $current_page) return 0;
+            $d = basename(dirname((string)$p));
+            if ($d !== '' && $d !== '.' && $d === $cur_dir) return 2;
+            return 1;
+        };
+        // Search through menu items (dua putaran: cocok folder dulu, baru nama file)
+        for ($pass = 2; $pass >= 1; $pass--) {
+            foreach ($menu_items as $menu) {
+                // Check if this menu is the direct match (no submenu)
+                if (isset($menu['url']) && $score($menu['url']) >= $pass) {
+                    $breadcrumb[] = [
+                        'title' => $menu['title'],
+                        'url' => $menu['url'],
+                        'active' => true
+                    ];
+                    return $breadcrumb;
+                }
 
-            // Check submenu
-            if (isset($menu['submenu']) && is_array($menu['submenu'])) {
-                foreach ($menu['submenu'] as $submenu) {
-                    if (isset($submenu['url']) && $match($submenu['url'], $current_page)) {
-                        $breadcrumb[] = [
-                            'title' => $menu['title'],
-                            'url' => null,
-                            'active' => false
-                        ];
-                        $breadcrumb[] = [
-                            'title' => $submenu['title'],
-                            'url' => $submenu['url'],
-                            'active' => true
-                        ];
-                        return $breadcrumb;
+                // Check submenu
+                if (isset($menu['submenu']) && is_array($menu['submenu'])) {
+                    foreach ($menu['submenu'] as $submenu) {
+                        if (isset($submenu['url']) && $score($submenu['url']) >= $pass) {
+                            $breadcrumb[] = [
+                                'title' => $menu['title'],
+                                'url' => null,
+                                'active' => false
+                            ];
+                            $breadcrumb[] = [
+                                'title' => $submenu['title'],
+                                'url' => $submenu['url'],
+                                'active' => true
+                            ];
+                            return $breadcrumb;
+                        }
                     }
                 }
             }
@@ -332,7 +345,7 @@ switch ($user_level) {
             ['title' => 'Supervisi Akademik', 'url' => '../kepala/supervisi_akademik.php?session_type=admin', 'active' => $current_page === 'supervisi_akademik.php'],
             ['title' => 'Supervisi Manajerial', 'url' => '../kepala/supervisi_manajerial.php?session_type=admin', 'active' => $current_page === 'supervisi_manajerial.php'],
             ['title' => 'Hasil Supervisi', 'url' => '../kepala/hasil_supervisi.php?session_type=admin', 'active' => $current_page === 'hasil_supervisi.php'],
-            ['title' => 'Tindak Lanjut Supervisi', 'url' => '../kepala/tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'tindak_lanjut.php' && ($_GET['session_type'] ?? '') !== 'admin_wali'],
+            ['title' => 'Tindak Lanjut Supervisi', 'url' => '../kepala/tindak_lanjut.php?session_type=admin', 'active' => $is_kepala_tl_page],
             ['title' => 'Monitoring Tindak Lanjut', 'url' => '../kepala/monitoring_tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'monitoring_tindak_lanjut.php'],
             ['title' => 'Rekapitulasi Supervisi', 'url' => '../kepala/rekapitulasi_supervisi.php?session_type=admin', 'active' => $current_page === 'rekapitulasi_supervisi.php'],
             ['title' => 'Laporan Supervisi', 'url' => '../kepala/laporan_supervisi.php?session_type=admin', 'active' => $current_page === 'laporan_supervisi.php'],
@@ -416,7 +429,7 @@ switch ($user_level) {
             ['title' => 'Konseling Siswa', 'url' => '../wali/konseling_awal.php?session_type=admin', 'active' => $current_page === 'konseling_awal.php'],
             ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php?session_type=admin', 'active' => $current_page === 'pelanggaran_siswa.php'],
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php?session_type=admin', 'active' => $current_page === 'pembinaan_siswa.php'],
-            ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php?session_type=admin', 'active' => $current_page === 'tindak_lanjut.php' && str_contains($_SERVER['REQUEST_URI'] ?? '', 'wali/tindak_lanjut.php')],
+            ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php?session_type=admin', 'active' => $is_wali_tl_page],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=admin', 'active' => $current_page === 'projek_kokurikuler.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php', 'active' => $current_page === 'struktur_kelas.php'],
         ];
@@ -438,7 +451,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_admin,
-                'active' => in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'tindak_lanjut.php', 'data_tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'struktur_kelas.php'])
+                'active' => (in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'data_tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'struktur_kelas.php']) || $is_wali_tl_page)
             ],
             [
                 'title' => 'Master Data',
@@ -537,7 +550,7 @@ switch ($user_level) {
                 'title' => 'Supervisi',
                 'icon' => 'fas fa-clipboard-check',
                 'submenu' => $supervisi_submenu_admin,
-                'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'data_monitoring.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php', 'master_supervisi.php'])
+                'active' => (in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'monitoring_tindak_lanjut.php', 'data_monitoring.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php', 'master_supervisi.php']) || $is_kepala_tl_page)
             ],
             [
                 'title' => 'Agenda',
@@ -657,7 +670,7 @@ switch ($user_level) {
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'pembinaan_siswa.php'],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'projek_kokurikuler.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'struktur_kelas.php'],
-            ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php?session_type=kepala_madrasah', 'active' => $current_page === 'tindak_lanjut.php' && str_contains($_SERVER['REQUEST_URI'] ?? '', 'wali/tindak_lanjut.php')],
+            ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php?session_type=kepala_madrasah', 'active' => $is_wali_tl_page],
         ];
         usort($pengelolaan_kelas_submenu_kepala, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
@@ -688,7 +701,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_kepala,
-                'active' => in_array($current_page, ['konseling_awal.php', 'data_konseling.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'struktur_kelas.php'])
+                'active' => (in_array($current_page, ['konseling_awal.php', 'data_konseling.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'struktur_kelas.php']) || $is_wali_tl_page)
             ],
             [
                 'title' => 'Program Kerja',
@@ -794,13 +807,13 @@ switch ($user_level) {
                     ['title' => 'Supervisi Akademik', 'url' => '../kepala/supervisi_akademik.php', 'active' => $current_page === 'supervisi_akademik.php'],
                     ['title' => 'Supervisi Manajerial', 'url' => '../kepala/supervisi_manajerial.php', 'active' => $current_page === 'supervisi_manajerial.php'],
                     ['title' => 'Hasil Supervisi', 'url' => '../kepala/hasil_supervisi.php', 'active' => $current_page === 'hasil_supervisi.php'],
-                    ['title' => 'Tindak Lanjut Supervisi', 'url' => '../kepala/tindak_lanjut.php', 'active' => $current_page === 'tindak_lanjut.php' && !str_contains($_SERVER['REQUEST_URI'] ?? '', 'wali/tindak_lanjut.php')],
+                    ['title' => 'Tindak Lanjut Supervisi', 'url' => '../kepala/tindak_lanjut.php', 'active' => $is_kepala_tl_page],
                     ['title' => 'Monitoring Tindak Lanjut', 'url' => '../kepala/monitoring_tindak_lanjut.php', 'active' => $current_page === 'monitoring_tindak_lanjut.php'],
                     ['title' => 'Rekapitulasi Supervisi', 'url' => '../kepala/rekapitulasi_supervisi.php', 'active' => $current_page === 'rekapitulasi_supervisi.php'],
                     ['title' => 'Laporan Supervisi', 'url' => '../kepala/laporan_supervisi.php', 'active' => $current_page === 'laporan_supervisi.php'],
                     ['title' => 'Arsip/Bukti Supervisi', 'url' => '../kepala/arsip_supervisi.php', 'active' => $current_page === 'arsip_supervisi.php'],
                 ],
-                'active' => in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'tindak_lanjut.php', 'monitoring_tindak_lanjut.php', 'data_monitoring.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php', 'master_supervisi.php'])
+                'active' => (in_array($current_page, ['dashboard_supervisi.php', 'program_supervisi.php', 'sasaran_supervisi.php', 'jadwal_supervisi.php', 'instrumen_supervisi.php', 'komponen_instrumen.php', 'indikator_instrumen.php', 'supervisi_administrasi.php', 'supervisi_akademik.php', 'supervisi_manajerial.php', 'hasil_supervisi.php', 'hasil_supervisi_detail.php', 'monitoring_tindak_lanjut.php', 'data_monitoring.php', 'rekapitulasi_supervisi.php', 'laporan_supervisi.php', 'arsip_supervisi.php', 'master_supervisi.php']) || $is_kepala_tl_page)
             ],
             [
                 'title' => 'Agenda',
@@ -1398,7 +1411,7 @@ switch ($user_level) {
             ['title' => 'Konseling Siswa', 'url' => '../wali/konseling_awal.php', 'active' => $current_page === 'konseling_awal.php'],
             ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php', 'active' => $current_page === 'pelanggaran_siswa.php'],
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php', 'active' => $current_page === 'pembinaan_siswa.php'],
-            ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php', 'active' => $current_page === 'tindak_lanjut.php' && str_contains($_SERVER['REQUEST_URI'] ?? '', 'wali/tindak_lanjut.php')],
+            ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php', 'active' => $is_wali_tl_page],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php', 'active' => $current_page === 'projek_kokurikuler.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=wali', 'active' => $current_page === 'struktur_kelas.php'],
         ];
@@ -1414,7 +1427,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_wali,
-                'active' => in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'tindak_lanjut.php', 'data_tindak_lanjut.php', 'struktur_kelas.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php'])
+                'active' => (in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'data_tindak_lanjut.php', 'struktur_kelas.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php']) || $is_wali_tl_page)
             ],
             [
                 'title' => 'Pembelajaran',

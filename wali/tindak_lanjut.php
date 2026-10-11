@@ -55,8 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $penanggung_jawab = trim((string)($_POST['penanggung_jawab'] ?? ''));
         $target_selesai = !empty($_POST['target_selesai']) ? date('Y-m-d', strtotime($_POST['target_selesai'])) : null;
         $tanggal_selesai = !empty($_POST['tanggal_selesai']) ? date('Y-m-d', strtotime($_POST['tanggal_selesai'])) : null;
-        $status = (!empty($tanggal_selesai) && $tanggal_selesai <= date('Y-m-d')) ? 'Selesai' : 'Proses';
+        $posted_status = trim((string)($_POST['status'] ?? ''));
+        $valid_status = ['Rencana', 'Proses', 'Selesai', 'Dibatalkan'];
 
+        $oldData = null;
         if ($action === 'edit' && $id > 0) {
             $stOld = $pdo->prepare("SELECT * FROM tb_tindak_lanjut_wali WHERE id = ?" . (!$is_admin_or_kepala ? " AND id_wali = " . (int)$guru_id : ""));
             $stOld->execute([$id]);
@@ -68,6 +70,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($id_pembinaan === null || $id_pembinaan <= 0) $id_pembinaan = $oldData['id_pembinaan'] ? (int)$oldData['id_pembinaan'] : null;
                 if ($id_konseling === null || $id_konseling <= 0) $id_konseling = $oldData['id_konseling'] ? (int)$oldData['id_konseling'] : null;
             }
+        }
+
+        if ($action === 'tambah') {
+            $status = in_array($posted_status, $valid_status, true) ? $posted_status : 'Proses';
+        } else {
+            $status = in_array($posted_status, $valid_status, true) ? $posted_status : (string)($oldData['status'] ?? 'Proses');
+            if (!in_array($status, $valid_status, true)) $status = 'Proses';
+        }
+        if (function_exists('tl_wali_effective_status')) {
+            $status = tl_wali_effective_status([
+                'status' => $status,
+                'tanggal_selesai' => $tanggal_selesai,
+                'target_selesai' => $target_selesai,
+            ]);
+        } elseif ($status !== 'Dibatalkan' && !empty($tanggal_selesai) && $tanggal_selesai <= date('Y-m-d')) {
+            $status = 'Selesai';
         }
 
         if ($id_siswa <= 0 || $tindakan === '' || $penanggung_jawab === '') {
@@ -280,6 +298,19 @@ try {
 } catch (Throwable $e) { $konseling_list = []; }
 
 sync_pelanggaran_statuses($pdo);
+// Tampilkan status efektif: lewat tanggal realisasi/target otomatis Selesai di layar,
+// lalu kunci ke DB agar konsisten meski guru tidak mengubah manual.
+$today_eff = date('Y-m-d');
+try {
+    $stEff = $pdo->prepare("UPDATE tb_tindak_lanjut_wali SET status = 'Selesai'
+        WHERE status NOT IN ('Selesai','Dibatalkan') AND (
+            (tanggal_selesai IS NOT NULL AND CAST(tanggal_selesai AS CHAR) NOT IN ('', '0000-00-00') AND tanggal_selesai <= ?)
+            OR ((tanggal_selesai IS NULL OR CAST(tanggal_selesai AS CHAR) IN ('', '0000-00-00')) AND target_selesai IS NOT NULL AND CAST(target_selesai AS CHAR) NOT IN ('', '0000-00-00') AND target_selesai <= ?)
+        )");
+    $stEff->execute([$today_eff, $today_eff]);
+} catch (Throwable $e) {
+    error_log('tindak_lanjut backfill: ' . $e->getMessage());
+}
 $f_sumber = trim((string)($_GET['f_sumber'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
 
@@ -317,6 +348,12 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if (function_exists('tl_wali_effective_status')) {
+    foreach ($rows as &$rr) {
+        $rr['status'] = tl_wali_effective_status($rr, $today_eff);
+    }
+    unset($rr);
+}
 
 $sumber_options = ['Pembinaan', 'Konseling'];
 $status_options = ['Rencana', 'Proses', 'Selesai', 'Dibatalkan'];
@@ -562,6 +599,30 @@ $(document).ready(function() {
         if (item && item.penanggung_jawab && !$('#inp_pj').val()) $('#inp_pj').val(item.penanggung_jawab);
     });
 
+    function svTodayStr() {
+        var d = new Date();
+        var m = ('0' + (d.getMonth() + 1)).slice(-2);
+        var day = ('0' + d.getDate()).slice(-2);
+        return d.getFullYear() + '-' + m + '-' + day;
+    }
+    function svEffectiveStatus(tglSelesai, tgtSelesai, cur) {
+        cur = (cur || '').toString();
+        if (cur === 'Dibatalkan' || cur === 'Selesai') return cur;
+        var today = svTodayStr();
+        tglSelesai = (tglSelesai || '').toString();
+        tgtSelesai = (tgtSelesai || '').toString();
+        if (tglSelesai !== '' && tglSelesai <= today) return 'Selesai';
+        if (tglSelesai === '' && tgtSelesai !== '' && tgtSelesai <= today) return 'Selesai';
+        return cur || 'Rencana';
+    }
+    function svAutoStatus() {
+        var eff = svEffectiveStatus($('#inp_selesai').val(), $('#inp_target').val(), $('#inp_status').val());
+        if (eff !== $('#inp_status').val()) {
+            $('#inp_status').val(eff).trigger('change');
+        }
+    }
+    $('#inp_selesai, #inp_target').on('change', svAutoStatus);
+
     $('#btnTambahTL').on('click', function() {
         $('#formTLAction').val('tambah');
         $('#tlId').val('');
@@ -573,6 +634,7 @@ $(document).ready(function() {
         showKonteksSiswa('');
         $('#inp_sumber').val('Pembinaan');
         switchSumberWrap('Pembinaan');
+        $('#inp_status').val('Rencana').trigger('change');
         $('#modalTL').modal('show');
         setTimeout(function() {
             $('#modalTL textarea').each(function() { autogrowTL($(this)); });
@@ -617,7 +679,7 @@ $(document).ready(function() {
         $('#inp_pj').val(data.penanggung_jawab || '');
         $('#inp_target').val(data.target_selesai || '');
         $('#inp_selesai').val(data.tanggal_selesai || '');
-        $('#inp_status').val(data.status || 'Rencana').trigger('change');
+        $('#inp_status').val(svEffectiveStatus(data.tanggal_selesai || '', data.target_selesai || '', data.status || 'Rencana')).trigger('change');
         showKonteksSiswa(data.id_siswa);
 
         $('#modalTL').modal('show');
@@ -705,15 +767,17 @@ include '../templates/sidebar.php';
             <?php if ($is_admin_or_kepala): ?>
             <div class="card mb-3">
                 <div class="card-body p-3">
-                    <form method="GET" class="form-inline">
+                    <form method="GET" class="form-row align-items-end">
                         <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
-                        <label class="mr-2">Pilih Kelas:</label>
-                        <select name="kelas" class="form-control" onchange="this.form.submit()">
-                            <option value="">-- Semua Kelas --</option>
-                            <?php foreach ($all_classes as $c): ?>
-                                <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="form-group col-md-4 mb-0" style="max-width: 340px;">
+                            <label>Pilih Kelas:</label>
+                            <select name="kelas" class="form-control" style="width: 100%; max-width: 320px;" onchange="this.form.submit()">
+                                <option value="">-- Semua Kelas --</option>
+                                <?php foreach ($all_classes as $c): ?>
+                                    <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -938,7 +1002,15 @@ include '../templates/sidebar.php';
                         <div class="col-md-6 form-group">
                             <label class="font-weight-bold">Tanggal Realisasi Selesai</label>
                             <input type="date" name="tanggal_selesai" id="inp_selesai" class="form-control">
-                            <small class="text-muted">Status default <strong>Proses</strong>. Pukul 00.00 pada tanggal realisasi selesai, status otomatis berubah <strong>Selesai</strong>.</small>
+                            <small class="text-muted">Isi tanggal realisasi bila sudah selesai. Status otomatis <strong>Selesai</strong> saat tanggal terlewati (kecuali <strong>Dibatalkan</strong>).</small>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="font-weight-bold">Status</label>
+                            <select name="status" id="inp_status" class="form-control">
+                                <?php foreach ($status_options as $st): ?>
+                                    <option value="<?= $st ?>"><?= $st ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                 </div>

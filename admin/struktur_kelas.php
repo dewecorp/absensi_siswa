@@ -380,16 +380,18 @@ include '../templates/sidebar.php';
                     <h4>Filter Kelas</h4>
                 </div>
                 <div class="card-body">
-                    <form method="GET" class="form-inline">
-                        <label class="mr-2" for="selectKelasStruktur">Pilih Kelas:</label>
-                        <select name="kelas" id="selectKelasStruktur" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
-                            <option value="">-- Pilih Kelas --</option>
-                            <?php foreach ($classes as $c): ?>
-                                <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_class_id === (int)$c['id_kelas'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($c['nama_kelas']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <form method="GET" class="form-row align-items-end">
+                        <div class="form-group col-md-4 mb-0">
+                            <label for="selectKelasStruktur">Pilih Kelas:</label>
+                            <select name="kelas" id="selectKelasStruktur" class="form-control" style="width: 100%; max-width: 320px;" onchange="this.form.submit();">
+                                <option value="">-- Pilih Kelas --</option>
+                                <?php foreach ($classes as $c): ?>
+                                    <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_class_id === (int)$c['id_kelas'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($c['nama_kelas']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </form>
                 </div>
             </div>

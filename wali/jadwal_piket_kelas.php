@@ -214,15 +214,17 @@ include '../templates/sidebar.php';
                     <h4>Filter Kelas</h4>
                 </div>
                 <div class="card-body">
-                    <form method="GET" class="form-inline">
+                    <form method="GET" class="form-row align-items-end">
                         <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
-                        <label class="mr-2" for="selectKelasPiket">Pilih Kelas:</label>
-                        <select name="kelas" id="selectKelasPiket" class="form-control" style="min-width: 220px;" onchange="this.form.submit();">
-                            <option value="">-- Pilih Kelas --</option>
-                            <?php foreach ($all_classes as $c): ?>
-                                <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="form-group col-md-4 mb-0">
+                            <label for="selectKelasPiket">Pilih Kelas:</label>
+                            <select name="kelas" id="selectKelasPiket" class="form-control" style="width: 100%; max-width: 320px;" onchange="this.form.submit();">
+                                <option value="">-- Pilih Kelas --</option>
+                                <?php foreach ($all_classes as $c): ?>
+                                    <option value="<?= (int)$c['id_kelas'] ?>" <?= $selected_kelas_id === (int)$c['id_kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nama_kelas']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </form>
                 </div>
             </div>
