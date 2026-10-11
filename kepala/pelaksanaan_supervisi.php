@@ -611,7 +611,7 @@ function svHitungNilai() {
 
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
-    var dttablepelaksanaan=$('#table-pelaksanaan').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablepelaksanaan.on('order.dt search.dt draw.dt',function(){var info=dttablepelaksanaan.page.info();dttablepelaksanaan.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    var dttablepelaksanaan=$('#table-pelaksanaan').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[[1,'desc']],columnDefs:[],responsive:false});dttablepelaksanaan.on('order.dt search.dt draw.dt',function(){var info=dttablepelaksanaan.page.info();dttablepelaksanaan.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     var programJenis = {};
     $('#sv-program-select option').each(function () { var v = $(this).val(); if (v) programJenis[v] = $(this).data('jenis'); });
     var instrumenJenis = {};

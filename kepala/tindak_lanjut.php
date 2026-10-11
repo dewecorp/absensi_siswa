@@ -23,8 +23,11 @@ $js_libs = [
 
 $pelaksanaan_list = [];
 try {
-    $pelaksanaan_list = $pdo->query("SELECT p.id_pelaksanaan, p.nama_guru, p.unit_bagian, p.jenis_supervisi, p.tanggal, p.temuan, p.rekomendasi, p.nilai
-        FROM tb_sv_pelaksanaan p ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC")->fetchAll(PDO::FETCH_ASSOC);
+    $pelaksanaan_list = $pdo->query("SELECT p.id_pelaksanaan, p.id_guru, p.nama_guru, p.unit_bagian, p.jenis_supervisi, p.tanggal, p.temuan, p.rekomendasi, p.nilai
+        FROM tb_sv_pelaksanaan p 
+        LEFT JOIN tb_sv_tindak_lanjut t ON t.id_pelaksanaan = p.id_pelaksanaan
+        WHERE t.id_tindak_lanjut IS NULL
+        ORDER BY p.tanggal DESC, p.id_pelaksanaan DESC")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
 }
 
@@ -197,9 +200,9 @@ $js_page[] = 'var tlPelaksanaan = ' . json_encode($tl_pelaksanaan_js, JSON_UNESC
 $js_page[] = <<<'JS'
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
-    var dttabletl=$('#table-tl').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttabletl.on('order.dt search.dt draw.dt',function(){var info=dttabletl.page.info();dttabletl.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    var dttabletl=$('#table-tl').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[[1,'desc']],columnDefs:[],responsive:false});dttabletl.on('order.dt search.dt draw.dt',function(){var info=dttabletl.page.info();dttabletl.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     var tlSel = document.getElementById('tl_id_pelaksanaan');
-    function tlFillOptions(keep) {
+    function tlFillOptions(keep, keepData) {
         if (!tlSel) return;
         var cur = keep || tlSel.value;
         tlSel.innerHTML = '<option value="">Pilih Supervisi</option>';
@@ -208,6 +211,15 @@ $(document).ready(function () {
             o.value = id; o.textContent = tlPelaksanaan[id].label;
             tlSel.appendChild(o);
         });
+        if (keepData && keepData.id_pelaksanaan) {
+            var kId = String(keepData.id_pelaksanaan);
+            if (!tlPelaksanaan[kId]) {
+                var oEdit = document.createElement('option');
+                oEdit.value = kId;
+                oEdit.textContent = '#' + kId + ' - ' + (keepData.nama_guru || keepData.unit_bagian || '-') + ' (' + (keepData.jenis_supervisi || '') + ')';
+                tlSel.appendChild(oEdit);
+            }
+        }
         if (cur) tlSel.value = cur;
     }
     function tlSyncRek() {
@@ -215,6 +227,12 @@ $(document).ready(function () {
         var el = document.getElementById('tl_rekomendasi');
         if (el) el.value = (id && tlPelaksanaan[id]) ? (tlPelaksanaan[id].rekomendasi || '') : '';
     }
+    $(document).on('change', '#sel_rencana_tindakan', function () {
+        var v = $(this).val() || '';
+        if (v) {
+            $('#inp_rencana_tindakan').val(v);
+        }
+    });
     tlFillOptions();
     $(document).on('change', '#tl_id_pelaksanaan', tlSyncRek);
     $('#btn-tambah').on('click', function () {
@@ -249,7 +267,7 @@ $(document).ready(function () {
         var d = $(this).data('row');
         $('#form-tl')[0].reset();
         $('#form-tl [name=aksi]').val('edit');
-        tlFillOptions(d.id_pelaksanaan);
+        tlFillOptions(d.id_pelaksanaan, d);
         $('#tl_id_pelaksanaan').val(d.id_pelaksanaan);
         Object.keys(d).forEach(function (k) {
             var el = $('#form-tl [name="' + k + '"]');
@@ -348,36 +366,34 @@ include '../templates/sidebar.php';
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-striped" id="table-tl">
-                            <thead>
-                                <tr>
-                                    <th width="5%">No</th>
-                                    <th>ID Supervisi</th>
-                                    <th>Guru/Unit</th>
-                                    <th>Rekomendasi</th>
-                                    <th>Bentuk</th>
-                                    <th>Rencana Tindakan</th>
-                                    <th>Penanggung Jawab</th>
-                                    <th>Target Selesai</th>
-                                    <th>Realisasi</th>
-                                    <th>Bukti</th>
-                                    <th>Status</th>
-                                    <th>Tanggal Selesai</th>
-                                    <th>Catatan</th>
-                                    <?php if ($can_manage): ?><th width="12%">Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $r): ?>
-                                    <?php
-                                    $badge = 'secondary';
-                                    if ($r['status'] === 'Selesai') $badge = 'success';
-                                    elseif ($r['status'] === 'Dalam Proses') $badge = 'warning';
-                                    elseif ($r['status'] === 'Perlu Supervisi Ulang') $badge = 'danger';
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"></td>
-                                        <td>#<?= (int)$r['id_pelaksanaan'] ?></td>
-                                        <td><?= htmlspecialchars($r['nama_guru'] ?: ($r['unit_bagian'] ?: '-')) ?></td>
+                             <thead>
+                                 <tr>
+                                     <th width="5%">No</th>
+                                     <th>Guru/Unit</th>
+                                     <th>Rekomendasi</th>
+                                     <th>Bentuk</th>
+                                     <th>Rencana Tindakan</th>
+                                     <th>Penanggung Jawab</th>
+                                     <th>Target Selesai</th>
+                                     <th>Realisasi</th>
+                                     <th>Bukti</th>
+                                     <th>Status</th>
+                                     <th>Tanggal Selesai</th>
+                                     <th>Catatan</th>
+                                     <?php if ($can_manage): ?><th width="12%">Aksi</th><?php endif; ?>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 <?php foreach ($rows as $r): ?>
+                                     <?php
+                                     $badge = 'secondary';
+                                     if ($r['status'] === 'Selesai') $badge = 'success';
+                                     elseif ($r['status'] === 'Dalam Proses') $badge = 'warning';
+                                     elseif ($r['status'] === 'Perlu Supervisi Ulang') $badge = 'danger';
+                                     ?>
+                                     <tr>
+                                         <td class="text-center"></td>
+                                         <td><?= htmlspecialchars($r['nama_guru'] ?: ($r['unit_bagian'] ?: '-')) ?></td>
                                         <td><?= htmlspecialchars((string)$r['rekomendasi']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['bentuk_tindak_lanjut']) ?></td>
                                         <td><?= htmlspecialchars((string)$r['rencana_tindakan']) ?></td>
@@ -440,7 +456,16 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                     </div>
-                    <div class="form-group"><label>Rencana Tindakan</label><textarea class="form-control" name="rencana_tindakan" rows="2"></textarea></div>
+                    <div class="form-group">
+                        <label>Rencana Tindakan</label>
+                        <select id="sel_rencana_tindakan" class="form-control mb-1">
+                            <option value="">-- Pilih Rencana Tindakan --</option>
+                            <?php foreach (sv_rencana_tindakan_list($pdo) as $rt): ?>
+                                <option value="<?= htmlspecialchars($rt, ENT_QUOTES) ?>"><?= htmlspecialchars($rt) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <textarea class="form-control" name="rencana_tindakan" id="inp_rencana_tindakan" rows="2" placeholder="Pilih dari dropdown di atas atau ketik manual..."></textarea>
+                    </div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label>Penanggung Jawab</label>

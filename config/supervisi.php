@@ -95,6 +95,30 @@ if (!function_exists('sv_bentuk_tindak_lanjut_list')) {
     }
 }
 
+if (!function_exists('sv_rencana_tindakan_list')) {
+    function sv_rencana_tindakan_list(?PDO $pdo = null): array
+    {
+        if ($pdo) {
+            try {
+                $opts = sv_hasil_options($pdo, 'rencana_tindakan');
+                if (!empty($opts)) return $opts;
+            } catch (Throwable $e) {}
+        }
+        return [
+            'Pembinaan & Pendampingan Penyusunan RPP/Modul Ajar Terstruktur',
+            'Mengikuti Pelatihan/Bimtek/Workshop Peningkatan Kompetensi Pedagogik',
+            'Pendampingan Penggunaan Media Pembelajaran Digital & Interaktif',
+            'Studi Tiru/Observasi Pembelajaran Rekan Sejawat (Peer Coaching)',
+            'Bimbingan Penerapan Strategi Pembelajaran Berdiferensiasi',
+            'Supervisi Ulang/Pendampingan Lanjutan oleh Pengawas/Supervisor',
+            'Penguatan Manajemen Kelas & Komunikasi Efektif dengan Siswa',
+            'Penyusunan & Pengelolaan Kelengkapan Administrasi Pembelajaran',
+            'Pelatihan Penilaian/Asesmen Hasil Belajar Berbasis Kriteria',
+            'Konsultasi Intensif dengan Tim Penjaminan Mutu Madrasah'
+        ];
+    }
+}
+
 if (!function_exists('sv_status_tindak_lanjut_list')) {
     function sv_status_tindak_lanjut_list(): array
     {
@@ -662,6 +686,28 @@ if (!function_exists('sv_guru_list')) {
         try {
             $stmt = $pdo->query("SELECT id_guru, kode_guru, nama_guru, nuptk, jenis_kelamin, wali_kelas, mengajar
                                  FROM tb_guru ORDER BY nama_guru ASC");
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+}
+
+if (!function_exists('sv_guru_sasaran_list')) {
+    function sv_guru_sasaran_list(PDO $pdo, ?string $jenisSupervisi = null): array
+    {
+        try {
+            $sql = "SELECT DISTINCT g.id_guru, g.kode_guru, g.nama_guru, g.nuptk, g.jenis_kelamin, g.wali_kelas, g.mengajar
+                    FROM tb_guru g
+                    JOIN tb_sv_sasaran s ON s.id_guru = g.id_guru";
+            $params = [];
+            if ($jenisSupervisi !== null && trim($jenisSupervisi) !== '') {
+                $sql .= " WHERE s.jenis_supervisi = ?";
+                $params[] = trim($jenisSupervisi);
+            }
+            $sql .= " ORDER BY g.nama_guru ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
             return [];
@@ -2853,7 +2899,13 @@ if (!function_exists('sv_filter_where')) {
 if (!function_exists('sv_hasil_kategori_list')) {
     function sv_hasil_kategori_list(): array
     {
-        return ['kekuatan' => 'Kekuatan', 'kelemahan' => 'Kelemahan', 'rekomendasi' => 'Rekomendasi', 'prioritas' => 'Prioritas Perbaikan'];
+        return [
+            'kekuatan' => 'Kekuatan',
+            'kelemahan' => 'Kelemahan',
+            'rekomendasi' => 'Rekomendasi',
+            'prioritas' => 'Prioritas Perbaikan',
+            'rencana_tindakan' => 'Rencana Tindakan'
+        ];
     }
 }
 
@@ -2900,6 +2952,18 @@ if (!function_exists('sv_seed_hasil_master')) {
                 'Integrasi Kurikulum Berbasis Cinta (KBC)',
                 'Optimalisasi Waktu Pembelajaran',
                 'Pendampingan dan Pembinaan Berkelanjutan',
+            ],
+            'rencana_tindakan' => [
+                'Pembinaan & Pendampingan Penyusunan RPP/Modul Ajar Terstruktur',
+                'Mengikuti Pelatihan/Bimtek/Workshop Peningkatan Kompetensi Pedagogik',
+                'Pendampingan Penggunaan Media Pembelajaran Digital & Interaktif',
+                'Studi Tiru/Observasi Pembelajaran Rekan Sejawat (Peer Coaching)',
+                'Bimbingan Penerapan Strategi Pembelajaran Berdiferensiasi',
+                'Supervisi Ulang/Pendampingan Lanjutan oleh Pengawas/Supervisor',
+                'Penguatan Manajemen Kelas & Komunikasi Efektif dengan Siswa',
+                'Penyusunan & Pengelolaan Kelengkapan Administrasi Pembelajaran',
+                'Pelatihan Penilaian/Asesmen Hasil Belajar Berbasis Kriteria',
+                'Konsultasi Intensif dengan Tim Penjaminan Mutu Madrasah'
             ],
         ];
         foreach ($data as $kategori => $list) {

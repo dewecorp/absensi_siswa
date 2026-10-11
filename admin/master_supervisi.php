@@ -6,7 +6,7 @@ require_once '../config/supervisi.php';
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-if (!isAuthorized(['admin'])) {
+if (!isAuthorized(['admin', 'tata_usaha', 'kepala_madrasah', 'kepala'])) {
     redirect('../login.php');
 }
 sv_ensure_schema($pdo);
@@ -125,20 +125,7 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <div class="card">
                 <div class="card-header">
-                    <h4>Pengaturan Tanggal Cetak</h4>
-                    <div class="card-header-action"><small class="text-muted">Kosong = tanggal saat cetak</small></div>
-                </div>
-                <div class="card-body">
-                    <form method="POST" class="form-row">
-                        <div class="form-group col-md-5"><label>Tanggal Cetak Detail Hasil <small class="text-muted">(cetak_detail_hasil)</small></label><input type="date" class="form-control" name="tanggal_cetak_detail" value="<?= htmlspecialchars($tglDetail ?? '', ENT_QUOTES) ?>"></div>
-                        <div class="form-group col-md-5"><label>Tanggal Cetak Hasil <small class="text-muted">(cetak_hasil)</small></label><input type="date" class="form-control" name="tanggal_cetak_hasil" value="<?= htmlspecialchars($tglHasil ?? '', ENT_QUOTES) ?>"></div>
-                        <div class="form-group col-md-2 d-flex align-items-end"><button type="submit" name="simpan_tanggal" value="1" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Simpan</button></div>
-                    </form>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h4>Data Kekuatan / Kelemahan / Rekomendasi / Prioritas</h4>
+                    <h4>Data Master Supervisi (Kekuatan / Kelemahan / Rekomendasi / Prioritas / Rencana Tindakan)</h4>
                     <div class="card-header-action">
                         <form method="POST" class="d-inline"><button type="submit" name="seed_master" value="1" class="btn btn-info btn-sm"><i class="fas fa-database"></i> Muat Template</button></form>
                         <button type="button" class="btn btn-primary btn-sm ml-1" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah</button>

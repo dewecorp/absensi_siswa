@@ -24,10 +24,14 @@ $js_libs = [
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
 ];
 
-$guru_list = sv_guru_list($pdo);
+$guru_list = sv_guru_sasaran_list($pdo);
+if (empty($guru_list)) {
+    $guru_list = sv_guru_list($pdo);
+}
 $program_list = sv_program_options($pdo);
 $instrumen_list = sv_instrumen_options($pdo);
 $jabatan_list = getJabatanList($pdo);
+$guru_json = json_encode($guru_list, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $instrumen_json = json_encode($instrumen_list, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $program_json = json_encode($program_list, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 $program_fokus_map = [];
@@ -305,6 +309,7 @@ $flash = sv_render_flash_js();
 if ($flash !== '') {
     $js_page[] = $flash;
 }
+$js_page[] = 'var svGuruList = ' . $guru_json . ';';
 $js_page[] = 'var svInstrumenList = ' . $instrumen_json . ';';
 $js_page[] = 'var svProgramList = ' . $program_json . ';';
 $js_page[] = 'var svProgramFokus = ' . $program_fokus_json . ';';
@@ -375,10 +380,13 @@ function svInitFokusJadwalSelect2(){ if(!$.fn.select2) return; var $s=$('#sv-fok
 function svFilterModalByJenis(jenis, keepVal) {
     var $p = $('#form-jadwal [name=id_program]');
     var $i = $('#form-jadwal [name=id_instrumen]');
+    var $g = $('#form-jadwal [name=id_guru]');
     var prevProg = keepVal ? String($p.val()||'') : '';
     var prevInst = keepVal ? String($i.val()||'') : '';
+    var prevGuru = keepVal ? String($g.val()||'') : '';
     $p.empty().append('<option value="">- Pilih Program -</option>');
     $i.empty().append('<option value="">- Pilih Instrumen -</option>');
+    $g.empty().append('<option value="">Pilih Guru</option>');
     svProgramList.forEach(function(r){
         if(!jenis || String(r.jenis_supervisi)===String(jenis)){
             $p.append('<option value="'+String(r.id_program)+'">'+$('<div>').text(r.nama_program).html()+' ('+String(r.jenis_supervisi)+')</option>');
@@ -389,9 +397,15 @@ function svFilterModalByJenis(jenis, keepVal) {
             $i.append('<option value="'+String(r.id_instrumen)+'">'+$('<div>').text(r.nama_instrumen).html()+' ('+String(r.jenis_supervisi)+')</option>');
         }
     });
+    svGuruList.forEach(function(r){
+        if(!jenis || !r.jenis_supervisi || String(r.jenis_supervisi)===String(jenis)){
+            $g.append('<option value="'+String(r.id_guru)+'">'+$('<div>').text(r.nama_guru).html()+'</option>');
+        }
+    });
     if(keepVal){
         if(prevProg) { svEnsureOption($p, prevProg, 'Program #'+prevProg); $p.val(prevProg); }
         if(prevInst) { svEnsureOption($i, prevInst, 'Instrumen #'+prevInst); $i.val(prevInst); }
+        if(prevGuru) { svEnsureOption($g, prevGuru, 'Guru #'+prevGuru); $g.val(prevGuru); }
         svFillFokusJadwal($p.val()||prevProg||'', false);
     } else {
         var firstProg2 = '';
@@ -402,10 +416,15 @@ function svFilterModalByJenis(jenis, keepVal) {
         svRefreshFokusJadwal(firstProg2 || '', null, firstIid2 || '', jenis || '');
     }
     svToggleFokusJadwalField(jenis);
+    if (window.GDSRefresh) {
+        try {
+            GDSRefresh($g);
+        } catch(e){}
+    }
 }
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
-    var dttablejadwal=$('#table-jadwal').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablejadwal.on('order.dt search.dt draw.dt',function(){var info=dttablejadwal.page.info();dttablejadwal.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    var dttablejadwal=$('#table-jadwal').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[[1,'desc']],columnDefs:[],responsive:false});dttablejadwal.on('order.dt search.dt draw.dt',function(){var info=dttablejadwal.page.info();dttablejadwal.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#modal-jadwal').on('shown.bs.modal', function(){ svInitFokusJadwalSelect2(); });
     function svAutoInstrumenByProgram(pid){
         var iid = svProgramInstrumen[String(pid)] || '';
@@ -459,7 +478,21 @@ $(document).ready(function () {
         svFilterModalByJenis(jenisVal, true);
         if (d.id_program) $('#form-jadwal [name=id_program]').val(String(d.id_program));
         if (d.id_instrumen) $('#form-jadwal [name=id_instrumen]').val(String(d.id_instrumen));
+        if (d.id_guru) $('#form-jadwal [name=id_guru]').val(String(d.id_guru));
         if (d.supervisor) $('#form-jadwal [name=supervisor]').val(String(d.supervisor));
+        if (d.status) $('#form-jadwal [name=status]').val(String(d.status));
+
+        if (window.GDSRefresh) {
+            try {
+                GDSRefresh($('#form-jadwal [name=jenis_supervisi]'));
+                GDSRefresh($('#form-jadwal [name=id_program]'));
+                GDSRefresh($('#form-jadwal [name=id_instrumen]'));
+                GDSRefresh($('#form-jadwal [name=id_guru]'));
+                GDSRefresh($('#form-jadwal [name=supervisor]'));
+                GDSRefresh($('#form-jadwal [name=status]'));
+            } catch(e){}
+        }
+
         if (d.fokus) {
             var selFokus = svParseFokusList(d.fokus);
             svRefreshFokusJadwal(d.id_program || '', selFokus, d.id_instrumen || '', jenisVal || '');
@@ -474,6 +507,18 @@ $(document).ready(function () {
         }
         $('#modal-jadwal .modal-title').text('Edit Jadwal Supervisi');
         $('#modal-jadwal').modal('show');
+        setTimeout(function() {
+            if (window.GDSRefresh) {
+                try {
+                    GDSRefresh($('#form-jadwal [name=jenis_supervisi]'));
+                    GDSRefresh($('#form-jadwal [name=id_program]'));
+                    GDSRefresh($('#form-jadwal [name=id_instrumen]'));
+                    GDSRefresh($('#form-jadwal [name=id_guru]'));
+                    GDSRefresh($('#form-jadwal [name=supervisor]'));
+                    GDSRefresh($('#form-jadwal [name=status]'));
+                } catch(e){}
+            }
+        }, 120);
     });
     $(document).on('click', '.btn-hapus', function () {
         var id = $(this).data('id');

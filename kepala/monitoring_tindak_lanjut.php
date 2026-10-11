@@ -131,7 +131,7 @@ if ($flash !== '') {
 }
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    var dttablemonitoring=$('#table-monitoring').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttablemonitoring.on('order.dt search.dt draw.dt',function(){var info=dttablemonitoring.page.info();dttablemonitoring.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+    var dttablemonitoring=$('#table-monitoring').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[[1,'desc']],columnDefs:[],responsive:false});dttablemonitoring.on('order.dt search.dt draw.dt',function(){var info=dttablemonitoring.page.info();dttablemonitoring.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
     $('#btn-tambah').on('click', function () {
         $('#form-monitoring')[0].reset();
         $('#form-monitoring [name=aksi]').val('tambah');
