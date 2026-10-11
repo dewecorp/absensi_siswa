@@ -201,7 +201,6 @@ include '../templates/sidebar.php';
                     ['Supervisi Terjadwal', $stats['terjadwal'], 'fas fa-calendar-alt', 'info'],
                     ['Supervisi Selesai', $stats['selesai'], 'fas fa-flag-checkered', 'success'],
                     ['Rata-rata Nilai', $stats['rata_nilai'], 'fas fa-star', 'primary'],
-                    ['Jumlah Temuan', $stats['jumlah_temuan'], 'fas fa-exclamation-triangle', 'danger'],
                     ['Tindak Lanjut Belum Selesai', $stats['tl_belum'], 'fas fa-tasks', 'warning'],
                     ['Tindak Lanjut Selesai', $stats['tl_selesai'], 'fas fa-clipboard-check', 'success'],
                 ];
