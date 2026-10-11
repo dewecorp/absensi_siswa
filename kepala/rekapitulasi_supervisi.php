@@ -116,35 +116,46 @@ try {
 } catch (Throwable $e) {
 }
 
+// Ambil data kelas per guru untuk ditampilkan di tabel rekap
+$kelasGuruAll = [];
+$mapelGuruAll = [];
+try {
+    $kelasGuruAll = sv_kelas_guru($pdo);
+    $mapelGuruAll = sv_mapel_guru($pdo);
+} catch (Throwable $e) {}
+
 // Kelompok rekap
 $kelompok = [];
 if ($f['kelompok'] === 'mapel') {
-    $mapelGuru = sv_mapel_guru($pdo);
     foreach ($rows as $r) {
         $idG = (int)$r['id_guru'];
-        $names = $mapelGuru[$idG] ?? ['(Tanpa Mapel)'];
+        $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? ''));
+        if ($mapelAktif === '') {
+            $mapelAktif = implode(', ', $mapelGuruAll[$idG] ?? ['-']);
+        }
+        if ($mapelAktif === '') $mapelAktif = '-';
+        $kelasAktif = implode(', ', $kelasGuruAll[$idG] ?? ['-']);
         $jenis = (string)$r['jenis_supervisi'];
-        foreach ($names as $nm) {
-            $key = $nm . '_' . $jenis;
-            if (!isset($kelompok[$key])) {
-                $kelompok[$key] = ['label' => $nm, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
-            }
-            if ($r['nilai'] !== null) {
-                $kelompok[$key]['nilai'] += (float)$r['nilai'];
-                $kelompok[$key]['count']++;
-            }
+        $key = $mapelAktif . '_' . $jenis . '_' . $kelasAktif;
+        if (!isset($kelompok[$key])) {
+            $kelompok[$key] = ['label' => $mapelAktif, 'kelas' => $kelasAktif, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
+        }
+        if ($r['nilai'] !== null) {
+            $kelompok[$key]['nilai'] += (float)$r['nilai'];
+            $kelompok[$key]['count']++;
         }
     }
 } elseif ($f['kelompok'] === 'kelas') {
     $kelasGuru = sv_kelas_guru($pdo);
     foreach ($rows as $r) {
         $idG = (int)$r['id_guru'];
-        $names = $kelasGuru[$idG] ?? ['(Tanpa Kelas)'];
+        $names = $kelasGuru[$idG] ?? ['-'];
+        $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? '')) ?: '-';
         $jenis = (string)$r['jenis_supervisi'];
         foreach ($names as $nm) {
-            $key = $nm . '_' . $jenis;
+            $key = $nm . '_' . $jenis . '_' . $mapelAktif;
             if (!isset($kelompok[$key])) {
-                $kelompok[$key] = ['label' => $nm, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
+                $kelompok[$key] = ['label' => $nm, 'kelas' => $nm, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
             }
             if ($r['nilai'] !== null) {
                 $kelompok[$key]['nilai'] += (float)$r['nilai'];
@@ -154,10 +165,13 @@ if ($f['kelompok'] === 'mapel') {
     }
 } elseif ($f['kelompok'] === 'jenis') {
     foreach ($rows as $r) {
+        $idG = (int)$r['id_guru'];
+        $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? '')) ?: '-';
+        $kelasAktif = implode(', ', $kelasGuruAll[$idG] ?? ['-']);
         $label = $r['jenis_supervisi'];
-        $key = $label;
+        $key = $label . '_' . $mapelAktif;
         if (!isset($kelompok[$key])) {
-            $kelompok[$key] = ['label' => $label, 'jenis' => $label, 'nilai' => 0, 'count' => 0];
+            $kelompok[$key] = ['label' => $label, 'kelas' => $kelasAktif, 'jenis' => $label, 'nilai' => 0, 'count' => 0];
         }
         if ($r['nilai'] !== null) {
             $kelompok[$key]['nilai'] += (float)$r['nilai'];
@@ -166,11 +180,14 @@ if ($f['kelompok'] === 'mapel') {
     }
 } else {
     foreach ($rows as $r) {
+        $idG = (int)$r['id_guru'];
         $label = $r['nama_guru'] ?: ($r['unit_bagian'] ?: '-');
+        $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? '')) ?: '-';
+        $kelasAktif = implode(', ', $kelasGuruAll[$idG] ?? ['-']);
         $jenis = (string)$r['jenis_supervisi'];
         $key = $label . '_' . $jenis;
         if (!isset($kelompok[$key])) {
-            $kelompok[$key] = ['label' => $label, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
+            $kelompok[$key] = ['label' => $label, 'kelas' => $kelasAktif, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
         }
         if ($r['nilai'] !== null) {
             $kelompok[$key]['nilai'] += (float)$r['nilai'];
@@ -317,6 +334,7 @@ include '../templates/sidebar.php';
                                 <tr>
                                     <th width="5%">No</th>
                                     <th><?= htmlspecialchars(ucfirst($f['kelompok'])) ?></th>
+                                    <th>Kelas</th>
                                     <th>Jenis Supervisi</th>
                                     <th>Nilai Rata-rata</th>
                                     <th>Predikat</th>
@@ -327,6 +345,7 @@ include '../templates/sidebar.php';
                                     <tr>
                                         <td class="text-center"></td>
                                         <td><?= htmlspecialchars($k['label']) ?></td>
+                                        <td><?= htmlspecialchars($k['kelas'] ?? '-') ?></td>
                                         <td><span class="badge badge-info"><?= htmlspecialchars($k['jenis'] ?? '-') ?></span></td>
                                         <td><?= $k['rata'] !== null ? htmlspecialchars(number_format((float)$k['rata'], 2)) : '-' ?></td>
                                         <td><span class="badge badge-primary"><?= htmlspecialchars($k['predikat']) ?></span></td>
