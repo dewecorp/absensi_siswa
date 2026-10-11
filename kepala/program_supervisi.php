@@ -273,7 +273,6 @@ function svApplyTemplate(kode) {
 
 $(document).ready(function () {
     var dttableprogram=$('#table-program').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttableprogram.on('order.dt search.dt draw.dt',function(){var info=dttableprogram.page.info();dttableprogram.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
-    $('#sv-filter-ta').on('change', function () { var v = $(this).val(); if (v) window.location.href = 'program_supervisi.php?tahun_ajaran=' + encodeURIComponent(v); });
 
     $('#modal-program').on('shown.bs.modal', function () {
 
@@ -396,18 +395,28 @@ include '../templates/sidebar.php';
             <input type="hidden" id="svEmail" value="<?= htmlspecialchars($school_profile['email_madrasah'] ?? '', ENT_QUOTES) ?>">
             <input type="hidden" id="svWebsite" value="<?= htmlspecialchars($school_profile['website_madrasah'] ?? '', ENT_QUOTES) ?>">
 
+            <div class="card mb-3">
+                <div class="card-body p-3">
+                    <form method="GET" class="form-row align-items-end">
+                        <div class="form-group col-md-4 mb-0">
+                            <label class="small font-weight-bold">Tahun Ajaran</label>
+                            <select class="form-control form-control-sm" name="tahun_ajaran" id="sv-filter-ta" onchange="this.form.submit()">
+                                <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <h4>Daftar Program Supervisi</h4>
                     <div class="card-header-action">
-                        <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
-                        <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button class="btn btn-success btn-sm" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn btn-warning btn-sm" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
                         <?php if ($can_manage): ?>
-                        <button class="btn btn-info" id="btn-seed" type="button"><i class="fas fa-magic"></i> Muat Template</button>
-                         <select class="form-control form-control-sm ml-2" id="sv-filter-ta" style="width:140px;display:inline-block;">
-                            <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
-                        </select>
-                        <button class="btn btn-primary" id="btn-tambah" type="button"><i class="fas fa-plus"></i> Tambah</button>
+                        <button class="btn btn-info btn-sm" id="btn-seed" type="button"><i class="fas fa-magic"></i> Muat Template</button>
+                        <button class="btn btn-primary btn-sm" id="btn-tambah" type="button"><i class="fas fa-plus"></i> Tambah</button>
                         <?php endif; ?>
                     </div>
                 </div>

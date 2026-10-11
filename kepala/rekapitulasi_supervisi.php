@@ -219,35 +219,35 @@ include '../templates/sidebar.php';
                                 <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $f['tahun_ajaran'] ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Semester</label>
                             <select class="form-control" name="semester">
                                 <option value="">Semua</option>
                                 <?php foreach (sv_semester_options() as $s): ?><option value="<?= htmlspecialchars($s, ENT_QUOTES) ?>" <?= $s === $f['semester'] ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Guru</label>
                             <select class="form-control" name="guru">
                                 <option value="">Semua</option>
                                 <?php foreach ($guru_list as $g): ?><option value="<?= (int)$g['id_guru'] ?>" <?= (string)$g['id_guru'] === $f['guru'] ? 'selected' : '' ?>><?= htmlspecialchars($g['nama_guru']) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Jenis</label>
                             <select class="form-control" name="jenis">
                                 <option value="">Semua</option>
                                 <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>" <?= $j === $f['jenis'] ? 'selected' : '' ?>><?= $j ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Predikat</label>
                             <select class="form-control" name="predikat">
                                 <option value="">Semua</option>
                                 <?php foreach (['A - Amat Baik', 'B - Baik', 'C - Cukup', 'D - Kurang'] as $p): ?><option value="<?= $p ?>" <?= $p === $f['predikat'] ? 'selected' : '' ?>><?= $p ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Status</label>
                             <select class="form-control" name="status">
                                 <option value="">Semua</option>
@@ -255,7 +255,7 @@ include '../templates/sidebar.php';
                                 <option value="Draft" <?= $f['status'] === 'Draft' ? 'selected' : '' ?>>Draft</option>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Rekap Per</label>
                             <select class="form-control" name="kelompok">
                                 <option value="guru" <?= $f['kelompok'] === 'guru' ? 'selected' : '' ?>>Guru</option>
@@ -264,39 +264,39 @@ include '../templates/sidebar.php';
                                 <option value="jenis" <?= $f['kelompok'] === 'jenis' ? 'selected' : '' ?>>Jenis Supervisi</option>
                             </select>
                         </div>
-                        <div class="form-group col-12 mb-2">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Terapkan</button>
-                            <a href="rekapitulasi_supervisi.php" class="btn btn-light">Reset</a>
+                        <div class="form-group col-md-3 mb-2 d-flex align-items-end">
+                            <div>
+                                <a href="rekapitulasi_supervisi.php" class="btn btn-light"><i class="fas fa-undo"></i> Reset</a>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <div class="row">
-                <?php
-                $cards = [
-                    ['Jumlah Guru', $ringkas['jumlah_guru'], 'primary'],
-                    ['Sudah Disupervisi', $ringkas['sudah'], 'success'],
-                    ['Belum Disupervisi', $ringkas['belum'], 'warning'],
-                    ['Jumlah Supervisi', $ringkas['jumlah_supervisi'], 'info'],
-                    ['Nilai Tertinggi', $ringkas['tertinggi'] !== null ? number_format($ringkas['tertinggi'], 2) : '-', 'success'],
-                    ['Nilai Terendah', $ringkas['terendah'] !== null ? number_format($ringkas['terendah'], 2) : '-', 'danger'],
-                    ['Nilai Rata-rata', $ringkas['rata'] !== null ? number_format($ringkas['rata'], 2) : '-', 'primary'],
-                    ['Jumlah Temuan', $ringkas['temuan'], 'danger'],
-                    ['Tindak Lanjut Selesai', $ringkas['tl_selesai'], 'success'],
-                    ['Tindak Lanjut Belum Selesai', $ringkas['tl_belum'], 'warning'],
-                ];
-                foreach ($cards as $c): ?>
-                    <div class="col-6 col-md-4 col-lg-3">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-<?= $c[2] ?>"><i class="fas fa-chart-bar"></i></div>
-                            <div class="card-wrap">
-                                <div class="card-header"><h4><?= htmlspecialchars($c[0]) ?></h4></div>
-                                <div class="card-body"><?= htmlspecialchars((string)$c[1]) ?></div>
-                            </div>
-                        </div>
+            <div class="card mb-3">
+                <div class="card-body p-3">
+                    <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
+                        <span class="text-dark font-weight-bold mr-2"><i class="fas fa-chart-pie mr-1 text-primary"></i> Ringkasan:</span>
+                        <?php
+                        $badges = [
+                            ['Guru', $ringkas['jumlah_guru'], 'secondary'],
+                            ['Sudah', $ringkas['sudah'], 'success'],
+                            ['Belum', $ringkas['belum'], 'warning'],
+                            ['Supervisi', $ringkas['jumlah_supervisi'], 'info'],
+                            ['Tertinggi', $ringkas['tertinggi'] !== null ? number_format($ringkas['tertinggi'], 2) : '-', 'success'],
+                            ['Terendah', $ringkas['terendah'] !== null ? number_format($ringkas['terendah'], 2) : '-', 'danger'],
+                            ['Rata-rata', $ringkas['rata'] !== null ? number_format($ringkas['rata'], 2) : '-', 'primary'],
+                            ['Temuan', $ringkas['temuan'], 'danger'],
+                            ['TL Selesai', $ringkas['tl_selesai'], 'success'],
+                            ['TL Belum', $ringkas['tl_belum'], 'warning'],
+                        ];
+                        foreach ($badges as $b): ?>
+                            <span class="badge badge-<?= $b[2] ?> px-3 py-2" style="font-size: 14px; font-weight: 700; letter-spacing: 0.3px;">
+                                <?= htmlspecialchars($b[0]) ?>: <strong style="font-size: 15px;"><?= htmlspecialchars((string)$b[1]) ?></strong>
+                            </span>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
+                </div>
             </div>
 
             <div class="card">

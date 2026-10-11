@@ -153,19 +153,6 @@ if ($flash !== '') {
 $js_page[] = <<<'JS'
 $(document).ready(function () {
     var dttableindikator=$('#table-indikator').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});dttableindikator.on('order.dt search.dt draw.dt',function(){var info=dttableindikator.page.info();dttableindikator.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
-    $('#filter-instrumen').on('change', function () {
-        var v = $(this).val();
-        if (v) window.location.href = 'indikator_instrumen.php?id_instrumen=' + v;
-        else window.location.href = 'indikator_instrumen.php';
-    });
-    $('#filter-komponen').on('change', function () {
-        var v = $(this).val();
-        if (v) window.location.href = 'indikator_instrumen.php?id_komponen=' + v;
-        else {
-            var ins = $('#filter-instrumen').val();
-            window.location.href = ins ? 'indikator_instrumen.php?id_instrumen=' + ins : 'indikator_instrumen.php';
-        }
-    });
     $('#btn-tambah').on('click', function () {
         $('#form-indikator')[0].reset();
         $('#form-indikator [name=aksi]').val('tambah');
@@ -227,25 +214,43 @@ include '../templates/sidebar.php';
                 </div>
             <?php endif; ?>
 
+            <div class="card mb-3">
+                <div class="card-body p-3">
+                    <form method="GET" class="form-row align-items-end">
+                        <div class="form-group col-md-4 mb-2">
+                            <label class="small font-weight-bold">Filter Instrumen</label>
+                            <select class="form-control form-control-sm" name="id_instrumen" id="filter-instrumen" onchange="this.form.submit()">
+                                <option value="">Semua Instrumen</option>
+                                <?php foreach ($instrumen_list as $ins): ?>
+                                    <option value="<?= (int)$ins['id_instrumen'] ?>" <?= $id_instrumen_filter === (int)$ins['id_instrumen'] ? 'selected' : '' ?>><?= htmlspecialchars($ins['kode_instrumen'] . ' - ' . $ins['nama_instrumen']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4 mb-2">
+                            <label class="small font-weight-bold">Filter Komponen</label>
+                            <select class="form-control form-control-sm" name="id_komponen" id="filter-komponen" onchange="this.form.submit()">
+                                <option value="">Semua Komponen</option>
+                                <?php foreach ($komponen_list as $kp): ?>
+                                    <?php if ($id_instrumen_filter && (int)$kp['id_instrumen'] !== $id_instrumen_filter) continue; ?>
+                                    <option value="<?= (int)$kp['id_komponen'] ?>" <?= $id_komponen === (int)$kp['id_komponen'] ? 'selected' : '' ?>><?= htmlspecialchars($kp['kode_komponen'] . ' - ' . $kp['nama_komponen']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4 mb-2 d-flex align-items-end">
+                            <div>
+                                <a href="indikator_instrumen.php" class="btn btn-light btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <h4>Daftar Indikator Penilaian</h4>
-                    <div class="card-header-action d-flex align-items-center">
-                        <select class="form-control form-control-sm mr-2" id="filter-instrumen" style="width:200px;">
-                            <option value="">Semua Instrumen</option>
-                            <?php foreach ($instrumen_list as $ins): ?>
-                                <option value="<?= (int)$ins['id_instrumen'] ?>" <?= $id_instrumen_filter === (int)$ins['id_instrumen'] ? 'selected' : '' ?>><?= htmlspecialchars($ins['kode_instrumen'] . ' - ' . $ins['nama_instrumen']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <select class="form-control form-control-sm mr-2" id="filter-komponen" style="width:220px;">
-                            <option value="">Semua Komponen</option>
-                            <?php foreach ($komponen_list as $kp): ?>
-                                <?php if ($id_instrumen_filter && (int)$kp['id_instrumen'] !== $id_instrumen_filter) continue; ?>
-                                <option value="<?= (int)$kp['id_komponen'] ?>" <?= $id_komponen === (int)$kp['id_komponen'] ? 'selected' : '' ?>><?= htmlspecialchars($kp['kode_komponen'] . ' - ' . $kp['nama_komponen']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button class="btn btn-success btn-sm mr-1" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
-                        <button class="btn btn-warning btn-sm mr-1" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <div class="card-header-action">
+                        <button class="btn btn-success btn-sm" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn btn-warning btn-sm" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
                         <?php if ($can_manage): ?>
                         <button class="btn btn-primary btn-sm" id="btn-tambah" type="button"><i class="fas fa-plus"></i> Tambah</button>
                         <?php endif; ?>

@@ -551,9 +551,9 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-body">
                     <form method="GET" class="form-row align-items-end">
-                        <div class="form-group col-md-2 mb-2"><label class="small font-weight-bold">Dari Tanggal</label><input type="date" class="form-control" name="tanggal_dari" value="<?= htmlspecialchars($filter['tanggal_dari'], ENT_QUOTES) ?>"></div>
-                        <div class="form-group col-md-2 mb-2"><label class="small font-weight-bold">Sampai Tanggal</label><input type="date" class="form-control" name="tanggal_sampai" value="<?= htmlspecialchars($filter['tanggal_sampai'], ENT_QUOTES) ?>"></div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2"><label class="small font-weight-bold">Dari Tanggal</label><input type="date" class="form-control" name="tanggal_dari" value="<?= htmlspecialchars($filter['tanggal_dari'], ENT_QUOTES) ?>"></div>
+                        <div class="form-group col-md-3 mb-2"><label class="small font-weight-bold">Sampai Tanggal</label><input type="date" class="form-control" name="tanggal_sampai" value="<?= htmlspecialchars($filter['tanggal_sampai'], ENT_QUOTES) ?>"></div>
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Guru/PTK</label>
                             <select class="form-control" name="guru">
                                 <option value="">Semua</option>
@@ -562,30 +562,31 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Jenis</label>
                             <select class="form-control" name="jenis">
                                 <option value="">Semua</option>
                                 <?php foreach (sv_jenis_list() as $j): ?><option value="<?= $j ?>" <?= $j === $filter['jenis'] ? 'selected' : '' ?>><?= $j ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Semester</label>
                             <select class="form-control" name="semester">
                                 <option value="">Semua</option>
                                 <?php foreach (sv_semester_options() as $s): ?><option value="<?= htmlspecialchars($s, ENT_QUOTES) ?>" <?= $s === $filter['semester'] ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Tahun Ajaran</label>
                             <select class="form-control" name="tahun_ajaran">
                                 <option value="">Semua</option>
                                 <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter['tahun_ajaran'] ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-12 mb-2">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
-                            <a href="jadwal_supervisi.php" class="btn btn-light">Reset</a>
+                        <div class="form-group col-md-3 mb-2 d-flex align-items-end">
+                            <div>
+                                <a href="jadwal_supervisi.php" class="btn btn-light"><i class="fas fa-undo"></i> Reset</a>
+                            </div>
                         </div>
                     </form>
                 </div>

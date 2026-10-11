@@ -74,9 +74,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = ['type' => 'success', 'text' => 'Pengaturan tanggal cetak disimpan.' . ($tDetail === '' && $tHasil === '' ? ' (kosong = tanggal saat cetak)' : '')];
     }
 }
+$filter_kategori = trim((string)($_GET['kategori'] ?? ''));
+if ($filter_kategori !== '' && !array_key_exists($filter_kategori, sv_hasil_kategori_list())) {
+    $filter_kategori = '';
+}
 $tglDetail = sv_pengaturan_get($pdo, 'tanggal_cetak_detail', '');
 $tglHasil = sv_pengaturan_get($pdo, 'tanggal_cetak_hasil', '');
-$rows = sv_hasil_master_rows($pdo);
+if ($filter_kategori !== '') {
+    try {
+        $stmtF = $pdo->prepare("SELECT * FROM tb_sv_hasil_master WHERE kategori = ? ORDER BY urutan ASC, teks ASC");
+        $stmtF->execute([$filter_kategori]);
+        $rows = $stmtF->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $rows = sv_hasil_master_rows($pdo);
+    }
+} else {
+    $rows = sv_hasil_master_rows($pdo);
+}
 $kategori_list = sv_hasil_kategori_list();
 $css_libs = ['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
 $js_libs = ['https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js', 'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js'];
@@ -123,9 +137,30 @@ include '../templates/sidebar.php';
             <?php echo render_breadcrumb(); ?>
         </div>
         <div class="section-body">
+            <div class="card mb-3">
+                <div class="card-body p-3">
+                    <form method="GET" class="form-row align-items-end">
+                        <div class="form-group col-md-4 mb-0">
+                            <label class="small font-weight-bold">Filter Kategori</label>
+                            <select class="form-control form-control-sm" name="kategori" onchange="this.form.submit()">
+                                <option value="">Semua Kategori</option>
+                                <?php foreach ($kategori_list as $k => $l): ?>
+                                    <option value="<?= htmlspecialchars($k, ENT_QUOTES) ?>" <?= $k === $filter_kategori ? 'selected' : '' ?>><?= htmlspecialchars($l) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4 mb-0 d-flex align-items-end">
+                            <div>
+                                <a href="master_supervisi.php" class="btn btn-light btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
-                    <h4>Data Master Supervisi (Kekuatan / Kelemahan / Rekomendasi / Prioritas / Rencana Tindakan / Monitoring)</h4>
+                    <h4>Master Supervisi</h4>
                     <div class="card-header-action">
                         <form method="POST" class="d-inline"><button type="submit" name="seed_master" value="1" class="btn btn-info btn-sm"><i class="fas fa-database"></i> Muat Template</button></form>
                         <button type="button" class="btn btn-primary btn-sm ml-1" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah</button>

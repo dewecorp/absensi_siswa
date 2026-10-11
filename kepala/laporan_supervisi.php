@@ -203,13 +203,13 @@ include '../templates/sidebar.php';
             <div class="card">
                 <div class="card-body">
                     <form method="GET" class="form-row align-items-end">
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Tahun Ajaran</label>
                             <select class="form-control" name="tahun_ajaran">
                                 <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Guru/PTK</label>
                             <select class="form-control" name="guru">
                                 <option value="">Semua</option>
@@ -231,9 +231,10 @@ include '../templates/sidebar.php';
                                 <option value="Draft" <?= $filter_status === 'Draft' ? 'selected' : '' ?>>Draft</option>
                             </select>
                         </div>
-                        <div class="form-group col-md-3 mb-2">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
-                            <a href="laporan_supervisi.php" class="btn btn-light">Reset</a>
+                        <div class="form-group col-md-3 mb-2 d-flex align-items-end">
+                            <div>
+                                <a href="laporan_supervisi.php" class="btn btn-light"><i class="fas fa-undo"></i> Reset</a>
+                            </div>
                         </div>
                     </form>
                 </div>

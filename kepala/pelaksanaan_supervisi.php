@@ -875,20 +875,20 @@ include '../templates/sidebar.php';
                 <div class="card-body">
                     <form method="GET" class="form-row align-items-end">
                         <input type="hidden" name="jenis" value="<?= htmlspecialchars($sv_jenis, ENT_QUOTES) ?>">
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Tahun Ajaran</label>
                             <select class="form-control" name="tahun_ajaran">
                                 <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?><option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Guru/PTK</label>
                             <select class="form-control" name="guru">
                                 <option value="">Semua</option>
                                 <?php foreach ($guru_list as $g): ?><option value="<?= (int)$g['id_guru'] ?>" <?= (string)$g['id_guru'] === $filter_guru ? 'selected' : '' ?>><?= htmlspecialchars($g['nama_guru']) ?></option><?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2">
+                        <div class="form-group col-md-3 mb-2">
                             <label class="small font-weight-bold">Status</label>
                             <select class="form-control" name="status">
                                 <option value="">Semua</option>
@@ -896,11 +896,18 @@ include '../templates/sidebar.php';
                                 <option value="Selesai" <?= $filter_status === 'Selesai' ? 'selected' : '' ?>>Selesai</option>
                             </select>
                         </div>
-                        <div class="form-group col-md-2 mb-2"><label class="small font-weight-bold">Dari</label><input type="date" class="form-control" name="tanggal_dari" value="<?= htmlspecialchars($filter_dari, ENT_QUOTES) ?>"></div>
-                        <div class="form-group col-md-2 mb-2"><label class="small font-weight-bold">Sampai</label><input type="date" class="form-control" name="tanggal_sampai" value="<?= htmlspecialchars($filter_sampai, ENT_QUOTES) ?>"></div>
                         <div class="form-group col-md-3 mb-2">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
-                            <a href="<?= htmlspecialchars(basename(__FILE__), ENT_QUOTES) ?>?jenis=<?= urlencode($sv_jenis) ?>" class="btn btn-light">Reset</a>
+                            <label class="small font-weight-bold">Dari Tanggal</label>
+                            <input type="date" class="form-control" name="tanggal_dari" value="<?= htmlspecialchars($filter_dari, ENT_QUOTES) ?>">
+                        </div>
+                        <div class="form-group col-md-3 mb-2">
+                            <label class="small font-weight-bold">Sampai Tanggal</label>
+                            <input type="date" class="form-control" name="tanggal_sampai" value="<?= htmlspecialchars($filter_sampai, ENT_QUOTES) ?>">
+                        </div>
+                        <div class="form-group col-md-3 mb-2 d-flex align-items-end">
+                            <div>
+                                <a href="<?= htmlspecialchars(basename(__FILE__), ENT_QUOTES) ?>?jenis=<?= urlencode($sv_jenis) ?>" class="btn btn-light"><i class="fas fa-undo"></i> Reset</a>
+                            </div>
                         </div>
                     </form>
                 </div>
