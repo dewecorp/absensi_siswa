@@ -91,8 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             foreach ($tindak as $t) $html .= '<tr><td>' . $h($t['bentuk_tindak_lanjut']) . '</td><td>' . $h($t['rencana_tindakan']) . '</td><td>' . $h($t['target_selesai'] ? date('d/m/Y', strtotime($t['target_selesai'])) : '-') . '</td><td>' . $h($t['status']) . '</td></tr>';
             $html .= '</tbody></table>';
             if ($monitoring) {
-                $html .= '<p><strong>Hasil monitoring:</strong></p><table><thead><tr><th>Tanggal</th><th>Ke</th><th>Hasil</th><th>Nilai Sebelum / Sesudah</th></tr></thead><tbody>';
-                foreach ($monitoring as $m) $html .= '<tr><td>' . $h($m['tanggal_monitoring'] ? date('d/m/Y', strtotime($m['tanggal_monitoring'])) : '-') . '</td><td>' . $h($m['monitoring_ke']) . '</td><td>' . $h($m['hasil_monitoring']) . '</td><td>' . $h(($m['nilai_sebelum'] ?? '-') . ' / ' . ($m['nilai_sesudah'] ?? '-')) . '</td></tr>';
+                $html .= '<p><strong>Hasil monitoring:</strong></p><table><thead><tr><th>Tanggal</th><th>Ke</th><th>Tindakan</th><th>Target</th><th>Hasil</th><th>Perubahan</th></tr></thead><tbody>';
+                foreach ($monitoring as $m) $html .= '<tr><td>' . $h($m['tanggal_monitoring'] ? date('d/m/Y', strtotime($m['tanggal_monitoring'])) : '-') . '</td><td>' . $h($m['monitoring_ke']) . '</td><td>' . $h($m['tindakan'] ?? '-') . '</td><td>' . $h($m['target_perbaikan'] ?? '-') . '</td><td>' . $h($m['hasil_monitoring']) . '</td><td>' . $h($m['perubahan'] ?? '-') . '</td></tr>';
                 $html .= '</tbody></table>';
             }
         } else $html .= '<p>Tindak lanjut: -</p>';

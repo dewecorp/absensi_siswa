@@ -42,18 +42,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
             $id_guru = null;
             $nama_guru = '';
             $unit_bagian = '';
-            foreach ($pelaksanaan_list as $pl) {
-                if ((int)$pl['id_pelaksanaan'] === $id_pelaksanaan) {
-                    $nama_guru = (string)$pl['nama_guru'];
-                    $unit_bagian = (string)$pl['unit_bagian'];
-                    break;
-                }
-            }
             try {
-                $st = $pdo->prepare("SELECT id_guru FROM tb_sv_pelaksanaan WHERE id_pelaksanaan = ? LIMIT 1");
+                $st = $pdo->prepare("SELECT id_guru, nama_guru, unit_bagian FROM tb_sv_pelaksanaan WHERE id_pelaksanaan = ? LIMIT 1");
                 $st->execute([$id_pelaksanaan]);
-                $id_guru = (int)($st->fetchColumn() ?: 0) ?: null;
+                if ($plRow = $st->fetch(PDO::FETCH_ASSOC)) {
+                    $id_guru = (int)($plRow['id_guru'] ?: 0) ?: null;
+                    $nama_guru = (string)($plRow['nama_guru'] ?? '');
+                    $unit_bagian = (string)($plRow['unit_bagian'] ?? '');
+                }
             } catch (Throwable $e) {
+            }
+            if ($aksi === 'edit' && $nama_guru === '' && $unit_bagian === '') {
+                try {
+                    $eidTmp = (int)($_POST['id_tindak_lanjut'] ?? 0);
+                    $stOld = $pdo->prepare("SELECT id_guru, nama_guru, unit_bagian FROM tb_sv_tindak_lanjut WHERE id_tindak_lanjut = ? LIMIT 1");
+                    $stOld->execute([$eidTmp]);
+                    if ($oldRow = $stOld->fetch(PDO::FETCH_ASSOC)) {
+                        if (!$id_guru) {
+                            $id_guru = (int)($oldRow['id_guru'] ?: 0) ?: null;
+                        }
+                        $nama_guru = (string)($oldRow['nama_guru'] ?? '');
+                        $unit_bagian = (string)($oldRow['unit_bagian'] ?? '');
+                    }
+                } catch (Throwable $e) {}
             }
 
             $bukti = trim((string)($_POST['bukti'] ?? ''));
@@ -183,20 +194,43 @@ $filter_status = trim((string)($_GET['status'] ?? ''));
 $where = [];
 $params = [];
 if ($filter_status !== '') {
-    $where[] = 'status = ?';
+    $where[] = 't.status = ?';
     $params[] = $filter_status;
 }
 $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 
 $rows = [];
 try {
-    $stmt = $pdo->prepare("SELECT t.*, p.jenis_supervisi 
-        FROM tb_sv_tindak_lanjut t 
-        LEFT JOIN tb_sv_pelaksanaan p ON p.id_pelaksanaan = t.id_pelaksanaan 
-        {$whereSql} 
+    $stmt = $pdo->prepare("SELECT t.*, p.jenis_supervisi, p.nama_guru AS p_nama_guru, p.unit_bagian AS p_unit_bagian,
+            p.tanggal AS p_tanggal, p.id_guru AS p_id_guru
+        FROM tb_sv_tindak_lanjut t
+        LEFT JOIN tb_sv_pelaksanaan p ON p.id_pelaksanaan = t.id_pelaksanaan
+        {$whereSql}
         ORDER BY t.target_selesai ASC, t.id_tindak_lanjut DESC");
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows as &$rr) {
+        if (trim((string)($rr['nama_guru'] ?? '')) === '' && trim((string)($rr['p_nama_guru'] ?? '')) !== '') {
+            $rr['nama_guru'] = $rr['p_nama_guru'];
+        }
+        if (trim((string)($rr['unit_bagian'] ?? '')) === '' && trim((string)($rr['p_unit_bagian'] ?? '')) !== '') {
+            $rr['unit_bagian'] = $rr['p_unit_bagian'];
+        }
+        if (empty($rr['id_guru']) && !empty($rr['p_id_guru'])) {
+            $rr['id_guru'] = $rr['p_id_guru'];
+        }
+        if (empty($rr['jenis_supervisi']) && !empty($rr['p_tanggal'])) {
+            $rr['tanggal'] = $rr['p_tanggal'];
+        } elseif (!empty($rr['p_tanggal']) && empty($rr['tanggal'])) {
+            $rr['tanggal'] = $rr['p_tanggal'];
+        }
+    }
+    unset($rr);
+    try {
+        $pdo->exec("UPDATE tb_sv_tindak_lanjut t JOIN tb_sv_pelaksanaan p ON p.id_pelaksanaan = t.id_pelaksanaan
+            SET t.nama_guru = p.nama_guru, t.unit_bagian = p.unit_bagian, t.id_guru = p.id_guru
+            WHERE (t.nama_guru IS NULL OR TRIM(t.nama_guru) = '') AND p.nama_guru IS NOT NULL AND TRIM(p.nama_guru) <> ''");
+    } catch (Throwable $e) {}
 } catch (Throwable $e) {
 }
 
@@ -209,6 +243,7 @@ $tl_pelaksanaan_js = [];
 foreach ($pelaksanaan_list as $pl) {
     $tl_pelaksanaan_js[(int)$pl['id_pelaksanaan']] = [
         'label' => '#' . (int)$pl['id_pelaksanaan'] . ' - ' . ($pl['nama_guru'] ?: ($pl['unit_bagian'] ?: '-')) . ' (' . $pl['jenis_supervisi'] . ', ' . ($pl['tanggal'] ? date('d/m/Y', strtotime($pl['tanggal'])) : '-') . ')',
+        'temuan' => (string)($pl['temuan'] ?? ''),
         'rekomendasi' => (string)($pl['rekomendasi'] ?? ''),
     ];
 }
@@ -232,12 +267,16 @@ $(document).ready(function () {
             if (!tlPelaksanaan[kId]) {
                 var oEdit = document.createElement('option');
                 oEdit.value = kId;
-                var guruLbl = keepData.nama_guru || keepData.unit_bagian || '';
-                if (!guruLbl && keepData.id_guru) guruLbl = 'Guru #' + keepData.id_guru;
+                var guruLbl = keepData.nama_guru || keepData.p_nama_guru || keepData.unit_bagian || keepData.p_unit_bagian || '';
+                if (!guruLbl && (keepData.id_guru || keepData.p_id_guru)) guruLbl = 'Guru #' + (keepData.id_guru || keepData.p_id_guru);
                 if (!guruLbl) guruLbl = '-';
                 var jenisLbl = keepData.jenis_supervisi || '';
-                var tglLbl = keepData.tanggal ? keepData.tanggal : '';
-                oEdit.textContent = '#' + kId + ' - ' + guruLbl + (jenisLbl ? ' (' + jenisLbl + (tglLbl ? ', ' + tglLbl : '') + ')' : '');
+                var tglLbl = keepData.tanggal || keepData.p_tanggal || keepData.target_selesai || '';
+                if (tglLbl && tglLbl.length >= 10 && tglLbl[4] === '-') {
+                    var tp = tglLbl.substring(0, 10).split('-');
+                    tglLbl = tp[2] + '/' + tp[1] + '/' + tp[0];
+                }
+                oEdit.textContent = '#' + kId + ' - ' + guruLbl + ' (' + (jenisLbl || '-') + (tglLbl ? ', ' + tglLbl : '') + ')';
                 tlSel.appendChild(oEdit);
             }
         }
@@ -245,8 +284,13 @@ $(document).ready(function () {
     }
     function tlSyncRek() {
         var id = tlSel ? tlSel.value : '';
+        if ($('#form-tl [name=aksi]').val() !== 'tambah') return;
+        var elT = document.getElementById('tl_temuan');
+        if (elT && !elT.value) {
+            elT.value = (id && tlPelaksanaan[id]) ? (tlPelaksanaan[id].temuan || '') : '';
+        }
         var el = document.getElementById('tl_rekomendasi');
-        if (el && (!el.value || $('#form-tl [name=aksi]').val() === 'tambah')) {
+        if (el && !el.value) {
             el.value = (id && tlPelaksanaan[id]) ? (tlPelaksanaan[id].rekomendasi || '') : '';
         }
     }
@@ -516,6 +560,7 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="modal-body">
                     <div class="form-group"><label>ID Supervisi (Pelaksanaan)</label><select class="form-control" name="id_pelaksanaan" id="tl_id_pelaksanaan" required></select></div>
+                    <div class="form-group"><label>Temuan</label><textarea class="form-control" name="temuan" id="tl_temuan" rows="2"></textarea></div>
                     <div class="form-group"><label>Rekomendasi</label><textarea class="form-control" name="rekomendasi" id="tl_rekomendasi" rows="2"></textarea></div>
                     <div class="form-row">
                         <div class="form-group col-md-6">

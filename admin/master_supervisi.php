@@ -125,7 +125,7 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <div class="card">
                 <div class="card-header">
-                    <h4>Data Master Supervisi (Kekuatan / Kelemahan / Rekomendasi / Prioritas / Rencana Tindakan)</h4>
+                    <h4>Data Master Supervisi (Kekuatan / Kelemahan / Rekomendasi / Prioritas / Rencana Tindakan / Monitoring)</h4>
                     <div class="card-header-action">
                         <form method="POST" class="d-inline"><button type="submit" name="seed_master" value="1" class="btn btn-info btn-sm"><i class="fas fa-database"></i> Muat Template</button></form>
                         <button type="button" class="btn btn-primary btn-sm ml-1" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah</button>

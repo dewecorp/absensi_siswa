@@ -126,6 +126,120 @@ if (!function_exists('sv_status_tindak_lanjut_list')) {
     }
 }
 
+if (!function_exists('sv_tindakan_monitoring_list')) {
+    function sv_tindakan_monitoring_list(?PDO $pdo = null): array
+    {
+        if ($pdo) {
+            try {
+                $opts = sv_hasil_options($pdo, 'tindakan_monitoring');
+                if (!empty($opts)) return $opts;
+            } catch (Throwable $e) {}
+        }
+        return [
+            'Observasi kelas lanjutan untuk verifikasi perbaikan pembelajaran',
+            'Wawancara/refleksi dengan guru terkait progres tindak lanjut',
+            'Pemeriksaan kelengkapan administrasi dan perangkat pembelajaran',
+            'Pendampingan praktik pembelajaran di kelas',
+            'Diskusi rekan sejawat (peer coaching) dan umpan balik',
+            'Evaluasi penggunaan media dan metode pembelajaran baru',
+            'Pemantauan konsistensi pengelolaan kelas dan asesmen',
+            'Konsultasi intensif dengan supervisor/pengawas',
+            'Verifikasi dokumen bukti tindak lanjut',
+            'Supervisi ulang terjadwal bila target belum tercapai'
+        ];
+    }
+}
+
+if (!function_exists('sv_target_perbaikan_list')) {
+    function sv_target_perbaikan_list(?PDO $pdo = null): array
+    {
+        if ($pdo) {
+            try {
+                $opts = sv_hasil_options($pdo, 'target_perbaikan');
+                if (!empty($opts)) return $opts;
+            } catch (Throwable $e) {}
+        }
+        return [
+            'RPP/Modul ajar lengkap dan terdokumentasi',
+            'Media pembelajaran variatif dan digunakan konsisten',
+            'Manajemen kelas kondusif dan efektif',
+            'Asesmen mencakup sikap, pengetahuan, dan keterampilan',
+            'Umpan balik pembelajaran diberikan tepat waktu',
+            'Administrasi pembelajaran tertib dan mutakhir',
+            'Metode pembelajaran aktif dan berdiferensiasi',
+            'Peningkatan nilai hasil supervisi minimal 10 poin'
+        ];
+    }
+}
+
+if (!function_exists('sv_hasil_monitoring_list')) {
+    function sv_hasil_monitoring_list(?PDO $pdo = null): array
+    {
+        if ($pdo) {
+            try {
+                $opts = sv_hasil_options($pdo, 'hasil_monitoring');
+                if (!empty($opts)) return $opts;
+            } catch (Throwable $e) {}
+        }
+        return [
+            'Target tercapai, perbaikan konsisten dilaksanakan',
+            'Target tercapai sebagian, perlu penguatan lanjutan',
+            'Perbaikan mulai terlihat namun belum konsisten',
+            'Belum ada perubahan signifikan, perlu pendampingan intensif',
+            'Guru kooperatif dan menindaklanjuti seluruh rekomendasi',
+            'Dokumen bukti lengkap dan dapat diverifikasi',
+            'Diperlukan supervisi ulang terjadwal',
+            'Target tidak tercapai, rencana tindak lanjut direvisi'
+        ];
+    }
+}
+
+if (!function_exists('sv_perubahan_list')) {
+    function sv_perubahan_list(?PDO $pdo = null): array
+    {
+        if ($pdo) {
+            try {
+                $opts = sv_hasil_options($pdo, 'perubahan');
+                if (!empty($opts)) return $opts;
+            } catch (Throwable $e) {}
+        }
+        return [
+            'Ada peningkatan signifikan',
+            'Ada peningkatan sebagian',
+            'Sedikit perubahan, belum konsisten',
+            'Belum ada perubahan',
+            'Perubahan positif dan berkelanjutan',
+            'Perlu pembinaan lanjutan'
+        ];
+    }
+}
+
+if (!function_exists('sv_monitoring_kategori_list')) {
+    function sv_monitoring_kategori_list(): array
+    {
+        return [
+            'tindakan_monitoring' => 'Tindakan',
+            'target_perbaikan' => 'Target Perbaikan',
+            'hasil_monitoring' => 'Hasil Monitoring',
+            'perubahan' => 'Perubahan',
+            'status_monitoring' => 'Status'
+        ];
+    }
+}
+
+if (!function_exists('sv_status_monitoring_list')) {
+    function sv_status_monitoring_list(?PDO $pdo = null): array
+    {
+        if ($pdo) {
+            try {
+                $opts = sv_hasil_options($pdo, 'status_monitoring');
+                if (!empty($opts)) return $opts;
+            } catch (Throwable $e) {}
+        }
+        return ['Belum Ditindaklanjuti', 'Dalam Proses', 'Tercapai', 'Tercapai Sebagian', 'Belum Tercapai', 'Perlu Supervisi Ulang'];
+    }
+}
+
 if (!function_exists('sv_jenis_dokumen_list')) {
     function sv_jenis_dokumen_list(): array
     {
@@ -500,6 +614,9 @@ if (!function_exists('sv_ensure_schema')) {
                 'bukti_file' => "VARCHAR(255) NULL AFTER bukti",
                 'tautan_dokumen' => "VARCHAR(500) NULL AFTER bukti_file",
             ],
+            'tb_sv_monitoring' => [
+                'bukti_file' => "VARCHAR(255) NULL AFTER bukti",
+            ],
         ];
         foreach ($columns as $table => $cols) {
             foreach ($cols as $col => $ddl) {
@@ -576,6 +693,30 @@ if (!function_exists('sv_ensure_schema')) {
                 $cnt = (int)$pdo->query("SELECT COUNT(*) FROM tb_sv_hasil_master")->fetchColumn();
                 if ($cnt === 0) {
                     sv_seed_hasil_master($pdo);
+                } else {
+                    $cntMon = 0;
+                    try {
+                        $stMon = $pdo->prepare("SELECT COUNT(*) FROM tb_sv_hasil_master WHERE kategori IN ('tindakan_monitoring','target_perbaikan','hasil_monitoring','perubahan','status_monitoring')");
+                        $stMon->execute();
+                        $cntMon = (int)$stMon->fetchColumn();
+                    } catch (Throwable $e2) {}
+                    if ($cntMon === 0) {
+                        sv_seed_hasil_master($pdo);
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+        }
+        try {
+            if (dbTableExists($pdo, 'tb_sv_monitoring')) {
+                foreach (['nilai_sebelum', 'nilai_sesudah'] as $dropCol) {
+                    try {
+                        if (dbColumnExists($pdo, 'tb_sv_monitoring', $dropCol)) {
+                            $pdo->exec("ALTER TABLE tb_sv_monitoring DROP COLUMN `{$dropCol}`");
+                        }
+                    } catch (Throwable $e2) {
+                        error_log("Supervisi drop column tb_sv_monitoring.{$dropCol}: " . $e2->getMessage());
+                    }
                 }
             }
         } catch (Throwable $e) {
@@ -2807,12 +2948,12 @@ if (!function_exists('sv_laporan_data')) {
                     ];
 
                 case 'monitoring_tindak_lanjut':
-                    $stmt = $pdo->prepare("SELECT m.tanggal_monitoring, COALESCE(NULLIF(m.nama_guru,''), m.unit_bagian) AS subjek, m.monitoring_ke, m.hasil_monitoring, m.perubahan, m.nilai_sebelum, m.nilai_sesudah, m.status
+                    $stmt = $pdo->prepare("SELECT m.tanggal_monitoring, COALESCE(NULLIF(m.nama_guru,''), m.unit_bagian) AS subjek, m.tindakan, m.target_perbaikan, m.monitoring_ke, m.hasil_monitoring, m.perubahan, m.status
                         FROM tb_sv_monitoring m ORDER BY m.tanggal_monitoring DESC");
                     $stmt->execute();
                     return [
                         'title' => $title,
-                        'headers' => ['Tanggal', 'Guru/Unit', 'Monitoring Ke', 'Hasil', 'Perubahan', 'Nilai Sebelum', 'Nilai Sesudah', 'Status'],
+                        'headers' => ['Tanggal', 'Guru/Unit', 'Tindakan', 'Target Perbaikan', 'Monitoring Ke', 'Hasil', 'Perubahan', 'Status'],
                         'rows' => $stmt->fetchAll(PDO::FETCH_NUM),
                     ];
 
@@ -2904,7 +3045,12 @@ if (!function_exists('sv_hasil_kategori_list')) {
             'kelemahan' => 'Kelemahan',
             'rekomendasi' => 'Rekomendasi',
             'prioritas' => 'Prioritas Perbaikan',
-            'rencana_tindakan' => 'Rencana Tindakan'
+            'rencana_tindakan' => 'Rencana Tindakan',
+            'tindakan_monitoring' => 'Tindakan Monitoring',
+            'target_perbaikan' => 'Target Perbaikan',
+            'hasil_monitoring' => 'Hasil Monitoring',
+            'perubahan' => 'Perubahan',
+            'status_monitoring' => 'Status Monitoring'
         ];
     }
 }
@@ -2964,6 +3110,54 @@ if (!function_exists('sv_seed_hasil_master')) {
                 'Penyusunan & Pengelolaan Kelengkapan Administrasi Pembelajaran',
                 'Pelatihan Penilaian/Asesmen Hasil Belajar Berbasis Kriteria',
                 'Konsultasi Intensif dengan Tim Penjaminan Mutu Madrasah'
+            ],
+            'tindakan_monitoring' => [
+                'Observasi kelas lanjutan untuk verifikasi perbaikan pembelajaran',
+                'Wawancara/refleksi dengan guru terkait progres tindak lanjut',
+                'Pemeriksaan kelengkapan administrasi dan perangkat pembelajaran',
+                'Pendampingan praktik pembelajaran di kelas',
+                'Diskusi rekan sejawat (peer coaching) dan umpan balik',
+                'Evaluasi penggunaan media dan metode pembelajaran baru',
+                'Pemantauan konsistensi pengelolaan kelas dan asesmen',
+                'Konsultasi intensif dengan supervisor/pengawas',
+                'Verifikasi dokumen bukti tindak lanjut',
+                'Supervisi ulang terjadwal bila target belum tercapai'
+            ],
+            'target_perbaikan' => [
+                'RPP/Modul ajar lengkap dan terdokumentasi',
+                'Media pembelajaran variatif dan digunakan konsisten',
+                'Manajemen kelas kondusif dan efektif',
+                'Asesmen mencakup sikap, pengetahuan, dan keterampilan',
+                'Umpan balik pembelajaran diberikan tepat waktu',
+                'Administrasi pembelajaran tertib dan mutakhir',
+                'Metode pembelajaran aktif dan berdiferensiasi',
+                'Peningkatan nilai hasil supervisi minimal 10 poin'
+            ],
+            'hasil_monitoring' => [
+                'Target tercapai, perbaikan konsisten dilaksanakan',
+                'Target tercapai sebagian, perlu penguatan lanjutan',
+                'Perbaikan mulai terlihat namun belum konsisten',
+                'Belum ada perubahan signifikan, perlu pendampingan intensif',
+                'Guru kooperatif dan menindaklanjuti seluruh rekomendasi',
+                'Dokumen bukti lengkap dan dapat diverifikasi',
+                'Diperlukan supervisi ulang terjadwal',
+                'Target tidak tercapai, rencana tindak lanjut direvisi'
+            ],
+            'perubahan' => [
+                'Ada peningkatan signifikan',
+                'Ada peningkatan sebagian',
+                'Sedikit perubahan, belum konsisten',
+                'Belum ada perubahan',
+                'Perubahan positif dan berkelanjutan',
+                'Perlu pembinaan lanjutan'
+            ],
+            'status_monitoring' => [
+                'Belum Ditindaklanjuti',
+                'Dalam Proses',
+                'Tercapai',
+                'Tercapai Sebagian',
+                'Belum Tercapai',
+                'Perlu Supervisi Ulang'
             ],
         ];
         foreach ($data as $kategori => $list) {

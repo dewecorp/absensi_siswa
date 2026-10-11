@@ -283,7 +283,7 @@ try {
 
         case 'monitoring':
             $title = 'Monitoring Tindak Lanjut';
-            $headers = ['Tindak Lanjut', 'Guru/Unit', 'Tindakan', 'Target Perbaikan', 'Tanggal', 'Ke', 'Hasil Monitoring', 'Perubahan', 'Nilai Sebelum', 'Nilai Sesudah', 'Status', 'Catatan', 'Bukti'];
+            $headers = ['Tindak Lanjut', 'Guru/Unit', 'Tindakan', 'Target Perbaikan', 'Tanggal', 'Ke', 'Hasil Monitoring', 'Perubahan', 'Status', 'Catatan', 'Bukti'];
             $rows = $pdo->query("SELECT m.*, t.bentuk_tindak_lanjut, t.status AS status_tl FROM tb_sv_monitoring m
                 LEFT JOIN tb_sv_tindak_lanjut t ON t.id_tindak_lanjut = m.id_tindak_lanjut
                 ORDER BY m.tanggal_monitoring DESC, m.id_monitoring DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -293,9 +293,7 @@ try {
                     h($r['nama_guru'] ?: ($r['unit_bagian'] ?: '-')), h($r['tindakan']), h($r['target_perbaikan']),
                     $r['tanggal_monitoring'] ? date('d/m/Y', strtotime($r['tanggal_monitoring'])) : '-',
                     (int)$r['monitoring_ke'], h($r['hasil_monitoring']), h($r['perubahan']),
-                    $r['nilai_sebelum'] !== null ? number_format((float)$r['nilai_sebelum'], 2) : '-',
-                    $r['nilai_sesudah'] !== null ? number_format((float)$r['nilai_sesudah'], 2) : '-',
-                    h($r['status']), h($r['catatan']), h($r['bukti']),
+                    h($r['status']), h($r['catatan']), h(trim((string)$r['bukti'] . (!empty($r['bukti_file']) ? ' [File: ' . basename((string)$r['bukti_file']) . ']' : ''))),
                 ];
             }
             break;
