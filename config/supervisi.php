@@ -916,24 +916,38 @@ if (!function_exists('sv_mapel_guru')) {
     }
 }
 
-if (!function_exists('sv_kelas_guru')) {
-    function sv_kelas_guru(PDO $pdo): array
+if (!function_exists('sv_sasaran_kelas_map')) {
+    function sv_sasaran_kelas_map(PDO $pdo, string $tahunAjaran, string $semester = ''): array
     {
-        $out = [];
+        $map = [];
         try {
-            $stmt = $pdo->query("SELECT j.guru_id, k.nama_kelas
-                                 FROM tb_jadwal_pelajaran j
-                                 JOIN tb_kelas k ON k.id_kelas = j.kelas_id
-                                 WHERE j.guru_id IS NOT NULL
-                                 GROUP BY j.guru_id, k.nama_kelas
-                                 ORDER BY k.nama_kelas ASC");
-            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $id = (int)$row['guru_id'];
-                $out[$id][] = $row['nama_kelas'];
+            $sql = "SELECT id_guru, kelas FROM tb_sv_sasaran WHERE tahun_ajaran = ?";
+            $params = [$tahunAjaran];
+            if ($semester !== '') {
+                $sql .= " AND semester = ?";
+                $params[] = $semester;
             }
-        } catch (Throwable $e) {
-        }
-        return $out;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $idG = (int)($row['id_guru'] ?? 0);
+                $kls = trim((string)($row['kelas'] ?? ''));
+                if ($idG > 0 && $kls !== '') {
+                    // Pecah koma jika ada beberapa kelas di sasaran
+                    $parts = array_map('trim', explode(',', $kls));
+                    foreach ($parts as $p) {
+                        if ($p !== '') {
+                            $map[$idG][] = $p;
+                        }
+                    }
+                }
+            }
+            // Uniquify
+            foreach ($map as $id => $arr) {
+                $map[$id] = array_values(array_unique($arr));
+            }
+        } catch (Throwable $e) {}
+        return $map;
     }
 }
 

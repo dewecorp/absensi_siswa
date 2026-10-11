@@ -34,7 +34,6 @@ $f = [
     'supervisor' => trim((string)($_GET['supervisor'] ?? '')),
     'predikat' => trim((string)($_GET['predikat'] ?? '')),
     'status' => trim((string)($_GET['status'] ?? '')),
-    'kelompok' => trim((string)($_GET['kelompok'] ?? 'guru')),
 ];
 
 $parts = explode('/', $f['tahun_ajaran']);
@@ -65,14 +64,44 @@ if ($f['status'] !== '') {
 }
 $whereSql = ' WHERE ' . implode(' AND ', $where);
 
-$rows = [];
+$allRows = [];
 try {
     $stmt = $pdo->prepare("SELECT p.*, i.nama_instrumen FROM tb_sv_pelaksanaan p
         LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = p.id_instrumen
         {$whereSql} ORDER BY p.nama_guru ASC, p.tanggal DESC");
     $stmt->execute($params);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $allRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
+    $allRows = [];
+}
+
+// Ambil data kelas per guru berdasarkan Sasaran Supervisi
+$kelasGuruAll = [];
+$mapelGuruAll = [];
+try {
+    $kelasGuruAll = sv_sasaran_kelas_map($pdo, $f['tahun_ajaran'], $f['semester']);
+    if (empty($kelasGuruAll)) {
+        $kelasGuruAll = sv_kelas_guru($pdo);
+    }
+    $mapelGuruAll = sv_mapel_guru($pdo);
+} catch (Throwable $e) {}
+
+// Filter berdasarkan kelas jika dipilih
+$rows = [];
+foreach ($allRows as $r) {
+    $idG = (int)$r['id_guru'];
+    $klsList = $kelasGuruAll[$idG] ?? ['-'];
+    if ($f['kelas'] !== '') {
+        $matchKelas = false;
+        foreach ($klsList as $nmKls) {
+            if (strcasecmp(trim($nmKls), trim($f['kelas'])) === 0) {
+                $matchKelas = true;
+                break;
+            }
+        }
+        if (!$matchKelas) continue;
+    }
+    $rows[] = $r;
 }
 
 // Ringkasan
@@ -116,91 +145,38 @@ try {
 } catch (Throwable $e) {
 }
 
-// Ambil data kelas per guru untuk ditampilkan di tabel rekap
+// Ambil data kelas per guru berdasarkan Sasaran Supervisi
 $kelasGuruAll = [];
 $mapelGuruAll = [];
 try {
-    $kelasGuruAll = sv_kelas_guru($pdo);
+    $kelasGuruAll = sv_sasaran_kelas_map($pdo, $f['tahun_ajaran'], $f['semester']);
+    if (empty($kelasGuruAll)) {
+        $kelasGuruAll = sv_kelas_guru($pdo);
+    }
     $mapelGuruAll = sv_mapel_guru($pdo);
 } catch (Throwable $e) {}
 
-// Kelompok rekap
+// Susun baris rekap per pelaksanaan supervisi / guru
 $kelompok = [];
-if ($f['kelompok'] === 'mapel') {
-    foreach ($rows as $r) {
-        $idG = (int)$r['id_guru'];
-        $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? ''));
-        if ($mapelAktif === '') {
-            $mapelAktif = implode(', ', $mapelGuruAll[$idG] ?? ['-']);
-        }
-        if ($mapelAktif === '') $mapelAktif = '-';
-        $kelasAktif = implode(', ', $kelasGuruAll[$idG] ?? ['-']);
-        $jenis = (string)$r['jenis_supervisi'];
-        $key = $mapelAktif . '_' . $jenis . '_' . $kelasAktif;
-        if (!isset($kelompok[$key])) {
-            $kelompok[$key] = ['label' => $mapelAktif, 'kelas' => $kelasAktif, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
-        }
-        if ($r['nilai'] !== null) {
-            $kelompok[$key]['nilai'] += (float)$r['nilai'];
-            $kelompok[$key]['count']++;
-        }
-    }
-} elseif ($f['kelompok'] === 'kelas') {
-    $kelasGuru = sv_kelas_guru($pdo);
-    foreach ($rows as $r) {
-        $idG = (int)$r['id_guru'];
-        $names = $kelasGuru[$idG] ?? ['-'];
-        $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? '')) ?: '-';
-        $jenis = (string)$r['jenis_supervisi'];
-        foreach ($names as $nm) {
-            $key = $nm . '_' . $jenis . '_' . $mapelAktif;
-            if (!isset($kelompok[$key])) {
-                $kelompok[$key] = ['label' => $nm, 'kelas' => $nm, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
-            }
-            if ($r['nilai'] !== null) {
-                $kelompok[$key]['nilai'] += (float)$r['nilai'];
-                $kelompok[$key]['count']++;
-            }
-        }
-    }
-} elseif ($f['kelompok'] === 'jenis') {
-    foreach ($rows as $r) {
-        $idG = (int)$r['id_guru'];
-        $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? '')) ?: '-';
-        $kelasAktif = implode(', ', $kelasGuruAll[$idG] ?? ['-']);
-        $label = $r['jenis_supervisi'];
-        $key = $label . '_' . $mapelAktif;
-        if (!isset($kelompok[$key])) {
-            $kelompok[$key] = ['label' => $label, 'kelas' => $kelasAktif, 'jenis' => $label, 'nilai' => 0, 'count' => 0];
-        }
-        if ($r['nilai'] !== null) {
-            $kelompok[$key]['nilai'] += (float)$r['nilai'];
-            $kelompok[$key]['count']++;
-        }
-    }
-} else {
-    foreach ($rows as $r) {
-        $idG = (int)$r['id_guru'];
-        $label = $r['nama_guru'] ?: ($r['unit_bagian'] ?: '-');
-        $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? '')) ?: '-';
-        $kelasAktif = implode(', ', $kelasGuruAll[$idG] ?? ['-']);
-        $jenis = (string)$r['jenis_supervisi'];
-        $key = $label . '_' . $jenis;
-        if (!isset($kelompok[$key])) {
-            $kelompok[$key] = ['label' => $label, 'kelas' => $kelasAktif, 'jenis' => $jenis, 'nilai' => 0, 'count' => 0];
-        }
-        if ($r['nilai'] !== null) {
-            $kelompok[$key]['nilai'] += (float)$r['nilai'];
-            $kelompok[$key]['count']++;
-        }
-    }
+foreach ($rows as $r) {
+    $idG = (int)$r['id_guru'];
+    $label = $r['nama_guru'] ?: ($r['unit_bagian'] ?: '-');
+    $mapelAktif = trim((string)($r['mapel_di_supervisi'] ?? '')) ?: '-';
+    $kelasAktif = implode(', ', $kelasGuruAll[$idG] ?? ['-']);
+    $jenis = (string)$r['jenis_supervisi'];
+    $nilai = $r['nilai'] !== null ? (float)$r['nilai'] : null;
+    $predikat = $r['predikat'] ?: ($nilai !== null ? sv_predikat($nilai) : '-');
+
+    $kelompok[] = [
+        'label' => $label,
+        'mapel' => $mapelAktif,
+        'kelas' => $kelasAktif,
+        'jenis' => $jenis,
+        'rata' => $nilai,
+        'predikat' => $predikat,
+    ];
 }
-foreach ($kelompok as &$k) {
-    $k['rata'] = $k['count'] > 0 ? round($k['nilai'] / $k['count'], 2) : null;
-    $k['predikat'] = sv_predikat($k['rata']);
-}
-unset($k);
-uasort($kelompok, function($a, $b) { return strcasecmp($a['label'], $b['label']); });
+usort($kelompok, function($a, $b) { return strcasecmp($a['label'], $b['label']); });
 
 $js_page = [];
 $js_page[] = <<<'JS'
@@ -277,12 +253,12 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="form-group col-md-3 mb-2">
-                            <label class="small font-weight-bold">Rekap Per</label>
-                            <select class="form-control" name="kelompok">
-                                <option value="guru" <?= $f['kelompok'] === 'guru' ? 'selected' : '' ?>>Guru</option>
-                                <option value="mapel" <?= $f['kelompok'] === 'mapel' ? 'selected' : '' ?>>Mata Pelajaran</option>
-                                <option value="kelas" <?= $f['kelompok'] === 'kelas' ? 'selected' : '' ?>>Kelas</option>
-                                <option value="jenis" <?= $f['kelompok'] === 'jenis' ? 'selected' : '' ?>>Jenis Supervisi</option>
+                            <label class="small font-weight-bold">Kelas</label>
+                            <select class="form-control" name="kelas">
+                                <option value="">Semua</option>
+                                <?php foreach ($kelas_list as $kls): ?>
+                                    <option value="<?= htmlspecialchars($kls['nama_kelas'], ENT_QUOTES) ?>" <?= $kls['nama_kelas'] === $f['kelas'] ? 'selected' : '' ?>><?= htmlspecialchars($kls['nama_kelas']) ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-3 mb-2 d-flex align-items-end">
@@ -321,7 +297,7 @@ include '../templates/sidebar.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h4>Rekap Per <?= htmlspecialchars(ucfirst($f['kelompok'])) ?></h4>
+                    <h4>Daftar Rekapitulasi Supervisi</h4>
                     <div class="card-header-action">
                         <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
                         <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -333,7 +309,8 @@ include '../templates/sidebar.php';
                             <thead>
                                 <tr>
                                     <th width="5%">No</th>
-                                    <th><?= htmlspecialchars(ucfirst($f['kelompok'])) ?></th>
+                                    <th>Guru / Unit</th>
+                                    <th>Mata Pelajaran</th>
                                     <th>Kelas</th>
                                     <th>Jenis Supervisi</th>
                                     <th>Nilai Rata-rata</th>
@@ -345,6 +322,7 @@ include '../templates/sidebar.php';
                                     <tr>
                                         <td class="text-center"></td>
                                         <td><?= htmlspecialchars($k['label']) ?></td>
+                                        <td><?= htmlspecialchars($k['mapel'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($k['kelas'] ?? '-') ?></td>
                                         <td><span class="badge badge-info"><?= htmlspecialchars($k['jenis'] ?? '-') ?></span></td>
                                         <td><?= $k['rata'] !== null ? htmlspecialchars(number_format((float)$k['rata'], 2)) : '-' ?></td>
