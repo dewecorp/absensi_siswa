@@ -1883,6 +1883,30 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             color: #6777ef !important;
             font-weight: 700 !important;
         }
+        .main-sidebar .sidebar-menu li.nav-logout {
+            padding: 4px 10px !important;
+        }
+        .main-sidebar .sidebar-menu li.nav-logout > a.nav-link {
+            color: #e11d48 !important;
+            font-weight: 700 !important;
+            background: rgba(225,29,72,.08) !important;
+            border-radius: 8px !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            border: 1px solid rgba(225,29,72,.25) !important;
+        }
+        .main-sidebar .sidebar-menu li.nav-logout > a.nav-link i {
+            color: #e11d48 !important;
+        }
+        .main-sidebar .sidebar-menu li.nav-logout > a.nav-link:hover {
+            background: #e11d48 !important;
+            color: #fff !important;
+        }
+        .main-sidebar .sidebar-menu li.nav-logout > a.nav-link:hover i {
+            color: #fff !important;
+        }
     </style>
     <aside id="sidebar-wrapper">
         <div class="sidebar-brand">
@@ -1918,7 +1942,8 @@ if (!function_exists('get_bottom_nav_quick_links')) {
                         </ul>
                     </li>
                 <?php else: ?>
-                    <li class="<?php echo $item['active'] ? 'active' : ''; ?>">
+                    <?php $is_logout_item = (strcasecmp(trim((string)($item['title'] ?? '')), 'Logout') === 0); ?>
+                    <li class="<?php echo $item['active'] ? 'active' : ''; ?><?php echo $is_logout_item ? ' nav-logout' : ''; ?>">
                         <a class="nav-link <?php echo ((isset($item['badge']) && $item['badge'] !== null) || $has_notif_main) ? 'has-notif-badge' : ''; ?>" <?php echo $has_notif_main ? 'data-notif-type="'.$ntype_main.'"' : ''; ?>
                            href="<?php echo htmlspecialchars(app_url($item['url']), ENT_QUOTES, 'UTF-8'); ?>"
                            <?php if (isset($item['attributes'])): ?>
