@@ -140,12 +140,23 @@ try {
 } catch (Throwable $e) {
 }
 
+$filter_jenis = trim((string)($_GET['jenis'] ?? ''));
+
 $rows = [];
 try {
-    $rows = $pdo->query("SELECT i.*,
+    $sqlIns = "SELECT i.*,
             (SELECT COUNT(*) FROM tb_sv_komponen k WHERE k.id_instrumen = i.id_instrumen) AS jml_komponen,
             (SELECT COUNT(*) FROM tb_sv_indikator n JOIN tb_sv_komponen k2 ON k2.id_komponen = n.id_komponen WHERE k2.id_instrumen = i.id_instrumen) AS jml_indikator
-        FROM tb_sv_instrumen i ORDER BY i.jenis_supervisi ASC, i.nama_instrumen ASC")->fetchAll(PDO::FETCH_ASSOC);
+        FROM tb_sv_instrumen i";
+    $paramsIns = [];
+    if ($filter_jenis !== '') {
+        $sqlIns .= " WHERE i.jenis_supervisi = ?";
+        $paramsIns[] = $filter_jenis;
+    }
+    $sqlIns .= " ORDER BY i.jenis_supervisi ASC, i.nama_instrumen ASC";
+    $stmtIns = $pdo->prepare($sqlIns);
+    $stmtIns->execute($paramsIns);
+    $rows = $stmtIns->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
 }
 
@@ -310,14 +321,35 @@ include '../templates/sidebar.php';
             <input type="hidden" id="svPrintPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang', ENT_QUOTES) ?>">
             <input type="hidden" id="svPrintDate" value="<?= date('d F Y') ?>">
 
+            <div class="card mb-3">
+                <div class="card-body p-3">
+                    <form method="GET" class="form-row align-items-end">
+                        <div class="form-group col-md-4 mb-0">
+                            <label class="small font-weight-bold">Filter Jenis Supervisi</label>
+                            <select class="form-control form-control-sm" name="jenis" onchange="this.form.submit()">
+                                <option value="">Semua Jenis</option>
+                                <?php foreach (sv_jenis_list() as $j): ?>
+                                    <option value="<?= htmlspecialchars($j, ENT_QUOTES) ?>" <?= $j === $filter_jenis ? 'selected' : '' ?>><?= htmlspecialchars($j) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4 mb-0 d-flex align-items-end">
+                            <div>
+                                <a href="instrumen_supervisi.php" class="btn btn-light btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <h4>Daftar Instrumen</h4>
                     <div class="card-header-action">
-                        <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
-                        <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button class="btn btn-success btn-sm" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn btn-warning btn-sm" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
                         <?php if ($can_manage): ?>
-                        <button class="btn btn-primary" id="btn-tambah" type="button"><i class="fas fa-plus"></i> Tambah</button>
+                        <button class="btn btn-primary btn-sm" id="btn-tambah" type="button"><i class="fas fa-plus"></i> Tambah</button>
                         <?php endif; ?>
                     </div>
                 </div>

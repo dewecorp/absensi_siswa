@@ -124,9 +124,14 @@ $(document).ready(function () {
         $('#form-komponen [name=aksi]').val('edit');
         Object.keys(d).forEach(function (k) {
             var el = $('#form-komponen [name="' + k + '"]');
-            if (el.length) { el.val(d[k]); }
+            if (el.length && k !== 'id_instrumen') { el.val(d[k]); }
         });
-        $('#form-komponen [name=id_instrumen]').val(d.id_instrumen);
+        if (d.id_instrumen) {
+            $('#form-komponen [name=id_instrumen]').val(String(d.id_instrumen)).trigger('change');
+        }
+        if (window.GDSRefresh) {
+            try { GDSRefresh($('#form-komponen [name=id_instrumen]')); } catch(e) {}
+        }
         $('#modal-komponen .modal-title').text('Edit Komponen');
         $('#modal-komponen').modal('show');
     });
