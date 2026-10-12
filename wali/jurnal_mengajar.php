@@ -479,6 +479,18 @@ $js_page = [
             width: '100%',
             dropdownParent: $('#jurnalModal')
         });
+
+        // Rapi: badge jam multi-select melar + wrap, tidak menumpuk vertikal
+        if (!$('#jurnal-jam-css').length) {
+            $('head').append('<style id=\"jurnal-jam-css\">'
+                + '#jurnalModal .select2-container .select2-selection--multiple{min-height:38px !important;height:auto !important;max-height:120px !important;overflow-y:auto !important;border:1px solid #ced4da !important;padding:2px 5px !important;}'
+                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-selection__rendered{display:flex !important;flex-wrap:wrap !important;gap:4px !important;padding:0 !important;margin:0 !important;}'
+                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-selection__choice{background-color:#6777ef !important;border:1px solid #6777ef !important;color:#fff !important;padding:2px 8px !important;margin:0 !important;border-radius:20px !important;line-height:1.4 !important;font-size:12px !important;white-space:nowrap !important;float:none !important;}'
+                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-selection__choice__remove{color:#fff !important;margin-right:5px !important;border-right:none !important;}'
+                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-search--inline{margin:0 !important;}'
+                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field{margin:0 !important;padding:2px !important;height:26px !important;}'
+                + '</style>');
+        }
         
         $('#jenis_jadwal').change(function() {
             updateJamOptions($(this).val());
