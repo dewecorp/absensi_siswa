@@ -260,19 +260,35 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-edit-tugas', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch (e) {}
+        }
+        if (!data || typeof data !== 'object') return;
+        $('#formTugas')[0].reset();
         $('#formTugasAction').val('edit');
         $('#tugasId').val(data.id);
         $('#modalTugasTitle').text('Edit Tugas');
-        $('#inp_judul').val(data.judul);
-        $('#inp_mapel').val(data.id_mapel || '');
-        $('#inp_kelas').val(data.id_kelas || '');
+        $('#inp_judul').val(data.judul || '');
+        var mapelId = (data.id_mapel != null && data.id_mapel !== '') ? String(data.id_mapel) : '';
+        if (mapelId !== '' && $('#inp_mapel').find('option[value="' + mapelId + '"]').length === 0) {
+            var lblM = data.nama_mapel || ('Mapel #' + mapelId);
+            $('#inp_mapel').append(new Option(lblM, mapelId, true, true));
+        }
+        $('#inp_mapel').val(mapelId).trigger('change');
+        var kelasId = (data.id_kelas != null && data.id_kelas !== '') ? String(data.id_kelas) : '';
+        if (kelasId !== '' && $('#inp_kelas').find('option[value="' + kelasId + '"]').length === 0) {
+            var lblK = data.nama_kelas || ('Kelas #' + kelasId);
+            $('#inp_kelas').append(new Option(lblK, kelasId, true, true));
+        }
+        $('#inp_kelas').val(kelasId).trigger('change');
         $('#inp_materi_tp').val(data.materi_tp || '');
-        $('#inp_jenis').val(data.jenis_tugas);
+        $('#inp_jenis').val(data.jenis_tugas || 'Individu').trigger('change');
         $('#inp_instruksi').val(data.instruksi || '');
         $('#inp_mulai').val(data.tgl_mulai ? data.tgl_mulai.substring(0, 16).replace(' ', 'T') : '');
         $('#inp_deadline').val(data.deadline ? data.deadline.substring(0, 16).replace(' ', 'T') : '');
-        $('#inp_nilai_maks').val(data.nilai_maksimal);
-        $('#inp_status').val(data.status);
+        $('#inp_nilai_maks').val(data.nilai_maksimal || 100);
+        $('#inp_status').val(data.status || 'Aktif').trigger('change');
+        if (window.GDSRefresh) { try { window.GDSRefresh($('#modalTugas')[0]); } catch (e2) {} }
         $('#modalTugas').modal('show');
     });
 
