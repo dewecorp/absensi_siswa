@@ -586,23 +586,37 @@ $(document).ready(function() {
     // Edit Modal
     $(document).on('click', '.btn-edit', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch (e) {}
+        }
+        if (!data || typeof data !== 'object') return;
+        $('#formPerangkat')[0].reset();
         $('#formPerangkatAction').val('edit');
         $('#perangkatId').val(data.id);
         $('#modalPerangkatTitle').text('Edit Perangkat Pembelajaran');
-        $('#inp_jenis').val(data.jenis_perangkat);
-        $('#inp_judul').val(data.judul);
-        $('#inp_mapel').val(data.id_mapel || '');
-        $('#inp_kelas').val(data.id_kelas || '');
+        $('#inp_jenis').val(data.jenis_perangkat || '').trigger('change');
+        $('#inp_judul').val(data.judul || '');
+        var mapelId = (data.id_mapel != null && data.id_mapel !== '') ? String(data.id_mapel) : '';
+        if (mapelId !== '' && $('#inp_mapel').find('option[value="' + mapelId + '"]').length === 0) {
+            $('#inp_mapel').append(new Option(data.nama_mapel || ('Mapel #' + mapelId), mapelId, true, true));
+        }
+        $('#inp_mapel').val(mapelId).trigger('change');
+        var kelasId = (data.id_kelas != null && data.id_kelas !== '') ? String(data.id_kelas) : '';
+        if (kelasId !== '' && $('#inp_kelas').find('option[value="' + kelasId + '"]').length === 0) {
+            $('#inp_kelas').append(new Option(data.nama_kelas || ('Kelas #' + kelasId), kelasId, true, true));
+        }
+        $('#inp_kelas').val(kelasId).trigger('change');
         $('#inp_materi_tp').val(data.materi_tp || '');
-        $('#inp_semester').val(data.semester);
-        $('#inp_tahun').val(data.tahun_ajaran);
-        $('#inp_status').val(data.status);
+        $('#inp_semester').val(data.semester || '').trigger('change');
+        $('#inp_tahun').val(data.tahun_ajaran || '').trigger('change');
+        $('#inp_status').val(data.status || 'Aktif').trigger('change');
         $('#inp_cp').val(data.cp || '');
         $('#inp_tp').val(data.tp || '');
         $('#inp_materi').val(data.materi || '');
         $('#inp_tujuan').val(data.tujuan_pembelajaran || '');
         $('#inp_indikator').val(data.indikator || '');
         $('#inp_deskripsi').val(data.deskripsi || '');
+        if (window.GDSRefresh) { try { window.GDSRefresh($('#modalPerangkat')[0]); } catch (e2) {} }
         $('#modalPerangkat').modal('show');
     });
 
@@ -803,11 +817,11 @@ include '../templates/sidebar.php';
                                                 <button type="button" class="btn btn-info btn-sm btn-detail" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <?php if ($can_crud): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <?php endif; ?>
+                                                 <?php if ($can_crud && !empty($r['file_path'])): ?>
+                                                 <button type="button" class="btn btn-warning btn-sm btn-edit" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                     <i class="fas fa-edit"></i>
+                                                 </button>
+                                                 <?php endif; ?>
                                                 <?php if (!empty($r['file_path'])): ?>
                                                     <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Baca Dokumen (Laman Penuh)">
                                                         <i class="fas fa-book-reader"></i>
