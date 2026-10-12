@@ -790,7 +790,7 @@ if ($aksi === 'simpan') {
         if ($semester_simpan !== '' && !in_array($semester_simpan, ['Semester 1', 'Semester 2'], true)) {
             $semester_simpan = mb_substr($semester_simpan, 0, 20);
         }
-        $kode_paket = 'PKT-' . strtoupper(substr(uniqid('', true), -10));
+    $kode_paket = 'GEN-' . strtoupper(substr(uniqid('', true), -10));
         $stmt = $pdo->prepare("
             INSERT INTO tb_bank_soal (
                 id_guru, kode_soal, kode_paket, jenis_soal, id_mapel, id_kelas, kurikulum, semester, jenis_asesmen, topik, sub_topik, materi_tp,
@@ -1767,7 +1767,7 @@ if ($aksi === 'upload') {
         exit;
     }
 
-    $kode_paket = 'PKT-' . strtoupper(substr(uniqid('', true), -10));
+    $kode_paket = 'UPL-' . strtoupper(substr(uniqid('', true), -10));
     $stmt = $pdo->prepare("
         INSERT INTO tb_bank_soal (
             id_guru, kode_soal, kode_paket, jenis_soal, id_mapel, id_kelas, kurikulum, semester, jenis_asesmen, topik,

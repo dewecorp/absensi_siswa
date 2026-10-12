@@ -24,6 +24,19 @@ $upload_dir = guru_upload_dir($pdo, $guru_id, 'bank_soal');
 
 $message = null;
 
+// Normalisasi prefix lama: PKT- hasil generator multi-bentuk -> GEN-, sisanya -> UPL-
+try {
+    $stAll = $pdo->query("SELECT kode_paket, COUNT(*) jml, COUNT(DISTINCT jenis_soal) varb, MAX(file_soal) fs, MAX(CASE WHEN (cp IS NOT NULL AND cp <> '' AND cp <> '-') OR (indikator IS NOT NULL AND indikator <> '' AND indikator <> '-') THEN 1 ELSE 0 END) hk FROM tb_bank_soal WHERE kode_paket LIKE 'PKT-%' GROUP BY kode_paket");
+    foreach ($stAll->fetchAll(PDO::FETCH_ASSOC) as $ar) {
+        $old = (string)$ar['kode_paket'];
+        $genLike = !empty($ar['hk']) || ((int)($ar['varb'] ?? 1) > 1 && (int)($ar['jml'] ?? 0) >= 5 && empty($ar['fs']));
+        $new = ($genLike ? 'GEN-' : 'UPL-') . substr($old, 4);
+        if ($new !== $old) {
+            $pdo->prepare("UPDATE tb_bank_soal SET kode_paket = ? WHERE kode_paket = ?")->execute([$new, $old]);
+        }
+    }
+} catch (Throwable $e) {}
+
 // Auto-assign kode_paket untuk soal lepas (tanpa paket)
 try {
     $stmtLepas = $pdo->prepare("SELECT id, topik, id_mapel, id_kelas, jenis_asesmen FROM tb_bank_soal WHERE id_guru = ? AND (kode_paket IS NULL OR kode_paket = '')");
@@ -507,7 +520,9 @@ $stmt = $pdo->prepare("
            MIN(b.semester) AS semester,
            MIN(b.status) AS status,
            COUNT(*) AS jumlah_butir,
+           COUNT(DISTINCT b.jenis_soal) AS variasi_bentuk,
            MAX(b.file_soal) AS file_soal,
+           MAX(CASE WHEN (b.cp IS NOT NULL AND b.cp <> '' AND b.cp <> '-') OR (b.indikator IS NOT NULL AND b.indikator <> '' AND b.indikator <> '-') THEN 1 ELSE 0 END) AS has_kisi,
            MAX(b.created_at) AS created_at
     FROM tb_bank_soal b
     LEFT JOIN tb_mata_pelajaran m ON m.id_mapel = b.id_mapel
@@ -615,15 +630,28 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-edit-paket', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch (e) {}
+        }
+        if (!data || typeof data !== 'object') return;
+        $('#formSoal')[0].reset();
         $('#formSoalAction').val('edit');
-        $('#inp_kode_paket').val(data.kode_paket);
-        $('#modalSoalTitle').text('Edit Soal â€” ' + data.kode_paket);
+        $('#inp_kode_paket').val(data.kode_paket || '');
+        $('#modalSoalTitle').text('Edit Soal - ' + (data.kode_paket || ''));
         $('#inp_asesmen').val(data.jenis_asesmen || '');
-        $('#inp_mapel').val(data.id_mapel || '');
-        $('#inp_kelas').val(data.id_kelas || '');
+        $('#inp_mapel').val(data.id_mapel ? String(data.id_mapel) : '');
+        $('#inp_kelas').val(data.id_kelas ? String(data.id_kelas) : '');
         $('#inp_topik').val(data.topik || '');
-        $('#inp_jumlah_soal').val(data.jumlah_butir || 1);
-        $('#inp_tanggal_upload').val(data.created_at ? data.created_at.substring(0, 10) : new Date().toISOString().substring(0, 10));
+        var jml = parseInt(data.jumlah_butir || '0', 10);
+        if (data.kode_paket && data.extra_butir != null) {
+            jml += parseInt(data.extra_butir || '0', 10);
+        }
+        $('#inp_jumlah_soal').val(jml > 0 ? jml : 1);
+        var tgl = '';
+        if (data.created_at) { tgl = String(data.created_at).substring(0, 10); }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(tgl)) { tgl = new Date().toISOString().substring(0, 10); }
+        $('#inp_tanggal_upload').val(tgl);
+        if (window.GDSRefresh) { try { window.GDSRefresh($('#modalSoal')[0]); } catch (e2) {} }
         $('#modalSoal').modal('show');
     });
 
@@ -750,9 +778,23 @@ include '../templates/sidebar.php';
                             </thead>
                             <tbody>
                                 <?php foreach ($paket_rows as $i => $p): ?>
+                                    <?php
+                                    $kodePkt = (string)$p['kode_paket'];
+                                    $is_gen = str_starts_with($kodePkt, 'GEN-')
+                                        || !empty($p['has_kisi'])
+                                        || ((int)($p['variasi_bentuk'] ?? 1) > 1 && (int)$p['jumlah_butir'] >= 5 && empty($p['file_soal']));
+                                    $is_upl = !$is_gen && (str_starts_with($kodePkt, 'UPL-') || !empty($p['file_soal']));
+                                    ?>
                                     <tr>
                                         <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><strong><?= htmlspecialchars($p['kode_paket']) ?></strong><?php if (!empty($p['file_soal'])): ?><br><span class="badge badge-info mt-1" title="Paket memiliki file soal asli: <?= htmlspecialchars(basename((string)$p['file_soal'])) ?>"><i class="fas fa-paperclip mr-1"></i><?= strtoupper(htmlspecialchars(pathinfo((string)$p['file_soal'], PATHINFO_EXTENSION))) ?> ASLI</span><?php endif; ?></td>
+                                        <td><strong><?= htmlspecialchars($p['kode_paket']) ?></strong><br>
+                                            <?php if ($is_gen): ?>
+                                                <span class="badge badge-success mt-1" title="Paket dibuat oleh Generator AI"><i class="fas fa-magic mr-1"></i>GENERATOR</span>
+                                            <?php elseif ($is_upl): ?>
+                                                <span class="badge badge-warning mt-1" title="Paket diupload manual"><i class="fas fa-upload mr-1"></i>UPLOAD</span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($p['file_soal'])): ?><br><span class="badge badge-info mt-1" title="Paket memiliki file soal asli: <?= htmlspecialchars(basename((string)$p['file_soal'])) ?>"><i class="fas fa-paperclip mr-1"></i><?= strtoupper(htmlspecialchars(pathinfo((string)$p['file_soal'], PATHINFO_EXTENSION))) ?> ASLI</span><?php endif; ?>
+                                        </td>
                                         <td><span class="badge badge-light border"><?= htmlspecialchars($p['jenis_asesmen'] ?? '-') ?></span></td>
                                         <td><?= htmlspecialchars($p['nama_mapel'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($p['nama_kelas'] ?? '-') ?></td>
@@ -765,9 +807,11 @@ include '../templates/sidebar.php';
                                                     <i class="fas fa-eye mr-1"></i> Preview
                                                 </a>
                                                 <?php if ($can_crud): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-paket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                <?php if (!$is_gen): ?>
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-paket" data-json='<?= htmlspecialchars(json_encode($p + ['extra_butir' => (int)($extra_butir[$p['kode_paket']] ?? 0)]), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
+                                                <?php endif; ?>
                                                 <button type="button" class="btn btn-danger btn-sm btn-hapus-paket" data-kode="<?= htmlspecialchars($p['kode_paket'], ENT_QUOTES) ?>" title="Hapus Paket">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
