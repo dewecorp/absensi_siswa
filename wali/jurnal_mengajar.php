@@ -416,24 +416,24 @@ $js_page = [
     function updateJamOptions(selectedJenis, selectedValues = []) {
         var \$jamSelect = $('select[name=\"jam_ke[]\"]');
         \$jamSelect.empty();
-        
+
         var sourceList = selectedJenis === 'Ramadhan' ? jamRamadhanList : jamRegulerList;
-        
+
         sourceList.forEach(function(jam) {
             if (['A', 'B', 'C'].includes(jam.jam_ke)) return;
-            
+
             var startTime = jam.waktu_mulai.substring(0, 5);
             var endTime = jam.waktu_selesai.substring(0, 5);
             var label = jam.jam_ke + ' (' + startTime + ' - ' + endTime + ')';
-            
+
             var option = new Option(label, jam.jam_ke, false, false);
             \$jamSelect.append(option);
         });
-        
+
         if (selectedValues.length > 0) {
             \$jamSelect.val(selectedValues).trigger('change');
         } else {
-            \$jamSelect.trigger('change');
+            \$jamSelect.val(null).trigger('change');
         }
     }
 
@@ -474,24 +474,20 @@ $js_page = [
             width: '100%'
         });
 
-        // Initialize Select2 inside modal (to fix search input issue)
-        $('#jurnalModal .select2').select2({
+        // Initialize Select2 inside modal: single-select biasa + Jam Ke multi khusus
+        $('#jurnalModal select[name=\"mapel\"], #jurnalModal select[name=\"id_kelas\"], #jurnalModal select[name=\"jenis\"]').select2({
             width: '100%',
             dropdownParent: $('#jurnalModal')
         });
+        $('select[name=\"jam_ke[]\"]').select2({
+            width: '100%',
+            dropdownParent: $('#jurnalModal'),
+            placeholder: 'Pilih Jam Ke',
+            allowClear: true,
+            closeOnSelect: false
+        });
 
-        // Rapi: badge jam multi-select melar + wrap, tidak menumpuk vertikal
-        if (!$('#jurnal-jam-css').length) {
-            $('head').append('<style id=\"jurnal-jam-css\">'
-                + '#jurnalModal .select2-container .select2-selection--multiple{min-height:38px !important;height:auto !important;max-height:120px !important;overflow-y:auto !important;border:1px solid #ced4da !important;padding:2px 5px !important;}'
-                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-selection__rendered{display:flex !important;flex-wrap:wrap !important;gap:4px !important;padding:0 !important;margin:0 !important;}'
-                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-selection__choice{background-color:#6777ef !important;border:1px solid #6777ef !important;color:#fff !important;padding:2px 8px !important;margin:0 !important;border-radius:20px !important;line-height:1.4 !important;font-size:12px !important;white-space:nowrap !important;float:none !important;}'
-                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-selection__choice__remove{color:#fff !important;margin-right:5px !important;border-right:none !important;}'
-                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-search--inline{margin:0 !important;}'
-                + '#jurnalModal .select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field{margin:0 !important;padding:2px !important;height:26px !important;}'
-                + '</style>');
-        }
-        
+
         $('#jenis_jadwal').change(function() {
             updateJamOptions($(this).val());
         });
