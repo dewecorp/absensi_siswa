@@ -202,6 +202,12 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.aksi-satu-baris{display:inline-flex;flex-wrap:nowrap;gap:4px;align-items:center;justify-content:center;white-space:nowrap}
+.aksi-satu-baris .btn{margin:0;flex:0 0 auto;width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.aksi-satu-baris .btn i{margin:0;font-size:13px;line-height:1}
+#table-tugas-siswa td:last-child{white-space:nowrap}
+</style>
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -300,13 +306,15 @@ include '../templates/sidebar.php';
                                         <td class="text-center">
                                             <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($t['status_periksa'] ?? 'Belum') ?></span>
                                         </td>
-                                        <td class="text-center" style="white-space: nowrap;">
-                                            <button type="button" class="btn btn-info btn-sm btn-lihat-tugas" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="Lihat Petunjuk Tugas">
-                                                <i class="fas fa-eye mr-1"></i> Petunjuk
-                                            </button>
-                                            <button type="button" class="btn btn-<?= $is_submitted ? 'warning' : 'primary' ?> btn-sm btn-kumpul-modal" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="<?= $is_submitted ? 'Perbarui Pengumpulan' : 'Kumpulkan Tugas' ?>">
-                                                <i class="fas fa-upload mr-1"></i> <?= $is_submitted ? 'Ubah' : 'Kumpul' ?>
-                                            </button>
+                                        <td class="text-center align-middle">
+                                            <div class="aksi-satu-baris">
+                                                <button type="button" class="btn btn-info btn-sm btn-lihat-tugas" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="Lihat Petunjuk Tugas">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-<?= $is_submitted ? 'warning' : 'primary' ?> btn-sm btn-kumpul-modal" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="<?= $is_submitted ? 'Perbarui Pengumpulan' : 'Kumpulkan Tugas' ?>">
+                                                    <i class="fas fa-upload"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

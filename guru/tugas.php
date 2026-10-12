@@ -306,6 +306,12 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.aksi-satu-baris{display:inline-flex;flex-wrap:nowrap;gap:4px;align-items:center;justify-content:center;white-space:nowrap}
+.aksi-satu-baris .btn{margin:0;flex:0 0 auto;width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.aksi-satu-baris .btn i{margin:0;font-size:13px;line-height:1}
+#table-tugas td:last-child{white-space:nowrap}
+</style>
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -458,18 +464,20 @@ include '../templates/sidebar.php';
                                         <td class="text-center">
                                             <span class="badge badge-<?= $status_badge ?>"><?= htmlspecialchars($r['status']) ?></span>
                                         </td>
-                                        <td class="text-center">
-                                            <a href="detail_tugas.php?id=<?= (int)$r['id'] ?>" class="btn btn-info btn-sm" title="Detail & Pengumpulan">
-                                                <i class="fas fa-list"></i>
-                                            </a>
-                                            <?php if ($can_crud): ?>
-                                            <button type="button" class="btn btn-warning btn-sm btn-edit-tugas" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm btn-hapus-tugas" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                            <?php endif; ?>
+                                        <td class="text-center align-middle">
+                                            <div class="aksi-satu-baris">
+                                                <a href="detail_tugas.php?id=<?= (int)$r['id'] ?>" class="btn btn-info btn-sm" title="Detail & Pengumpulan">
+                                                    <i class="fas fa-list"></i>
+                                                </a>
+                                                <?php if ($can_crud): ?>
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-tugas" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-tugas" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -201,15 +201,15 @@ include '../templates/sidebar.php';
 
 <div class="main-content">
     <section class="section">
-        <div class="section-header d-flex justify-content-between">
-            <div>
-                <h1>Detail Tugas</h1>
-                <?php echo render_breadcrumb(); ?>
-            </div>
-            <a href="tugas.php" class="btn btn-secondary"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar</a>
+        <div class="section-header">
+            <h1>Detail Tugas</h1>
+            <?php echo render_breadcrumb(); ?>
         </div>
 
         <div class="section-body">
+            <div class="mb-3">
+                <a href="tugas.php" class="btn btn-primary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
+            </div>
             <!-- Informasi Tugas & Statistik -->
             <div class="row">
                 <!-- Info Tugas -->
