@@ -483,12 +483,15 @@ $js_page = [
             width: '100%'
         });
 
-        // Initialize Select2 inside modal: single-select biasa + Jam Ke multi khusus
-        $('#jurnalModal select[name=\"mapel\"], #jurnalModal select[name=\"id_kelas\"], #jurnalModal select[name=\"jenis\"]').select2({
-            width: '100%',
-            dropdownParent: $('#jurnalModal')
+        // Initialize Select2 inside modal
+        $('#jurnalModal select[name=\"mapel\"], #jurnalModal select[name=\"id_kelas\"], #jurnalModal select[name=\"jenis\"]').each(function() {
+            var elItem = $(this);
+            if (elItem.hasClass('select2-hidden-accessible')) { elItem.select2('destroy'); }
+            elItem.select2({ width: '100%', dropdownParent: $('#jurnalModal') });
         });
-        $('select[name=\"jam_ke[]\"]').select2({
+        var jSelObj = $('#jurnalModal select[name=\"jam_ke[]\"]');
+        if (jSelObj.hasClass('select2-hidden-accessible')) { try { jSelObj.select2('destroy'); } catch (errObj1) {} }
+        jSelObj.select2({
             width: '100%',
             dropdownParent: $('#jurnalModal'),
             placeholder: 'Pilih Jam Ke',
@@ -884,7 +887,7 @@ include '../templates/header.php';
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Jam Ke</label>
-                                <select name="jam_ke[]" class="form-control select2" multiple required>
+                                <select name="jam_ke[]" class="form-control" multiple required>
                                     <?php foreach ($jam_mengajar_list as $jam): ?>
                                         <?php if (in_array($jam['jam_ke'], ['A', 'B', 'C'])) continue; ?>
                                         <option value="<?php echo $jam['jam_ke']; ?>">
@@ -897,7 +900,7 @@ include '../templates/header.php';
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Mata Pelajaran</label>
-                                <select name="mapel" class="form-control select2" required>
+                                <select name="mapel" class="form-control" required>
                                     <option value="">-- Pilih Mata Pelajaran --</option>
                                     <?php foreach ($mapel_list as $mpl): ?>
                                         <option value="<?php echo htmlspecialchars($mpl['nama_mapel']); ?>">

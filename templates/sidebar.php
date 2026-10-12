@@ -415,7 +415,10 @@ switch ($user_level) {
             ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=admin', 'active' => $current_page === 'komunikasi_kelas.php'],
             ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=admin', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=admin', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
+            ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=admin', 'active' => $current_page === 'jurnal_mengajar.php'],
+            ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=admin', 'active' => $current_page === 'jurnal_les.php'],
         ];
+        usort($pembelajaran_submenu_admin, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
         usort($pembelajaran_submenu_admin, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
         $pengelolaan_kelas_submenu_admin = [
@@ -492,15 +495,7 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php', 'jadwal_piket.php'])
             ],
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-            ],
+
             [
                 'title' => 'Inventaris',
                 'icon' => 'fas fa-boxes',
@@ -658,6 +653,8 @@ switch ($user_level) {
             ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'komunikasi_kelas.php'],
             ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=kepala_madrasah', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
+            ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=kepala_madrasah', 'active' => $current_page === 'jurnal_mengajar.php'],
+            ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=kepala_madrasah', 'active' => $current_page === 'jurnal_les.php'],
         ];
         usort($pembelajaran_submenu_kepala, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
@@ -746,15 +743,7 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php', 'jadwal_piket.php'])
             ],
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Mengajar', 'url' => '../kepala/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
-                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=kepala_madrasah', 'active' => $current_page === 'jurnal_les.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-            ],
+
             [
                 'title' => 'Keuangan',
                 'icon' => 'fas fa-money-bill-wave',
@@ -934,15 +923,7 @@ switch ($user_level) {
                 ],
                 'active' => in_array($current_page, ['jadwal_reguler.php', 'jadwal_ramadhan.php', 'jadwal_les.php', 'jadwal_imam.php', 'jadwal_seragam.php', 'jadwal_seragam_siswa.php', 'jadwal_piket.php'])
             ],
-            [
-                'title' => 'Jurnal',
-                'icon' => 'fas fa-book-open',
-                'submenu' => [
-                    ['title' => 'Jurnal Les', 'url' => '../admin/jurnal_les.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_les.php'],
-                    ['title' => 'Jurnal Mengajar', 'url' => '../admin/jurnal_mengajar.php?session_type=tata_usaha', 'active' => $current_page === 'jurnal_mengajar.php']
-                ],
-                'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-            ],
+
             [
                 'title' => 'Kehadiran',
                 'icon' => 'fas fa-calendar-check',
@@ -1108,7 +1089,12 @@ switch ($user_level) {
             ['title' => 'Data Perkembangan', 'url' => '../guru/data_perkembangan.php', 'active' => $current_page === 'data_perkembangan.php'],
             ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php', 'active' => $current_page === 'komunikasi_kelas.php'],
             ['title' => 'Diskusi Kelas', 'url' => '../guru/diskusi.php', 'badge' => $diskusi_badge, 'active' => $current_page === 'diskusi.php'],
+            ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php'],
         ];
+        if ($is_grade_6_guru) {
+            $pembelajaran_submenu_guru[] = ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
+        }
+        usort($pembelajaran_submenu_guru, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
         $menu_items = [
             [
@@ -1192,21 +1178,7 @@ switch ($user_level) {
             'active' => in_array($current_page, ['kategori_anggaran.php', 'rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php', 'data_gaji.php'])
         ];
 
-        // Jurnal menu for all teachers
-        $jurnal_submenu_guru = [
-            ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php']
-        ];
-        if ($is_grade_6_guru) {
-            $jurnal_submenu_guru[] = ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
-        }
-        
-        $menu_items[] = [
-            'title' => 'Jurnal',
-            'icon' => 'fas fa-book-open',
-            'submenu' => $jurnal_submenu_guru,
-            'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-        ];
-
+        // Jurnal menu for all teachers (sudah digabung ke Pembelajaran)
         if ($is_grade_6_guru) {
             // Add Jadwal Les into Jadwal submenu for Grade 6 Teachers
             foreach ($menu_items as &$m_item) {
@@ -1390,6 +1362,7 @@ switch ($user_level) {
         }
 
         $pembelajaran_submenu_wali = [
+            ['title' => 'Jurnal Mengajar', 'url' => '../guru/jurnal_mengajar.php?session_type=wali', 'active' => $current_page === 'jurnal_mengajar.php'],
             ['title' => 'Perangkat Pembelajaran', 'url' => '../guru/perangkat_pembelajaran.php?session_type=wali', 'active' => in_array($current_page, ['perangkat_pembelajaran.php', 'preview_perangkat.php'])],
             ['title' => 'Tugas Siswa', 'url' => '../guru/tugas.php?session_type=wali', 'active' => in_array($current_page, ['tugas.php', 'detail_tugas.php'])],
             ['title' => 'Bank Soal', 'url' => '../guru/bank_soal.php?session_type=wali', 'active' => in_array($current_page, ['bank_soal.php', 'preview_bank_soal.php'])],
@@ -1399,6 +1372,10 @@ switch ($user_level) {
             ['title' => 'Komunikasi Kelas', 'url' => '../guru/komunikasi_kelas.php?session_type=wali', 'active' => $current_page === 'komunikasi_kelas.php'],
             ['title' => 'Diskusi Kelas', 'url' => '../guru/diskusi.php?session_type=wali', 'badge' => $diskusi_badge, 'active' => $current_page === 'diskusi.php'],
         ];
+        if ($is_grade_6) {
+            $pembelajaran_submenu_wali[] = ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php?session_type=wali', 'active' => $current_page === 'jurnal_les.php'];
+        }
+        usort($pembelajaran_submenu_wali, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
         $pengelolaan_kelas_submenu_wali = [
             ['title' => 'Agenda Kelas', 'url' => '../wali/agenda_kelas.php', 'active' => $current_page === 'agenda_kelas.php'],
@@ -1501,20 +1478,7 @@ switch ($user_level) {
             'active' => in_array($current_page, ['kategori_anggaran.php', 'rab_madrasah.php', 'rab_ekstrakurikuler.php', 'rab_ujian.php', 'data_gaji.php'])
         ];
 
-        // Jurnal menu for all wali
-        $jurnal_submenu_wali = [
-            ['title' => 'Jurnal Mengajar', 'url' => '../wali/jurnal_mengajar.php', 'active' => $current_page === 'jurnal_mengajar.php']
-        ];
-        if ($is_grade_6) {
-            $jurnal_submenu_wali[] = ['title' => 'Jurnal Les', 'url' => '../wali/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
-        }
 
-        $menu_items[] = [
-            'title' => 'Jurnal',
-            'icon' => 'fas fa-book-open',
-            'submenu' => $jurnal_submenu_wali,
-            'active' => in_array($current_page, ['jurnal_mengajar.php', 'jurnal_les.php'])
-        ];
 
         if ($is_grade_6) {
             // Add Jadwal Les into Jadwal submenu for Grade 6 Wali
