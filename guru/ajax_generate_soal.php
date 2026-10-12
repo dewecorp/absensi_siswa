@@ -138,16 +138,39 @@ function ai_zip_stored(array $files): string {
 
 // Ambil uraian [GAMBAR: ...] dari teks pertanyaan / field gambar AI
 function ai_extract_gambar(string $pertanyaan, string $gambar_field = ''): string {
-    if (preg_match('/\[GAMBAR:\s*(.*?)\]/s', $pertanyaan, $m)) {
+    if (preg_match('/\[GAMBAR:\s*([\s\S]*?)\]/i', $pertanyaan, $m)) {
         return trim($m[1]);
     }
     return trim($gambar_field);
 }
 
+// Pisahkan teks pertanyaan bersih tanpa blok [GAMBAR:...]
+function ai_bersih_pertanyaan(string $pertanyaan): string {
+    $t = preg_replace('/\[GAMBAR:\s*[\s\S]*?\]/i', '', $pertanyaan);
+    $t = preg_replace("/[ \t]{2,}/", ' ', (string)$t);
+    $t = preg_replace("/\n{3,}/", "\n\n", (string)$t);
+    return trim((string)$t);
+}
+
 // Render blok gambar untuk HTML (PDF) maupun DOCX-teks
+// SELALU tampilkan gambar: unduh dulu via resolver, fallback URL publik bila cache belum ada
 function ai_gambar_html(string $uraian): string {
     if ($uraian === '') return '';
-    return '<p style="margin:4px 0;padding:6px 8px;background:#fffbeb;border:1px solid #f59e0b;"><strong>[GAMBAR: ' . htmlspecialchars($uraian) . ']</strong></p>';
+    [$fp, $bin] = ai_resolve_image_file($uraian);
+    $cap = '<div style="font-size:8pt;color:#444;font-style:italic;margin-top:4px;">Gambar: ' . htmlspecialchars($uraian) . '</div>';
+    if ($bin !== '' && strlen($bin) > 2000) {
+        $b64 = base64_encode($bin);
+        return '<div style="text-align:center;margin:8px 0;">'
+            . '<img src="data:image/jpeg;base64,' . $b64 . '" style="max-width:480px;width:100%;max-height:280px;border-radius:4px;border:1px solid #777;">'
+            . $cap . '</div>';
+    }
+    $hash = md5($uraian);
+    $url = '../uploads/ai_images/img_' . $hash . '.jpg';
+    $poll = 'https://image.pollinations.ai/prompt/' . rawurlencode($uraian) . '?width=650&height=380&nologo=true';
+    $src = (is_string($fp) && $fp !== '' && is_file($fp) && filesize($fp) > 2000) ? $url : $poll;
+    return '<div style="text-align:center;margin:8px 0;">'
+        . '<img src="' . htmlspecialchars($src) . '" style="max-width:480px;width:100%;height:auto;max-height:280px;border-radius:4px;border:1px solid #777;">'
+        . $cap . '</div>';
 }
 
 function ai_parse_menjodohkan_text(string $pertanyaan): array {
@@ -341,10 +364,10 @@ function ai_build_soal_docx(array $items, array $payload): string {
             }
         }
 
-        $body .= ai_docx_p(($i + 1) . '. [' . (string)$b_it . '][' . (string)($it['level_kognitif'] ?? 'L2') . '] ' . $pert_it, true);
+        $body .= ai_docx_p(($i + 1) . '. [' . (string)$b_it . '][' . (string)($it['level_kognitif'] ?? 'L2') . '] ' . ai_bersih_pertanyaan($pert_it), true);
         $gbr_it = ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? ''));
         if ($gbr_it !== '') {
-            $body .= ai_docx_p('[GAMBAR: ' . $gbr_it . ']', true);
+            $body .= ai_docx_p('Ilustrasi / Gambar Soal: ' . $gbr_it, true);
         }
         if ($b_it === 'Menjodohkan' && !empty($tbl_docx)) {
             $body .= ai_docx_tabel_jodoh($tbl_docx);
@@ -455,6 +478,20 @@ if ($aksi === 'generate') {
         echo json_encode(['ok' => false, 'msg' => 'Pilih minimal 1 bentuk soal dengan jumlah minimal 1.']);
         exit;
     }
+    $kesulitan_dist = [];
+    if (!empty($_POST['kesulitan_dist']) && is_array($_POST['kesulitan_dist'])) {
+        foreach ($_POST['kesulitan_dist'] as $kd => $kv) {
+            $n_kd = (int)$kv;
+            if ($n_kd <= 0) continue;
+            $kd_norm = trim(str_replace('_', ' ', (string)$kd));
+            if (stripos($kd_norm, 'mudah') !== false) $kd_norm = 'Mudah';
+            elseif (stripos($kd_norm, 'sedang') !== false || stripos($kd_norm, 'medium') !== false) $kd_norm = 'Sedang';
+            elseif (stripos($kd_norm, 'sukar') !== false || stripos($kd_norm, 'sukar') !== false || stripos($kd_norm, 'hard') !== false || stripos($kd_norm, 'sulit') !== false) $kd_norm = 'Sukar';
+            elseif (stripos($kd_norm, 'easy') !== false) $kd_norm = 'Mudah';
+            $kesulitan_dist[$kd_norm] = $n_kd;
+        }
+    }
+    // Hapus validasi ketat sum_kesulitan yang bikin gagal; bila beda, jadikan opsional/merata secara otomatis oleh AI.
     $kurikulum = in_array($_POST['kurikulum'] ?? '', ['PERMENDIKDASMEN_046', 'KMA_1503_KBC'], true) ? $_POST['kurikulum'] : 'PERMENDIKDASMEN_046';
     $jenis_asesmen = trim((string)($_POST['jenis_asesmen'] ?? ''));
     if (!in_array($jenis_asesmen, ai_asesmen_list(), true)) {
@@ -465,9 +502,6 @@ if ($aksi === 'generate') {
         echo json_encode(['ok' => false, 'msg' => $err]);
         exit;
     }
-    // Materi detail opsional: bila kosong, AI buat dari mapel/kelas/semester/topik.
-    // Kesulitan dibuat acak merata oleh AI per bentuk (tanpa input dominan).
-    $kesulitan = '';
     $id_mapel = (int)($_POST['id_mapel'] ?? 0);
     $id_kelas = (int)($_POST['id_kelas'] ?? 0);
     $semester = trim((string)($_POST['semester'] ?? ''));
@@ -482,6 +516,32 @@ if ($aksi === 'generate') {
     }
     $sub_topik = trim((string)($_POST['sub_topik'] ?? ''));
     $instruksi_tambahan = trim((string)($_POST['instruksi_tambahan'] ?? ''));
+    $bloom = [];
+    if (!empty($_POST['bloom']) && is_array($_POST['bloom'])) {
+        foreach ($_POST['bloom'] as $bl) {
+            $bl_clean = strtoupper(trim((string)$bl));
+            if (in_array($bl_clean, ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'], true)) {
+                $bloom[] = $bl_clean;
+            }
+        }
+    }
+    $karakteristik = [];
+    if (!empty($_POST['karakteristik']) && is_array($_POST['karakteristik'])) {
+        $k_jml_raw = $_POST['karakteristik_jml'] ?? [];
+        $k_jml = [];
+        if (is_array($k_jml_raw)) {
+            foreach ($k_jml_raw as $kk => $vv) {
+                $k_jml[$kk] = $vv;
+                $k_jml[str_replace('_', ' ', (string)$kk)] = $vv;
+            }
+        }
+        foreach ($_POST['karakteristik'] as $kar) {
+            $kar_name = trim((string)$kar);
+            if ($kar_name !== '') {
+                $karakteristik[$kar_name] = (int)($k_jml[$kar_name] ?? 2);
+            }
+        }
+    }
 
     $prompt = ai_build_soal_prompt([
         'kurikulum' => $kurikulum === 'KMA_1503_KBC' ? 'KMA' : 'MENDIKDASMEN',
@@ -494,7 +554,9 @@ if ($aksi === 'generate') {
         'sub_topik' => $sub_topik,
         'materi' => $materi,
         'instruksi_tambahan' => $instruksi_tambahan,
-        'kesulitan' => $kesulitan,
+        'kesulitan_dist' => $kesulitan_dist ?? [],
+        'bloom' => $bloom ?? [],
+        'karakteristik' => $karakteristik ?? [],
     ]);
 
     $cfg = ai_guru_config($pdo, $guru_id);
@@ -504,7 +566,13 @@ if ($aksi === 'generate') {
         [$ok, $data] = ai_generate_soal('gemini', $cfg['gemini_key'], $cfg['gemini_model'], $prompt, $cfg['gemini_email'] ?? '');
     }
     if (!$ok) {
-        echo json_encode(['ok' => false, 'msg' => is_string($data) ? $data : 'Gagal generate soal.']);
+        $dbg = 'provider=' . $cfg['provider']
+            . ' model=' . ($cfg['provider'] === 'openai' ? $cfg['openai_model'] : $cfg['gemini_model'])
+            . ' prompt_len=' . strlen($prompt)
+            . ' bloom=' . implode(',', $bloom ?? [])
+            . ' kesulitan=' . json_encode($kesulitan_dist ?? [], JSON_UNESCAPED_UNICODE)
+            . ' karakteristik=' . json_encode($karakteristik ?? [], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'msg' => is_string($data) ? $data : 'Gagal generate soal.', 'debug' => $dbg]);
         exit;
     }
     // Normalisasi: tiap butir wajib punya bentuk valid + nomor urut paket.
@@ -664,6 +732,8 @@ if ($aksi === 'generate') {
         }
     }
     unset($k);
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: application/json');
     echo json_encode([
         'ok' => true,
         'provider' => $cfg['provider'],
@@ -814,7 +884,17 @@ if ($aksi === 'simpan') {
         echo json_encode(['ok' => false, 'msg' => 'Gagal menyimpan: ' . $e->getMessage()]);
         exit;
     }
-    echo json_encode(['ok' => true, 'tersimpan' => $tersimpan, 'kode_paket' => $kode_paket]);
+    // Hitung total butir riil: tiap baris tabel Menjodohkan = 1 butir (samakan dgn preview)
+    $total_butir = 0;
+    foreach ($items as $itc) {
+        if (!is_array($itc)) continue;
+        if (trim((string)($itc['bentuk'] ?? '')) === 'Menjodohkan' && !empty($itc['tabel']) && is_array($itc['tabel'])) {
+            $total_butir += count($itc['tabel']);
+        } else {
+            $total_butir += 1;
+        }
+    }
+    echo json_encode(['ok' => true, 'tersimpan' => $total_butir, 'kode_paket' => $kode_paket, 'baris_db' => $tersimpan]);
     exit;
 }
 
@@ -1016,7 +1096,7 @@ if ($aksi === 'unduh') {
     }
     $html .= '<h4>Soal</h4><ol>';
     foreach ($items as $it) {
-        $html .= '<li><p><b>[' . htmlspecialchars((string)($it['bentuk'] ?? 'Soal')) . '][' . htmlspecialchars((string)($it['level_kognitif'] ?? 'L2')) . ']</b> ' . nl2br(htmlspecialchars((string)($it['pertanyaan'] ?? ''))) . '</p>';
+        $html .= '<li><p><b>[' . htmlspecialchars((string)($it['bentuk'] ?? 'Soal')) . '][' . htmlspecialchars((string)($it['level_kognitif'] ?? 'L2')) . ']</b> ' . nl2br(htmlspecialchars(ai_bersih_pertanyaan((string)($it['pertanyaan'] ?? '')))) . '</p>';
         $html .= ai_gambar_html(ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? '')));
         $tbl = $ai_tabel_html($it);
         if ($tbl !== '') {
@@ -1319,7 +1399,7 @@ if ($aksi === 'unduh_paket') {
     }
     $html .= '<h4>Soal</h4><ol>';
     foreach ($items as $it) {
-        $html .= '<li><p style="margin:0 0 4px;"><b>[' . htmlspecialchars($it['bentuk']) . '][' . htmlspecialchars($it['level_kognitif']) . ']</b> ' . nl2br(htmlspecialchars($it['pertanyaan'])) . '</p>';
+        $html .= '<li><p style="margin:0 0 4px;"><b>[' . htmlspecialchars($it['bentuk']) . '][' . htmlspecialchars($it['level_kognitif']) . ']</b> ' . nl2br(htmlspecialchars(ai_bersih_pertanyaan($it['pertanyaan']))) . '</p>';
         $html .= ai_gambar_html(ai_extract_gambar((string)($it['pertanyaan'] ?? ''), (string)($it['gambar'] ?? '')));
         if ($it['bentuk'] === 'Menjodohkan' && !empty($it['tabel']) && is_array($it['tabel'])) {
             $html .= '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:10pt;margin:8px 0;">'
@@ -1720,5 +1800,25 @@ if ($aksi === 'upload') {
     exit;
 }
 
+if ($aksi === 'resolve_image') {
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: application/json');
+    $desc = trim((string)($_GET['desc'] ?? $_POST['desc'] ?? ''));
+    if ($desc === '') {
+        echo json_encode(['ok' => false, 'url' => '']);
+        exit;
+    }
+    [$filePath, $data] = ai_resolve_image_file($desc);
+    $hash = md5($desc);
+    if ($filePath !== '' && is_file($filePath)) {
+        echo json_encode(['ok' => true, 'url' => '../uploads/ai_images/img_' . $hash . '.jpg']);
+    } else {
+        echo json_encode(['ok' => false, 'url' => '']);
+    }
+    exit;
+}
+
 http_response_code(400);
+while (ob_get_level()) { ob_end_clean(); }
+header('Content-Type: application/json');
 echo json_encode(['ok' => false, 'msg' => 'Aksi tidak dikenal.']);

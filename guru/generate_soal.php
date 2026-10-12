@@ -21,7 +21,16 @@ $session_q = isset($_GET['session_type']) ? '?session_type=' . urlencode((string
 // Master lists: mapel + kelas sesuai guru login (fallback semua bila belum ada jadwal)
 $mapel_list = function_exists('getGuruTaughtMapels') ? getGuruTaughtMapels($pdo, $guru_id) : getFilteredSubjects($pdo);
 $kelas_list = function_exists('getGuruTaughtClasses') ? getGuruTaughtClasses($pdo, $guru_id) : $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
-$jenis_soal_options = ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'];
+$kesulitan_options = ['Mudah (Easy)', 'Sedang (Medium)', 'Sukar (Hard)'];
+$bloom_options = [
+    'C1 - Mengingat' => 'Mengingat kembali fakta, istilah, atau konsep dasar',
+    'C2 - Memahami' => 'Menjelaskan ide atau konsep materi',
+    'C3 - Mengaplikasikan' => 'Menggunakan informasi pada situasi baru',
+    'C4 - Menganalisis' => 'Membedakan bagian dan struktur materi',
+    'C5 - Mengevaluasi' => 'Memberikan penilaian atau keputusan berbasis kriteria',
+    'C6 - Mencipta' => 'Menghasilkan karya baru atau asli'
+];
+$khusus_options = ['HOTS', 'Literacy', 'Numeracy', 'With Image'];
 $kurikulum_options = ['PERMENDIKDASMEN_046' => 'Permendikdasmen CP 046', 'KMA_1503_KBC' => 'KMA 1503 + KBC'];
 $asesmen_options = ai_asesmen_list();
 
@@ -40,8 +49,31 @@ function aiHitungTotal() {
         }
     });
     $('#aiTotalPaket').text(total);
+    
+    var totalKesulitan = 0;
+    $('.ai-kesulitan-num').each(function() {
+        totalKesulitan += parseInt($(this).val() || '0', 10) || 0;
+    });
+    
+    var $badge = $('#aiMatchBadge');
+    if (!$badge.length) {
+        // Cari label pada section Level Kesulitan (field 2)
+        $('.ai-kesulitan-num').first().closest('.col-12').find('label').first().append(' <span id="aiMatchBadge" class="badge ml-2" style="font-size:12px;"></span>');
+        $badge = $('#aiMatchBadge');
+    }
+    if (totalKesulitan === total) {
+        $badge.removeClass('badge-danger').addClass('badge-success').text('Matched (' + totalKesulitan + ' = ' + total + ')');
+    } else {
+        $badge.removeClass('badge-success').addClass('badge-danger').text('Tidak Cocok (' + totalKesulitan + ' ≠ ' + total + ')');
+    }
+    
     return total;
 }
+$(document).on('input', '.ai-kesulitan-num', function() {
+    var v = parseInt($(this).val() || '0', 10) || 0;
+    if (v < 0) { $(this).val(0); }
+    aiHitungTotal();
+});
 $(document).on('change', '.ai-paket-check', function() {
     var num = $(this).closest('.border').find('.ai-paket-num');
     if ($(this).is(':checked')) {
@@ -66,6 +98,14 @@ $('#formGenerateAI').on('submit', function(e) {
         Swal.fire({ icon: 'warning', title: 'Paket kosong', text: 'Centang minimal 1 bentuk soal dan isi jumlahnya.' });
         return;
     }
+    var totalKesulitan = 0;
+    $('.ai-kesulitan-num').each(function() {
+        totalKesulitan += parseInt($(this).val() || '0', 10) || 0;
+    });
+    if (totalKesulitan !== total) {
+        Swal.fire({ icon: 'warning', title: 'Jumlah Tidak Cocok', text: 'Jumlah total level kesulitan (' + totalKesulitan + ') harus sama persis dengan total butir soal (' + total + ').' });
+        return;
+    }
     if (($('#ai_topik').val() || '').trim() === '') {
         Swal.fire({ icon: 'warning', title: 'Topik kosong', text: 'Topik/pokok bahasan wajib diisi.' });
         return;
@@ -86,7 +126,9 @@ $('#formGenerateAI').on('submit', function(e) {
         timeout: 180000
     }).done(function(res) {
         if (!res || !res.ok) {
-            Swal.fire({ icon: 'error', title: 'Gagal', text: (res && res.msg) ? res.msg : 'Gagal generate soal.' });
+            var detail = (res && res.msg) ? res.msg : 'Gagal generate soal.';
+            if (res && res.debug) { detail += '\n\n[DEBUG] ' + res.debug; }
+            Swal.fire({ icon: 'error', title: 'Gagal', html: '<div style="text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto;">' + $('<div>').text(detail).html() + '</div>' });
             return;
         }
         aiLastSoal = res.soal || [];
@@ -110,13 +152,31 @@ $('#formGenerateAI').on('submit', function(e) {
             });
             return h + '</tbody></table></div>';
         }
+        function aiPisahGambar(pertanyaan, gambarField) {
+            var teks = (pertanyaan || '') + '';
+            var gbr = (gambarField || '') + '';
+            var m = teks.match(/\[GAMBAR:\s*([\s\S]*?)\]/i);
+            if (m) {
+                if (!gbr.trim()) { gbr = (m[1] || '').trim(); }
+                teks = teks.replace(/\[GAMBAR:\s*[\s\S]*?\]/i, '').replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+            }
+            return { teks: teks, gambar: (gbr || '').trim() };
+        }
         var html = '<ol class="pl-3 mb-0">';
         aiLastSoal.forEach(function(s) {
+            var pg = aiPisahGambar(s.pertanyaan, s.gambar);
+            s.gambar = pg.gambar;
             html += '<li class="mb-3"><span class="badge badge-primary mb-1">' + $('<div>').text(s.bentuk || '').html() + '</span> <span class="badge badge-info mb-1">' + $('<div>').text(s.level_kognitif || 'L2').html() + '</span>';
-            if (s.gambar && (s.gambar + '').trim() !== '') {
-                html += '<div class="alert alert-warning py-2 px-2 mb-2 small"><i class="fas fa-image mr-1"></i><strong>[GAMBAR: </strong>' + $('<div>').text(s.gambar).html() + '<strong>]</strong></div>';
+            if (pg.gambar !== '') {
+                var gesc = $('<div>').text(pg.gambar).html();
+                var gurl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(pg.gambar) + '?width=650&height=380&nologo=true';
+                html += '<div class="my-2 text-center p-2 bg-white rounded border ai-gambar-box" data-desc="' + gesc + '" style="max-width:520px;">'
+                    + '<img class="ai-gambar-img img-fluid rounded" src="' + gurl + '" alt="' + gesc + '" style="max-width:100%;max-height:300px;" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.querySelector(\'.ai-gambar-spin\').style.display=\'none\';">'
+                    + '<div class="ai-gambar-cap small text-muted mt-1"><i class="fas fa-image mr-1"></i>' + gesc + '</div>'
+                    + '<div class="ai-gambar-spin small text-muted" style="display:none;"><i class="fas fa-spinner fa-spin mr-1"></i>Memuat gambar...</div>'
+                    + '</div>';
             }
-            html += '<div class="font-weight-bold">' + $('<div>').text(s.pertanyaan || '').html() + '</div>';
+            html += '<div class="font-weight-bold" style="white-space:pre-wrap;">' + $('<div>').text(pg.teks || '').html() + '</div>';
             if (s.bentuk === 'Menjodohkan' && s.tabel && s.tabel.length) {
                 html += aiTabelJodoh(s.tabel);
             } else if (s.opsi && typeof s.opsi === 'object' && (s.opsi.A || s.opsi.B || s.opsi.C || s.opsi.D)) {
@@ -131,6 +191,17 @@ $('#formGenerateAI').on('submit', function(e) {
         });
         html += '</ol>';
         $('#aiHasil').html(html);
+        // Coba ganti ke cache lokal bila sudah ada; biarkan gambar pollinations tampil langsung
+        $('.ai-gambar-box').each(function() {
+            var box = $(this);
+            var desc = box.data('desc') || '';
+            if (!desc) return;
+            $.getJSON('ajax_generate_soal.php', { aksi: 'resolve_image', desc: desc }).done(function(r) {
+                if (r && r.ok && r.url) {
+                    box.find('.ai-gambar-img').attr('src', r.url);
+                }
+            });
+        });
         // Hitung total butir: tiap baris pasangan Menjodohkan dihitung 1 butir
         var totalButir = 0;
         aiLastSoal.forEach(function(s) {
@@ -291,6 +362,9 @@ include '../templates/sidebar.php';
                 <div class="card-body">
                     <form id="formGenerateAI" enctype="multipart/form-data">
                         <div class="row">
+                            <div class="col-12 form-group">
+                                <label class="font-weight-bold">1. Informasi Dasar & Kurikulum</label>
+                            </div>
                             <div class="col-md-4 form-group">
                                 <label>Jenis Asesmen <span class="text-danger">*</span> <small class="text-muted">(jadi nama file)</small></label>
                                 <select name="jenis_asesmen" id="ai_asesmen" class="form-control">
@@ -354,9 +428,9 @@ include '../templates/sidebar.php';
                                 <input type="file" name="materi_file" id="ai_file" class="form-control-file" accept=".docx,.txt">
                             </div>
                             <div class="col-12 form-group">
-                                <label class="font-weight-bold">Paket Bentuk Soal <small class="text-muted">(centang + isi jumlah per bentuk — hasil jadi 1 paket, kesulitan otomatis acak merata Mudah/Sedang/Sukar per bentuk)</small></label>
+                                <label class="font-weight-bold">2. Paket Bentuk Soal <small class="text-muted">(centang + isi jumlah per bentuk)</small></label>
                                 <div class="row" id="aiPaketWrap">
-                                    <?php foreach ($jenis_soal_options as $idx => $js): ?>
+                                    <?php foreach (['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Menjodohkan', 'Isian Singkat', 'Uraian'] as $idx => $js): ?>
                                         <?php $def_jml = ['Pilihan Ganda' => 5, 'Pilihan Ganda Kompleks' => 0, 'Menjodohkan' => 0, 'Isian Singkat' => 0, 'Uraian' => 2][$js] ?? 0; ?>
                                         <div class="col-md-4 mb-2">
                                             <div class="border rounded p-2 d-flex align-items-center">
@@ -370,6 +444,54 @@ include '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </div>
                                 <small class="text-muted">Total paket: <b id="aiTotalPaket">7</b> butir.</small>
+                            </div>
+
+                            <div class="col-12 form-group">
+                                <label class="font-weight-bold">3. Level Kesulitan (Difficulty Level)</label>
+                                <div class="row">
+                                    <?php foreach (['Mudah (Easy)', 'Sedang (Medium)', 'Sukar (Hard)'] as $idx => $dl): ?>
+                                        <div class="col-md-4 mb-2">
+                                            <div class="border rounded p-2 d-flex align-items-center bg-light">
+                                                <div class="font-weight-bold small mr-2"><?= $dl ?></div>
+                                                <input type="number" name="kesulitan_dist[<?= explode(' ', $dl)[0] ?>]" class="form-control form-control-sm ml-auto ai-kesulitan-num" style="width:90px;" value="<?= $idx === 1 ? 7 : 0 ?>" min="0">
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+
+                            <div class="col-12 form-group">
+                                <label class="font-weight-bold">4. Taksonomi Bloom Level Kognitif (Pilih minimal 1)</label>
+                                <div class="row">
+                                    <?php foreach ($bloom_options as $bk => $bv): ?>
+                                        <div class="col-md-4 mb-2">
+                                            <div class="border rounded p-2 d-flex align-items-center">
+                                                <div class="custom-control custom-checkbox mr-2">
+                                                    <input type="checkbox" class="custom-control-input" name="bloom[]" value="<?= explode(' ', $bk)[0] ?>" id="bloom_<?= md5($bk) ?>" <?= in_array(explode(' ', $bk)[0], ['C1', 'C2', 'C3', 'C4'], true) ? 'checked' : '' ?>>
+                                                    <label class="custom-control-label font-weight-bold small" for="bloom_<?= md5($bk) ?>"><?= $bk ?></label>
+                                                </div>
+                                                <small class="text-muted ml-auto" style="font-size:11px;"><?= $bv ?></small>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+
+                            <div class="col-12 form-group">
+                                <label class="font-weight-bold">5. Karakteristik / Bentuk Khusus Soal (Opsional)</label>
+                                <div class="row">
+                                    <?php foreach ($khusus_options as $ko): ?>
+                                        <div class="col-md-3 mb-2">
+                                            <div class="border rounded p-2 d-flex align-items-center">
+                                                <div class="custom-control custom-checkbox mr-2">
+                                                    <input type="checkbox" class="custom-control-input" name="karakteristik[]" value="<?= $ko ?>" id="kar_<?= md5($ko) ?>">
+                                                    <label class="custom-control-label font-weight-bold small" for="kar_<?= md5($ko) ?>"><?= $ko ?></label>
+                                                </div>
+                                                <input type="number" name="karakteristik_jml[<?= $ko ?>]" class="form-control form-control-sm ml-auto" style="width:70px;" value="2" min="0">
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                             <div class="col-md-6 form-group">
                                 <label class="font-weight-bold">Materi Detail <span class="text-muted small font-weight-normal">(opsional — ketik manual / tempel materi)</span></label>

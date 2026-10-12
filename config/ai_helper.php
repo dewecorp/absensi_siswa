@@ -345,13 +345,43 @@ if (!function_exists('ai_build_soal_prompt')) {
         $lines[] = '  2. KESESUAIAN SUBJEK & USIA: Jika soal menceritakan kegiatan peserta didik madrasah (MI/SD, MTs, MA), subjek visual WAJIB dideskripsikan sebagai "peserta didik / siswa madrasah (anak-anak usia sekolah berseragam sekolah)". DILARANG KERAS mendeskripsikan warga masyarakat dewasa, orang kampung, atau petani jika konteksnya adalah murid madrasah.';
         $lines[] = '  3. MATERI SAINS / DIAGRAM: Gunakan istilah anatomi atau sains yang baku dan presisi (misal: "Diagram sistem pencernaan manusia dengan label mulut, kerongkongan, lambung, usus halus, usus besar, anus").';
         $lines[] = '  4. PENULISAN BLOK: Tuliskan persis [GAMBAR: deskripsi objek edukatif yang fokus dan spesifik] tepat setelah kalimat pertanyaan. Jangan menulis "perhatikan gambar berikut" tanpa menyertakan blok [GAMBAR: ...]. Jika soal tidak memerlukan gambar, JANGAN menuliskan blok tersebut.';
-        $lines[] = '- Tingkat kesulitan: ACAK dan MERATA untuk tiap bentuk soal (setiap bentuk wajib ada yang Mudah, Sedang, dan Sukar bila jumlah memungkinkan; bila jumlah < 3, variasikan sebisa mungkin). Tandai tiap butir pada field "kesulitan".';
-        $lines[] = 'Level kognitif (WAJIB untuk tiap butir kisi-kisi dan soal, cantumkan field "level_kognitif" dengan nilai persis C1, C2, C3, atau C4 / L1-L4):';
-        $lines[] = '- Kognitif C1 Knowledge (Mengingat): Pada level ini pelajar perlu mengingat istilah, fakta, & detail tanpa perlu memahami konsep materinya.';
-        $lines[] = '- Kognitif C2 Comprehension (Memahami): Pada level ini pelajar perlu menyusun ringkasan & menjelaskan gagasan utama menggunakan kata-kata serta bahasanya sendiri tanpa menghubungkannya dengan pembahasan lainnya.';
-        $lines[] = '- Kognitif C3 Application (Menerapkan): Pada level ini pelajar perlu mengaplikasikan atau menerapkan hasil belajar ke kehidupan sehari-hari maupun ke masalah dengan konteks berbeda dari contoh yang sudah pernah diberikan.';
-        $lines[] = '- Kognitif C4 Analysis (Menganalisis): Pada level ini pelajar perlu melakukan analisis pemecahan masalah melalui tahap memisahkan bagian-bagian permasalahan, menguraikan pola permasalahan hingga menghubungkan sebab-akibat antara suatu materi terhadap bagian lainnya.';
-        $lines[] = 'Sebarkan level kognitif (C1-C4) secara proporsional sesuai materi dan bentuk soal; tandai pada field "level_kognitif" (contoh: "C1", "C2", "C3", atau "C4").';
+        // Aturan Level Kesulitan & Taksonomi Bloom / Karakteristik
+        $d_kesulitan = [];
+        if (!empty($in['kesulitan_dist']) && is_array($in['kesulitan_dist'])) {
+            foreach ($in['kesulitan_dist'] as $kd => $kv) {
+                if ((int)$kv > 0) {
+                    $d_kesulitan[] = (int)$kv . ' butir ' . $kd;
+                }
+            }
+        }
+        if ($d_kesulitan) {
+            $lines[] = '- Distribusi tingkat kesulitan (WAJIB dipenuhi persis): ' . implode(', ', $d_kesulitan) . '. Tandai tiap butir pada field "kesulitan" dengan nilai persis "Mudah", "Sedang", atau "Sukar".';
+        } else {
+            $lines[] = '- Tingkat kesulitan: ACAK dan MERATA untuk tiap bentuk soal (Mudah, Sedang, Sukar). Tandai tiap butir pada field "kesulitan".';
+        }
+
+        $d_bloom = [];
+        if (!empty($in['bloom']) && is_array($in['bloom'])) {
+            $d_bloom = array_map('strtoupper', $in['bloom']);
+        }
+        if ($d_bloom) {
+            $lines[] = '- Level Kognitif Taksonomi Bloom (WAJIB gunakan hanya level berikut: ' . implode(', ', $d_bloom) . '). Sebar butir soal secara proporsional ke level-level tersebut dan cantumkan pada field "level_kognitif".';
+        } else {
+            $lines[] = 'Level kognitif (WAJIB untuk tiap butir kisi-kisi dan soal, cantumkan field "level_kognitif" dengan nilai persis C1, C2, C3, C4, C5, atau C6):';
+            $lines[] = '- Kognitif C1 (Mengingat), C2 (Memahami), C3 (Mengaplikasikan), C4 (Menganalisis), C5 (Mengevaluasi), C6 (Mencipta).';
+        }
+
+        $d_kar = [];
+        if (!empty($in['karakteristik']) && is_array($in['karakteristik'])) {
+            foreach ($in['karakteristik'] as $kn => $kn_jml) {
+                if ((int)$kn_jml > 0) {
+                    $d_kar[] = (int)$kn_jml . ' butir ' . $kn;
+                }
+            }
+        }
+        if ($d_kar) {
+            $lines[] = '- Karakteristik / bentuk khusus soal yang diinginkan: ' . implode(', ', $d_kar) . '. Sesuaikan stimulus dan bobot soal agar mencirikan karakteristik tersebut.';
+        }
         $lines[] = 'Aturan per bentuk:';
         $lines[] = '- Pilihan Ganda: tiap butir tepat 4 opsi berlabel A-D dan satu kunci (A/B/C/D).';
         $lines[] = '- Pilihan Ganda Kompleks: tiap butir memiliki 4 opsi berlabel A-D, dan kunci jawaban WAJIB TEPAT 2 PILIHAN BENAR SAJA (contoh "A,C" atau "B,D"). Siswa memilih tepat 2 jawaban yang benar.';
@@ -443,14 +473,24 @@ if (!function_exists('ai_parse_soal_json')) {
     // Ambil blok JSON dari teks AI (tahan bungkus markdown) lalu validasi struktur minimal.
     function ai_parse_soal_json(string $text): array {
         $t = trim($text);
-        if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $t, $m)) {
+        if (preg_match('/```(?:json)?\s*(\{.*\})\s*```/s', $t, $m)) {
             $t = $m[1];
         } elseif (($p1 = strpos($t, '{')) !== false && ($p2 = strrpos($t, '}')) !== false && $p2 > $p1) {
             $t = substr($t, $p1, $p2 - $p1 + 1);
         }
+        $t = preg_replace('/[\x00-\x1F\x7F]/u', '', $t);
         $data = json_decode($t, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $t_fix = preg_replace('/,\s*([\]}])/', '$1', $t);
+            $data = json_decode($t_fix, true);
+        }
         if (!is_array($data) || empty($data['soal']) || !is_array($data['soal'])) {
-            return [false, null, 'Respons AI bukan JSON soal yang valid.'];
+            $arr_alt = json_decode($t, true);
+            if (is_array($arr_alt) && array_is_list($arr_alt)) {
+                $data = ['kisi_kisi' => [], 'soal' => $arr_alt];
+            } else {
+                return [false, null, 'Respons AI bukan JSON soal yang valid. Silakan klik Generate ulang.'];
+            }
         }
         if (empty($data['kisi_kisi']) || !is_array($data['kisi_kisi'])) {
             $data['kisi_kisi'] = [];
