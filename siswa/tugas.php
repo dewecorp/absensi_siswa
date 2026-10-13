@@ -111,6 +111,21 @@ $stmt = $pdo->prepare("
 $stmt->execute([$id_siswa, $id_kelas]);
 $all_tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Abaikan pengumpulan prematur (tgl_kumpul < tgl_mulai) agar status konsisten antar siswa
+foreach ($all_tasks as &$at) {
+    if (!empty($at['tgl_kumpul']) && !empty($at['tgl_mulai']) && strtotime($at['tgl_kumpul']) < strtotime($at['tgl_mulai'])) {
+        $at['id_pengumpulan'] = null;
+        $at['file_siswa'] = null;
+        $at['catatan_siswa'] = null;
+        $at['tgl_kumpul'] = null;
+        $at['keterlambatan'] = null;
+        $at['nilai'] = null;
+        $at['status_periksa'] = null;
+        $at['feedback'] = null;
+    }
+}
+unset($at);
+
 $filter_status = trim((string)($_GET['status'] ?? ''));
 $tasks = $all_tasks;
 if ($filter_status === 'belum') {
@@ -272,7 +287,7 @@ include '../templates/sidebar.php';
                                     <th>Batas Waktu (Deadline)</th>
                                     <th class="text-center">Status Kumpul</th>
                                     <th class="text-center">Nilai</th>
-                                    <th class="text-center">Pemeriksaan</th>
+                                    <th class="text-center">Status Tugas</th>
                                     <th class="text-center" width="16%">Aksi</th>
                                 </tr>
                             </thead>
@@ -280,8 +295,8 @@ include '../templates/sidebar.php';
                                 <?php foreach ($tasks as $i => $t): ?>
                                      <?php
                                      $is_submitted = !empty($t['id_pengumpulan']);
-                                     $is_upcoming = !empty($t['tgl_mulai']) && strtotime($t['tgl_mulai']) > time() && !$is_submitted;
-                                     $is_overdue = !empty($t['deadline']) && strtotime($t['deadline']) < time() && !$is_submitted;
+                                     $is_upcoming = !empty($t['tgl_mulai']) && strtotime($t['tgl_mulai']) > time();
+                                     $is_overdue = !empty($t['deadline']) && strtotime($t['deadline']) < time() && !$is_submitted && !$is_upcoming;
                                      $p_badge = ($t['status_periksa'] ?? '') === 'Sudah Diperiksa' ? 'success' : (($t['status_periksa'] ?? '') === 'Perlu Revisi' ? 'warning' : 'secondary');
                                      ?>
                                      <tr>
@@ -315,7 +330,15 @@ include '../templates/sidebar.php';
                                             <?= $t['nilai'] !== null ? '<span class="text-primary font-weight-bold">' . (float)$t['nilai'] . '</span>' : '-' ?>
                                         </td>
                                         <td class="text-center">
-                                            <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($t['status_periksa'] ?? 'Belum') ?></span>
+                                            <?php if (in_array($t['jenis_tugas'] ?? '', ['Kuis', 'CBT'], true)): ?>
+                                                <?php if ($is_submitted): ?>
+                                                    <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Sudah Dikerjakan</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-warning"><i class="fas fa-hourglass-half mr-1"></i>Belum Dikerjakan</span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($t['status_periksa'] ?? 'Belum') ?></span>
+                                            <?php endif; ?>
                                         </td>
                                          <td class="text-center align-middle">
                                              <div class="aksi-satu-baris">

@@ -36,6 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id_kelas = (int)($_POST['id_kelas'] ?? 0) ?: null;
         $materi_tp = trim((string)($_POST['materi_tp'] ?? ''));
         $jenis_tugas = trim((string)($_POST['jenis_tugas'] ?? 'Individu'));
+        if ($judul !== '' && $jenis_tugas !== '') {
+            $judul_bersih = preg_replace('/^(individu|kelompok|proyek|praktik|portofolio|kuis|cbt)\s+/i', '', $judul);
+            $judul = $jenis_tugas . ' ' . ltrim($judul_bersih);
+        }
         $instruksi = trim((string)($_POST['instruksi'] ?? ''));
         $tgl_mulai = !empty($_POST['tgl_mulai']) ? date('Y-m-d H:i:s', strtotime($_POST['tgl_mulai'])) : date('Y-m-d H:i:s');
         $deadline = !empty($_POST['deadline']) ? date('Y-m-d H:i:s', strtotime($_POST['deadline'])) : null;
