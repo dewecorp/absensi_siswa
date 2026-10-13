@@ -82,9 +82,14 @@ if (empty($rows)) {
 }
 
 $deadline_ts = !empty($tugas['deadline']) ? strtotime($tugas['deadline']) : null;
+$is_kuis_cbt = in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true);
 foreach ($rows as &$r) {
     $is_kumpul = !empty($r['tgl_kumpul']);
-    $r['_kumpul'] = $is_kumpul ? 'Sudah' : 'Belum';
+    if ($is_kuis_cbt) {
+        $r['_kumpul'] = $is_kumpul ? 'Sudah Mengerjakan' : 'Belum Mengerjakan';
+    } else {
+        $r['_kumpul'] = $is_kumpul ? 'Sudah' : 'Belum';
+    }
     $r['_tgl'] = $is_kumpul ? date('d/m/Y H:i', strtotime($r['tgl_kumpul'])) : '-';
     $late = '-';
     if ($is_kumpul && $deadline_ts) {
@@ -203,7 +208,7 @@ ob_start();
         .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 9.5pt; }
         .info-table td { padding: 3px 6px; vertical-align: top; }
         .info-table .lbl { width: 150px; font-weight: bold; color: #222; }
-        .table-data { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; table-layout: fixed; }
+        .table-data { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
         .table-data th, .table-data td { border: 1px solid #333; padding: 6px 8px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
         .table-data th { background-color: #f1f5f9; font-weight: bold; text-align: center; font-size: 9pt; }
         .signature-table { width: 100%; border-collapse: collapse; margin-top: 30px; page-break-inside: avoid; font-size: 9.5pt; }
@@ -264,11 +269,18 @@ ob_start();
 
 <table class="table-data">
     <colgroup>
-        <col style="width:5%;"><col style="width:21%;"><col style="width:12%;"><col style="width:8%;"><col style="width:12%;"><col style="width:12%;"><col style="width:8%;"><col style="width:22%;">
+        <?php if ($is_kuis_cbt): ?>
+            <col style="width:6%;"><col style="width:36%;"><col style="width:16%;"><col style="width:22%;"><col style="width:14%;"><col style="width:6%;">
+        <?php else: ?>
+            <col style="width:5%;"><col style="width:21%;"><col style="width:12%;"><col style="width:8%;"><col style="width:12%;"><col style="width:12%;"><col style="width:8%;"><col style="width:22%;">
+        <?php endif; ?>
     </colgroup>
     <thead>
         <tr>
-            <th>No</th><th>Nama Siswa</th><th>NISN</th><th>Status</th><th>Tgl Kumpul</th><th>Keterlambatan</th><th>Nilai</th><th>Pemeriksaan</th>
+            <th>No</th><th>Nama Siswa</th><th>NISN</th><th><?= $is_kuis_cbt ? 'Status' : 'Status Kumpul' ?></th><th><?= $is_kuis_cbt ? 'Tgl Mengerjakan' : 'Tgl Kumpul' ?></th>
+            <?php if (!$is_kuis_cbt): ?><th>Keterlambatan</th><?php endif; ?>
+            <th>Nilai</th>
+            <?php if (!$is_kuis_cbt): ?><th>Pemeriksaan</th><?php endif; ?>
         </tr>
     </thead>
     <tbody>
@@ -279,9 +291,13 @@ ob_start();
                 <td style="text-align:center;"><?= htmlspecialchars($r['nisn'] ?? '-') ?></td>
                 <td style="text-align:center;"><?= htmlspecialchars($r['_kumpul']) ?></td>
                 <td style="text-align:center;"><?= htmlspecialchars($r['_tgl']) ?></td>
+                <?php if (!$is_kuis_cbt): ?>
                 <td style="text-align:center;"><?= htmlspecialchars($r['_late']) ?></td>
-                <td style="text-align:center;"><?= htmlspecialchars($r['_nilai']) ?></td>
+                <?php endif; ?>
+                <td style="text-align:center; font-weight:bold;"><?= htmlspecialchars($r['_nilai']) ?></td>
+                <?php if (!$is_kuis_cbt): ?>
                 <td style="text-align:center;"><?= htmlspecialchars($r['_periksa']) ?></td>
+                <?php endif; ?>
             </tr>
         <?php endforeach; ?>
     </tbody>

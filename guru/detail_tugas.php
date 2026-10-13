@@ -97,7 +97,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Gagal menyimpan nilai: ' . $e->getMessage()];
         }
-    }
+    } elseif ($action === 'simpan_soal') {
+            $soal_id = (int)($_POST['soal_id'] ?? 0);
+            $tipe_soal = in_array($_POST['tipe_soal'] ?? '', ['Pilihan Ganda', 'Essay'], true) ? $_POST['tipe_soal'] : 'Pilihan Ganda';
+            $pertanyaan = trim((string)($_POST['pertanyaan'] ?? ''));
+            $pilihan_a = trim((string)($_POST['pilihan_a'] ?? ''));
+            $pilihan_b = trim((string)($_POST['pilihan_b'] ?? ''));
+            $pilihan_c = trim((string)($_POST['pilihan_c'] ?? ''));
+            $pilihan_d = trim((string)($_POST['pilihan_d'] ?? ''));
+            $pilihan_e = trim((string)($_POST['pilihan_e'] ?? ''));
+            $kunci_jawaban = trim((string)($_POST['kunci_jawaban'] ?? 'A'));
+            $bobot = (int)($_POST['bobot'] ?? 10) ?: 10;
+
+            if ($pertanyaan === '') {
+                $message = ['type' => 'warning', 'text' => 'Pertanyaan soal wajib diisi.'];
+            } else {
+                try {
+                    if ($soal_id > 0) {
+                        $st = $pdo->prepare("UPDATE tb_tugas_soal SET tipe_soal=?, pertanyaan=?, pilihan_a=?, pilihan_b=?, pilihan_c=?, pilihan_d=?, pilihan_e=?, kunci_jawaban=?, bobot=? WHERE id=? AND id_tugas=?");
+                        $st->execute([$tipe_soal, $pertanyaan, $pilihan_a, $pilihan_b, $pilihan_c, $pilihan_d, $pilihan_e, $kunci_jawaban, $bobot, $soal_id, $id_tugas]);
+                        $message = ['type' => 'success', 'text' => 'Soal kuis berhasil diperbarui.'];
+                    } else {
+                        $st = $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        $st->execute([$id_tugas, $tipe_soal, $pertanyaan, $pilihan_a, $pilihan_b, $pilihan_c, $pilihan_d, $pilihan_e, $kunci_jawaban, $bobot]);
+                        $message = ['type' => 'success', 'text' => 'Soal kuis baru berhasil ditambahkan.'];
+                    }
+                } catch (Exception $e) {
+                    $message = ['type' => 'danger', 'text' => 'Gagal menyimpan soal: ' . $e->getMessage()];
+                }
+            }
+        } elseif ($action === 'perpanjang_waktu') {
+            $tambah_jam = (int)($_POST['tambah_jam'] ?? 24);
+            try {
+                $stDL = $pdo->prepare("SELECT deadline FROM tb_tugas WHERE id = ? AND id_guru = ?");
+                $stDL->execute([$id_tugas, $guru_id]);
+                $old_dl = $stDL->fetchColumn();
+                $base_time = ($old_dl && strtotime($old_dl) > time()) ? strtotime($old_dl) : time();
+                $new_dl = date('Y-m-d H:i:s', $base_time + ($tambah_jam * 3600));
+
+                $pdo->prepare("UPDATE tb_tugas SET deadline = ? WHERE id = ? AND id_guru = ?")->execute([$new_dl, $id_tugas, $guru_id]);
+                $message = ['type' => 'success', 'text' => "Batas waktu tugas berhasil diperpanjang hingga: " . date('d/m/Y H:i', strtotime($new_dl))];
+            } catch (Exception $e) {
+                $message = ['type' => 'danger', 'text' => 'Gagal memperpanjang waktu: ' . $e->getMessage()];
+            }
+        }
 }
 }
 
@@ -113,6 +156,14 @@ $students_stmt = $pdo->prepare("
 ");
 $students_stmt->execute([$id_tugas, $tugas['id_kelas']]);
 $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch soal kuis/CBT jika jenis tugas Kuis atau CBT
+$soal_list = [];
+if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)) {
+    $stSoal = $pdo->prepare("SELECT * FROM tb_tugas_soal WHERE id_tugas = ? ORDER BY id ASC");
+    $stSoal->execute([$id_tugas]);
+    $soal_list = $stSoal->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Statistics
 $jml_siswa = count($students);
@@ -207,8 +258,13 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <div class="mb-3">
-                <a href="tugas.php" class="btn btn-primary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
+            <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                <a href="tugas.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
+                <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                <a href="buat_soal_tugas.php?id=<?= (int)$tugas['id'] ?>" class="btn btn-primary btn-sm">
+                    <i class="fas fa-question-circle mr-1"></i> Kelola Soal <?= htmlspecialchars($tugas['jenis_tugas']) ?>
+                </a>
+                <?php endif; ?>
             </div>
             <!-- Informasi Tugas & Statistik -->
             <div class="row">
@@ -286,19 +342,19 @@ include '../templates/sidebar.php';
                                         <h3 class="mb-0 text-warning"><?= $terlambat ?></h3>
                                     </div>
                                 </div>
-                                <div class="col-6">
-                                    <div class="border rounded p-3 text-center">
-                                        <div class="text-muted small">Sudah Diperiksa</div>
-                                        <h3 class="mb-0 text-info"><?= $sudah_diperiksa ?></h3>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="border rounded p-3 text-center">
-                                        <div class="text-muted small">Belum Diperiksa</div>
-                                        <h3 class="mb-0 text-secondary"><?= $belum_diperiksa ?></h3>
-                                    </div>
-                                </div>
-                            </div>
+                                 <div class="col-6">
+                                     <div class="border rounded p-3 text-center">
+                                         <div class="text-muted small"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Sudah Mengerjakan' : 'Sudah Diperiksa' ?></div>
+                                         <h3 class="mb-0 text-info"><?= $sudah_diperiksa ?></h3>
+                                     </div>
+                                 </div>
+                                  <div class="col-6">
+                                      <div class="border rounded p-3 text-center">
+                                          <div class="text-muted small"><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Belum Mengerjakan' : 'Belum Diperiksa' ?></div>
+                                          <h3 class="mb-0 text-secondary"><?= $belum_diperiksa ?></h3>
+                                      </div>
+                                  </div>
+                             </div>
                         </div>
                     </div>
                 </div>
@@ -309,6 +365,11 @@ include '../templates/sidebar.php';
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                     <h4><i class="fas fa-users-cog mr-2"></i>Tabel Pengumpulan Tugas</h4>
                     <div class="d-flex flex-wrap" style="gap:6px;">
+                        <?php if ($can_crud): ?>
+                        <button type="button" class="btn btn-warning btn-sm font-weight-bold" data-toggle="modal" data-target="#modalPerpanjangWaktu" title="Perpanjang Batas Waktu Pengerjaan">
+                            <i class="fas fa-clock mr-1"></i> Perpanjang Waktu
+                        </button>
+                        <?php endif; ?>
                         <a href="export_pengumpulan_tugas_pdf.php?id=<?= (int)$tugas['id'] ?>" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF (tab baru)"><i class="fas fa-print mr-1"></i> PDF</a>
                         <a href="export_pengumpulan_tugas_excel.php?id=<?= (int)$tugas['id'] ?>" class="btn btn-success btn-sm" title="Unduh Excel"><i class="fas fa-file-excel mr-1"></i> Excel</a>
                     </div>
@@ -321,13 +382,20 @@ include '../templates/sidebar.php';
                                     <th width="4%">No</th>
                                     <th>Nama Siswa</th>
                                     <th>NISN</th>
-                                    <th>Status Kumpul</th>
-                                    <th>Tanggal Kumpul</th>
+                                    <?php if (!in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                        <th>Status Kumpul</th>
+                                    <?php endif; ?>
+                                    <th><?= in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true) ? 'Tanggal Mengerjakan' : 'Tanggal Kumpul' ?></th>
                                     <th>Keterlambatan</th>
                                     <th>Nilai</th>
-                                    <th>Status Pemeriksaan</th>
-                                    <th width="10%" class="text-center">Berkas Siswa</th>
-                                    <th width="12%" class="text-center">Aksi</th>
+                                    <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                        <th>Status</th>
+                                        <th width="15%" class="text-center">Aksi</th>
+                                    <?php else: ?>
+                                        <th>Status Pemeriksaan</th>
+                                        <th width="10%" class="text-center">Berkas Siswa</th>
+                                        <th width="12%" class="text-center">Aksi</th>
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -349,13 +417,15 @@ include '../templates/sidebar.php';
                                         <td class="text-center"><?= $i + 1 ?></td>
                                         <td><strong><?= htmlspecialchars($s['nama_siswa']) ?></strong></td>
                                         <td><?= htmlspecialchars($s['nisn'] ?? '-') ?></td>
-                                        <td class="text-center">
-                                            <?php if ($is_kumpul): ?>
-                                                <span class="badge badge-success">Sudah</span>
-                                            <?php else: ?>
-                                                <span class="badge badge-danger">Belum</span>
-                                            <?php endif; ?>
-                                        </td>
+                                         <?php if (!in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                         <td class="text-center">
+                                             <?php if ($is_kumpul): ?>
+                                                 <span class="badge badge-success">Sudah</span>
+                                             <?php else: ?>
+                                                 <span class="badge badge-danger">Belum</span>
+                                             <?php endif; ?>
+                                         </td>
+                                         <?php endif; ?>
                                         <td><?= $is_kumpul ? date('d/m/Y H:i', strtotime($s['tgl_kumpul'])) : '-' ?></td>
                                         <td>
                                             <?php if ($keterlambatan_label === 'Tepat Waktu'): ?>
@@ -369,38 +439,60 @@ include '../templates/sidebar.php';
                                         <td class="text-center font-weight-bold text-primary" style="font-size: 15px;">
                                             <?= $s['nilai'] !== null ? (float)$s['nilai'] : '-' ?>
                                         </td>
-                                        <td class="text-center">
-                                            <?php
-                                            $st_periksa = $s['status_periksa'] ?? 'Belum Diperiksa';
-                                            $p_badge = $st_periksa === 'Sudah Diperiksa' ? 'success' : ($st_periksa === 'Perlu Revisi' ? 'warning' : 'secondary');
-                                            ?>
-                                            <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($st_periksa) ?></span>
-                                        </td>
-                                        <td class="text-center">
-                                            <?php if (!empty($s['file_path'])): ?>
-                                                <?php $ext = strtoupper(pathinfo($s['file_path'], PATHINFO_EXTENSION)); ?>
-                                                <a href="preview_tugas.php?id_pengumpulan=<?= (int)$s['id_pengumpulan'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Baca Berkas Siswa (Tab Baru)">
-                                                    <i class="fas fa-book-reader mr-1"></i> <?= $ext ?>
-                                                </a>
-                                            <?php else: ?>
-                                                <span class="text-muted small">-</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center">
-                                            <?php if ($can_crud): ?>
-                                            <button type="button" class="btn btn-primary btn-sm btn-periksa"
-                                                data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'
-                                                title="Periksa, Nilai & Feedback">
-                                                <i class="fas fa-check-circle mr-1"></i> Periksa / Nilai
-                                            </button>
-                                            <?php else: ?>
-                                            <button type="button" class="btn btn-info btn-sm btn-periksa"
-                                                data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'
-                                                title="Lihat Detail Nilai & Feedback">
-                                                <i class="fas fa-eye mr-1"></i> Detail
-                                            </button>
-                                            <?php endif; ?>
-                                        </td>
+                                         <td class="text-center">
+                                             <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                                 <?php if ($is_kumpul): ?>
+                                                     <span class="badge badge-success">Sudah Mengerjakan</span>
+                                                 <?php else: ?>
+                                                     <span class="badge badge-secondary">Belum Mengerjakan</span>
+                                                 <?php endif; ?>
+                                             <?php else: ?>
+                                                 <?php
+                                                 $st_periksa = $s['status_periksa'] ?? 'Belum Diperiksa';
+                                                 $p_badge = $st_periksa === 'Sudah Diperiksa' ? 'success' : ($st_periksa === 'Perlu Revisi' ? 'warning' : 'secondary');
+                                                 ?>
+                                                 <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($st_periksa) ?></span>
+                                             <?php endif; ?>
+                                         </td>
+                                         <?php if (!in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                         <td class="text-center">
+                                             <?php if (!empty($s['file_path'])): ?>
+                                                 <?php $ext = strtoupper(pathinfo($s['file_path'], PATHINFO_EXTENSION)); ?>
+                                                 <a href="preview_tugas.php?id_pengumpulan=<?= (int)$s['id_pengumpulan'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Baca Berkas Siswa (Tab Baru)">
+                                                     <i class="fas fa-book-reader mr-1"></i> <?= $ext ?>
+                                                 </a>
+                                             <?php else: ?>
+                                                 <span class="text-muted small">-</span>
+                                             <?php endif; ?>
+                                         </td>
+                                         <?php endif; ?>
+                                         <td class="text-center">
+                                             <?php
+                                             $s_json = $s;
+                                             $s_json['soal_list'] = $soal_list;
+                                             ?>
+                                             <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                                 <button type="button" class="btn btn-info btn-sm btn-lihat-jawaban"
+                                                     data-json='<?= htmlspecialchars(json_encode($s_json), ENT_QUOTES, 'UTF-8') ?>'
+                                                     title="Lihat Lembar Jawaban Siswa">
+                                                     <i class="fas fa-eye mr-1"></i> Lihat Jawaban
+                                                 </button>
+                                             <?php else: ?>
+                                                 <?php if ($can_crud): ?>
+                                                 <button type="button" class="btn btn-primary btn-sm btn-periksa"
+                                                     data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'
+                                                     title="Periksa, Nilai & Feedback">
+                                                     <i class="fas fa-check-circle mr-1"></i> Periksa / Nilai
+                                                 </button>
+                                                 <?php else: ?>
+                                                 <button type="button" class="btn btn-info btn-sm btn-periksa"
+                                                     data-json='<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>'
+                                                     title="Lihat Detail Nilai & Feedback">
+                                                     <i class="fas fa-eye mr-1"></i> Detail
+                                                 </button>
+                                                 <?php endif; ?>
+                                             <?php endif; ?>
+                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -459,6 +551,162 @@ include '../templates/sidebar.php';
                     <?php if ($can_crud): ?>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Simpan Penilaian</button>
                     <?php endif; ?>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lihat Lembar Jawaban Siswa (Kuis / CBT) -->
+<div class="modal fade" id="modalLihatJawaban" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title text-white"><i class="fas fa-file-alt mr-2"></i>Lembar Jawaban Siswa: <span id="jw_nama_siswa"></span></h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body bg-light" style="max-height: 75vh; overflow-y: auto;">
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body py-2">
+                        <div class="row">
+                            <div class="col-md-4"><strong>Status:</strong> <span id="jw_status_kumpul"></span></div>
+                            <div class="col-md-4"><strong>Tanggal Kumpul:</strong> <span id="jw_tgl_kumpul"></span></div>
+                            <div class="col-md-4"><strong>Nilai Diperoleh:</strong> <span id="jw_nilai" class="text-primary font-weight-bold" style="font-size: 16px;"></span></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="jw_container_soal"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php
+$js_page = [];
+if ($message) {
+    $js_page[] = "Swal.fire({ icon: '" . ($message['type'] === 'danger' ? 'error' : $message['type']) . "', title: '" . ($message['type'] === 'success' ? 'Berhasil' : 'Perhatian') . "', text: " . json_encode($message['text']) . ", timer: 2200, showConfirmButton: false });";
+}
+$js_page[] = <<<'JS'
+$(document).ready(function() {
+    $(document).on('click', '.btn-lihat-jawaban', function() {
+        var data = $(this).data('json');
+        if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) {} }
+        
+        $('#jw_nama_siswa').text(data.nama_siswa || '-');
+        if (data.tgl_kumpul) {
+            $('#jw_status_kumpul').html('<span class="badge badge-success">Sudah Mengerjakan</span>');
+            $('#jw_tgl_kumpul').text(data.tgl_kumpul);
+            $('#jw_nilai').text((data.nilai !== null ? data.nilai : '0') + ' / 100');
+        } else {
+            $('#jw_status_kumpul').html('<span class="badge badge-secondary">Belum Mengerjakan</span>');
+            $('#jw_tgl_kumpul').text('-');
+            $('#jw_nilai').text('-');
+        }
+
+        var hasSubmitted = !!data.tgl_kumpul;
+        var jawabanSiswa = {};
+        if (hasSubmitted) {
+            try {
+                if (data.catatan_siswa) {
+                    jawabanSiswa = JSON.parse(data.catatan_siswa);
+                }
+            } catch(e) {}
+        }
+
+        var htmlSoal = '';
+        var soalList = data.soal_list || [];
+        if (soalList.length === 0) {
+            htmlSoal = '<div class="text-center text-muted py-4">Belum ada butir soal.</div>';
+        } else {
+            soalList.forEach(function(soal, idx) {
+                var sId = soal.id;
+                var jwbSiswa = hasSubmitted ? (jawabanSiswa[sId] || '(Belum dijawab)') : null;
+                var kunci = soal.kunci_jawaban || '';
+                var isCorrect = false;
+                if (hasSubmitted && soal.tipe_soal !== 'Essay') {
+                    isCorrect = (String(jwbSiswa).trim().toLowerCase() === String(kunci).trim().toLowerCase());
+                }
+
+                htmlSoal += '<div class="card mb-3 shadow-sm border">';
+                htmlSoal += '<div class="card-header bg-white d-flex justify-content-between align-items-center">';
+                htmlSoal += '<div><span class="badge badge-primary mr-2">Soal No. ' + (idx + 1) + '</span> <span class="badge badge-info">' + soal.tipe_soal + '</span></div>';
+                if (hasSubmitted && soal.tipe_soal !== 'Essay') {
+                    if (isCorrect) {
+                        htmlSoal += '<span class="badge badge-success"><i class="fas fa-check mr-1"></i> Benar</span>';
+                    } else {
+                        htmlSoal += '<span class="badge badge-danger"><i class="fas fa-times mr-1"></i> Salah</span>';
+                    }
+                } else if (!hasSubmitted) {
+                    htmlSoal += '<span class="badge badge-secondary">Siswa Belum Mengerjakan</span>';
+                }
+                htmlSoal += '</div>';
+                htmlSoal += '<div class="card-body">';
+                htmlSoal += '<p class="font-weight-bold text-dark mb-3" style="font-size:14.5px;">' + (soal.pertanyaan || '') + '</p>';
+
+                if (soal.tipe_soal !== 'Essay') {
+                    var opts = { 'A': soal.pilihan_a, 'B': soal.pilihan_b, 'C': soal.pilihan_c, 'D': soal.pilihan_d, 'E': soal.pilihan_e };
+                    htmlSoal += '<div class="pl-2 mb-3">';
+                    for (var k in opts) {
+                        if (opts[k]) {
+                            var isChosen = hasSubmitted && (String(jwbSiswa).toUpperCase().indexOf(k) !== -1);
+                            var isKey = (String(kunci).toUpperCase().indexOf(k) !== -1);
+                            var badgeCls = '';
+                            if (isKey) badgeCls = 'text-success font-weight-bold';
+                            if (isChosen && !isKey) badgeCls = 'text-danger font-weight-bold text-decoration-line-through';
+                            if (isChosen && isKey) badgeCls = 'text-success font-weight-bold';
+
+                            htmlSoal += '<div class="py-1 ' + badgeCls + '"><strong>' + k + '.</strong> ' + opts[k] + (isChosen ? ' <em>(Pilihan Siswa)</em>' : '') + (isKey ? ' <strong>(Kunci)</strong>' : '') + '</div>';
+                        }
+                    }
+                    htmlSoal += '</div>';
+                } else {
+                    htmlSoal += '<div class="p-3 bg-light rounded mb-2"><strong>Jawaban Siswa:</strong><br>' + (hasSubmitted ? (jwbSiswa || '-') : '<em class="text-muted">Siswa belum mengerjakan</em>') + '</div>';
+                }
+
+                htmlSoal += '<div class="small text-muted font-italic">Kunci Jawaban Guru: <strong>' + (kunci || '-') + '</strong> | Bobot: ' + (soal.bobot || 10) + '</div>';
+                htmlSoal += '</div></div>';
+            });
+        }
+
+        $('#jw_container_soal').html(htmlSoal);
+        $('#modalLihatJawaban').modal('show');
+    });
+});
+JS;
+?>
+
+<!-- Modal Perpanjang Waktu -->
+<div class="modal fade" id="modalPerpanjangWaktu" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="action" value="perpanjang_waktu">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-clock mr-2"></i>Perpanjang Batas Waktu Pengerjaan</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small mb-3">
+                        <i class="fas fa-info-circle mr-1"></i> Deadline saat ini: <strong><?= !empty($tugas['deadline']) ? date('d/m/Y H:i', strtotime($tugas['deadline'])) : 'Tidak ada deadline' ?></strong>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-weight-bold">Tambah Durasi Waktu</label>
+                        <select name="tambah_jam" class="form-control" required>
+                            <option value="6">Tambah 6 Jam</option>
+                            <option value="12">Tambah 12 Jam</option>
+                            <option value="24" selected>Tambah 1 Hari (24 Jam)</option>
+                            <option value="48">Tambah 2 Hari (48 Jam)</option>
+                            <option value="72">Tambah 3 Hari (72 Jam)</option>
+                            <option value="168">Tambah 1 Minggu</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning font-weight-bold text-dark"><i class="fas fa-check mr-1"></i> Perpanjang Waktu Sekarang</button>
                 </div>
             </form>
         </div>

@@ -170,6 +170,12 @@ $(document).ready(function() {
             $('#det_feedback_wrap').hide();
         }
 
+        if (data.jenis_tugas === 'Kuis' || data.jenis_tugas === 'CBT') {
+            $('#det_footer_action').html('<a href="kerjakan_kuis.php?id=' + data.id + '" class="btn btn-success"><i class="fas fa-laptop-code mr-1"></i> Mulai Mengerjakan ' + data.jenis_tugas + ' Sekarang</a>');
+        } else {
+            $('#det_footer_action').html('');
+        }
+
         $('#modalLihatTugas').modal('show');
     });
 
@@ -306,16 +312,22 @@ include '../templates/sidebar.php';
                                         <td class="text-center">
                                             <span class="badge badge-<?= $p_badge ?>"><?= htmlspecialchars($t['status_periksa'] ?? 'Belum') ?></span>
                                         </td>
-                                        <td class="text-center align-middle">
-                                            <div class="aksi-satu-baris">
-                                                <button type="button" class="btn btn-info btn-sm btn-lihat-tugas" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="Lihat Petunjuk Tugas">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-<?= $is_submitted ? 'warning' : 'primary' ?> btn-sm btn-kumpul-modal" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="<?= $is_submitted ? 'Perbarui Pengumpulan' : 'Kumpulkan Tugas' ?>">
-                                                    <i class="fas fa-upload"></i>
-                                                </button>
-                                            </div>
-                                        </td>
+                                         <td class="text-center align-middle">
+                                             <div class="aksi-satu-baris">
+                                                 <button type="button" class="btn btn-info btn-sm btn-lihat-tugas" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="Lihat Petunjuk Tugas">
+                                                     <i class="fas fa-eye"></i>
+                                                 </button>
+                                                 <?php if (in_array($t['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                                     <a href="kerjakan_kuis.php?id=<?= (int)$t['id'] ?>" class="btn btn-success btn-sm" title="Mulai Kerjakan <?= htmlspecialchars($t['jenis_tugas']) ?>">
+                                                         <i class="fas fa-laptop-code"></i>
+                                                     </a>
+                                                 <?php else: ?>
+                                                     <button type="button" class="btn btn-<?= $is_submitted ? 'warning' : 'primary' ?> btn-sm btn-kumpul-modal" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="<?= $is_submitted ? 'Perbarui Pengumpulan' : 'Kumpulkan Tugas' ?>">
+                                                         <i class="fas fa-upload"></i>
+                                                     </button>
+                                                 <?php endif; ?>
+                                             </div>
+                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -357,8 +369,9 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-top py-2">
+            <div class="modal-footer border-top py-2 d-flex justify-content-between">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                <div id="det_footer_action"></div>
             </div>
         </div>
     </div>

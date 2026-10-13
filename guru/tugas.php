@@ -145,7 +145,7 @@ if ($is_admin_or_kepala) {
     $mapel_list = getGuruTaughtMapels($pdo, $guru_id);
     $kelas_list = getGuruTaughtClasses($pdo, $guru_id);
 }
-$jenis_tugas_options = ['Individu', 'Kelompok', 'Proyek', 'Praktik', 'Portofolio', 'Kuis'];
+$jenis_tugas_options = ['Individu', 'Kelompok', 'Proyek', 'Praktik', 'Portofolio', 'Kuis', 'CBT'];
 
 // Deteksi kelas wali jika login sebagai wali kelas
 $wali_kelas_id = 0;
@@ -257,6 +257,24 @@ $(document).ready(function() {
         }
         $('#modalTugas').modal('show');
     });
+
+    function toggleJenisTugas() {
+        var v = $('#inp_jenis').val();
+        if (v === 'Kuis') {
+            $('#container_kuis_builder').slideDown(150);
+            $('#container_cbt_builder').slideUp(150);
+            $('#container_lampiran_berkas').slideUp(150);
+        } else if (v === 'CBT') {
+            $('#container_cbt_builder').slideDown(150);
+            $('#container_kuis_builder').slideUp(150);
+            $('#container_lampiran_berkas').slideUp(150);
+        } else {
+            $('#container_kuis_builder').slideUp(150);
+            $('#container_cbt_builder').slideUp(150);
+            $('#container_lampiran_berkas').slideDown(150);
+        }
+    }
+    $(document).on('change', '#inp_jenis', toggleJenisTugas);
 
     $(document).on('click', '.btn-edit-tugas', function() {
         var data = $(this).data('json');
@@ -580,7 +598,28 @@ include '../templates/sidebar.php';
                                 <option value="Arsip">Arsip</option>
                             </select>
                         </div>
-                        <div class="col-12 form-group">
+                        <div class="col-12 form-group" id="container_kuis_builder" style="display:none;">
+                            <div class="alert alert-info small mb-0">
+                                <i class="fas fa-question-circle mr-1"></i> <strong>Mode Kuis Aktif:</strong> Setelah tugas disimpan, Anda dapat menyusun butir-butir soal pilihan ganda atau essay langsung pada detail tugas.
+                            </div>
+                        </div>
+                        <div class="col-12 form-group" id="container_cbt_builder" style="display:none;">
+                            <div class="p-3 bg-light border rounded">
+                                <h6 class="font-weight-bold text-primary mb-2"><i class="fas fa-laptop-code mr-1"></i> Konfigurasi Ujian CBT</h6>
+                                <div class="form-row">
+                                    <div class="col-md-6 form-group mb-2">
+                                        <label class="small font-weight-bold">Durasi Ujian (Menit)</label>
+                                        <input type="number" name="cbt_durasi" id="inp_cbt_durasi" class="form-control form-control-sm" value="90" min="10" max="300">
+                                    </div>
+                                    <div class="col-md-6 form-group mb-2">
+                                        <label class="small font-weight-bold">Token Ujian (Auto/Kustom)</label>
+                                        <input type="text" name="cbt_token" id="inp_cbt_token" class="form-control form-control-sm" value="CBT-<?= rand(1000,9999) ?>">
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block">Siswa memerlukan token di atas untuk memulai ujian CBT. Laman bank soal & generator AI dapat diakses setelah tugas ini dibuat.</small>
+                            </div>
+                        </div>
+                        <div class="col-12 form-group" id="container_lampiran_berkas">
                             <label>Lampiran Berkas (Soal/Panduan)</label>
                             <input type="file" name="lampiran_file" class="form-control-file">
                         </div>
