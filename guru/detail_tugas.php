@@ -280,12 +280,25 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                         <div class="card-body">
-                            <h5 class="text-primary"><?= htmlspecialchars($tugas['judul']) ?></h5>
+                            <?php
+                            $judul_bersih = $tugas['judul'];
+                            if ($tugas['jenis_tugas'] === 'CBT') {
+                                $judul_bersih = preg_replace('/^kuis\s*/i', '', $judul_bersih);
+                                if (stripos($judul_bersih, 'cbt') !== 0) $judul_bersih = 'CBT ' . trim($judul_bersih);
+                            } elseif ($tugas['jenis_tugas'] === 'Kuis') {
+                                $judul_bersih = preg_replace('/^cbt\s*/i', '', $judul_bersih);
+                                if (stripos($judul_bersih, 'kuis') !== 0) $judul_bersih = 'Kuis ' . trim($judul_bersih);
+                            }
+                            ?>
+                            <h5 class="text-primary font-weight-bold mb-3">
+                                <?= htmlspecialchars($judul_bersih) ?>
+                            </h5>
                             <table class="table table-sm table-bordered mt-3">
                                 <tr><th width="30%">Mata Pelajaran</th><td><?= htmlspecialchars($tugas['nama_mapel'] ?? '-') ?></td></tr>
                                 <tr><th>Kelas</th><td><?= htmlspecialchars($tugas['nama_kelas'] ?? '-') ?></td></tr>
                                 <tr><th>Materi / TP</th><td><?= htmlspecialchars($tugas['materi_tp'] ?? '-') ?></td></tr>
-                                <tr><th>Jenis Tugas</th><td><span class="badge badge-light border"><?= htmlspecialchars($tugas['jenis_tugas']) ?></span></td></tr>
+                                 <tr><th>Jenis Tugas</th><td><span class="badge badge-light border"><?= htmlspecialchars($tugas['jenis_tugas']) ?></span></td></tr>
+                                <tr><th>Jumlah Soal</th><td><strong class="text-primary"><?= count($soal_list) ?> Butir Soal</strong></td></tr>
                                 <tr><th>Tanggal Mulai</th><td><?= !empty($tugas['tgl_mulai']) ? date('d/m/Y H:i', strtotime($tugas['tgl_mulai'])) : '-' ?></td></tr>
                                 <tr><th>Deadline</th><td class="font-weight-bold text-danger"><?= !empty($tugas['deadline']) ? date('d/m/Y H:i', strtotime($tugas['deadline'])) : '-' ?></td></tr>
                                 <tr><th>Nilai Maksimal</th><td><?= (int)$tugas['nilai_maksimal'] ?></td></tr>

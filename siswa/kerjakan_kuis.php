@@ -41,6 +41,17 @@ $stSub = $pdo->prepare("SELECT * FROM tb_tugas_pengumpulan WHERE id_tugas = ? AN
 $stSub->execute([$id_tugas, $id_siswa]);
 $submission = $stSub->fetch(PDO::FETCH_ASSOC);
 
+// Cek deadline
+$is_expired = !empty($tugas['deadline']) && strtotime($tugas['deadline']) < time();
+if ($is_expired && empty($submission)) {
+    $page_title = 'Waktu Habis';
+    include '../templates/header.php';
+    include '../templates/sidebar.php';
+    echo '<div class="main-content"><section class="section"><div class="section-body"><div class="card shadow-sm border-danger"><div class="card-body text-center py-5"><div class="mb-3 text-danger" style="font-size: 50px;"><i class="fas fa-clock"></i></div><h3 class="text-danger font-weight-bold">Waktu Pengerjaan Telah Berakhir</h3><p class="text-muted">Batas waktu (deadline) tugas ini sudah terlewati. Anda tidak dapat mengerjakan kuis ini kecuali guru telah memberikan perpanjangan waktu.</p><a href="tugas.php" class="btn btn-primary mt-2"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a></div></div></div></section></div>';
+    include '../templates/footer.php';
+    exit;
+}
+
 $message = null;
 
 // Handle submit jawaban kuis/CBT
@@ -206,6 +217,39 @@ if ($message) {
 }
 $js_page[] = <<<'JS'
 $(document).ready(function() {
+    var violationCount = 0;
+    var maxViolations = 3;
+
+    function checkVisibility() {
+        if (document.hidden || document.visibilityState === 'hidden') {
+            violationCount++;
+            var sisa = maxViolations - violationCount;
+            if (violationCount >= maxViolations) {
+                Swal.fire({
+                    title: 'Ujian Dihentikan!',
+                    text: 'Anda terdeteksi meninggalkan halaman ujian sebanyak 3 kali. Sesuai aturan, pengerjaan kuis/CBT dihentikan dan nilai dianggap 0.',
+                    icon: 'error',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    confirmButtonText: 'Keluar ke Daftar Tugas'
+                }).then(function() {
+                    window.location.href = 'tugas.php';
+                });
+                $('#formKerjakanKuis').html('<div class="alert alert-danger text-center font-weight-bold p-4">Ujian dibatalkan karena terdeteksi berpindah tab/jendela.</div>');
+            } else {
+                Swal.fire({
+                    title: 'Peringatan (' + violationCount + '/' + maxViolations + ')',
+                    text: 'Jangan membuka tab atau jendela lain! Jika Anda meninggalkan halaman ini ' + sisa + ' kali lagi, ujian akan dihentikan secara otomatis.',
+                    icon: 'warning',
+                    confirmButtonText: 'Saya Mengerti'
+                });
+            }
+        }
+    }
+
+    document.addEventListener('visibilitychange', checkVisibility);
+    window.addEventListener('blur', checkVisibility);
+
     $('#btnSubmitKuis').on('click', function(e) {
         e.preventDefault();
         Swal.fire({

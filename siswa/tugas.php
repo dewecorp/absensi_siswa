@@ -317,15 +317,19 @@ include '../templates/sidebar.php';
                                                  <button type="button" class="btn btn-info btn-sm btn-lihat-tugas" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="Lihat Petunjuk Tugas">
                                                      <i class="fas fa-eye"></i>
                                                  </button>
-                                                 <?php if (in_array($t['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
-                                                     <a href="kerjakan_kuis.php?id=<?= (int)$t['id'] ?>" class="btn btn-success btn-sm" title="Mulai Kerjakan <?= htmlspecialchars($t['jenis_tugas']) ?>">
-                                                         <i class="fas fa-laptop-code"></i>
-                                                     </a>
-                                                 <?php else: ?>
-                                                     <button type="button" class="btn btn-<?= $is_submitted ? 'warning' : 'primary' ?> btn-sm btn-kumpul-modal" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="<?= $is_submitted ? 'Perbarui Pengumpulan' : 'Kumpulkan Tugas' ?>">
-                                                         <i class="fas fa-upload"></i>
-                                                     </button>
-                                                 <?php endif; ?>
+                                                  <?php if ($is_overdue): ?>
+                                                      <button type="button" class="btn btn-secondary btn-sm" disabled title="Waktu Habis (Deadline Terlewati)">
+                                                          <i class="fas fa-lock"></i>
+                                                      </button>
+                                                  <?php elseif (in_array($t['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                                      <a href="kerjakan_kuis.php?id=<?= (int)$t['id'] ?>" class="btn btn-success btn-sm" title="Mulai Kerjakan <?= htmlspecialchars($t['jenis_tugas']) ?>">
+                                                          <i class="fas fa-laptop-code"></i>
+                                                      </a>
+                                                  <?php else: ?>
+                                                      <button type="button" class="btn btn-<?= $is_submitted ? 'warning' : 'primary' ?> btn-sm btn-kumpul-modal" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="<?= $is_submitted ? 'Perbarui Pengumpulan' : 'Kumpulkan Tugas' ?>">
+                                                          <i class="fas fa-upload"></i>
+                                                      </button>
+                                                  <?php endif; ?>
                                              </div>
                                          </td>
                                     </tr>
