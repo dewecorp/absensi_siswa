@@ -174,29 +174,27 @@ ob_start();
     <meta charset="utf-8">
     <title><?= htmlspecialchars($judul_dokumen) ?></title>
     <style>
-        @page { size: 215mm 330mm; margin: 12mm 12mm; }
-        body { font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; font-size: 10pt; color: #111; line-height: 1.4; background: #fff; margin: 0; padding: 10px; }
-        .header-kop { border-bottom: 2.5px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-        .header-kop h2 { margin: 0; font-size: 14pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-        .header-kop h3 { margin: 2px 0; font-size: 12pt; font-weight: 700; }
-        .header-kop p { margin: 2px 0; font-size: 9pt; color: #333; }
+        @page { size: 215mm 330mm portrait; margin: 12mm 14mm; }
+        body { font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; font-size: 9.5pt; color: #111; line-height: 1.4; background: #fff; margin: 0; padding: 10px; }
+        .header-kop { border-bottom: 2.5px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+        .header-kop h2 { margin: 0; font-size: 13pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .header-kop h3 { margin: 2px 0; font-size: 11pt; font-weight: 700; }
+        .header-kop p { margin: 2px 0; font-size: 8.5pt; color: #333; }
         .header-kop table { table-layout: fixed; }
         .header-kop td { overflow: visible; }
-        .kop-logo-img { width: 82px; height: 71px; display: block; margin: 0 auto; }
-        .doc-title { text-align: center; margin: 14px 0 16px; }
-        .doc-title h4 { margin: 0; font-size: 10.5pt; font-weight: 800; text-decoration: underline; text-transform: uppercase; line-height: 1.35; }
-        .doc-title small { font-size: 9pt; color: #444; }
-        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 9.5pt; }
-        .info-table td { padding: 3px 6px; vertical-align: top; }
-        .info-table .lbl { width: 130px; font-weight: bold; color: #222; }
-        .day-title { margin: 14px 0 8px; font-size: 10.5pt; border-bottom: 1.5px solid #1d4ed8; color: #1e40af; padding-bottom: 3px; font-weight: 800; text-transform: uppercase; }
-        .table-data { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; table-layout: fixed; }
-        .table-data th, .table-data td { border: 1px solid #333; padding: 6px 8px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
-        .table-data th { background-color: #f1f5f9; font-weight: bold; text-align: center; font-size: 9pt; }
-        .signature-table { width: 100%; border-collapse: collapse; margin-top: 30px; page-break-inside: avoid; font-size: 9.5pt; }
+        .kop-logo-img { width: 75px; height: 65px; display: block; margin: 0 auto; }
+        .doc-title { text-align: center; margin: 10px 0 12px; }
+        .doc-title h4 { margin: 0; font-size: 10pt; font-weight: 800; text-decoration: underline; text-transform: uppercase; line-height: 1.35; }
+        .doc-title small { font-size: 8.5pt; color: #444; }
+        .table-data { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 9pt; table-layout: fixed; }
+        .table-data th, .table-data td { border: 1px solid #333; padding: 5px 7px; vertical-align: middle; word-wrap: break-word; overflow-wrap: break-word; }
+        .table-data th { background-color: #f1f5f9; color: #000; font-weight: bold; text-align: center; font-size: 9pt; }
+        .table-data td.td-hari { background-color: #e2e8f0; font-weight: bold; text-align: center; color: #000; }
+        .table-data tr:nth-child(even) td:not(.td-hari) { background-color: #f8faff; }
+        .signature-table { width: 100%; border-collapse: collapse; margin-top: 24px; page-break-inside: avoid; font-size: 9.5pt; }
         .signature-table td { text-align: center; vertical-align: top; width: 50%; }
         .no-print { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
-        @media print { .no-print { display: none !important; } body { padding: 0; } .day-block { page-break-inside: avoid; } }
+        @media print { .no-print { display: none !important; } body { padding: 0; } }
     </style>
 </head>
 <body>
@@ -240,31 +238,61 @@ ob_start();
     <small>Tahun Ajaran <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars($semester) ?>) &bull; Tanggal Cetak: <?= date('d F Y') ?></small>
 </div>
 
-<?php foreach ($days_order as $hari): ?>
-    <?php $petugas = $piket_by_day[$hari] ?? []; ?>
-    <div class="day-block">
-        <h5 class="day-title"><?= htmlspecialchars(strtoupper($hari)) ?> &mdash; <?= count($petugas) ?> SISWA</h5>
-        <?php if (empty($petugas)): ?>
-            <p style="color:#64748b;">Belum ada petugas piket.</p>
-        <?php else: ?>
-        <table class="table-data">
-            <colgroup><col style="width:8%;"><col style="width:62%;"><col style="width:30%;"></colgroup>
-            <thead>
-                <tr><th>No</th><th>Nama Siswa</th><th>NISN</th></tr>
-            </thead>
-            <tbody>
-                <?php $no = 1; foreach ($petugas as $p): ?>
-                    <tr>
-                        <td style="text-align:center;"><?= $no++ ?></td>
-                        <td><strong><?= htmlspecialchars($p['nama_siswa']) ?></strong></td>
-                        <td style="text-align:center;"><?= htmlspecialchars($p['nisn'] ?? '-') ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php endif; ?>
-    </div>
-<?php endforeach; ?>
+<?php
+// Susun semua baris dalam urutan hari, dengan rowspan per hari
+$all_rows = [];
+foreach ($days_order as $hari) {
+    $petugas = $piket_by_day[$hari] ?? [];
+    foreach ($petugas as $p) {
+        $all_rows[] = array_merge($p, ['_hari' => $hari, '_jumlah_hari' => count($petugas)]);
+    }
+    if (empty($petugas)) {
+        $all_rows[] = ['_hari' => $hari, '_jumlah_hari' => 0, 'nama_siswa' => null, 'nisn' => null, 'tugas' => null, 'urutan' => null];
+    }
+}
+?>
+<table class="table-data">
+    <colgroup>
+        <col style="width:14%;">
+        <col style="width:6%;">
+        <col style="width:52%;">
+        <col style="width:28%;">
+    </colgroup>
+    <thead>
+        <tr>
+            <th>Hari</th>
+            <th>No</th>
+            <th>Nama Siswa</th>
+            <th>NISN</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php
+        $prev_hari = null;
+        $no_per_hari = 0;
+        foreach ($all_rows as $p):
+            $hari      = $p['_hari'];
+            $jumlah    = (int)$p['_jumlah_hari'];
+            $is_first  = ($hari !== $prev_hari);
+            if ($is_first) $no_per_hari = 0;
+            $no_per_hari++;
+            $kosong    = ($p['nama_siswa'] === null);
+        ?>
+        <tr>
+            <?php if ($is_first): ?>
+            <td class="td-hari" rowspan="<?= max(1, $jumlah) ?>"><?= htmlspecialchars(strtoupper($hari)) ?></td>
+            <?php endif; ?>
+            <?php if ($kosong): ?>
+            <td colspan="3" style="color:#94a3b8;font-style:italic;text-align:center;">Belum ada petugas</td>
+            <?php else: ?>
+            <td style="text-align:center;"><?= (int)$p['urutan'] ?></td>
+            <td><?= htmlspecialchars($p['nama_siswa']) ?></td>
+            <td style="text-align:center;"><?= htmlspecialchars($p['nisn'] ?? '-') ?></td>
+            <?php endif; ?>
+        </tr>
+        <?php $prev_hari = $hari; endforeach; ?>
+    </tbody>
+</table>
 
 <!-- TANDA TANGAN -->
 <table class="signature-table">
@@ -317,7 +345,7 @@ if ($is_download) {
     }
     $dompdf = new Dompdf\Dompdf(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true, 'defaultFont' => 'sans-serif']);
     $dompdf->loadHtml($html_out);
-    $dompdf->setPaper([0, 0, 609.43, 935.43], 'portrait');
+    $dompdf->setPaper([0, 0, 609.45, 935.43], 'portrait');
     $dompdf->render();
     $pdf_content = $dompdf->output();
     header('Content-Type: application/pdf');

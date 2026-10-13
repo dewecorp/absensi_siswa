@@ -53,13 +53,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $action = $_POST['action'] ?? '';
 
+    if ($action === 'reorder') {
+        header('Content-Type: application/json');
+        $rid  = (int)($_POST['id'] ?? 0);
+        $arah = $_POST['arah'] ?? '';
+        if ($rid > 0 && in_array($arah, ['naik','turun'], true)) {
+            $cur = $pdo->prepare("SELECT id, hari, id_kelas, urutan FROM tb_jadwal_piket_kelas WHERE id = ?");
+            $cur->execute([$rid]);
+            $row = $cur->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                if ($arah === 'naik') {
+                    $swap = $pdo->prepare("SELECT id, urutan FROM tb_jadwal_piket_kelas WHERE hari=? AND id_kelas=? AND urutan < ? ORDER BY urutan DESC LIMIT 1");
+                } else {
+                    $swap = $pdo->prepare("SELECT id, urutan FROM tb_jadwal_piket_kelas WHERE hari=? AND id_kelas=? AND urutan > ? ORDER BY urutan ASC LIMIT 1");
+                }
+                $swap->execute([$row['hari'], $row['id_kelas'], $row['urutan']]);
+                $other = $swap->fetch(PDO::FETCH_ASSOC);
+                if ($other) {
+                    $pdo->prepare("UPDATE tb_jadwal_piket_kelas SET urutan=? WHERE id=?")->execute([$other['urutan'], $rid]);
+                    $pdo->prepare("UPDATE tb_jadwal_piket_kelas SET urutan=? WHERE id=?")->execute([$row['urutan'], $other['id']]);
+                    echo json_encode(['ok' => true]);
+                } else {
+                    echo json_encode(['ok' => false, 'msg' => 'Sudah di ujung.']);
+                }
+            } else {
+                echo json_encode(['ok' => false, 'msg' => 'Record tidak ditemukan.']);
+            }
+        } else {
+            echo json_encode(['ok' => false, 'msg' => 'Parameter tidak valid.']);
+        }
+        exit;
+    }
+
     if ($action === 'tambah' || $action === 'edit') {
         $id = (int)($_POST['id'] ?? 0);
         $id_kelas = (int)($_POST['id_kelas'] ?? $selected_kelas_id);
         $hari = trim((string)($_POST['hari'] ?? 'Senin'));
         $id_siswa = (int)($_POST['id_siswa'] ?? 0);
         $tugas = trim((string)($_POST['tugas'] ?? 'Piket Umum'));
-        $urutan = (int)($_POST['urutan'] ?? 1);
         $status = in_array($_POST['status'] ?? '', ['Aktif', 'Nonaktif'], true) ? $_POST['status'] : 'Aktif';
 
         if ($id_siswa <= 0 || $hari === '') {
@@ -67,20 +98,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 if ($action === 'tambah') {
+                    $stmtMax = $pdo->prepare("SELECT COALESCE(MAX(urutan),0)+1 FROM tb_jadwal_piket_kelas WHERE hari=? AND id_kelas=?");
+                    $stmtMax->execute([$hari, $id_kelas]);
+                    $urutan_baru = (int)$stmtMax->fetchColumn();
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_jadwal_piket_kelas (
                             id_wali, id_kelas, hari, id_siswa, tugas, urutan, status
                         ) VALUES (?, ?, ?, ?, ?, ?, ?)
                     ");
-                    $stmt->execute([$guru_id, $id_kelas, $hari, $id_siswa, $tugas, $urutan, $status]);
+                    $stmt->execute([$guru_id, $id_kelas, $hari, $id_siswa, $tugas, $urutan_baru, $status]);
                     $message = ['type' => 'success', 'text' => 'Jadwal piket siswa berhasil ditambahkan.'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE tb_jadwal_piket_kelas SET
-                            id_kelas = ?, hari = ?, id_siswa = ?, tugas = ?, urutan = ?, status = ?
+                            id_kelas = ?, hari = ?, id_siswa = ?, tugas = ?, status = ?
                         WHERE id = ? " . (!$is_monitor ? "AND id_wali = $guru_id" : "") . "
                     ");
-                    $stmt->execute([$id_kelas, $hari, $id_siswa, $tugas, $urutan, $status, $id]);
+                    $stmt->execute([$id_kelas, $hari, $id_siswa, $tugas, $status, $id]);
                     $message = ['type' => 'success', 'text' => 'Jadwal piket berhasil diperbarui.'];
                 }
             } catch (Exception $e) {
@@ -159,14 +193,15 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-edit-piket', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) {} }
+        $('#formPiket')[0].reset();
         $('#formPiketAction').val('edit');
         $('#piketId').val(data.id);
         $('#modalPiketTitle').text('Edit Petugas Piket');
-        $('#inp_hari').val(data.hari);
-        $('#inp_siswa').val(data.id_siswa);
-        $('#inp_tugas').val(data.tugas);
-        $('#inp_urutan').val(data.urutan);
-        $('#inp_status').val(data.status);
+        $('#inp_hari').val(String(data.hari || '')).trigger('change');
+        $('#inp_siswa').val(String(data.id_siswa || '')).trigger('change');
+        $('#inp_tugas').val(data.tugas || 'Piket Umum');
+        $('#inp_status').val(String(data.status || 'Aktif')).trigger('change');
         $('#modalPiket').modal('show');
     });
 
@@ -187,6 +222,55 @@ $(document).ready(function() {
                 $('#formHapus').submit();
             }
         });
+    });
+
+    function reorderPiket(id, arah, btn) {
+        btn.prop('disabled', true);
+        $.post('', { action: 'reorder', id: id, arah: arah }, function(res) {
+            if (res.ok) {
+                var item = btn.closest('.piket-item');
+                var wrap = item.closest('.piket-list-wrap');
+                if (arah === 'naik') {
+                    var prev = item.prev('.piket-item');
+                    if (prev.length) { item.insertBefore(prev); }
+                } else {
+                    var next = item.next('.piket-item');
+                    if (next.length) { item.insertAfter(next); }
+                }
+                renumberWrap(wrap);
+            } else {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: res.msg || 'Gagal mengubah urutan.', timer: 2000, showConfirmButton: false });
+            }
+            btn.prop('disabled', false);
+            refreshArrowState(btn.closest('.piket-list-wrap'));
+        }, 'json').fail(function() {
+            btn.prop('disabled', false);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menghubungi server.', timer: 2000, showConfirmButton: false });
+        });
+    }
+
+    function renumberWrap(wrap) {
+        wrap.find('.piket-item').each(function(i) {
+            $(this).find('.piket-num').text(i + 1);
+        });
+    }
+
+    function refreshArrowState(wrap) {
+        var items = wrap.find('.piket-item');
+        items.each(function(i) {
+            $(this).find('.btn-piket-naik').prop('disabled', i === 0);
+            $(this).find('.btn-piket-turun').prop('disabled', i === items.length - 1);
+        });
+    }
+
+    $(document).on('click', '.btn-piket-naik', function() {
+        var id = $(this).data('id');
+        reorderPiket(id, 'naik', $(this));
+    });
+
+    $(document).on('click', '.btn-piket-turun', function() {
+        var id = $(this).data('id');
+        reorderPiket(id, 'turun', $(this));
     });
 });
 JS
@@ -248,7 +332,7 @@ include '../templates/sidebar.php';
             .piket-item:last-child { margin-bottom: 0; }
             .piket-num { width: 24px; height: 24px; border-radius: 50%; background: #eef2ff; color: #4338ca; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
             .piket-avatar { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0; }
-            .piket-name { font-size: 13.5px; line-height: 1.25; }
+            .piket-name { font-size: 13px; line-height: 1.3; word-break: break-word; white-space: normal; }
             .piket-nisn { font-size: 11.5px; }
             </style>
             <div class="card">
@@ -275,9 +359,9 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-light border small text-muted mb-3">
+                    <div class="alert alert-light border font-weight-bold text-dark mb-3" style="font-size: 14pt;">
                         <i class="fas fa-info-circle mr-1 text-primary"></i>
-                        Total <strong><?= (int)$total_petugas ?> petugas</strong> &bull; <?= (int)$hari_terisi ?> dari <?= count($days_order) ?> hari terisi
+                        Total <strong><?= (int)$total_petugas ?> petugas</strong>
                         <?php if ($hari_ini !== ''): ?> &bull; Hari ini: <strong><?= htmlspecialchars($hari_ini) ?></strong><?php endif; ?>
                     </div>
                     <div class="row">
@@ -303,7 +387,7 @@ include '../templates/sidebar.php';
                                             <span class="badge badge-light"><?= count($petugas) ?> Siswa</span>
                                         <?php endif; ?>
                                     </div>
-                                    <div class="card-body p-3" style="background:#f8fafc;">
+                                    <div class="card-body p-3 piket-list-wrap" style="background:#f8fafc;" data-hari="<?= htmlspecialchars($hari) ?>">
                                         <?php if (empty($petugas)): ?>
                                             <div class="text-center text-muted py-3">
                                                 <div style="font-size:28px;"><i class="fas fa-user-slash"></i></div>
@@ -318,15 +402,19 @@ include '../templates/sidebar.php';
                                                 $inisial = strtoupper(implode('', array_slice(array_map(function($w){ return mb_substr($w,0,1); }, preg_split('/\s+/', trim((string)$p['nama_siswa']))), 0, 2)));
                                                 $bg = $avatar_colors[($idx + $di) % count($avatar_colors)];
                                                 ?>
-                                                <div class="piket-item">
-                                                    <span class="piket-num"><?= $idx + 1 ?></span>
+                                                <div class="piket-item" data-piket-id="<?= (int)$p['id'] ?>">
+                                                    <span class="piket-num"><?= (int)$p['urutan'] ?></span>
                                                     <span class="piket-avatar" style="background:<?= $bg ?>;"><?= htmlspecialchars($inisial) ?></span>
                                                     <div class="flex-grow-1" style="min-width:0;">
-                                                        <div class="piket-name font-weight-bold text-dark text-truncate"><?= htmlspecialchars($p['nama_siswa']) ?></div>
+                                                        <div class="piket-name font-weight-bold text-dark"><?= htmlspecialchars($p['nama_siswa']) ?></div>
                                                         <div class="piket-nisn text-muted">NISN: <?= htmlspecialchars($p['nisn'] ?? '-') ?></div>
                                                     </div>
                                                     <?php if ($can_crud): ?>
-                                                    <div class="no-print d-flex" style="gap:4px;">
+                                                    <div class="no-print d-flex flex-column" style="gap:2px;">
+                                                        <button type="button" class="btn btn-light btn-sm py-0 px-1 btn-piket-naik" data-id="<?= (int)$p['id'] ?>" title="Naik" <?= $idx === 0 ? 'disabled' : '' ?>><i class="fas fa-chevron-up" style="font-size:9px;"></i></button>
+                                                        <button type="button" class="btn btn-light btn-sm py-0 px-1 btn-piket-turun" data-id="<?= (int)$p['id'] ?>" title="Turun" <?= $idx === count($petugas)-1 ? 'disabled' : '' ?>><i class="fas fa-chevron-down" style="font-size:9px;"></i></button>
+                                                    </div>
+                                                    <div class="no-print d-flex flex-column" style="gap:2px;">
                                                         <button type="button" class="btn btn-warning btn-sm py-0 px-1 btn-edit-piket" data-json='<?= htmlspecialchars(json_encode($p), ENT_QUOTES, 'UTF-8') ?>' title="Edit"><i class="fas fa-pencil-alt" style="font-size: 10px;"></i></button>
                                                         <button type="button" class="btn btn-danger btn-sm py-0 px-1 btn-hapus-piket" data-id="<?= (int)$p['id'] ?>" data-nama="<?= htmlspecialchars($p['nama_siswa'], ENT_QUOTES) ?>" title="Hapus"><i class="fas fa-times" style="font-size: 10px;"></i></button>
                                                     </div>
@@ -381,10 +469,6 @@ include '../templates/sidebar.php';
                     <div class="form-group">
                         <label>Tugas Spesifik</label>
                         <input type="text" name="tugas" id="inp_tugas" class="form-control" value="Piket Umum" placeholder="Menyapu, Menghapus Papan, Menyiram Tanaman, dll">
-                    </div>
-                    <div class="form-group">
-                        <label>Urutan Penomoran</label>
-                        <input type="number" name="urutan" id="inp_urutan" class="form-control" value="1" min="1">
                     </div>
                     <div class="form-group">
                         <label>Status</label>
