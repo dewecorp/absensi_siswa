@@ -31,6 +31,19 @@ if (!$tugas || !in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)) {
     redirect('tugas.php');
 }
 
+// Cek deadline & tgl_mulai
+$is_upcoming = !empty($tugas['tgl_mulai']) && strtotime($tugas['tgl_mulai']) > time();
+$is_expired = !empty($tugas['deadline']) && strtotime($tugas['deadline']) < time();
+
+if ($is_upcoming) {
+    $page_title = 'Ujian Belum Dibuka';
+    include '../templates/header.php';
+    include '../templates/sidebar.php';
+    echo '<div class="main-content"><section class="section"><div class="section-body"><div class="card shadow-sm border-warning"><div class="card-body text-center py-5"><div class="mb-3 text-warning" style="font-size: 50px;"><i class="fas fa-hourglass-start"></i></div><h3 class="text-warning font-weight-bold">Ujian Belum Dimulai</h3><p class="text-muted">Kuis / CBT ini baru akan dibuka pada tanggal: <strong>' . date('d/m/Y H:i', strtotime($tugas['tgl_mulai'])) . '</strong>. Mohon tunggu hingga waktu yang ditentukan.</p><a href="tugas.php" class="btn btn-primary mt-2"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a></div></div></div></section></div>';
+    include '../templates/footer.php';
+    exit;
+}
+
 // Fetch soal untuk tugas ini
 $stSoal = $pdo->prepare("SELECT * FROM tb_tugas_soal WHERE id_tugas = ? ORDER BY id ASC");
 $stSoal->execute([$id_tugas]);
@@ -41,19 +54,6 @@ $stSub = $pdo->prepare("SELECT * FROM tb_tugas_pengumpulan WHERE id_tugas = ? AN
 $stSub->execute([$id_tugas, $id_siswa]);
 $submission = $stSub->fetch(PDO::FETCH_ASSOC);
 
-// Cek deadline & tgl_mulai
-$is_upcoming = !empty($tugas['tgl_mulai']) && strtotime($tugas['tgl_mulai']) > time();
-$is_expired = !empty($tugas['deadline']) && strtotime($tugas['deadline']) < time();
-
-if ($is_upcoming && empty($submission)) {
-    $page_title = 'Ujian Belum Dibuka';
-    include '../templates/header.php';
-    include '../templates/sidebar.php';
-    echo '<div class="main-content"><section class="section"><div class="section-body"><div class="card shadow-sm border-warning"><div class="card-body text-center py-5"><div class="mb-3 text-warning" style="font-size: 50px;"><i class="fas fa-hourglass-start"></i></div><h3 class="text-warning font-weight-bold">Ujian Belum Dimulai</h3><p class="text-muted">Kuis / CBT ini baru akan dibuka pada tanggal: <strong>' . date('d/m/Y H:i', strtotime($tugas['tgl_mulai'])) . '</strong>. Mohon tunggu hingga waktu yang ditentukan.</p><a href="tugas.php" class="btn btn-primary mt-2"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a></div></div></div></section></div>';
-    include '../templates/footer.php';
-    exit;
-}
-
 if ($is_expired && empty($submission)) {
     $page_title = 'Waktu Habis';
     include '../templates/header.php';
@@ -61,6 +61,15 @@ if ($is_expired && empty($submission)) {
     echo '<div class="main-content"><section class="section"><div class="section-body"><div class="card shadow-sm border-danger"><div class="card-body text-center py-5"><div class="mb-3 text-danger" style="font-size: 50px;"><i class="fas fa-clock"></i></div><h3 class="text-danger font-weight-bold">Waktu Pengerjaan Telah Berakhir</h3><p class="text-muted">Batas waktu (deadline) tugas ini sudah terlewati. Anda tidak dapat mengerjakan kuis ini kecuali guru telah memberikan perpanjangan waktu.</p><a href="tugas.php" class="btn btn-primary mt-2"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a></div></div></div></section></div>';
     include '../templates/footer.php';
     exit;
+}
+
+// Hanya tampilkan kartu nilai jika sudah submit DAN waktu sudah habis (expired), 
+// jika waktu masih ada, siswa boleh edit/perbaiki jawabannya!
+$tampilkan_hasil_final = (!empty($submission) && $is_expired);
+
+$saved_answers = [];
+if (!empty($submission['catatan_siswa'])) {
+    $saved_answers = json_decode($submission['catatan_siswa'], true) ?: [];
 }
 
 $message = null;
@@ -127,23 +136,51 @@ $page_title = 'Kerjakan ' . $tugas['jenis_tugas'];
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<style>
+body.exam-mode .main-sidebar,
+body.exam-mode .navbar,
+body.exam-mode .main-footer {
+    display: none !important;
+}
+body.exam-mode .main-content {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    min-height: 100vh;
+}
+@media (max-width: 991.98px) {
+    .main-content { padding: 10px !important; }
+    .card { margin-bottom: 12px !important; }
+    .btn-nav-soal { width: 38px !important; height: 38px !important; font-size: 13px !important; }
+}
+</style>
 
 <div class="main-content">
+    <!-- Overlay Masuk Ujian & Fullscreen Menutupi Seluruh Halaman -->
+    <div id="startExamOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.98); z-index: 999999; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div class="card shadow-lg border-0 text-center p-4" style="max-width: 520px; width: 100%; border-radius: 14px; background: #fff;">
+            <div class="card-body">
+                <div class="mb-3 text-primary" style="font-size: 60px;"><i class="fas fa-laptop-code"></i></div>
+                <h3 class="font-weight-bold text-dark mb-2">Konfirmasi Memulai Ujian</h3>
+                <p class="text-muted small mb-4">Ujian ini wajib dikerjakan dalam mode <strong>Layar Penuh (Full Screen)</strong>. Dilarang membuka tab atau jendela lain (maksimal 3 kali peringatan sebelum ujian dihentikan otomatis).</p>
+                <button type="button" id="btnStartExam" class="btn btn-success btn-lg btn-block font-weight-bold py-3 shadow">
+                    <i class="fas fa-expand mr-2"></i> Mulai Ujian & Aktifkan Layar Penuh
+                </button>
+            </div>
+        </div>
+    </div>
+
     <section class="section">
         <div class="section-header">
             <h1><?= htmlspecialchars($tugas['jenis_tugas']) ?>: <?= htmlspecialchars($tugas['judul']) ?></h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item"><a href="tugas.php">Daftar Tugas</a></div>
-                <div class="breadcrumb-item active">Kerjakan Ujian</div>
+                <div class="breadcrumb-item active">Ujian Berlangsung</div>
             </div>
         </div>
 
         <div class="section-body">
-            <div class="mb-3">
-                <a href="tugas.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
-            </div>
-
-            <?php if (!empty($submission)): ?>
+            <?php if ($tampilkan_hasil_final): ?>
                 <div class="card shadow-sm border-success">
                     <div class="card-body text-center py-5">
                         <div class="mb-3 text-success" style="font-size: 50px;"><i class="fas fa-check-circle"></i></div>
@@ -162,56 +199,91 @@ include '../templates/sidebar.php';
                 </div>
             <?php else: ?>
                 <form method="POST" id="formKerjakanKuis">
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-light">
-                            <h4><i class="fas fa-laptop-code mr-2"></i>Soal <?= htmlspecialchars($tugas['jenis_tugas']) ?> (<?= count($soal_list) ?> Butir Soal)</h4>
-                        </div>
-                        <div class="card-body">
-                            <?php foreach ($soal_list as $idx => $soal): ?>
-                                <div class="card border mb-4 shadow-sm">
-                                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                                        <span class="font-weight-bold text-dark">Soal No. <?= $idx + 1 ?></span>
-                                        <span class="badge badge-secondary">Bobot: <?= (int)$soal['bobot'] ?></span>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="font-weight-bold text-dark" style="font-size: 15px; line-height: 1.6;"><?= nl2br(htmlspecialchars($soal['pertanyaan'])) ?></p>
-                                        
-                                        <?php if ($soal['tipe_soal'] === 'Pilihan Ganda'): ?>
-                                            <div class="pl-2">
-                                                <?php foreach (['A' => $soal['pilihan_a'], 'B' => $soal['pilihan_b'], 'C' => $soal['pilihan_c'], 'D' => $soal['pilihan_d'], 'E' => $soal['pilihan_e']] as $k => $opt): ?>
-                                                    <?php if (!empty($opt)): ?>
-                                                        <div class="custom-control custom-radio mb-2">
-                                                            <input type="radio" id="jwb_<?= $soal['id'] ?>_<?= $k ?>" name="jawaban[<?= $soal['id'] ?>]" value="<?= $k ?>" class="custom-control-input" required>
-                                                            <label class="custom-control-label text-dark" for="jwb_<?= $soal['id'] ?>_<?= $k ?>"><strong><?= $k ?>.</strong> <?= htmlspecialchars($opt) ?></label>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        <?php elseif ($soal['tipe_soal'] === 'Pilihan Ganda Kompleks'): ?>
-                                            <div class="pl-2">
-                                                <small class="text-info d-block mb-2"><i class="fas fa-info-circle mr-1"></i> Pilihan Ganda Kompleks (Dapat memilih lebih dari 1 jawaban)</small>
-                                                <?php foreach (['A' => $soal['pilihan_a'], 'B' => $soal['pilihan_b'], 'C' => $soal['pilihan_c'], 'D' => $soal['pilihan_d'], 'E' => $soal['pilihan_e']] as $k => $opt): ?>
-                                                    <?php if (!empty($opt)): ?>
-                                                        <div class="custom-control custom-checkbox mb-2">
-                                                            <input type="checkbox" id="jwb_k_<?= $soal['id'] ?>_<?= $k ?>" name="jawaban[<?= $soal['id'] ?>][]" value="<?= $k ?>" class="custom-control-input">
-                                                            <label class="custom-control-label text-dark" for="jwb_k_<?= $soal['id'] ?>_<?= $k ?>"><strong><?= $k ?>.</strong> <?= htmlspecialchars($opt) ?></label>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        <?php else: ?>
-                                            <div class="form-group mb-0">
-                                                <textarea name="jawaban[<?= $soal['id'] ?>]" class="form-control" rows="4" placeholder="Tuliskan jawaban essay / uraian Anda di sini..." required></textarea>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
+                    <div class="row">
+                        <!-- Kolom Kiri: Soal Aktif -->
+                        <div class="col-lg-8 mb-4">
+                            <div class="card shadow-sm h-100 border">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 text-dark font-weight-bold" id="labelNoSoal">Soal No. 1</h5>
+                                    <span class="badge badge-primary" id="badgeBobotSoal">Bobot: 10</span>
                                 </div>
-                            <?php endforeach; ?>
+                                <div class="card-body" style="min-height: 280px;">
+                                    <?php foreach ($soal_list as $idx => $soal): ?>
+                                        <div class="soal-item" id="soalBox_<?= $idx ?>" style="display: <?= $idx === 0 ? 'block' : 'none' ?>;">
+                                            <p class="font-weight-bold text-dark mb-4" style="font-size: 16px; line-height: 1.6;"><?= nl2br(htmlspecialchars($soal['pertanyaan'])) ?></p>
+                                            
+                                             <?php if ($soal['tipe_soal'] === 'Pilihan Ganda'): ?>
+                                                 <div class="pl-2">
+                                                     <?php 
+                                                     $val_pg = $saved_answers[$soal['id']] ?? '';
+                                                     foreach (['A' => $soal['pilihan_a'], 'B' => $soal['pilihan_b'], 'C' => $soal['pilihan_c'], 'D' => $soal['pilihan_d'], 'E' => $soal['pilihan_e']] as $k => $opt): 
+                                                     ?>
+                                                         <?php if (!empty($opt)): ?>
+                                                             <div class="custom-control custom-radio mb-3">
+                                                                 <input type="radio" id="jwb_<?= $soal['id'] ?>_<?= $k ?>" name="jawaban[<?= $soal['id'] ?>]" value="<?= $k ?>" class="custom-control-input soal-input" data-index="<?= $idx ?>" <?= $val_pg === $k ? 'checked' : '' ?>>
+                                                                 <label class="custom-control-label text-dark" style="font-size: 15px;" for="jwb_<?= $soal['id'] ?>_<?= $k ?>"><strong><?= $k ?>.</strong> <?= htmlspecialchars($opt) ?></label>
+                                                             </div>
+                                                         <?php endif; ?>
+                                                     <?php endforeach; ?>
+                                                 </div>
+                                             <?php elseif ($soal['tipe_soal'] === 'Pilihan Ganda Kompleks'): ?>
+                                                 <div class="pl-2">
+                                                     <small class="text-info d-block mb-3"><i class="fas fa-info-circle mr-1"></i> Pilihan Ganda Kompleks (Dapat memilih lebih dari 1 jawaban)</small>
+                                                     <?php 
+                                                     $val_kompleks = explode(',', (string)($saved_answers[$soal['id']] ?? ''));
+                                                     foreach (['A' => $soal['pilihan_a'], 'B' => $soal['pilihan_b'], 'C' => $soal['pilihan_c'], 'D' => $soal['pilihan_d'], 'E' => $soal['pilihan_e']] as $k => $opt): 
+                                                     ?>
+                                                         <?php if (!empty($opt)): ?>
+                                                             <div class="custom-control custom-checkbox mb-3">
+                                                                 <input type="checkbox" id="jwb_k_<?= $soal['id'] ?>_<?= $k ?>" name="jawaban[<?= $soal['id'] ?>][]" value="<?= $k ?>" class="custom-control-input soal-input" data-index="<?= $idx ?>" <?= in_array($k, $val_kompleks, true) ? 'checked' : '' ?>>
+                                                                 <label class="custom-control-label text-dark" style="font-size: 15px;" for="jwb_k_<?= $soal['id'] ?>_<?= $k ?>"><strong><?= $k ?>.</strong> <?= htmlspecialchars($opt) ?></label>
+                                                             </div>
+                                                         <?php endif; ?>
+                                                     <?php endforeach; ?>
+                                                 </div>
+                                             <?php else: ?>
+                                                 <div class="form-group mb-0">
+                                                     <textarea name="jawaban[<?= $soal['id'] ?>]" class="form-control soal-input" rows="5" placeholder="Tuliskan jawaban essay / uraian Anda di sini..." data-index="<?= $idx ?>"><?= htmlspecialchars($saved_answers[$soal['id']] ?? '') ?></textarea>
+                                                 </div>
+                                             <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div class="card-footer bg-light d-flex justify-content-between">
+                                    <button type="button" id="btnPrev" class="btn btn-secondary font-weight-bold" disabled>
+                                        <i class="fas fa-arrow-left mr-1"></i> Sebelumnya
+                                    </button>
+                                    <button type="button" id="btnNext" class="btn btn-primary font-weight-bold">
+                                        Selanjutnya <i class="fas fa-arrow-right ml-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
-                            <div class="text-center mt-4">
-                                <button type="button" id="btnSubmitKuis" class="btn btn-success btn-lg px-5 font-weight-bold">
-                                    <i class="fas fa-paper-plane mr-2"></i> Serahkan Jawaban Kuis
-                                </button>
+                        <!-- Kolom Kanan: Navigasi Soal -->
+                        <div class="col-lg-4 mb-4">
+                            <div class="card shadow-sm h-100 border">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0 text-dark font-weight-bold"><i class="fas fa-th mr-2"></i>Navigasi Soal</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex flex-wrap" style="gap: 8px;">
+                                        <?php foreach ($soal_list as $idx => $soal): ?>
+                                            <button type="button" class="btn btn-outline-secondary btn-nav-soal font-weight-bold <?= $idx === 0 ? 'active' : '' ?>" data-index="<?= $idx ?>" id="navBtn_<?= $idx ?>" style="width: 44px; height: 44px;">
+                                                <?= $idx + 1 ?>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <hr class="my-4">
+                                     <div class="text-center" style="display:flex; flex-direction:column; gap:10px;">
+                                         <button type="button" id="btnSubmitKuis" class="btn btn-success btn-lg btn-block font-weight-bold py-3 shadow mb-0">
+                                             <i class="fas fa-paper-plane mr-2"></i> Selesai & Serahkan Ujian
+                                         </button>
+                                         <button type="button" id="btnKeluarUjian" class="btn btn-outline-danger btn-sm font-weight-bold">
+                                             <i class="fas fa-sign-out-alt mr-1"></i> Keluar Ujian / Batal
+                                         </button>
+                                     </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -226,59 +298,155 @@ $js_page = [];
 if ($message) {
     $js_page[] = "Swal.fire({ icon: '" . ($message['type'] === 'danger' ? 'error' : $message['type']) . "', title: '" . ($message['type'] === 'success' ? 'Berhasil' : 'Perhatian') . "', text: " . json_encode($message['text']) . ", timer: 2500, showConfirmButton: false });";
 }
-$js_page[] = <<<'JS'
+$js_page[] = '
 $(document).ready(function() {
+    var totalSoal = ' . count($soal_list) . ';
+    totalSoal = parseInt(totalSoal) || 1;
+    var currentIndex = 0;
+    var bobotList = ' . json_encode(array_column($soal_list, 'bobot')) . ';
+
+    function showSoal(idx) {
+        if (idx < 0 || idx >= totalSoal) return;
+        currentIndex = idx;
+        $(\'.soal-item\').hide();
+        $(\'#soalBox_\' + idx).show();
+        $(\'#labelNoSoal\').text(\'Soal No. \' + (idx + 1));
+        $(\'#badgeBobotSoal\').text(\'Bobot: \' + (bobotList[idx] || 10));
+
+        $(\'#btnPrev\').prop(\'disabled\', idx === 0);
+        $(\'#btnNext\').prop(\'disabled\', idx === totalSoal - 1);
+
+        $(\'.btn-nav-soal\').removeClass(\'active\');
+        $(\'#navBtn_\' + idx).addClass(\'active\');
+    }
+
+    $(document).on(\'click\', \'.btn-nav-soal\', function() {
+        var idx = parseInt($(this).data(\'index\'));
+        showSoal(idx);
+    });
+
+    $(\'#btnPrev\').on(\'click\', function() {
+        showSoal(currentIndex - 1);
+    });
+
+    $(\'#btnNext\').on(\'click\', function() {
+        showSoal(currentIndex + 1);
+    });
+
+    $(document).on(\'change input\', \'.soal-input\', function() {
+        var idx = parseInt($(this).data(\'index\'));
+        var isAnswered = false;
+        var box = $(\'#soalBox_\' + idx);
+        
+        box.find(\'input, textarea\').each(function() {
+            if ($(this).is(\':checkbox, :radio\')) {
+                if ($(this).is(\':checked\')) isAnswered = true;
+            } else {
+                if ($.trim($(this).val()) !== \'\') isAnswered = true;
+            }
+        });
+
+        if (isAnswered) {
+            $(\'#navBtn_\' + idx).removeClass(\'btn-outline-secondary\').addClass(\'btn-primary text-white\');
+        } else {
+            $(\'#navBtn_\' + idx).removeClass(\'btn-primary text-white\').addClass(\'btn-outline-secondary\');
+        }
+    });
+
+    function requestFullscreen() {
+        var elem = document.documentElement;
+        var requestFn = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
+        if (requestFn) {
+            requestFn.call(elem).catch(function(err) {
+                console.log("Fullscreen blocked or failed: ", err);
+            });
+        }
+        $(\'body\').addClass(\'exam-mode\');
+        $(\'#startExamOverlay\').fadeOut(200);
+    }
+
+    $(document).on(\'click\', \'#btnStartExam\', function() {
+        requestFullscreen();
+    });
+
     var violationCount = 0;
     var maxViolations = 3;
 
     function checkVisibility() {
-        if (document.hidden || document.visibilityState === 'hidden') {
+        if (document.hidden || document.visibilityState === \'hidden\') {
             violationCount++;
             var sisa = maxViolations - violationCount;
             if (violationCount >= maxViolations) {
                 Swal.fire({
-                    title: 'Ujian Dihentikan!',
-                    text: 'Anda terdeteksi meninggalkan halaman ujian sebanyak 3 kali. Sesuai aturan, pengerjaan kuis/CBT dihentikan dan nilai dianggap 0.',
-                    icon: 'error',
+                    title: \'Ujian Dihentikan!\',
+                    text: \'Anda terdeteksi meninggalkan halaman ujian sebanyak 3 kali. Sesuai aturan, pengerjaan kuis/CBT dihentikan dan nilai dianggap 0.\',
+                    icon: \'error\',
                     allowOutsideClick: false,
                     allowEscapeKey: false,
-                    confirmButtonText: 'Keluar ke Daftar Tugas'
+                    confirmButtonText: \'Keluar ke Daftar Tugas\'
                 }).then(function() {
-                    window.location.href = 'tugas.php';
+                    window.location.href = \'tugas.php\';
                 });
-                $('#formKerjakanKuis').html('<div class="alert alert-danger text-center font-weight-bold p-4">Ujian dibatalkan karena terdeteksi berpindah tab/jendela.</div>');
+                $(\'#formKerjakanKuis\').html(\'<div class="alert alert-danger text-center font-weight-bold p-4">Ujian dibatalkan karena terdeteksi berpindah tab/jendela.</div>\');
             } else {
                 Swal.fire({
-                    title: 'Peringatan (' + violationCount + '/' + maxViolations + ')',
-                    text: 'Jangan membuka tab atau jendela lain! Jika Anda meninggalkan halaman ini ' + sisa + ' kali lagi, ujian akan dihentikan secara otomatis.',
-                    icon: 'warning',
-                    confirmButtonText: 'Saya Mengerti'
+                    title: \'Peringatan (\' + violationCount + \'/\' + maxViolations + \')\',
+                    text: \'Jangan membuka tab atau jendela lain! Jika Anda meninggalkan halaman ini \' + sisa + \' kali lagi, ujian akan dihentikan secara otomatis.\',
+                    icon: \'warning\',
+                    confirmButtonText: \'Saya Mengerti\'
                 });
             }
         }
     }
 
-    document.addEventListener('visibilitychange', checkVisibility);
-    window.addEventListener('blur', checkVisibility);
+    document.addEventListener(\'visibilitychange\', checkVisibility);
+    window.addEventListener(\'blur\', checkVisibility);
 
-    $('#btnSubmitKuis').on('click', function(e) {
+    $(document).on(\'keydown\', function(e) {
+        if (e.key === \'Escape\' || e.keyCode === 27 || e.key === \'F11\' || e.keyCode === 122) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    });
+
+    $(document).on(\'click\', \'#btnKeluarUjian\', function(e) {
         e.preventDefault();
         Swal.fire({
-            title: 'Serahkan Jawaban Kuis?',
-            text: 'Pastikan semua jawaban sudah terisi dengan benar. Anda tidak dapat mengubah jawaban setelah diserahkan.',
-            icon: 'question',
+            title: \'Keluar Ujian?\',
+            text: \'Jawaban Anda tidak akan tersimpan jika keluar sekarang.\',
+            icon: \'warning\',
             showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Ya, Serahkan!',
-            cancelButtonText: 'Batal'
+            confirmButtonColor: \'#d33\',
+            cancelButtonColor: \'#6c757d\',
+            confirmButtonText: \'Ya, Keluar\',
+            cancelButtonText: \'Lanjutkan Ujian\'
         }).then(function(res) {
             if (res.isConfirmed) {
-                $('#formKerjakanKuis').submit();
+                if (document.exitFullscreen) { document.exitFullscreen(); }
+                else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+                window.location.href = \'tugas.php\';
+            }
+        });
+    });
+    $(document).on(\'click\', \'#btnSubmitKuis\', function(e) {
+        e.preventDefault();
+        Swal.fire({
+            title: \'Serahkan Jawaban Ujian?\',
+            text: \'Pastikan semua soal telah dikerjakan dengan benar. Anda tidak dapat mengubah jawaban setelah diserahkan.\',
+            icon: \'question\',
+            showCancelButton: true,
+            confirmButtonColor: \'#28a745\',
+            cancelButtonColor: \'#6c757d\',
+            confirmButtonText: \'Ya, Serahkan Sekarang!\',
+            cancelButtonText: \'Periksa Kembali\'
+        }).then(function(res) {
+            if (res.isConfirmed) {
+                $(\'#formKerjakanKuis\').submit();
             }
         });
     });
 });
-JS;
+';
 include '../templates/footer.php';
 ?>
