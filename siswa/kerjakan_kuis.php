@@ -187,7 +187,6 @@ textarea.form-control{font-size:14px}
 </head>
 <body>
 <div class="exam-topbar">
-  <a class="back" href="tugas.php"><i class="fas fa-arrow-left"></i> Tugas</a>
   <div class="title"><?= htmlspecialchars($tugas['jenis_tugas']) ?>: <?= htmlspecialchars($tugas['judul']) ?></div>
   <span class="badge badge-warning text-dark font-weight-bold" id="examTimer"><i class="fas fa-clock mr-1"></i> <span id="timerCountdown">--:--:--</span></span>
   <span class="badge badge-light"><?= (int)$total_soal ?> soal</span>
