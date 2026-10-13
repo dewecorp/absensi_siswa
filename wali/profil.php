@@ -331,6 +331,7 @@ include '../templates/user_header.php';
                                         <div class="col-md-12 form-group">
                                             <label class="small font-weight-bold mb-1">Gemini API Key: <span class="text-danger">*</span></label>
                                             <input type="password" name="ai_gemini_key" class="form-control" value="<?= htmlspecialchars($ai_cfg['gemini_key_pribadi'] ?? '') ?>" placeholder="AIzaSy..." autocomplete="new-password">
+                                            <small class="text-muted d-block mt-1">Belum punya API key? Buat gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"><i class="fas fa-external-link-alt fa-xs mr-1"></i>Google AI Studio &raquo;</a></small>
                                         </div>
                                     </div>
                                 </div>
