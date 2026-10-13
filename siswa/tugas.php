@@ -35,12 +35,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $catatan_siswa = trim((string)($_POST['catatan_siswa'] ?? ''));
 
     // Verify task exists and is for this class
-    $stVer = $pdo->prepare("SELECT id, id_guru, deadline, status FROM tb_tugas WHERE id = ? AND id_kelas = ? AND status = 'Aktif'");
+    $stVer = $pdo->prepare("SELECT id, id_guru, tgl_mulai, deadline, status FROM tb_tugas WHERE id = ? AND id_kelas = ? AND status = 'Aktif'");
     $stVer->execute([$id_tugas, $id_kelas]);
     $tugas_ver = $stVer->fetch(PDO::FETCH_ASSOC);
 
     if (!$tugas_ver) {
         $message = ['type' => 'danger', 'text' => 'Tugas tidak ditemukan atau sudah tidak aktif.'];
+    } elseif (!empty($tugas_ver['tgl_mulai']) && strtotime($tugas_ver['tgl_mulai']) > time()) {
+        $message = ['type' => 'danger', 'text' => 'Tugas belum dibuka (waktu mulai belum tercapai).'];
     } else {
         $submit_dir = guru_upload_dir($pdo, (int)($tugas_ver['id_guru'] ?? 0), 'tugas');
         $file_path = null;
@@ -276,19 +278,22 @@ include '../templates/sidebar.php';
                             </thead>
                             <tbody>
                                 <?php foreach ($tasks as $i => $t): ?>
-                                    <?php
-                                    $is_submitted = !empty($t['id_pengumpulan']);
-                                    $is_overdue = !empty($t['deadline']) && strtotime($t['deadline']) < time() && !$is_submitted;
-                                    $p_badge = ($t['status_periksa'] ?? '') === 'Sudah Diperiksa' ? 'success' : (($t['status_periksa'] ?? '') === 'Perlu Revisi' ? 'warning' : 'secondary');
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td>
-                                            <strong class="text-dark"><?= htmlspecialchars($t['judul']) ?></strong>
-                                            <?php if ($is_overdue): ?>
-                                                <span class="badge badge-danger ml-1" style="font-size:10px;">Lewat Batas</span>
-                                            <?php endif; ?>
-                                        </td>
+                                     <?php
+                                     $is_submitted = !empty($t['id_pengumpulan']);
+                                     $is_upcoming = !empty($t['tgl_mulai']) && strtotime($t['tgl_mulai']) > time() && !$is_submitted;
+                                     $is_overdue = !empty($t['deadline']) && strtotime($t['deadline']) < time() && !$is_submitted;
+                                     $p_badge = ($t['status_periksa'] ?? '') === 'Sudah Diperiksa' ? 'success' : (($t['status_periksa'] ?? '') === 'Perlu Revisi' ? 'warning' : 'secondary');
+                                     ?>
+                                     <tr>
+                                         <td class="text-center"><?= $i + 1 ?></td>
+                                         <td>
+                                             <strong class="text-dark"><?= htmlspecialchars($t['judul']) ?></strong>
+                                             <?php if ($is_upcoming): ?>
+                                                 <span class="badge badge-warning ml-1" style="font-size:10px;">Belum Dibuka</span>
+                                             <?php elseif ($is_overdue): ?>
+                                                 <span class="badge badge-danger ml-1" style="font-size:10px;">Lewat Batas</span>
+                                             <?php endif; ?>
+                                         </td>
                                         <td><span class="badge badge-light border"><?= htmlspecialchars($t['nama_mapel'] ?? '-') ?></span></td>
                                         <td><small><?= htmlspecialchars($t['nama_guru'] ?? '-') ?></small></td>
                                         <td>
@@ -317,7 +322,11 @@ include '../templates/sidebar.php';
                                                  <button type="button" class="btn btn-info btn-sm btn-lihat-tugas" data-json='<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>' title="Lihat Petunjuk Tugas">
                                                      <i class="fas fa-eye"></i>
                                                  </button>
-                                                  <?php if ($is_overdue): ?>
+                                                  <?php if ($is_upcoming): ?>
+                                                      <button type="button" class="btn btn-secondary btn-sm" disabled title="Ujian Belum Dibuka">
+                                                          <i class="fas fa-hourglass-start"></i>
+                                                      </button>
+                                                  <?php elseif ($is_overdue): ?>
                                                       <button type="button" class="btn btn-secondary btn-sm" disabled title="Waktu Habis (Deadline Terlewati)">
                                                           <i class="fas fa-lock"></i>
                                                       </button>

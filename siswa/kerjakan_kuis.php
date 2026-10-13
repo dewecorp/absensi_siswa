@@ -41,8 +41,19 @@ $stSub = $pdo->prepare("SELECT * FROM tb_tugas_pengumpulan WHERE id_tugas = ? AN
 $stSub->execute([$id_tugas, $id_siswa]);
 $submission = $stSub->fetch(PDO::FETCH_ASSOC);
 
-// Cek deadline
+// Cek deadline & tgl_mulai
+$is_upcoming = !empty($tugas['tgl_mulai']) && strtotime($tugas['tgl_mulai']) > time();
 $is_expired = !empty($tugas['deadline']) && strtotime($tugas['deadline']) < time();
+
+if ($is_upcoming && empty($submission)) {
+    $page_title = 'Ujian Belum Dibuka';
+    include '../templates/header.php';
+    include '../templates/sidebar.php';
+    echo '<div class="main-content"><section class="section"><div class="section-body"><div class="card shadow-sm border-warning"><div class="card-body text-center py-5"><div class="mb-3 text-warning" style="font-size: 50px;"><i class="fas fa-hourglass-start"></i></div><h3 class="text-warning font-weight-bold">Ujian Belum Dimulai</h3><p class="text-muted">Kuis / CBT ini baru akan dibuka pada tanggal: <strong>' . date('d/m/Y H:i', strtotime($tugas['tgl_mulai'])) . '</strong>. Mohon tunggu hingga waktu yang ditentukan.</p><a href="tugas.php" class="btn btn-primary mt-2"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a></div></div></div></section></div>';
+    include '../templates/footer.php';
+    exit;
+}
+
 if ($is_expired && empty($submission)) {
     $page_title = 'Waktu Habis';
     include '../templates/header.php';
