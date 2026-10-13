@@ -1371,8 +1371,9 @@ $(document).ready(function() {
         
 
         
-        // Check if class is selected
-        if (!classId || classId === '') {
+        // Check if class is selected (skip if wali class is already locked by server)
+        var isWali = <?= $wali_kelas ? 'true' : 'false' ?>;
+        if (!isWali && (!classId || classId === '')) {
             e.preventDefault();
             console.log('Validation failed: Class not selected');
             Swal.fire({
