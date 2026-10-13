@@ -369,7 +369,7 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                <a href="detail_tugas.php?id=<?= $id_tugas ?>" class="btn btn-secondary btn-sm">
+                <a href="detail_tugas.php?id=<?= $id_tugas ?>" class="btn btn-dark btn-sm">
                     <i class="fas fa-arrow-left mr-1"></i> Kembali ke Detail Tugas
                 </a>
                 <?php if ($can_crud): ?>

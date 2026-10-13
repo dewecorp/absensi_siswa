@@ -259,7 +259,7 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                <a href="tugas.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
+                <a href="tugas.php" class="btn btn-dark btn-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Tugas</a>
                 <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
                 <a href="buat_soal_tugas.php?id=<?= (int)$tugas['id'] ?>" class="btn btn-primary btn-sm">
                     <i class="fas fa-question-circle mr-1"></i> Kelola Soal <?= htmlspecialchars($tugas['jenis_tugas']) ?>
