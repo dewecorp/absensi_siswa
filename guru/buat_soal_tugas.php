@@ -40,6 +40,27 @@ if (!$tugas || !in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)) {
 
 $message = null;
 
+// Tabel pengaturan bobot per jenis soal (per tugas, bukan per butir)
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS tb_tugas_bobot_jenis (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        id_tugas INT NOT NULL,
+        tipe_soal VARCHAR(50) NOT NULL,
+        bobot INT NOT NULL DEFAULT 10,
+        UNIQUE KEY uniq_tugas_tipe (id_tugas, tipe_soal)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+");
+
+$bobot_jenis_defaults = ['Pilihan Ganda' => 10, 'Pilihan Ganda Kompleks' => 10, 'Essay' => 10];
+$bobot_jenis_map = $bobot_jenis_defaults;
+try {
+    $stB = $pdo->prepare("SELECT tipe_soal, bobot FROM tb_tugas_bobot_jenis WHERE id_tugas = ?");
+    $stB->execute([$id_tugas]);
+    foreach ($stB->fetchAll(PDO::FETCH_ASSOC) as $rb) {
+        $bobot_jenis_map[$rb['tipe_soal']] = (int)$rb['bobot'];
+    }
+} catch (Exception $e) {}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
     $action = $_POST['action'] ?? '';
     if ($action === 'simpan_soal') {
@@ -57,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
         } elseif ($tipe_soal === 'Essay') {
             $kunci_jawaban = trim((string)($_POST['kunci_jawaban_essay'] ?? ''));
         }
-        $bobot = (int)($_POST['bobot'] ?? 10) ?: 10;
+        $bobot = $bobot_jenis_map[$tipe_soal] ?? ((int)($_POST['bobot'] ?? 10) ?: 10);
 
         if ($pertanyaan === '') {
             $message = ['type' => 'warning', 'text' => 'Pertanyaan soal wajib diisi.'];
@@ -75,6 +96,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal menyimpan soal: ' . $e->getMessage()];
             }
+        }
+    } elseif ($action === 'simpan_bobot_jenis') {
+        try {
+            $input_bobot = $_POST['bobot_jenis'] ?? [];
+            $stUp = $pdo->prepare("
+                INSERT INTO tb_tugas_bobot_jenis (id_tugas, tipe_soal, bobot)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE bobot = VALUES(bobot)
+            ");
+            foreach ($bobot_jenis_defaults as $tj => $def) {
+                $b = isset($input_bobot[$tj]) ? (int)$input_bobot[$tj] : $def;
+                if ($b < 1) $b = 1;
+                if ($b > 100) $b = 100;
+                $stUp->execute([$id_tugas, $tj, $b]);
+                $bobot_jenis_map[$tj] = $b;
+            }
+            // Sinkronkan bobot soal lama mengikuti bobot jenisnya
+            $stSync = $pdo->prepare("UPDATE tb_tugas_soal SET bobot = ? WHERE id_tugas = ? AND tipe_soal = ?");
+            foreach ($bobot_jenis_map as $tj => $b) {
+                $stSync->execute([$b, $id_tugas, $tj]);
+            }
+            $message = ['type' => 'success', 'text' => 'Pengaturan bobot per jenis soal berhasil disimpan dan diterapkan ke semua soal.'];
+        } catch (Exception $e) {
+            $message = ['type' => 'danger', 'text' => 'Gagal menyimpan bobot: ' . $e->getMessage()];
         }
     } elseif ($action === 'hapus_soal') {
         $soal_id = (int)($_POST['soal_id'] ?? 0);
@@ -234,6 +279,38 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
+            <!-- Pengaturan Bobot per Jenis Soal -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h4><i class="fas fa-balance-scale mr-2"></i>Pengaturan Bobot / Skor per Jenis Soal</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Tentukan bobot sekali per jenis soal. Semua soal dengan jenis yang sama otomatis memakai bobot ini.</p>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="simpan_bobot_jenis">
+                        <div class="form-row">
+                            <div class="col-md-4 form-group">
+                                <label class="font-weight-bold small">Pilihan Ganda</label>
+                                <input type="number" name="bobot_jenis[Pilihan Ganda]" class="form-control" value="<?= (int)($bobot_jenis_map['Pilihan Ganda'] ?? 10) ?>" min="1" max="100" required>
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label class="font-weight-bold small">Pilihan Ganda Kompleks</label>
+                                <input type="number" name="bobot_jenis[Pilihan Ganda Kompleks]" class="form-control" value="<?= (int)($bobot_jenis_map['Pilihan Ganda Kompleks'] ?? 10) ?>" min="1" max="100" required>
+                            </div>
+                            <?php if ($tugas['jenis_tugas'] !== 'Kuis'): ?>
+                            <div class="col-md-4 form-group">
+                                <label class="font-weight-bold small">Essay / Uraian</label>
+                                <input type="number" name="bobot_jenis[Essay]" class="form-control" value="<?= (int)($bobot_jenis_map['Essay'] ?? 10) ?>" min="1" max="100" required>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($can_crud): ?>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save mr-1"></i> Simpan Bobot Jenis Soal</button>
+                        <?php endif; ?>
+                    </form>
+                </div>
+            </div>
+
             <!-- Daftar Soal -->
             <div class="card shadow-sm">
                 <div class="card-header bg-light">
@@ -316,8 +393,9 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label>Bobot Nilai</label>
-                            <input type="number" name="bobot" id="inp_bobot" class="form-control" value="10" min="1" max="100" required>
+                            <label>Bobot Nilai (otomatis per jenis soal)</label>
+                            <input type="number" id="inp_bobot" class="form-control" value="10" min="1" max="100" readonly>
+                            <small class="text-muted">Diambil dari Pengaturan Bobot per Jenis Soal di atas.</small>
                         </div>
                     </div>
                     <div class="form-group">
@@ -389,8 +467,14 @@ if ($message) {
 }
 $js_page[] = <<<'JS'
 $(document).ready(function() {
+    var bobotJenisMap = <?= json_encode($bobot_jenis_map) ?>;
+    function syncBobotModal() {
+        var t = $('#inp_tipe_soal').val();
+        $('#inp_bobot').val(bobotJenisMap[t] || 10);
+    }
     function toggleTipeSoal() {
         var t = $('#inp_tipe_soal').val();
+        syncBobotModal();
         if (t === 'Essay') {
             $('#wrapper_pilihan_ganda').slideUp(150);
             $('#group_kunci_pg').hide();
