@@ -189,6 +189,7 @@ textarea.form-control{font-size:14px}
 <div class="exam-topbar">
   <a class="back" href="tugas.php"><i class="fas fa-arrow-left"></i> Tugas</a>
   <div class="title"><?= htmlspecialchars($tugas['jenis_tugas']) ?>: <?= htmlspecialchars($tugas['judul']) ?></div>
+  <span class="badge badge-warning text-dark font-weight-bold" id="examTimer"><i class="fas fa-clock mr-1"></i> <span id="timerCountdown">--:--:--</span></span>
   <span class="badge badge-light"><?= (int)$total_soal ?> soal</span>
 </div>
 
@@ -420,6 +421,46 @@ textarea.form-control{font-size:14px}
       Swal.fire({title: 'Peringatan (' + violation + '/3)', text: 'Jangan buka tab lain! ' + (3 - violation) + 'x lagi ujian dihentikan.', icon: 'warning'});
     }
   });
+
+  // Timer hitung mundur otomatis
+  var durasiMenit = <?= (int)($tugas['durasi_menit'] ?? 90) ?>;
+  var totalDetik = durasiMenit * 60;
+  var timerKey = 'exam_timer_' + <?= (int)$id_tugas ?> + '_' + <?= (int)$id_siswa ?>;
+  var savedSecs = sessionStorage.getItem(timerKey);
+  if(savedSecs !== null) {
+      totalDetik = parseInt(savedSecs, 10);
+  }
+
+  function updateTimer() {
+      if(totalDetik <= 0) {
+          document.getElementById('timerCountdown').textContent = '00:00:00';
+          Swal.fire({
+              title: 'Waktu Ujian Habis!',
+              text: 'Waktu pengerjaan telah habis. Jawaban Anda akan diserahkan secara otomatis.',
+              icon: 'warning',
+              allowOutsideClick: false,
+              allowEscapeKey: false,
+              confirmButtonText: 'OK'
+          }).then(function(){
+              sessionStorage.removeItem(timerKey);
+              document.getElementById('formKerjakanKuis').submit();
+          });
+          return;
+      }
+      var h = Math.floor(totalDetik / 3600);
+      var m = Math.floor((totalDetik % 3600) / 60);
+      var s = totalDetik % 60;
+      var timeStr = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+      document.getElementById('timerCountdown').textContent = timeStr;
+      sessionStorage.setItem(timerKey, totalDetik);
+      totalDetik--;
+  }
+
+  var formEl = document.getElementById('formKerjakanKuis');
+  if(formEl && formEl.style.display !== 'none') {
+      updateTimer();
+      setInterval(updateTimer, 1000);
+  }
 
   document.querySelectorAll('.soal-input').forEach(function(inp){
     markAnswered(parseInt(inp.getAttribute('data-index'), 10));

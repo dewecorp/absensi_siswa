@@ -44,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tgl_mulai = !empty($_POST['tgl_mulai']) ? date('Y-m-d H:i:s', strtotime($_POST['tgl_mulai'])) : date('Y-m-d H:i:s');
         $deadline = !empty($_POST['deadline']) ? date('Y-m-d H:i:s', strtotime($_POST['deadline'])) : null;
         $nilai_maksimal = (int)($_POST['nilai_maksimal'] ?? 100) ?: 100;
+        $durasi_menit = (int)($_POST['durasi_menit'] ?? 90) ?: 90;
         $status = in_array($_POST['status'] ?? '', ['Draft', 'Aktif', 'Selesai', 'Arsip'], true) ? $_POST['status'] : 'Aktif';
 
         $lampiran = null;
@@ -63,12 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("
                         INSERT INTO tb_tugas (
                             id_guru, judul, id_mapel, id_kelas, materi_tp, jenis_tugas,
-                            instruksi, tgl_mulai, deadline, nilai_maksimal, lampiran, status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            instruksi, tgl_mulai, deadline, nilai_maksimal, durasi_menit, lampiran, status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([
                         $guru_id, $judul, $id_mapel, $id_kelas, $materi_tp, $jenis_tugas,
-                        $instruksi, $tgl_mulai, $deadline, $nilai_maksimal, $lampiran, $status
+                        $instruksi, $tgl_mulai, $deadline, $nilai_maksimal, $durasi_menit, $lampiran, $status
                     ]);
 
                     // Kirim notifikasi sistem untuk siswa
@@ -84,11 +85,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $sql = "
                         UPDATE tb_tugas SET
                             judul = ?, id_mapel = ?, id_kelas = ?, materi_tp = ?, jenis_tugas = ?,
-                            instruksi = ?, tgl_mulai = ?, deadline = ?, nilai_maksimal = ?, status = ?
+                            instruksi = ?, tgl_mulai = ?, deadline = ?, nilai_maksimal = ?, durasi_menit = ?, status = ?
                     ";
                     $params = [
                         $judul, $id_mapel, $id_kelas, $materi_tp, $jenis_tugas,
-                        $instruksi, $tgl_mulai, $deadline, $nilai_maksimal, $status
+                        $instruksi, $tgl_mulai, $deadline, $nilai_maksimal, $durasi_menit, $status
                     ];
                     if ($lampiran !== null) {
                         try {
@@ -165,8 +166,6 @@ if (!$is_admin_or_kepala) {
 $f_mapel = (int)($_GET['f_mapel'] ?? 0);
 $f_kelas = (int)($_GET['f_kelas'] ?? 0);
 $f_jenis = trim((string)($_GET['f_jenis'] ?? ''));
-$f_status = trim((string)($_GET['f_status'] ?? ''));
-$f_periode = trim((string)($_GET['f_periode'] ?? '')); // 'aktif', 'lewat', 'semua'
 
 if ($is_admin_or_kepala) {
     $where = ["1=1"];
@@ -191,15 +190,6 @@ if ($f_kelas > 0) {
 if ($f_jenis !== '') {
     $where[] = "t.jenis_tugas = ?";
     $params[] = $f_jenis;
-}
-if ($f_status !== '') {
-    $where[] = "t.status = ?";
-    $params[] = $f_status;
-}
-if ($f_periode === 'aktif') {
-    $where[] = "(t.deadline IS NULL OR t.deadline >= NOW())";
-} elseif ($f_periode === 'lewat') {
-    $where[] = "(t.deadline IS NOT NULL AND t.deadline < NOW())";
 }
 
 $where_sql = implode(' AND ', $where);
@@ -268,14 +258,17 @@ $(document).ready(function() {
             $('#container_kuis_builder').slideDown(150);
             $('#container_cbt_builder').slideUp(150);
             $('#container_lampiran_berkas').slideUp(150);
+            $('#container_durasi_ujian').slideDown(150);
         } else if (v === 'CBT') {
             $('#container_cbt_builder').slideDown(150);
             $('#container_kuis_builder').slideUp(150);
             $('#container_lampiran_berkas').slideUp(150);
+            $('#container_durasi_ujian').slideDown(150);
         } else {
             $('#container_kuis_builder').slideUp(150);
             $('#container_cbt_builder').slideUp(150);
             $('#container_lampiran_berkas').slideDown(150);
+            $('#container_durasi_ujian').slideUp(150);
         }
     }
     $(document).on('change', '#inp_jenis', toggleJenisTugas);
@@ -309,6 +302,7 @@ $(document).ready(function() {
         $('#inp_mulai').val(data.tgl_mulai ? data.tgl_mulai.substring(0, 16).replace(' ', 'T') : '');
         $('#inp_deadline').val(data.deadline ? data.deadline.substring(0, 16).replace(' ', 'T') : '');
         $('#inp_nilai_maks').val(data.nilai_maksimal || 100);
+        $('#inp_durasi_menit').val(data.durasi_menit || 90);
         $('#inp_status').val(data.status || 'Aktif').trigger('change');
         if (window.GDSRefresh) { try { window.GDSRefresh($('#modalTugas')[0]); } catch (e2) {} }
         $('#modalTugas').modal('show');
@@ -365,7 +359,7 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="card-body">
                     <form method="GET" class="row" id="formFilterTugas">
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="small font-weight-bold">Mata Pelajaran</label>
                             <select name="f_mapel" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Mapel --</option>
@@ -374,7 +368,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
                             <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Kelas --</option>
@@ -383,7 +377,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="small font-weight-bold">Jenis Tugas</label>
                             <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Jenis --</option>
@@ -392,24 +386,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="small font-weight-bold">Status</label>
-                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Status --</option>
-                                <?php foreach (['Aktif', 'Draft', 'Selesai', 'Arsip'] as $st): ?>
-                                    <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="small font-weight-bold">Periode / Deadline</label>
-                            <select name="f_periode" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Periode --</option>
-                                <option value="aktif" <?= $f_periode === 'aktif' ? 'selected' : '' ?>>Deadline Masih Aktif</option>
-                                <option value="lewat" <?= $f_periode === 'lewat' ? 'selected' : '' ?>>Deadline Lewat</option>
-                            </select>
-                        </div>
-                        <?php if ($f_mapel > 0 || $f_kelas > 0 || $f_jenis !== '' || $f_status !== '' || $f_periode !== ''): ?>
+                        <?php if ($f_mapel > 0 || $f_kelas > 0 || $f_jenis !== ''): ?>
                         <div class="col-12 mt-1">
                             <a href="tugas.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo mr-1"></i> Reset Filter</a>
                         </div>
@@ -601,6 +578,13 @@ include '../templates/sidebar.php';
                                 <option value="Selesai">Selesai</option>
                                 <option value="Arsip">Arsip</option>
                             </select>
+                        </div>
+                        <div class="col-12 form-group" id="container_durasi_ujian" style="display:none;">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-primary"><i class="fas fa-clock mr-1"></i> Durasi Pengerjaan Ujian (Menit)</label>
+                                <input type="number" name="durasi_menit" id="inp_durasi_menit" class="form-control" value="90" min="5" max="300">
+                                <small class="text-muted">Timer hitung mundur otomatis akan aktif selama siswa mengerjakan Kuis atau CBT.</small>
+                            </div>
                         </div>
                         <div class="col-12 form-group" id="container_kuis_builder" style="display:none;">
                             <div class="alert alert-info small mb-0">

@@ -299,6 +299,9 @@ include '../templates/sidebar.php';
                                 <tr><th>Materi / TP</th><td><?= htmlspecialchars($tugas['materi_tp'] ?? '-') ?></td></tr>
                                  <tr><th>Jenis Tugas</th><td><span class="badge badge-light border"><?= htmlspecialchars($tugas['jenis_tugas']) ?></span></td></tr>
                                 <tr><th>Jumlah Soal</th><td><strong class="text-primary"><?= count($soal_list) ?> Butir Soal</strong></td></tr>
+                                <?php if (in_array($tugas['jenis_tugas'], ['Kuis', 'CBT'], true)): ?>
+                                <tr><th>Durasi Pengerjaan</th><td><strong class="text-danger"><i class="fas fa-clock mr-1"></i> <?= (int)($tugas['durasi_menit'] ?? 90) ?> Menit</strong></td></tr>
+                                <?php endif; ?>
                                 <tr><th>Tanggal Mulai</th><td><?= !empty($tugas['tgl_mulai']) ? date('d/m/Y H:i', strtotime($tugas['tgl_mulai'])) : '-' ?></td></tr>
                                 <tr><th>Deadline</th><td class="font-weight-bold text-danger"><?= !empty($tugas['deadline']) ? date('d/m/Y H:i', strtotime($tugas['deadline'])) : '-' ?></td></tr>
                                 <tr><th>Nilai Maksimal</th><td><?= (int)$tugas['nilai_maksimal'] ?></td></tr>
