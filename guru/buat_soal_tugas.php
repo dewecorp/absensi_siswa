@@ -65,7 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
     $action = $_POST['action'] ?? '';
     if ($action === 'simpan_soal') {
         $soal_id = (int)($_POST['soal_id'] ?? 0);
-        $tipe_soal = in_array($_POST['tipe_soal'] ?? '', ['Pilihan Ganda', 'Essay'], true) ? $_POST['tipe_soal'] : 'Pilihan Ganda';
+        $tipe_soal = in_array($_POST['tipe_soal'] ?? '', ['Pilihan Ganda', 'Pilihan Ganda Kompleks', 'Essay'], true) ? $_POST['tipe_soal'] : 'Pilihan Ganda';
+        if ($tugas['jenis_tugas'] === 'Kuis' && $tipe_soal === 'Essay') {
+            $tipe_soal = 'Pilihan Ganda';
+        }
         $pertanyaan = trim((string)($_POST['pertanyaan'] ?? ''));
         $pilihan_a = trim((string)($_POST['pilihan_a'] ?? ''));
         $pilihan_b = trim((string)($_POST['pilihan_b'] ?? ''));
@@ -153,29 +156,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
                             $bobot = 10;
                             $tipe = 'Pilihan Ganda';
 
-                            foreach ($paragraphs as $p) {
-                                $text = trim($p->nodeName === 'p' ? $p->textContent : '');
-                                if ($text === '') continue;
-                                if (preg_match('/^(soal|no\.?)\s*\d+/i', $text) || strpos($text, '?') !== false || strlen($text) > 30) {
-                                    if ($current_q !== '') {
-                                        // Save previous
-                                        $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                                            ->execute([$id_tugas, $tipe, $current_q, $opts['A']??'', $opts['B']??'', $opts['C']??'', $opts['D']??'', $opts['E']??'', $kunci, $bobot]);
-                                        $imported_count++;
-                                    }
-                                    $current_q = $text;
+                            $mode_uraian = false;
+                            $is_kuis_docx = ($tugas['jenis_tugas'] === 'Kuis');
+                            $skipped_uraian_docx = 0;
+                            $ins_docx = $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                            $save_docx = function () use ($ins_docx, $id_tugas, &$current_q, &$opts, &$kunci, &$tipe, &$imported_count, $bobot_jenis_map, $is_kuis_docx, &$skipped_uraian_docx) {
+                                if (trim($current_q) === '') return;
+                                $t = $tipe;
+                                if ($t === 'Essay' && $is_kuis_docx) {
+                                    $skipped_uraian_docx++;
+                                    $current_q = '';
                                     $opts = [];
                                     $kunci = 'A';
-                                } elseif (preg_match('/^([A-E])[\.\)]\s*(.*)/i', $text, $m)) {
+                                    $tipe = 'Pilihan Ganda';
+                                    return;
+                                }
+                                if ($t === 'Pilihan Ganda' && strpos($kunci, ',') !== false) {
+                                    $t = 'Pilihan Ganda Kompleks';
+                                }
+                                $b = $bobot_jenis_map[$t] ?? 10;
+                                $ins_docx->execute([$id_tugas, $t, $current_q, $opts['A'] ?? '', $opts['B'] ?? '', $opts['C'] ?? '', $opts['D'] ?? '', $opts['E'] ?? '', $kunci, $b]);
+                                $imported_count++;
+                            };
+
+                            foreach ($paragraphs as $p) {
+                                $text = trim($p->textContent);
+                                if ($text === '') continue;
+                                if (preg_match('/^bagian\s+b\b/i', $text)) {
+                                    $save_docx();
+                                    $mode_uraian = true;
+                                    $current_q = '';
+                                    $opts = [];
+                                    $kunci = '';
+                                    $tipe = 'Essay';
+                                    continue;
+                                }
+                                if (preg_match('/^bagian\s+a\b/i', $text)) {
+                                    $save_docx();
+                                    $mode_uraian = false;
+                                    $current_q = '';
+                                    $opts = [];
+                                    $kunci = 'A';
+                                    $tipe = 'Pilihan Ganda';
+                                    continue;
+                                }
+                                if (stripos($text, 'TEMPLATE SOAL') === 0 || stripos($text, 'Catatan:') === 0) continue;
+                                if (preg_match('/^(soal|no\.?)\s*\d+/i', $text) || strpos($text, '?') !== false || strlen($text) > 40) {
+                                    $save_docx();
+                                    $current_q = preg_replace('/^(soal|no\.?)\s*\d+\s*[:.\-]?\s*/i', '', $text);
+                                    $opts = [];
+                                    $kunci = $mode_uraian ? '' : 'A';
+                                    $tipe = $mode_uraian ? 'Essay' : 'Pilihan Ganda';
+                                } elseif (!$mode_uraian && preg_match('/^([A-E])[\.\)]\s*(.*)/i', $text, $m)) {
                                     $opts[strtoupper($m[1])] = trim($m[2]);
-                                } elseif (preg_match('/^kunci[\s:]*([A-E])/i', $text, $m)) {
-                                    $kunci = strtoupper($m[1]);
+                                } elseif (preg_match('/^kunci\s+uraian\s*:\s*(.+)$/i', $text, $m)) {
+                                    $kunci = trim($m[1]);
+                                    $tipe = 'Essay';
+                                } elseif (preg_match('/^kunci\s*:\s*(.+)$/i', $text, $m)) {
+                                    if ($mode_uraian) {
+                                        $kunci = trim($m[1]);
+                                        $tipe = 'Essay';
+                                    } else {
+                                        preg_match_all('/[A-E]/i', $m[1], $km);
+                                        $letters = array_unique(array_map('strtoupper', $km[0]));
+                                        if (!empty($letters)) $kunci = implode(',', $letters);
+                                    }
                                 }
                             }
-                            if ($current_q !== '') {
-                                $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                                    ->execute([$id_tugas, $tipe, $current_q, $opts['A']??'', $opts['B']??'', $opts['C']??'', $opts['D']??'', $opts['E']??'', $kunci, $bobot]);
-                                $imported_count++;
+                            $save_docx();
+                            if ($skipped_uraian_docx > 0 && $imported_count === 0) {
+                                $message = ['type' => 'warning', 'text' => 'Soal uraian dilewati: tugas Kuis hanya menerima Pilihan Ganda dan Pilihan Ganda Kompleks.'];
                             }
                         }
                     }
@@ -183,47 +233,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_crud) {
                     $html_content = file_get_contents($tmp);
                     $dom = new DOMDocument();
                     @$dom->loadHTML($html_content);
-                    $rows = $dom->getElementsByTagName('Row');
-                    $is_header = true;
-                    foreach ($rows as $row) {
-                        if ($is_header) { $is_header = false; continue; }
-                        $cells = $row->getElementsByTagName('Cell');
-                        $rowData = [];
-                        foreach ($cells as $cell) {
-                            $rowData[] = trim($cell->textContent);
+                    $ins_xls = $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $is_kuis_mode = ($tugas['jenis_tugas'] === 'Kuis');
+                    $sheets = $dom->getElementsByTagName('Worksheet');
+                    if ($sheets->length === 0) {
+                        $sheets = [$dom];
+                    }
+                    $skipped_uraian = 0;
+                    foreach ($sheets as $sheet) {
+                        $sheet_name = '';
+                        if ($sheet instanceof DOMElement && $sheet->hasAttribute('ss:Name')) {
+                            $sheet_name = strtolower($sheet->getAttribute('ss:Name'));
                         }
-                        if (count($rowData) >= 8 && !empty($rowData[1])) {
-                            $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                                ->execute([$id_tugas, $rowData[0] ?: 'Pilihan Ganda', $rowData[1], $rowData[2], $rowData[3], $rowData[4], $rowData[5], $rowData[6], strtoupper($rowData[7]), (int)($rowData[8] ?? 10)]);
-                            $imported_count++;
+                        $is_uraian_sheet = (strpos($sheet_name, 'uraian') !== false);
+                        $rows = ($sheet instanceof DOMElement ? $sheet : $dom)->getElementsByTagName('Row');
+                        $first_row = true;
+                        foreach ($rows as $row) {
+                            $cells = $row->getElementsByTagName('Cell');
+                            $rowData = [];
+                            foreach ($cells as $cell) {
+                                $rowData[] = trim($cell->textContent);
+                            }
+                            if ($first_row) { $first_row = false; continue; }
+                            if (empty($rowData[1])) continue;
+                            if (stripos($rowData[1], 'Hapus ') === 0) continue;
+                            if ($is_uraian_sheet || (count($rowData) === 3 && stripos($rowData[0] . ' ' . implode(' ', $rowData), 'uraian') === false && count($rowData) < 8)) {
+                                // Format lembar Uraian: No | Pertanyaan | Kunci
+                                if ($is_kuis_mode) { $skipped_uraian++; continue; }
+                                $b = $bobot_jenis_map['Essay'] ?? 10;
+                                $ins_xls->execute([$id_tugas, 'Essay', $rowData[1], '', '', '', '', '', $rowData[2] ?? '', $b]);
+                                $imported_count++;
+                            } elseif (count($rowData) >= 8) {
+                                // Format lembar Pilihan Ganda: No | Pertanyaan | A | B | C | D | E | Kunci
+                                preg_match_all('/[A-E]/i', $rowData[7], $km);
+                                $letters = array_unique(array_map('strtoupper', $km[0]));
+                                if (empty($letters)) continue;
+                                $kunci = implode(',', $letters);
+                                $tipe = count($letters) > 1 ? 'Pilihan Ganda Kompleks' : 'Pilihan Ganda';
+                                $b = $bobot_jenis_map[$tipe] ?? 10;
+                                $ins_xls->execute([$id_tugas, $tipe, $rowData[1], $rowData[2], $rowData[3], $rowData[4], $rowData[5], $rowData[6], $kunci, $b]);
+                                $imported_count++;
+                            }
                         }
                     }
-                    if ($imported_count === 0) {
+                    if ($imported_count === 0 && $skipped_uraian === 0) {
                         // Fallback CSV parse if XML cells not found
                         $handle = fopen($tmp, 'r');
                         $rIdx = 0;
                         while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
                             if ($rIdx === 0) { $rIdx++; continue; }
                             if (count($data) >= 8 && !empty($data[1])) {
+                                preg_match_all('/[A-E]/i', $data[7], $km2);
+                                $letters2 = array_unique(array_map('strtoupper', $km2[0]));
+                                if (empty($letters2)) continue;
+                                $kunci2 = implode(',', $letters2);
+                                $tipe2 = count($letters2) > 1 ? 'Pilihan Ganda Kompleks' : 'Pilihan Ganda';
+                                $b2 = $bobot_jenis_map[$tipe2] ?? 10;
                                 $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                                    ->execute([$id_tugas, $data[0] ?: 'Pilihan Ganda', $data[1], $data[2], $data[3], $data[4], $data[5], $data[6], strtoupper($data[7]), (int)($data[8] ?? 10)]);
+                                    ->execute([$id_tugas, $tipe2, $data[1], $data[2], $data[3], $data[4], $data[5], $data[6], $kunci2, $b2]);
+                                $imported_count++;
+                            } elseif (count($data) === 3 && !empty($data[1])) {
+                                if ($is_kuis_mode) { $skipped_uraian++; continue; }
+                                $b3 = $bobot_jenis_map['Essay'] ?? 10;
+                                $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                                    ->execute([$id_tugas, 'Essay', $data[1], '', '', '', '', '', $data[2] ?? '', $b3]);
                                 $imported_count++;
                             }
                         }
                         fclose($handle);
                     }
+                    if ($skipped_uraian > 0 && $imported_count === 0) {
+                        $message = ['type' => 'warning', 'text' => 'Soal uraian dilewati: tugas Kuis hanya menerima Pilihan Ganda dan Pilihan Ganda Kompleks.'];
+                    }
                 } elseif (in_array($ext, ['csv', 'txt'], true)) {
                     $handle = fopen($tmp, 'r');
                     while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                        if (count($data) >= 8) {
+                        if (count($data) >= 8 && !empty($data[1])) {
+                            preg_match_all('/[A-E]/i', $data[7], $km3);
+                            $letters3 = array_unique(array_map('strtoupper', $km3[0]));
+                            if (empty($letters3)) continue;
+                            $kunci3 = implode(',', $letters3);
+                            $tipe3 = count($letters3) > 1 ? 'Pilihan Ganda Kompleks' : 'Pilihan Ganda';
+                            $b4 = $bobot_jenis_map[$tipe3] ?? 10;
                             $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                                ->execute([$id_tugas, $data[0] ?: 'Pilihan Ganda', $data[1], $data[2], $data[3], $data[4], $data[5], $data[6], strtoupper($data[7]), (int)($data[8] ?? 10)]);
+                                ->execute([$id_tugas, $tipe3, $data[1], $data[2], $data[3], $data[4], $data[5], $data[6], $kunci3, $b4]);
+                            $imported_count++;
+                        } elseif (count($data) === 3 && !empty($data[1])) {
+                            if ($tugas['jenis_tugas'] === 'Kuis') continue;
+                            $b5 = $bobot_jenis_map['Essay'] ?? 10;
+                            $pdo->prepare("INSERT INTO tb_tugas_soal (id_tugas, tipe_soal, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                                ->execute([$id_tugas, 'Essay', $data[1], '', '', '', '', '', $data[2] ?? '', $b5]);
                             $imported_count++;
                         }
                     }
                     fclose($handle);
                 }
-                $message = ['type' => 'success', 'text' => "Berhasil mengimpor $imported_count butir soal!"];
+                if ($imported_count > 0) {
+                    $message = ['type' => 'success', 'text' => "Berhasil mengimpor $imported_count butir soal!"];
+                } elseif ($message === null) {
+                    $message = ['type' => 'warning', 'text' => 'Tidak ada soal yang berhasil diimpor. Periksa format file.'];
+                }
             } catch (Exception $e) {
                 $message = ['type' => 'danger', 'text' => 'Gagal mengimpor file: ' . $e->getMessage()];
             }
@@ -243,7 +352,8 @@ include '../templates/sidebar.php';
 <div class="main-content">
     <section class="section">
         <div class="section-header">
-            <h1>Kelola Soal <?= htmlspecialchars($tugas['jenis_tugas']) ?>: <?= htmlspecialchars($tugas['judul']) ?></h1>
+            <?php $judul_tampil = preg_replace('/^(individu|kelompok|proyek|praktik|portofolio|kuis|cbt)\s+/i', '', (string)$tugas['judul']); ?>
+            <h1>Kelola Soal <?= htmlspecialchars($tugas['jenis_tugas']) ?>: <?= htmlspecialchars($judul_tampil) ?></h1>
             <div class="section-header-breadcrumb">
                 <div class="breadcrumb-item"><a href="tugas.php">Daftar Tugas</a></div>
                 <div class="breadcrumb-item"><a href="detail_tugas.php?id=<?= $id_tugas ?>">Detail Tugas</a></div>
@@ -575,18 +685,19 @@ JS;
                     <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
+                    <?php $tpl_mode = ($tugas['jenis_tugas'] === 'Kuis') ? 'kuis' : 'cbt'; ?>
                     <div class="alert alert-info small mb-3">
-                        <i class="fas fa-info-circle mr-1"></i> <strong>Panduan Format Impor Soal:</strong><br>
-                        1. <strong>Format Word (.docx):</strong> Ketik pertanyaan soal, lalu di bawahnya pilihan jawaban diawali huruf (A., B., C., D., E.), dan baris kunci jawaban diawali <code>Kunci: A</code>.<br>
-                        2. <strong>Format Excel (.xls):</strong> Unduh template Excel di bawah, isi kolom Tipe Soal, Pertanyaan, Pilihan A-E, Kunci, dan Bobot, lalu unggah kembali.
+                        <i class="fas fa-info-circle mr-1"></i> <strong>Unduh template asli sesuai jenis tugas ini (<?= htmlspecialchars($tugas['jenis_tugas']) ?>):</strong><br>
+                        1. <strong>Word (.docx asli):</strong> Bagian A Pilihan Ganda — kunci biasa <code>Kunci: B</code>, kompleks <code>Kunci: A,C</code>.<?php if ($tugas['jenis_tugas'] !== 'Kuis'): ?><br>Bagian B Uraian — <code>Kunci Uraian: kata kunci jawaban</code>.<?php else: ?><br>Tugas Kuis tidak menerima uraian: lembar/baris uraian otomatis dilewati saat impor.<?php endif; ?><br>
+                        2. <strong>Excel (.xls asli):</strong> lembar <code>Pilihan_Ganda</code> (No | Pertanyaan | A | B | C | D | E | Kunci)<?php if ($tugas['jenis_tugas'] !== 'Kuis'): ?> + lembar <code>Uraian</code> (No | Pertanyaan | Kunci)<?php endif; ?>. Bobot per jenis soal diatur di halaman ini, bukan di file.
                     </div>
-                    
-                    <div class="mb-3 d-flex" style="gap:8px;">
-                        <a href="download_template_soal.php?format=excel" class="btn btn-outline-success btn-sm">
-                            <i class="fas fa-file-excel mr-1"></i> Unduh Template Excel (.xls)
+
+                    <div class="mb-3 d-flex flex-wrap" style="gap:8px;">
+                        <a href="download_template_soal.php?format=excel&mode=<?= $tpl_mode ?>" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-file-excel mr-1"></i> Unduh Template Excel <?= htmlspecialchars($tugas['jenis_tugas']) ?> (.xls)
                         </a>
-                        <a href="download_template_soal.php?format=docx" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-download mr-1"></i> Unduh Panduan / Contoh Word
+                        <a href="download_template_soal.php?format=docx&mode=<?= $tpl_mode ?>" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-file-word mr-1"></i> Unduh Template Word <?= htmlspecialchars($tugas['jenis_tugas']) ?> (.docx)
                         </a>
                     </div>
 
