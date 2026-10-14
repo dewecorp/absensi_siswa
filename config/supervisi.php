@@ -916,6 +916,85 @@ if (!function_exists('sv_mapel_guru')) {
     }
 }
 
+if (!function_exists('sv_kelas_guru')) {
+    /**
+     * Petakan id_guru => daftar nama kelas (dari jadwal pelajaran Reguler, tb_guru.mengajar, atau wali_kelas).
+     */
+    function sv_kelas_guru(PDO $pdo): array
+    {
+        $out = [];
+        try {
+            $stmt = $pdo->query("SELECT j.guru_id, k.nama_kelas
+                                 FROM tb_jadwal_pelajaran j
+                                 JOIN tb_kelas k ON k.id_kelas = j.kelas_id
+                                 WHERE j.guru_id IS NOT NULL AND j.jenis = 'Reguler'
+                                 GROUP BY j.guru_id, k.nama_kelas
+                                 ORDER BY k.nama_kelas ASC");
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $id = (int)$row['guru_id'];
+                $out[$id][] = $row['nama_kelas'];
+            }
+
+            $teachers = $pdo->query("SELECT id_guru, nama_guru, mengajar FROM tb_guru")->fetchAll(PDO::FETCH_ASSOC);
+            $all_classes = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($teachers as $g) {
+                $idG = (int)$g['id_guru'];
+                $seen = [];
+                if (isset($out[$idG])) {
+                    foreach ($out[$idG] as $cName) {
+                        $seen[$cName] = true;
+                    }
+                }
+
+                // Cek mengajar
+                if (!empty($g['mengajar'])) {
+                    $list = json_decode((string)$g['mengajar'], true);
+                    if (!is_array($list)) {
+                        $list = array_map('trim', explode(',', (string)$g['mengajar']));
+                    }
+                    foreach ($list as $item) {
+                        foreach ($all_classes as $k) {
+                            if ((is_numeric($item) && (int)$item === (int)$k['id_kelas']) ||
+                                (string)$k['id_kelas'] === (string)$item ||
+                                strcasecmp((string)$k['nama_kelas'], (string)$item) === 0) {
+                                $cName = $k['nama_kelas'];
+                                if (!isset($seen[$cName])) {
+                                    $seen[$cName] = true;
+                                    $out[$idG][] = $cName;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Cek wali_kelas
+                if (!empty($g['nama_guru'])) {
+                    foreach ($all_classes as $k) {
+                        // Cek apakah wali_kelas cocok dengan nama_guru atau jika ada kolom wali_kelas di tb_kelas
+                    }
+                }
+            }
+
+            // Cek wali kelas langsung dari tb_kelas
+            $stmtW = $pdo->query("SELECT k.nama_kelas, g.id_guru FROM tb_kelas k JOIN tb_guru g ON g.nama_guru = k.wali_kelas WHERE k.wali_kelas IS NOT NULL AND k.wali_kelas != ''");
+            foreach ($stmtW->fetchAll(PDO::FETCH_ASSOC) as $rw) {
+                $idG = (int)$rw['id_guru'];
+                $cName = $rw['nama_kelas'];
+                if (!isset($out[$idG]) || !in_array($cName, $out[$idG])) {
+                    $out[$idG][] = $cName;
+                }
+            }
+
+            foreach ($out as $id => $arr) {
+                $out[$id] = array_values(array_unique($arr));
+            }
+        } catch (Throwable $e) {
+        }
+        return $out;
+    }
+}
+
 if (!function_exists('sv_sasaran_kelas_map')) {
     function sv_sasaran_kelas_map(PDO $pdo, string $tahunAjaran, string $semester = ''): array
     {
