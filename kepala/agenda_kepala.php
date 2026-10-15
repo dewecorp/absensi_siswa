@@ -386,6 +386,8 @@ include '../templates/sidebar.php';
                                 }
                                 $tl_color = $agk_palette[((int)($r['id_jenis'] ?? 0) + (int)$r['id_agenda']) % count($agk_palette)];
                                 $uraian_cut = !empty($r['uraian_kegiatan']) ? mb_strimwidth(strip_tags($r['uraian_kegiatan']), 0, 120, '...') : '';
+                                $agk_sudah_lewat = strtotime($r['hari_tanggal']) <= strtotime(date('Y-m-d'));
+                                $agk_status = $agk_sudah_lewat ? 'Terlaksana' : 'Rencana';
                             ?>
                                 <div class="agk-item">
                                     <div class="agk-date" style="--tl-color: <?= $tl_color ?>;">
@@ -397,7 +399,10 @@ include '../templates/sidebar.php';
                                             <span class="badge px-2 py-1 font-weight-bold" style="background: <?= $tl_color ?>1a; color: <?= $tl_color ?>; font-size: 11px; border-radius: 6px;">
                                                 <i class="fas fa-tag mr-1"></i><?= htmlspecialchars($r['jenis_agenda'] ?? 'Agenda') ?>
                                             </span>
-                                            <span class="small text-muted"><i class="far fa-calendar-alt mr-1"></i><?= htmlspecialchars($r['hari_tanggal_indo']) ?></span>
+                                            <div class="d-flex" style="gap: 4px;">
+                                                <span class="small text-muted"><i class="far fa-calendar-alt mr-1"></i><?= htmlspecialchars($r['hari_tanggal_indo']) ?></span>
+                                                <span class="badge badge-<?= $agk_sudah_lewat ? 'success' : 'primary' ?>"><?= $agk_status ?></span>
+                                            </div>
                                         </div>
                                         <h6 class="font-weight-bold text-dark mb-1" style="font-size: 14.5px;"><?= htmlspecialchars($r['nama_agenda']) ?></h6>
                                         <?php if ($uraian_cut !== ''): ?>
@@ -448,6 +453,7 @@ include '../templates/sidebar.php';
                                     <th width="10%">Waktu</th>
                                     <th width="12%">Tempat</th>
                                     <th width="20%">Uraian Kegiatan</th>
+                                    <th width="10%">Status</th>
                                     <th width="10%" class="text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -463,6 +469,7 @@ include '../templates/sidebar.php';
                                         <td><?= htmlspecialchars($rx['waktu'] ?: '-') ?></td>
                                         <td><?= htmlspecialchars($rx['tempat'] ?: '-') ?></td>
                                         <td><?= htmlspecialchars(strip_tags($rx['uraian_kegiatan'] ?? '')) ?></td>
+                                        <td><?= strtotime($rx['hari_tanggal']) <= strtotime(date('Y-m-d')) ? 'Terlaksana' : 'Rencana' ?></td>
                                         <td></td>
                                     </tr>
                                 <?php endforeach; ?>

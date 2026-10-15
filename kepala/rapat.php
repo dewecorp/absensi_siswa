@@ -134,12 +134,8 @@ try {
     $rows = [];
 }
 
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
-];
+$css_libs = [];
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
     'https://cdn.ckeditor.com/4.22.1/full/ckeditor.js'
 ];
@@ -162,27 +158,6 @@ $(document).ready(function () {
         CKEDITOR.replace('ck_agenda_edit', { height: 200, toolbar: 'Full', versionCheck: false });
         CKEDITOR.replace('ck_notulensi_edit', { height: 200, toolbar: 'Full', versionCheck: false });
     }
-
-    var table = $('#table-rapat').DataTable({
-        language: {
-            search: 'Cari:',
-            lengthMenu: 'Tampilkan _MENU_ data',
-            info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',
-            infoEmpty: 'Tidak ada data',
-            zeroRecords: 'Data tidak ditemukan',
-            paginate: { first: 'Awal', last: 'Akhir', next: 'Berikutnya', previous: 'Sebelumnya' }
-        },
-        pageLength: 10,
-        order: [],
-        columnDefs: [{ sortable: false, targets: [8] }]
-    });
-
-    table.on('order.dt search.dt draw.dt', function () {
-        var info = table.page.info();
-        table.column(0, { search: 'applied', order: 'applied', page: 'current' }).nodes().each(function (cell, i) {
-            if (cell) cell.innerHTML = info.start + i + 1;
-        });
-    }).draw();
 
     // Reset CKEditor on modal show
     $('#modal-tambah').on('shown.bs.modal', function() {
@@ -372,7 +347,107 @@ include '../templates/sidebar.php';
                             <?php endif; ?>
                         </div>
                     </form>
-                    <div class="table-responsive">
+                    <style>
+                    .rpt-timeline { position: relative; padding: 6px 0 6px 8px; }
+                    .rpt-timeline::before { content: ''; position: absolute; left: 57px; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #6777ef, #3abaf4); opacity: .35; }
+                    .rpt-month { position: relative; z-index: 1; display: inline-block; margin: 14px 0 14px 34px; padding: 4px 16px; border-radius: 20px; background: #6777ef; color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .3px; box-shadow: 0 4px 10px rgba(103,119,239,.35); }
+                    .rpt-month:first-child { margin-top: 0; }
+                    .rpt-item { position: relative; display: flex; gap: 14px; margin-bottom: 14px; }
+                    .rpt-date { flex: 0 0 76px; text-align: center; z-index: 1; }
+                    .rpt-date .d { display: block; width: 46px; height: 46px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid var(--tl-color, #6777ef); color: var(--tl-color, #6777ef); font-weight: 800; font-size: 17px; line-height: 40px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+                    .rpt-date .m { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
+                    .rpt-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e9edf5; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.07); padding: 12px 14px; border-left: 4px solid var(--tl-color, #6777ef); transition: box-shadow .2s ease, transform .2s ease; }
+                    .rpt-card:hover { box-shadow: 0 10px 26px rgba(20,30,70,.13); transform: translateY(-2px); }
+                    @media (max-width: 575.98px) {
+                        .rpt-timeline::before { left: 47px; }
+                        .rpt-item { gap: 10px; }
+                        .rpt-date { flex-basis: 60px; }
+                        .rpt-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 32px; }
+                    }
+                    </style>
+
+                    <?php if (empty($rows)): ?>
+                        <div class="text-center text-muted py-5">
+                            <i class="far fa-calendar-times fa-3x mb-3"></i><br>
+                            <strong>Belum ada rapat pada filter ini.</strong>
+                        </div>
+                    <?php else: ?>
+                        <?php
+                        $bulan_id = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                        $cur_month = '';
+                        $rpt_palette = ['#6777ef', '#3abaf4', '#47c363', '#ffa426', '#9467ef', '#20c997', '#fc544b'];
+                        ?>
+                        <div class="rpt-timeline">
+                            <?php foreach ($rows as $r):
+                                $r['hari_tanggal_indo'] = formatHariTanggalIndo($r['hari_tanggal']);
+                                $mk = date('Y-m', strtotime($r['hari_tanggal']));
+                                if ($mk !== $cur_month) {
+                                    $cur_month = $mk;
+                                    echo '<div class="rpt-month"><i class="far fa-calendar-alt mr-1"></i>' . $bulan_id[(int)date('n', strtotime($r['hari_tanggal']))] . ' ' . date('Y', strtotime($r['hari_tanggal'])) . '</div>';
+                                }
+                                $tl_color = $rpt_palette[((int)($r['id_jenis'] ?? 0) + (int)$r['id_rapat']) % count($rpt_palette)];
+                                $rpt_lewat = strtotime($r['hari_tanggal']) <= strtotime(date('Y-m-d'));
+                                $agenda_cut = !empty($r['agenda_rapat']) ? mb_strimwidth(strip_tags($r['agenda_rapat']), 0, 120, '...') : '';
+                            ?>
+                                <div class="rpt-item">
+                                    <div class="rpt-date" style="--tl-color: <?= $tl_color ?>;">
+                                        <span class="d"><?= date('d', strtotime($r['hari_tanggal'])) ?></span>
+                                        <span class="m"><?= mb_substr($bulan_id[(int)date('n', strtotime($r['hari_tanggal']))], 0, 3) ?></span>
+                                    </div>
+                                    <div class="rpt-card" style="--tl-color: <?= $tl_color ?>;">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-1" style="gap: 6px;">
+                                            <span class="badge px-2 py-1 font-weight-bold" style="background: <?= $tl_color ?>1a; color: <?= $tl_color ?>; font-size: 11px; border-radius: 6px;">
+                                                <i class="fas fa-users mr-1"></i><?= htmlspecialchars($r['jenis_rapat'] ?? 'Rapat') ?>
+                                            </span>
+                                            <div class="d-flex" style="gap: 4px;">
+                                                <span class="small text-muted"><i class="far fa-calendar-alt mr-1"></i><?= htmlspecialchars($r['hari_tanggal_indo']) ?></span>
+                                                <span class="badge badge-<?= $rpt_lewat ? 'success' : 'primary' ?>"><?= $rpt_lewat ? 'Terlaksana' : 'Rencana' ?></span>
+                                            </div>
+                                        </div>
+                                        <h6 class="font-weight-bold text-dark mb-1" style="font-size: 14.5px;"><?= htmlspecialchars($r['nama_rapat']) ?></h6>
+                                        <?php if ($agenda_cut !== ''): ?>
+                                            <p class="small text-muted mb-2"><?= htmlspecialchars($agenda_cut) ?></p>
+                                        <?php endif; ?>
+                                        <div class="small text-muted mb-2" style="font-size: 11.5px; line-height: 1.8;">
+                                            <span class="mr-3"><i class="far fa-clock mr-1"></i><?= htmlspecialchars($r['waktu'] ?: '-') ?></span>
+                                            <?php if (!empty($r['tempat'])): ?>
+                                                <span class="mr-3"><i class="fas fa-map-marker-alt mr-1"></i><?= htmlspecialchars($r['tempat']) ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($r['pemimpin_rapat'])): ?>
+                                                <span><i class="fas fa-user-tie mr-1"></i><?= htmlspecialchars($r['pemimpin_rapat']) ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="pt-2 border-top d-flex flex-wrap" style="gap: 6px;">
+                                            <button class="btn btn-info btn-sm px-2 font-weight-bold btn-detail" type="button"
+                                                data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'
+                                                title="Lihat Detail" style="border-radius: 6px; font-size: 11.5px;">
+                                                <i class="fas fa-eye mr-1"></i>Detail
+                                            </button>
+                                            <a class="btn btn-secondary btn-sm px-2 font-weight-bold" href="cetak_detail_rapat.php?id=<?= (int)$r['id_rapat'] ?>" target="_blank" title="Cetak Agenda" style="border-radius: 6px; font-size: 11.5px;">
+                                                <i class="fas fa-print mr-1"></i>Cetak
+                                            </a>
+                                            <?php if ($can_manage): ?>
+                                                <button class="btn btn-warning btn-sm px-2 font-weight-bold btn-edit" type="button"
+                                                    data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'
+                                                    title="Edit" style="border-radius: 6px; font-size: 11.5px;">
+                                                    <i class="fas fa-edit mr-1"></i>Edit
+                                                </button>
+                                                <button class="btn btn-danger btn-sm px-2 font-weight-bold btn-hapus" type="button"
+                                                    data-id="<?= (int)$r['id_rapat'] ?>"
+                                                    data-nama="<?= htmlspecialchars($r['nama_rapat'], ENT_QUOTES) ?>"
+                                                    title="Hapus" style="border-radius: 6px; font-size: 11.5px;">
+                                                    <i class="fas fa-trash mr-1"></i>Hapus
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Tabel tersembunyi khusus ekspor Excel -->
+                    <div class="table-responsive" style="display:none;" aria-hidden="true">
                         <table class="table table-striped" id="table-rapat">
                             <thead>
                                 <tr>
@@ -384,68 +459,23 @@ include '../templates/sidebar.php';
                                     <th width="20%">Notulensi</th>
                                     <th>Pemimpin Rapat</th>
                                     <th>Tempat</th>
+                                    <th>Status</th>
                                     <th width="12%" class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($rows as $r): 
-                                    $r['hari_tanggal_indo'] = formatHariTanggalIndo($r['hari_tanggal']);
-                                ?>
+                                <?php $no_x = 1; foreach ($rows as $rx): ?>
                                     <tr>
-                                        <td class="text-center"></td>
-                                        <td>
-                                            <strong><?= htmlspecialchars($r['nama_rapat']) ?></strong>
-                                            <?php if (!empty($r['jenis_rapat'])): ?>
-                                                <small class="d-block text-muted"><i class="fas fa-tag mr-1"></i><?= htmlspecialchars($r['jenis_rapat']) ?></small>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= htmlspecialchars($r['hari_tanggal_indo']) ?></td>
-                                        <td><?= htmlspecialchars($r['waktu'] ?: '-') ?></td>
-                                        <td>
-                                            <?php if (!empty($r['agenda_rapat'])): ?>
-                                                <div class="agenda-content">
-                                                    <?= $r['agenda_rapat'] ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <em class="text-muted">-</em>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if (!empty($r['notulensi'])): ?>
-                                                <div class="agenda-content">
-                                                    <?= $r['notulensi'] ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <em class="text-muted">-</em>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= htmlspecialchars($r['pemimpin_rapat'] ?: '-') ?></td>
-                                        <td><?= htmlspecialchars($r['tempat'] ?: '-') ?></td>
-                                        <td style="white-space:nowrap">
-                                            <div class="d-inline-flex align-items-center">
-                                                <button class="btn btn-info btn-sm btn-detail mr-1" type="button"
-                                                    data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'
-                                                    title="Lihat Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <a class="btn btn-secondary btn-sm mr-1" href="cetak_detail_rapat.php?id=<?= (int)$r['id_rapat'] ?>" target="_blank" title="Cetak Agenda">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                                <?php if ($can_manage): ?>
-                                                <button class="btn btn-warning btn-sm btn-edit mr-1" type="button"
-                                                    data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'
-                                                    title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm btn-hapus" type="button"
-                                                    data-id="<?= (int)$r['id_rapat'] ?>"
-                                                    data-nama="<?= htmlspecialchars($r['nama_rapat'], ENT_QUOTES) ?>"
-                                                    title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                                <?php endif; ?>
-                                            </div>
-                                        </td>
+                                        <td class="text-center"><?= $no_x++ ?></td>
+                                        <td><?= htmlspecialchars($rx['nama_rapat']) ?></td>
+                                        <td><?= htmlspecialchars(formatHariTanggalIndo($rx['hari_tanggal'])) ?></td>
+                                        <td><?= htmlspecialchars($rx['waktu'] ?: '-') ?></td>
+                                        <td><?= htmlspecialchars(strip_tags($rx['agenda_rapat'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars(strip_tags($rx['notulensi'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars($rx['pemimpin_rapat'] ?: '-') ?></td>
+                                        <td><?= htmlspecialchars($rx['tempat'] ?: '-') ?></td>
+                                        <td><?= strtotime($rx['hari_tanggal']) <= strtotime(date('Y-m-d')) ? 'Terlaksana' : 'Rencana' ?></td>
+                                        <td></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
