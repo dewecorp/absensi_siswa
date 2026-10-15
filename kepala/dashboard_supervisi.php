@@ -98,6 +98,43 @@ try {
 } catch (Throwable $e) {
 }
 
+// Timeline tahapan supervisi per guru (periode berjalan)
+$sv_guru_timeline = [];
+try {
+    $stmt = $pdo->prepare("SELECT nama_guru, COUNT(*) AS jml, MAX(tanggal) AS terakhir, AVG(nilai) AS rata
+                           FROM tb_sv_pelaksanaan
+                           WHERE status = 'Selesai' AND tanggal BETWEEN ? AND ?
+                           GROUP BY nama_guru ORDER BY terakhir DESC LIMIT 12");
+    $stmt->execute([$ta_start, $ta_end]);
+    $sv_guru_timeline = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($sv_guru_timeline as &$sg) {
+        $sg['tl_selesai'] = 0;
+        $sg['tl_total'] = 0;
+        $sg['mon'] = 0;
+        try {
+            $st = $pdo->prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN t.status = 'Selesai' THEN 1 ELSE 0 END) AS selesai
+                                 FROM tb_sv_tindak_lanjut t
+                                 JOIN tb_sv_pelaksanaan p ON p.id_pelaksanaan = t.id_pelaksanaan
+                                 WHERE p.nama_guru = ? AND p.tanggal BETWEEN ? AND ?");
+            $st->execute([$sg['nama_guru'], $ta_start, $ta_end]);
+            if ($tr = $st->fetch(PDO::FETCH_ASSOC)) {
+                $sg['tl_total'] = (int)($tr['total'] ?? 0);
+                $sg['tl_selesai'] = (int)($tr['selesai'] ?? 0);
+            }
+        } catch (Throwable $e) {}
+        try {
+            $st = $pdo->prepare("SELECT COUNT(*) FROM tb_sv_monitoring m
+                                 JOIN tb_sv_tindak_lanjut t ON t.id_tindak_lanjut = m.id_tindak_lanjut
+                                 JOIN tb_sv_pelaksanaan p ON p.id_pelaksanaan = t.id_pelaksanaan
+                                 WHERE p.nama_guru = ? AND p.tanggal BETWEEN ? AND ?");
+            $st->execute([$sg['nama_guru'], $ta_start, $ta_end]);
+            $sg['mon'] = (int)$st->fetchColumn();
+        } catch (Throwable $e) {}
+    }
+    unset($sg);
+} catch (Throwable $e) {
+}
+
 $js_page = [];
 $js_page[] = "var svChart = {
     progres: {sudah: " . (int)$stats['sudah_diperiksa'] . ", belum: " . (int)$stats['belum_diperiksa'] . "},
@@ -372,6 +409,76 @@ include '../templates/sidebar.php';
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4><i class="fas fa-user-check mr-2"></i>Timeline Tahapan Supervisi per Guru</h4>
+                            <span class="badge badge-primary font-weight-bold" style="font-size: 12px; padding: 6px 14px; border-radius: 20px;"><?= count($sv_guru_timeline) ?> guru</span>
+                        </div>
+                        <div class="card-body">
+                            <?php if (empty($sv_guru_timeline)): ?>
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-user-clock fa-3x mb-3"></i><br>
+                                    <strong>Belum ada supervisi selesai pada periode ini.</strong>
+                                </div>
+                            <?php else: ?>
+                                <style>
+                                .sv-guru-step { display: flex; align-items: flex-start; }
+                                .sv-guru-node { flex: 1; min-width: 0; text-align: center; position: relative; padding-top: 30px; }
+                                .sv-guru-node::before { content: ''; position: absolute; top: 12px; left: -50%; width: 100%; height: 3px; border-radius: 3px; background: #e9edf5; }
+                                .sv-guru-node:first-child::before { display: none; }
+                                .sv-guru-node.done::before { background: #47c363; }
+                                .sv-guru-dot { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 27px; height: 27px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; background: #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,.15); z-index: 1; }
+                                .sv-guru-node.done .sv-guru-dot { background: #47c363; }
+                                .sv-guru-node.run .sv-guru-dot { background: #6777ef; animation: sv-pulse 1.6s infinite; }
+                                .sv-guru-lbl { font-size: 10.5px; font-weight: 800; color: #0f172a; line-height: 1.3; }
+                                .sv-guru-node:not(.done):not(.run) .sv-guru-lbl { color: #94a3b8; }
+                                .sv-guru-sub { font-size: 10px; color: #64748b; }
+                                </style>
+                                <div class="row">
+                                    <?php foreach ($sv_guru_timeline as $sg):
+                                        $sg_jml = (int)$sg['jml'];
+                                        $sg_rata = $sg['rata'] !== null ? round((float)$sg['rata'], 1) : null;
+                                        $sg_steps = [
+                                            ['label' => 'Dijadwalkan', 'sub' => $sg_jml . ' supervisi', 'icon' => 'fas fa-calendar-check', 'state' => $sg_jml > 0 ? 'done' : ''],
+                                            ['label' => 'Dilaksanakan', 'sub' => $sg['terakhir'] ? date('d/m/Y', strtotime($sg['terakhir'])) : '-', 'icon' => 'fas fa-chalkboard-teacher', 'state' => $sg_jml > 0 ? 'done' : ''],
+                                            ['label' => 'Dinilai', 'sub' => $sg_rata !== null ? 'Rata-rata ' . $sg_rata : 'Belum ada nilai', 'icon' => 'fas fa-star', 'state' => $sg_rata !== null ? 'done' : ($sg_jml > 0 ? 'run' : '')],
+                                            ['label' => 'Ditindaklanjuti', 'sub' => (int)$sg['tl_selesai'] . '/' . (int)$sg['tl_total'] . ' selesai', 'icon' => 'fas fa-tasks', 'state' => ((int)$sg['tl_total'] > 0 && (int)$sg['tl_selesai'] >= (int)$sg['tl_total']) ? 'done' : ((int)$sg['tl_total'] > 0 ? 'run' : '')],
+                                            ['label' => 'Dimonitoring', 'sub' => (int)$sg['mon'] . ' kunjungan', 'icon' => 'fas fa-search', 'state' => (int)$sg['mon'] > 0 ? 'done' : (((int)$sg['tl_total'] > 0) ? 'run' : '')],
+                                        ];
+                                        $inisial_g = strtoupper(mb_substr(trim((string)$sg['nama_guru']), 0, 1, 'UTF-8'));
+                                    ?>
+                                        <div class="col-12 col-xl-6 mb-3">
+                                            <div class="border rounded p-3 h-100" style="border-radius: 12px;">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mr-2 font-weight-bold" style="width: 40px; height: 40px; min-width: 40px; font-size: 16px;">
+                                                        <?= htmlspecialchars($inisial_g) ?>
+                                                    </div>
+                                                    <div class="min-width-0">
+                                                        <div class="font-weight-bold text-dark" style="font-size: 14px;"><?= htmlspecialchars($sg['nama_guru']) ?></div>
+                                                        <div class="small text-muted"><?= $sg_jml ?> supervisi selesai<?= $sg_rata !== null ? ' &bull; Rata-rata <strong class="text-primary">' . $sg_rata . '</strong>' : '' ?></div>
+                                                    </div>
+                                                </div>
+                                                <div class="sv-guru-step">
+                                                    <?php foreach ($sg_steps as $st): ?>
+                                                        <div class="sv-guru-node <?= $st['state'] ?>">
+                                                            <span class="sv-guru-dot"><i class="<?= $st['state'] === 'done' ? 'fas fa-check' : $st['icon'] ?>"></i></span>
+                                                            <div class="sv-guru-lbl"><?= $st['label'] ?></div>
+                                                            <div class="sv-guru-sub"><?= htmlspecialchars($st['sub']) ?></div>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
