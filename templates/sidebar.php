@@ -1663,11 +1663,16 @@ switch ($user_level) {
         ];
 
         if ($is_grade_6_siswa) {
+            // Slot navigasi Info Kelulusan diganti Diskusi Kelas di posisi atas (hindari duplikat).
+            $menu_items = array_values(array_filter($menu_items, static function ($it) {
+                return ($it['title'] ?? '') !== 'Diskusi Kelas';
+            }));
             array_splice($menu_items, 1, 0, [[
-                'title' => 'Info Kelulusan',
-                'icon' => 'fas fa-graduation-cap',
-                'url' => '../siswa/info_kelulusan.php',
-                'active' => $current_page === 'info_kelulusan.php'
+                'title' => 'Diskusi Kelas',
+                'icon' => 'fas fa-comments',
+                'url' => '../siswa/diskusi.php',
+                'badge' => $diskusi_badge,
+                'active' => $current_page === 'diskusi.php'
             ]]);
             // Add Jadwal Les into Jadwal submenu for Grade 6 Students
             foreach ($menu_items as &$m_item) {

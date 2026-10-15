@@ -324,6 +324,17 @@
             </div>
 
             <script>
+            function openStudentMsgFromNavByKey(key, element) {
+                if (!key) return;
+                var map = window.studentMsgMap || {};
+                var data = map[key];
+                if (!data) {
+                    // Fallback: cari dari atribut class bila peta belum terisi
+                    if (element) openStudentMsgFromNav({ id: 0, msg_type: 'ortu', status_dibaca: 'Sudah Dibaca' }, element);
+                    return;
+                }
+                openStudentMsgFromNav(data, element);
+            }
             function openStudentMsgFromNav(data, element) {
                 if (!data) return;
                 var tglStr = '-';
@@ -370,29 +381,41 @@
                 }
 
                 $('#modalBacaPesanSiswaNav').modal('show');
-                
-                if (data.status_dibaca !== 'Sudah Dibaca') {
-                    $.post('<?php echo htmlspecialchars(app_url('siswa/mark_message_read.php'), ENT_QUOTES, 'UTF-8'); ?>', { pesan_id: data.id, msg_type: data.msg_type || 'ortu' }, function(res) {
-                        data.status_dibaca = 'Sudah Dibaca';
-                        if (element) {
-                            var $el = $(element);
-                            $el.css('font-weight', 'normal').css('background-color', 'white');
-                            $el.find('span').css('font-weight', 'normal');
+
+                var readStatus = String(data.status_dibaca || '').trim();
+                if (readStatus !== 'Sudah Dibaca') {
+                    // Optimistic UI: unbold + kurangi badge SEBELUM ajax, agar klik terasa instan.
+                    data.status_dibaca = 'Sudah Dibaca';
+                    var keyClass = '.nav-msg-item-' + (data.msg_type || 'ortu') + '-' + data.id;
+                    var $items = $(keyClass);
+                    if ($items.length) {
+                        $items.removeClass('is-unread').addClass('is-read');
+                        $items.find('.notif-title-text').css({ 'font-weight': '400', 'color': '#555' });
+                    }
+                    if (element) {
+                        $(element).removeClass('is-unread').addClass('is-read');
+                        $(element).find('.notif-title-text').css({ 'font-weight': '400', 'color': '#555' });
+                    }
+                    var $badges = $('.nav-msg-count');
+                    $badges.each(function() {
+                        var $b = $(this);
+                        var countAttr = parseInt($b.attr('data-count'), 10) || 0;
+                        if (countAttr > 1) {
+                            var next = countAttr - 1;
+                            $b.attr('data-count', next).text(next > 99 ? '99+' : String(next));
+                        } else {
+                            $b.remove();
+                            $('.notification-toggle, .nav-msg-toggle').removeClass('beep');
                         }
-                        var $badge = $('.nav-msg-count');
-                        if ($badge.length) {
-                            var countAttr = parseInt($badge.attr('data-count'), 10) || 0;
-                            if (countAttr > 1) {
-                                var next = countAttr - 1;
-                                $badge.attr('data-count', next).text(next > 99 ? '99+' : String(next));
-                            } else {
-                                $badge.remove();
-                                $('.nav-msg-toggle').removeClass('beep');
-                            }
-                        }
-                        if ($('#row-pesan-' + data.id).length) {
-                            $('#row-pesan-' + data.id).find('.status-baca-col').html('<span class="badge badge-info"><i class="fas fa-check-double mr-1"></i>Sudah Dibaca</span>');
-                        }
+                    });
+                    if ($('#row-pesan-' + data.id).length) {
+                        $('#row-pesan-' + data.id).find('.status-baca-col').html('<span class="badge badge-info"><i class="fas fa-check-double mr-1"></i>Sudah Dibaca</span>');
+                    }
+                    $.ajax({
+                        url: '../siswa/mark_message_read.php',
+                        type: 'POST',
+                        data: { pesan_id: data.id, msg_type: data.msg_type || 'ortu' },
+                        dataType: 'json'
                     });
                 }
             }
@@ -566,6 +589,30 @@
                 type: 'POST',
                 data: { action: 'mark_all' },
                 success: function(response) {
+                    window.location.reload();
+                }
+            });
+        });
+
+        $(document).on('click', '#mark-all-read-siswa, #mark-all-read-siswa-mobile', function(e) {
+            e.preventDefault();
+            // Optimistic UI: langsung unbold semua pesan dan hilangkan badge.
+            // Tugas tidak dihitung di badge, jadi badge harus hilang total.
+            try {
+                $('.nav-msg-item').removeClass('is-unread').addClass('is-read');
+                $('.nav-msg-item .notif-title-text').css({ 'font-weight': '400', 'color': '#555' });
+                $('.nav-msg-count').remove();
+                $('.notification-toggle, .nav-msg-toggle').removeClass('beep');
+            } catch (err) {}
+            $.ajax({
+                url: '../siswa/mark_message_read.php',
+                type: 'POST',
+                data: { action: 'mark_all' },
+                dataType: 'json',
+                success: function(response) {
+                    window.location.reload();
+                },
+                error: function() {
                     window.location.reload();
                 }
             });

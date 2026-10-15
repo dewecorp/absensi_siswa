@@ -40,7 +40,7 @@ include_once '../templates/sidebar.php';
                     <!-- Banner profil full width -->
                     <div class="row">
                         <div class="col-12 mb-4">
-                            <div class="card border-0 shadow-sm" style="border-radius:18px;overflow:hidden;background:linear-gradient(135deg,#6777ef 0%,#3abaf4 100%);color:#fff;">
+                            <div class="card border-0 shadow-sm mapp-identity-banner" style="border-radius:18px;overflow:hidden;background:linear-gradient(135deg,#6777ef 0%,#3abaf4 100%);color:#fff;">
                                 <div class="card-body p-4">
                                     <div class="d-flex flex-column flex-md-row align-items-center" style="gap:20px;">
                                         <div class="position-relative flex-shrink-0">

@@ -323,8 +323,54 @@ include_once '../templates/sidebar.php';
             </div>
         </div>
 
+        <div class="row d-none d-lg-flex">
+            <!-- Banner Identitas Siswa (desktop saja, mobile disembunyikan) -->
+            <div class="col-12 mb-4">
+                <?php
+                $dash_foto = !empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto'])
+                    ? '../assets/img/siswa/' . $student['foto']
+                    : null;
+                $dash_inisial = strtoupper(substr((string)($student['nama_siswa'] ?? 'S'), 0, 1));
+                ?>
+                <div class="card border-0 shadow-sm" style="border-radius:18px;overflow:hidden;background:linear-gradient(135deg,#6777ef 0%,#3abaf4 100%);color:#fff;">
+                    <div class="card-body p-4">
+                        <div class="d-flex flex-column flex-md-row align-items-center" style="gap:20px;">
+                            <div class="flex-shrink-0">
+                                <?php if ($dash_foto): ?>
+                                    <img alt="foto" src="<?php echo $dash_foto; ?>" class="rounded-circle shadow" style="width:90px;height:90px;object-fit:cover;border:4px solid #fff;">
+                                <?php else: ?>
+                                    <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center shadow" style="width:90px;height:90px;font-weight:800;font-size:2.2rem;">
+                                        <?php echo $dash_inisial; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="text-center text-md-left flex-grow-1">
+                                <h4 class="font-weight-bold text-white mb-1"><?php echo htmlspecialchars($student['nama_siswa']); ?></h4>
+                                <div class="mb-2">
+                                    <span class="badge badge-light px-3 py-2 mr-1"><i class="fas fa-chalkboard mr-1"></i>Kelas <?php echo htmlspecialchars($student['nama_kelas'] ?? '-'); ?></span>
+                                    <?php if (!empty($student['jenis_kelamin'])): ?>
+                                        <span class="badge px-3 py-2 <?php echo $student['jenis_kelamin'] == 'L' ? 'badge-info' : 'badge-danger'; ?>">
+                                            <i class="fas fa-<?php echo $student['jenis_kelamin'] == 'L' ? 'mars' : 'venus'; ?> mr-1"></i>
+                                            <?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan'; ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="color:#f1f5f9;font-size:13px;">
+                                    NISN <?php echo htmlspecialchars($student['nisn'] ?? '-'); ?>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <a href="profil.php" class="btn btn-light btn-sm font-weight-bold px-3" style="border-radius: 20px; color:#6777ef;">
+                                    <i class="fas fa-user mr-1"></i>Profil Saya
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
-            <!-- Box Identitas Siswa pindah ke profil.php -->
             <!-- Box Kehadiran Manual -->
             <div class="col-12 mb-4">
                 <div class="card card-warning mapp-absen-card">
@@ -454,47 +500,106 @@ include_once '../templates/sidebar.php';
 
         <div class="row">
             <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
-                <div class="card card-warning mapp-tagihan-card h-100">
+                <div class="card card-warning mapp-tagihan-card h-100" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-file-invoice-dollar mr-2"></i>Ringkasan Tagihan Sibayar</h4>
-                        <a href="tagihan_siswa.php" class="btn btn-sm btn-warning text-white">
-                            Detail Tagihan
+                        <a href="tagihan_siswa.php" class="btn btn-sm btn-warning text-white" style="border-radius: 20px;">
+                            Detail Tagihan <i class="fas fa-chevron-right ml-1"></i>
                         </a>
                     </div>
                     <div class="card-body">
                         <?php if ($tagihan_status_ok): ?>
-                            <div class="row">
-                                <div class="col-md-4 col-12 mb-3 mb-md-0">
-                                    <div class="border rounded bg-light p-3 h-100">
-                                        <div class="small text-muted">Total Tunggakan</div>
-                                        <div class="h5 mb-0 <?php echo $tagihan_total_semua > 0 ? 'text-danger' : 'text-success'; ?> font-weight-bold">
-                                            Rp <?php echo number_format($tagihan_total_semua, 0, ',', '.'); ?>
+                            <?php
+                            $tagihan_lunas = $tagihan_total_semua <= 0;
+                            $tagihan_aktif_pct = $tagihan_total_semua > 0 ? round($tagihan_total_aktif / $tagihan_total_semua * 100) : 0;
+                            $tagihan_lama_pct = 100 - $tagihan_aktif_pct;
+                            ?>
+                            <!-- Hero total -->
+                            <div class="p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between" style="border-radius: 12px; background: <?= $tagihan_lunas ? 'linear-gradient(135deg, #d1fae5, #a7f3d0)' : 'linear-gradient(135deg, #fef3c7, #fde68a)' ?>;">
+                                <div class="d-flex align-items-center mb-2 mb-md-0">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center mr-3 <?= $tagihan_lunas ? 'bg-success' : 'bg-warning' ?> text-white" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fas fa-<?= $tagihan_lunas ? 'check' : 'exclamation' ?> fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="small font-weight-bold text-uppercase" style="letter-spacing: .5px; color: #6b7280;">Total Tunggakan</div>
+                                        <div class="h4 mb-0 font-weight-bold <?= $tagihan_lunas ? 'text-success' : 'text-danger' ?>">
+                                            Rp <?= number_format($tagihan_total_semua, 0, ',', '.') ?>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-4 col-md-4 mb-2">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="small text-muted">Tahun Ajaran Aktif</div>
-                                        <div class="font-weight-bold"><?php echo htmlspecialchars($tagihan_tahun_aktif); ?></div>
-                                        <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_aktif, 0, ',', '.'); ?></div>
-                                    </div>
-                                </div>
-                                <div class="col-4 col-md-4 mb-2">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="small text-muted">Tahun Ajaran Lama</div>
-                                        <div class="font-weight-bold"><?php echo empty($tagihan_tahun_lama) ? '-' : htmlspecialchars(implode(', ', $tagihan_tahun_lama)); ?></div>
-                                        <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_lama, 0, ',', '.'); ?></div>
-                                    </div>
+                                <div>
+                                    <?php if ($tagihan_lunas): ?>
+                                        <span class="badge badge-success px-3 py-2" style="font-size: 12px; border-radius: 20px;"><i class="fas fa-check-circle mr-1"></i>Lunas</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-danger px-3 py-2" style="font-size: 12px; border-radius: 20px;"><i class="fas fa-exclamation-circle mr-1"></i>Ada Tunggakan</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
-                            <?php if ($tagihan_total_semua <= 0): ?>
-                                <div class="alert alert-success mb-0 mt-3">
-                                    <i class="fas fa-check-circle mr-2"></i> Tidak ada tagihan yang belum dibayar menurut data Sibayar.
+
+                            <?php if (!$tagihan_lunas): ?>
+                                <!-- Proporsi tunggakan -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span><i class="fas fa-circle mr-1" style="color: #f59e0b; font-size: 8px;"></i>Tahun aktif <?= $tagihan_aktif_pct ?>%</span>
+                                        <span><i class="fas fa-circle mr-1" style="color: #ef4444; font-size: 8px;"></i>Tahun lama <?= $tagihan_lama_pct ?>%</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px; border-radius: 10px; overflow: hidden;">
+                                        <div class="progress-bar" role="progressbar" style="width: <?= $tagihan_aktif_pct ?>%; background: #f59e0b;" aria-valuenow="<?= $tagihan_aktif_pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress-bar" role="progressbar" style="width: <?= $tagihan_lama_pct ?>%; background: #ef4444;" aria-valuenow="<?= $tagihan_lama_pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Rincian -->
+                                <div class="border rounded mb-2 p-3 d-flex align-items-center justify-content-between" style="border-radius: 10px;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded bg-warning text-white d-flex align-items-center justify-content-center mr-3" style="width: 36px; height: 36px; min-width: 36px; border-radius: 10px;">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </div>
+                                        <div>
+                                            <div class="small text-muted">Tahun Ajaran Aktif</div>
+                                            <div class="font-weight-bold text-dark"><?= htmlspecialchars($tagihan_tahun_aktif) ?></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-weight-bold <?= $tagihan_total_aktif > 0 ? 'text-danger' : 'text-success' ?>">Rp <?= number_format($tagihan_total_aktif, 0, ',', '.') ?></div>
+                                        <?php if ($tagihan_total_aktif <= 0): ?>
+                                            <small class="badge badge-success">Lunas</small>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="border rounded p-3 d-flex align-items-center justify-content-between" style="border-radius: 10px;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded bg-secondary text-white d-flex align-items-center justify-content-center mr-3" style="width: 36px; height: 36px; min-width: 36px; border-radius: 10px;">
+                                            <i class="fas fa-history"></i>
+                                        </div>
+                                        <div>
+                                            <div class="small text-muted">Tunggakan Tahun Lama</div>
+                                            <div class="font-weight-bold text-dark"><?= empty($tagihan_tahun_lama) ? '-' : htmlspecialchars(implode(', ', $tagihan_tahun_lama)) ?></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-weight-bold <?= $tagihan_total_lama > 0 ? 'text-danger' : 'text-success' ?>">Rp <?= number_format($tagihan_total_lama, 0, ',', '.') ?></div>
+                                        <?php if ($tagihan_total_lama <= 0): ?>
+                                            <small class="badge badge-success">Lunas</small>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-success mb-0" style="border-radius: 10px;">
+                                    <i class="fas fa-check-circle mr-2"></i>Tidak ada tagihan yang belum dibayar menurut data Sibayar. Pertahankan!
                                 </div>
                             <?php endif; ?>
                         <?php else: ?>
-                            <div class="alert alert-warning mb-0">
-                                <i class="fas fa-plug mr-2"></i> Ringkasan tagihan belum bisa diambil dari Sibayar. Buka detail tagihan untuk mencoba lagi.
+                            <div class="text-center py-2">
+                                <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3 text-warning" style="width: 56px; height: 56px;">
+                                    <i class="fas fa-plug fa-lg"></i>
+                                </div>
+                                <h6 class="font-weight-bold text-dark">Belum Terhubung ke Sibayar</h6>
+                                <p class="text-muted small mb-3">Ringkasan tagihan belum bisa diambil saat ini. Coba lagi melalui halaman detail.</p>
+                                <a href="tagihan_siswa.php" class="btn btn-warning btn-sm text-white font-weight-bold px-4" style="border-radius: 20px;">
+                                    <i class="fas fa-sync-alt mr-1"></i>Coba Lagi
+                                </a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -503,28 +608,88 @@ include_once '../templates/sidebar.php';
 
             <!-- Box Info Tabungan -->
             <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
-                <div class="card card-success mapp-tabungan-card h-100">
+                <div class="card card-success mapp-tabungan-card h-100" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-piggy-bank mr-2"></i>Info Tabungan</h4>
-                        <a href="tabungan_siswa.php" class="btn btn-sm btn-success">Detail</a>
+                        <a href="tabungan_siswa.php" class="btn btn-sm btn-success" style="border-radius: 20px;">
+                            Detail <i class="fas fa-chevron-right ml-1"></i>
+                        </a>
                     </div>
-                    <div class="card-body text-center">
+                    <div class="card-body">
                         <?php if ($tab_ok): ?>
-                            <div class="small text-muted">Saldo Tabungan</div>
-                            <div class="font-weight-bold h4 mb-3">Rp <?php echo number_format($tab_saldo, 0, ',', '.'); ?></div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <div class="small text-muted">Setoran</div>
-                                    <div class="font-weight-bold text-primary">Rp <?php echo number_format($tab_setor, 0, ',', '.'); ?></div>
+                            <?php
+                            $tab_total_gerak = $tab_setor + $tab_tarik;
+                            $tab_setor_pct = $tab_total_gerak > 0 ? round($tab_setor / $tab_total_gerak * 100) : 50;
+                            $tab_tarik_pct = 100 - $tab_setor_pct;
+                            ?>
+                            <!-- Hero saldo -->
+                            <div class="p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between" style="border-radius: 12px; background: linear-gradient(135deg, #d1fae5, #a7f3d0);">
+                                <div class="d-flex align-items-center mb-2 mb-md-0">
+                                    <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mr-3" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fas fa-piggy-bank fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="small font-weight-bold text-uppercase" style="letter-spacing: .5px; color: #6b7280;">Saldo Tabungan</div>
+                                        <div class="h4 mb-0 font-weight-bold text-success">Rp <?php echo number_format($tab_saldo, 0, ',', '.'); ?></div>
+                                    </div>
                                 </div>
-                                <div class="col-6">
-                                    <div class="small text-muted">Penarikan</div>
-                                    <div class="font-weight-bold text-danger">Rp <?php echo number_format($tab_tarik, 0, ',', '.'); ?></div>
+                                <div>
+                                    <?php if ($tab_saldo > 0): ?>
+                                        <span class="badge badge-success px-3 py-2" style="font-size: 12px; border-radius: 20px;"><i class="fas fa-arrow-up mr-1"></i>Surplus</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-secondary px-3 py-2" style="font-size: 12px; border-radius: 20px;"><i class="fas fa-minus-circle mr-1"></i>Nol</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
+
+                            <!-- Proporsi arus kas -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span><i class="fas fa-circle mr-1" style="color: #10b981; font-size: 8px;"></i>Setoran <?= $tab_setor_pct ?>%</span>
+                                    <span><i class="fas fa-circle mr-1" style="color: #ef4444; font-size: 8px;"></i>Penarikan <?= $tab_tarik_pct ?>%</span>
+                                </div>
+                                <div class="progress" style="height: 8px; border-radius: 10px; overflow: hidden;">
+                                    <div class="progress-bar" role="progressbar" style="width: <?= $tab_setor_pct ?>%; background: #10b981;" aria-valuenow="<?= $tab_setor_pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                    <div class="progress-bar" role="progressbar" style="width: <?= $tab_tarik_pct ?>%; background: #ef4444;" aria-valuenow="<?= $tab_tarik_pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+
+                            <!-- Rincian -->
+                            <div class="border rounded mb-2 p-3 d-flex align-items-center justify-content-between" style="border-radius: 10px;">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded bg-success text-white d-flex align-items-center justify-content-center mr-3" style="width: 36px; height: 36px; min-width: 36px; border-radius: 10px;">
+                                        <i class="fas fa-arrow-down"></i>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted">Total Setoran Masuk</div>
+                                        <div class="font-weight-bold text-dark">Tabungan terkumpul</div>
+                                    </div>
+                                </div>
+                                <div class="text-right font-weight-bold text-primary">Rp <?php echo number_format($tab_setor, 0, ',', '.'); ?></div>
+                            </div>
+
+                            <div class="border rounded p-3 d-flex align-items-center justify-content-between" style="border-radius: 10px;">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded bg-danger text-white d-flex align-items-center justify-content-center mr-3" style="width: 36px; height: 36px; min-width: 36px; border-radius: 10px;">
+                                        <i class="fas fa-arrow-up"></i>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted">Total Penarikan Keluar</div>
+                                        <div class="font-weight-bold text-dark">Dana terpakai</div>
+                                    </div>
+                                </div>
+                                <div class="text-right font-weight-bold text-danger">Rp <?php echo number_format($tab_tarik, 0, ',', '.'); ?></div>
+                            </div>
                         <?php else: ?>
-                            <div class="alert alert-warning mb-0">
-                                <i class="fas fa-plug mr-2"></i> Data tabungan belum bisa diambil. Buka detail untuk mencoba lagi.
+                            <div class="text-center py-2">
+                                <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3 text-success" style="width: 56px; height: 56px;">
+                                    <i class="fas fa-plug fa-lg"></i>
+                                </div>
+                                <h6 class="font-weight-bold text-dark">Data Belum Tersedia</h6>
+                                <p class="text-muted small mb-3">Data tabungan belum bisa diambil saat ini. Coba lagi melalui halaman detail.</p>
+                                <a href="tabungan_siswa.php" class="btn btn-success btn-sm font-weight-bold px-4" style="border-radius: 20px;">
+                                    <i class="fas fa-sync-alt mr-1"></i>Coba Lagi
+                                </a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -554,97 +719,78 @@ include_once '../templates/sidebar.php';
                     </div>
                     <div class="card-body">
                         <?php if (empty($student_messages)): ?>
-                            <div class="text-center text-muted py-3">
-                                <i class="fas fa-comments fa-2x mb-2 text-info"></i>
+                            <div class="text-center text-muted py-4">
+                                <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3 text-info" style="width: 56px; height: 56px;">
+                                    <i class="fas fa-comments fa-lg"></i>
+                                </div>
                                 <p class="mb-0 font-weight-bold">Belum ada informasi / laporan pesan dari sekolah untuk Anda.</p>
                             </div>
                         <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-striped table-bordered table-sm mb-0">
-                                    <thead>
-                                        <tr class="bg-light">
-                                            <th width="4%" class="text-center">No</th>
-                                            <th width="15%">Tanggal Mulai - Selesai</th>
-                                            <th width="12%" class="text-center">Waktu</th>
-                                            <th width="16%">Pengirim (Wali / Guru)</th>
-                                            <th width="16%">Jenis Informasi</th>
-                                            <th>Judul Pesan</th>
-                                            <th width="13%" class="text-center">Status Dibaca</th>
-                                            <th class="text-center" width="6%">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($student_messages as $idx => $m): ?>
-                                            <?php
-                                            $is_read = ($m['status_dibaca'] === 'Sudah Dibaca');
-                                            $raw_isi = strip_tags($m['isi']);
-                                            $isi_cut = mb_strlen($raw_isi) > 50 ? mb_substr($raw_isi, 0, 50) . '...' : $raw_isi;
-                                            $tm_s = !empty($m['tanggal_mulai']) ? $m['tanggal_mulai'] : $m['tanggal'];
-                                            $ts_s = !empty($m['tanggal_selesai']) ? $m['tanggal_selesai'] : $tm_s;
-                                            $tgl_disp = date('d/m/Y', strtotime($tm_s));
-                                            if ($ts_s && $ts_s !== $tm_s) {
-                                                $tgl_disp .= ' - ' . date('d/m/Y', strtotime($ts_s));
-                                            }
-                                            $wm_s = isset($m['waktu_mulai']) && $m['waktu_mulai'] ? substr((string)$m['waktu_mulai'], 0, 5) : '';
-                                            $ws_s = isset($m['waktu_selesai']) && $m['waktu_selesai'] ? substr((string)$m['waktu_selesai'], 0, 5) : '';
-                                            if ($wm_s !== '' && $ws_s !== '' && $wm_s !== $ws_s) {
-                                                $waktu_disp = str_replace(':', '.', $wm_s) . ' - ' . str_replace(':', '.', $ws_s);
-                                            } elseif ($wm_s !== '') {
-                                                $waktu_disp = str_replace(':', '.', $wm_s);
-                                            } elseif ($ws_s !== '') {
-                                                $waktu_disp = str_replace(':', '.', $ws_s);
-                                            } else {
-                                                $waktu_disp = '-';
-                                            }
-                                            ?>
-                                            <tr id="row-pesan-<?= (int)$m['id'] ?>">
-                                                <td class="text-center font-weight-bold"><?= $idx + 1 ?></td>
-                                                <td><?= htmlspecialchars($tgl_disp) ?></td>
-                                                <td class="text-center"><small><i class="far fa-clock mr-1 text-muted"></i><?= htmlspecialchars($waktu_disp) ?></small></td>
-                                                <td><small><i class="fas fa-user-tie mr-1 text-muted"></i><?= htmlspecialchars($m['pengirim'] ?? $m['nama_guru'] ?? 'Wali / Guru') ?></small></td>
-                                                <td><span class="badge badge-light border"><?= htmlspecialchars($m['jenis_informasi']) ?></span></td>
-                                                <td>
-                                                    <strong class="text-dark"><?= htmlspecialchars($m['judul']) ?></strong>
-                                                    <small class="d-block text-muted"><?= htmlspecialchars($isi_cut) ?></small>
-                                                </td>
-                                                <td class="text-center status-baca-col">
-                                                    <?php if ($is_read): ?>
-                                                        <span class="badge badge-info"><i class="fas fa-check-double mr-1"></i>Sudah Dibaca</span>
-                                                    <?php else: ?>
-                                                        <span class="badge badge-warning"><i class="fas fa-envelope mr-1"></i>Belum Dibaca</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="text-center">
-                                                    <button type="button" class="btn btn-info btn-sm btn-baca-pesan" data-json='<?= htmlspecialchars(json_encode($m), ENT_QUOTES, 'UTF-8') ?>' title="Baca Detail Pesan" style="width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;">
-                                                        <i class="fas fa-eye"></i>
+                            <div class="row">
+                                <?php foreach ($student_messages as $m): ?>
+                                    <?php
+                                    $is_read = ($m['status_dibaca'] === 'Sudah Dibaca');
+                                    $raw_isi = strip_tags($m['isi']);
+                                    $isi_cut = mb_strlen($raw_isi) > 90 ? mb_substr($raw_isi, 0, 90) . '...' : $raw_isi;
+                                    $tm_s = !empty($m['tanggal_mulai']) ? $m['tanggal_mulai'] : $m['tanggal'];
+                                    $ts_s = !empty($m['tanggal_selesai']) ? $m['tanggal_selesai'] : $tm_s;
+                                    $tgl_disp = date('d/m/Y', strtotime($tm_s));
+                                    if ($ts_s && $ts_s !== $tm_s) {
+                                        $tgl_disp .= ' - ' . date('d/m/Y', strtotime($ts_s));
+                                    }
+                                    $wm_s = isset($m['waktu_mulai']) && $m['waktu_mulai'] ? substr((string)$m['waktu_mulai'], 0, 5) : '';
+                                    $ws_s = isset($m['waktu_selesai']) && $m['waktu_selesai'] ? substr((string)$m['waktu_selesai'], 0, 5) : '';
+                                    if ($wm_s !== '' && $ws_s !== '' && $wm_s !== $ws_s) {
+                                        $waktu_disp = str_replace(':', '.', $wm_s) . ' - ' . str_replace(':', '.', $ws_s) . ' WIB';
+                                    } elseif ($wm_s !== '') {
+                                        $waktu_disp = str_replace(':', '.', $wm_s) . ' WIB';
+                                    } elseif ($ws_s !== '') {
+                                        $waktu_disp = str_replace(':', '.', $ws_s) . ' WIB';
+                                    } else {
+                                        $waktu_disp = '-';
+                                    }
+                                    $msg_key_d = ($m['msg_type'] ?? 'ortu') . '-' . ($m['id'] ?? 0);
+                                    $jenis_txt = (string)($m['jenis_informasi'] ?? '-');
+                                    if (stripos($jenis_txt, 'Kehadiran') !== false) { $jenis_bg = '#dbeafe'; $jenis_fg = '#1d4ed8'; $jenis_ic = 'fas fa-user-check'; }
+                                    elseif (stripos($jenis_txt, 'Tugas') !== false) { $jenis_bg = '#fef3c7'; $jenis_fg = '#b45309'; $jenis_ic = 'fas fa-tasks'; }
+                                    elseif (stripos($jenis_txt, 'Perkembangan') !== false) { $jenis_bg = '#ede9fe'; $jenis_fg = '#6d28d9'; $jenis_ic = 'fas fa-chart-line'; }
+                                    elseif (stripos($jenis_txt, 'Pengumuman') !== false) { $jenis_bg = '#ffedd5'; $jenis_fg = '#c2410c'; $jenis_ic = 'fas fa-bullhorn'; }
+                                    else { $jenis_bg = '#e0f2fe'; $jenis_fg = '#0369a1'; $jenis_ic = 'fas fa-envelope-open-text'; }
+                                    ?>
+                                    <div class="col-12 col-lg-6 d-flex align-items-stretch mb-3" id="row-pesan-<?= (int)$m['id'] ?>">
+                                        <div class="card w-100 border shadow-sm nav-msg-item-<?= htmlspecialchars($msg_key_d) ?> <?= $is_read ? 'is-read' : 'is-unread' ?>" style="border-radius: 12px; <?= $is_read ? '' : 'border-left: 4px solid #f59e0b !important;' ?>">
+                                            <div class="card-body p-3 d-flex flex-column">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge px-2 py-1 font-weight-bold" style="background: <?= $jenis_bg ?>; color: <?= $jenis_fg ?>; font-size: 11px; border-radius: 6px;">
+                                                        <i class="<?= $jenis_ic ?> mr-1"></i><?= htmlspecialchars($jenis_txt) ?>
+                                                    </span>
+                                                    <span class="status-baca-col">
+                                                        <?php if ($is_read): ?>
+                                                            <span class="badge badge-info"><i class="fas fa-check-double mr-1"></i>Sudah Dibaca</span>
+                                                        <?php else: ?>
+                                                            <span class="badge badge-warning"><i class="fas fa-envelope mr-1"></i>Belum Dibaca</span>
+                                                        <?php endif; ?>
+                                                    </span>
+                                                </div>
+                                                <h6 class="font-weight-bold text-dark mb-1" style="font-size: 14px; line-height: 1.4;">
+                                                    <?= htmlspecialchars($m['judul']) ?>
+                                                </h6>
+                                                <p class="small text-muted mb-2"><?= htmlspecialchars($isi_cut) ?></p>
+                                                <div class="small text-muted mb-3" style="font-size: 11.5px; line-height: 1.7;">
+                                                    <div><i class="fas fa-user-tie mr-1"></i><?= htmlspecialchars($m['pengirim'] ?? $m['nama_guru'] ?? 'Wali / Guru') ?></div>
+                                                    <div><i class="far fa-calendar-alt mr-1"></i><?= htmlspecialchars($tgl_disp) ?> &bull; <i class="far fa-clock mr-1"></i><?= htmlspecialchars($waktu_disp) ?></div>
+                                                </div>
+                                                <div class="mt-auto pt-2 border-top">
+                                                    <button type="button" class="btn btn-info btn-sm font-weight-bold btn-baca-pesan" data-json='<?= htmlspecialchars(json_encode($m), ENT_QUOTES, 'UTF-8') ?>' style="border-radius: 8px;">
+                                                        <i class="fas fa-eye mr-1"></i>Baca Pesan
                                                     </button>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        <!-- Mobile: list card pesan -->
-                        <div class="d-lg-none">
-                            <?php if (!empty($student_messages)): ?>
-                                <?php foreach ($student_messages as $mm): ?>
-                                    <?php
-                                    $mm_read = (($mm['status_dibaca'] ?? '') === 'Sudah Dibaca');
-                                    $mm_raw = (string)($mm['tanggal_mulai'] ?? $mm['tanggal'] ?? '');
-                                    $mm_tgl = $mm_raw !== '' ? date('d/m/Y', strtotime($mm_raw)) : '-';
-                                    ?>
-                                    <a href="#" onclick="return false;" class="mapp-info-card btn-baca-pesan" data-json='<?= htmlspecialchars(json_encode($mm), ENT_QUOTES, 'UTF-8') ?>'>
-                                        <span class="mapp-info-icon"><i class="fas fa-envelope-open-text"></i></span>
-                                        <span style="flex:1;min-width:0;">
-                                            <span class="mapp-info-title d-block"><?php echo htmlspecialchars($mm['judul'] ?? '-'); ?></span>
-                                            <span class="d-block small text-muted"><?php echo htmlspecialchars($mm['pengirim'] ?? $mm['nama_guru'] ?? 'Wali / Guru'); ?> &bull; <?php echo htmlspecialchars($mm_tgl); ?></span>
-                                            <span class="mt-1 d-inline-block badge <?php echo $mm_read ? 'badge-info' : 'badge-warning'; ?>"><?php echo $mm_read ? 'Sudah Dibaca' : 'Belum Dibaca'; ?></span>
-                                        </span>
-                                    </a>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -675,88 +821,54 @@ include_once '../templates/sidebar.php';
                     </div>
                     <div class="card-body">
                         <?php if (empty($student_tasks)): ?>
-                            <div class="text-center text-muted py-3">
-                                <i class="fas fa-clipboard-check fa-2x mb-2 text-success"></i>
+                            <div class="text-center text-muted py-4">
+                                <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3 text-success" style="width: 56px; height: 56px;">
+                                    <i class="fas fa-clipboard-check fa-lg"></i>
+                                </div>
                                 <p class="mb-0 font-weight-bold">Tidak ada tugas aktif untuk kelas Anda saat ini.</p>
                             </div>
                         <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-striped table-bordered table-sm mb-0">
-                                    <thead>
-                                        <tr class="bg-light">
-                                            <th width="4%" class="text-center">No</th>
-                                            <th>Judul Tugas</th>
-                                            <th>Mata Pelajaran</th>
-                                            <th>Guru Pengampu</th>
-                                            <th>Batas Waktu (Deadline)</th>
-                                            <th class="text-center">Status</th>
-                                            <th class="text-center">Nilai</th>
-                                            <th class="text-center" width="10%">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($student_tasks as $idx => $t): ?>
-                                            <?php
-                                            $is_submitted = !empty($t['id_pengumpulan']);
-                                            $is_overdue = !empty($t['deadline']) && strtotime($t['deadline']) < time() && !$is_submitted;
-                                            ?>
-                                            <tr>
-                                                <td class="text-center font-weight-bold"><?= $idx + 1 ?></td>
-                                                <td>
-                                                    <strong class="text-dark"><?= htmlspecialchars($t['judul']) ?></strong>
-                                                    <?php if ($is_overdue): ?>
-                                                        <span class="badge badge-danger ml-1" style="font-size:10px;">Lewat Batas</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td><span class="badge badge-light border"><?= htmlspecialchars($t['nama_mapel'] ?? '-') ?></span></td>
-                                                <td><small><i class="fas fa-chalkboard-teacher mr-1 text-muted"></i><?= htmlspecialchars($t['nama_guru'] ?? '-') ?></small></td>
-                                                <td>
-                                                    <?php if (!empty($t['deadline'])): ?>
-                                                        <i class="far fa-calendar-alt text-danger mr-1"></i><?= date('d/m/Y H:i', strtotime($t['deadline'])) ?>
-                                                    <?php else: ?>
-                                                        <span class="text-muted">-</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="text-center">
+                            <div class="row">
+                                <?php foreach ($student_tasks as $t): ?>
+                                    <?php
+                                    $is_submitted = !empty($t['id_pengumpulan']);
+                                    $is_overdue = !empty($t['deadline']) && strtotime($t['deadline']) < time() && !$is_submitted;
+                                    $is_kuis_d = in_array($t['jenis_tugas'] ?? '', ['Kuis', 'CBT'], true);
+                                    ?>
+                                    <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch mb-3">
+                                        <div class="card w-100 border shadow-sm" style="border-radius: 12px; <?= $is_submitted ? '' : 'border-left: 4px solid #6777ef !important;' ?>">
+                                            <div class="card-body p-3 d-flex flex-column">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="font-size: 11px; border-radius: 6px;">
+                                                        <i class="fas fa-<?= $is_kuis_d ? 'laptop-code' : 'tasks' ?> mr-1 text-primary"></i><?= htmlspecialchars($t['jenis_tugas'] ?? 'Tugas') ?>
+                                                    </span>
                                                     <?php if ($is_submitted): ?>
                                                         <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Sudah</span>
+                                                    <?php elseif ($is_overdue): ?>
+                                                        <span class="badge badge-danger"><i class="fas fa-exclamation-circle mr-1"></i>Lewat Batas</span>
                                                     <?php else: ?>
                                                         <span class="badge badge-warning"><i class="fas fa-hourglass-half mr-1"></i>Belum</span>
                                                     <?php endif; ?>
-                                                </td>
-                                                <td class="text-center font-weight-bold">
-                                                    <?= $t['nilai'] !== null ? '<span class="text-primary font-weight-bold">' . (float)$t['nilai'] . '</span>' : '-' ?>
-                                                </td>
-                                                <td class="text-center">
-                                                    <a href="tugas.php" class="btn btn-primary btn-sm py-1 px-2">
-                                                        <i class="fas fa-external-link-alt mr-1"></i> Buka
+                                                </div>
+                                                <h6 class="font-weight-bold text-dark mb-1" style="font-size: 14px; line-height: 1.4;">
+                                                    <?= htmlspecialchars($t['judul']) ?>
+                                                </h6>
+                                                <div class="small text-muted mb-2" style="font-size: 11.5px; line-height: 1.7;">
+                                                    <div><i class="fas fa-book mr-1"></i><?= htmlspecialchars($t['nama_mapel'] ?? '-') ?> &bull; <i class="fas fa-chalkboard-teacher mr-1"></i><?= htmlspecialchars($t['nama_guru'] ?? '-') ?></div>
+                                                    <div><i class="far fa-calendar-alt mr-1 <?= $is_overdue ? 'text-danger' : '' ?>"></i>Batas: <strong class="<?= $is_overdue ? 'text-danger' : '' ?>"><?= !empty($t['deadline']) ? date('d/m/Y H:i', strtotime($t['deadline'])) : '-' ?></strong></div>
+                                                    <div><i class="fas fa-star mr-1 text-warning"></i>Nilai: <?= $t['nilai'] !== null ? '<strong class="text-primary">' . (float)$t['nilai'] . '</strong>' : '<span class="text-muted">-</span>' ?></div>
+                                                </div>
+                                                <div class="mt-auto pt-2 border-top">
+                                                    <a href="tugas.php" class="btn btn-primary btn-sm font-weight-bold" style="border-radius: 8px;">
+                                                        <i class="fas fa-external-link-alt mr-1"></i>Buka Tugas
                                                     </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        <!-- Mobile: list card tugas -->
-                        <div class="d-lg-none">
-                            <?php if (!empty($student_tasks)): ?>
-                                <?php foreach ($student_tasks as $tt): ?>
-                                    <?php
-                                    $tt_sub = !empty($tt['id_pengumpulan']);
-                                    $tt_od = !empty($tt['deadline']) && strtotime($tt['deadline']) < time() && !$tt_sub;
-                                    ?>
-                                    <a href="tugas.php" class="mapp-info-card">
-                                        <span class="mapp-info-icon" style="background:#e8f1fe;color:#2563eb;"><i class="fas fa-tasks"></i></span>
-                                        <span style="flex:1;min-width:0;">
-                                            <span class="mapp-info-title d-block"><?php echo htmlspecialchars($tt['judul']); ?><?php if ($tt_od): ?> <span class="badge badge-danger">Lewat Batas</span><?php endif; ?></span>
-                                            <span class="d-block small text-muted"><?php echo htmlspecialchars($tt['nama_mapel'] ?? '-'); ?> &bull; <?php echo htmlspecialchars($tt['nama_guru'] ?? '-'); ?></span>
-                                            <span class="d-block small">Deadline: <?php echo !empty($tt['deadline']) ? date('d/m/Y H:i', strtotime($tt['deadline'])) : '-'; ?> &bull; <span class="badge <?php echo $tt_sub ? 'badge-success' : 'badge-warning'; ?>"><?php echo $tt_sub ? 'Sudah' : 'Belum'; ?></span><?php if ($tt['nilai'] !== null): ?> &bull; Nilai: <strong><?php echo (float)$tt['nilai']; ?></strong><?php endif; ?></span>
-                                        </span>
-                                    </a>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
                     </div>
                 </div>
             </div>

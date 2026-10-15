@@ -43,8 +43,9 @@
   /* ---------- Box sambutan baru: salam | nama | jabatan, rata kiri + siluet biru ---------- */
   .mapp-greetbox {
     position: relative; overflow: hidden; text-align: left;
-    background: #fff; border: 1.5px solid var(--mapp-border);
-    border-radius: 18px; box-shadow: var(--mapp-shadow);
+    background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%);
+    color: #fff; border: none;
+    border-radius: 18px; box-shadow: 0 8px 20px rgba(47, 110, 240, .28);
     padding: 16px 132px 16px 16px; margin-bottom: 14px;
   }
   .mapp-greetbox::after {
@@ -54,12 +55,13 @@
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='110' viewBox='0 0 160 110'%3E%3Ccircle cx='108' cy='55' r='48' fill='%23e9effe'/%3E%3Crect x='84' y='66' width='54' height='13' rx='3' fill='%238ba8ef'/%3E%3Crect x='90' y='53' width='42' height='13' rx='3' fill='%23a9c4f5'/%3E%3Cpolygon points='80,24 120,41 80,58 40,41' fill='%236f97ec'/%3E%3Cpath d='M62 49 v9 c0,7 36,7 36,0 v-9 l-18,8 Z' fill='%235b86e8'/%3E%3Cline x1='120' y1='41' x2='120' y2='62' stroke='%235b86e8' stroke-width='2'/%3E%3Ccircle cx='120' cy='65' r='3.5' fill='%235b86e8'/%3E%3Ccircle cx='142' cy='30' r='3' fill='%23a9c4f5'/%3E%3C/svg%3E") no-repeat right bottom / contain;
     opacity: .9;
   }
-  .mapp-greet-salam { font-size: 12.5px; color: #64748b; line-height: 1.4; }
+  .mapp-greet-salam { font-size: 12.5px; color: rgba(255,255,255,.92); line-height: 1.4; }
   .mapp-greet-nama {
-    font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1.35;
+    font-size: 17px; font-weight: 800; color: #fff; line-height: 1.35;
     margin-top: 1px; overflow: hidden; text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,.25);
   }
-  .mapp-greet-role { font-size: 12.5px; font-weight: 700; color: #2f6ef0; margin-top: 2px; }
+  .mapp-greet-role { display: inline-block; font-size: 11.5px; font-weight: 700; color: #fff; margin-top: 6px; background: rgba(255,255,255,.22); border-radius: 20px; padding: 3px 12px; }
   /* Sambutan lama disembunyikan di mobile (desktop utuh) */
   body.mobile-no-app-header .main-content .row.d-lg-none > .col-12.mb-3 { display: none !important; }
   body.mobile-no-app-header .main-content .mapp-row-profile { display: none !important; }
@@ -270,18 +272,18 @@
     position: relative; overflow: hidden;
   }
   /* Welcome card biru lama -> kartu sapaan putih ala gambar */
-  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="6777ef"],
-  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="2f6ef0"],
-  .main-content .row > .col-12.mb-3 > .card[style*="6777ef"],
-  .main-content .row > .col-12.mb-3 > .card[style*="2f6ef0"] {
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="6777ef"]:not(.mapp-identity-banner),
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="2f6ef0"]:not(.mapp-identity-banner),
+  .main-content .row > .col-12.mb-3 > .card[style*="6777ef"]:not(.mapp-identity-banner),
+  .main-content .row > .col-12.mb-3 > .card[style*="2f6ef0"]:not(.mapp-identity-banner) {
     background: #ffffff !important; color: #0f172a !important;
     border: 1px solid #eef2f0 !important; border-radius: 18px !important;
     box-shadow: var(--mapp-shadow) !important;
   }
-  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="6777ef"] *,
-  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="2f6ef0"] *,
-  .main-content .row > .col-12.mb-3 > .card[style*="6777ef"] *,
-  .main-content .row > .col-12.mb-3 > .card[style*="2f6ef0"] * {
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="6777ef"]:not(.mapp-identity-banner) *,
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="2f6ef0"]:not(.mapp-identity-banner) *,
+  .main-content .row > .col-12.mb-3 > .card[style*="6777ef"]:not(.mapp-identity-banner) *,
+  .main-content .row > .col-12.mb-3 > .card[style*="2f6ef0"]:not(.mapp-identity-banner) * {
     color: #0f172a !important; text-shadow: none !important;
   }
   .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="6777ef"] .wb-chip,
@@ -290,16 +292,16 @@
     border: 1px solid #cfddfb !important; text-shadow: none !important; font-weight: 700 !important;
   }
   /* Profile-box guru/wali/siswa (card biru besar) -> putih juga agar konsisten */
-  .main-content .row .card[style*="6777ef"],
-  .main-content .row .card[style*="2f6ef0"] {
+  .main-content .row .card[style*="6777ef"]:not(.mapp-identity-banner),
+  .main-content .row .card[style*="2f6ef0"]:not(.mapp-identity-banner) {
     background: #ffffff !important;
   }
-  .main-content .row .card[style*="6777ef"] *,
-  .main-content .row .card[style*="2f6ef0"] * {
+  .main-content .row .card[style*="6777ef"]:not(.mapp-identity-banner) *,
+  .main-content .row .card[style*="2f6ef0"]:not(.mapp-identity-banner) * {
     color: #0f172a !important; text-shadow: none !important;
   }
-  .main-content .row .card[style*="6777ef"] .btn-light,
-  .main-content .row .card[style*="2f6ef0"] .btn-light {
+  .main-content .row .card[style*="6777ef"]:not(.mapp-identity-banner) .btn-light,
+  .main-content .row .card[style*="2f6ef0"]:not(.mapp-identity-banner) .btn-light {
     background: var(--mapp-green) !important; color: #fff !important; border: none !important;
   }
 
