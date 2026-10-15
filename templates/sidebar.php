@@ -1647,6 +1647,12 @@ switch ($user_level) {
                 'icon' => 'fas fa-calendar-alt',
                 'url' => '../admin/kalender_pendidikan.php?session_type=siswa',
                 'active' => $current_page === 'kalender_pendidikan.php'
+            ],
+            [
+                'title' => 'Profil',
+                'icon' => 'fas fa-user-circle',
+                'url' => '../siswa/profil.php',
+                'active' => $current_page === 'profil.php'
             ]
         ];
 

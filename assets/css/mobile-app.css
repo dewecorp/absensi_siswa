@@ -575,9 +575,32 @@
     min-height: 50px !important; border-radius: 14px !important; font-size: 14px !important;
   }
 
+  /* ---------- Box siswa khas mobile ---------- */
+  body.mobile-no-app-header .mapp-table-card .card-header { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+  body.mobile-no-app-header .mapp-table-card .card-header .btn,
+  body.mobile-no-app-header .mapp-table-card .card-header-action .btn { width: 100%; margin-top: 4px; }
+  body.mobile-no-app-header .mapp-table-card .table-responsive { display: none !important; }
+  a.mapp-info-card { text-decoration: none !important; color: inherit !important; }
+  body.mobile-no-app-header .mapp-tagihan-card .card-body .row > .col-4 {
+    flex: 0 0 50% !important; max-width: 50% !important;
+  }
+  body.mobile-no-app-header .mapp-barcode-card .card-body { padding: 16px 14px !important; }
+  body.mobile-no-app-header .mapp-barcode-card .barcode-container img { max-width: 170px !important; }
+  body.mobile-no-app-header .mapp-tabungan-card .card-body { padding: 16px 14px !important; }
+  #mapp-box-pesan { scroll-margin-top: 90px; }
+
   /* Tabel & card umum tetap nyaman di HP */
   .card { border-radius: 18px !important; }
   .table-responsive { border-radius: 12px; border: 1.5px solid var(--mapp-border); }
+}
+
+/* Samakan tinggi box barcode & agenda (desktop) */
+@media (min-width: 992px) {
+  .mapp-agenda-wrap { display: flex !important; }
+  .mapp-agenda-wrap > .row { flex: 1 1 auto; display: flex; width: 100%; margin-left: 0; margin-right: 0; }
+  .mapp-agenda-wrap > .row > [class*="col-"] { flex: 1 1 auto; display: flex; max-width: 100%; padding-left: 0; padding-right: 0; }
+  .mapp-agenda-wrap .dashboard-agenda-card { flex: 1 1 auto; width: 100%; margin-bottom: 0 !important; }
+  .mapp-agenda-wrap .card { margin-bottom: 0 !important; }
 }
 
 /* Desktop: pastikan komponen mapp tidak bocor */

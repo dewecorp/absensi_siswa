@@ -610,7 +610,7 @@ include_once '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-4 col-md-6 col-lg-4">
+                        <div class="col-4 col-md-6 col-lg-4 mapp-stat-full">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
                                     <i class="fas fa-users"></i>
@@ -729,7 +729,7 @@ include_once '../templates/sidebar.php';
                     </div>
 
                     <div class="row">
-                        <div class="col-4 col-md-6 col-lg-4">
+                        <div class="col-4 col-md-6 col-lg-4 mapp-stat-full">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-success">
                                     <i class="fas fa-user-check"></i>

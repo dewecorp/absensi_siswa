@@ -735,6 +735,12 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
                             <div class="d-none d-lg-inline-block"><?php echo htmlspecialchars($display_name); ?></div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right user-dropdown-menu">
+                            <?php if (getUserLevel() === 'siswa'): ?>
+                            <a href="profil.php" class="dropdown-item has-icon">
+                                <i class="fas fa-user-circle"></i> Profil Saya
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <?php endif; ?>
                             <?php if (getUserLevel() === 'admin'): ?>
                             <a href="#" id="btn-toggle-self-update" class="dropdown-item has-icon <?php echo APP_SELF_UPDATE_ENABLED ? 'text-warning' : 'text-muted'; ?>" data-enabled="<?php echo APP_SELF_UPDATE_ENABLED ? '1' : '0'; ?>">
                                 <i class="fas <?php echo APP_SELF_UPDATE_ENABLED ? 'fa-toggle-on' : 'fa-toggle-off'; ?>"></i> <?php echo APP_SELF_UPDATE_ENABLED ? 'Nonaktifkan Update Sistem' : 'Aktifkan Update Sistem'; ?>

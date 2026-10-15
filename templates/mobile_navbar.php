@@ -67,6 +67,11 @@ $__nav_count = 0;
 if (isset($unread_notifs_u) || isset($unread_count_u)) {
     $__nav_modal = '#mobileNotificationModalU';
     $__nav_count = isset($unread_count_u) ? (int)$unread_count_u : 0;
+} elseif ($__nav_level === 'siswa') {
+    // Siswa: lonceng surat/pesan -> gulir ke box pesan di dashboard.
+    $__nav_modal = '#mapp-box-pesan';
+    if (isset($student_unread_msg_count)) $__nav_count = (int)$student_unread_msg_count;
+    elseif (isset($total_pesan_belum_baca)) $__nav_count = (int)$total_pesan_belum_baca;
 } elseif (in_array($__nav_level, ['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali'], true)) {
     $__nav_modal = '#mobileNotificationModal';
     $__nav_count = isset($unread_count) ? (int)$unread_count : 0;
@@ -92,12 +97,21 @@ $__nav_label = $__nav_count > 99 ? '99+' : (string)$__nav_count;
     </div>
     <div class="mapp-top-actions">
         <?php if ($__nav_modal !== ''): ?>
-            <button type="button" class="mapp-icon-btn" data-toggle="modal" data-target="<?php echo htmlspecialchars($__nav_modal, ENT_QUOTES, 'UTF-8'); ?>" aria-label="Notifikasi">
-                <i class="far fa-bell"></i>
-                <?php if ($__nav_count > 0): ?>
-                    <span class="notif-count-badge" data-count="<?php echo (int)$__nav_count; ?>"><?php echo htmlspecialchars($__nav_label, ENT_QUOTES, 'UTF-8'); ?></span>
-                <?php endif; ?>
-            </button>
+            <?php if ($__nav_modal[0] === '#mapp-'): ?>
+                <a class="mapp-icon-btn" href="<?php echo htmlspecialchars($__nav_modal, ENT_QUOTES, 'UTF-8'); ?>" aria-label="Notifikasi" style="text-decoration:none;">
+                    <i class="far fa-bell"></i>
+                    <?php if ($__nav_count > 0): ?>
+                        <span class="notif-count-badge" data-count="<?php echo (int)$__nav_count; ?>"><?php echo htmlspecialchars($__nav_label, ENT_QUOTES, 'UTF-8'); ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php else: ?>
+                <button type="button" class="mapp-icon-btn" data-toggle="modal" data-target="<?php echo htmlspecialchars($__nav_modal, ENT_QUOTES, 'UTF-8'); ?>" aria-label="Notifikasi">
+                    <i class="far fa-bell"></i>
+                    <?php if ($__nav_count > 0): ?>
+                        <span class="notif-count-badge" data-count="<?php echo (int)$__nav_count; ?>"><?php echo htmlspecialchars($__nav_label, ENT_QUOTES, 'UTF-8'); ?></span>
+                    <?php endif; ?>
+                </button>
+            <?php endif; ?>
         <?php endif; ?>
         <span class="mapp-avatar">
             <?php if ($__nav_photo !== ''): ?>

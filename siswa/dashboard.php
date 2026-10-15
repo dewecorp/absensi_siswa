@@ -60,69 +60,27 @@ $tagihan_tahun_lama = $tagihan_summary['tahun_ajaran_tunggakan'] ?? [];
 $tagihan_tahun_lama = is_array($tagihan_tahun_lama) ? $tagihan_tahun_lama : [];
 $tagihan_status_ok = ($tagihan_summary_response['status'] ?? 'error') === 'success';
 
+// Ringkasan tabungan eTabs untuk box dashboard
+$tab_nis = trim((string)($student['nis'] ?? $student['nisn'] ?? ''));
+$tab_summary = ['success' => false, 'data' => []];
+if ($tab_nis !== '' && function_exists('fetchEtabsData')) {
+    try {
+        $tab_res = fetchEtabsData($tab_nis, 'summary');
+        if (is_array($tab_res)) $tab_summary = $tab_res;
+    } catch (Throwable $e) { $tab_summary = ['success' => false, 'data' => []]; }
+}
+$tab_data = (isset($tab_summary['data']) && is_array($tab_summary['data'])) ? $tab_summary['data'] : [];
+$tab_ok = !empty($tab_summary['success']);
+$tab_saldo = (int)($tab_data['saldo'] ?? 0);
+$tab_setor = (int)($tab_data['total_setor'] ?? 0);
+$tab_tarik = (int)($tab_data['total_tarik'] ?? 0);
+
 // Get today's attendance status
 $today = date('Y-m-d');
 $holiday = isSchoolHoliday($pdo, $today);
 $stmt = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
 $stmt->execute([$id_siswa, $today]);
 $attendance = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Get sholat status for female students
-$sholat_status = '';
-if ($student['jenis_kelamin'] == 'P') {
-    $stmt = $pdo->prepare("SELECT status FROM tb_sholat WHERE id_siswa = ? AND tanggal = ?");
-    $stmt->execute([$id_siswa, $today]);
-    $sholat_data = $stmt->fetch(PDO::FETCH_ASSOC);
-    $sholat_status = $sholat_data ? $sholat_data['status'] : '';
-}
-
-// Handle Berhalangan (Menstruation) Toggle
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['toggle_berhalangan']) && $student['jenis_kelamin'] == 'P') {
-    $action = $_POST['toggle_berhalangan']; // 'set' or 'unset'
-    
-    if ($action == 'set') {
-        $new_status = 'Berhalangan';
-        $swal_message = [
-            'title' => 'Berhasil!',
-            'text' => 'Status berhalangan berhasil dicatat.',
-            'icon' => 'success'
-        ];
-    } else {
-        // Revert status based on attendance
-        $new_status = 'Tidak Melaksanakan'; // Default
-        if ($attendance) {
-            if (in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])) {
-                $new_status = 'Melaksanakan';
-            }
-        }
-        $swal_message = [
-            'title' => 'Berhasil!',
-            'text' => 'Status berhalangan dibatalkan.',
-            'icon' => 'success'
-        ];
-    }
-
-    // Update tb_sholat
-    $stmt = $pdo->prepare("SELECT id_sholat FROM tb_sholat WHERE id_siswa = ? AND tanggal = ?");
-    $stmt->execute([$id_siswa, $today]);
-    if ($stmt->fetch()) {
-        $pdo->prepare("UPDATE tb_sholat SET status = ? WHERE id_siswa = ? AND tanggal = ?")->execute([$new_status, $id_siswa, $today]);
-    } else {
-        $pdo->prepare("INSERT INTO tb_sholat (id_siswa, tanggal, status) VALUES (?, ?, ?)")->execute([$id_siswa, $today, $new_status]);
-    }
-
-    // Update tb_sholat_dhuha
-    $stmt = $pdo->prepare("SELECT id_sholat FROM tb_sholat_dhuha WHERE id_siswa = ? AND tanggal = ?");
-    $stmt->execute([$id_siswa, $today]);
-    if ($stmt->fetch()) {
-        $pdo->prepare("UPDATE tb_sholat_dhuha SET status = ? WHERE id_siswa = ? AND tanggal = ?")->execute([$new_status, $id_siswa, $today]);
-    } else {
-        $pdo->prepare("INSERT INTO tb_sholat_dhuha (id_siswa, tanggal, status) VALUES (?, ?, ?)")->execute([$id_siswa, $today, $new_status]);
-    }
-    
-    // Refresh status variable
-    $sholat_status = $new_status;
-}
 
 // Handle Manual Attendance - Simple Click Like Guru
 $message = '';
@@ -327,7 +285,7 @@ include_once '../templates/sidebar.php';
                 <?php include '../templates/mobile_navbar.php'; ?>
                 <?php
                 $mapp_greet_name = (isset($student) && is_array($student) && !empty($student['nama_siswa'])) ? $student['nama_siswa'] : 'Siswa';
-                $mapp_greet_role = 'Siswa';
+                $mapp_greet_role = 'Siswa' . (!empty($student['nama_kelas']) ? ' • Kelas ' . $student['nama_kelas'] : '');
                 include '../templates/mobile_greeting.php';
                 ?>
 
@@ -366,74 +324,10 @@ include_once '../templates/sidebar.php';
         </div>
 
         <div class="row">
-            <!-- Box Identitas Siswa -->
-            <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
-                <div class="card card-primary">
-                    <div class="card-header py-3">
-                        <h4 class="mb-0"><i class="fas fa-user-graduate mr-2"></i>Identitas Siswa</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4 text-center mb-3 mb-md-0">
-                                <div class="position-relative d-inline-block">
-                                    <?php 
-                                    $foto_profil = !empty($student['foto']) && file_exists('../assets/img/siswa/' . $student['foto']) 
-                                        ? '../assets/img/siswa/' . $student['foto'] 
-                                        : null;
-                                    ?>
-                                    <?php if ($foto_profil): ?>
-                                        <img alt="image" src="<?php echo $foto_profil; ?>" class="rounded-circle profile-widget-picture shadow" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #6777ef;">
-                                    <?php else: ?>
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow" style="width: 120px; height: 120px; font-weight: 700; font-size: 3rem; border: 4px solid #fff;">
-                                            <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <button type="button" class="btn btn-primary btn-sm position-absolute" style="bottom: 5px; right: 5px; border-radius: 50%; width: 35px; height: 35px; padding: 0;" data-toggle="modal" data-target="#modalUploadFoto">
-                                        <i class="fas fa-camera"></i>
-                                    </button>
-                                </div>
-                                <div class="mt-2">
-                                    <span class="badge badge-<?php echo $student['jenis_kelamin'] == 'L' ? 'info' : 'danger'; ?> px-3 py-2">
-                                        <i class="fas fa-<?php echo $student['jenis_kelamin'] == 'L' ? 'mars' : 'venus'; ?> mr-1"></i>
-                                        <?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan'; ?>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="col-md-8">
-                                <h5 class="font-weight-bold text-primary mb-3"><?php echo htmlspecialchars($student['nama_siswa']); ?></h5>
-                                <div class="row mb-2">
-                                    <div class="col-5 text-muted"><small><i class="fas fa-id-card mr-2"></i>NISN</small></div>
-                                    <div class="col-7"><small class="font-weight-bold"><?php echo htmlspecialchars($student['nisn'] ?? '-'); ?></small></div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-5 text-muted"><small><i class="fas fa-chalkboard mr-2"></i>Kelas</small></div>
-                                    <div class="col-7"><small class="font-weight-bold"><span class="badge badge-info px-2 py-1"><?php echo htmlspecialchars($student['nama_kelas'] ?? '-'); ?></span></small></div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-5 text-muted"><small><i class="fas fa-calendar mr-2"></i>Tempat Lahir</small></div>
-                                    <div class="col-7"><small class="font-weight-bold"><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-'); ?></small></div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-5 text-muted"><small><i class="fas fa-birthday-cake mr-2"></i>Tanggal Lahir</small></div>
-                                    <div class="col-7"><small class="font-weight-bold">
-                                        <?php 
-                                        echo !empty($student['tanggal_lahir']) ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-';
-                                        ?>
-                                    </small></div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-5 text-muted"><small><i class="fas fa-user-tie mr-2"></i>Wali</small></div>
-                                    <div class="col-7"><small class="font-weight-bold"><?php echo htmlspecialchars($student['wali'] ?? '-'); ?></small></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+            <!-- Box Identitas Siswa pindah ke profil.php -->
             <!-- Box Kehadiran Manual -->
-            <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
-                <div class="card card-warning">
+            <div class="col-12 mb-4">
+                <div class="card card-warning mapp-absen-card">
                     <div class="card-header py-3">
                         <h4 class="mb-0">Kehadiran Hari Ini</h4>
                         <div class="card-header-action">
@@ -556,63 +450,92 @@ include_once '../templates/sidebar.php';
                 </div>
             </div>
 
-            <?php if ($student['jenis_kelamin'] == 'P'): ?>
-            <div class="col-12 mb-4">
-                <div class="card card-danger">
-                    <div class="card-header py-3">
-                        <h4 class="mb-0"><i class="fas fa-female mr-2"></i>Laporan Berhalangan (Haid)</h4>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
+                <div class="card card-warning mapp-tagihan-card h-100">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-file-invoice-dollar mr-2"></i>Ringkasan Tagihan Sibayar</h4>
+                        <a href="tagihan_siswa.php" class="btn btn-sm btn-warning text-white">
+                            Detail Tagihan
+                        </a>
                     </div>
                     <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <?php if ($sholat_status == 'Berhalangan'): ?>
-                                    <div class="alert alert-info mb-0">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-info-circle fa-2x mr-3"></i>
-                                            <div>
-                                                <h6 class="font-weight-bold mb-1">Status Saat Ini</h6>
-                                                <p class="mb-0">Anda sedang <b>Berhalangan</b>. Sistem akan otomatis mencatat ketidakhadiran sholat berjamaah.</p>
-                                            </div>
+                        <?php if ($tagihan_status_ok): ?>
+                            <div class="row">
+                                <div class="col-md-4 col-12 mb-3 mb-md-0">
+                                    <div class="border rounded bg-light p-3 h-100">
+                                        <div class="small text-muted">Total Tunggakan</div>
+                                        <div class="h5 mb-0 <?php echo $tagihan_total_semua > 0 ? 'text-danger' : 'text-success'; ?> font-weight-bold">
+                                            Rp <?php echo number_format($tagihan_total_semua, 0, ',', '.'); ?>
                                         </div>
                                     </div>
-                                <?php else: ?>
-                                    <div class="alert alert-light border mb-0">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-check-circle fa-2x text-success mr-3"></i>
-                                            <div>
-                                                <h6 class="font-weight-bold mb-1">Status Saat Ini</h6>
-                                                <p class="mb-0">Anda <b>Tidak Berhalangan</b>. Silakan lapor jika sedang berhalangan.</p>
-                                            </div>
-                                        </div>
+                                </div>
+                                <div class="col-4 col-md-4 mb-2">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="small text-muted">Tahun Ajaran Aktif</div>
+                                        <div class="font-weight-bold"><?php echo htmlspecialchars($tagihan_tahun_aktif); ?></div>
+                                        <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_aktif, 0, ',', '.'); ?></div>
                                     </div>
-                                <?php endif; ?>
+                                </div>
+                                <div class="col-4 col-md-4 mb-2">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="small text-muted">Tahun Ajaran Lama</div>
+                                        <div class="font-weight-bold"><?php echo empty($tagihan_tahun_lama) ? '-' : htmlspecialchars(implode(', ', $tagihan_tahun_lama)); ?></div>
+                                        <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_lama, 0, ',', '.'); ?></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-4 text-center">
-                                <?php if ($sholat_status == 'Berhalangan'): ?>
-                                    <form method="POST" action="">
-                                        <button type="submit" name="toggle_berhalangan" value="unset" class="btn btn-outline-danger btn-lg btn-block">
-                                            <i class="fas fa-check-circle mr-2"></i> Sudah Suci / Batalkan
-                                        </button>
-                                    </form>
-                                <?php else: ?>
-                                    <form method="POST" action="">
-                                        <button type="submit" name="toggle_berhalangan" value="set" class="btn btn-danger btn-lg btn-block">
-                                            <i class="fas fa-female mr-2"></i> Lapor Berhalangan
-                                        </button>
-                                    </form>
-                                <?php endif; ?>
+                            <?php if ($tagihan_total_semua <= 0): ?>
+                                <div class="alert alert-success mb-0 mt-3">
+                                    <i class="fas fa-check-circle mr-2"></i> Tidak ada tagihan yang belum dibayar menurut data Sibayar.
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-plug mr-2"></i> Ringkasan tagihan belum bisa diambil dari Sibayar. Buka detail tagihan untuk mencoba lagi.
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
-            <?php endif; ?>
+
+            <!-- Box Info Tabungan -->
+            <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4">
+                <div class="card card-success mapp-tabungan-card h-100">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-piggy-bank mr-2"></i>Info Tabungan</h4>
+                        <a href="tabungan_siswa.php" class="btn btn-sm btn-success">Detail</a>
+                    </div>
+                    <div class="card-body text-center">
+                        <?php if ($tab_ok): ?>
+                            <div class="small text-muted">Saldo Tabungan</div>
+                            <div class="font-weight-bold h4 mb-3">Rp <?php echo number_format($tab_saldo, 0, ',', '.'); ?></div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="small text-muted">Setoran</div>
+                                    <div class="font-weight-bold text-primary">Rp <?php echo number_format($tab_setor, 0, ',', '.'); ?></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="small text-muted">Penarikan</div>
+                                    <div class="font-weight-bold text-danger">Rp <?php echo number_format($tab_tarik, 0, ',', '.'); ?></div>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-plug mr-2"></i> Data tabungan belum bisa diambil. Buka detail untuk mencoba lagi.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Box Komunikasi Orang Tua / Informasi Sekolah -->
         <div class="row">
             <div class="col-12 mb-4">
-                <div class="card card-info shadow-sm">
+                <div class="card card-info shadow-sm mapp-table-card" id="mapp-box-pesan" style="scroll-margin-top:90px;">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                         <h4 class="mb-0 text-info">
                             <i class="fas fa-envelope-open-text mr-2"></i>Pesan &amp; Laporan dari Wali Kelas / Sekolah
@@ -702,6 +625,26 @@ include_once '../templates/sidebar.php';
                                 </table>
                             </div>
                         <?php endif; ?>
+                        <!-- Mobile: list card pesan -->
+                        <div class="d-lg-none">
+                            <?php if (!empty($student_messages)): ?>
+                                <?php foreach ($student_messages as $mm): ?>
+                                    <?php
+                                    $mm_read = (($mm['status_dibaca'] ?? '') === 'Sudah Dibaca');
+                                    $mm_raw = (string)($mm['tanggal_mulai'] ?? $mm['tanggal'] ?? '');
+                                    $mm_tgl = $mm_raw !== '' ? date('d/m/Y', strtotime($mm_raw)) : '-';
+                                    ?>
+                                    <a href="#" onclick="return false;" class="mapp-info-card btn-baca-pesan" data-json='<?= htmlspecialchars(json_encode($mm), ENT_QUOTES, 'UTF-8') ?>'>
+                                        <span class="mapp-info-icon"><i class="fas fa-envelope-open-text"></i></span>
+                                        <span style="flex:1;min-width:0;">
+                                            <span class="mapp-info-title d-block"><?php echo htmlspecialchars($mm['judul'] ?? '-'); ?></span>
+                                            <span class="d-block small text-muted"><?php echo htmlspecialchars($mm['pengirim'] ?? $mm['nama_guru'] ?? 'Wali / Guru'); ?> &bull; <?php echo htmlspecialchars($mm_tgl); ?></span>
+                                            <span class="mt-1 d-inline-block badge <?php echo $mm_read ? 'badge-info' : 'badge-warning'; ?>"><?php echo $mm_read ? 'Sudah Dibaca' : 'Belum Dibaca'; ?></span>
+                                        </span>
+                                    </a>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -710,7 +653,7 @@ include_once '../templates/sidebar.php';
         <!-- Box Pemberitahuan Tugas Siswa -->
         <div class="row">
             <div class="col-12 mb-4">
-                <div class="card card-primary shadow-sm">
+                <div class="card card-primary shadow-sm mapp-table-card">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
                         <h4 class="mb-0 text-primary">
                             <i class="fas fa-tasks mr-2"></i>Pemberitahuan Tugas - Kelas <?= htmlspecialchars($student['nama_kelas'] ?? '') ?>
@@ -795,123 +738,29 @@ include_once '../templates/sidebar.php';
                                 </table>
                             </div>
                         <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12 mb-4">
-                <div class="card card-warning">
-                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0"><i class="fas fa-file-invoice-dollar mr-2"></i>Ringkasan Tagihan Sibayar</h4>
-                        <a href="tagihan_siswa.php" class="btn btn-sm btn-warning text-white">
-                            Detail Tagihan
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        <?php if ($tagihan_status_ok): ?>
-                            <div class="row">
-                                <div class="col-md-4 col-12 mb-3 mb-md-0">
-                                    <div class="border rounded bg-light p-3 h-100">
-                                        <div class="small text-muted">Total Tunggakan</div>
-                                        <div class="h5 mb-0 <?php echo $tagihan_total_semua > 0 ? 'text-danger' : 'text-success'; ?> font-weight-bold">
-                                            Rp <?php echo number_format($tagihan_total_semua, 0, ',', '.'); ?>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-4 col-md-4 mb-2">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="small text-muted">Tahun Ajaran Aktif</div>
-                                        <div class="font-weight-bold"><?php echo htmlspecialchars($tagihan_tahun_aktif); ?></div>
-                                        <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_aktif, 0, ',', '.'); ?></div>
-                                    </div>
-                                </div>
-                                <div class="col-4 col-md-4 mb-2">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="small text-muted">Tahun Ajaran Lama</div>
-                                        <div class="font-weight-bold"><?php echo empty($tagihan_tahun_lama) ? '-' : htmlspecialchars(implode(', ', $tagihan_tahun_lama)); ?></div>
-                                        <div class="text-danger font-weight-bold">Rp <?php echo number_format($tagihan_total_lama, 0, ',', '.'); ?></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php if ($tagihan_total_semua <= 0): ?>
-                                <div class="alert alert-success mb-0 mt-3">
-                                    <i class="fas fa-check-circle mr-2"></i> Tidak ada tagihan yang belum dibayar menurut data Sibayar.
-                                </div>
+                        <!-- Mobile: list card tugas -->
+                        <div class="d-lg-none">
+                            <?php if (!empty($student_tasks)): ?>
+                                <?php foreach ($student_tasks as $tt): ?>
+                                    <?php
+                                    $tt_sub = !empty($tt['id_pengumpulan']);
+                                    $tt_od = !empty($tt['deadline']) && strtotime($tt['deadline']) < time() && !$tt_sub;
+                                    ?>
+                                    <a href="tugas.php" class="mapp-info-card">
+                                        <span class="mapp-info-icon" style="background:#e8f1fe;color:#2563eb;"><i class="fas fa-tasks"></i></span>
+                                        <span style="flex:1;min-width:0;">
+                                            <span class="mapp-info-title d-block"><?php echo htmlspecialchars($tt['judul']); ?><?php if ($tt_od): ?> <span class="badge badge-danger">Lewat Batas</span><?php endif; ?></span>
+                                            <span class="d-block small text-muted"><?php echo htmlspecialchars($tt['nama_mapel'] ?? '-'); ?> &bull; <?php echo htmlspecialchars($tt['nama_guru'] ?? '-'); ?></span>
+                                            <span class="d-block small">Deadline: <?php echo !empty($tt['deadline']) ? date('d/m/Y H:i', strtotime($tt['deadline'])) : '-'; ?> &bull; <span class="badge <?php echo $tt_sub ? 'badge-success' : 'badge-warning'; ?>"><?php echo $tt_sub ? 'Sudah' : 'Belum'; ?></span><?php if ($tt['nilai'] !== null): ?> &bull; Nilai: <strong><?php echo (float)$tt['nilai']; ?></strong><?php endif; ?></span>
+                                        </span>
+                                    </a>
+                                <?php endforeach; ?>
                             <?php endif; ?>
-                        <?php else: ?>
-                            <div class="alert alert-warning mb-0">
-                                <i class="fas fa-plug mr-2"></i> Ringkasan tagihan belum bisa diambil dari Sibayar. Buka detail tagihan untuk mencoba lagi.
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <?php if ($is_grade_6): ?>
-        <div class="row">
-            <!-- Box Khusus Kelas 6 -->
-            <div class="col-12">
-                <div class="card card-info">
-                    <div class="card-header">
-                        <h4>Fitur Khusus Kelas 6</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 col-sm-6 col-12 mb-3">
-                                <a href="jadwal_les.php" class="btn btn-primary btn-lg btn-block py-3">
-                                    <i class="fas fa-calendar-alt mr-2"></i> Jadwal Les Kelas 6
-                                </a>
-                            </div>
-                            <div class="col-md-6 col-sm-6 col-12 mb-3">
-                                <a href="rekap_absensi_les.php" class="btn btn-success btn-lg btn-block py-3">
-                                    <i class="fas fa-history mr-2"></i> Rekap Kehadiran Les
-                                </a>
-                            </div>
-                            <div class="col-md-6 col-sm-6 col-12 mb-3">
-                                <a href="biaya_ujian.php" class="btn btn-warning btn-lg btn-block py-3 text-white">
-                                    <i class="fas fa-money-bill-wave mr-2"></i> Biaya Ujian
-                                </a>
-                            </div>
-                            <div class="col-md-6 col-sm-6 col-12 mb-3">
-                                <a href="nilai_ujian.php" class="btn btn-info btn-lg btn-block py-3">
-                                    <i class="fas fa-graduation-cap mr-2"></i> Nilai Ujian
-                                </a>
-                            </div>
-                            <div class="col-md-6 col-sm-6 col-12 mb-3">
-                                <a href="nilai_ujian.php?nilai_mode=praktik" class="btn btn-outline-info btn-lg btn-block py-3">
-                                    <i class="fas fa-flask mr-2"></i> Nilai Ujian Praktik
-                                </a>
-                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <?php endif; ?>
-
-        <div class="row">
-            <!-- Box Barcode Kehadiran -->
-            <div class="col-12">
-                <div class="card card-info">
-                    <div class="card-header d-flex flex-column align-items-center flex-md-row justify-content-md-between py-3 h-auto">
-                        <h4 class="mb-0">Barcode Kehadiran</h4>
-                    </div>
-                    <div class="card-body text-center">
-                        <p>Gunakan barcode ini untuk kehadiran di perangkat sekolah (jika tersedia).</p>
-                        <div class="barcode-container mb-3">
-                            <!-- Generate QR Code using Google Charts API or similar -->
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?php echo $student['nisn']; ?>" alt="QR Code NISN" class="img-fluid border p-2">
-                        </div>
-                        <div class="font-weight-bold text-xl"><?php echo htmlspecialchars($student['nisn']); ?></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <?php echo renderDashboardAgendaBulanBerjalan($pdo); ?>
 
         <!-- Mobile Menu Utama - Last Position -->
         <div class="row d-lg-none mt-4">
@@ -957,113 +806,36 @@ include_once '../templates/sidebar.php';
                         <?php endif; ?>
             </div>
         </div>
+
+        <div class="row">
+            <!-- Box Barcode Kehadiran -->
+            <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4 d-flex">
+                <div class="card card-info mapp-barcode-card h-100 w-100">
+                    <div class="card-header d-flex flex-column align-items-center flex-md-row justify-content-md-between py-3 h-auto">
+                        <h4 class="mb-0">Barcode Kehadiran</h4>
+                    </div>
+                    <div class="card-body text-center">
+                        <p>Gunakan barcode ini untuk kehadiran di perangkat sekolah (jika tersedia).</p>
+                        <div class="barcode-container mb-3">
+                            <!-- Generate QR Code using Google Charts API or similar -->
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?php echo $student['nisn']; ?>" alt="QR Code NISN" class="img-fluid border p-2">
+                        </div>
+                        <div class="font-weight-bold text-xl"><?php echo htmlspecialchars($student['nisn']); ?></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-12 col-12 col-sm-12 mb-4 mapp-agenda-wrap">
+                <?php echo renderDashboardAgendaBulanBerjalan($pdo); ?>
+            </div>
+        </div>
                 </section>
                 </div>
             </div>
 
-<!-- Modal Upload Foto -->
-<div class="modal fade" id="modalUploadFoto" tabindex="-1" role="dialog" aria-labelledby="modalUploadFotoLabel" aria-hidden="true">
-    <div class="modal-dialog" role="dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalUploadFotoLabel">Ubah Foto Profil</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form id="formUploadFoto" enctype="multipart/form-data">
-                <div class="modal-body text-center">
-                    <div class="mb-3">
-                        <div id="containerPreview">
-                            <?php if ($foto_profil): ?>
-                                <img id="previewFoto" src="<?php echo $foto_profil; ?>" class="rounded-circle shadow" style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #6777ef;">
-                            <?php else: ?>
-                                <div id="previewAvatar" class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow mx-auto" style="width: 150px; height: 150px; font-weight: 700; font-size: 4rem; border: 4px solid #fff;">
-                                    <?php echo strtoupper(substr($student['nama_siswa'], 0, 1)); ?>
-                                </div>
-                                <img id="previewFoto" src="" class="rounded-circle shadow d-none" style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #6777ef;">
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <div class="form-group text-left">
-                        <label>Pilih Foto Baru</label>
-                        <input type="file" name="foto" id="inputFoto" class="form-control" accept="image/*" required>
-                        <small class="text-muted">Format: JPG, JPEG, PNG. Maksimal 2MB.</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary" id="btnSimpanFoto">Simpan Perubahan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <?php
+// Box identitas + upload foto pindah ke profil.php
 include '../templates/footer.php';
 ?>
-
-<script>
- // Preview foto sebelum upload
- document.getElementById('inputFoto').addEventListener('change', function(e) {
-     const file = e.target.files[0];
-     if (file) {
-         const reader = new FileReader();
-         reader.onload = function(e) {
-             const previewImg = document.getElementById('previewFoto');
-             const previewAvatar = document.getElementById('previewAvatar');
-             
-             previewImg.src = e.target.result;
-             previewImg.classList.remove('d-none');
-             
-             if (previewAvatar) {
-                 previewAvatar.classList.add('d-none');
-             }
-         }
-         reader.readAsDataURL(file);
-     }
- });
-
-// Handle upload foto via AJAX
-document.getElementById('formUploadFoto').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    const btn = document.getElementById('btnSimpanFoto');
-    
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan...';
-    
-    fetch('upload_foto.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            Swal.fire({
-                title: 'Berhasil!',
-                text: data.message,
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            }).then(() => {
-                location.reload();
-            });
-        } else {
-            Swal.fire('Gagal!', data.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = 'Simpan Perubahan';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Terjadi kesalahan sistem.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = 'Simpan Perubahan';
-    });
-});
-</script>
 
 <?php
 if (isset($swal_message)): ?>
