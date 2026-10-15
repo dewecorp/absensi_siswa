@@ -94,38 +94,38 @@
             }
             </style>
 
-            <!-- Bottom Navbar (Mobile Only) -->
-            <?php
-            $bottom_quick_links = function_exists('get_bottom_nav_quick_links') && isset($menu_items)
-                ? get_bottom_nav_quick_links($menu_items, 3)
-                : [];
-            ?>
-            <nav class="navbar navbar-expand navbar-light bg-white d-block d-lg-none border-top shadow-lg" style="position: fixed; bottom: 0; left: 0; right: 0; height: 60px; padding: 0; z-index: 1030;">
-                <div class="container-fluid h-100 px-0">
-                    <div class="row w-100 mx-0 h-100 no-gutters bottom-nav-row">
-                        <div class="col px-0 h-100">
-                            <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-home">
-                                <i class="fas fa-home"></i>
-                                <span class="bottom-nav-label">Home</span>
-                            </a>
-                        </div>
-                        <?php foreach ($bottom_quick_links as $link): ?>
-                            <div class="col px-0 h-100">
-                                <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-item">
-                                    <i class="<?php echo $link['icon']; ?>"></i>
-                                    <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
-                                </a>
-                            </div>
-                        <?php endforeach; ?>
-                        <div class="col px-0 h-100">
-                            <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-account">
-                                <i class="fas fa-user"></i>
-                                <span class="bottom-nav-label">Akun</span>
-                            </a>
-                        </div>
-                    </div>
+    <!-- Bottom Navbar (Mobile Only) -->
+    <?php
+    $bottom_quick_links = function_exists('get_bottom_nav_quick_links') && isset($menu_items)
+        ? get_bottom_nav_quick_links($menu_items, 3)
+        : [];
+    ?>
+    <nav class="navbar navbar-expand navbar-light bg-white d-block d-lg-none border-top shadow-lg" style="position: fixed; bottom: 0; left: 0; right: 0; height: 60px; padding: 0; z-index: 1030;">
+        <div class="container-fluid h-100 px-0">
+            <div class="row w-100 mx-0 h-100 no-gutters bottom-nav-row">
+                <div class="col px-0 h-100">
+                    <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-home">
+                        <i class="fas fa-home"></i>
+                        <span class="bottom-nav-label">Dashboard</span>
+                    </a>
                 </div>
-            </nav>
+                <?php foreach ($bottom_quick_links as $link): ?>
+                    <div class="col px-0 h-100">
+                        <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-item">
+                            <i class="<?php echo $link['icon']; ?>"></i>
+                            <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+                <div class="col px-0 h-100">
+                    <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-account">
+                        <i class="fas fa-user"></i>
+                        <span class="bottom-nav-label">Akun</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
 
             <script>
             (function() {

@@ -567,6 +567,17 @@ include_once '../templates/sidebar.php';
 
             <!-- Main Content -->
             <div class="main-content">
+                <!-- Mobile App Navbar -->
+                <div class="d-md-none shadow-sm px-3 py-3 mb-3 d-flex align-items-center rounded" style="background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%); color: #fff;">
+                    <a href="javascript:history.back()" class="btn btn-sm btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center mr-3" style="width: 38px; height: 38px; color: #6777ef; border: none; background: rgba(255,255,255,0.9);">
+                        <i class="fas fa-arrow-left" style="font-size: 16px;"></i>
+                    </a>
+                    <div class="flex-grow-1 text-center font-weight-bold" style="font-size: 1.15rem; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                        Dashboard Tata Usaha
+                    </div>
+                    <div style="width: 38px;"><!-- spacer for centering --></div>
+                </div>
+
                 <section class="section">
                     <div class="section-header">
                         <h1>Dashboard</h1>

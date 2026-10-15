@@ -323,8 +323,23 @@ include '../templates/header.php';
 include_once '../templates/sidebar.php';
 ?>
 
-<div class="main-content">
-    <section class="section">
+            <div class="main-content">
+                <!-- Mobile App Navbar -->
+                <div class="d-md-none shadow-sm px-3 py-3 mb-3 d-flex align-items-center" style="background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%); color: #fff; border-radius: 20px;">
+                    <div class="d-flex align-items-center">
+                        <?php if (!empty($school_profile['logo'])): ?>
+                            <img src="../assets/img/<?= htmlspecialchars($school_profile['logo']) ?>" alt="Logo" style="width: 36px; height: 36px; object-fit: contain;" class="mr-2 rounded-circle bg-white p-1">
+                        <?php else: ?>
+                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center font-weight-bold mr-2 shadow-sm" style="width: 36px; height: 36px; font-size: 14px;">M</div>
+                        <?php endif; ?>
+                        <div>
+                            <div style="font-size: 13.5px; font-weight: 800; color: #fff; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.2);"><?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'SIMAD') ?></div>
+                            <div style="font-size: 10.5px; color: #f1f5f9; font-weight: 600; text-shadow: 0 1px 1px rgba(0,0,0,0.2);">Dashboard Siswa</div>
+                        </div>
+                    </div>
+                </div>
+
+                <section class="section">
         <div class="section-header">
             <h1>Dashboard Siswa</h1>
             <div class="section-header-breadcrumb">
@@ -955,8 +970,9 @@ include_once '../templates/sidebar.php';
                         <?php endif; ?>
             </div>
         </div>
-    </section>
-</div>
+                </section>
+                </div>
+            </div>
 
 <!-- Modal Upload Foto -->
 <div class="modal fade" id="modalUploadFoto" tabindex="-1" role="dialog" aria-labelledby="modalUploadFotoLabel" aria-hidden="true">

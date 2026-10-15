@@ -1736,8 +1736,21 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         $links = [];
         $user_level = getUserLevel();
 
+        $ordered_items = [];
         foreach ($menu_items as $item) {
-            if ($item['title'] === 'Logout' || $item['title'] === 'Dashboard' || $item['title'] === 'Profil' || $item['title'] === 'Profil & Pengaturan') {
+            if (($item['title'] ?? '') === 'Kehadiran') {
+                $ordered_items[] = $item;
+                break;
+            }
+        }
+        foreach ($menu_items as $item) {
+            if (($item['title'] ?? '') !== 'Kehadiran') {
+                $ordered_items[] = $item;
+            }
+        }
+
+        foreach ($ordered_items as $item) {
+            if ($item['title'] === 'Logout' || $item['title'] === 'Dashboard' || $item['title'] === 'Data Utama' || $item['title'] === 'Profil' || $item['title'] === 'Profil & Pengaturan') {
                 continue;
             }
 
@@ -1745,45 +1758,13 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             $icon = isset($item['icon']) ? $item['icon'] : '';
             $has_submenu = isset($item['submenu']) && is_array($item['submenu']) && count($item['submenu']) > 0;
             $url = $has_submenu ? $item['submenu'][0]['url'] : $item['url'];
+            $display_title = $title;
 
-            // Nama singkat untuk tampilan bottom nav (URL tetap pakai judul asli)
-            $short_map = [
-                'Master Data' => 'Master',
-                'Ekstrakurikuler' => 'Ekstra',
-                'Kalender Pendidikan' => 'Kalender',
-                'Mata Pelajaran' => 'Mapel',
-                'Data Alumni' => 'Alumni',
-                'Data Siswa Baru' => 'Siswa Baru',
-                'Kenaikan Kelas' => 'Kenaikan',
-                'Rekap Absensi' => 'Rekap',
-                'Syarat Kecakapan Umum' => 'SKU',
-                'Data Anggota Pramuka' => 'Pramuka',
-                'Data Anggota Rebana' => 'Rebana',
-                'Data Anggota Pencak Silat' => 'Pencak Silat',
-                'Pengaturan Cetak Suket' => 'Suket',
-            ];
-            $display_title = isset($short_map[$title]) ? $short_map[$title] : $title;
-            if (!isset($short_map[$title]) && stripos($title, 'Data Anggota ') === 0) {
-                $display_title = trim(substr($title, strlen('Data Anggota ')));
-            }
-
-            // Custom mapping untuk semua level (URL/anchor memakai judul ASLI)
-            if ($user_level === 'guru' || $user_level === 'wali') {
-                if ($title === 'Data Utama') {
-                    $display_title = 'Kehadiran';
-                    $icon = 'fas fa-calendar-check';
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Kehadiran');
-                } elseif ($title === 'Kehadiran') {
-                    $display_title = 'Nilai Siswa';
-                    $icon = 'fas fa-graduation-cap';
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id('Nilai Siswa');
-                } elseif ($title === 'Ekstrakurikuler') {
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
-                }
-            } else {
-                if ($has_submenu) {
-                    $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
-                }
+            if ($title === 'Data Utama' || $title === 'Kehadiran') {
+                $display_title = 'Kehadiran';
+                $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
+            } else if ($has_submenu) {
+                $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
             }
 
             $links[] = [

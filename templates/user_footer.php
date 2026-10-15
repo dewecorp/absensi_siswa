@@ -112,14 +112,14 @@ if (!isset($school_profile)) {
         <div class="container-fluid h-100 px-0">
             <div class="row w-100 mx-0 h-100 no-gutters bottom-nav-row">
                 <div class="col px-0 h-100">
-                            <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-home">
+                    <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-home">
                         <i class="fas fa-home"></i>
-                        <span class="bottom-nav-label">Home</span>
+                        <span class="bottom-nav-label">Dashboard</span>
                     </a>
                 </div>
                 <?php foreach ($bottom_quick_links as $link): ?>
                     <div class="col px-0 h-100">
-                                <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-item">
+                        <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-item">
                             <i class="<?php echo $link['icon']; ?>"></i>
                             <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
                         </a>
