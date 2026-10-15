@@ -216,12 +216,9 @@ foreach ($rows as $r) {
 
 $page_title = 'Daftar Agenda Kelas';
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css',
 ];
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js',
 ];
 
@@ -229,20 +226,6 @@ $calendar_events_json = json_encode($calendar_events);
 $js_page = [<<<JS
 var calendarEvents = $calendar_events_json;
 $(document).ready(function() {
-    if ($('#table-agenda').length) {
-        $('#table-agenda').DataTable({
-            'order': [[1, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [9] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada agenda ditemukan',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
-        });
-    }
 
     // FullCalendar Init
     var calendarEl = document.getElementById('calendarView');
@@ -399,7 +382,7 @@ include '../templates/sidebar.php';
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <ul class="nav nav-pills" id="agendaModeTab" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="tab-tabel-link" data-toggle="tab" href="#tab-tabel" role="tab"><i class="fas fa-list mr-1"></i> Tampilan Tabel</a>
+                            <a class="nav-link active" id="tab-tabel-link" data-toggle="tab" href="#tab-tabel" role="tab"><i class="fas fa-stream mr-1"></i> Timeline Agenda</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" id="tab-kalender-link" data-toggle="tab" href="#tab-kalender" role="tab"><i class="fas fa-calendar-alt mr-1"></i> Tampilan Kalender</a>
@@ -414,7 +397,7 @@ include '../templates/sidebar.php';
 
                 <div class="card-body">
                     <div class="tab-content" id="agendaTabContent">
-                        <!-- Tampilan Tabel -->
+                        <!-- Timeline Agenda -->
                         <div class="tab-pane fade show active" id="tab-tabel" role="tabpanel">
                             <form method="GET" class="row mb-3">
                                 <input type="hidden" name="kelas" value="<?= (int)$selected_kelas_id ?>">
@@ -441,70 +424,110 @@ include '../templates/sidebar.php';
                                 </div>
                             </form>
 
-                            <div class="table-responsive">
-                                <table class="table table-striped table-bordered table-sm" id="table-agenda">
-                                    <thead>
-                                        <tr>
-                                            <th width="4%">No</th>
-                                            <th>Tanggal Mulai - Selesai</th>
-                                            <th>Waktu</th>
-                                            <th>Nama Agenda</th>
-                                            <th>Jenis</th>
-                                            <th>Kelas</th>
-                                            <th>Tempat</th>
-                                            <th>Penanggung Jawab</th>
-                                            <th>Status</th>
-                                            <th width="12%">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($rows as $i => $r): ?>
-                                            <?php
-                                            $st_badge = 'secondary';
-                                            if ($r['status'] === 'Selesai') $st_badge = 'success';
-                                            elseif ($r['status'] === 'Berjalan') $st_badge = 'info';
-                                            elseif ($r['status'] === 'Rencana') $st_badge = 'primary';
-                                            elseif ($r['status'] === 'Batal') $st_badge = 'danger';
+                            <style>
+                            .agenda-timeline { position: relative; padding: 6px 0 6px 8px; }
+                            .agenda-timeline::before { content: ''; position: absolute; left: 57px; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #6777ef, #3abaf4); opacity: .35; }
+                            .agenda-month { position: relative; z-index: 1; display: inline-block; margin: 14px 0 14px 34px; padding: 4px 16px; border-radius: 20px; background: #6777ef; color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .3px; box-shadow: 0 4px 10px rgba(103,119,239,.35); }
+                            .agenda-month:first-child { margin-top: 0; }
+                            .agenda-item { position: relative; display: flex; gap: 14px; margin-bottom: 14px; }
+                            .agenda-date { flex: 0 0 76px; text-align: center; z-index: 1; }
+                            .agenda-date .d { display: block; width: 46px; height: 46px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid var(--tl-color, #6777ef); color: var(--tl-color, #6777ef); font-weight: 800; font-size: 17px; line-height: 40px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+                            .agenda-date .m { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
+                            .agenda-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e9edf5; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.07); padding: 12px 14px; border-left: 4px solid var(--tl-color, #6777ef); transition: box-shadow .2s ease, transform .2s ease; }
+                            .agenda-card:hover { box-shadow: 0 10px 26px rgba(20,30,70,.13); transform: translateY(-2px); }
+                            @media (max-width: 575.98px) {
+                                .agenda-timeline::before { left: 47px; }
+                                .agenda-item { gap: 10px; }
+                                .agenda-date { flex-basis: 60px; }
+                                .agenda-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 32px; }
+                            }
+                            </style>
 
-                                            $waktu_str = '-';
-                                            if (!empty($r['waktu_mulai'])) {
-                                                $waktu_str = substr($r['waktu_mulai'], 0, 5) . (!empty($r['waktu_selesai']) ? ' - ' . substr($r['waktu_selesai'], 0, 5) : '');
-                                            }
-                                            ?>
-                                            <tr>
-                                                <td class="text-center"><?= $i + 1 ?></td>
-                                                <?php
-                                                $tm_ef = $r['tanggal_mulai'] ?? $r['tgl_mulai_ef'] ?? $r['tanggal'];
-                                                $ts_ef = $r['tanggal_selesai'] ?? $r['tgl_selesai_ef'] ?? $tm_ef;
-                                                $tgl_str = date('d/m/Y', strtotime($tm_ef));
-                                                if ($ts_ef !== $tm_ef) $tgl_str .= ' - ' . date('d/m/Y', strtotime($ts_ef));
-                                                ?>
-                                                <td><?= $tgl_str ?></td>
-                                                <td class="text-center"><?= $waktu_str ?></td>
-                                                <td><strong><?= htmlspecialchars($r['nama_agenda']) ?></strong></td>
-                                                <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis']) ?></span></td>
-                                                <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                                <td><?= htmlspecialchars($r['tempat'] ?: '-') ?></td>
-                                                <td><?= htmlspecialchars($r['penanggung_jawab'] ?: '-') ?></td>
-                                                <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                                <td class="text-center">
-                                                    <button type="button" class="btn btn-info btn-sm btn-detail-agenda" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
-                                                        <i class="fas fa-eye"></i>
+                            <?php if (empty($rows)): ?>
+                                <div class="text-center text-muted py-5">
+                                    <i class="far fa-calendar-times fa-3x mb-3"></i><br>
+                                    <strong>Belum ada agenda pada filter ini.</strong>
+                                </div>
+                            <?php else: ?>
+                                <?php
+                                $bulan_id = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                                $cur_month = '';
+                                ?>
+                                <div class="agenda-timeline">
+                                    <?php foreach ($rows as $r): ?>
+                                        <?php
+                                        $tm_ef = $r['tgl_mulai_ef'] ?? $r['tanggal_mulai'] ?? $r['tanggal'];
+                                        $ts_ef = $r['tgl_selesai_ef'] ?? $r['tanggal_selesai'] ?? $tm_ef;
+                                        $mk = date('Y-m', strtotime($tm_ef));
+                                        if ($mk !== $cur_month) {
+                                            $cur_month = $mk;
+                                            echo '<div class="agenda-month"><i class="far fa-calendar-alt mr-1"></i>' . $bulan_id[(int)date('n', strtotime($tm_ef))] . ' ' . date('Y', strtotime($tm_ef)) . '</div>';
+                                        }
+                                        $jenis_tl = (string)($r['jenis'] ?? '');
+                                        $tl_color = $agenda_color_map[$jenis_tl] ?? '#6777ef';
+                                        if (stripos(($r['nama_agenda'] ?? '') . ' ' . $jenis_tl . ' ' . ($r['keterangan'] ?? ''), 'libur') !== false) $tl_color = '#dc3545';
+
+                                        $st_badge = 'secondary';
+                                        if ($r['status'] === 'Selesai') $st_badge = 'success';
+                                        elseif ($r['status'] === 'Berjalan') $st_badge = 'info';
+                                        elseif ($r['status'] === 'Rencana') $st_badge = 'primary';
+                                        elseif ($r['status'] === 'Batal') $st_badge = 'danger';
+
+                                        $tgl_tl = date('d/m/Y', strtotime($tm_ef));
+                                        if ($ts_ef !== $tm_ef) $tgl_tl .= ' - ' . date('d/m/Y', strtotime($ts_ef));
+                                        $waktu_tl = '-';
+                                        if (!empty($r['waktu_mulai'])) {
+                                            $waktu_tl = substr($r['waktu_mulai'], 0, 5) . (!empty($r['waktu_selesai']) ? ' - ' . substr($r['waktu_selesai'], 0, 5) . ' WIB' : ' WIB');
+                                        }
+                                        $ket_cut = !empty($r['keterangan']) ? mb_strimwidth(strip_tags($r['keterangan']), 0, 110, '...') : '';
+                                        ?>
+                                        <div class="agenda-item">
+                                            <div class="agenda-date" style="--tl-color: <?= $tl_color ?>;">
+                                                <span class="d"><?= date('d', strtotime($tm_ef)) ?></span>
+                                                <span class="m"><?= mb_substr($bulan_id[(int)date('n', strtotime($tm_ef))], 0, 3) ?></span>
+                                            </div>
+                                            <div class="agenda-card" style="--tl-color: <?= $tl_color ?>;">
+                                                <div class="d-flex justify-content-between align-items-center flex-wrap mb-1" style="gap: 6px;">
+                                                    <span class="badge px-2 py-1 font-weight-bold" style="background: <?= $tl_color ?>1a; color: <?= $tl_color ?>; font-size: 11px; border-radius: 6px;">
+                                                        <?= htmlspecialchars($jenis_tl !== '' ? $jenis_tl : 'Agenda') ?>
+                                                    </span>
+                                                    <span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span>
+                                                </div>
+                                                <h6 class="font-weight-bold text-dark mb-1" style="font-size: 14.5px;"><?= htmlspecialchars($r['nama_agenda']) ?></h6>
+                                                <?php if ($ket_cut !== ''): ?>
+                                                    <p class="small text-muted mb-2"><?= htmlspecialchars($ket_cut) ?></p>
+                                                <?php endif; ?>
+                                                <div class="small text-muted mb-2" style="font-size: 11.5px; line-height: 1.8;">
+                                                    <span class="mr-3"><i class="far fa-calendar-alt mr-1"></i><?= $tgl_tl ?></span>
+                                                    <span class="mr-3"><i class="far fa-clock mr-1"></i><?= $waktu_tl ?></span>
+                                                    <?php if (!empty($r['tempat'])): ?>
+                                                        <span class="mr-3"><i class="fas fa-map-marker-alt mr-1"></i><?= htmlspecialchars($r['tempat']) ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($r['penanggung_jawab'])): ?>
+                                                        <span class="mr-3"><i class="fas fa-user-tie mr-1"></i><?= htmlspecialchars($r['penanggung_jawab']) ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($r['nama_kelas'])): ?>
+                                                        <span><i class="fas fa-chalkboard mr-1"></i><?= htmlspecialchars($r['nama_kelas']) ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="pt-2 border-top d-flex flex-wrap" style="gap: 6px;">
+                                                    <button type="button" class="btn btn-info btn-sm px-2 font-weight-bold btn-detail-agenda" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail" style="border-radius: 6px; font-size: 11.5px;">
+                                                        <i class="fas fa-eye mr-1"></i>Detail
                                                     </button>
                                                     <?php if ($can_crud): ?>
-                                                    <button type="button" class="btn btn-warning btn-sm btn-edit-agenda" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-danger btn-sm btn-hapus-agenda" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_agenda'], ENT_QUOTES) ?>" title="Hapus">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
+                                                        <button type="button" class="btn btn-warning btn-sm px-2 font-weight-bold btn-edit-agenda" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit" style="border-radius: 6px; font-size: 11.5px;">
+                                                            <i class="fas fa-edit mr-1"></i>Edit
+                                                        </button>
+                                                        <button type="button" class="btn btn-danger btn-sm px-2 font-weight-bold btn-hapus-agenda" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_agenda'], ENT_QUOTES) ?>" title="Hapus" style="border-radius: 6px; font-size: 11.5px;">
+                                                            <i class="fas fa-trash mr-1"></i>Hapus
+                                                        </button>
                                                     <?php endif; ?>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Tampilan Kalender -->

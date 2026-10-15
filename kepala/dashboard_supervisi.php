@@ -33,17 +33,7 @@ $parts = explode('/', $filter_ta);
 $ta_start = ($parts[0] ?? date('Y')) . '-07-01';
 $ta_end = ($parts[1] ?? ((int)date('Y') + 1)) . '-06-30';
 
-// Nilai per guru (top 10)
-$nilai_per_guru = [];
-try {
-    $stmt = $pdo->prepare("SELECT nama_guru, AVG(nilai) AS rata, COUNT(*) AS jumlah
-                           FROM tb_sv_pelaksanaan
-                           WHERE status = 'Selesai' AND tanggal BETWEEN ? AND ?
-                           GROUP BY nama_guru ORDER BY rata DESC LIMIT 10");
-    $stmt->execute([$ta_start, $ta_end]);
-    $nilai_per_guru = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Throwable $e) {
-}
+// Nilai per guru (top 10) -- tidak dipakai lagi (diganti timeline progres)
 
 // Rekap per jenis
 $per_jenis = ['Akademik' => 0, 'Administrasi' => 0, 'Manajerial' => 0];
@@ -82,6 +72,20 @@ try {
 } catch (Throwable $e) {
 }
 
+// Tahap supervisi untuk timeline progres
+$sv_prog_count = 0;
+$sv_mon_count = 0;
+try {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tb_sv_program WHERE tahun_ajaran = ? AND semester = ?");
+    $stmt->execute([$filter_ta, $filter_sem]);
+    $sv_prog_count = (int)$stmt->fetchColumn();
+} catch (Throwable $e) {
+}
+try {
+    $sv_mon_count = (int)$pdo->query("SELECT COUNT(*) FROM tb_sv_monitoring")->fetchColumn();
+} catch (Throwable $e) {
+}
+
 // Jadwal terdekat
 $jadwal_terdekat = [];
 try {
@@ -97,7 +101,6 @@ try {
 $js_page = [];
 $js_page[] = "var svChart = {
     progres: {sudah: " . (int)$stats['sudah_diperiksa'] . ", belum: " . (int)$stats['belum_diperiksa'] . "},
-    nilaiGuru: {labels: " . json_encode(array_column($nilai_per_guru, 'nama_guru')) . ", data: " . json_encode(array_map(function ($r) { return round((float)$r['rata'], 2); }, $nilai_per_guru)) . "},
     perJenis: {labels: " . json_encode(array_keys($per_jenis)) . ", data: " . json_encode(array_values($per_jenis)) . "},
     tlStatus: {labels: " . json_encode(array_keys($tl_status)) . ", data: " . json_encode(array_values($tl_status)) . "},
     perBulan: {labels: " . json_encode($bulan_labels) . ", data: " . json_encode($bulan_data) . "}
@@ -137,7 +140,6 @@ $(document).ready(function () {
     }
 
     makeDoughnut('chartProgres', ['Sudah Disupervisi', 'Belum Disupervisi'], [svChart.progres.sudah, svChart.progres.belum]);
-    makeBar('chartNilaiGuru', svChart.nilaiGuru.labels, svChart.nilaiGuru.data, true);
     makeDoughnut('chartPerJenis', svChart.perJenis.labels, svChart.perJenis.data);
     makeDoughnut('chartTlStatus', svChart.tlStatus.labels, svChart.tlStatus.data);
     makeLine('chartPerBulan', svChart.perBulan.labels, svChart.perBulan.data);
@@ -222,14 +224,110 @@ include '../templates/sidebar.php';
             <div class="row">
                 <div class="col-lg-6">
                     <div class="card">
-                        <div class="card-header"><h4>Progres Supervisi</h4></div>
+                        <?php
+                        $sv_persen_sudah = ((int)$stats['sudah_diperiksa'] + (int)$stats['belum_diperiksa']) > 0
+                            ? round((int)$stats['sudah_diperiksa'] / ((int)$stats['sudah_diperiksa'] + (int)$stats['belum_diperiksa']) * 100)
+                            : 0;
+                        ?>
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4>Persentase Supervisi</h4>
+                            <span class="badge badge-success font-weight-bold" style="font-size: 13px; padding: 6px 14px; border-radius: 20px;"><?= $sv_persen_sudah ?>%</span>
+                        </div>
                         <div class="card-body"><div style="height:280px;"><canvas id="chartProgres"></canvas></div></div>
                     </div>
                 </div>
                 <div class="col-lg-6">
                     <div class="card">
-                        <div class="card-header"><h4>Nilai Supervisi per Guru</h4></div>
-                        <div class="card-body"><div style="height:280px;"><canvas id="chartNilaiGuru"></canvas></div></div>
+                        <div class="card-header"><h4>Progres Supervisi</h4></div>
+                        <div class="card-body">
+                            <div class="sv-scroll" style="height: 280px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; scroll-behavior: smooth; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #b9c4d8 transparent;">
+                            <?php
+                            $sv_tl_total = (int)$stats['tl_belum'] + (int)$stats['tl_selesai'];
+                            $sv_stages = [
+                                [
+                                    'label' => 'Program Supervisi', 'desc' => $sv_prog_count . ' program tersusun', 'url' => 'program_supervisi.php',
+                                    'icon' => 'fas fa-clipboard-list', 'color' => '#6777ef',
+                                    'state' => $sv_prog_count > 0 ? 'done' : 'wait',
+                                ],
+                                [
+                                    'label' => 'Sasaran Guru / PTK', 'desc' => (int)$stats['total_sasaran'] . ' sasaran ditetapkan', 'url' => 'sasaran_supervisi.php',
+                                    'icon' => 'fas fa-bullseye', 'color' => '#3abaf4',
+                                    'state' => (int)$stats['total_sasaran'] > 0 ? 'done' : ($sv_prog_count > 0 ? 'run' : 'wait'),
+                                ],
+                                [
+                                    'label' => 'Penjadwalan', 'desc' => (int)$stats['terjadwal'] . ' jadwal terjadwal', 'url' => 'jadwal_supervisi.php',
+                                    'icon' => 'fas fa-calendar-alt', 'color' => '#ffa426',
+                                    'state' => (int)$stats['selesai'] > 0 ? 'done' : ((int)$stats['terjadwal'] > 0 ? 'run' : ((int)$stats['total_sasaran'] > 0 ? 'wait' : 'wait')),
+                                ],
+                                [
+                                    'label' => 'Pelaksanaan & Penilaian', 'desc' => (int)$stats['selesai'] . ' selesai, ' . (int)$stats['belum_diperiksa'] . ' guru belum disupervisi', 'url' => 'supervisi_akademik.php',
+                                    'icon' => 'fas fa-chalkboard-teacher', 'color' => '#47c363',
+                                    'state' => ((int)$stats['selesai'] > 0 && (int)$stats['belum_diperiksa'] <= 0) ? 'done' : ((int)$stats['selesai'] > 0 || (int)$stats['terjadwal'] > 0 ? 'run' : 'wait'),
+                                ],
+                                [
+                                    'label' => 'Tindak Lanjut', 'desc' => (int)$stats['tl_selesai'] . ' selesai dari ' . $sv_tl_total . ' temuan', 'url' => 'monitoring_tindak_lanjut.php',
+                                    'icon' => 'fas fa-tasks', 'color' => '#9467ef',
+                                    'state' => ($sv_tl_total > 0 && (int)$stats['tl_belum'] <= 0) ? 'done' : ($sv_tl_total > 0 ? 'run' : 'wait'),
+                                ],
+                                [
+                                    'label' => 'Monitoring', 'desc' => $sv_mon_count . ' kunjungan monitoring', 'url' => 'data_monitoring.php',
+                                    'icon' => 'fas fa-search', 'color' => '#20c997',
+                                    'state' => $sv_mon_count > 0 ? 'run' : 'wait',
+                                ],
+                            ];
+                            $sv_done_n = 0;
+                            foreach ($sv_stages as $sg) { if ($sg['state'] === 'done') $sv_done_n++; }
+                            $sv_run_n = 0;
+                            foreach ($sv_stages as $sg) { if ($sg['state'] === 'run') $sv_run_n++; }
+                            $sv_pct = round($sv_done_n / count($sv_stages) * 100);
+                            ?>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span><strong class="text-dark"><?= $sv_done_n ?>/<?= count($sv_stages) ?></strong> tahap selesai<?= $sv_run_n > 0 ? ', <strong class="text-primary">' . $sv_run_n . '</strong> berjalan' : '' ?></span>
+                                    <span class="font-weight-bold text-success"><?= $sv_pct ?>%</span>
+                                </div>
+                                <div class="progress" style="height: 10px; border-radius: 10px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: <?= $sv_pct ?>%;" aria-valuenow="<?= $sv_pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                            <style>
+                            .sv-timeline { position: relative; padding-left: 26px; }
+                            .sv-timeline::before { content: ''; position: absolute; left: 11px; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: #e9edf5; }
+                            .sv-stage { position: relative; padding-bottom: 14px; }
+                            .sv-stage:last-child { padding-bottom: 2px; }
+                            .sv-dot { position: absolute; left: -26px; top: 1px; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; background: var(--sc, #6777ef); box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+                            .sv-stage[data-state="wait"] .sv-dot { background: #cbd5e1 !important; }
+                            .sv-stage[data-state="run"] .sv-dot { animation: sv-pulse 1.6s infinite; }
+                            @keyframes sv-pulse { 0% { box-shadow: 0 0 0 0 rgba(103,119,239,.45); } 70% { box-shadow: 0 0 0 8px rgba(103,119,239,0); } 100% { box-shadow: 0 0 0 0 rgba(103,119,239,0); } }
+                            .sv-scroll::-webkit-scrollbar { width: 6px; }
+                            .sv-scroll::-webkit-scrollbar-track { background: transparent; }
+                            .sv-scroll::-webkit-scrollbar-thumb { background: #b9c4d8; border-radius: 999px; }
+                            .sv-scroll::-webkit-scrollbar-thumb:hover { background: #6777ef; }
+                            </style>
+                            <div class="sv-timeline">
+                                <?php foreach ($sv_stages as $sg): ?>
+                                    <div class="sv-stage" data-state="<?= $sg['state'] ?>">
+                                        <span class="sv-dot" style="--sc: <?= $sg['color'] ?>;">
+                                            <?php if ($sg['state'] === 'done'): ?><i class="fas fa-check"></i>
+                                            <?php elseif ($sg['state'] === 'run'): ?><i class="fas <?= $sg['icon'] ?>"></i>
+                                            <?php else: ?><i class="far fa-circle"></i><?php endif; ?>
+                                        </span>
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap: 6px;">
+                                            <a href="<?= $sg['url'] ?>" class="font-weight-bold text-dark" style="font-size: 13.5px;"><?= htmlspecialchars($sg['label']) ?></a>
+                                            <?php if ($sg['state'] === 'done'): ?>
+                                                <span class="badge badge-success">Selesai</span>
+                                            <?php elseif ($sg['state'] === 'run'): ?>
+                                                <span class="badge badge-primary">Berjalan</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-light border text-muted">Menunggu</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="small text-muted"><?= htmlspecialchars($sg['desc']) ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="col-lg-6">

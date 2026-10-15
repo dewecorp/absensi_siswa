@@ -405,12 +405,9 @@ $page_title = 'Jurnal Mengajar';
 
 // Libraries
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
 ];
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js'
 ];
@@ -462,22 +459,6 @@ $js_page = [
     }
 
     $(document).ready(function() {
-        var t = $('#table-jurnal').DataTable({
-            'language': { 'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
-            'ordering': false,
-            'columnDefs': [ {
-                'searchable': false,
-                'orderable': false,
-                'targets': [0, 1]
-            } ]
-        });
-
-        t.on( 'order.dt search.dt', function () {
-            t.column(1, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
-                cell.innerHTML = i+1;
-            } );
-        } ).draw();
-
         // Initialize Select2 for filter (main page)
         $('.select2').not('#jurnalModal .select2').select2({
             width: '100%'
@@ -750,93 +731,127 @@ include '../templates/header.php';
         <?php if (isset($_GET['kelas']) && !empty($_GET['kelas'])): ?>
         <div class="row">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h4>Data Jurnal - <?php echo isset($class_info['nama_kelas']) ? htmlspecialchars($class_info['nama_kelas']) : ''; ?></h4>
-                        <div class="card-header-action">
-                            <div class="btn-group mr-2">
-                                <a href="../config/export_jurnal_pdf?session_type=guru&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&jenis=<?php echo $_GET['jenis'] ?? ''; ?>&bulan=<?php echo $_GET['bulan'] ?? ''; ?>" target="_blank" class="btn btn-danger">
-                                    <i class="fas fa-file-pdf"></i> Export PDF
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                        <h4>Jurnal - <?php echo isset($class_info['nama_kelas']) ? htmlspecialchars($class_info['nama_kelas']) : ''; ?> (<?= count($journal_entries) ?>)</h4>
+                        <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
+                            <div class="btn-group mr-1">
+                                <a href="../config/export_jurnal_pdf?session_type=guru&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&jenis=<?php echo $_GET['jenis'] ?? ''; ?>&bulan=<?php echo $_GET['bulan'] ?? ''; ?>" target="_blank" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-file-pdf"></i> PDF
                                 </a>
-                                <a href="../config/export_jurnal_excel?session_type=guru&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&jenis=<?php echo $_GET['jenis'] ?? ''; ?>&bulan=<?php echo $_GET['bulan'] ?? ''; ?>" target="_blank" class="btn btn-success">
-                                    <i class="fas fa-file-excel"></i> Export Excel
+                                <a href="../config/export_jurnal_excel?session_type=guru&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&jenis=<?php echo $_GET['jenis'] ?? ''; ?>&bulan=<?php echo $_GET['bulan'] ?? ''; ?>" target="_blank" class="btn btn-success btn-sm">
+                                    <i class="fas fa-file-excel"></i> Excel
                                 </a>
                             </div>
-                            <button id="btn-bulk-delete" class="btn btn-danger mr-2" style="display: none;" onclick="bulkDelete()">
+                            <div class="custom-checkbox custom-control mr-1" title="Pilih semua">
+                                <input type="checkbox" class="custom-control-input" id="check-all">
+                                <label class="custom-control-label font-weight-bold small" for="check-all">Pilih semua</label>
+                            </div>
+                            <button id="btn-bulk-delete" class="btn btn-danger btn-sm" style="display: none;" onclick="bulkDelete()">
                                 <i class="fas fa-trash"></i>
                             </button>
-                            <button class="btn btn-primary" onclick="openModal('add')"><i class="fas fa-plus"></i> Tambah</button>
+                            <button class="btn btn-primary btn-sm" onclick="openModal('add')"><i class="fas fa-plus"></i> Tambah</button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped" id="table-jurnal">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center" style="width: 40px;">
-                                            <div class="custom-checkbox custom-control">
-                                                <input type="checkbox" class="custom-control-input" id="check-all">
-                                                <label class="custom-control-label" for="check-all"></label>
-                                            </div>
-                                        </th>
-                                        <th>No</th>
-                                        <th>Tanggal</th>
-                                        <th>Jam Ke</th>
-                                        <th>Waktu</th>
-                                        <th>Jenis Jadwal</th>
-                                        <th>Mapel</th>
-                                        <th>Materi</th>
-                                        <th>Dibuat Pada</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php $no = 1; foreach ($journal_entries as $journal): ?>
-                                    <tr>
-                                        <td class="text-center">
-                                            <?php if ($journal['id_guru'] == $teacher['id_guru']): ?>
+                </div>
+
+                <style>
+                .jurnal-timeline { position: relative; padding: 6px 0 6px 8px; }
+                .jurnal-timeline::before { content: ''; position: absolute; left: 57px; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #6777ef, #3abaf4); opacity: .35; }
+                .jurnal-month { position: relative; z-index: 1; display: inline-block; margin: 14px 0 14px 34px; padding: 4px 16px; border-radius: 20px; background: #6777ef; color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .3px; box-shadow: 0 4px 10px rgba(103,119,239,.35); }
+                .jurnal-month:first-child { margin-top: 0; }
+                .jurnal-item { position: relative; display: flex; gap: 14px; margin-bottom: 14px; }
+                .jurnal-date { flex: 0 0 76px; text-align: center; z-index: 1; }
+                .jurnal-date .d { display: block; width: 46px; height: 46px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid var(--tl-color, #6777ef); color: var(--tl-color, #6777ef); font-weight: 800; font-size: 17px; line-height: 40px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+                .jurnal-date .m { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
+                .jurnal-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e9edf5; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.07); padding: 12px 14px; border-left: 4px solid var(--tl-color, #6777ef); transition: box-shadow .2s ease, transform .2s ease; }
+                .jurnal-card:hover { box-shadow: 0 10px 26px rgba(20,30,70,.13); transform: translateY(-2px); }
+                @media (max-width: 575.98px) {
+                    .jurnal-timeline::before { left: 47px; }
+                    .jurnal-item { gap: 10px; }
+                    .jurnal-date { flex-basis: 60px; }
+                    .jurnal-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 32px; }
+                }
+                </style>
+
+                <?php if (empty($journal_entries)): ?>
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="card-body p-5 text-center text-muted">
+                            <i class="fas fa-book fa-3x mb-3"></i><br>
+                            Belum ada entri jurnal pada filter ini.
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <?php
+                    $bulan_id = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                    $cur_month = '';
+                    ?>
+                    <div class="jurnal-timeline">
+                        <?php foreach ($journal_entries as $journal): ?>
+                            <?php
+                            $mk = date('Y-m', strtotime($journal['tanggal']));
+                            if ($mk !== $cur_month) {
+                                $cur_month = $mk;
+                                echo '<div class="jurnal-month"><i class="far fa-calendar-alt mr-1"></i>' . $bulan_id[(int)date('n', strtotime($journal['tanggal']))] . ' ' . date('Y', strtotime($journal['tanggal'])) . '</div>';
+                            }
+                            $jenis_jurnal_tl = $journal['jenis'] ?? 'Reguler';
+                            $tl_color = $jenis_jurnal_tl === 'Ramadhan' ? '#ffa426' : '#6777ef';
+                            $is_own = $journal['id_guru'] == $teacher['id_guru'];
+
+                            $jam_ke_arr = explode(',', (string)$journal['jam_ke']);
+                            $jam_ke_arr = array_map('trim', $jam_ke_arr);
+                            sort($jam_ke_arr, SORT_NUMERIC);
+                            $first_jam = $jam_ke_arr[0];
+                            $last_jam = end($jam_ke_arr);
+                            $waktu_tl = '';
+                            if (isset($jam_map[$jenis_jurnal_tl][$first_jam]) && isset($jam_map[$jenis_jurnal_tl][$last_jam])) {
+                                $waktu_tl = $jam_map[$jenis_jurnal_tl][$first_jam]['mulai'] . ' - ' . $jam_map[$jenis_jurnal_tl][$last_jam]['selesai'];
+                            }
+                            ?>
+                            <div class="jurnal-item">
+                                <div class="jurnal-date" style="--tl-color: <?= $tl_color ?>;">
+                                    <span class="d"><?= date('d', strtotime($journal['tanggal'])) ?></span>
+                                    <span class="m"><?= mb_substr($bulan_id[(int)date('n', strtotime($journal['tanggal']))], 0, 3) ?></span>
+                                </div>
+                                <div class="jurnal-card" style="--tl-color: <?= $tl_color ?>;">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-1" style="gap: 6px;">
+                                        <div class="d-flex flex-wrap" style="gap: 6px;">
+                                            <span class="badge px-2 py-1 font-weight-bold" style="background: <?= $tl_color ?>1a; color: <?= $tl_color ?>; font-size: 11px; border-radius: 6px;">
+                                                <i class="fas fa-book-open mr-1"></i><?= htmlspecialchars($journal['mapel']) ?>
+                                            </span>
+                                            <span class="badge badge-light border font-weight-bold" style="font-size: 11px; border-radius: 6px;">Jam ke-<?= htmlspecialchars($journal['jam_ke']) ?></span>
+                                            <span class="badge <?= $jenis_jurnal_tl === 'Ramadhan' ? 'badge-warning' : 'badge-primary' ?>" style="font-size: 11px; border-radius: 6px;"><?= htmlspecialchars($jenis_jurnal_tl) ?></span>
+                                        </div>
+                                        <?php if ($is_own): ?>
                                             <div class="custom-checkbox custom-control">
                                                 <input type="checkbox" class="custom-control-input check-item" id="checkbox-<?php echo $journal['id']; ?>" value="<?php echo $journal['id']; ?>">
                                                 <label class="custom-control-label" for="checkbox-<?php echo $journal['id']; ?>"></label>
                                             </div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?php echo $no++; ?></td>
-                                        <td data-order="<?php echo $journal['tanggal']; ?>"><?php echo date('d-m-Y', strtotime($journal['tanggal'])); ?></td>
-                                        <td><?php echo htmlspecialchars($journal['jam_ke']); ?></td>
-                                        <td>
-                                            <?php 
-                                            $jam_ke_arr = explode(',', $journal['jam_ke']);
-                                            $jam_ke_arr = array_map('trim', $jam_ke_arr);
-                                            sort($jam_ke_arr, SORT_NUMERIC);
-                                            $first_jam = $jam_ke_arr[0];
-                                            $last_jam = end($jam_ke_arr);
-                                            
-                                            $jenis_jurnal = $journal['jenis'] ?? 'Reguler';
-                                            $waktu_str = '';
-                                            if (isset($jam_map[$jenis_jurnal][$first_jam]) && isset($jam_map[$jenis_jurnal][$last_jam])) {
-                                                $waktu_str = $jam_map[$jenis_jurnal][$first_jam]['mulai'] . ' - ' . $jam_map[$jenis_jurnal][$last_jam]['selesai'];
-                                            }
-                                            echo htmlspecialchars($waktu_str);
-                                            ?>
-                                        </td>
-                                        <td><?php echo htmlspecialchars($journal['jenis'] ?? 'Reguler'); ?></td>
-                                        <td><?php echo htmlspecialchars($journal['mapel']); ?></td>
-                                        <td><?php echo htmlspecialchars($journal['materi']); ?></td>
-                                        <td><?php echo date('d-m-Y H:i', strtotime($journal['created_at'])); ?></td>
-                                        <td style="white-space:nowrap">
-                                            <?php if ($journal['id_guru'] == $teacher['id_guru']): ?>
-                                            <button class="btn btn-warning btn-sm" onclick='openModal("edit", <?php echo json_encode($journal); ?>)'><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-danger btn-sm" onclick="confirmDelete(<?php echo $journal['id']; ?>)"><i class="fas fa-trash"></i></button>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <h6 class="font-weight-bold text-dark mb-1" style="font-size: 14px;"><?= htmlspecialchars($journal['materi']) ?></h6>
+                                    <div class="small text-muted mb-2" style="font-size: 11.5px; line-height: 1.8;">
+                                        <span class="mr-3"><i class="far fa-calendar-alt mr-1"></i><?= date('d/m/Y', strtotime($journal['tanggal'])) ?></span>
+                                        <?php if ($waktu_tl !== ''): ?>
+                                            <span class="mr-3"><i class="far fa-clock mr-1"></i><?= htmlspecialchars($waktu_tl) ?></span>
+                                        <?php endif; ?>
+                                        <span><i class="fas fa-history mr-1"></i>Dicatat <?= date('d/m/Y H:i', strtotime($journal['created_at'])) ?></span>
+                                    </div>
+                                    <?php if ($is_own): ?>
+                                        <div class="pt-2 border-top d-flex flex-wrap" style="gap: 6px;">
+                                            <button class="btn btn-warning btn-sm px-2 font-weight-bold" onclick='openModal("edit", <?php echo htmlspecialchars(json_encode($journal), ENT_QUOTES, 'UTF-8'); ?>)' title="Edit" style="border-radius: 6px; font-size: 11.5px;">
+                                                <i class="fas fa-edit mr-1"></i>Edit
+                                            </button>
+                                            <button class="btn btn-danger btn-sm px-2 font-weight-bold" onclick="confirmDelete(<?php echo $journal['id']; ?>)" title="Hapus" style="border-radius: 6px; font-size: 11.5px;">
+                                                <i class="fas fa-trash mr-1"></i>Hapus
+                                            </button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>

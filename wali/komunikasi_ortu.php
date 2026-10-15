@@ -159,30 +159,11 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $jenis_options = ['Pesan Individu', 'Informasi Kehadiran', 'Informasi Tugas', 'Informasi Perkembangan'];
 
 $page_title = 'Daftar Komunikasi Orang Tua';
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-];
-$js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-];
+$css_libs = [];
+$js_libs = [];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    if ($('#table-komunikasi-ortu').length) {
-        $('#table-komunikasi-ortu').DataTable({
-            'order': [[1, 'desc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [8] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada pesan komunikasi',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
-        });
-    }
 
     function syncNamaOrtuFromSiswa(fallbackNama) {
         var wali = $('#inp_siswa').find(':selected').data('wali') || '';
@@ -330,66 +311,111 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Pesan & Laporan untuk Orang Tua / Wali Siswa</h4>
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                    <h4>Pesan & Laporan untuk Orang Tua / Wali Siswa (<?= count($rows) ?>)</h4>
                     <?php if ($can_crud): ?>
                     <button type="button" class="btn btn-primary" id="btnTambahKomOrtu" <?= empty($siswa_list) && !$is_admin_or_kepala ? 'disabled' : '' ?>>
                         <i class="fas fa-paper-plane mr-1"></i> Kirim Pesan Baru
                     </button>
                     <?php endif; ?>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-komunikasi-ortu">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Tanggal</th>
-                                    <th>Nama Siswa</th>
-                                    <th>Nama Orang Tua/Wali</th>
-                                    <th>Jenis Informasi</th>
-                                    <th>Judul</th>
-                                    <th>Status Pengiriman</th>
-                                    <th>Status Dibaca</th>
-                                    <th width="12%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $i => $r): ?>
-                                    <?php
-                                    $k_badge = $r['status_kirim'] === 'Terkirim' ? 'success' : ($r['status_kirim'] === 'Draft' ? 'warning' : 'danger');
-                                    $b_badge = $r['status_dibaca'] === 'Sudah Dibaca' ? 'info' : 'secondary';
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                        <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong></td>
-                                        <td><?= htmlspecialchars($r['nama_ortu'] ?: '-') ?></td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis_informasi']) ?></span></td>
-                                        <td><?= htmlspecialchars(mb_strimwidth($r['judul'], 0, 35, '...')) ?></td>
-                                        <td class="text-center"><span class="badge badge-<?= $k_badge ?>"><?= htmlspecialchars($r['status_kirim']) ?></span></td>
-                                        <td class="text-center"><span class="badge badge-<?= $b_badge ?>"><?= htmlspecialchars($r['status_dibaca']) ?></span></td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-info btn-sm btn-detail-kom-ortu" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <?php if ($can_crud): ?>
-                                            <button type="button" class="btn btn-warning btn-sm btn-edit-kom-ortu" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm btn-hapus-kom-ortu" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+            </div>
+
+            <style>
+            .kom-timeline { position: relative; padding: 6px 0 6px 8px; }
+            .kom-timeline::before { content: ''; position: absolute; left: 57px; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #6777ef, #3abaf4); opacity: .35; }
+            .kom-month { position: relative; z-index: 1; display: inline-block; margin: 14px 0 14px 34px; padding: 4px 16px; border-radius: 20px; background: #6777ef; color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .3px; box-shadow: 0 4px 10px rgba(103,119,239,.35); }
+            .kom-month:first-child { margin-top: 0; }
+            .kom-item { position: relative; display: flex; gap: 14px; margin-bottom: 14px; }
+            .kom-date { flex: 0 0 76px; text-align: center; z-index: 1; }
+            .kom-date .d { display: block; width: 46px; height: 46px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid var(--tl-color, #6777ef); color: var(--tl-color, #6777ef); font-weight: 800; font-size: 17px; line-height: 40px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+            .kom-date .m { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
+            .kom-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e9edf5; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.07); padding: 12px 14px; border-left: 4px solid var(--tl-color, #6777ef); transition: box-shadow .2s ease, transform .2s ease; }
+            .kom-card:hover { box-shadow: 0 10px 26px rgba(20,30,70,.13); transform: translateY(-2px); }
+            @media (max-width: 575.98px) {
+                .kom-timeline::before { left: 47px; }
+                .kom-item { gap: 10px; }
+                .kom-date { flex-basis: 60px; }
+                .kom-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 32px; }
+            }
+            </style>
+
+            <?php if (empty($rows)): ?>
+                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                    <div class="card-body p-5 text-center text-muted">
+                        <i class="fas fa-comments fa-3x mb-3"></i><br>
+                        Belum ada pesan pada filter ini.
                     </div>
                 </div>
-            </div>
+            <?php else: ?>
+                <?php
+                $bulan_id = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                $cur_month = '';
+                $kom_color_map = [
+                    'Pesan Individu' => '#6777ef',
+                    'Pengumuman Kelas' => '#ea580c',
+                    'Informasi Kehadiran' => '#059669',
+                    'Informasi Tugas' => '#d97706',
+                    'Informasi Perkembangan' => '#7c3aed',
+                ];
+                ?>
+                <div class="kom-timeline">
+                    <?php foreach ($rows as $r): ?>
+                        <?php
+                        $mk = date('Y-m', strtotime($r['tanggal']));
+                        if ($mk !== $cur_month) {
+                            $cur_month = $mk;
+                            echo '<div class="kom-month"><i class="far fa-calendar-alt mr-1"></i>' . $bulan_id[(int)date('n', strtotime($r['tanggal']))] . ' ' . date('Y', strtotime($r['tanggal'])) . '</div>';
+                        }
+                        $jenis_kom = (string)($r['jenis_informasi'] ?? '');
+                        $tl_color = $kom_color_map[$jenis_kom] ?? '#6777ef';
+                        $k_badge = $r['status_kirim'] === 'Terkirim' ? 'success' : ($r['status_kirim'] === 'Draft' ? 'warning' : 'danger');
+                        $b_badge = $r['status_dibaca'] === 'Sudah Dibaca' ? 'info' : 'secondary';
+                        $isi_cut = !empty($r['isi']) ? mb_strimwidth(strip_tags($r['isi']), 0, 110, '...') : '';
+                        ?>
+                        <div class="kom-item">
+                            <div class="kom-date" style="--tl-color: <?= $tl_color ?>;">
+                                <span class="d"><?= date('d', strtotime($r['tanggal'])) ?></span>
+                                <span class="m"><?= mb_substr($bulan_id[(int)date('n', strtotime($r['tanggal']))], 0, 3) ?></span>
+                            </div>
+                            <div class="kom-card" style="--tl-color: <?= $tl_color ?>;">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap mb-1" style="gap: 6px;">
+                                    <span class="badge px-2 py-1 font-weight-bold" style="background: <?= $tl_color ?>1a; color: <?= $tl_color ?>; font-size: 11px; border-radius: 6px;">
+                                        <?= htmlspecialchars($jenis_kom !== '' ? $jenis_kom : 'Pesan') ?>
+                                    </span>
+                                    <div class="d-flex" style="gap: 4px;">
+                                        <span class="badge badge-<?= $k_badge ?>"><?= htmlspecialchars($r['status_kirim']) ?></span>
+                                        <span class="badge badge-<?= $b_badge ?>"><?= htmlspecialchars($r['status_dibaca']) ?></span>
+                                    </div>
+                                </div>
+                                <h6 class="font-weight-bold text-dark mb-1" style="font-size: 14.5px;"><?= htmlspecialchars($r['judul']) ?></h6>
+                                <?php if ($isi_cut !== ''): ?>
+                                    <p class="small text-muted mb-2"><?= htmlspecialchars($isi_cut) ?></p>
+                                <?php endif; ?>
+                                <div class="small text-muted mb-2" style="font-size: 11.5px; line-height: 1.8;">
+                                    <span class="mr-3"><i class="far fa-calendar-alt mr-1"></i><?= date('d/m/Y', strtotime($r['tanggal'])) ?></span>
+                                    <span class="mr-3"><i class="fas fa-user-graduate mr-1"></i><?= htmlspecialchars($r['nama_siswa']) ?></span>
+                                    <span><i class="fas fa-user-friends mr-1"></i><?= htmlspecialchars($r['nama_ortu'] ?: '-') ?></span>
+                                </div>
+                                <div class="pt-2 border-top d-flex flex-wrap" style="gap: 6px;">
+                                    <button type="button" class="btn btn-info btn-sm px-2 font-weight-bold btn-detail-kom-ortu" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail" style="border-radius: 6px; font-size: 11.5px;">
+                                        <i class="fas fa-eye mr-1"></i>Detail
+                                    </button>
+                                    <?php if ($can_crud): ?>
+                                        <button type="button" class="btn btn-warning btn-sm px-2 font-weight-bold btn-edit-kom-ortu" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit" style="border-radius: 6px; font-size: 11.5px;">
+                                            <i class="fas fa-edit mr-1"></i>Edit
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm px-2 font-weight-bold btn-hapus-kom-ortu" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus" style="border-radius: 6px; font-size: 11.5px;">
+                                            <i class="fas fa-trash mr-1"></i>Hapus
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </section>
 </div>

@@ -276,14 +276,11 @@ $page_title = 'Jurnal Les';
 
 // Define CSS libraries
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
 ];
 
 // Define JS libraries
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js'
 ];
@@ -400,15 +397,6 @@ $(document).ready(function() {
         }
     });
 
-    var t = $('#table-jurnal').DataTable({
-        'language': {
-            'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
-        },
-        'pageLength': 50,
-        'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-        'columnDefs': [{ 'orderable': false, 'targets': [5] }]
-    });
-    
     // Edit button handler - properly loads data into modal
     $(document).on('click', '.btn-edit', function(e) {
         e.preventDefault();
@@ -564,49 +552,73 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="card-body">
                     <?php if (!empty($journal_entries)): ?>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped table-hover" id="table-jurnal">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Tanggal</th>
-                                    <th>Waktu</th>
-                                    <th>Mapel</th>
-                                    <th>Materi</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $no = 1;
-                                foreach ($journal_entries as $entry): 
-                                ?>
-                                <tr>
-                                    <td><?php echo $no++; ?></td>
-                                    <td><?php echo date('d/m/Y', strtotime($entry['tanggal'])); ?></td>
-                                    <td><?php echo htmlspecialchars($entry['waktu']); ?></td>
-                                    <td><?php echo htmlspecialchars($entry['mapel']); ?></td>
-                                    <td><?php echo htmlspecialchars($entry['materi']); ?></td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-info btn-edit" 
-                                                data-id="<?php echo $entry['id']; ?>" 
-                                                data-tanggal="<?php echo $entry['tanggal']; ?>" 
-                                                data-waktu="<?php echo htmlspecialchars($entry['waktu']); ?>" 
-                                                data-mapel="<?php echo htmlspecialchars($entry['mapel']); ?>" 
-                                                data-materi="<?php echo htmlspecialchars($entry['materi']); ?>">
-                                            <i class="fas fa-edit"></i> Edit
+                    <?php
+                    $bulan_id = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                    $cur_month = '';
+                    ?>
+                    <style>
+                    .jurnal-timeline { position: relative; padding: 6px 0 6px 8px; }
+                    .jurnal-timeline::before { content: ''; position: absolute; left: 57px; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #20c997, #3abaf4); opacity: .35; }
+                    .jurnal-month { position: relative; z-index: 1; display: inline-block; margin: 14px 0 14px 34px; padding: 4px 16px; border-radius: 20px; background: #20c997; color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .3px; box-shadow: 0 4px 10px rgba(32,201,151,.35); }
+                    .jurnal-month:first-child { margin-top: 0; }
+                    .jurnal-item { position: relative; display: flex; gap: 14px; margin-bottom: 14px; }
+                    .jurnal-date { flex: 0 0 76px; text-align: center; z-index: 1; }
+                    .jurnal-date .d { display: block; width: 46px; height: 46px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid #20c997; color: #20c997; font-weight: 800; font-size: 17px; line-height: 40px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+                    .jurnal-date .m { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
+                    .jurnal-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e9edf5; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.07); padding: 12px 14px; border-left: 4px solid #20c997; transition: box-shadow .2s ease, transform .2s ease; }
+                    .jurnal-card:hover { box-shadow: 0 10px 26px rgba(20,30,70,.13); transform: translateY(-2px); }
+                    @media (max-width: 575.98px) {
+                        .jurnal-timeline::before { left: 47px; }
+                        .jurnal-item { gap: 10px; }
+                        .jurnal-date { flex-basis: 60px; }
+                        .jurnal-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 32px; }
+                    }
+                    </style>
+                    <div class="jurnal-timeline">
+                        <?php foreach ($journal_entries as $entry): ?>
+                            <?php
+                            $mk = date('Y-m', strtotime($entry['tanggal']));
+                            if ($mk !== $cur_month) {
+                                $cur_month = $mk;
+                                echo '<div class="jurnal-month"><i class="far fa-calendar-alt mr-1"></i>' . $bulan_id[(int)date('n', strtotime($entry['tanggal']))] . ' ' . date('Y', strtotime($entry['tanggal'])) . '</div>';
+                            }
+                            ?>
+                            <div class="jurnal-item">
+                                <div class="jurnal-date">
+                                    <span class="d"><?= date('d', strtotime($entry['tanggal'])) ?></span>
+                                    <span class="m"><?= mb_substr($bulan_id[(int)date('n', strtotime($entry['tanggal']))], 0, 3) ?></span>
+                                </div>
+                                <div class="jurnal-card">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-1" style="gap: 6px;">
+                                        <span class="badge px-2 py-1 font-weight-bold" style="background: #20c9971a; color: #0d9463; font-size: 11px; border-radius: 6px;">
+                                            <i class="fas fa-book-open mr-1"></i><?= htmlspecialchars($entry['mapel']) ?>
+                                        </span>
+                                        <span class="small text-muted"><i class="far fa-calendar-alt mr-1"></i><?= date('d/m/Y', strtotime($entry['tanggal'])) ?></span>
+                                    </div>
+                                    <p class="text-dark mb-2" style="font-size: 13.5px; line-height: 1.6; white-space: pre-wrap;"><?= htmlspecialchars($entry['materi']) ?></p>
+                                    <div class="small text-muted mb-2" style="font-size: 11.5px;">
+                                        <i class="far fa-clock mr-1"></i><?= htmlspecialchars($entry['waktu']) ?>
+                                    </div>
+                                    <div class="pt-2 border-top d-flex flex-wrap" style="gap: 6px;">
+                                        <button type="button" class="btn btn-sm btn-info px-2 font-weight-bold btn-edit"
+                                                data-id="<?php echo $entry['id']; ?>"
+                                                data-tanggal="<?php echo $entry['tanggal']; ?>"
+                                                data-waktu="<?php echo htmlspecialchars($entry['waktu']); ?>"
+                                                data-mapel="<?php echo htmlspecialchars($entry['mapel']); ?>"
+                                                data-materi="<?php echo htmlspecialchars($entry['materi']); ?>"
+                                                style="border-radius: 6px; font-size: 11.5px;">
+                                            <i class="fas fa-edit mr-1"></i>Edit
                                         </button>
                                         <form method="POST" style="display:inline;" class="delete-form">
                                             <input type="hidden" name="id_jurnal" value="<?php echo $entry['id']; ?>">
-                                            <button type="submit" name="delete_journal" class="btn btn-sm btn-danger btn-delete" title="Hapus">
-                                                <i class="fas fa-trash"></i> Hapus
+                                            <button type="submit" name="delete_journal" class="btn btn-sm btn-danger px-2 font-weight-bold btn-delete" title="Hapus" style="border-radius: 6px; font-size: 11.5px;">
+                                                <i class="fas fa-trash mr-1"></i>Hapus
                                             </button>
                                         </form>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                     <?php else: ?>
                     <div class="alert alert-info">

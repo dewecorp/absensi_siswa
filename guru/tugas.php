@@ -210,30 +210,11 @@ $stmt->execute($params);
 $tugas_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = 'Daftar Tugas';
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-];
-$js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-];
+$css_libs = [];
+$js_libs = [];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    if ($('#table-tugas').length) {
-        $('#table-tugas').DataTable({
-            'order': [[0, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [11] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada tugas ditemukan',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
-        });
-    }
 
     // Auto-submit filter on change
     $('#formFilterTugas select').on('change', function() {
@@ -339,10 +320,9 @@ include '../templates/sidebar.php';
 ?>
 
 <style>
-.aksi-satu-baris{display:inline-flex;flex-wrap:nowrap;gap:4px;align-items:center;justify-content:center;white-space:nowrap}
-.aksi-satu-baris .btn{margin:0;flex:0 0 auto;width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;line-height:1}
-.aksi-satu-baris .btn i{margin:0;font-size:13px;line-height:1}
-#table-tugas td:last-child{white-space:nowrap}
+.tugas-card-grid .card { transition: box-shadow .2s ease, transform .2s ease; }
+.tugas-card-grid .card:hover { box-shadow: 0 10px 28px rgba(20,30,70,.14) !important; transform: translateY(-2px); }
+.text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 </style>
 <div class="main-content">
     <section class="section">
@@ -395,10 +375,10 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
-            <!-- Table Card -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Daftar Penugasan</h4>
+            <!-- Daftar Penugasan (Card) -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                    <h4>Daftar Penugasan (<?= count($tugas_rows) ?>)</h4>
                     <?php if ($can_crud): ?>
                     <div>
                         <button type="button" class="btn btn-primary" id="btnTambahTugas">
@@ -407,100 +387,105 @@ include '../templates/sidebar.php';
                     </div>
                     <?php endif; ?>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-tugas">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Judul Tugas</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Kelas</th>
-                                    <th>Materi/TP</th>
-                                    <th>Jenis Tugas</th>
-                                    <th>Tanggal Mulai</th>
-                                    <th>Deadline</th>
-                                    <th>Pengumpulan</th>
-                                    <th>Sudah Diperiksa</th>
-                                    <th>Status</th>
-                                    <th width="14%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($tugas_rows as $i => $r): ?>
-                                    <?php
-                                    $total_siswa = (int)($r['total_siswa'] ?? 0);
-                                    $kumpul = (int)($r['total_kumpul'] ?? 0);
-                                    $periksa = (int)($r['total_diperiksa'] ?? 0);
-
-                                    // Badge warna status
-                                    $status_badge = 'secondary';
-                                    if ($r['status'] === 'Aktif') $status_badge = 'success';
-                                    elseif ($r['status'] === 'Draft') $status_badge = 'warning';
-                                    elseif ($r['status'] === 'Selesai') $status_badge = 'info';
-
-                                    $deadline_str = '-';
-                                    $is_overdue = false;
-                                    if (!empty($r['deadline'])) {
-                                        $deadline_str = date('d/m/Y H:i', strtotime($r['deadline']));
-                                        if (strtotime($r['deadline']) < time() && $r['status'] === 'Aktif') {
-                                            $is_overdue = true;
-                                        }
-                                    }
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td>
-                                            <a href="detail_tugas.php?id=<?= (int)$r['id'] ?>" class="font-weight-bold text-primary">
-                                                <?= htmlspecialchars($r['judul']) ?>
-                                            </a>
-                                        </td>
-                                        <td><?= htmlspecialchars($r['nama_mapel'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['materi_tp'] ?? '-') ?></td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis_tugas']) ?></span></td>
-                                        <td><?= !empty($r['tgl_mulai']) ? date('d/m/Y H:i', strtotime($r['tgl_mulai'])) : '-' ?></td>
-                                        <td>
-                                            <?= $deadline_str ?>
-                                            <?php if ($is_overdue): ?>
-                                                <span class="badge badge-danger ml-1">Lewat</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge badge-<?= $kumpul >= $total_siswa && $total_siswa > 0 ? 'success' : 'primary' ?>">
-                                                <?= $kumpul ?>/<?= $total_siswa ?> siswa
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge badge-<?= $periksa >= $kumpul && $kumpul > 0 ? 'success' : ($periksa > 0 ? 'warning' : 'secondary') ?>">
-                                                <?= $periksa ?>/<?= $kumpul ?>
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge badge-<?= $status_badge ?>"><?= htmlspecialchars($r['status']) ?></span>
-                                        </td>
-                                        <td class="text-center align-middle">
-                                            <div class="aksi-satu-baris">
-                                                <a href="detail_tugas.php?id=<?= (int)$r['id'] ?>" class="btn btn-info btn-sm" title="Detail & Pengumpulan">
-                                                    <i class="fas fa-list"></i>
-                                                </a>
-                                                <?php if ($can_crud): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-tugas" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-tugas" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                                <?php endif; ?>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+            </div>
+            <?php if (empty($tugas_rows)): ?>
+                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                    <div class="card-body p-5 text-center text-muted">
+                        <i class="fas fa-tasks fa-3x mb-3"></i><br>
+                        Belum ada tugas pada filter ini.
                     </div>
                 </div>
-            </div>
+            <?php else: ?>
+                <div class="row tugas-card-grid">
+                    <?php foreach ($tugas_rows as $r): ?>
+                        <?php
+                        $total_siswa = (int)($r['total_siswa'] ?? 0);
+                        $kumpul = (int)($r['total_kumpul'] ?? 0);
+                        $periksa = (int)($r['total_diperiksa'] ?? 0);
+                        $kumpul_pct = $total_siswa > 0 ? round($kumpul / $total_siswa * 100) : 0;
+
+                        $status_badge = 'secondary';
+                        if ($r['status'] === 'Aktif') $status_badge = 'success';
+                        elseif ($r['status'] === 'Draft') $status_badge = 'warning';
+                        elseif ($r['status'] === 'Selesai') $status_badge = 'info';
+
+                        $is_overdue = !empty($r['deadline']) && strtotime($r['deadline']) < time() && $r['status'] === 'Aktif';
+                        $is_kuis_g = in_array($r['jenis_tugas'] ?? '', ['Kuis', 'CBT'], true);
+                        ?>
+                        <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch mb-4">
+                            <div class="card w-100 border shadow-sm" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="font-size: 11px; border-radius: 6px;">
+                                                <i class="fas fa-<?= $is_kuis_g ? 'laptop-code' : 'tasks' ?> mr-1 text-primary"></i><?= htmlspecialchars($r['jenis_tugas']) ?>
+                                            </span>
+                                            <span class="badge badge-<?= $status_badge ?> px-2 py-1 font-weight-bold" style="font-size: 10px; border-radius: 6px;">
+                                                <?= htmlspecialchars($r['status']) ?>
+                                            </span>
+                                        </div>
+
+                                        <h6 class="font-weight-bold mb-1 text-truncate-2" style="font-size: 14.5px; line-height: 1.35; min-height: 38px;">
+                                            <a href="detail_tugas.php?id=<?= (int)$r['id'] ?>" class="text-dark" title="<?= htmlspecialchars($r['judul']) ?>">
+                                                <?= htmlspecialchars($r['judul']) ?>
+                                            </a>
+                                        </h6>
+
+                                        <div class="d-flex flex-wrap align-items-center mb-2 small text-muted" style="gap: 6px;">
+                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 4px; font-size: 11px;">
+                                                <i class="fas fa-book text-muted mr-1"></i><?= htmlspecialchars($r['nama_mapel'] ?? '-') ?>
+                                            </span>
+                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 4px; font-size: 11px;">
+                                                <i class="fas fa-chalkboard text-muted mr-1"></i><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?>
+                                            </span>
+                                        </div>
+
+                                        <?php if (!empty($r['materi_tp'])): ?>
+                                            <div class="p-2 mb-2 rounded small text-muted" style="font-size: 11.5px; line-height: 1.3; background: #f8fafc !important;">
+                                                <i class="fas fa-bookmark mr-1 text-primary"></i><?= htmlspecialchars(mb_strimwidth($r['materi_tp'], 0, 75, '...')) ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <div class="small text-muted mb-2" style="font-size: 11.5px; line-height: 1.7;">
+                                            <div><i class="far fa-play-circle mr-1"></i>Mulai: <?= !empty($r['tgl_mulai']) ? date('d/m/Y H:i', strtotime($r['tgl_mulai'])) : '-' ?></div>
+                                            <div>
+                                                <i class="far fa-clock mr-1 <?= $is_overdue ? 'text-danger' : '' ?>"></i>Batas: <strong class="<?= $is_overdue ? 'text-danger' : '' ?>"><?= !empty($r['deadline']) ? date('d/m/Y H:i', strtotime($r['deadline'])) : '-' ?></strong>
+                                                <?php if ($is_overdue): ?>
+                                                    <span class="badge badge-danger ml-1" style="font-size: 10px;">Lewat</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between small text-muted mb-1" style="font-size: 11px;">
+                                                <span><i class="fas fa-users mr-1"></i>Terkumpul <?= $kumpul ?>/<?= $total_siswa ?></span>
+                                                <span><i class="fas fa-check-double mr-1"></i>Diperiksa <?= $periksa ?>/<?= $kumpul ?></span>
+                                            </div>
+                                            <div class="progress" style="height: 8px; border-radius: 10px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: <?= $kumpul_pct ?>%;" aria-valuenow="<?= $kumpul_pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-2 border-top d-flex flex-wrap align-items-center" style="border-color: #f1f5f9 !important; gap: 6px;">
+                                        <a href="detail_tugas.php?id=<?= (int)$r['id'] ?>" class="btn btn-info btn-sm px-2 font-weight-bold" title="Detail & Pengumpulan" style="border-radius: 6px; font-size: 11.5px;">
+                                            <i class="fas fa-list mr-1"></i>Detail
+                                        </a>
+                                        <?php if ($can_crud): ?>
+                                            <button type="button" class="btn btn-warning btn-sm px-2 font-weight-bold btn-edit-tugas" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit" style="border-radius: 6px; font-size: 11.5px;">
+                                                <i class="fas fa-edit mr-1"></i>Edit
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm px-2 font-weight-bold btn-hapus-tugas" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus" style="border-radius: 6px; font-size: 11.5px;">
+                                                <i class="fas fa-trash mr-1"></i>Hapus
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </section>
 </div>
