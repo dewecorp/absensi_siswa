@@ -659,22 +659,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php if (!$holiday['is_holiday']): ?>
                     <div class="row">
                         <div class="col-12 mb-3">
-                            <div class="card border-left-primary shadow-sm mapp-ketentuan-card">
-                                <div class="card-body py-3">
-                                    <div class="row align-items-center">
-                                        <div class="col-md-8">
-                                            <h6 class="font-weight-bold mb-2"><i class="fas fa-info-circle text-primary mr-2"></i>Ketentuan Pengisian Kehadiran dan Jurnal KBM Hari Ini</h6>
-                                            <p class="mb-2 font-weight-bold" style="font-size:17px;color:#856404;background:#fff3cd;padding:8px 14px;border-radius:5px;">
-                                                <i class="fas fa-exclamation-triangle mr-1"></i>Pastikan mengisi <u>Kehadiran Siswa</u> sebelum memulai KBM hari ini!
-                                            </p>
-                                            <div class="d-flex flex-wrap" style="gap:12px;">
-                                                <div><span class="badge badge-success px-3 py-2"><i class="fas fa-user-check mr-1"></i> Kehadiran Siswa</span> <span class="text-muted" style="font-size:13px;">07:00 - 14:00 WIB</span></div>
-                                                <div><span class="badge badge-primary px-3 py-2"><i class="fas fa-chalkboard-teacher mr-1"></i> Kehadiran Guru</span> <span class="text-muted" style="font-size:13px;">06:00 - 15:00 WIB</span></div>
-                                                <div><span class="badge badge-warning px-3 py-2"><i class="fas fa-book mr-1"></i> Jurnal Mengajar</span> <span class="text-muted" style="font-size:13px;">07:00 - 14:00 WIB</span></div>
+                            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 16px; border-left: 5px solid #2563eb !important; overflow: hidden;">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mr-3 shadow-sm" style="width: 48px; height: 48px; min-width: 48px; font-size: 20px;">
+                                            <i class="fas fa-bell"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="font-weight-bold mb-1 text-dark" style="font-size: 1.1rem;">Informasi & Jadwal KBM Hari Ini</h5>
+                                            <p class="text-muted mb-0" style="font-size: 13px;">Pastikan seluruh aktivitas harian tercatat tepat waktu demi kelancaran proses pembelajaran.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-warning border-0 shadow-sm mb-3" style="background: #fffbeb; border-radius: 12px; border-left: 4px solid #f59e0b !important;">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-exclamation-triangle text-warning fa-2x mr-3"></i>
+                                            <div>
+                                                <h6 class="font-weight-bold mb-1" style="color: #92400e; font-size: 14px;">Catatan Penting Hari Ini</h6>
+                                                <p class="mb-0 text-dark" style="font-size: 13px;">Mohon segera lakukan pengisian <b>Kehadiran Siswa</b> sebelum memulai jam pelajaran pertama.</p>
                                             </div>
                                         </div>
-                                        <div class="col-md-4 text-md-right mt-2 mt-md-0">
-                                            <span class="font-weight-bold" style="font-size:17px;color:#e74c3c;"><i class="fas fa-exclamation-circle mr-1"></i>Isilah tepat waktu agar KBM tercatat rapi!</span>
+                                    </div>
+
+                                    <div class="row text-center mt-3" style="row-gap: 12px;">
+                                        <div class="col-12 col-md-4 mb-2 mb-md-0">
+                                            <div class="p-3 rounded bg-white shadow-sm border border-light h-100 d-flex flex-column align-items-center justify-content-center">
+                                                <div class="text-success mb-1" style="font-size: 18px;"><i class="fas fa-user-check"></i></div>
+                                                <div class="font-weight-bold text-dark" style="font-size: 13px;">Kehadiran Siswa</div>
+                                                <div class="badge badge-success mt-1 px-2 py-1" style="font-size: 11px;">07:00 - 14:00 WIB</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-4 mb-2 mb-md-0">
+                                            <div class="p-3 rounded bg-white shadow-sm border border-light h-100 d-flex flex-column align-items-center justify-content-center">
+                                                <div class="text-primary mb-1" style="font-size: 18px;"><i class="fas fa-chalkboard-teacher"></i></div>
+                                                <div class="font-weight-bold text-dark" style="font-size: 13px;">Kehadiran Guru</div>
+                                                <div class="badge badge-primary mt-1 px-2 py-1" style="font-size: 11px;">06:00 - 15:00 WIB</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <div class="p-3 rounded bg-white shadow-sm border border-light h-100 d-flex flex-column align-items-center justify-content-center">
+                                                <div class="text-warning mb-1" style="font-size: 18px;"><i class="fas fa-book-open"></i></div>
+                                                <div class="font-weight-bold text-dark" style="font-size: 13px;">Jurnal Mengajar</div>
+                                                <div class="badge badge-warning mt-1 px-2 py-1" style="font-size: 11px;">07:00 - 14:00 WIB</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
