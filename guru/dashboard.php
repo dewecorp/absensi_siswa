@@ -572,22 +572,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
             <div class="main-content">
-                <!-- Mobile App Navbar -->
-                <div class="d-md-none shadow-sm px-3 py-3 mb-3 d-flex align-items-center" style="background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%); color: #fff; border-radius: 20px;">
-                    <div class="d-flex align-items-center">
-                        <?php if (!empty($school_profile['logo'])): ?>
-                            <img src="../assets/img/<?= htmlspecialchars($school_profile['logo']) ?>" alt="Logo" style="width: 36px; height: 36px; object-fit: contain;" class="mr-2 rounded-circle bg-white p-1">
-                        <?php else: ?>
-                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center font-weight-bold mr-2 shadow-sm" style="width: 36px; height: 36px; font-size: 14px;">M</div>
-                        <?php endif; ?>
-                        <div>
-                            <div style="font-size: 13.5px; font-weight: 800; color: #fff; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.2);"><?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'SIMAD') ?></div>
-                            <div style="font-size: 10.5px; color: #f1f5f9; font-weight: 600; text-shadow: 0 1px 1px rgba(0,0,0,0.2);">Dashboard Guru</div>
-                        </div>
-                    </div>
-                </div>
+                <?php include '../templates/mobile_navbar.php'; ?>
+                <?php
+                $mapp_greet_name = (isset($teacher) && is_array($teacher) && !empty($teacher['nama_guru'])) ? $teacher['nama_guru'] : 'Guru';
+                $mapp_greet_role = 'Guru';
+                include '../templates/mobile_greeting.php';
+                ?>
 
-                <section class="section">
+                <section class="section mapp-ordered">
                     <div class="section-header">
                         <h1>Dashboard Guru</h1>
                         <div class="section-header-breadcrumb">
@@ -596,7 +588,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <!-- Profile Box -->
-                    <div class="row">
+                    <div class="row mapp-row-profile">
                         <div class="col-12 mb-3">
                             <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%); border-radius: 16px; overflow: hidden; color: #fff;">
                                 <div class="card-body p-4">
@@ -667,7 +659,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php if (!$holiday['is_holiday']): ?>
                     <div class="row">
                         <div class="col-12 mb-3">
-                            <div class="card border-left-primary shadow-sm">
+                            <div class="card border-left-primary shadow-sm mapp-ketentuan-card">
                                 <div class="card-body py-3">
                                     <div class="row align-items-center">
                                         <div class="col-md-8">
@@ -768,7 +760,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <!-- Jadwal + Kehadiran sejajar 2 kolom -->
                     <div class="row align-items-stretch">
                         <div class="col-12 col-md-6 mb-4 d-flex">
-                            <div class="card card-primary w-100 h-100">
+                            <div class="card card-primary w-100 h-100 mapp-jadwal-card">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                                     <h4>Jadwal Mengajar Hari Ini</h4>
                                     <a href="jadwal_reguler.php" class="btn btn-light btn-sm font-weight-bold"><i class="fas fa-table mr-1"></i> Lihat Jadwal Penuh</a>
@@ -830,8 +822,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmt_check_reg->execute([$teacher['id_guru'], $today]);
                             $today_reg_attendance = $stmt_check_reg->fetch(PDO::FETCH_ASSOC);
                         ?>
-                        <div class="<?php echo $col_class; ?>">
-                            <div class="card card-primary w-100 h-100">
+                        <div class="<?php echo $col_class; ?> mapp-col-absen">
+                            <div class="card card-primary w-100 h-100 mapp-absen-card">
                                 <div class="card-header">
                                     <h4>Kehadiran Harian</h4>
                                 </div>
@@ -939,7 +931,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endif; ?>
                     </div>
 
-                    <div class="row">
+                    <div class="row mapp-row-les">
                         <?php
                         if ($show_les_box):
                             // Get current les attendance
@@ -1029,7 +1021,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="row">
                         <div class="col-12">
-                            <div class="card">
+                            <div class="card mapp-link-card">
                                 <div class="card-header">
                                     <h4>Tautan Cepat</h4>
                                 </div>
@@ -1148,8 +1140,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $grouped_items = $mobile_menu_groups['grouped'];
                                     ?>
                                     <?php if (!empty($single_items) || !empty($grouped_items)): ?>
-                                        <?php if (!empty($single_items)): ?>
-                                            <div class="row">
+                                        <div class="row mapp-menu-grid">
+                                            <?php if (!empty($single_items)): ?>
                                                 <?php foreach ($single_items as $mg_idx => $item): ?>
                                                     <div class="col-3 mb-3">
                                                         <a href="<?php echo $item['url']; ?>" class="text-decoration-none text-center d-block">
@@ -1160,25 +1152,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                         </a>
                                                     </div>
                                                 <?php endforeach; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php foreach ($grouped_items as $group): ?>
-                                            <div class="mt-3" id="menu-<?php echo str_replace(' ', '-', $group['title']); ?>">
-                                                <a href="#menu-<?php echo str_replace(' ', '-', $group['title']); ?>" class="small text-muted font-weight-bold mb-2 d-block text-decoration-none"><?php echo $group['title']; ?></a>
-                                                <div class="row">
-                                                    <?php foreach ($group['items'] as $mg_idx => $subitem): ?>
-                                                        <div class="col-3 mb-3">
-                                                            <a href="<?php echo $subitem['url']; ?>" class="text-decoration-none text-center d-block">
-                                                                <div class="mx-auto mb-2 menu-grid-icon mg-c<?php echo ($mg_idx % 8) + 1; ?>">
-                                                                    <i class="<?php echo $group['icon']; ?>"></i>
-                                                                </div>
-                                                                <div class="mobile-menu-label small text-dark"><?php echo $subitem['title']; ?></div>
-                                                            </a>
-                                                        </div>
-                                                    <?php endforeach; ?>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
+                                            <?php endif; ?>
+                                            <?php if (!empty($grouped_items)): ?>
+                                                <?php $tile_base = count($single_items); ?>
+                                                <?php foreach ($grouped_items as $g_idx => $group): ?>
+                                                    <div class="col-3 mb-3">
+                                                        <a href="<?php echo htmlspecialchars(mapp_tile_url($group['title']), ENT_QUOTES, 'UTF-8'); ?>" class="text-decoration-none text-center d-block">
+                                                            <div class="mx-auto mb-2 menu-grid-icon mg-c<?php echo (($tile_base + $g_idx) % 8) + 1; ?>">
+                                                                <i class="<?php echo $group['icon']; ?>"></i>
+                                                            </div>
+                                                            <div class="mobile-menu-label small text-dark"><?php echo $group['title']; ?></div>
+                                                        </a>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                         </div>
                     </div>
@@ -1220,6 +1208,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </script>
 
                     <div class="row">
+                        <div class="col-4 col-md-6 col-lg-4 mapp-stat-full">
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-success">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>Total Siswa</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <strong><?php echo $total_siswa; ?></strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="col-4 col-md-6 col-lg-4">
                             <div class="card card-statistic-1">
                                 <div class="card-icon bg-primary">
@@ -1231,21 +1234,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                     <div class="card-body">
                                         <strong><?php echo $total_kelas; ?></strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-4 col-md-6 col-lg-4">
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-success">
-                                    <i class="fas fa-users"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>Total Siswa</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <strong><?php echo $total_siswa; ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -1360,7 +1348,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="row">
                         <div class="col-12">
-                            <div class="card">
+                            <div class="card mapp-hide-mobile">
                                 <div class="card-header">
                                     <h4>Status Kehadiran Siswa Hari Ini</h4>
                                 </div>

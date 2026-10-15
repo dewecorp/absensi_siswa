@@ -527,20 +527,12 @@ include_once '../templates/sidebar.php';
 
             <!-- Main Content -->
             <div class="main-content">
-                <!-- Mobile App Navbar -->
-                <div class="d-md-none shadow-sm px-3 py-3 mb-3 d-flex align-items-center" style="background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%); color: #fff; border-radius: 20px;">
-                    <div class="d-flex align-items-center">
-                        <?php if (!empty($school_profile['logo'])): ?>
-                            <img src="../assets/img/<?= htmlspecialchars($school_profile['logo']) ?>" alt="Logo" style="width: 36px; height: 36px; object-fit: contain;" class="mr-2 rounded-circle bg-white p-1">
-                        <?php else: ?>
-                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center font-weight-bold mr-2 shadow-sm" style="width: 36px; height: 36px; font-size: 14px;">M</div>
-                        <?php endif; ?>
-                        <div>
-                            <div style="font-size: 13.5px; font-weight: 800; color: #fff; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.2);"><?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'SIMAD') ?></div>
-                            <div style="font-size: 10.5px; color: #f1f5f9; font-weight: 600; text-shadow: 0 1px 1px rgba(0,0,0,0.2);">Dashboard Kepala Madrasah</div>
-                        </div>
-                    </div>
-                </div>
+                <?php include '../templates/mobile_navbar.php'; ?>
+                <?php
+                $mapp_greet_name = $display_name ?? ($_SESSION['nama'] ?? $_SESSION['username'] ?? 'Kepala Madrasah');
+                $mapp_greet_role = 'Kepala Madrasah';
+                include '../templates/mobile_greeting.php';
+                ?>
 
                 <section class="section">
                     <div class="section-header">
@@ -586,8 +578,8 @@ include_once '../templates/sidebar.php';
                                     $grouped_items = $mobile_menu_groups['grouped'];
                                     ?>
                                     <?php if (!empty($single_items) || !empty($grouped_items)): ?>
-                                        <?php if (!empty($single_items)): ?>
-                                            <div class="row">
+                                        <div class="row mapp-menu-grid">
+                                            <?php if (!empty($single_items)): ?>
                                                 <?php foreach ($single_items as $mg_idx => $item): ?>
                                                     <div class="col-3 mb-3">
                                                         <a href="<?php echo $item['url']; ?>" class="text-decoration-none text-center d-block">
@@ -598,25 +590,21 @@ include_once '../templates/sidebar.php';
                                                         </a>
                                                     </div>
                                                 <?php endforeach; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php foreach ($grouped_items as $group): ?>
-                                            <div class="mt-3" id="menu-<?php echo str_replace(' ', '-', $group['title']); ?>">
-                                                <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
-                                                <div class="row">
-                                                    <?php foreach ($group['items'] as $mg_idx => $subitem): ?>
-                                                        <div class="col-3 mb-3">
-                                                            <a href="<?php echo $subitem['url']; ?>" class="text-decoration-none text-center d-block">
-                                                                <div class="mx-auto mb-2 menu-grid-icon mg-c<?php echo ($mg_idx % 8) + 1; ?>">
-                                                                    <i class="<?php echo $group['icon']; ?>"></i>
-                                                                </div>
-                                                                <div class="mobile-menu-label small text-dark"><?php echo $subitem['title']; ?></div>
-                                                            </a>
-                                                        </div>
-                                                    <?php endforeach; ?>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
+                                            <?php endif; ?>
+                                            <?php if (!empty($grouped_items)): ?>
+                                                <?php $tile_base = count($single_items); ?>
+                                                <?php foreach ($grouped_items as $g_idx => $group): ?>
+                                                    <div class="col-3 mb-3">
+                                                        <a href="<?php echo htmlspecialchars(mapp_tile_url($group['title']), ENT_QUOTES, 'UTF-8'); ?>" class="text-decoration-none text-center d-block">
+                                                            <div class="mx-auto mb-2 menu-grid-icon mg-c<?php echo (($tile_base + $g_idx) % 8) + 1; ?>">
+                                                                <i class="<?php echo $group['icon']; ?>"></i>
+                                                            </div>
+                                                            <div class="mobile-menu-label small text-dark"><?php echo $group['title']; ?></div>
+                                                        </a>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                         </div>
                     </div>
@@ -837,7 +825,7 @@ include_once '../templates/sidebar.php';
                     </div>
                     <div class="row">
                         <div class="col-12">
-                            <div class="card">
+                            <div class="card mapp-hide-mobile">
                                 <div class="card-header">
                                     <h4>Rekap Harian Kehadiran Guru</h4>
                                     <div class="card-header-action">

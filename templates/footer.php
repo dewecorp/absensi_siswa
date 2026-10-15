@@ -94,7 +94,7 @@
             }
             </style>
 
-    <!-- Bottom Navbar (Mobile Only) -->
+    <!-- Bottom Navbar dinamis (Mobile Only): Beranda + menu role + Lainnya -->
     <?php
     $bottom_quick_links = function_exists('get_bottom_nav_quick_links') && isset($menu_items)
         ? get_bottom_nav_quick_links($menu_items, 3)
@@ -106,14 +106,14 @@
                 <div class="col px-0 h-100">
                     <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-home">
                         <i class="fas fa-home"></i>
-                        <span class="bottom-nav-label">Dashboard</span>
+                        <span class="bottom-nav-label">Beranda</span>
                     </a>
                 </div>
                 <?php foreach ($bottom_quick_links as $link): ?>
                     <div class="col px-0 h-100">
                         <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-item">
-                            <i class="<?php echo $link['icon']; ?>"></i>
-                            <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
+                            <i class="<?php echo htmlspecialchars($link['icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
+                            <span class="bottom-nav-label"><?php echo htmlspecialchars($link['title'], ENT_QUOTES, 'UTF-8'); ?></span>
                         </a>
                     </div>
                 <?php endforeach; ?>
@@ -146,8 +146,6 @@
                 function updateBottomNavActive() {
                     var home = document.querySelector('.bottom-nav-row .bottom-nav-home');
                     var items = document.querySelectorAll('.bottom-nav-row .bottom-nav-item');
-
-                    // 0) Pulihkan pilihan dari klik sebelum navigasi
                     try {
                         var saved = JSON.parse(sessionStorage.getItem('bnav_sel') || 'null');
                         if (saved && Date.now() - saved.ts < 5000) {
@@ -164,36 +162,34 @@
 
                     var page = lastSeg(location.pathname);
                     var hash = location.hash || '';
-
-                    // Tanpa anchor: Home adalah default aktif
                     if (!hash) {
-                        setActive(home);
-                        return;
-                    }
-
-                    // 1) Cocokkan anchor persis
-                    var matched = null;
-                    Array.prototype.forEach.call(items, function(a) {
-                        try {
-                            var u = new URL(a.getAttribute('href'), location.href);
-                            if (u.hash === hash && lastSeg(u.pathname) === page) matched = a;
-                        } catch (e) {}
-                    });
-
-                    // 2) Jaring pengaman: anchor tak cocok -> item dengan halaman sama
-                    if (!matched) {
+                        var matched = null;
                         Array.prototype.forEach.call(items, function(a) {
                             try {
                                 var u = new URL(a.getAttribute('href'), location.href);
                                 if (!matched && lastSeg(u.pathname) === page) matched = a;
                             } catch (e) {}
                         });
+                        setActive(matched || home);
+                        return;
                     }
-
-                    // 3) Jaring pengaman terakhir: tetap Home
-                    setActive(matched || home);
+                    var matchedH = null;
+                    Array.prototype.forEach.call(items, function(a) {
+                        try {
+                            var uh = new URL(a.getAttribute('href'), location.href);
+                            if (uh.hash === hash && lastSeg(uh.pathname) === page) matchedH = a;
+                        } catch (e) {}
+                    });
+                    if (!matchedH) {
+                        Array.prototype.forEach.call(items, function(a) {
+                            try {
+                                var u2 = new URL(a.getAttribute('href'), location.href);
+                                if (!matchedH && lastSeg(u2.pathname) === page) matchedH = a;
+                            } catch (e) {}
+                        });
+                    }
+                    setActive(matchedH || home);
                 }
-                // Aktivasi instan saat menu diklik + simpan pilihan untuk dimuat ulang
                 document.addEventListener('click', function(e) {
                     var a = e.target.closest ? e.target.closest('.bottom-nav-row .bottom-nav-home, .bottom-nav-row .bottom-nav-item') : null;
                     if (!a) return;
@@ -205,7 +201,29 @@
             })();
             </script>
 
-            <!-- Mobile User Menu Modal -->
+            <script>
+            // Dashboard mobile: sembunyikan tabel rekap kehadiran (form absen & lainnya tetap).
+            // Desktop tidak tersentuh (cek body.mobile-no-app-header + lebar layar).
+            (function() {
+                try {
+                    if (!document.body.classList.contains('mobile-no-app-header')) return;
+                    if (!window.matchMedia('(max-width: 991.98px)').matches) return;
+                    var hideExact = ['Rekap Harian Kehadiran Guru'];
+                    var hidePrefix = ['Status Kehadiran Siswa Hari Ini'];
+                    document.querySelectorAll('.main-content .card').forEach(function(c) {
+                        var h = c.querySelector('.card-header h4');
+                        if (!h) return;
+                        var t = (h.textContent || '').trim();
+                        if (hideExact.indexOf(t) !== -1) { c.style.display = 'none'; return; }
+                        for (var i = 0; i < hidePrefix.length; i++) {
+                            if (t.indexOf(hidePrefix[i]) === 0) { c.style.display = 'none'; break; }
+                        }
+                    });
+                } catch (e) {}
+            })();
+            </script>
+
+            <!-- Mobile User Menu Modal (grid Lainnya ala mobile-app) -->
             <div class="modal fade" id="mobileUserMenu" tabindex="-1" role="dialog" aria-labelledby="mobileUserMenuLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
                     <div class="modal-content">
@@ -216,15 +234,59 @@
                             </button>
                         </div>
                         <div class="modal-body p-0">
-                            <div class="list-group list-group-flush">
-                                <a href="<?php echo htmlspecialchars(app_url($bottom_profile_url), ENT_QUOTES, 'UTF-8'); ?>" class="list-group-item list-group-item-action d-flex align-items-center">
-                                    <i class="fas fa-user-circle fa-lg mr-3 text-primary"></i> Profil Saya
+                            <div class="mapp-lainnya-grid">
+                                <a href="<?php echo htmlspecialchars(app_url($bottom_profile_url), ENT_QUOTES, 'UTF-8'); ?>" class="mapp-lainnya-item">
+                                    <span class="mapp-lainnya-icon mg-c3"><i class="fas fa-user"></i></span>
+                                    <span class="mapp-lainnya-label">Profil</span>
                                 </a>
-                                <a href="#" onclick="confirmLogout('../logout.php?level=<?php echo htmlspecialchars(getUserLevel(), ENT_QUOTES, 'UTF-8'); ?>'); return false;" class="list-group-item list-group-item-action d-flex align-items-center text-danger">
-                                    <i class="fas fa-sign-out-alt fa-lg mr-3"></i> Logout
+                                <?php if (function_exists('getUserLevel') && getUserLevel() === 'admin'): ?>
+                                <a href="#" id="btn-toggle-self-update-m" class="mapp-lainnya-item">
+                                    <span class="mapp-lainnya-icon mg-c4"><i class="fas fa-toggle-off"></i></span>
+                                    <span class="mapp-lainnya-label">Update Sistem</span>
+                                </a>
+                                <a href="#" id="btn-update-github-m" class="mapp-lainnya-item">
+                                    <span class="mapp-lainnya-icon mg-c2"><i class="fas fa-sync-alt"></i></span>
+                                    <span class="mapp-lainnya-label">Jalankan Update</span>
+                                </a>
+                                <?php endif; ?>
+                                <a href="#" onclick="confirmLogout('../logout.php?level=<?php echo htmlspecialchars(getUserLevel(), ENT_QUOTES, 'UTF-8'); ?>'); return false;" class="mapp-lainnya-item">
+                                    <span class="mapp-lainnya-icon mg-c7"><i class="fas fa-sign-out-alt"></i></span>
+                                    <span class="mapp-lainnya-label" style="color:#e11d48;">Keluar</span>
                                 </a>
                             </div>
                         </div>
+                        <?php if (function_exists('getUserLevel') && getUserLevel() === 'admin'): ?>
+                        <script>
+                        // Teruskan aksi update ke tombol desktop yang sudah ada (logika tetap satu pintu).
+                        (function() {
+                            function fwd(mId, dId) {
+                                var m = document.getElementById(mId);
+                                if (!m) return;
+                                m.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    var d = document.getElementById(dId);
+                                    if (d) d.click();
+                                    var modal = document.getElementById('mobileUserMenu');
+                                    if (modal && window.jQuery) jQuery(modal).modal('hide');
+                                });
+                            }
+                            function syncLabel() {
+                                var d = document.getElementById('btn-toggle-self-update');
+                                var m = document.getElementById('btn-toggle-self-update-m');
+                                if (d && m) {
+                                    var lbl = m.querySelector('.mapp-lainnya-label');
+                                    if (lbl) lbl.textContent = d.textContent.trim();
+                                }
+                            }
+                            document.addEventListener('DOMContentLoaded', function() {
+                                fwd('btn-toggle-self-update-m', 'btn-toggle-self-update');
+                                fwd('btn-update-github-m', 'btn-update-github');
+                                if (window.jQuery) jQuery('#mobileUserMenu').on('show.bs.modal', syncLabel);
+                                else syncLabel();
+                            });
+                        })();
+                        </script>
+                        <?php endif; ?>
                         <div class="modal-footer p-2">
                             <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">Tutup</button>
                         </div>

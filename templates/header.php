@@ -199,6 +199,12 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_global_dropdown_v = is_readable($_global_dropdown_path) ? (string) filemtime($_global_dropdown_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/global_dropdown.css?v=<?php echo htmlspecialchars($_global_dropdown_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- SIMAD Mobile App full-app CSS (mobile only) -->
+    <?php
+    $_mapp_path = __DIR__ . '/../assets/css/mobile-app.css';
+    $_mapp_v = is_readable($_mapp_path) ? (string) filemtime($_mapp_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/mobile-app.css?v=<?php echo htmlspecialchars($_mapp_v, ENT_QUOTES, 'UTF-8'); ?>">
 
     <!-- Dynamic breadcrumb rendering will be handled in the page content -->
         <!-- Custom Responsive CSS -->
@@ -916,15 +922,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
             });
             </script>
             <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali'], true)): ?>
-            <!-- Mobile Floating Notification Button -->
-            <a href="#" data-toggle="modal" data-target="#mobileNotificationModal" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
-                <i class="far fa-bell fa-lg"></i>
-                <?php if ($unread_count > 0): ?>
-                    <span class="notif-count-badge" data-count="<?php echo (int)$unread_count; ?>"><?php echo htmlspecialchars($unread_count_label, ENT_QUOTES, 'UTF-8'); ?></span>
-                <?php endif; ?>
-            </a>
-
-            <!-- Mobile Notification Modal -->
+            <!-- Mobile Notification Modal (dibuka dari lonceng navbar; tombol melayang dihapus) -->
             <div class="modal fade" id="mobileNotificationModal" tabindex="-1" role="dialog" aria-labelledby="mobileNotificationModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">

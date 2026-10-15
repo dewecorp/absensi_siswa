@@ -83,6 +83,12 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
     $_global_dropdown_v = is_readable($_global_dropdown_path) ? (string) filemtime($_global_dropdown_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/global_dropdown.css?v=<?php echo htmlspecialchars($_global_dropdown_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- SIMAD Mobile App full-app CSS (mobile only) -->
+    <?php
+    $_mapp_path_u = __DIR__ . '/../assets/css/mobile-app.css';
+    $_mapp_v_u = is_readable($_mapp_path_u) ? (string) filemtime($_mapp_path_u) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/mobile-app.css?v=<?php echo htmlspecialchars($_mapp_v_u, ENT_QUOTES, 'UTF-8'); ?>">
     
     <!-- Additional CSS for this specific page -->
     <?php if (isset($css_page) && is_array($css_page)): ?>

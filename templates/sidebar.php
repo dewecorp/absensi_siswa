@@ -1697,6 +1697,18 @@ foreach ($menu_items as &$item) {
 // Sort all menu items alphabetically, keeping Dashboard first and Logout last
 sort_all_menu_items($menu_items);
 
+// Helper tab mobile (klasifikasi kategori -> halaman list bertumpuk m_*.php)
+require_once __DIR__ . '/mobile_tabs.php';
+
+if (!function_exists('mapp_tile_url')) {
+    // URL halaman list bertumpuk untuk satu judul grup kategori (menu asli sistem).
+    function mapp_tile_url(string $group_title): string
+    {
+        $url = 'm_menu.php?g=' . urlencode(trim($group_title));
+        return function_exists('app_url') ? app_url($url) : $url;
+    }
+}
+
 if (!function_exists('get_mobile_menu_groups')) {
     function get_mobile_menu_groups(array $menu_items): array
     {
@@ -1762,7 +1774,10 @@ if (!function_exists('get_bottom_nav_quick_links')) {
 
             if ($title === 'Data Utama' || $title === 'Kehadiran') {
                 $display_title = 'Kehadiran';
-                $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
+            }
+            if ($has_submenu && function_exists('mapp_tile_url')) {
+                // Grup kategori -> halaman list bertumpuk (bukan anchor dashboard).
+                $url = mapp_tile_url($title);
             } else if ($has_submenu) {
                 $url = 'dashboard.php#' . get_mobile_menu_anchor_id($title);
             }

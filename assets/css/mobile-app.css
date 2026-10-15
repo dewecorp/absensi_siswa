@@ -1,0 +1,586 @@
+/* ============================================================
+   SIMAD Mobile App - full-app look (mobile only, <=991.98px)
+   Desktop (>=992px) TIDAK tersentuh.
+   Header tetap BIRU template (#6777ef/#2f6ef0), bukan hijau.
+   Stat 2x2 pastel, Menu Cepat 4 ikon,
+   list-card Akademik/Supervisi/Laporan,
+   grid Lainnya 3 kolom, bottom-nav 5 tab.
+   ============================================================ */
+@media (max-width: 991.98px) {
+  :root {
+    --mapp-green: #2f6ef0;
+    --mapp-green-dark: #2449b8;
+    --mapp-green-light: #e8effe;
+    --mapp-bg: #f4f6f5;
+    --mapp-card-radius: 18px;
+    --mapp-shadow: 0 6px 18px rgba(47, 110, 240, .10);
+    --mapp-border: #c3cec9;
+  }
+
+  body { background: var(--mapp-bg) !important; }
+  .main-content { background: var(--mapp-bg); padding-bottom: 96px !important; overflow-x: hidden; }
+  .main-footer { display: none !important; }
+  .section .section-header { display: none !important; }
+
+  /* ---------- Navbar mobile terpusat: SIMAD + sekolah + bel + avatar ---------- */
+  .mapp-navbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%);
+    color: #fff; border-radius: 0 0 24px 24px;
+    padding: 14px 16px 18px; margin: -16px -20px 14px;
+    box-shadow: 0 8px 20px rgba(47, 110, 240, .28);
+    position: relative; overflow: hidden;
+  }
+  .mapp-navbar .mapp-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .mapp-navbar .mapp-brand-text { min-width: 0; }
+  .mapp-navbar .mapp-app-name { font-size: 16px; font-weight: 800; letter-spacing: .4px; line-height: 1.15; }
+  .mapp-navbar .mapp-school-name {
+    font-size: 11px; font-weight: 600; opacity: .95; line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52vw;
+  }
+  .mapp-navbar .mapp-top-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+
+  /* ---------- Box sambutan baru: salam | nama | jabatan, rata kiri + siluet biru ---------- */
+  .mapp-greetbox {
+    position: relative; overflow: hidden; text-align: left;
+    background: #fff; border: 1.5px solid var(--mapp-border);
+    border-radius: 18px; box-shadow: var(--mapp-shadow);
+    padding: 16px 132px 16px 16px; margin-bottom: 14px;
+  }
+  .mapp-greetbox::after {
+    content: ''; position: absolute; right: 22px; top: 50%;
+    transform: translateY(-50%);
+    width: 118px; height: 82px; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='110' viewBox='0 0 160 110'%3E%3Ccircle cx='108' cy='55' r='48' fill='%23e9effe'/%3E%3Crect x='84' y='66' width='54' height='13' rx='3' fill='%238ba8ef'/%3E%3Crect x='90' y='53' width='42' height='13' rx='3' fill='%23a9c4f5'/%3E%3Cpolygon points='80,24 120,41 80,58 40,41' fill='%236f97ec'/%3E%3Cpath d='M62 49 v9 c0,7 36,7 36,0 v-9 l-18,8 Z' fill='%235b86e8'/%3E%3Cline x1='120' y1='41' x2='120' y2='62' stroke='%235b86e8' stroke-width='2'/%3E%3Ccircle cx='120' cy='65' r='3.5' fill='%235b86e8'/%3E%3Ccircle cx='142' cy='30' r='3' fill='%23a9c4f5'/%3E%3C/svg%3E") no-repeat right bottom / contain;
+    opacity: .9;
+  }
+  .mapp-greet-salam { font-size: 12.5px; color: #64748b; line-height: 1.4; }
+  .mapp-greet-nama {
+    font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1.35;
+    margin-top: 1px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mapp-greet-role { font-size: 12.5px; font-weight: 700; color: #2f6ef0; margin-top: 2px; }
+  /* Sambutan lama disembunyikan di mobile (desktop utuh) */
+  body.mobile-no-app-header .main-content .row.d-lg-none > .col-12.mb-3 { display: none !important; }
+  body.mobile-no-app-header .main-content .mapp-row-profile { display: none !important; }
+
+  /* ---------- Top bar BIRU template (Beranda) ---------- */
+  .mapp-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%);
+    color: #fff; border-radius: 0 0 24px 24px;
+    padding: 14px 16px 20px; margin: -16px -20px 14px;
+    box-shadow: 0 8px 20px rgba(47, 110, 240, .28);
+    position: relative; overflow: hidden;
+  }
+  .mapp-topbar::after {
+    content: ''; position: absolute; right: -46px; top: -46px;
+    width: 150px; height: 150px; border-radius: 50%;
+    background: rgba(255,255,255,.10); pointer-events: none;
+  }
+  .mapp-topbar::before {
+    content: ''; position: absolute; right: 30px; bottom: -60px;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: rgba(255,255,255,.07); pointer-events: none;
+  }
+  .mapp-brand { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
+  .mapp-logo {
+    width: 42px; height: 42px; border-radius: 12px; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: var(--mapp-green); font-size: 18px;
+    overflow: hidden; flex: 0 0 auto; box-shadow: 0 3px 8px rgba(0,0,0,.18);
+  }
+  .mapp-logo img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
+  .mapp-brand-name { font-size: 16px; font-weight: 800; letter-spacing: .3px; line-height: 1.1; }
+  .mapp-brand-sub { font-size: 10.5px; opacity: .92; line-height: 1.3; max-width: 180px; }
+  .mapp-top-actions { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
+  .mapp-navbar .mapp-school-name {
+    font-size: 11px; font-weight: 600; opacity: .95; line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52vw;
+  }
+  .mapp-navbar .mapp-dash-name {
+    font-size: 10px; font-weight: 700; opacity: .85; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52vw;
+  }
+  .mapp-icon-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: none !important; outline: none !important; box-shadow: none !important;
+    background: rgba(255,255,255,.18); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 16px; position: relative; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .mapp-icon-btn:focus, .mapp-icon-btn:hover { outline: none !important; box-shadow: none !important; }
+  .mapp-icon-btn:active { transform: scale(.92); }
+  .mapp-avatar {
+    width: 38px; height: 38px; border-radius: 50%; object-fit: cover;
+    border: 2px solid rgba(255,255,255,.9); background: #fff; overflow: hidden;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; color: var(--mapp-green); padding: 0;
+  }
+  .mapp-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+
+  /* ---------- Kartu sapaan ---------- */
+  .mapp-greet {
+    background: #fff; border-radius: var(--mapp-card-radius);
+    padding: 16px; box-shadow: var(--mapp-shadow);
+    position: relative; overflow: hidden; margin-bottom: 14px;
+    border: 1.5px solid var(--mapp-border);
+  }
+  .mapp-greet::after {
+    content: '\f6ad'; font-family: 'Font Awesome 5 Free'; font-weight: 900;
+    position: absolute; right: 6px; bottom: -18px; font-size: 110px;
+    color: #2f6ef0; opacity: .06; pointer-events: none;
+  }
+  .mapp-greet-title { font-size: 13px; color: #64748b; margin-bottom: 2px; }
+  .mapp-greet-name { font-size: 15px; font-weight: 800; color: #0f172a; line-height: 1.35; }
+  .mapp-greet-desc { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+  /* ---------- Stat 2 kolom rapi ala gambar ---------- */
+  .main-content .row:has(> [class*="col-"] > .card.card-statistic-1) {
+    margin-left: -6px !important; margin-right: -6px !important;
+  }
+  .main-content .row:has(> [class*="col-"] > .card.card-statistic-1) > [class*="col-"] {
+    flex: 0 0 50% !important; max-width: 50% !important;
+    padding-left: 6px !important; padding-right: 6px !important; margin-bottom: 12px !important;
+  }
+  /* Total Siswa full 1 kolom (guru/wali), sisanya tetap 2 kolom */
+  .main-content .row:has(> [class*="col-"] > .card.card-statistic-1) > .mapp-stat-full {
+    flex: 0 0 100% !important; max-width: 100% !important;
+  }
+  .main-content .row > [class*="col-"] > .card.card-statistic-1 {
+    border: 1.5px solid var(--mapp-border) !important; border-radius: 16px !important;
+    box-shadow: var(--mapp-shadow) !important; height: 100%; margin-bottom: 0 !important;
+  }
+  /* 4 warna berulang: hijau, biru, ungu, oranye */
+  .main-content .row > [class*="col-"]:nth-child(4n+1) > .card.card-statistic-1 { background: #e9f7ef !important; }
+  .main-content .row > [class*="col-"]:nth-child(4n+2) > .card.card-statistic-1 { background: #e8f1fe !important; }
+  .main-content .row > [class*="col-"]:nth-child(4n+3) > .card.card-statistic-1 { background: #efe9fb !important; }
+  .main-content .row > [class*="col-"]:nth-child(4n+4) > .card.card-statistic-1 { background: #fef3e6 !important; }
+  .main-content .card.card-statistic-1 .card-icon {
+    width: 38px !important; height: 38px !important; border-radius: 12px !important;
+    margin: 0 !important; font-size: 16px !important; line-height: 38px !important;
+  }
+  .main-content .card.card-statistic-1 { padding: 12px !important; }
+  .main-content .card.card-statistic-1 .card-wrap { padding-left: 8px !important; }
+  .main-content .card.card-statistic-1 .card-header { padding: 0 !important; min-height: 0 !important; }
+  .main-content .card.card-statistic-1 .card-header h4 {
+    font-size: 11.5px !important; color: #475569 !important; font-weight: 600 !important;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .main-content .card.card-statistic-1 .card-body {
+    padding: 0 !important; font-size: 20px !important; font-weight: 800 !important; color: #0f172a !important;
+  }
+
+  /* ---------- Judul seksi ---------- */
+  .mapp-section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 16px 2px 10px;
+  }
+  .mapp-section-head h6 { font-size: 14px; font-weight: 800; color: #0f172a; margin: 0; }
+  .mapp-section-head a { font-size: 11.5px; font-weight: 700; color: var(--mapp-green); }
+
+  /* ---------- Menu grid: ikon besar memenuhi kolom ---------- */
+  .menu-grid-icon {
+    width: 72px !important; height: 72px !important; border-radius: 22px !important;
+    font-size: 30px !important; box-shadow: 0 5px 12px rgba(15,23,42,.10) !important;
+  }
+  .mg-c1 { background: linear-gradient(135deg, #22c55e, #15803d) !important; }
+  .mg-c2 { background: linear-gradient(135deg, #60a5fa, #2563eb) !important; }
+  .mg-c3 { background: linear-gradient(135deg, #a78bfa, #7c3aed) !important; }
+  .mg-c4 { background: linear-gradient(135deg, #fdba74, #ea580c) !important; }
+  .mg-c5 { background: linear-gradient(135deg, #f472b6, #db2777) !important; }
+  .mg-c6 { background: linear-gradient(135deg, #2dd4bf, #0d9488) !important; }
+  .mg-c7 { background: linear-gradient(135deg, #fb7185, #e11d48) !important; }
+  .mg-c8 { background: linear-gradient(135deg, #818cf8, #9333ea) !important; }
+  .mobile-menu-label { font-size: 10.5px !important; font-weight: 600 !important; color: #1e293b !important; }
+  /* Grid menu gabungan: full selebar box, tinggi tile seragam, label rata tengah 2 baris */
+  .mapp-menu-grid { margin-left: -15px !important; margin-right: -15px !important; }
+  .mapp-menu-grid > .col-3 { display: flex !important; flex: 0 0 25% !important; max-width: 25% !important; padding-left: 5px !important; padding-right: 5px !important; }
+  .mapp-menu-grid > .col-3 > a { flex: 1 1 auto; display: flex !important; flex-direction: column; align-items: center; }
+  .mapp-menu-grid .menu-grid-icon { flex: 0 0 auto; }
+  .mapp-menu-grid .mobile-menu-label {
+    flex: 1 1 auto; display: flex !important; align-items: flex-start; justify-content: center;
+    text-align: center !important; min-height: 2.7em; line-height: 1.35 !important;
+  }
+
+  /* ---------- Grouped sections -> list-card ala Halaman Akademik ---------- */
+  .main-content .row.d-lg-none [id^="menu-"] { margin-top: 14px; }
+  .main-content .row.d-lg-none [id^="menu-"] > .small.text-muted {
+    font-size: 13.5px !important; font-weight: 800 !important; color: #0f172a !important;
+    margin: 4px 2px 8px !important;
+  }
+  .main-content .row.d-lg-none [id^="menu-"] .row > [class*="col-"] { flex: 0 0 100% !important; max-width: 100% !important; margin-bottom: 0 !important; padding: 0 !important; }
+  .main-content .row.d-lg-none [id^="menu-"] .row { margin: 0 !important; background: #fff; border-radius: var(--mapp-card-radius); overflow: hidden; box-shadow: var(--mapp-shadow); border: 1.5px solid var(--mapp-border); }
+  .main-content .row.d-lg-none [id^="menu-"] .row > [class*="col-"] > a {
+    display: flex !important; align-items: center !important; text-align: left !important;
+    padding: 12px 14px !important; border-bottom: 1px solid #f1f5f9 !important; position: relative;
+  }
+  .main-content .row.d-lg-none [id^="menu-"] .row > [class*="col-"]:last-child > a { border-bottom: none !important; }
+  .main-content .row.d-lg-none [id^="menu-"] .row > [class*="col-"] > a::after {
+    content: '\f054'; font-family: 'Font Awesome 5 Free'; font-weight: 900;
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    font-size: 12px; color: #cbd5e1;
+  }
+  .main-content .row.d-lg-none [id^="menu-"] .menu-grid-icon {
+    width: 44px !important; height: 44px !important; border-radius: 14px !important;
+    margin: 0 12px 0 0 !important; font-size: 18px !important; flex: 0 0 auto !important;
+  }
+  .main-content .row.d-lg-none [id^="menu-"] .mobile-menu-label {
+    font-size: 13px !important; font-weight: 700 !important; text-align: left !important; width: auto !important;
+  }
+
+  /* Single menu (tanpa submenu) tampil sebagai chip list juga */
+  .mapp-single-list { background: #fff; border-radius: var(--mapp-card-radius); overflow: hidden; box-shadow: var(--mapp-shadow); border: 1px solid #eef2f0; }
+  .mapp-single-list > a { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; position: relative; }
+  .mapp-single-list > a:last-child { border-bottom: none; }
+
+  /* ---------- Informasi Terbaru ---------- */
+  .mapp-info-card {
+    background: #fff; border-radius: var(--mapp-card-radius);
+    box-shadow: var(--mapp-shadow); border: 1.5px solid var(--mapp-border);
+    padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px;
+  }
+  .mapp-info-icon {
+    width: 42px; height: 42px; border-radius: 12px; flex: 0 0 auto;
+    background: #fef3e6; color: #ea580c;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .mapp-info-title { font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.35; }
+  .mapp-info-date { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+  /* ---------- Sub-halaman header tetap BIRU template ---------- */
+  .mobile-app-header {
+    background: linear-gradient(135deg, #2f6ef0 0%, #5a8ff7 100%) !important;
+    border-radius: 0 0 22px 22px !important;
+    padding: 14px 16px 18px !important;
+    box-shadow: 0 8px 20px rgba(47, 110, 240, .28) !important;
+  }
+  .mobile-app-header .mobile-app-title { font-size: 16px !important; font-weight: 800 !important; }
+  .mobile-app-header .mobile-app-back { width: 34px !important; height: 34px !important; font-size: 15px !important; }
+
+  /* Navbar per-dashboard tetap BIRU template, bentuk full-bleed */
+  .main-content > .d-md-none.shadow-sm[style*="6777ef"],
+  .main-content > .d-md-none.shadow-sm[style*="2f6ef0"] {
+    background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%) !important;
+    border-radius: 0 0 24px 24px !important;
+    margin: -16px -20px 14px !important;
+    padding: 16px 16px 22px !important;
+    box-shadow: 0 8px 20px rgba(47, 110, 240, .28) !important;
+    position: relative; overflow: hidden;
+  }
+  /* Welcome card biru lama -> kartu sapaan putih ala gambar */
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="6777ef"],
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="2f6ef0"],
+  .main-content .row > .col-12.mb-3 > .card[style*="6777ef"],
+  .main-content .row > .col-12.mb-3 > .card[style*="2f6ef0"] {
+    background: #ffffff !important; color: #0f172a !important;
+    border: 1px solid #eef2f0 !important; border-radius: 18px !important;
+    box-shadow: var(--mapp-shadow) !important;
+  }
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="6777ef"] *,
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="2f6ef0"] *,
+  .main-content .row > .col-12.mb-3 > .card[style*="6777ef"] *,
+  .main-content .row > .col-12.mb-3 > .card[style*="2f6ef0"] * {
+    color: #0f172a !important; text-shadow: none !important;
+  }
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="6777ef"] .wb-chip,
+  .main-content .row.d-lg-none > .col-12.mb-3 > .card[style*="2f6ef0"] .wb-chip {
+    background: #e8effe !important; color: #2f6ef0 !important;
+    border: 1px solid #cfddfb !important; text-shadow: none !important; font-weight: 700 !important;
+  }
+  /* Profile-box guru/wali/siswa (card biru besar) -> putih juga agar konsisten */
+  .main-content .row .card[style*="6777ef"],
+  .main-content .row .card[style*="2f6ef0"] {
+    background: #ffffff !important;
+  }
+  .main-content .row .card[style*="6777ef"] *,
+  .main-content .row .card[style*="2f6ef0"] * {
+    color: #0f172a !important; text-shadow: none !important;
+  }
+  .main-content .row .card[style*="6777ef"] .btn-light,
+  .main-content .row .card[style*="2f6ef0"] .btn-light {
+    background: var(--mapp-green) !important; color: #fff !important; border: none !important;
+  }
+
+  /* ---------- Bottom nav ala gambar ---------- */
+  .bottom-nav-row { flex-wrap: nowrap !important; }
+  .bottom-nav-row .col { flex: 1 1 0 !important; min-width: 0 !important; overflow: hidden; }
+  nav.navbar.d-block.d-lg-none {
+    height: 72px !important; border-top: 1px solid #eef2f0 !important;
+    box-shadow: 0 -8px 24px rgba(15,23,42,.08) !important;
+    border-radius: 20px 20px 0 0 !important; overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+  .bottom-nav-row a.nav-link { color: #94a3b8 !important; padding-top: 8px !important; gap: 2px; }
+  .bottom-nav-row a.nav-link i {
+    width: auto !important; height: auto !important; background: none !important;
+    box-shadow: none !important; font-size: 20px !important; margin-bottom: 3px !important; color: inherit !important;
+  }
+  .bottom-nav-row .bottom-nav-label { font-size: 10px !important; font-weight: 600 !important; white-space: nowrap !important; }
+  .bottom-nav-row a.nav-link.bottom-nav-active { color: var(--mapp-green) !important; }
+  .bottom-nav-row a.nav-link.bottom-nav-active i { color: var(--mapp-green) !important; transform: none !important; }
+  .bottom-nav-row a.nav-link.bottom-nav-active .bottom-nav-label { font-weight: 800 !important; }
+  .bottom-nav-row a.nav-link.bottom-nav-active::before {
+    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 28px; height: 3px; border-radius: 0 0 6px 6px; background: var(--mapp-green);
+  }
+
+  /* ---------- Modal Lainnya jadi grid 3 kolom ala gambar ---------- */
+  #mobileUserMenu .modal-content { border-radius: 22px; border: none; overflow: hidden; }
+  #mobileUserMenu .modal-header { border: none; padding-bottom: 0; }
+  #mobileUserMenu .modal-title { font-size: 15px; font-weight: 800; }
+  .mapp-lainnya-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 8px; padding: 16px; }
+  .mapp-lainnya-item { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none !important; }
+  .mapp-lainnya-icon {
+    width: 56px; height: 56px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 6px; box-shadow: 0 5px 12px rgba(15,23,42,.10); color: #fff;
+  }
+  .mapp-lainnya-label { font-size: 11px; font-weight: 600; color: #1e293b; line-height: 1.3; }
+
+  /* ---------- Lepas card Stisla, pakai custom flat di mobile ---------- */
+  .main-content .card,
+  .main-content .card.card-primary,
+  .main-content .card.card-secondary,
+  .main-content .card.card-success,
+  .main-content .card.card-danger,
+  .main-content .card.card-warning,
+  .main-content .card.card-info,
+  .main-content .card.card-dark {
+    box-shadow: var(--mapp-shadow) !important;
+    border: 1.5px solid var(--mapp-border) !important;
+    border-top: none !important;
+    border-radius: 18px !important;
+    overflow: hidden;
+    background: #fff;
+  }
+  .main-content .card .card-header {
+    border-bottom: 1px solid #f1f5f9 !important;
+    background: transparent !important;
+    padding: 13px 15px !important;
+    min-height: 0 !important;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .main-content .card .card-header h4 {
+    font-size: 13.5px !important; font-weight: 800 !important; color: #0f172a !important;
+  }
+  .main-content .card .card-header h4 i { color: var(--mapp-green) !important; }
+  .main-content .card .card-header-action { margin: 0 !important; }
+  .main-content .card .card-body { padding: 14px 15px !important; box-shadow: none !important; }
+  .main-content .card .card-footer {
+    border-top: 1px solid #f1f5f9 !important; background: transparent !important;
+    padding: 12px 15px !important;
+  }
+  /* Statistic: flex row, ikon tidak absolute */
+  .main-content .card.card-statistic-1 {
+    display: flex !important; flex-direction: row !important; align-items: center !important; gap: 10px;
+  }
+  .main-content .card.card-statistic-1 .card-icon {
+    position: static !important; float: none !important; margin: 0 !important; flex: 0 0 auto;
+  }
+  .main-content .card.card-statistic-1 .card-wrap { flex: 1 1 auto; min-width: 0; padding: 0 !important; }
+  .main-content .card.card-statistic-1::before,
+  .main-content .card.card-statistic-1::after { display: none !important; }
+
+  /* ---------- Halaman list kategori (m_menu.php?g=...) ---------- */
+  .mapp-search {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border: 1.5px solid var(--mapp-border);
+    border-radius: 14px; padding: 10px 14px; margin-bottom: 12px;
+    box-shadow: var(--mapp-shadow);
+  }
+  .mapp-search i { color: #94a3b8; font-size: 14px; }
+  .mapp-search input {
+    border: none !important; outline: none !important; box-shadow: none !important;
+    flex: 1; font-size: 13px; background: transparent; padding: 0;
+  }
+  .mapp-tab-list {
+    background: #fff; border: 1.5px solid var(--mapp-border);
+    border-radius: var(--mapp-card-radius); overflow: hidden;
+    box-shadow: var(--mapp-shadow); margin-bottom: 14px;
+  }
+  .mapp-tab-item {
+    display: flex !important; align-items: center !important; gap: 12px;
+    padding: 12px 14px !important; border-bottom: 1px solid #eef2f0 !important;
+    position: relative; text-decoration: none !important;
+  }
+  .mapp-tab-item:last-child { border-bottom: none !important; }
+  .mapp-tab-item::after {
+    content: '\f054'; font-family: 'Font Awesome 5 Free'; font-weight: 900;
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    font-size: 12px; color: #cbd5e1;
+  }
+  .mapp-tab-icon {
+    width: 44px; height: 44px; border-radius: 14px; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #fff;
+    box-shadow: 0 4px 10px rgba(15,23,42,.12);
+  }
+  .mapp-tab-text { flex: 1; min-width: 0; padding-right: 18px; }
+  .mapp-tab-title { font-size: 13.5px; font-weight: 700; color: #0f172a; line-height: 1.35; }
+  .mapp-tab-sub { font-size: 11.5px; color: #64748b; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mapp-tab-group { font-size: 13px; font-weight: 800; color: #0f172a; margin: 14px 2px 8px; }
+  .mapp-tab-group:first-child { margin-top: 0; }
+  .mapp-empty { text-align: center; padding: 28px 16px; color: #94a3b8; font-size: 13px; }
+  /* Agenda di Beranda tampil sebagai Informasi Terbaru */
+  .dashboard-agenda-card { border: 1.5px solid var(--mapp-border) !important; }
+  .dashboard-agenda-item {
+    border: 1.5px solid #e6ebe8 !important; border-radius: 14px !important;
+    padding: 10px !important; margin-bottom: 10px !important;
+  }
+  .mapp-lihat-semua {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 700; color: var(--mapp-green); text-decoration: none !important;
+  }
+
+  /* ---------- Dashboard mobile: sembunyikan card grafik + tabel rekap (desktop utuh) ---------- */
+  body.mobile-no-app-header .main-content .card:has(canvas) { display: none !important; }
+  body.mobile-no-app-header .main-content .mapp-hide-mobile { display: none !important; }
+
+  /* ---------- Tautan Cepat: 3 kolom card mobile (desktop utuh) ---------- */
+  body.mobile-no-app-header .mapp-link-card .card-body .row {
+    display: grid !important; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin: 0 !important;
+  }
+  body.mobile-no-app-header .mapp-link-card .card-body .row > div {
+    padding: 0 !important; margin: 0 !important; min-width: 0; max-width: none !important;
+  }
+  body.mobile-no-app-header .mapp-link-card .btn-block {
+    position: relative; display: flex !important; flex-direction: column;
+    align-items: center; justify-content: flex-start; gap: 8px; height: 100%;
+    width: 100%; margin: 0; text-align: center !important;
+    background: #fff !important; color: #0f172a !important;
+    border: 1.5px solid var(--mapp-border) !important; border-radius: 14px !important;
+    padding: 12px 6px !important; font-size: 11px !important; font-weight: 700 !important;
+    box-shadow: var(--mapp-shadow) !important; line-height: 1.35 !important;
+  }
+  body.mobile-no-app-header .mapp-link-card .btn-block > i:first-child {
+    flex: 0 0 auto; width: 42px; height: 42px; border-radius: 13px;
+    display: inline-flex !important; align-items: center; justify-content: center;
+    font-size: 17px !important; margin: 0 !important;
+    background: #e8effe !important; color: #2f6ef0 !important;
+  }
+  body.mobile-no-app-header .mapp-link-card .btn-block::after { display: none; }
+  body.mobile-no-app-header .mapp-link-card .btn-block:active { transform: scale(.97); }
+
+  /* Urutan mobile KHUSUS guru/wali (section.mapp-ordered). Dashboard lain tidak tersentuh.
+     Sapaan > Stat > Kehadiran > Jadwal > Menu > Tautan > Agenda > Ketentuan */
+  body.mobile-no-app-header section.section.mapp-ordered { display: flex !important; flex-direction: column; }
+  body.mobile-no-app-header section.mapp-ordered > .row.mapp-row-profile { order: 0; }
+  body.mobile-no-app-header section.mapp-ordered > .row:has(.card-statistic-1) { order: 1; }
+  body.mobile-no-app-header section.mapp-ordered > .row.align-items-stretch { order: 2; }
+  body.mobile-no-app-header section.mapp-ordered > .row.align-items-stretch > .mapp-col-absen { order: -1; }
+  body.mobile-no-app-header section.mapp-ordered > .row.mapp-row-les { order: 3; }
+  body.mobile-no-app-header section.mapp-ordered > .row.d-lg-none { order: 4; }
+  body.mobile-no-app-header section.mapp-ordered > .row:has(.mapp-link-card) { order: 5; }
+  body.mobile-no-app-header section.mapp-ordered > .row:has(.dashboard-agenda-card) { order: 6; }
+  body.mobile-no-app-header section.mapp-ordered > .row:has(.mapp-ketentuan-card) { order: 7; }
+
+  /* ---------- Box ketentuan / jadwal / absen ala mobile (desktop utuh) ---------- */
+  /* Ketentuan: teks peringatan kecil + tiap baris badge jadi baris card */
+  body.mobile-no-app-header .mapp-ketentuan-card { border-left: 4px solid var(--mapp-green) !important; }
+  body.mobile-no-app-header .mapp-ketentuan-card h6 { font-size: 13px !important; }
+  body.mobile-no-app-header .mapp-ketentuan-card p[style*="17px"] { font-size: 12.5px !important; }
+  body.mobile-no-app-header .mapp-ketentuan-card .d-flex.flex-wrap > div {
+    flex: 1 1 100%; display: flex; align-items: center; gap: 8px;
+    background: #f8fafc; border: 1.5px solid var(--mapp-border);
+    border-radius: 12px; padding: 8px 10px;
+  }
+  body.mobile-no-app-header .mapp-ketentuan-card .col-md-4 { margin-top: 10px !important; text-align: center !important; }
+  body.mobile-no-app-header .mapp-ketentuan-card .col-md-4 span[style*="17px"] { font-size: 13px !important; }
+  /* Jadwal hari ini khas mobile: header menumpuk, ringkasan chip, sesi card kompak */
+  body.mobile-no-app-header .mapp-jadwal-card .card-header { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .card-header h4 { text-align: center; }
+  body.mobile-no-app-header .mapp-jadwal-card .card-header .btn { width: 100%; border-radius: 12px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .alert { font-size: 12px !important; border-radius: 12px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .alert .font-weight-bold[style*="14px"] { font-size: 12.5px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .alert .badge { font-size: 11px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .card-body { padding: 12px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .card-body .row { margin: 0 !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .card-body .row > div { flex: 0 0 100% !important; max-width: 100% !important; padding: 0 !important; margin-bottom: 10px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .card-body .row > div > div.p-3 {
+    border: 1.5px solid var(--mapp-border) !important; border-left-width: 5px !important;
+    border-radius: 16px !important; padding: 12px !important; background: #fff !important;
+    box-shadow: var(--mapp-shadow) !important;
+  }
+  body.mobile-no-app-header .mapp-jadwal-card .card-body .row > div .font-weight-bold.text-dark[style*="15.5px"] { font-size: 14px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .card-body .row > div .font-weight-bold[class*="text-"][style*="13.5px"] { font-size: 12.5px !important; }
+  body.mobile-no-app-header .mapp-jadwal-card .card-body .row > div div.text-dark[style*="12.5px"] {
+    background: #f1f5f9 !important; border-radius: 10px; padding: 6px 10px; margin-top: 8px;
+    font-size: 12px !important;
+  }
+  /* Agenda khas mobile: list baris ber-pembatas + badge tanggal tegas */
+  body.mobile-no-app-header .dashboard-agenda-card .card-header h4 { font-size: 13px !important; }
+  body.mobile-no-app-header .dashboard-agenda-list { display: block !important; }
+  body.mobile-no-app-header .dashboard-agenda-item {
+    border: none !important; border-bottom: 1px solid #eef2f0 !important;
+    border-radius: 0 !important; background: transparent !important;
+    padding: 12px 2px !important; margin-bottom: 0 !important; box-shadow: none !important;
+  }
+  body.mobile-no-app-header .dashboard-agenda-item:last-child { border-bottom: none !important; }
+  body.mobile-no-app-header .dashboard-agenda-item.is-today {
+    background: #f0f9ff !important; border: 1.5px solid #bfdbfe !important;
+    border-radius: 14px !important; padding: 12px 10px !important; margin-bottom: 10px !important;
+  }
+  body.mobile-no-app-header .agenda-date-box {
+    width: 54px !important; min-width: 54px !important;
+    border: 1.5px solid var(--mapp-border) !important; border-radius: 14px !important; overflow: hidden;
+  }
+  body.mobile-no-app-header .agenda-day { font-size: 19px !important; }
+  body.mobile-no-app-header .agenda-content h6 { font-size: 13px !important; font-weight: 800 !important; }
+  body.mobile-no-app-header .agenda-meta {
+    background: transparent !important; box-shadow: none !important; border-left: none !important;
+    padding: 0 !important; margin-top: 4px !important; font-weight: 600 !important; font-size: 11.5px !important;
+  }
+  /* Form absen harian khas mobile: segmented pills vertikal */
+  body.mobile-no-app-header .mapp-absen-card .card-header { justify-content: center !important; }
+  body.mobile-no-app-header .mapp-absen-card .card-header h4 { font-size: 14px !important; }
+  body.mobile-no-app-header .mapp-absen-card .alert-has-icon {
+    display: flex !important; align-items: flex-start; gap: 10px;
+    padding: 10px 12px !important; border-radius: 14px !important;
+    border: 1.5px solid var(--mapp-border) !important; box-shadow: none !important;
+  }
+  body.mobile-no-app-header .mapp-absen-card .alert-has-icon .alert-icon {
+    width: auto !important; height: auto !important; margin: 0 !important; font-size: 20px !important;
+  }
+  body.mobile-no-app-header .mapp-absen-card .alert-has-icon .alert-body { font-size: 12px !important; line-height: 1.5 !important; }
+  body.mobile-no-app-header .mapp-absen-card .alert-has-icon .alert-title { font-size: 12.5px !important; margin-bottom: 2px !important; }
+  body.mobile-no-app-header .mapp-absen-card form .row.justify-content-center { display: flex !important; gap: 8px; margin: 0 !important; }
+  body.mobile-no-app-header .mapp-absen-card form .row.justify-content-center > .col-4,
+  body.mobile-no-app-header .mapp-absen-card form .row.justify-content-center > [class*="col-"] {
+    flex: 1 1 0 !important; max-width: none !important; padding: 0 !important; margin: 0 !important; min-width: 0;
+  }
+  body.mobile-no-app-header .mapp-absen-card .btn-block {
+    min-height: 84px !important; height: 100%; border-radius: 18px !important;
+    border-width: 2px !important; font-size: 13px !important; padding: 10px 4px !important;
+  }
+  body.mobile-no-app-header .mapp-absen-card .btn-block > span {
+    display: flex !important; flex-direction: column; align-items: center; gap: 6px;
+    font-size: 12px !important; font-weight: 800 !important; line-height: 1.2;
+  }
+  body.mobile-no-app-header .mapp-absen-card .btn-block > span > i,
+  body.mobile-no-app-header .mapp-absen-card .btn-block i {
+    font-size: 24px !important; margin: 0 !important;
+  }
+  /* Status terpilih (inline cursor:not-allowed) tampil menonjol */
+  body.mobile-no-app-header .mapp-absen-card .btn-block[style*="not-allowed"] {
+    opacity: 1 !important; transform: scale(1.04);
+    box-shadow: 0 6px 14px rgba(15,23,42,.22) !important;
+  }
+  body.mobile-no-app-header .mapp-absen-card label { font-size: 13px !important; }
+  body.mobile-no-app-header .mapp-absen-card textarea { border-radius: 12px !important; font-size: 13px !important; }
+  body.mobile-no-app-header .mapp-absen-card button[type="submit"].btn-block,
+  body.mobile-no-app-header .mapp-absen-card .btn-lg.btn-block {
+    min-height: 50px !important; border-radius: 14px !important; font-size: 14px !important;
+  }
+
+  /* Tabel & card umum tetap nyaman di HP */
+  .card { border-radius: 18px !important; }
+  .table-responsive { border-radius: 12px; border: 1.5px solid var(--mapp-border); }
+}
+
+/* Desktop: pastikan komponen mapp tidak bocor */
+@media (min-width: 992px) {
+  .mapp-topbar, .mapp-greet, .mapp-section-head, .mapp-info-card, .mapp-lainnya-grid { display: none !important; }
+}

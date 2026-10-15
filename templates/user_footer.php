@@ -102,7 +102,7 @@ if (!isset($school_profile)) {
     }
     </style>
 
-    <!-- Bottom Navbar (Mobile Only) -->
+    <!-- Bottom Navbar dinamis (Mobile Only): Beranda + menu role + Lainnya -->
     <?php
     $bottom_quick_links = function_exists('get_bottom_nav_quick_links') && isset($menu_items)
         ? get_bottom_nav_quick_links($menu_items, 3)
@@ -114,14 +114,14 @@ if (!isset($school_profile)) {
                 <div class="col px-0 h-100">
                     <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-home">
                         <i class="fas fa-home"></i>
-                        <span class="bottom-nav-label">Dashboard</span>
+                        <span class="bottom-nav-label">Beranda</span>
                     </a>
                 </div>
                 <?php foreach ($bottom_quick_links as $link): ?>
                     <div class="col px-0 h-100">
                         <a href="<?php echo htmlspecialchars(app_url($link['url']), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-item">
-                            <i class="<?php echo $link['icon']; ?>"></i>
-                            <span class="bottom-nav-label"><?php echo $link['title']; ?></span>
+                            <i class="<?php echo htmlspecialchars($link['icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
+                            <span class="bottom-nav-label"><?php echo htmlspecialchars($link['title'], ENT_QUOTES, 'UTF-8'); ?></span>
                         </a>
                     </div>
                 <?php endforeach; ?>
@@ -213,7 +213,29 @@ if (!isset($school_profile)) {
     })();
     </script>
 
-    <!-- Mobile User Menu Modal -->
+    <script>
+    // Dashboard mobile: sembunyikan tabel rekap kehadiran (form absen & lainnya tetap).
+    // Desktop tidak tersentuh (cek body.mobile-no-app-header + lebar layar).
+    (function() {
+        try {
+            if (!document.body.classList.contains('mobile-no-app-header')) return;
+            if (!window.matchMedia('(max-width: 991.98px)').matches) return;
+            var hideExact = ['Rekap Harian Kehadiran Guru'];
+            var hidePrefix = ['Status Kehadiran Siswa Hari Ini'];
+            document.querySelectorAll('.main-content .card').forEach(function(c) {
+                var h = c.querySelector('.card-header h4');
+                if (!h) return;
+                var t = (h.textContent || '').trim();
+                if (hideExact.indexOf(t) !== -1) { c.style.display = 'none'; return; }
+                for (var i = 0; i < hidePrefix.length; i++) {
+                    if (t.indexOf(hidePrefix[i]) === 0) { c.style.display = 'none'; break; }
+                }
+            });
+        } catch (e) {}
+    })();
+    </script>
+
+    <!-- Mobile User Menu Modal (grid Lainnya ala mobile-app) -->
     <div class="modal fade" id="mobileUserMenu" tabindex="-1" role="dialog" aria-labelledby="mobileUserMenuLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
             <div class="modal-content">
@@ -224,12 +246,14 @@ if (!isset($school_profile)) {
                     </button>
                 </div>
                 <div class="modal-body p-0">
-                    <div class="list-group list-group-flush">
-                                <a href="<?php echo htmlspecialchars(app_url($bottom_profile_url), ENT_QUOTES, 'UTF-8'); ?>" class="list-group-item list-group-item-action d-flex align-items-center">
-                            <i class="fas fa-user-circle fa-lg mr-3 text-primary"></i> Profil Saya
+                    <div class="mapp-lainnya-grid">
+                        <a href="<?php echo htmlspecialchars(app_url($bottom_profile_url), ENT_QUOTES, 'UTF-8'); ?>" class="mapp-lainnya-item">
+                            <span class="mapp-lainnya-icon mg-c3"><i class="fas fa-user"></i></span>
+                            <span class="mapp-lainnya-label">Profil</span>
                         </a>
-                        <a href="#" onclick="confirmLogoutInline('../logout.php?level=<?php echo htmlspecialchars(getUserLevel(), ENT_QUOTES, 'UTF-8'); ?>'); return false;" class="list-group-item list-group-item-action d-flex align-items-center text-danger">
-                            <i class="fas fa-sign-out-alt fa-lg mr-3"></i> Logout
+                        <a href="#" onclick="confirmLogoutInline('../logout.php?level=<?php echo htmlspecialchars(getUserLevel(), ENT_QUOTES, 'UTF-8'); ?>'); return false;" class="mapp-lainnya-item">
+                            <span class="mapp-lainnya-icon mg-c7"><i class="fas fa-sign-out-alt"></i></span>
+                            <span class="mapp-lainnya-label" style="color:#e11d48;">Keluar</span>
                         </a>
                     </div>
                 </div>
@@ -280,15 +304,7 @@ if (!isset($school_profile)) {
     <?php endif; ?>
 
     <?php if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha', 'guru', 'wali'], true) && isset($unread_notifs_u) && is_array($unread_notifs_u)): ?>
-    <!-- Mobile Floating Notification Button -->
-    <a href="#" data-toggle="modal" data-target="#mobileNotificationModalU" class="btn btn-primary btn-lg rounded-circle shadow-lg d-lg-none" style="position: fixed; bottom: 80px; right: 20px; z-index: 1040; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
-        <i class="far fa-bell fa-lg"></i>
-        <?php if ($unread_count_u > 0): ?>
-            <span class="notif-count-badge" data-count="<?php echo (int)$unread_count_u; ?>"><?php echo htmlspecialchars($unread_count_label_u, ENT_QUOTES, 'UTF-8'); ?></span>
-        <?php endif; ?>
-    </a>
-
-    <!-- Mobile Notification Modal -->
+    <!-- Mobile Notification Modal (dibuka dari lonceng navbar; tombol melayang dihapus) -->
     <div class="modal fade" id="mobileNotificationModalU" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">

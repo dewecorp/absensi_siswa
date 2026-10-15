@@ -324,20 +324,12 @@ include_once '../templates/sidebar.php';
 ?>
 
             <div class="main-content">
-                <!-- Mobile App Navbar -->
-                <div class="d-md-none shadow-sm px-3 py-3 mb-3 d-flex align-items-center" style="background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%); color: #fff; border-radius: 20px;">
-                    <div class="d-flex align-items-center">
-                        <?php if (!empty($school_profile['logo'])): ?>
-                            <img src="../assets/img/<?= htmlspecialchars($school_profile['logo']) ?>" alt="Logo" style="width: 36px; height: 36px; object-fit: contain;" class="mr-2 rounded-circle bg-white p-1">
-                        <?php else: ?>
-                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center font-weight-bold mr-2 shadow-sm" style="width: 36px; height: 36px; font-size: 14px;">M</div>
-                        <?php endif; ?>
-                        <div>
-                            <div style="font-size: 13.5px; font-weight: 800; color: #fff; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.2);"><?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'SIMAD') ?></div>
-                            <div style="font-size: 10.5px; color: #f1f5f9; font-weight: 600; text-shadow: 0 1px 1px rgba(0,0,0,0.2);">Dashboard Siswa</div>
-                        </div>
-                    </div>
-                </div>
+                <?php include '../templates/mobile_navbar.php'; ?>
+                <?php
+                $mapp_greet_name = (isset($student) && is_array($student) && !empty($student['nama_siswa'])) ? $student['nama_siswa'] : 'Siswa';
+                $mapp_greet_role = 'Siswa';
+                include '../templates/mobile_greeting.php';
+                ?>
 
                 <section class="section">
         <div class="section-header">
@@ -935,8 +927,8 @@ include_once '../templates/sidebar.php';
                         $grouped_items = $mobile_menu_groups['grouped'];
                         ?>
                         <?php if (!empty($single_items) || !empty($grouped_items)): ?>
-                            <?php if (!empty($single_items)): ?>
-                                <div class="row">
+                            <div class="row mapp-menu-grid">
+                                <?php if (!empty($single_items)): ?>
                                     <?php foreach ($single_items as $mg_idx => $item): ?>
                                         <div class="col-3 mb-3">
                                             <a href="<?php echo $item['url']; ?>" class="text-decoration-none text-center d-block">
@@ -947,26 +939,21 @@ include_once '../templates/sidebar.php';
                                             </a>
                                         </div>
                                     <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-                            <?php foreach ($grouped_items as $group): ?>
-                                <?php $group_anchor_id = 'menu-' . preg_replace('/[^A-Za-z0-9_-]+/', '-', trim((string)$group['title'])); ?>
-                                <div class="mt-3" id="<?php echo htmlspecialchars($group_anchor_id, ENT_QUOTES, 'UTF-8'); ?>" style="scroll-margin-top: 90px;">
-                                    <div class="small text-muted font-weight-bold mb-2"><?php echo $group['title']; ?></div>
-                                    <div class="row">
-                                        <?php foreach ($group['items'] as $mg_idx => $subitem): ?>
-                                            <div class="col-3 mb-3">
-                                                <a href="<?php echo $subitem['url']; ?>" class="text-decoration-none text-center d-block">
-                                                    <div class="mx-auto mb-2 menu-grid-icon mg-c<?php echo ($mg_idx % 8) + 1; ?>">
-                                                        <i class="<?php echo $group['icon']; ?>"></i>
-                                                    </div>
-                                                        <div class="mobile-menu-label small text-dark"><?php echo $subitem['title']; ?></div>
-                                                </a>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
+                                <?php endif; ?>
+                                <?php if (!empty($grouped_items)): ?>
+                                    <?php $tile_base = count($single_items); ?>
+                                    <?php foreach ($grouped_items as $g_idx => $group): ?>
+                                        <div class="col-3 mb-3">
+                                            <a href="<?php echo htmlspecialchars(mapp_tile_url($group['title']), ENT_QUOTES, 'UTF-8'); ?>" class="text-decoration-none text-center d-block">
+                                                <div class="mx-auto mb-2 menu-grid-icon mg-c<?php echo (($tile_base + $g_idx) % 8) + 1; ?>">
+                                                    <i class="<?php echo $group['icon']; ?>"></i>
+                                                </div>
+                                                <div class="mobile-menu-label small text-dark"><?php echo $group['title']; ?></div>
+                                            </a>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
                         <?php endif; ?>
             </div>
         </div>
