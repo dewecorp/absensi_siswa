@@ -1600,6 +1600,12 @@ switch ($user_level) {
                 'active' => $current_page === 'tugas.php'
             ],
             [
+                'title' => 'Bahan Ajar',
+                'icon' => 'fas fa-book-reader',
+                'url' => '../siswa/bahan_ajar.php',
+                'active' => $current_page === 'bahan_ajar.php'
+            ],
+            [
                 'title' => 'Diskusi Kelas',
                 'icon' => 'fas fa-comments',
                 'url' => '../siswa/diskusi.php',

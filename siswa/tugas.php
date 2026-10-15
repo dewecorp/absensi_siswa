@@ -242,6 +242,24 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
+            <!-- Nav Link Bahan Ajar untuk Siswa -->
+            <div class="alert alert-light border shadow-sm mb-3 d-flex flex-wrap align-items-center justify-content-between p-3" style="border-radius: 12px; background: #fff;">
+                <div class="d-flex align-items-center mb-2 mb-md-0">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mr-3" style="width: 40px; height: 40px; min-width: 40px;">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div>
+                        <h6 class="font-weight-bold text-dark mb-0.5" style="font-size: 14px;">Materi & Bahan Ajar Tersedia</h6>
+                        <span class="text-muted small">Pelajari materi pembuka, modul, dan bahan bacaan untuk menyelesaikan tugas.</span>
+                    </div>
+                </div>
+                <div>
+                    <a href="bahan_ajar.php" class="btn btn-primary btn-sm px-3 shadow-sm font-weight-bold" style="border-radius: 8px;">
+                        <i class="fas fa-book-reader mr-1.5"></i> Buka Bahan Ajar
+                    </a>
+                </div>
+            </div>
+
             <!-- Filter Tabs -->
             <div class="card mb-3">
                 <div class="card-body p-2 d-flex flex-wrap align-items-center justify-content-between">
@@ -267,6 +285,11 @@ include '../templates/sidebar.php';
                             </a>
                         </li>
                     </ul>
+                    <div class="mt-2 mt-md-0">
+                        <a href="bahan_ajar.php" class="btn btn-outline-info btn-sm font-weight-bold" style="border-radius: 20px;">
+                            <i class="fas fa-book-reader mr-1"></i> Bahan Ajar
+                        </a>
+                    </div>
                 </div>
             </div>
 

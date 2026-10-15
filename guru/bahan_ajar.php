@@ -196,31 +196,11 @@ if (!in_array($tahun_ajaran_aktif, $tahun_list, true)) {
 }
 
 $page_title = 'Daftar Bahan Ajar';
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-];
-$js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-];
+$css_libs = [];
+$js_libs = [];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    if ($('#table-bahan').length) {
-        $('#table-bahan').DataTable({
-            'order': [[0, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [6, 11] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada bahan ajar ditemukan',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
-        });
-    }
-
     $('#btnTambahBahan').on('click', function() {
         $('#formBahanAction').val('tambah');
         $('#bahanId').val('');
@@ -383,88 +363,112 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
-            <!-- Table Card -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Materi & Bahan Pembelajaran</h4>
+            <!-- Grid Card Bahan Ajar -->
+            <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9;">
+                    <div>
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-folder-open text-primary mr-2"></i>Materi & Bahan Pembelajaran</h4>
+                        <small class="text-muted">Total <?= count($bahan_rows) ?> bahan ajar tersedia</small>
+                    </div>
                     <?php if ($can_crud): ?>
-                    <button type="button" class="btn btn-primary" id="btnTambahBahan">
+                    <button type="button" class="btn btn-primary px-3 shadow-sm" id="btnTambahBahan" style="border-radius: 8px;">
                         <i class="fas fa-plus mr-1"></i> Tambah Bahan Ajar
                     </button>
                     <?php endif; ?>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-bahan">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Judul</th>
-                                    <th>Jenis</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Kelas</th>
-                                    <th>Materi/TP</th>
-                                    <th width="10%">File / Link</th>
-                                    <th>Semester</th>
-                                    <th>Tahun Ajaran</th>
-                                    <th>Status</th>
-                                    <th>Tanggal</th>
-                                    <th width="16%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($bahan_rows as $i => $r): ?>
-                                    <?php
-                                    $is_url = (strpos($r['file_link'], 'http://') === 0 || strpos($r['file_link'], 'https://') === 0);
-                                    $file_dest = $is_url ? $r['file_link'] : guru_file_href('bahan_ajar', $r['file_link']);
-                                    $st_badge = $r['status'] === 'Aktif' ? 'success' : ($r['status'] === 'Draft' ? 'warning' : 'secondary');
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><strong><?= htmlspecialchars($r['judul']) ?></strong></td>
-                                        <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis']) ?></span></td>
-                                        <td><?= htmlspecialchars($r['nama_mapel'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['materi_tp'] ?? '-') ?></td>
-                                        <td class="text-center">
-                                            <?php if ($is_url): ?>
-                                                <a href="<?= htmlspecialchars($r['file_link']) ?>" target="_blank" class="btn btn-sm btn-outline-info" title="Buka Tautan">
-                                                    <i class="fas fa-link"></i> Link
-                                                </a>
-                                            <?php elseif (!empty($r['file_link'])): ?>
-                                                <a href="preview_bahan.php?id=<?= (int)$r['id'] ?><?= isset($_GET['session_type']) ? '&session_type=' . urlencode($_GET['session_type']) : '' ?>" target="_blank" class="btn btn-sm btn-outline-primary" title="Baca Dokumen (<?= strtoupper(pathinfo($r['file_link'], PATHINFO_EXTENSION)) ?>)">
-                                                    <i class="fas fa-book-reader mr-1"></i> <?= strtoupper(pathinfo($r['file_link'], PATHINFO_EXTENSION)) ?>
-                                                </a>
-                                            <?php else: ?>
-                                                -
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= htmlspecialchars($r['semester'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['tahun_ajaran'] ?? '-') ?></td>
-                                        <td class="text-center">
-                                            <span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span>
-                                        </td>
-                                        <td><?= date('d/m/Y', strtotime($r['created_at'])) ?></td>
-                                        <td class="text-center text-nowrap" style="white-space:nowrap;">
-                                            <div class="d-inline-flex align-items-center justify-content-center" style="gap:4px;">
-                                                <a href="preview_bahan.php?id=<?= (int)$r['id'] ?><?= isset($_GET['session_type']) ? '&session_type=' . urlencode($_GET['session_type']) : '' ?>" target="_blank" class="btn btn-info btn-sm" title="Pratinjau Dokumen (Tab Baru)">
-                                                    <i class="fas fa-eye"></i> Pratinjau
-                                                </a>
+                <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
+                    <?php if (empty($bahan_rows)): ?>
+                        <div class="text-center py-5 bg-white rounded shadow-sm border">
+                            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted font-weight-bold">Belum ada bahan ajar</h5>
+                            <p class="text-muted small mb-0">Silakan tambahkan bahan ajar baru atau sesuaikan filter pencarian Anda.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="row" style="row-gap: 16px;">
+                            <?php foreach ($bahan_rows as $r): ?>
+                                <?php
+                                $is_url = (strpos($r['file_link'], 'http://') === 0 || strpos($r['file_link'], 'https://') === 0);
+                                $ext = strtolower(pathinfo($r['file_link'], PATHINFO_EXTENSION));
+                                $st_badge = $r['status'] === 'Aktif' ? 'success' : ($r['status'] === 'Draft' ? 'warning' : 'secondary');
+
+                                // Icon & warna jenis bahan
+                                $icon_map = [
+                                    'PDF' => ['icon' => 'fas fa-file-pdf', 'color' => '#ef4444', 'bg' => '#fee2e2'],
+                                    'Video' => ['icon' => 'fas fa-video', 'color' => '#8b5cf6', 'bg' => '#ede9fe'],
+                                    'Link' => ['icon' => 'fas fa-link', 'color' => '#06b6d4', 'bg' => '#cffafe'],
+                                    'Presentasi' => ['icon' => 'fas fa-file-powerpoint', 'color' => '#f97316', 'bg' => '#ffedd5'],
+                                    'LKPD' => ['icon' => 'fas fa-clipboard-list', 'color' => '#10b981', 'bg' => '#d1fae5'],
+                                    'Dokumen' => ['icon' => 'fas fa-file-word', 'color' => '#2563eb', 'bg' => '#dbeafe']
+                                ];
+                                $t_info = $icon_map[$r['jenis']] ?? ['icon' => 'fas fa-file-alt', 'color' => '#64748b', 'bg' => '#f1f5f9'];
+                                ?>
+                                <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch">
+                                    <div class="card w-100 border-0 shadow-sm hover-shadow transition" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                        <div class="card-body p-3 p-md-3.5 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <!-- Top Bar Card: Tipe & Status -->
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge px-2 py-1 font-weight-bold" style="background: <?= $t_info['bg'] ?>; color: <?= $t_info['color'] ?>; font-size: 11px; border-radius: 6px;">
+                                                        <i class="<?= $t_info['icon'] ?> mr-1"></i> <?= htmlspecialchars($r['jenis']) ?>
+                                                    </span>
+                                                    <span class="badge badge-<?= $st_badge ?> px-2 py-1 font-weight-bold" style="font-size: 10px; border-radius: 6px;">
+                                                        <?= htmlspecialchars($r['status']) ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Judul Bahan Ajar -->
+                                                <h6 class="font-weight-bold text-dark mb-1 text-truncate-2" title="<?= htmlspecialchars($r['judul']) ?>" style="font-size: 14.5px; line-height: 1.35; min-height: 38px;">
+                                                    <?= htmlspecialchars($r['judul']) ?>
+                                                </h6>
+
+                                                <!-- Info Mapel & Kelas -->
+                                                <div class="d-flex flex-wrap align-items-center mb-2 small text-muted" style="gap: 6px;">
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 11px;">
+                                                        <i class="fas fa-book text-muted mr-1"></i> <?= htmlspecialchars($r['nama_mapel'] ?? '-') ?>
+                                                    </span>
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 11px;">
+                                                        <i class="fas fa-chalkboard text-muted mr-1"></i> <?= htmlspecialchars($r['nama_kelas'] ?? 'Semua') ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Materi / TP Preview -->
+                                                <?php if (!empty($r['materi_tp'])): ?>
+                                                    <div class="p-2 mb-2 rounded bg-light border-0 small text-muted" style="font-size: 11.5px; line-height: 1.3; background: #f8fafc !important;">
+                                                        <i class="fas fa-info-circle mr-1 text-primary"></i> <?= htmlspecialchars(mb_strimwidth($r['materi_tp'], 0, 75, '...')) ?>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <!-- Metadata (Semester, TA, Tanggal) -->
+                                                <div class="small text-muted mb-3 d-flex justify-content-between" style="font-size: 11px;">
+                                                    <span><i class="far fa-calendar-alt mr-1"></i> <?= htmlspecialchars($r['semester'] ?? '-') ?> (<?= htmlspecialchars($r['tahun_ajaran'] ?? '-') ?>)</span>
+                                                    <span><?= date('d M Y', strtotime($r['created_at'])) ?></span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Card Actions Footer -->
+                                            <div class="pt-2 border-top d-flex align-items-center justify-content-between" style="border-color: #f1f5f9 !important;">
+                                                <div>
+                                                    <a href="preview_bahan.php?id=<?= (int)$r['id'] ?><?= isset($_GET['session_type']) ? '&session_type=' . urlencode($_GET['session_type']) : '' ?>" target="_blank" class="btn btn-outline-primary btn-sm px-2.5 font-weight-bold" style="border-radius: 6px; font-size: 11.5px;">
+                                                        <i class="fas fa-eye mr-1"></i> Buka
+                                                    </a>
+                                                </div>
                                                 <?php if ($can_crud): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-bahan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                    <i class="fas fa-edit"></i> Edit
-                                                </button>
-                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-bahan" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
-                                                    <i class="fas fa-trash"></i> Hapus
-                                                </button>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-outline-warning btn-sm px-2 btn-edit-bahan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit" style="border-radius: 6px 0 0 6px;">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm px-2 btn-hapus-bahan" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus" style="border-radius: 0 6px 6px 0;">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
                                                 <?php endif; ?>
                                             </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

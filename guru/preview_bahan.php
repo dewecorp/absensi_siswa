@@ -53,7 +53,7 @@ if ($is_url) {
 $page_title = 'Pratinjau: ' . htmlspecialchars($bahan['judul']);
 $back_url = 'bahan_ajar.php' . (isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '');
 if (getUserLevel() === 'siswa') {
-    $back_url = '../siswa/dashboard.php';
+    $back_url = '../siswa/bahan_ajar.php';
 }
 ?>
 <!DOCTYPE html>

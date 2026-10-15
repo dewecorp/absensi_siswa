@@ -202,7 +202,6 @@ $f_mapel = (int)($_GET['f_mapel'] ?? 0);
 $f_kelas = (int)($_GET['f_kelas'] ?? 0);
 $f_semester = trim((string)($_GET['f_semester'] ?? ''));
 $f_tahun = trim((string)($_GET['f_tahun'] ?? ''));
-$f_status = trim((string)($_GET['f_status'] ?? ''));
 
 if ($is_admin_or_kepala) {
     $where = ["1=1"];
@@ -232,10 +231,6 @@ if ($f_tahun !== '') {
     $where[] = "p.tahun_ajaran = ?";
     $params[] = $f_tahun;
 }
-if ($f_status !== '') {
-    $where[] = "p.status = ?";
-    $params[] = $f_status;
-}
 
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
@@ -257,13 +252,8 @@ if (!in_array($tahun_ajaran_aktif, $tahun_list, true)) {
 }
 
 $page_title = 'Daftar Perangkat Pembelajaran';
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-];
-$js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-];
+$css_libs = [];
+$js_libs = [];
 
 $js_page = [<<<'JS'
 // JavaScript Download Function using Blob (Safe from Chrome/Edge insecure connection blocking)
@@ -313,21 +303,6 @@ function downloadPerangkat(id, format) {
 }
 
 $(document).ready(function() {
-    if ($('#table-perangkat').length) {
-        $('#table-perangkat').DataTable({
-            'order': [[0, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [8, 11] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada data ditemukan',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
-        });
-    }
-
     // Auto-submit filter on change
     $('#formFilterPerangkat select').on('change', function() {
         $('#formFilterPerangkat').submit();
@@ -693,7 +668,7 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="card-body">
                     <form method="GET" class="row" id="formFilterPerangkat">
-                        <div class="col-md-3 mb-2">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2">
                             <label class="small font-weight-bold">Jenis Perangkat</label>
                             <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Jenis --</option>
@@ -702,7 +677,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2">
                             <label class="small font-weight-bold">Mata Pelajaran</label>
                             <select name="f_mapel" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Mapel --</option>
@@ -711,7 +686,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
                             <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Kelas --</option>
@@ -720,25 +695,16 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2">
                             <label class="small font-weight-bold">Semester</label>
                             <select name="f_semester" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua --</option>
+                                <option value="">-- Semua Semester --</option>
                                 <?php foreach ($semester_options as $s): ?>
                                     <option value="<?= htmlspecialchars($s) ?>" <?= $f_semester === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="small font-weight-bold">Status</label>
-                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Status --</option>
-                                <?php foreach (['Aktif', 'Draft', 'Arsip'] as $st): ?>
-                                    <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <?php if ($f_jenis !== '' || $f_mapel > 0 || $f_kelas > 0 || $f_semester !== '' || $f_status !== '' || $f_tahun !== ''): ?>
+                        <?php if ($f_jenis !== '' || $f_mapel > 0 || $f_kelas > 0 || $f_semester !== '' || $f_tahun !== ''): ?>
                         <div class="col-12 mt-1">
                             <a href="perangkat_pembelajaran.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo mr-1"></i> Reset Filter</a>
                         </div>
@@ -747,115 +713,160 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
-            <!-- Table Card -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Daftar Dokumen</h4>
-                    <?php if ($can_crud): ?>
+            <!-- Grid Card Perangkat Pembelajaran -->
+            <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9;">
                     <div>
-                        <button type="button" class="btn btn-primary" id="btnTambahPerangkat">
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-archive text-primary mr-2"></i>Daftar Perangkat Pembelajaran</h4>
+                        <small class="text-muted">Total <?= count($rows) ?> dokumen perangkat pembelajaran</small>
+                    </div>
+                    <?php if ($can_crud): ?>
+                    <div class="d-flex flex-wrap" style="gap: 8px;">
+                        <button type="button" class="btn btn-primary px-3 shadow-sm font-weight-bold" id="btnTambahPerangkat" style="border-radius: 8px;">
                             <i class="fas fa-plus mr-1"></i> Tambah Perangkat
                         </button>
-                        <a href="generate_perangkat.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '' ?>" class="btn btn-success ml-2">
-                            <i class="fas fa-magic mr-1"></i> Generate Perangkat
+                        <a href="generate_perangkat.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode((string)$_GET['session_type']) : '' ?>" class="btn btn-success px-3 shadow-sm font-weight-bold" style="border-radius: 8px;">
+                            <i class="fas fa-magic mr-1"></i> Generate AI
                         </a>
                     </div>
                     <?php endif; ?>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-perangkat">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Jenis Perangkat</th>
-                                    <th>Judul</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Kelas</th>
-                                    <th>Materi/TP</th>
-                                    <th>Semester</th>
-                                    <th>Tahun Ajaran</th>
-                                    <th width="5%" class="text-center">File</th>
-                                    <th width="7%" class="text-center">Status</th>
-                                    <th>Tanggal</th>
-                                    <th class="text-center" style="width: 170px; min-width: 170px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $i => $r): ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_perangkat']) ?></span></td>
-                                        <td><strong><?= htmlspecialchars($r['judul']) ?></strong></td>
-                                        <td><?= htmlspecialchars($r['nama_mapel'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['materi_tp'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['semester'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['tahun_ajaran'] ?? '-') ?></td>
-                                        <td class="text-center">
-                                            <?php if (!empty($r['file_path'])): ?>
-                                                <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="text-primary font-weight-bold" title="Baca Dokumen (<?= strtoupper(pathinfo($r['file_path'], PATHINFO_EXTENSION)) ?>)">
-                                                    <i class="fas fa-file-alt fa-lg"></i>
-                                                    <small class="d-block" style="font-size: 10px;"><?= strtoupper(pathinfo($r['file_path'], PATHINFO_EXTENSION)) ?></small>
-                                                </a>
-                                            <?php else: ?>
-                                                <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="text-success font-weight-bold" title="Pratinjau hasil generate">
-                                                    <i class="fas fa-file-alt fa-lg"></i>
-                                                    <small class="d-block" style="font-size: 10px;">Generate</small>
-                                                </a>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center">
-                                            <?php
-                                            $badge_cls = $r['status'] === 'Aktif' ? 'success' : ($r['status'] === 'Draft' ? 'warning' : 'secondary');
-                                            ?>
-                                            <span class="badge badge-<?= $badge_cls ?>"><?= htmlspecialchars($r['status']) ?></span>
-                                        </td>
-                                        <td><?= date('d/m/Y', strtotime($r['created_at'])) ?></td>
-                                        <td class="text-center" style="white-space: nowrap;">
-                                            <div class="d-inline-flex align-items-center justify-content-center" style="gap: 4px;">
-                                                <button type="button" class="btn btn-info btn-sm btn-detail" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                 <?php if ($can_crud && !empty($r['file_path'])): ?>
-                                                 <button type="button" class="btn btn-warning btn-sm btn-edit" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                     <i class="fas fa-edit"></i>
-                                                 </button>
-                                                 <?php endif; ?>
-                                                <?php if (!empty($r['file_path'])): ?>
-                                                    <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Baca Dokumen (Laman Penuh)">
-                                                        <i class="fas fa-book-reader"></i>
-                                                    </a>
-                                                    <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>)" class="btn btn-success btn-sm" title="Unduh Berkas">
-                                                        <i class="fas fa-download"></i>
-                                                    </button>
-                                                <?php else: ?>
-                                                    <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm" title="Pratinjau hasil generate (Laman Penuh)">
-                                                        <i class="fas fa-book-reader"></i>
-                                                    </a>
-                                                    <div class="btn-group btn-group-sm" role="group" title="Unduh Dokumen">
-                                                        <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>, 'pdf')" class="btn btn-outline-danger" title="Unduh PDF"><i class="fas fa-file-pdf"></i></button>
-                                                        <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>, 'docx')" class="btn btn-outline-primary" title="Unduh Word"><i class="fas fa-file-word"></i></button>
-                                                        <button type="button" onclick="downloadPerangkat(<?= (int)$r['id'] ?>, 'xlsx')" class="btn btn-outline-success" title="Unduh Excel"><i class="fas fa-file-excel"></i></button>
+                <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
+                    <?php if (empty($rows)): ?>
+                        <div class="text-center py-5 bg-white rounded shadow-sm border">
+                            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted font-weight-bold">Belum ada perangkat pembelajaran</h5>
+                            <p class="text-muted small mb-0">Silakan tambahkan perangkat baru atau buat otomatis dengan fitur Generate AI.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="row" style="row-gap: 16px;">
+                            <?php foreach ($rows as $r): ?>
+                                <?php
+                                $has_file = !empty($r['file_path']);
+                                $file_ext = $has_file ? strtolower(pathinfo($r['file_path'], PATHINFO_EXTENSION)) : 'ai';
+                                $badge_cls = $r['status'] === 'Aktif' ? 'success' : ($r['status'] === 'Draft' ? 'warning' : 'secondary');
+
+                                // Warna & Icon Badge jenis perangkat
+                                $jp_type = $r['jenis_perangkat'];
+                                $jp_badge_color = '#2563eb';
+                                $jp_badge_bg = '#dbeafe';
+                                $jp_icon = 'fas fa-file-alt';
+
+                                if (in_array($jp_type, ['Modul Ajar', 'RPP'])) {
+                                    $jp_badge_color = '#059669';
+                                    $jp_badge_bg = '#d1fae5';
+                                    $jp_icon = 'fas fa-book';
+                                } elseif (in_array($jp_type, ['Program Tahunan (Prota)', 'Program Semester (Promes)'])) {
+                                    $jp_badge_color = '#d97706';
+                                    $jp_badge_bg = '#fef3c7';
+                                    $jp_icon = 'fas fa-calendar-alt';
+                                } elseif (in_array($jp_type, ['CP/TP', 'ATP', 'Kriteria Ketercapaian (KKTP)'])) {
+                                    $jp_badge_color = '#7c3aed';
+                                    $jp_badge_bg = '#ede9fe';
+                                    $jp_icon = 'fas fa-bullseye';
+                                } elseif ($jp_type === 'PPT (Slide Show) Materi Pembelajaran') {
+                                    $jp_badge_color = '#ea580c';
+                                    $jp_badge_bg = '#ffedd5';
+                                    $jp_icon = 'fas fa-file-powerpoint';
+                                }
+                                ?>
+                                <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch">
+                                    <div class="card w-100 border-0 shadow-sm hover-shadow transition" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                        <div class="card-body p-3 p-md-3.5 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <!-- Top Bar Badge -->
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge px-2 py-1 font-weight-bold" style="background: <?= $jp_badge_bg ?>; color: <?= $jp_badge_color ?>; font-size: 11px; border-radius: 6px;">
+                                                        <i class="<?= $jp_icon ?> mr-1"></i> <?= htmlspecialchars($r['jenis_perangkat']) ?>
+                                                    </span>
+                                                    <span class="badge badge-<?= $badge_cls ?> px-2 py-1 font-weight-bold" style="font-size: 10px; border-radius: 6px;">
+                                                        <?= htmlspecialchars($r['status']) ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Judul Dokumen -->
+                                                <h6 class="font-weight-bold text-dark mb-1 text-truncate-2" title="<?= htmlspecialchars($r['judul']) ?>" style="font-size: 14.5px; line-height: 1.35; min-height: 38px;">
+                                                    <?= htmlspecialchars($r['judul']) ?>
+                                                </h6>
+
+                                                <!-- Info Mapel & Kelas -->
+                                                <div class="d-flex flex-wrap align-items-center mb-2 small text-muted" style="gap: 6px;">
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 11px;">
+                                                        <i class="fas fa-book text-muted mr-1"></i> <?= htmlspecialchars($r['nama_mapel'] ?? '-') ?>
+                                                    </span>
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 11px;">
+                                                        <i class="fas fa-chalkboard text-muted mr-1"></i> <?= htmlspecialchars($r['nama_kelas'] ?? 'Semua') ?>
+                                                    </span>
+                                                    <?php if ($has_file): ?>
+                                                        <span class="badge badge-light border text-primary font-weight-bold px-1.5 py-0.5" style="border-radius: 4px; font-size: 10.5px;">
+                                                            <i class="fas fa-paperclip mr-0.5"></i> <?= strtoupper($file_ext) ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="badge badge-light border text-success font-weight-bold px-1.5 py-0.5" style="border-radius: 4px; font-size: 10.5px;">
+                                                            <i class="fas fa-robot mr-0.5"></i> AI Generated
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+
+                                                <!-- Materi / TP Preview -->
+                                                <?php if (!empty($r['materi_tp'])): ?>
+                                                    <div class="p-2 mb-2 rounded bg-light border-0 small text-muted" style="font-size: 11.5px; line-height: 1.3; background: #f8fafc !important;">
+                                                        <i class="fas fa-bookmark mr-1 text-primary"></i> <?= htmlspecialchars(mb_strimwidth($r['materi_tp'], 0, 75, '...')) ?>
                                                     </div>
                                                 <?php endif; ?>
-                                                <?php if ($can_crud): ?>
-                                                    <?php if ($r['status'] !== 'Arsip'): ?>
-                                                        <button type="button" class="btn btn-secondary btn-sm btn-arsip" data-id="<?= (int)$r['id'] ?>" title="Arsipkan">
-                                                            <i class="fas fa-archive"></i>
+
+                                                <div class="small text-muted mb-3 d-flex justify-content-between" style="font-size: 11px;">
+                                                    <span><i class="far fa-calendar-alt mr-1"></i> <?= htmlspecialchars($r['semester'] ?? '-') ?> (<?= htmlspecialchars($r['tahun_ajaran'] ?? '-') ?>)</span>
+                                                    <span><?= date('d M Y', strtotime($r['created_at'])) ?></span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Card Actions Footer -->
+                                            <div class="pt-2 border-top d-flex flex-wrap align-items-center justify-content-between" style="border-color: #f1f5f9 !important; gap: 6px;">
+                                                <div class="d-flex align-items-center" style="gap: 4px;">
+                                                    <button type="button" class="btn btn-outline-info btn-sm px-2 font-weight-bold btn-detail" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail Perangkat" style="border-radius: 6px; font-size: 11.5px;">
+                                                        <i class="fas fa-info-circle mr-1"></i> Detail
+                                                    </button>
+                                                    <a href="preview_perangkat.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-primary btn-sm px-2.5 font-weight-bold" title="Baca Dokumen Lengkap" style="border-radius: 6px; font-size: 11.5px;">
+                                                        <i class="fas fa-book-reader mr-1"></i> Baca
+                                                    </a>
+                                                </div>
+
+                                                <div class="d-flex align-items-center" style="gap: 4px;">
+                                                    <?php if ($has_file): ?>
+                                                        <a href="download_perangkat.php?id=<?= (int)$r['id'] ?>" class="btn btn-outline-success btn-sm px-2 font-weight-bold" title="Unduh Berkas Asli (<?= strtoupper($file_ext) ?>)" style="border-radius: 6px; font-size: 11.5px;">
+                                                            <i class="fas fa-download mr-1"></i> Unduh
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <a href="download_perangkat.php?id=<?= (int)$r['id'] ?>&format=pdf" class="btn btn-outline-danger btn-sm px-1.5" title="Unduh PDF" style="border-radius: 6px; font-size: 11px;">
+                                                            <i class="fas fa-file-pdf"></i>
+                                                        </a>
+                                                        <a href="download_perangkat.php?id=<?= (int)$r['id'] ?>&format=docx" class="btn btn-outline-primary btn-sm px-1.5" title="Unduh Word" style="border-radius: 6px; font-size: 11px;">
+                                                            <i class="fas fa-file-word"></i>
+                                                        </a>
+                                                        <a href="download_perangkat.php?id=<?= (int)$r['id'] ?>&format=xlsx" class="btn btn-outline-success btn-sm px-1.5" title="Unduh Excel" style="border-radius: 6px; font-size: 11px;">
+                                                            <i class="fas fa-file-excel"></i>
+                                                        </a>
+                                                    <?php endif; ?>
+
+                                                    <?php if ($can_crud): ?>
+                                                        <?php if (!empty($r['file_path'])): ?>
+                                                        <button type="button" class="btn btn-outline-warning btn-sm px-2 btn-edit" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit" style="border-radius: 6px;">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <?php endif; ?>
+                                                        <button type="button" class="btn btn-outline-danger btn-sm px-2 btn-hapus" data-id="<?= (int)$r['id'] ?>" title="Hapus" style="border-radius: 6px;">
+                                                            <i class="fas fa-trash"></i>
                                                         </button>
                                                     <?php endif; ?>
-                                                    <button type="button" class="btn btn-danger btn-sm btn-hapus" data-id="<?= (int)$r['id'] ?>" title="Hapus">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                <?php endif; ?>
+                                                </div>
                                             </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
