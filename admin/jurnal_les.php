@@ -96,14 +96,10 @@ $journal_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $page_title = 'Jurnal Les';
 
 // Define CSS libraries
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'
-];
+$css_libs = [];
 
 // Define JS libraries
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11'
 ];
 
@@ -134,14 +130,11 @@ if ($can_manage) {
 
 $js_page[] = <<<JS
 $(document).ready(function() {
-    var t = $('#table-jurnal').DataTable({
-        'language': {
-            'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json'
-        },
-        'pageLength': 50,
-        'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-        'columnDefs': [$column_defs]
-    });
+    function toggleLesBulkBtn() {
+        var n = $('input[name="ids[]"]:checked').length;
+        if (n > 0) { $('#delete-selected-btn').show(); } else { $('#delete-selected-btn').hide(); }
+    }
+    toggleLesBulkBtn();
     
     // Delete single confirmation
     $(document).on('click', '.btn-delete', function(e) {
@@ -188,9 +181,8 @@ $(document).ready(function() {
     $('#delete-selected-btn').on('click', function(e) {
         e.preventDefault();
         var selectedIds = [];
-        
-        // Use DataTables API to get all checked checkboxes, even on other pages
-        t.$('input[name="ids[]"]:checked').each(function() {
+
+        $('input[name="ids[]"]:checked').each(function() {
             selectedIds.push($(this).val());
         });
         
@@ -224,7 +216,11 @@ $(document).ready(function() {
     // Select all checkbox
     $('#select-all').on('click', function() {
         var isChecked = $(this).prop('checked');
-        t.$('input[name="ids[]"]').prop('checked', isChecked);
+        $('input[name="ids[]"]').prop('checked', isChecked);
+        toggleLesBulkBtn();
+    });
+    $(document).on('change', 'input[name="ids[]"]', function() {
+        toggleLesBulkBtn();
     });
 });
 JS;
@@ -301,68 +297,91 @@ include '../templates/header.php';
                     </form>
                     
                     <?php if (!empty($journal_entries)): ?>
+                    <style>
+                    .jurnal-timeline { position: relative; padding: 6px 0 6px 8px; }
+                    .jurnal-timeline::before { content: ''; position: absolute; left: 57px; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #20c997, #3abaf4); opacity: .35; }
+                    .jurnal-month { position: relative; z-index: 1; display: inline-block; margin: 14px 0 14px 34px; padding: 4px 16px; border-radius: 20px; background: #20c997; color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .3px; box-shadow: 0 4px 10px rgba(32,201,151,.35); }
+                    .jurnal-month:first-child { margin-top: 0; }
+                    .jurnal-item { position: relative; display: flex; gap: 14px; margin-bottom: 14px; }
+                    .jurnal-date { flex: 0 0 76px; text-align: center; z-index: 1; }
+                    .jurnal-date .d { display: block; width: 46px; height: 46px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid #20c997; color: #20c997; font-weight: 800; font-size: 17px; line-height: 40px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+                    .jurnal-date .m { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
+                    .jurnal-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e9edf5; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.07); padding: 12px 14px; border-left: 4px solid #20c997; transition: box-shadow .2s ease, transform .2s ease; }
+                    .jurnal-card:hover { box-shadow: 0 10px 26px rgba(20,30,70,.13); transform: translateY(-2px); }
+                    @media (max-width: 575.98px) {
+                        .jurnal-timeline::before { left: 47px; }
+                        .jurnal-item { gap: 10px; }
+                        .jurnal-date { flex-basis: 60px; }
+                        .jurnal-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 32px; }
+                    }
+                    </style>
                     <form method="POST" id="delete-multiple-form">
                         <input type="hidden" name="selected-ids" id="selected-ids">
-                        
+
                         <?php if ($can_manage): ?>
-                        <div class="mb-3">
-                            <button type="button" class="btn btn-danger" id="delete-selected-btn">
+                        <div class="mb-3 d-flex flex-wrap align-items-center" style="gap: 8px;">
+                            <div class="custom-checkbox custom-control mr-1" title="Pilih semua">
+                                <input type="checkbox" class="custom-control-input" id="select-all">
+                                <label class="custom-control-label font-weight-bold small" for="select-all">Pilih semua</label>
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm" id="delete-selected-btn" style="display: none;">
                                 <i class="fas fa-trash"></i> Hapus Dipilih
                             </button>
                         </div>
                         <?php endif; ?>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped table-hover" id="table-jurnal">
-                                <thead>
-                                    <tr>
+
+                        <?php
+                        $bulan_id = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                        $cur_month = '';
+                        ?>
+                        <div class="jurnal-timeline">
+                            <?php foreach ($journal_entries as $entry): ?>
+                                <?php
+                                $mk = date('Y-m', strtotime($entry['tanggal']));
+                                if ($mk !== $cur_month) {
+                                    $cur_month = $mk;
+                                    echo '<div class="jurnal-month"><i class="far fa-calendar-alt mr-1"></i>' . $bulan_id[(int)date('n', strtotime($entry['tanggal']))] . ' ' . date('Y', strtotime($entry['tanggal'])) . '</div>';
+                                }
+                                ?>
+                                <div class="jurnal-item">
+                                    <div class="jurnal-date">
+                                        <span class="d"><?= date('d', strtotime($entry['tanggal'])) ?></span>
+                                        <span class="m"><?= mb_substr($bulan_id[(int)date('n', strtotime($entry['tanggal']))], 0, 3) ?></span>
+                                    </div>
+                                    <div class="jurnal-card">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-1" style="gap: 6px;">
+                                            <span class="badge px-2 py-1 font-weight-bold" style="background: #20c9971a; color: #0d9463; font-size: 11px; border-radius: 6px;">
+                                                <i class="fas fa-book-open mr-1"></i><?= htmlspecialchars($entry['mapel']) ?>
+                                            </span>
+                                            <?php if ($can_manage): ?>
+                                                <div class="custom-checkbox custom-control">
+                                                    <input type="checkbox" class="custom-control-input les-check" id="lescheck-<?php echo $entry['id']; ?>" name="ids[]" value="<?php echo $entry['id']; ?>">
+                                                    <label class="custom-control-label" for="lescheck-<?php echo $entry['id']; ?>"></label>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <p class="text-dark mb-2" style="font-size: 13.5px; line-height: 1.6; white-space: pre-wrap;"><?= htmlspecialchars($entry['materi']) ?></p>
+                                        <div class="small text-muted mb-2" style="font-size: 11.5px; line-height: 1.8;">
+                                            <span class="mr-3"><i class="far fa-calendar-alt mr-1"></i><?= date('d/m/Y', strtotime($entry['tanggal'])) ?></span>
+                                            <span class="mr-3"><i class="far fa-clock mr-1"></i><?= htmlspecialchars($entry['waktu']) ?></span>
+                                            <span class="mr-3"><i class="fas fa-user mr-1"></i><?= htmlspecialchars($entry['nama_guru'] ?? '-') ?></span>
+                                            <?php if (!empty($entry['nama_kelas'])): ?>
+                                                <span><i class="fas fa-door-open mr-1"></i><?= htmlspecialchars($entry['nama_kelas']) ?></span>
+                                            <?php endif; ?>
+                                        </div>
                                         <?php if ($can_manage): ?>
-                                        <th width="30">
-                                            <input type="checkbox" id="select-all">
-                                        </th>
+                                            <div class="pt-2 border-top d-flex flex-wrap" style="gap: 6px;">
+                                                <form method="POST" style="display:inline;" class="delete-form">
+                                                    <input type="hidden" name="id_jurnal" value="<?php echo $entry['id']; ?>">
+                                                    <button type="submit" name="delete_journal" class="btn btn-sm btn-danger px-2 font-weight-bold btn-delete" title="Hapus" style="border-radius: 6px; font-size: 11.5px;">
+                                                        <i class="fas fa-trash mr-1"></i>Hapus
+                                                    </button>
+                                                </form>
+                                            </div>
                                         <?php endif; ?>
-                                        <th>No</th>
-                                        <th>Tanggal</th>
-                                        <th>Waktu</th>
-                                        <th>Guru</th>
-                                        <th>Mapel</th>
-                                        <th>Materi</th>
-                                        <?php if ($can_manage): ?>
-                                        <th>Aksi</th>
-                                        <?php endif; ?>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php 
-                                    $no = 1;
-                                    foreach ($journal_entries as $entry): 
-                                    ?>
-                                    <tr>
-                                        <?php if ($can_manage): ?>
-                                        <td>
-                                            <input type="checkbox" name="ids[]" value="<?php echo $entry['id']; ?>">
-                                        </td>
-                                        <?php endif; ?>
-                                        <td><?php echo $no++; ?></td>
-                                        <td><?php echo date('d/m/Y', strtotime($entry['tanggal'])); ?></td>
-                                        <td><?php echo htmlspecialchars($entry['waktu']); ?></td>
-                                        <td><?php echo htmlspecialchars($entry['nama_guru'] ?? '-'); ?></td>
-                                        <td><?php echo htmlspecialchars($entry['mapel']); ?></td>
-                                        <td><?php echo htmlspecialchars($entry['materi']); ?></td>
-                                        <?php if ($can_manage): ?>
-                                        <td>
-                                            <form method="POST" style="display:inline;" class="delete-form">
-                                                <input type="hidden" name="id_jurnal" value="<?php echo $entry['id']; ?>">
-                                                <button type="submit" name="delete_journal" class="btn btn-sm btn-danger btn-delete" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </td>
-                                        <?php endif; ?>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </form>
                     <?php else: ?>
