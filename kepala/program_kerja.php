@@ -130,14 +130,13 @@ if($where){
 }
 $cnt_st=$pdo->query("SELECT status,COUNT(*) c FROM tb_program_kerja GROUP BY status")->fetchAll(PDO::FETCH_KEY_PAIR);
 
-$css_libs=['https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css'];
-$js_libs=['https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js','https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js'];
+$css_libs=[];
+$js_libs=[];
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 <style>
-#table-proker th{white-space:nowrap;font-size:.78rem}
-#table-proker td{font-size:.8rem;vertical-align:top}
+.proker-timeline-card{border-radius:12px}
 @media (max-width:767.98px){
 .proja-toolbar .btn-tambah-wrap{margin-top:.5rem}
 .proja-toolbar .btn-tambah-wrap .btn{width:100%}
@@ -172,60 +171,87 @@ include '../templates/sidebar.php';
 </div>
 
 <div class="card">
-<div class="card-header proja-card-header"><h4>Tabel Program Kerja</h4><div class="card-header-action d-flex align-items-center">
+<div class="card-header proja-card-header"><h4>Timeline Program Kerja</h4><div class="card-header-action d-flex align-items-center">
 <span class="badge badge-info mr-2"><?=count($rows)?> data</span>
 <?php $q=http_build_query(array_filter(['komponen'=>$filter_komponen?:null,'status'=>$filter_status?:null])); $qs=$q?'?'.$q:''; ?>
 <a href="export_progja_excel.php<?=$qs?>" class="btn btn-success btn-sm mr-1"><i class="fas fa-file-excel"></i> Excel</a>
 <a href="cetak_progja.php<?=$qs?>" target="_blank" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
 </div></div>
 <div class="card-body">
-<div class="table-responsive">
-<table class="table table-striped table-bordered" id="table-proker" style="width:100%">
-<thead>
-<tr>
-<th class="text-center" style="min-width:40px">No</th>
-<th style="min-width:140px">Komponen</th>
-<th style="min-width:160px">Program</th>
-<th style="min-width:160px">Kegiatan</th>
-<th style="min-width:140px">Tujuan</th>
-<th style="min-width:140px">Indikator Keberhasilan</th>
-<th style="min-width:100px">Target</th>
-<th style="min-width:110px">Waktu Mulai</th>
-<th style="min-width:110px">Waktu Selesai</th>
-<th style="min-width:130px">Penanggung Jawab</th>
-<th style="min-width:110px">Anggaran</th>
-<th style="min-width:110px">Sumber Dana</th>
-<?php if($is_editable):?><th class="text-center" style="min-width:130px">Aksi</th><?php endif;?>
-</tr>
-</thead>
-<tbody>
-<?php $no=1; foreach($rows as $r): $kom=$komponen_list[(int)$r['komponen']]??['nama'=>'-','ruang'=>''];?>
-<tr>
-<td class="text-center"><?=$no++?></td>
-<td><span class="badge badge-primary"><?=$r['komponen']?>. <?=htmlspecialchars($kom['nama'])?></span><br><small class="text-muted"><?=htmlspecialchars($kom['ruang'])?></small></td>
-<td><?=htmlspecialchars($r['program'])?></td>
-<td><?=nl2br(htmlspecialchars($r['kegiatan']))?></td>
-<td><?=nl2br(htmlspecialchars($r['tujuan']??'-'))?></td>
-<td><?=nl2br(htmlspecialchars($r['indikator']??'-'))?></td>
-<td><?=htmlspecialchars($r['target']??'-')?></td>
-<td><?=!empty($r['waktu_mulai'])?formatDateDMY($r['waktu_mulai']):(!empty($r['waktu'])?htmlspecialchars($r['waktu']):'-')?></td>
-<td><?=!empty($r['waktu_selesai'])?formatDateDMY($r['waktu_selesai']):'-'?></td>
-<td><?=htmlspecialchars($r['penanggung_jawab']??'-')?></td>
-<td class="text-right"><?= $r['anggaran']>0?'Rp '.number_format($r['anggaran'],0,',','.'):'-' ?></td>
-<td><?=htmlspecialchars($r['sumber_dana']??'-')?></td>
-<?php if($is_editable):?>
-<td class="text-center">
-<div class="btn-group">
-<button class="btn btn-warning btn-sm btn-edit" data-row='<?=htmlspecialchars(json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE),ENT_QUOTES,'UTF-8')?>' title="Edit"><i class="fas fa-edit"></i></button>
-<button class="btn btn-danger btn-sm btn-del" data-id="<?=$r['id']?>" data-prog="<?=htmlspecialchars($r['program'])?>" title="Hapus"><i class="fas fa-trash"></i></button>
+<style>
+.proker-timeline { position: relative; padding: 6px 0 6px 8px; }
+.proker-timeline::before { content: ''; position: absolute; left: 57px; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #6777ef, #3abaf4); opacity: .35; }
+.proker-month { position: relative; z-index: 1; display: inline-block; margin: 14px 0 14px 34px; padding: 4px 16px; border-radius: 20px; background: #6777ef; color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .3px; box-shadow: 0 4px 10px rgba(103,119,239,.35); }
+.proker-month:first-child { margin-top: 0; }
+.proker-item { position: relative; display: flex; gap: 14px; margin-bottom: 14px; }
+.proker-date { flex: 0 0 76px; text-align: center; z-index: 1; }
+.proker-date .d { display: block; width: 46px; height: 46px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid var(--tl-color, #6777ef); color: var(--tl-color, #6777ef); font-weight: 800; font-size: 15px; line-height: 40px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+.proker-date .m { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
+.proker-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e9edf5; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.07); padding: 12px 14px; border-left: 4px solid var(--tl-color, #6777ef); transition: box-shadow .2s ease, transform .2s ease; }
+.proker-card:hover { box-shadow: 0 10px 26px rgba(20,30,70,.13); transform: translateY(-2px); }
+@media (max-width: 575.98px) {
+ .proker-timeline::before { left: 47px; }
+ .proker-item { gap: 10px; }
+ .proker-date { flex-basis: 60px; }
+ .proker-date .d { width: 38px; height: 38px; font-size: 13px; line-height: 32px; }
+}
+</style>
+<?php if(empty($rows)):?>
+<div class="text-center text-muted py-5"><i class="far fa-clipboard fa-3x mb-3"></i><br><strong>Belum ada program pada filter ini.</strong></div>
+<?php else:?>
+<?php
+$bulan_id=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+$cur_kom=''; $pk_palette=['#6777ef','#3abaf4','#47c363','#ffa426','#9467ef','#20c997','#fc544b'];
+?>
+<div class="proker-timeline">
+<?php foreach($rows as $r): $kom=$komponen_list[(int)$r['komponen']]??['nama'=>'-','ruang'=>''];?>
+<?php
+$kkey=(string)$r['komponen'];
+if($kkey!==$cur_kom){ $cur_kom=$kkey; echo '<div class="proker-month"><i class="fas fa-layer-group mr-1"></i>Komponen '.$r['komponen'].'. '.htmlspecialchars($kom['nama']).'</div>'; }
+$tl_color=$pk_palette[((int)$r['komponen'])%count($pk_palette)];
+$st=(string)($r['status']??'belum_terlaksana'); if(!isset($status_opts[$st])) $st='belum_terlaksana';
+$st_badge=$status_badge[$st]??'badge-secondary'; $st_icon=$status_icon[$st]??'fa-clock';
+$wm=!empty($r['waktu_mulai'])?formatDateDMY($r['waktu_mulai']):(!empty($r['waktu'])?htmlspecialchars($r['waktu']):'-');
+$ws=!empty($r['waktu_selesai'])?formatDateDMY($r['waktu_selesai']):'-';
+$dm=!empty($r['waktu_mulai'])?date('d',strtotime($r['waktu_mulai'])):'•';
+$mm=!empty($r['waktu_mulai'])?mb_substr($bulan_id[(int)date('n',strtotime($r['waktu_mulai']))],0,3):'';
+$keg_cut=mb_strimwidth(strip_tags((string)($r['kegiatan']??'')),0,120,'...');
+?>
+<div class="proker-item">
+<div class="proker-date" style="--tl-color: <?=$tl_color?>;"><span class="d"><?=$dm?></span><span class="m"><?=$mm?></span></div>
+<div class="proker-card" style="--tl-color: <?=$tl_color?>;">
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-1" style="gap:6px;">
+<span class="badge badge-primary px-2 py-1 font-weight-bold" style="font-size:11px;border-radius:6px;"><?=$r['komponen']?>. <?=htmlspecialchars($kom['nama'])?></span>
+<span class="badge <?=$st_badge?>"><i class="fas <?=$st_icon?> mr-1"></i><?=htmlspecialchars($status_opts[$st])?></span>
 </div>
-</td>
+<h6 class="font-weight-bold text-dark mb-1" style="font-size:14.5px;"><?=htmlspecialchars($r['program'])?></h6>
+<?php if($keg_cut!==''):?><p class="small text-muted mb-2"><?=htmlspecialchars($keg_cut)?></p><?php endif;?>
+<div class="small text-muted mb-2" style="font-size:11.5px;line-height:1.8;">
+<span class="mr-3"><i class="far fa-calendar-alt mr-1"></i><?=$wm?> s/d <?=$ws?></span>
+<?php if(!empty($r['penanggung_jawab'])):?><span class="mr-3"><i class="fas fa-user-tie mr-1"></i><?=htmlspecialchars($r['penanggung_jawab'])?></span><?php endif;?>
+<?php if(!empty($r['target'])):?><span class="mr-3"><i class="fas fa-bullseye mr-1"></i>Target: <?=htmlspecialchars($r['target'])?></span><?php endif;?>
+<?php if(($r['anggaran']??0)>0):?><span><i class="fas fa-money-bill-wave mr-1"></i>Rp <?=number_format($r['anggaran'],0,',','.')?><?=!empty($r['sumber_dana'])?' ('.htmlspecialchars($r['sumber_dana']).')':''?></span><?php endif;?>
+</div>
+<?php if(!empty($r['tujuan'])||!empty($r['indikator'])):?>
+<div class="small mb-2 p-2 rounded" style="background:#f8fafc;font-size:11.5px;">
+<?php if(!empty($r['tujuan'])):?><div><strong class="text-primary">Tujuan:</strong> <?=htmlspecialchars(mb_strimwidth(strip_tags($r['tujuan']),0,100,'...'))?></div><?php endif;?>
+<?php if(!empty($r['indikator'])):?><div><strong class="text-success">Indikator:</strong> <?=htmlspecialchars(mb_strimwidth(strip_tags($r['indikator']),0,100,'...'))?></div><?php endif;?>
+</div>
 <?php endif;?>
-</tr>
-<?php endforeach;?>
-</tbody>
-</table>
+<div class="pt-2 border-top d-flex flex-wrap align-items-center" style="gap:6px;">
+<?php if($is_editable):?>
+<select class="form-control form-control-sm proker-status-sel font-weight-bold" data-id="<?=$r['id']?>" style="max-width:170px;border-radius:8px;">
+<?php foreach($status_opts as $sk=>$sl):?><option value="<?=$sk?>" <?=$st===$sk?'selected':''?>><?=$sl?></option><?php endforeach;?>
+</select>
+<button class="btn btn-warning btn-sm px-2 font-weight-bold btn-edit" data-row='<?=htmlspecialchars(json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE),ENT_QUOTES,'UTF-8')?>' title="Edit" style="border-radius:6px;font-size:11.5px;"><i class="fas fa-edit mr-1"></i>Edit</button>
+<button class="btn btn-danger btn-sm px-2 font-weight-bold btn-del" data-id="<?=$r['id']?>" data-prog="<?=htmlspecialchars($r['program'])?>" title="Hapus" style="border-radius:6px;font-size:11.5px;"><i class="fas fa-trash mr-1"></i>Hapus</button>
+<?php endif;?>
 </div>
+</div>
+</div>
+<?php endforeach;?>
+</div>
+<?php endif;?>
 </div>
 </div>
 
@@ -350,8 +376,14 @@ function fmtRupiah(v){
 function bindRupiah(sel){ $(document).on('input', sel, function(){ var p=this.selectionStart, l=this.value.length; this.value=fmtRupiah(this.value); }); $(document).on('blur', sel, function(){ this.value=fmtRupiah(this.value); }); }
 $(document).ready(function(){
  bindRupiah('input[name="anggaran"]'); bindRupiah('#edit_anggaran');
+  $(document).on('change','.proker-status-sel',function(){
+   var $s=$(this), id=$s.data('id'), st=$s.val();
+   $.ajax({url:location.pathname, type:'POST', data:{update_status:1, id:id, status:st}, headers:{'X-Requested-With':'XMLHttpRequest'}, dataType:'json',
+    success:function(res){ if(res && res.success){ location.reload(); } else { Swal.fire({icon:'error',title:'Gagal update status'}); } },
+    error:function(){ Swal.fire({icon:'error',title:'Gagal update status'}); }});
+  });
  $('form').on('submit', function(){ $(this).find('input[name="anggaran"]').each(function(){ this.value=this.value.replace(/\D/g,''); }); });
- var t=$('#table-proker').DataTable({scrollX:true, autoWidth:false, paging:true, pageLength:10, language:{search:"Cari:", lengthMenu:"Tampilkan _MENU_", zeroRecords:"Tidak ada data", info:"Menampilkan _START_ - _END_ dari _TOTAL_", paginate:{first:"Awal",last:"Akhir",next:"Next",previous:"Prev"}}});
+ var t=$('#table-proker').each(function(){}, {scrollX:false, autoWidth:false, paging:false, pageLength:10, language:{search:"Cari:", lengthMenu:"Tampilkan _MENU_", zeroRecords:"Tidak ada data", info:"Menampilkan _START_ - _END_ dari _TOTAL_", paginate:{first:"Awal",last:"Akhir",next:"Next",previous:"Prev"}}});
  <?php if($message):?>Swal.fire({icon:'<?= $message['type']=='success'?'success':'error'?>',title:'<?= addslashes($message['text'])?>', timer:2000, showConfirmButton:false});<?php endif;?>
   $(document).on('click','.btn-edit',function(){
    var r=$(this).data('row'); if(typeof r==='string') try{r=JSON.parse(r)}catch(e){r=$(this).attr('data-row'); r=JSON.parse(r)}
