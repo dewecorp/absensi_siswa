@@ -611,54 +611,60 @@ include_once '../templates/sidebar.php';
                     <!-- Profile Box -->
                     <div class="row mapp-row-profile">
                         <div class="col-12 mb-3">
-                            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%); border-radius: 16px; overflow: hidden; color: #fff;">
-                                <div class="card-body p-4">
+                            <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 50%, #06b6d4 100%); border-radius: 12px; overflow: hidden; color: #fff; position: relative;">
+                                <div style="position: absolute; right: -20px; bottom: -20px; width: 180px; height: 180px; background: rgba(255,255,255,0.07); border-radius: 50%; pointer-events: none;"></div>
+                                <div class="card-body p-4 p-md-4">
                                     <div class="row align-items-center">
                                         <div class="col-12 col-md-auto text-center mb-3 mb-md-0">
-                                            <div class="d-inline-block position-relative">
+                                            <div class="d-inline-block position-relative text-center">
                                                 <?php
                                                 $avatar_img = getTeacherAvatarImage($teacher, 96);
-                                                $avatar_img = str_replace("class='rounded-circle'", "class='rounded-circle shadow border border-white' style='border-width: 3px !important; object-fit: cover; width: 96px; height: 96px;'", $avatar_img);
+                                                $avatar_img = str_replace("class='rounded-circle'", "class='rounded-circle shadow-lg border border-white' style='border-width: 3px !important; object-fit: cover; width: 96px; height: 96px;'", $avatar_img);
                                                 echo $avatar_img;
                                                 ?>
+                                                <div class="mt-2">
+                                                    <span class="badge badge-success px-3 py-1 shadow-sm" style="font-size: 11px; font-weight: 800; background: #16a34a !important; color: #ffffff !important; border: 1px solid #4ade80;"><i class="fas fa-circle mr-1" style="font-size: 6px; color: #4ade80;"></i> Aktif</span>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="col-12 col-md text-center text-md-left">
-                                            <div class="d-flex flex-column flex-md-row align-items-center align-items-md-center justify-content-between mb-2">
+                                            <div class="d-flex flex-column flex-md-row align-items-center justify-content-between mb-3" style="gap: 12px;">
                                                 <div class="text-center text-md-left mb-2 mb-md-0">
-                                                    <h3 class="font-weight-bold text-white mb-1" style="font-size: 1.4rem; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">Assalamualaikum, <?php echo htmlspecialchars($teacher_name); ?></h3>
-                                                    <div style="color: #f8fafc; font-size: 13.5px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
-                                                        <i class="fas fa-user-graduate mr-1" style="color: #fde047;"></i> Wali Kelas <b><?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '-'; ?></b> (<b><?php echo $total_siswa; ?></b> siswa)
+                                                    <div class="text-uppercase mb-1" style="font-size: 10.5px; letter-spacing: 1.5px; font-weight: 800; color: #93c5fd;">Selamat Datang Kembali</div>
+                                                    <h3 class="font-weight-bold text-white mb-2" style="font-size: 1.45rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2); word-break: break-word;">Assalamualaikum, <?php echo htmlspecialchars($teacher_name); ?></h3>
+                                                    <div class="d-inline-block px-3 py-1 rounded-pill" style="background: rgba(255,255,255,0.2) !important; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.3); color: #ffffff !important;">
+                                                        <i class="fas fa-user-graduate mr-1" style="color: #fde047;"></i>
+                                                        <span style="font-size: 12px; font-weight: 600; color: #ffffff !important;">Wali Kelas <b><?php echo $wali_kelas ? htmlspecialchars($wali_kelas['nama_kelas']) : '-'; ?></b> (<b><?php echo $total_siswa; ?></b> Siswa)</span>
                                                     </div>
                                                 </div>
-                                                <div class="mt-2 mt-md-0 text-center text-md-right">
-                                                    <a href="../guru/profil.php" class="btn btn-sm btn-light font-weight-bold px-3 shadow-sm" style="border-radius: 20px; font-size: 12px; color: #1e3a8a;">
-                                                        <i class="fas fa-user-cog mr-1" style="color: #2563eb;"></i> Profil & Pengaturan
+                                                <div class="text-center text-md-right flex-shrink-0">
+                                                    <a href="../guru/profil.php" class="btn btn-light font-weight-bold px-3.5 py-2 shadow-sm" style="border-radius: 10px; font-size: 12px; color: #1e3a8a; white-space: nowrap;">
+                                                        <i class="fas fa-user-cog mr-2" style="color: #2563eb;"></i> Profil & Pengaturan
                                                     </a>
                                                 </div>
                                             </div>
 
-                                            <div class="p-3 mt-3 rounded d-none d-md-block" style="background: rgba(15, 23, 42, 0.22); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(4px);">
-                                                <div class="row text-center text-md-left">
-                                                    <div class="col-6 col-sm-4 col-md-auto mb-2 mb-md-0 pr-md-4">
-                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">NUPTK</span>
-                                                        <span class="font-weight-bold text-white" style="font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);"><?php echo !empty($teacher['nuptk']) ? htmlspecialchars($teacher['nuptk']) : '-'; ?></span>
+                                            <div class="p-3 mt-3 rounded d-none d-md-block" style="background: rgba(15, 23, 42, 0.25); border: 1px solid rgba(255, 255, 255, 0.25); backdrop-filter: blur(8px); box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); border-radius: 10px !important;">
+                                                <div class="row text-center text-md-left align-items-center">
+                                                    <div class="col mb-2 mb-md-0 pr-md-3 border-right border-light border-opacity-15">
+                                                        <span class="d-block" style="color: #93c5fd; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">NUPTK</span>
+                                                        <span class="font-weight-bold text-white" style="font-size: 12.5px;"><?php echo !empty($teacher['nuptk']) ? htmlspecialchars($teacher['nuptk']) : '-'; ?></span>
                                                     </div>
-                                                    <div class="col-6 col-sm-4 col-md-auto mb-2 mb-md-0 pr-md-4">
-                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Status</span>
-                                                        <span class="badge badge-success px-2 py-1" style="font-size: 10.5px; font-weight: 800; border: 1px solid #16a34a;"><?php echo !empty($teacher['status_kepegawaian']) ? htmlspecialchars($teacher['status_kepegawaian']) : 'Aktif'; ?></span>
+                                                    <div class="col mb-2 mb-md-0 px-md-3 border-right border-light border-opacity-15">
+                                                        <span class="d-block" style="color: #93c5fd; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">Status</span>
+                                                        <span class="badge badge-success px-2 py-0.5 mt-1" style="font-size: 10px; font-weight: 800; background: #16a34a;"><?php echo !empty($teacher['status_kepegawaian']) ? htmlspecialchars($teacher['status_kepegawaian']) : 'Aktif'; ?></span>
                                                     </div>
-                                                    <div class="col-6 col-sm-4 col-md-auto mb-2 mb-md-0 pr-md-4">
-                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">TMT</span>
-                                                        <span class="font-weight-bold text-white" style="font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);"><?php echo !empty($teacher['tmt']) ? date('d/m/Y', strtotime($teacher['tmt'])) : '-'; ?></span>
+                                                    <div class="col mb-2 mb-md-0 px-md-3 border-right border-light border-opacity-15">
+                                                        <span class="d-block" style="color: #93c5fd; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">TMT</span>
+                                                        <span class="font-weight-bold text-white" style="font-size: 12.5px;"><?php echo !empty($teacher['tmt']) ? date('d/m/Y', strtotime($teacher['tmt'])) : '-'; ?></span>
                                                     </div>
-                                                    <div class="col-6 col-sm-4 col-md-auto mb-2 mb-md-0 pr-md-4">
-                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Masa Bakti</span>
-                                                        <span class="font-weight-bold" style="color: #fef08a; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></span>
+                                                    <div class="col mb-2 mb-md-0 px-md-3 border-right border-light border-opacity-15">
+                                                        <span class="d-block" style="color: #93c5fd; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">Masa Bakti</span>
+                                                        <span class="font-weight-bold" style="color: #fef08a; font-size: 12.5px;"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></span>
                                                     </div>
-                                                    <div class="col-12 col-sm-8 col-md-auto mt-2 mt-md-0">
-                                                        <span class="d-block" style="color: #cbd5e1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Tempat, Tgl Lahir</span>
-                                                        <span class="font-weight-bold text-white" style="font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                                                    <div class="col mt-2 mt-md-0 pl-md-3">
+                                                        <span class="d-block" style="color: #93c5fd; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">Tempat, Tgl Lahir</span>
+                                                        <span class="font-weight-bold text-white" style="font-size: 12px;">
                                                             <?php
                                                             $ttl = [];
                                                             if (!empty($teacher['tempat_lahir'])) $ttl[] = $teacher['tempat_lahir'];
