@@ -167,6 +167,49 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.jadwal-card {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.jadwal-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(103, 119, 239, 0.08) !important;
+    border-color: #cbd5e1 !important;
+}
+.jadwal-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.jadwal-act-btn {
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.seragam-preview-box {
+    background: #f8fafc;
+    border-left: 3.5px solid #6777ef;
+    border-top: 1px solid #edf2f7;
+    border-right: 1px solid #edf2f7;
+    border-bottom: 1px solid #edf2f7;
+    border-radius: 6px;
+    padding: 12px 14px;
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -175,54 +218,84 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Daftar Jadwal Seragam Tahun Ajaran <?php echo $school_profile['tahun_ajaran'] ?? ''; ?></h4>
-                            <div class="card-header-action">
-                                <?php if ($is_editable): ?>
-                                <button class="btn btn-primary" data-toggle="modal" data-target="#modalAdd">
-                                    <i class="fas fa-plus"></i> Tambah Jadwal
-                                </button>
-                                <?php endif; ?>
-                                <a href="jadwal_seragam.php?print=1" target="_blank" class="btn btn-info">
-                                    <i class="fas fa-print"></i> Cetak
-                                </a>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center" width="10%">NO</th>
-                                            <th class="text-center" width="30%">HARI</th>
-                                            <th class="text-center">JENIS SERAGAM</th>
-                                            <?php if ($is_editable): ?>
-                                            <th class="text-center" width="15%">AKSI</th>
-                                            <?php endif; ?>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($schedules as $idx => $row): ?>
-                                        <tr>
-                                            <td class="text-center"><?php echo $idx + 1; ?></td>
-                                            <td class="text-center"><?php echo strtoupper($row['hari']); ?></td>
-                                            <td><?php echo $row['jenis_seragam']; ?></td>
-                                            <?php if ($is_editable): ?>
-                                            <td class="text-center">
-                                                <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#modalEdit<?php echo $row['id']; ?>"><i class="fas fa-edit"></i></button>
-                                                <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#modalDelete<?php echo $row['id']; ?>"><i class="fas fa-trash"></i></button>
-                                            </td>
-                                            <?php endif; ?>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+            <!-- Card Utama Jadwal Seragam (Bentuk Kartu Informatif) -->
+            <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9; gap: 10px;">
+                    <div>
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-tshirt text-primary mr-2"></i>Jadwal Seragam Guru</h4>
+                        <small class="text-muted">Menampilkan <span class="font-weight-bold text-primary"><?= count($schedules) ?></span> hari &bull; Tahun Ajaran <?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?></small>
                     </div>
+                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                        <?php if ($is_editable): ?>
+                        <button class="btn btn-primary btn-sm font-weight-bold" data-toggle="modal" data-target="#modalAdd" style="border-radius: 6px;">
+                            <i class="fas fa-plus mr-1"></i> Tambah Jadwal
+                        </button>
+                        <?php endif; ?>
+                        <a href="jadwal_seragam.php?print=1" target="_blank" class="btn btn-info btn-sm font-weight-bold" style="border-radius: 6px;">
+                            <i class="fas fa-print mr-1"></i> Cetak
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
+                    <?php if (empty($schedules)): ?>
+                        <div class="text-center py-5 bg-white rounded shadow-sm border">
+                            <i class="fas fa-tshirt fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted font-weight-bold">Belum Ada Jadwal Seragam</h5>
+                            <p class="text-muted small mb-0">Silakan tambahkan jadwal seragam guru terlebih dahulu.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="row" style="row-gap: 16px;">
+                            <?php
+                            $seragam_palette = [
+                                ['#6777ef', '#3abaf4'],
+                                ['#10b981', '#059669'],
+                                ['#f59e0b', '#f97316'],
+                                ['#8b5cf6', '#6366f1'],
+                                ['#ec4899', '#f43f5e'],
+                                ['#0ea5e9', '#06b6d4'],
+                                ['#14b8a6', '#0d9488'],
+                            ];
+                            ?>
+                            <?php foreach ($schedules as $idx => $row): ?>
+                                <?php $pal = $seragam_palette[$idx % count($seragam_palette)]; ?>
+                                <div class="col-12 col-md-6 col-xl-4 d-flex align-items-stretch">
+                                    <div class="card w-100 border-0 shadow-sm jadwal-card mb-0 d-flex flex-column justify-content-between" style="overflow: hidden;">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex align-items-center mb-2" style="gap: 12px;">
+                                                <div class="jadwal-avatar flex-shrink-0" style="background: linear-gradient(135deg, <?= $pal[0] ?>, <?= $pal[1] ?>);">
+                                                    <i class="fas fa-tshirt"></i>
+                                                </div>
+                                                <div style="min-width: 0;">
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 5px; font-size: 11px;">
+                                                        <i class="far fa-calendar-alt text-primary mr-1"></i> <?= strtoupper(htmlspecialchars($row['hari'])) ?>
+                                                    </span>
+                                                    <div class="small text-muted mt-1">Hari pemakaian seragam</div>
+                                                </div>
+                                            </div>
+                                            <div class="seragam-preview-box">
+                                                <div class="small font-weight-bold text-dark mb-1">
+                                                    <i class="fas fa-tags text-primary mr-2" style="font-size: 11px;"></i> Jenis Seragam:
+                                                </div>
+                                                <div class="text-dark small font-weight-bold" style="line-height: 1.45; font-size: 13px; padding-left: 2px;">
+                                                    <?= htmlspecialchars($row['jenis_seragam']) ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php if ($is_editable): ?>
+                                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-end" style="gap: 6px;">
+                                            <button class="btn btn-warning btn-sm jadwal-act-btn" data-toggle="modal" data-target="#modalEdit<?php echo $row['id']; ?>" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm jadwal-act-btn" data-toggle="modal" data-target="#modalDelete<?php echo $row['id']; ?>" title="Hapus">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

@@ -105,6 +105,65 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.jadwal-card {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.jadwal-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(103, 119, 239, 0.08) !important;
+    border-color: #cbd5e1 !important;
+}
+.jadwal-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.jadwal-act-btn {
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.piket-teacher-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 4px 12px 4px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin: 0 6px 6px 0;
+}
+.piket-teacher-chip .chip-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6777ef, #3abaf4);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -113,80 +172,117 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <div class="card">
-                <div class="card-header">
-                    <h4>Daftar Jadwal Piket Harian</h4>
-                    <div class="card-header-action">
+            <!-- Card Utama Jadwal Piket (Bentuk Kartu Informatif) -->
+            <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9; gap: 10px;">
+                    <div>
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-user-shield text-primary mr-2"></i>Jadwal Guru Piket Harian</h4>
+                        <small class="text-muted">Menampilkan <span class="font-weight-bold text-primary"><?= count($jadwal) ?></span> hari terjadwal</small>
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
                         <?php if ($can_edit): ?>
-                        <button class="btn btn-primary" data-toggle="modal" data-target="#addModal"><i class="fas fa-plus"></i> Tambah Jadwal</button>
+                        <button class="btn btn-primary btn-sm font-weight-bold" data-toggle="modal" data-target="#addModal" style="border-radius: 6px;"><i class="fas fa-plus mr-1"></i> Tambah Jadwal</button>
                         <?php endif; ?>
                         <?php if (!empty($jadwal)): ?>
-                        <div class="btn-group btn-pill ml-2 overflow-hidden" style="border-radius: 30px;">
-                            <button type="button" class="btn btn-danger px-3" onclick="exportToPDF()" style="background-color:#ff5e5e;border:none;border-top-left-radius:30px;border-bottom-left-radius:30px;"><i class="fas fa-file-pdf"></i> PDF</button>
-                            <button type="button" class="btn btn-success px-3" onclick="exportToExcel()" style="background-color:#47c363;border:none;border-top-right-radius:30px;border-bottom-right-radius:30px;"><i class="fas fa-file-excel"></i> Excel</button>
+                        <div class="btn-group btn-pill overflow-hidden" style="border-radius: 30px;">
+                            <button type="button" class="btn btn-danger btn-sm px-3 font-weight-bold" onclick="exportToPDF()" style="background-color:#ff5e5e;border:none;">
+                                <i class="fas fa-file-pdf mr-1"></i> PDF
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm px-3 font-weight-bold" onclick="exportToExcel()" style="background-color:#47c363;border:none;">
+                                <i class="fas fa-file-excel mr-1"></i> Excel
+                            </button>
                         </div>
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
                     <?php if (isset($error)): ?>
                         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
                     <?php endif; ?>
 
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th class="text-center" style="width:60px">No</th>
-                                    <th style="width:120px">Hari</th>
-                                    <th>Nama Guru</th>
-                                    <?php if ($can_edit): ?>
-                                    <th class="text-center" style="width:100px">Aksi</th>
-                                    <?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($jadwal)): ?>
-                                <tr><td colspan="<?= $can_edit ? 4 : 3 ?>" class="text-center text-muted py-4">Belum ada jadwal piket. Tambah jadwal baru.</td></tr>
-                                <?php else: ?>
-                                <?php $no = 1; foreach ($jadwal as $j): ?>
-                                <tr>
-                                    <td class="text-center"><?= $no++ ?></td>
-                                    <td><strong><?= htmlspecialchars($j['hari']) ?></strong></td>
-                                    <td>
-                                        <?php
-                                        $ids = array_filter(explode(',', $j['id_guru']));
-                                        $nama_guru = [];
-                                        foreach ($ids as $id) {
-                                            foreach ($all_guru as $g) {
-                                                if ($g['id_guru'] == $id) {
-                                                    $nama_guru[] = htmlspecialchars($g['nama_guru']);
-                                                    break;
-                                                }
-                                            }
+                    <?php if (empty($jadwal)): ?>
+                        <div class="text-center py-5 bg-white rounded shadow-sm border">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted font-weight-bold">Belum Ada Jadwal Piket</h5>
+                            <p class="text-muted small mb-0">Silakan tambahkan jadwal guru piket baru.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="row" style="row-gap: 16px;">
+                            <?php
+                            $piket_palette = [
+                                ['#6777ef', '#3abaf4'],
+                                ['#10b981', '#059669'],
+                                ['#f59e0b', '#f97316'],
+                                ['#8b5cf6', '#6366f1'],
+                                ['#ec4899', '#f43f5e'],
+                                ['#0ea5e9', '#06b6d4'],
+                                ['#14b8a6', '#0d9488'],
+                            ];
+                            ?>
+                            <?php $pi = 0; foreach ($jadwal as $j): ?>
+                                <?php
+                                $pal = $piket_palette[$pi % count($piket_palette)];
+                                $pi++;
+                                $ids = array_filter(explode(',', $j['id_guru']));
+                                $nama_guru = [];
+                                foreach ($ids as $id) {
+                                    foreach ($all_guru as $g) {
+                                        if ($g['id_guru'] == $id) {
+                                            $nama_guru[] = $g['nama_guru'];
+                                            break;
                                         }
-                                        echo implode(', ', $nama_guru);
-                                        ?>
-                                    </td>
-                                    <?php if ($can_edit): ?>
-                                    <td class="text-center" style="white-space:nowrap">
-                                        <button class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
-                                            data-id="<?= $j['id'] ?>"
-                                            data-hari="<?= $j['hari'] ?>"
-                                            data-guru="<?= $j['id_guru'] ?>"><i class="fas fa-edit"></i></button>
-                                        <form method="POST" style="display:inline" class="delete-form">
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="id" value="<?= $j['id'] ?>">
-                                            <button class="btn btn-sm btn-danger delete-btn" type="button"><i class="fas fa-trash"></i></button>
-                                        </form>
-                                    </td>
-                                    <?php endif; ?>
-                                </tr>
-                                <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                    }
+                                }
+                                ?>
+                                <div class="col-12 col-md-6 col-xl-6 d-flex align-items-stretch">
+                                    <div class="card w-100 border-0 shadow-sm jadwal-card mb-0 d-flex flex-column justify-content-between" style="overflow: hidden;">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom">
+                                                <div class="d-flex align-items-center" style="gap: 12px; min-width: 0;">
+                                                    <div class="jadwal-avatar flex-shrink-0" style="background: linear-gradient(135deg, <?= $pal[0] ?>, <?= $pal[1] ?>);">
+                                                        <i class="fas fa-user-shield"></i>
+                                                    </div>
+                                                    <div style="min-width: 0;">
+                                                        <h6 class="mb-0 font-weight-bold text-dark"><?= strtoupper(htmlspecialchars($j['hari'])) ?></h6>
+                                                        <small class="text-muted">Hari piket</small>
+                                                    </div>
+                                                </div>
+                                                <span class="badge badge-primary px-2 py-1 font-weight-bold flex-shrink-0" style="border-radius: 6px; font-size: 11px;" title="Jumlah guru piket">
+                                                    <i class="fas fa-users mr-1"></i> <?= count($nama_guru) ?> Guru
+                                                </span>
+                                            </div>
+                                            <div class="small font-weight-bold text-dark mb-2">
+                                                <i class="fas fa-user-check text-primary mr-2" style="font-size: 11px;"></i> Guru Bertugas:
+                                            </div>
+                                            <div class="d-flex flex-wrap">
+                                                <?php foreach ($nama_guru as $nm): ?>
+                                                    <span class="piket-teacher-chip">
+                                                        <span class="chip-avatar"><?= strtoupper(mb_substr(trim($nm), 0, 1)) ?></span>
+                                                        <?= htmlspecialchars($nm) ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                        <?php if ($can_edit): ?>
+                                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-end" style="gap: 6px;">
+                                            <button class="btn btn-warning btn-sm jadwal-act-btn" data-toggle="modal" data-target="#editModal"
+                                                data-id="<?= $j['id'] ?>"
+                                                data-hari="<?= $j['hari'] ?>"
+                                                data-guru="<?= $j['id_guru'] ?>" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <form method="POST" style="display:inline" class="delete-form mb-0">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="id" value="<?= $j['id'] ?>">
+                                                <button class="btn btn-danger btn-sm jadwal-act-btn delete-btn" type="button" title="Hapus"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if (!empty($jadwal)): ?>
                     <div id="exportTableContainer" style="display:none">
