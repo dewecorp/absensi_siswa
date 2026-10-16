@@ -110,23 +110,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // 1. List kelas
+$all_kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+
 if ($is_admin_or_kepala) {
-    $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $kelas_list = $all_kelas_list;
     $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik') AND nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
 } else {
     $kelas_list = getGuruTaughtClasses($pdo, $guru_id);
     if (empty($kelas_list)) {
-        $kelas_list = $pdo->query("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $kelas_list = $all_kelas_list;
     }
     $mapel_list = getGuruTaughtMapels($pdo, $guru_id);
     if (empty($mapel_list)) {
-$mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik') AND nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $mapel_list = $pdo->query("SELECT id_mapel, nama_mapel FROM tb_mata_pelajaran WHERE (jenis_mapel IS NULL OR jenis_mapel = 'Akademik') AND nama_mapel NOT LIKE '%Asmaul Husna%' AND nama_mapel NOT LIKE '%Upacara%' AND nama_mapel NOT LIKE '%Istirahat%' AND nama_mapel NOT LIKE '%Kepramukaan%' AND nama_mapel NOT LIKE '%Ekstrakurikuler%' ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 
 // 3. Siswa
+$all_siswa_list = $pdo->query("
+    SELECT s.id_siswa, s.nama_siswa, s.nisn, s.id_kelas, k.nama_kelas
+    FROM tb_siswa s
+    LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
+    ORDER BY k.nama_kelas ASC, s.nama_siswa ASC
+")->fetchAll(PDO::FETCH_ASSOC);
+
 $taught_kelas_ids = array_filter(array_map(function($k) { return (int)($k['id_kelas'] ?? 0); }, $kelas_list));
-if (!empty($taught_kelas_ids)) {
+if (!empty($taught_kelas_ids) && !$is_admin_or_kepala) {
     $in_clause = implode(',', $taught_kelas_ids);
     $siswa_list = $pdo->query("
         SELECT s.id_siswa, s.nama_siswa, s.nisn, s.id_kelas, k.nama_kelas
@@ -136,31 +145,25 @@ if (!empty($taught_kelas_ids)) {
         ORDER BY k.nama_kelas ASC, s.nama_siswa ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
 } else {
-    $siswa_list = $pdo->query("
-        SELECT s.id_siswa, s.nama_siswa, s.nisn, s.id_kelas, k.nama_kelas
-        FROM tb_siswa s
-        LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
-        ORDER BY k.nama_kelas ASC, s.nama_siswa ASC
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    $siswa_list = $all_siswa_list;
 }
 
 // 4. Data Master Pemetaan Perkembangan
-$stMaster = $pdo->prepare("
+$stMaster = $pdo->query("
     SELECT id, aspek, kendala, tindak_lanjut, ringkasan,
            perkembangan_akademik, perkembangan_sikap, perkembangan_keterampilan,
            keaktifan, potensi, rekomendasi
     FROM tb_master_perkembangan
-    WHERE id_guru = ? OR id_guru IS NULL OR id_guru = 0
     ORDER BY aspek ASC, id ASC
 ");
-$stMaster->execute([$guru_id]);
 $master_perkembangan = $stMaster->fetchAll(PDO::FETCH_ASSOC);
 
-// Daftar Aspek unik
-$aspek_options = array_values(array_unique(array_column($master_perkembangan, 'aspek')));
-if (empty($aspek_options)) {
-    $aspek_options = ['Akademik', 'Sikap & Karakter', 'Keterampilan', 'Kedisiplinan', 'Ibadah & Spiritual', 'Sosial Emosional', 'Keaktifan & Partisipasi', 'Potensi & Minat'];
-}
+// Daftar Aspek unik lengkap
+$default_aspek = ['Akademik', 'Sikap & Karakter', 'Keterampilan', 'Kedisiplinan', 'Ibadah & Spiritual', 'Sosial Emosional', 'Keaktifan & Partisipasi', 'Potensi & Minat'];
+$master_aspek = array_values(array_unique(array_filter(array_column($master_perkembangan, 'aspek'))));
+$cat_aspek = $pdo->query("SELECT DISTINCT kategori FROM tb_catatan_perkembangan WHERE kategori IS NOT NULL AND kategori != ''")->fetchAll(PDO::FETCH_COLUMN);
+$aspek_options = array_values(array_unique(array_filter(array_merge($default_aspek, $master_aspek, $cat_aspek))));
+sort($aspek_options);
 
 // Filters
 $f_kategori = trim((string)($_GET['f_kategori'] ?? ''));
@@ -200,10 +203,13 @@ if ($f_status !== '') {
 
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
-    SELECT c.*, s.nama_siswa, s.nisn, k.nama_kelas, m.nama_mapel, g.nama_guru
+    SELECT c.*,
+           COALESCE(NULLIF(c.id_kelas, 0), s.id_kelas) AS id_kelas,
+           s.nama_siswa, s.nisn, s.id_kelas AS siswa_id_kelas,
+           k.nama_kelas, m.nama_mapel, g.nama_guru
     FROM tb_catatan_perkembangan c
     JOIN tb_siswa s ON s.id_siswa = c.id_siswa
-    LEFT JOIN tb_kelas k ON k.id_kelas = c.id_kelas
+    LEFT JOIN tb_kelas k ON k.id_kelas = COALESCE(NULLIF(c.id_kelas, 0), s.id_kelas)
     LEFT JOIN tb_mata_pelajaran m ON m.id_mapel = c.id_mapel
     LEFT JOIN tb_guru g ON g.id_guru = c.id_guru
     WHERE $where_sql
@@ -212,14 +218,22 @@ $stmt = $pdo->prepare("
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+if (!function_exists('get_initials_catatan')) {
+    function get_initials_catatan(string $name): string {
+        $clean = preg_replace('/[^a-zA-Z0-9\s]/', '', $name);
+        $words = preg_split('/\s+/', trim((string)$clean));
+        $init = '';
+        if (!empty($words[0])) $init .= mb_substr($words[0], 0, 1);
+        if (!empty($words[1])) $init .= mb_substr($words[1], 0, 1);
+        return strtoupper($init ?: 'S');
+    }
+}
+
 $page_title = 'Catatan Perkembangan Siswa';
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
 ];
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
     'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
 ];
 
@@ -228,20 +242,25 @@ var masterPerkembangan =
 JS
 . json_encode($master_perkembangan) . ";\n" . <<<'JS'
 $(document).ready(function() {
-    if ($('#table-catatan').length) {
-        $('#table-catatan').DataTable({
-            'order': [[1, 'desc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [11] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada catatan perkembangan',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
+    $('#cari-kartu-catatan').on('input', function() {
+        var query = $(this).val().toLowerCase().trim();
+        var visibleCount = 0;
+        $('.catatan-card-col').each(function() {
+            var cardText = $(this).text().toLowerCase();
+            if (cardText.indexOf(query) !== -1) {
+                $(this).show();
+                visibleCount++;
+            } else {
+                $(this).hide();
             }
         });
-    }
+        if (visibleCount === 0 && query !== '') {
+            $('#no-catatan-search').show();
+        } else {
+            $('#no-catatan-search').hide();
+        }
+        $('#count-kartu-catatan').text(visibleCount);
+    });
 
     if ($.fn.select2) {
         $('.select2-siswa').select2({
@@ -451,50 +470,96 @@ $(document).ready(function() {
         $('#catatanId').val('');
         $('#modalCatatanTitle').text('Tambah Catatan Perkembangan');
         $('#formCatatan')[0].reset();
+        $('#inp_kelas').val('');
         filterSiswaByKelas('');
+        $('#inp_siswa').val('').trigger('change.select2');
         $('#sel_template_kendala').empty().append('<option value="">-- Pilih Aspek terlebih dahulu --</option>');
         $('#sel_template_tindak_lanjut').empty().append('<option value="">-- Pilih Kendala/Aspek terlebih dahulu --</option>');
         populateDetailDropdowns('');
         $('.sel-detail-tpl').val('');
         $('#modalCatatan textarea').css('height', 'auto');
         $('#inp_kategori').val('').trigger('change');
+        $('#modalCatatan select').each(function() {
+            if (typeof this.gdsRefresh === 'function') this.gdsRefresh();
+        });
         $('#modalCatatan').modal('show');
     });
 
     // Modal Edit
     $(document).on('click', '.btn-edit-catatan', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
+        if (!data || typeof data !== 'object') return;
+
         $('#formCatatanAction').val('edit');
         $('#catatanId').val(data.id);
         $('#modalCatatanTitle').text('Edit Catatan Perkembangan');
 
-        $('#inp_kelas').val(data.id_kelas || '');
-        filterSiswaByKelas(data.id_kelas || '');
-        $('#inp_siswa').val(data.id_siswa).trigger('change.select2');
+        // 1. Set Kelas
+        var targetKelas = data.id_kelas || data.siswa_id_kelas || '';
+        if (targetKelas) {
+            var $optKelas = $('#inp_kelas option[value="' + targetKelas + '"]');
+            if ($optKelas.length === 0 && data.nama_kelas) {
+                $('#inp_kelas').append($('<option>').val(targetKelas).text('Kelas ' + data.nama_kelas));
+            }
+            $('#inp_kelas').val(String(targetKelas));
+        } else {
+            $('#inp_kelas').val('');
+        }
+
+        // Filter siswa berdasar kelas target, lalu set siswa terpilih
+        filterSiswaByKelas(targetKelas);
+        if (data.id_siswa) {
+            $('#inp_siswa').val(String(data.id_siswa)).trigger('change.select2');
+        }
+
+        // 2. Set Mapel, Tanggal, Status
         $('#inp_mapel').val(data.id_mapel || '');
         $('#inp_tanggal').val(data.tanggal);
-        $('#inp_status').val(data.status);
+        $('#inp_status').val(data.status || 'Aktif');
 
-        $('#inp_kategori').val(data.kategori);
-        populateDetailDropdowns(data.kategori);
-        // Isi dropdown template sesuai data tersimpan, tanpa menimpa textarea secara paksa
-        var curKendala = (data.kendala || '').toString();
-        var curTl = (data.tindak_lanjut || '').toString();
+        // 3. Set Kategori / Aspek Perkembangan
+        var targetKategori = (data.kategori || '').trim();
+        if (targetKategori) {
+            var matchedKategori = false;
+            $('#inp_kategori option').each(function() {
+                if ($(this).val().toLowerCase() === targetKategori.toLowerCase()) {
+                    $(this).prop('selected', true);
+                    targetKategori = $(this).val(); // gunakan value presisi yang ada
+                    matchedKategori = true;
+                    return false;
+                }
+            });
+            if (!matchedKategori) {
+                $('#inp_kategori').append($('<option>').val(targetKategori).text(targetKategori).prop('selected', true));
+            }
+            $('#inp_kategori').val(targetKategori);
+        } else {
+            $('#inp_kategori').val('');
+        }
+
+        // 4. Populate template kendala & tindak lanjut sesuai aspek
+        populateDetailDropdowns(targetKategori);
+        var curKendala = (data.kendala || '').toString().trim();
+        var curTl = (data.tindak_lanjut || '').toString().trim();
         $('#sel_template_kendala').empty().append('<option value="">-- Pilih Template Kendala --</option>');
         $('#sel_template_tindak_lanjut').empty().append('<option value="">-- Pilih Template Tindak Lanjut --</option>');
         var filteredEdit = masterPerkembangan.filter(function(m) {
-            return (m.aspek || '').toLowerCase() === (data.kategori || '').toLowerCase();
+            return (m.aspek || '').toLowerCase() === targetKategori.toLowerCase();
         });
         filteredEdit.forEach(function(m) {
             var $o1 = $('<option>').val(m.id).text(shortTpl(m.kendala, 100));
             $o1.data('item', m);
-            if (m.kendala === curKendala) $o1.prop('selected', true);
+            if (m.kendala && m.kendala.trim() === curKendala) $o1.prop('selected', true);
             $('#sel_template_kendala').append($o1);
             var $o2 = $('<option>').val(m.id).text(shortTpl(m.tindak_lanjut, 100));
             $o2.data('item', m);
-            if (m.tindak_lanjut === curTl) $o2.prop('selected', true);
+            if (m.tindak_lanjut && m.tindak_lanjut.trim() === curTl) $o2.prop('selected', true);
             $('#sel_template_tindak_lanjut').append($o2);
         });
+
         // Samakan dropdown rincian aspek dengan nilai tersimpan (bila cocok persis)
         $('.sel-detail-tpl').each(function() {
             var field = $(this).data('field');
@@ -514,7 +579,8 @@ $(document).ready(function() {
             }
         });
 
-        $('#inp_ringkasan').val(data.ringkasan);
+        // 5. Isi textarea
+        $('#inp_ringkasan').val(data.ringkasan || '');
         $('#inp_kendala').val(data.kendala || '');
         $('#inp_tindak_lanjut').val(data.tindak_lanjut || '');
 
@@ -526,8 +592,16 @@ $(document).ready(function() {
         $('#inp_catatan_guru').val(data.catatan_guru || '');
         $('#inp_rekomendasi').val(data.rekomendasi || '');
 
+        // 6. Refresh gds custom button jika ada
+        $('#modalCatatan select').each(function() {
+            if (typeof this.gdsRefresh === 'function') this.gdsRefresh();
+        });
+
         $('#modalCatatan').modal('show');
         setTimeout(function() {
+            $('#modalCatatan select').each(function() {
+                if (typeof this.gdsRefresh === 'function') this.gdsRefresh();
+            });
             $('#modalCatatan textarea').each(function() { autogrow($(this)); });
         }, 120);
     });
@@ -642,10 +716,39 @@ include '../templates/sidebar.php';
 .catatan-actions .btn { margin-bottom: 4px; white-space: nowrap; }
 #modalCatatan textarea.catatan-ta { min-height: 110px; line-height: 1.55; resize: vertical; overflow-y: auto; }
 #modalCatatan select.sel-detail-tpl { white-space: normal; }
-.aksi-satu-baris { display: inline-flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; white-space: nowrap; }
-.aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
-.aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
-#table-catatan td:last-child { white-space: nowrap; }
+.card-catatan {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.card-catatan:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(103, 119, 239, 0.08) !important;
+    border-color: #cbd5e1 !important;
+}
+.catatan-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6777ef, #3abaf4);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(103, 119, 239, 0.25);
+}
+.bullet {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: #cbd5e1;
+    margin: 0 4px;
+}
 .select2-container--default .select2-selection--single {
     border: 1px solid #ced4da;
     height: 31px;
@@ -690,7 +793,7 @@ include '../templates/sidebar.php';
                         <?php if (isset($_GET['session_type'])): ?>
                             <input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>">
                         <?php endif; ?>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 col-lg mb-2">
                             <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Kelas --</option>
                                 <?php foreach ($kelas_list as $k): ?>
@@ -700,7 +803,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 col-lg mb-2">
                             <select name="f_mapel" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Mata Pelajaran --</option>
                                 <?php foreach ($mapel_list as $m): ?>
@@ -710,7 +813,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 col-lg mb-2">
                             <select name="f_kategori" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Aspek Perkembangan --</option>
                                 <?php foreach ($aspek_options as $cat): ?>
@@ -720,7 +823,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-6 col-lg mb-2">
                             <select name="f_siswa" id="f_siswa" class="form-control form-control-sm select2-filter-siswa">
                                 <option value="">-- Siswa --</option>
                                 <?php foreach ($siswa_list as $sw): ?>
@@ -730,7 +833,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-6 col-lg mb-2">
                             <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Status --</option>
                                 <option value="Aktif" <?= $f_status === 'Aktif' ? 'selected' : '' ?>>Aktif</option>
@@ -770,81 +873,168 @@ include '../templates/sidebar.php';
                 </div>
             </div>
 
-            <!-- Tabel Catatan Perkembangan -->
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped table-hover" id="table-catatan" style="width:100%;">
-                            <thead class="thead-light text-center">
-                                <tr>
-                                    <th style="width: 35px;">No</th>
-                                    <th style="width: 85px;">Tanggal</th>
-                                    <th>Nama Siswa</th>
-                                    <th style="width: 70px;">Kelas</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th style="width: 120px;">Aspek</th>
-                                    <th>Ringkasan Perkembangan</th>
-                                    <th>Kendala Belajar</th>
-                                    <th>Tindak Lanjut</th>
-                                    <th style="width: 100px;">Status</th>
-                                    <th>Guru</th>
-                                    <th style="width:180px;min-width:180px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php $no = 1; foreach ($rows as $r): ?>
-                                    <tr>
-                                        <td class="text-center align-middle"><?= $no++ ?></td>
-                                        <td class="text-center align-middle small font-weight-bold"><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                        <td class="align-middle">
-                                            <strong><?= htmlspecialchars($r['nama_siswa']) ?></strong>
-                                            <?php if (!empty($r['nisn'])): ?>
-                                                <div class="text-muted small">NISN: <?= htmlspecialchars($r['nisn']) ?></div>
+            <!-- Daftar Catatan Perkembangan Siswa (Bentuk Kartu Informatif) -->
+            <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9; gap: 10px;">
+                    <div>
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-id-card-alt text-primary mr-2"></i>Catatan Perkembangan Siswa</h4>
+                        <small class="text-muted">Menampilkan <span id="count-kartu-catatan" class="font-weight-bold text-primary"><?= count($rows) ?></span> catatan perkembangan</small>
+                    </div>
+                    <div class="d-flex align-items-center" style="gap: 8px;">
+                        <div class="input-group input-group-sm" style="width: 240px;">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-light border-right-0"><i class="fas fa-search text-muted"></i></span>
+                            </div>
+                            <input type="text" id="cari-kartu-catatan" class="form-control form-control-sm border-left-0" placeholder="Cari siswa / mapel...">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
+                    <?php if (empty($rows)): ?>
+                        <div class="text-center py-5 bg-white rounded shadow-sm border">
+                            <i class="fas fa-user-graduate fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted font-weight-bold">Belum Ada Catatan Perkembangan</h5>
+                            <p class="text-muted small mb-0">Silakan tambahkan catatan baru atau sesuaikan filter pencarian di atas.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="row" id="container-kartu-catatan" style="row-gap: 16px;">
+                            <div class="col-12" id="no-catatan-search" style="display: none;">
+                                <div class="text-center py-5 bg-white rounded shadow-sm border">
+                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted small mb-0">Tidak ada catatan perkembangan yang cocok dengan kata kunci pencarian.</p>
+                                </div>
+                            </div>
+                            <?php foreach ($rows as $r): ?>
+                                <?php
+                                $st_badge = 'badge-success';
+                                $st_icon = 'fas fa-check-circle';
+                                if ($r['status'] === 'Dalam Pemantauan') {
+                                    $st_badge = 'badge-warning';
+                                    $st_icon = 'fas fa-eye';
+                                } elseif ($r['status'] === 'Selesai') {
+                                    $st_badge = 'badge-secondary';
+                                    $st_icon = 'fas fa-flag-checkered';
+                                }
+
+                                $has_kendala = (!empty($r['kendala']) && trim($r['kendala']) !== '-');
+                                $has_tl = (!empty($r['tindak_lanjut']) && trim($r['tindak_lanjut']) !== '-');
+                                ?>
+                                <div class="col-12 col-md-6 col-xl-6 d-flex align-items-stretch catatan-card-col">
+                                    <div class="card w-100 border-0 shadow-sm card-catatan d-flex flex-column justify-content-between mb-0" style="overflow: hidden;">
+                                        <div class="card-body p-3 p-md-3.5">
+                                            <!-- Top Bar: Avatar + Identitas Siswa + Status -->
+                                            <div class="d-flex justify-content-between align-items-start mb-2.5 pb-2 border-bottom">
+                                                <div class="d-flex align-items-center" style="gap: 12px;">
+                                                    <div class="catatan-avatar">
+                                                        <?= htmlspecialchars(get_initials_catatan($r['nama_siswa'])) ?>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0 font-weight-bold" style="font-size: 15px; line-height: 1.3;">
+                                                            <a href="javascript:void(0)" class="text-dark btn-detail-catatan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' style="text-decoration: none;">
+                                                                <?= htmlspecialchars($r['nama_siswa']) ?>
+                                                            </a>
+                                                        </h6>
+                                                        <div class="d-flex flex-wrap align-items-center small text-muted mt-1" style="gap: 6px;">
+                                                            <?php if (!empty($r['nisn'])): ?>
+                                                                <span>NISN: <?= htmlspecialchars($r['nisn']) ?></span>
+                                                                <span class="bullet"></span>
+                                                            <?php endif; ?>
+                                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 10.5px;">
+                                                                <i class="fas fa-chalkboard text-muted mr-1"></i> Kelas <?= htmlspecialchars($r['nama_kelas'] ?? '-') ?>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <span class="badge <?= $st_badge ?> px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 6px;">
+                                                        <i class="<?= $st_icon ?> mr-1"></i> <?= htmlspecialchars($r['status']) ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Baris Meta: Tanggal, Aspek, Mapel, Guru -->
+                                            <div class="d-flex flex-wrap align-items-center mb-2.5 small text-muted" style="gap: 6px;">
+                                                <span class="badge badge-light border text-muted px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="far fa-calendar-alt text-primary mr-1"></i> <?= date('d M Y', strtotime($r['tanggal'])) ?>
+                                                </span>
+                                                <span class="badge badge-primary px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-tag mr-1"></i> <?= htmlspecialchars($r['kategori']) ?>
+                                                </span>
+                                                <span class="badge badge-light border text-dark px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-book-reader text-info mr-1"></i> <?= htmlspecialchars($r['nama_mapel'] ?? 'Umum') ?>
+                                                </span>
+                                                <?php if (!empty($r['nama_guru'])): ?>
+                                                <span class="badge badge-light border text-muted px-2 py-1" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-user-tie mr-1"></i> <?= htmlspecialchars($r['nama_guru']) ?>
+                                                </span>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Ringkasan Perkembangan (Highlight Box) -->
+                                            <div class="p-2.5 mb-2.5 rounded" style="background: #f8fafc; border-left: 3.5px solid #6777ef; border-top: 1px solid #edf2f7; border-right: 1px solid #edf2f7; border-bottom: 1px solid #edf2f7;">
+                                                <div class="small font-weight-bold text-dark mb-1 d-flex align-items-center">
+                                                    <i class="fas fa-quote-left text-primary mr-1.5" style="font-size: 11px;"></i> Ringkasan Perkembangan:
+                                                </div>
+                                                <div class="text-dark small" style="line-height: 1.5; font-size: 12.5px;">
+                                                    <?= nl2br(htmlspecialchars($r['ringkasan'])) ?>
+                                                </div>
+                                            </div>
+
+                                            <!-- Kendala Belajar & Tindak Lanjut -->
+                                            <?php if ($has_kendala || $has_tl): ?>
+                                            <div class="row no-gutters mb-1" style="gap: 8px;">
+                                                <?php if ($has_kendala): ?>
+                                                <div class="col p-2 rounded" style="background: #fff5f5; border: 1px solid #fed7d7;">
+                                                    <div class="small font-weight-bold text-danger mb-0.5" style="font-size: 11.5px;">
+                                                        <i class="fas fa-exclamation-triangle mr-1"></i> Kendala:
+                                                    </div>
+                                                    <div class="small text-danger" style="line-height: 1.35; font-size: 11.5px;">
+                                                        <?= htmlspecialchars($r['kendala']) ?>
+                                                    </div>
+                                                </div>
+                                                <?php endif; ?>
+
+                                                <?php if ($has_tl): ?>
+                                                <div class="col p-2 rounded" style="background: #f0fff4; border: 1px solid #c6f6d5;">
+                                                    <div class="small font-weight-bold text-success mb-0.5" style="font-size: 11.5px;">
+                                                        <i class="fas fa-clipboard-check mr-1"></i> Tindak Lanjut:
+                                                    </div>
+                                                    <div class="small text-success" style="line-height: 1.35; font-size: 11.5px;">
+                                                        <?= htmlspecialchars($r['tindak_lanjut']) ?>
+                                                    </div>
+                                                </div>
+                                                <?php endif; ?>
+                                            </div>
                                             <?php endif; ?>
-                                        </td>
-                                        <td class="text-center align-middle"><span class="badge badge-light border">Kelas <?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></span></td>
-                                        <td class="align-middle small"><?= htmlspecialchars($r['nama_mapel'] ?? 'Umum') ?></td>
-                                        <td class="align-middle text-center">
-                                            <span class="badge badge-info px-2 py-1" style="font-size: 11.5px;"><?= htmlspecialchars($r['kategori']) ?></span>
-                                        </td>
-                                        <td class="align-middle small" style="line-height: 1.45;"><?= htmlspecialchars($r['ringkasan']) ?></td>
-                                        <td class="align-middle small text-danger" style="line-height: 1.45;"><?= htmlspecialchars($r['kendala'] ?? '-') ?></td>
-                                        <td class="align-middle small text-success" style="line-height: 1.45;"><?= htmlspecialchars($r['tindak_lanjut'] ?? '-') ?></td>
-                                        <td class="text-center align-middle">
-                                            <?php
-                                            $stCls = 'badge-success';
-                                            if ($r['status'] === 'Dalam Pemantauan') $stCls = 'badge-warning';
-                                            elseif ($r['status'] === 'Selesai') $stCls = 'badge-secondary';
-                                            ?>
-                                            <span class="badge <?= $stCls ?>"><?= htmlspecialchars($r['status']) ?></span>
-                                        </td>
-                                        <td class="align-middle small text-muted"><?= htmlspecialchars($r['nama_guru'] ?? '-') ?></td>
-                                        <td class="text-center align-middle">
-                                            <div class="aksi-satu-baris">
-                                                <button type="button" class="btn btn-info btn-sm btn-detail-catatan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail & Timeline">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
+                                        </div>
+
+                                        <!-- Card Footer Aksi -->
+                                        <div class="card-footer bg-white pt-2 pb-2.5 px-3 border-top d-flex flex-wrap justify-content-between align-items-center" style="gap: 6px;">
+                                            <button type="button" class="btn btn-outline-primary btn-sm btn-detail-catatan font-weight-bold px-2.5" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' style="border-radius: 6px; font-size: 12px;">
+                                                <i class="fas fa-eye mr-1"></i> Detail &amp; Timeline
+                                            </button>
+                                            <div class="d-flex align-items-center" style="gap: 5px;">
+                                                <a href="export_catatan_perkembangan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF <?= htmlspecialchars($r['nama_siswa']) ?>" style="border-radius: 6px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+                                                <a href="export_catatan_perkembangan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel <?= htmlspecialchars($r['nama_siswa']) ?>" style="border-radius: 6px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-file-excel"></i>
+                                                </a>
                                                 <?php if ($can_crud): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-catatan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-catatan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit Catatan" style="border-radius: 6px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-catatan" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa']) ?>" title="Hapus">
+                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-catatan" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa']) ?>" title="Hapus Catatan" style="border-radius: 6px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                                 <?php endif; ?>
-                                                <a href="export_catatan_perkembangan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini (<?= htmlspecialchars($r['nama_siswa']) ?>)">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                                <a href="export_catatan_perkembangan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel siswa ini">
-                                                    <i class="fas fa-file-excel"></i>
-                                                </a>
                                             </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -877,7 +1067,7 @@ include '../templates/sidebar.php';
                                     <label class="font-weight-bold small">Pilih Kelas</label>
                                     <select name="id_kelas" id="inp_kelas" class="form-control form-control-sm">
                                         <option value="">-- Pilih Kelas --</option>
-                                        <?php foreach ($kelas_list as $k): ?>
+                                        <?php foreach ($all_kelas_list as $k): ?>
                                             <option value="<?= (int)$k['id_kelas'] ?>">Kelas <?= htmlspecialchars($k['nama_kelas']) ?></option>
                                         <?php endforeach; ?>
                                     </select>
@@ -887,7 +1077,7 @@ include '../templates/sidebar.php';
                                     <label class="font-weight-bold small">Pilih Siswa <span class="text-danger">*</span></label>
                                     <select name="id_siswa" id="inp_siswa" class="form-control select2-siswa" required style="width:100%;">
                                         <option value="">-- Cari &amp; Pilih Siswa --</option>
-                                        <?php foreach ($siswa_list as $s): ?>
+                                        <?php foreach ($all_siswa_list as $s): ?>
                                             <option value="<?= (int)$s['id_siswa'] ?>" data-kelas="<?= (int)$s['id_kelas'] ?>">
                                                 <?= htmlspecialchars($s['nama_siswa']) ?> (Kelas <?= htmlspecialchars($s['nama_kelas'] ?? '-') ?> / NISN: <?= htmlspecialchars($s['nisn'] ?? '-') ?>)
                                             </option>

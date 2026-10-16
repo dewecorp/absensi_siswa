@@ -711,7 +711,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
                             <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Kelas --</option>
@@ -720,7 +720,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Status</label>
                             <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Status --</option>

@@ -142,7 +142,6 @@ $f_mapel = (int)($_GET['f_mapel'] ?? 0);
 $f_kelas = (int)($_GET['f_kelas'] ?? 0);
 $f_semester = trim((string)($_GET['f_semester'] ?? ''));
 $f_tahun = trim((string)($_GET['f_tahun'] ?? ''));
-$f_status = trim((string)($_GET['f_status'] ?? ''));
 
 if ($is_admin_or_kepala) {
     $where = ["1=1"];
@@ -172,11 +171,6 @@ if ($f_tahun !== '') {
     $where[] = "b.tahun_ajaran = ?";
     $params[] = $f_tahun;
 }
-if ($f_status !== '') {
-    $where[] = "b.status = ?";
-    $params[] = $f_status;
-}
-
 $where_sql = implode(' AND ', $where);
 $stmt = $pdo->prepare("
     SELECT b.*, m.nama_mapel, k.nama_kelas, g.nama_guru
@@ -311,7 +305,7 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="card-body">
                     <form method="GET" class="row">
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Jenis</label>
                             <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Jenis --</option>
@@ -329,7 +323,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
                             <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Kelas --</option>
@@ -338,21 +332,12 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-3 mb-2">
                             <label class="small font-weight-bold">Semester</label>
                             <select name="f_semester" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua --</option>
                                 <?php foreach ($semester_options as $s): ?>
                                     <option value="<?= htmlspecialchars($s) ?>" <?= $f_semester === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="small font-weight-bold">Status</label>
-                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Status --</option>
-                                <?php foreach (['Aktif', 'Draft', 'Arsip'] as $st): ?>
-                                    <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
