@@ -814,34 +814,52 @@ include_once '../templates/sidebar.php';
                     <!-- Jadwal + Kehadiran sejajar 2 kolom -->
                     <div class="row align-items-stretch">
                         <div class="col-12 col-md-6 mb-4 d-flex">
-                            <div class="card card-primary w-100 h-100 mapp-jadwal-card">
+                            <div class="card w-100 h-100 mapp-jadwal-card border-0 shadow-sm">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                                    <h4>Jadwal Mengajar Hari Ini</h4>
+                                    <h4 class="mb-0"><i class="fas fa-calendar-day text-primary mr-2"></i>Jadwal Mengajar Hari Ini</h4>
                                     <a href="jadwal_reguler.php?session_type=wali" class="btn btn-light btn-sm font-weight-bold"><i class="fas fa-table mr-1"></i> Lihat Jadwal Penuh</a>
                                 </div>
-                                <div class="px-3 pt-3 pb-0">
-                                    <div class="alert alert-success border-0 shadow-none mb-0 py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap" style="background: rgba(40, 167, 69, 0.1); color: #28a745; border-radius: 8px;">
-                                        <div class="font-weight-bold" style="font-size: 14px;"><i class="fas fa-calendar-day mr-1.5"></i> <?= htmlspecialchars($jd_hari_ini) ?>, <?= htmlspecialchars($jd_tanggal_ini) ?><?php if ($wali_kelas): ?> &bull; Wali Kelas <?= htmlspecialchars($wali_kelas['nama_kelas']) ?><?php endif; ?></div>
-                                        <div><span class="badge badge-success font-weight-bold" style="font-size: 12px;"><?= count($jadwal_hari_ini) ?> Jam Pelajaran (<?= count($jadwal_grouped) ?> Sesi)</span></div>
-                                    </div>
-                                </div>
                                 <div class="card-body p-3">
+                                    <?php
+                                    $mapp_bulan = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                                    $mapp_day_sub = htmlspecialchars($jd_tanggal_ini);
+                                    if ($wali_kelas) { $mapp_day_sub .= ' • Wali Kelas ' . htmlspecialchars($wali_kelas['nama_kelas']); }
+                                    ?>
+                                    <div class="mapp-day-banner">
+                                        <div class="mapp-day-date">
+                                            <span class="d"><?= date('d') ?></span>
+                                            <span class="m"><?= $mapp_bulan[(int)date('n')] ?></span>
+                                        </div>
+                                        <div class="mapp-day-info">
+                                            <div class="mapp-day-name"><?= htmlspecialchars($jd_hari_ini) ?></div>
+                                            <div class="mapp-day-sub"><?= $mapp_day_sub ?></div>
+                                        </div>
+                                        <div class="mapp-day-stats">
+                                            <div class="mapp-day-stat">
+                                                <span class="num"><?= count($jadwal_hari_ini) ?></span>
+                                                <span class="lbl">Jam</span>
+                                            </div>
+                                            <div class="mapp-day-stat">
+                                                <span class="num"><?= count($jadwal_grouped) ?></span>
+                                                <span class="lbl">Sesi</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <?php if (!empty($jadwal_grouped)): ?>
-                                        <div class="row">
+                                        <div class="mapp-agenda-list">
                                             <?php foreach ($jadwal_grouped as $g): ?>
-                                                <div class="col-12 col-sm-6 mb-3">
-                                                    <div class="p-3 rounded border bg-white shadow-none h-100" style="border-left: 4px solid #28a745 !important; background-color: #f8fafc;">
-                                                        <div class="font-weight-bold text-dark text-break mb-1.5" style="font-size: 15.5px; line-height: 1.35;">
-                                                            <?= htmlspecialchars($g['nama_mapel'] ?? '-') ?>
-                                                        </div>
-                                                        <div class="text-success font-weight-bold mb-1.5" style="font-size: 13.5px;">
-                                                            <i class="fas fa-door-open mr-1"></i>Kelas <?= htmlspecialchars($g['nama_kelas'] ?? '-') ?>
-                                                        </div>
-                                                        <div class="text-dark" style="font-size: 12.5px;">
-                                                            <i class="far fa-clock mr-1 text-success"></i>
-                                                            <strong class="text-dark">Jam ke <?= $g['jam_awal'] == $g['jam_akhir'] ? $g['jam_awal'] : $g['jam_awal'] . '–' . $g['jam_akhir'] ?></strong>
+                                                <div class="mapp-agenda-item">
+                                                    <div class="mapp-agenda-clock">
+                                                        <span class="jam">Jam</span>
+                                                        <span class="val"><?= $g['jam_awal'] == $g['jam_akhir'] ? $g['jam_awal'] : $g['jam_awal'] . '–' . $g['jam_akhir'] ?></span>
+                                                    </div>
+                                                    <div class="mapp-agenda-body">
+                                                        <div class="mapp-agenda-mapel"><?= htmlspecialchars($g['nama_mapel'] ?? '-') ?></div>
+                                                        <div class="mapp-agenda-meta">
+                                                            <span class="mapp-chip"><i class="fas fa-door-open"></i> Kelas <?= htmlspecialchars($g['nama_kelas'] ?? '-') ?></span>
                                                             <?php if (!empty($g['waktu_mulai'])): ?>
-                                                                &bull; Pukul <?= str_replace(':', '.', substr($g['waktu_mulai'], 0, 5)) ?><?= !empty($g['waktu_selesai']) ? '–' . str_replace(':', '.', substr($g['waktu_selesai'], 0, 5)) : '' ?> WIB
+                                                            <span class="mapp-chip"><i class="far fa-clock"></i> <?= str_replace(':', '.', substr($g['waktu_mulai'], 0, 5)) ?><?= !empty($g['waktu_selesai']) ? '–' . str_replace(':', '.', substr($g['waktu_selesai'], 0, 5)) : '' ?> WIB</span>
                                                             <?php endif; ?>
                                                         </div>
                                                     </div>
@@ -849,16 +867,9 @@ include_once '../templates/sidebar.php';
                                             <?php endforeach; ?>
                                         </div>
                                     <?php else: ?>
-                                        <div class="py-4 text-center px-2">
-                                            <div class="mb-3">
-                                                <span class="avatar-item bg-light text-success rounded-circle d-inline-flex align-items-center justify-content-center shadow-none" style="width: 54px; height: 54px;">
-                                                    <i class="fas fa-calendar-check" style="font-size: 26px;"></i>
-                                                </span>
-                                            </div>
-                                            <h6 class="font-weight-bold text-dark mb-1">Tidak Ada Jadwal Mengajar Hari <?= htmlspecialchars($jd_hari_ini) ?></h6>
-                                            <p class="text-muted small mx-auto mb-0" style="max-width: 360px; line-height: 1.5;">
-                                                Hari ini (<?= htmlspecialchars($jd_tanggal_ini) ?>) Anda tidak terjadwal mengajar. Gunakan waktu untuk persiapan perangkat pembelajaran, pemeriksaan tugas, atau catatan perkembangan siswa.
-                                            </p>
+                                        <div class="mapp-empty-state">
+                                            <h6>Tidak Ada Jadwal Mengajar Hari <?= htmlspecialchars($jd_hari_ini) ?></h6>
+                                            <p>Hari ini (<?= htmlspecialchars($jd_tanggal_ini) ?>) Anda tidak terjadwal mengajar.</p>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -873,19 +884,12 @@ include_once '../templates/sidebar.php';
                         if (!$holiday['is_holiday']):
                         ?>
                         <div class="<?php echo $col_class_wali; ?> mapp-col-absen">
-                            <div class="card card-primary w-100 h-100 mapp-absen-card">
-                                <div class="card-header">
-                                    <h4>Kehadiran Harian Guru</h4>
+                            <div class="card w-100 h-100 mapp-absen-card border-0 shadow-sm">
+                                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                                    <h4 class="mb-0"><i class="fas fa-user-check text-primary mr-2"></i>Kehadiran Saya Hari Ini</h4>
+                                    <span class="badge badge-light border text-muted font-weight-bold"><?php echo date('d M Y'); ?></span>
                                 </div>
                                 <div class="card-body">
-                                    <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
-                                        <div class="alert-icon text-primary"><i class="far fa-bell"></i></div>
-                                        <div class="alert-body">
-                                            <div class="alert-title font-weight-bold">Penting</div>
-                                            Jangan lupa untuk mengisi <b>Kehadiran</b> Anda, <b>Kehadiran Siswa</b>, serta <b>Jurnal Mengajar</b> hari ini.
-                                        </div>
-                                    </div>
-
                                     <?php
                                     // Check current attendance status - ONLY use regular table for dashboard
                                     $today_attendance = null;
@@ -894,55 +898,61 @@ include_once '../templates/sidebar.php';
                                         $stmt_check->execute([$teacher['id_guru']]);
                                         $today_attendance = $stmt_check->fetch(PDO::FETCH_ASSOC);
                                     }
+                                    $wali_status = $today_attendance ? strtolower($today_attendance['status']) : '';
+                                    $wali_time = ($today_attendance && !empty($today_attendance['waktu_input'])) ? date('H.i', strtotime($today_attendance['waktu_input'])) . ' WIB' : '';
+                                    $wali_hero_cls = 'is-empty';
+                                    $wali_hero_icon = 'fas fa-hourglass-half';
+                                    $wali_hero_title = 'Belum Absen';
+                                    $wali_hero_sub = 'Silakan pilih status kehadiran Anda hari ini.';
+                                    if ($wali_status === 'hadir') {
+                                        $wali_att_ts = !empty($today_attendance['waktu_input']) ? strtotime($today_attendance['waktu_input']) : time();
+                                        $wali_att_late = $wali_att_ts > strtotime('07:10');
+                                        $wali_hero_cls = $wali_att_late ? 'is-late' : 'is-hadir';
+                                        $wali_hero_icon = $wali_att_late ? 'fas fa-clock' : 'fas fa-check-circle';
+                                        $wali_hero_title = $wali_att_late ? 'Hadir - Terlambat' : 'Hadir - Tepat Waktu';
+                                        $wali_hero_sub = $wali_time !== '' ? 'Kehadiran dicatat pukul ' . $wali_time : 'Kehadiran Anda sudah tercatat.';
+                                    } elseif ($wali_status === 'sakit') {
+                                        $wali_hero_cls = 'is-sakit';
+                                        $wali_hero_icon = 'fas fa-procedures';
+                                        $wali_hero_title = 'Sakit';
+                                        $wali_hero_sub = !empty($today_attendance['keterangan']) ? htmlspecialchars($today_attendance['keterangan']) : 'Semoga lekas sembuh.';
+                                    } elseif ($wali_status === 'izin') {
+                                        $wali_hero_cls = 'is-izin';
+                                        $wali_hero_icon = 'fas fa-paper-plane';
+                                        $wali_hero_title = 'Izin';
+                                        $wali_hero_sub = !empty($today_attendance['keterangan']) ? htmlspecialchars($today_attendance['keterangan']) : 'Izin Anda sudah tercatat.';
+                                    }
                                     ?>
+                                    <div class="mapp-att-hero <?= $wali_hero_cls ?>">
+                                        <div class="mapp-att-hero-ico"><i class="<?= $wali_hero_icon ?>"></i></div>
+                                        <div class="mapp-att-hero-txt">
+                                            <div class="mapp-att-hero-title"><?= $wali_hero_title ?></div>
+                                            <div class="mapp-att-hero-sub"><?= $wali_hero_sub ?></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mapp-att-hint">
+                                        <i class="far fa-bell"></i>
+                                        <span>Jangan lupa mengisi <b>Kehadiran</b>, <b>Kehadiran Siswa</b>, dan <b>Jurnal Mengajar</b> hari ini.</span>
+                                    </div>
 
                                     <form method="POST" action="" id="attendanceForm">
-                                        <div class="form-group mb-3 text-center">
-                                            <label class="d-block font-weight-bold">Status Kehadiran (<?php echo date('d-m-Y'); ?>)</label>
-                                            <div class="row justify-content-center mb-3">
-                                                <div class="col-4 mb-2">
-                                                    <button type="button" onclick="waliAutoAtt('hadir')" class="btn btn-success btn-block py-2" style="<?php echo ($today_attendance && strtolower($today_attendance['status']) == 'hadir') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-check mr-1" style="font-size:0.75rem;"></i>Hadir</span>
-                                                    </button>
-                                                </div>
-                                                <div class="col-4 mb-2">
-                                                    <button type="button" onclick="waliAutoAtt('sakit')" class="btn btn-warning btn-block py-2" style="<?php echo ($today_attendance && strtolower($today_attendance['status']) == 'sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-procedures mr-1" style="font-size:0.75rem;"></i>Sakit</span>
-                                                    </button>
-                                                </div>
-                                                <div class="col-4 mb-2">
-                                                    <button type="button" onclick="waliAutoAtt('izin')" class="btn btn-info btn-block py-2" style="<?php echo ($today_attendance && strtolower($today_attendance['status']) == 'izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>">
-                                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-paper-plane mr-1" style="font-size:0.75rem;"></i>Izin</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <?php
-                                            $wali_att_label = '';
-                                            $wali_att_late = false;
-                                            if ($today_attendance && strtolower($today_attendance['status']) === 'hadir') {
-                                                $wali_att_ts = !empty($today_attendance['waktu_input']) ? strtotime($today_attendance['waktu_input']) : time();
-                                                $wali_att_late = $wali_att_ts > strtotime('07:10');
-                                                $wali_att_label = $wali_att_late ? 'Terlambat' : 'Tepat Waktu';
-                                            }
-                                            ?>
-                                            <?php if ($wali_att_label !== ''): ?>
-                                            <div class="mt-2" id="waliAttBadge">
-                                                <span class="badge <?php echo $wali_att_late ? 'badge-warning' : 'badge-success'; ?> px-3 py-2">
-                                                    <i class="fas fa-<?php echo $wali_att_late ? 'clock' : 'check-circle'; ?> mr-1"></i>
-                                                    <?php echo $wali_att_label; ?>
-                                                </span>
-                                            </div>
-                                            <?php endif; ?>
-                                            <?php if ($today_attendance && strtolower($today_attendance['status']) == 'izin' && !empty($today_attendance['keterangan'])): ?>
-                                            <div class="mt-2">
-                                                <span class="badge badge-info px-3 py-2">
-                                                    <i class="fas fa-envelope mr-1"></i> Izin: <?php echo htmlspecialchars($today_attendance['keterangan']); ?>
-                                                </span>
-                                            </div>
-                                            <?php endif; ?>
+                                        <div class="mapp-att-label">Pilih Status Kehadiran</div>
+                                        <div class="mapp-att-actions">
+                                            <button type="button" onclick="waliAutoAtt('hadir')" class="mapp-att-btn is-hadir <?php echo ($wali_status === 'hadir') ? 'active' : ''; ?>">
+                                                <i class="fas fa-check"></i><span>Hadir</span>
+                                            </button>
+                                            <button type="button" onclick="waliAutoAtt('sakit')" class="mapp-att-btn is-sakit <?php echo ($wali_status === 'sakit') ? 'active' : ''; ?>">
+                                                <i class="fas fa-procedures"></i><span>Sakit</span>
+                                            </button>
+                                            <button type="button" onclick="waliAutoAtt('izin')" class="mapp-att-btn is-izin <?php echo ($wali_status === 'izin') ? 'active' : ''; ?>">
+                                                <i class="fas fa-paper-plane"></i><span>Izin</span>
+                                            </button>
                                         </div>
 
-                                        <div class="form-group" id="keteranganArea" style="display: none;">
+                                        <div id="waliAttBadge" style="display:none;"></div>
+
+                                        <div class="form-group mapp-att-note" id="keteranganArea" style="display: <?php echo ($wali_status === 'izin') ? 'block' : 'none'; ?>; margin-top: 14px;">
                                             <label class="font-weight-bold">Alasan Izin</label>
                                             <textarea name="attendance_note" id="noteWali" class="form-control" placeholder="Tuliskan alasan izin..."><?php echo $today_attendance ? htmlspecialchars($today_attendance['keterangan']) : ''; ?></textarea>
                                             <button type="submit" class="btn btn-info btn-lg btn-block mt-2"><i class="fas fa-save mr-2"></i> Simpan Izin</button>
@@ -972,18 +982,17 @@ include_once '../templates/sidebar.php';
                             </div>
                         </div>
                         <?php else: ?>
-                        <div class="<?php echo $col_class_wali; ?>">
-                            <div class="card card-warning w-100 h-100">
-                                <div class="card-header"><h4>Kehadiran Harian Guru</h4></div>
-                                <div class="card-body d-flex align-items-center justify-content-center text-center">
-                                    <div class="py-2">
-                                        <div class="mb-3">
-                                            <i class="fas fa-calendar-check text-warning" style="font-size: 60px;"></i>
-                                        </div>
-                                        <h5 class="font-weight-bold mb-1">Hari Libur Sekolah</h5>
-                                        <p class="text-muted mb-2">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo $holiday['name']; ?></strong>.</p>
-                                        <div class="badge badge-warning px-3 py-1" style="font-size: 0.9rem; border-radius: 30px;">
-                                            <i class="fas fa-info-circle mr-2"></i> Kehadiran Harian Ditutup
+                        <div class="<?php echo $col_class_wali; ?> mapp-col-absen">
+                            <div class="card w-100 h-100 mapp-absen-card border-0 shadow-sm">
+                                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                                    <h4 class="mb-0"><i class="fas fa-user-check text-warning mr-2"></i>Kehadiran Saya Hari Ini</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mapp-att-hero is-holiday">
+                                        <div class="mapp-att-hero-ico"><i class="fas fa-calendar-check"></i></div>
+                                        <div class="mapp-att-hero-txt">
+                                            <div class="mapp-att-hero-title">Hari Libur Sekolah</div>
+                                            <div class="mapp-att-hero-sub">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo $holiday['name']; ?></strong>. Kehadiran harian ditutup.</div>
                                         </div>
                                     </div>
                                 </div>
