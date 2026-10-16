@@ -167,70 +167,53 @@ include '../templates/header.php';
                             <input type="hidden" name="tanggal" value="<?php echo $tanggal; ?>">
                             <input type="hidden" name="save_attendance" value="1">
                             
-                            <div class="table-responsive">
-                                <table class="table table-striped" id="table-1">
-                                    <thead>
-                                        <tr>
-                                            <th>No</th>
-                                            <th>Nama Siswa</th>
-                                            <th>Status Kehadiran</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($students as $index => $student): ?>
-                                        <?php
-                                            $status_sholat = $student['status_sholat'] ?? null;
-                                            $status_absensi = $student['status_absensi'] ?? null;
-                                            $is_absent_daily = in_array($status_absensi, ['Sakit', 'Izin', 'Alpa']);
-                                            
-                                            if ($is_absent_daily) {
-                                                $current_status = 'Tidak Hadir';
-                                            } elseif ($status_sholat) {
-                                                $current_status = $status_sholat;
-                                            } else {
-                                                $current_status = 'Hadir';
-                                            }
-                                        ?>
-                                        <tr>
-                                            <td><?php echo $index + 1; ?></td>
-                                            <td>
-                                                <?php echo htmlspecialchars($student['nama_siswa']); ?>
-                                                <span class="ml-2 badge <?php 
-                                                    if ($current_status == 'Hadir') echo 'badge-success';
-                                                    elseif ($current_status == 'Berhalangan') echo 'badge-danger';
-                                                    else echo 'badge-danger';
-                                                ?>" id="badge_<?php echo $student['id_siswa']; ?>">
-                                                    <?php echo $current_status; ?>
-                                                </span>
-                                                <?php if ($is_absent_daily): ?>
-                                                    <small class="text-danger d-block">(Absensi: <?php echo $status_absensi; ?>)</small>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group btn-group-toggle" data-toggle="buttons">
-                                                    <label class="btn btn-outline-success <?php echo $current_status === 'Hadir' ? 'active' : ''; ?>" 
-                                                           onclick="updateBadgeLocal(<?php echo $student['id_siswa']; ?>, 'Hadir')">
-                                                        <input type="radio" name="status_<?php echo $student['id_siswa']; ?>" value="Hadir" 
-                                                               <?php echo $current_status === 'Hadir' ? 'checked' : ''; ?>> Hadir
-                                                    </label>
-                                                    <label class="btn btn-outline-danger <?php echo $current_status === 'Tidak Hadir' ? 'active' : ''; ?>"
-                                                           onclick="updateBadgeLocal(<?php echo $student['id_siswa']; ?>, 'Tidak Hadir')">
-                                                        <input type="radio" name="status_<?php echo $student['id_siswa']; ?>" value="Tidak Hadir" 
-                                                               <?php echo $current_status === 'Tidak Hadir' ? 'checked' : ''; ?>> Tidak Hadir
-                                                    </label>
-                                                    <?php if ($student['jenis_kelamin'] == 'P'): ?>
-                                                    <label class="btn btn-outline-warning <?php echo $current_status === 'Berhalangan' ? 'active' : ''; ?>"
-                                                           onclick="updateBadgeLocal(<?php echo $student['id_siswa']; ?>, 'Berhalangan')">
-                                                        <input type="radio" name="status_<?php echo $student['id_siswa']; ?>" value="Berhalangan" 
-                                                               <?php echo $current_status === 'Berhalangan' ? 'checked' : ''; ?>> Berhalangan
-                                                    </label>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                            <div class="att-grid">
+                                <?php foreach ($students as $index => $student): ?>
+                                <?php
+                                    $status_sholat = $student['status_sholat'] ?? null;
+                                    $status_absensi = $student['status_absensi'] ?? null;
+                                    $is_absent_daily = in_array($status_absensi, ['Sakit', 'Izin', 'Alpa']);
+                                    if ($is_absent_daily) { $current_status = 'Tidak Hadir'; }
+                                    elseif ($status_sholat) { $current_status = $status_sholat; }
+                                    else { $current_status = 'Hadir'; }
+                                    $stat_slug = strtolower($current_status);
+                                    if ($current_status == 'Hadir') $badgeClass = 'badge-success';
+                                    elseif ($current_status == 'Berhalangan') $badgeClass = 'badge-warning';
+                                    else $badgeClass = 'badge-danger';
+                                    $nm = trim((string)($student['nama_siswa'] ?? ''));
+                                    $parts = preg_split('/\s+/', $nm);
+                                    $ini = '';
+                                    foreach (array_slice($parts, 0, 2) as $w) { if ($w !== '') $ini .= strtoupper(substr($w, 0, 1)); }
+                                ?>
+                                <div class="att-card">
+                                    <div class="att-card-head">
+                                        <div class="att-avatar att-avatar--<?= htmlspecialchars($stat_slug) ?>"><?= htmlspecialchars($ini !== '' ? $ini : '?') ?></div>
+                                        <div class="att-card-id">
+                                            <div class="att-name"><?= htmlspecialchars($nm) ?></div>
+                                            <div class="att-sub">
+                                                <span class="att-num">No <?= $index + 1 ?></span>
+                                                <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($current_status) ?></span>
+                                            </div>
+                                            <?php if ($is_absent_daily): ?>
+                                                <small class="att-note-daily">(Absensi: <?= htmlspecialchars($status_absensi) ?>)</small>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="att-actions">
+                                        <label class="att-opt is-hadir <?= $current_status === 'Hadir' ? 'active' : '' ?>" onclick="updateBadgeLocal(this, <?= $student['id_siswa'] ?>, 'Hadir')">
+                                            <input type="radio" name="status_<?= $student['id_siswa'] ?>" value="Hadir" <?= $current_status === 'Hadir' ? 'checked' : '' ?>><i class="fas fa-check"></i><span>Hadir</span>
+                                        </label>
+                                        <label class="att-opt is-tidakhadir <?= $current_status === 'Tidak Hadir' ? 'active' : '' ?>" onclick="updateBadgeLocal(this, <?= $student['id_siswa'] ?>, 'Tidak Hadir')">
+                                            <input type="radio" name="status_<?= $student['id_siswa'] ?>" value="Tidak Hadir" <?= $current_status === 'Tidak Hadir' ? 'checked' : '' ?>><i class="fas fa-times"></i><span>Tidak Hadir</span>
+                                        </label>
+                                        <?php if ($student['jenis_kelamin'] == 'P'): ?>
+                                        <label class="att-opt is-berhalangan <?= $current_status === 'Berhalangan' ? 'active' : '' ?>" onclick="updateBadgeLocal(this, <?= $student['id_siswa'] ?>, 'Berhalangan')">
+                                            <input type="radio" name="status_<?= $student['id_siswa'] ?>" value="Berhalangan" <?= $current_status === 'Berhalangan' ? 'checked' : '' ?>><i class="fas fa-female"></i><span>Berhalangan</span>
+                                        </label>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
                             </div>
                             
                             <div class="row mt-4">
@@ -281,16 +264,18 @@ $(document).ready(function() {
         $('#filterForm').submit();
     });
     
-    // Initialize DataTable
-    $('#table-1').DataTable({
-        'paging': false, // Disable paging to show all students
-        'ordering': false, // Disable ordering to keep list stable
-        'info': false,
-        'searching': true
-    });
+    // Initialize DataTable (hanya jika tabel tersedia)
+    if ($('#table-1').length) {
+        $('#table-1').DataTable({
+            'paging': false,
+            'ordering': false,
+            'info': false,
+            'searching': true
+        });
+    }
 });
 
-function updateBadgeLocal(id, status) {
+function updateBadgeLocal(el, id, status) {
     var badge = $('#badge_' + id);
     badge.removeClass('badge-danger badge-success badge-warning');
     if (status === 'Hadir') {
@@ -299,6 +284,11 @@ function updateBadgeLocal(id, status) {
         badge.addClass('badge-warning').text('Berhalangan');
     } else {
         badge.addClass('badge-danger').text('Tidak Hadir');
+    }
+    if (el) {
+        var group = $(el).closest('.att-actions');
+        group.find('.att-opt').removeClass('active');
+        $(el).addClass('active');
     }
 }
 ";

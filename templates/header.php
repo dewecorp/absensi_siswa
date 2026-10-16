@@ -248,6 +248,12 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_mapp_v = is_readable($_mapp_path) ? (string) filemtime($_mapp_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/mobile-app.css?v=<?php echo htmlspecialchars($_mapp_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Attendance cards CSS -->
+    <?php
+    $_att_path = __DIR__ . '/../assets/css/attendance-cards.css';
+    $_att_v = is_readable($_att_path) ? (string) filemtime($_att_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/attendance-cards.css?v=<?php echo htmlspecialchars($_att_v, ENT_QUOTES, 'UTF-8'); ?>">
 
     <!-- Dynamic breadcrumb rendering will be handled in the page content -->
         <!-- Custom Responsive CSS -->

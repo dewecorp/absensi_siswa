@@ -253,56 +253,52 @@ include '../templates/sidebar.php';
                                 <input type="hidden" name="tanggal" value="<?php echo $tanggal; ?>">
                                 <input type="hidden" name="save_attendance" value="1">
                                 
-                                <div class="table-responsive">
-                                    <table class="table table-striped" id="table-1">
-                                        <thead>
-                                            <tr>
-                                                <th width="5%">No</th>
-                                                <th>Nama Siswa</th>
-                                                <th width="25%">Status Kehadiran</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($students as $index => $student): ?>
-                                            <tr>
-                                                <td><?php echo $index + 1; ?></td>
-                                                <td>
-                                                    <?php echo htmlspecialchars($student['nama_siswa']); ?>
-                                                    <span class="ml-2 badge <?php 
-                                                        $status_badge = $student['keterangan'] ?? 'Hadir';
-                                                        switch($status_badge) {
-                                                            case 'Hadir': echo 'badge-success'; break;
-                                                            case 'Sakit': echo 'badge-warning'; break;
-                                                            case 'Izin': echo 'badge-info'; break;
-                                                            case 'Alpa': echo 'badge-danger'; break;
-                                                            default: echo 'badge-secondary';
-                                                        }
-                                                    ?>" id="badge_<?php echo $student['id_siswa']; ?>">
-                                                        <?php echo $status_badge; ?>
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <?php $status_now = $student['keterangan'] ?? 'Hadir'; ?>
-                                                    <div class="btn-group btn-group-sm attendance-btn-group <?php echo !$has_schedule ? 'disabled' : ''; ?>" role="group">
-                                                        <button type="button" class="btn btn-success btn-kehadiran-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir">
-                                                            <i class="fas fa-check"></i> Hadir
-                                                        </button>
-                                                        <button type="button" class="btn btn-warning btn-kehadiran-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit">
-                                                            <i class="fas fa-procedures"></i> Sakit
-                                                        </button>
-                                                        <button type="button" class="btn btn-info btn-kehadiran-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin">
-                                                            <i class="fas fa-envelope-open-text"></i> Izin
-                                                        </button>
-                                                        <button type="button" class="btn btn-danger btn-kehadiran-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa">
-                                                            <i class="fas fa-user-times"></i> Alpa
-                                                        </button>
-                                                    </div>
-                                                    <input type="hidden" class="student-status-input" id="status_<?php echo $student['id_siswa']; ?>" name="keterangan_<?php echo $student['id_siswa']; ?>" value="<?php echo htmlspecialchars($status_now, ENT_QUOTES); ?>">
-                                                </td>
-                                            </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                                <div class="att-grid">
+                                    <?php foreach ($students as $index => $student): ?>
+                                    <?php
+                                        $status_badge = $student['keterangan'] ?? 'Hadir';
+                                        $status_now = $status_badge;
+                                        $stat_slug = strtolower($status_now);
+                                        switch ($status_badge) {
+                                            case 'Hadir': $badgeClass = 'badge-success'; break;
+                                            case 'Sakit': $badgeClass = 'badge-warning'; break;
+                                            case 'Izin': $badgeClass = 'badge-info'; break;
+                                            case 'Alpa': $badgeClass = 'badge-danger'; break;
+                                            default: $badgeClass = 'badge-secondary';
+                                        }
+                                        $nm = trim((string)($student['nama_siswa'] ?? ''));
+                                        $parts = preg_split('/\s+/', $nm);
+                                        $ini = '';
+                                        foreach (array_slice($parts, 0, 2) as $w) { if ($w !== '') $ini .= strtoupper(substr($w, 0, 1)); }
+                                    ?>
+                                    <div class="att-card">
+                                        <div class="att-card-head">
+                                            <div class="att-avatar att-avatar--<?= htmlspecialchars($stat_slug) ?>"><?= htmlspecialchars($ini !== '' ? $ini : '?') ?></div>
+                                            <div class="att-card-id">
+                                                <div class="att-name"><?= htmlspecialchars($nm) ?></div>
+                                                <div class="att-sub">
+                                                    <span class="att-num">No <?= $index + 1 ?></span>
+                                                    <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($status_badge) ?></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="att-actions attendance-btn-group <?php echo !$has_schedule ? 'disabled' : ''; ?>">
+                                            <button type="button" class="att-opt is-hadir btn-kehadiran-siswa <?php echo $status_now === 'Hadir' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Hadir">
+                                                <i class="fas fa-check"></i><span>Hadir</span>
+                                            </button>
+                                            <button type="button" class="att-opt is-sakit btn-kehadiran-siswa <?php echo $status_now === 'Sakit' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Sakit">
+                                                <i class="fas fa-procedures"></i><span>Sakit</span>
+                                            </button>
+                                            <button type="button" class="att-opt is-izin btn-kehadiran-siswa <?php echo $status_now === 'Izin' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Izin">
+                                                <i class="fas fa-envelope-open-text"></i><span>Izin</span>
+                                            </button>
+                                            <button type="button" class="att-opt is-alpa btn-kehadiran-siswa <?php echo $status_now === 'Alpa' ? 'active' : ''; ?>" data-id="<?php echo $student['id_siswa']; ?>" data-status="Alpa">
+                                                <i class="fas fa-user-times"></i><span>Alpa</span>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" class="student-status-input" id="status_<?php echo $student['id_siswa']; ?>" name="keterangan_<?php echo $student['id_siswa']; ?>" value="<?php echo htmlspecialchars($status_now, ENT_QUOTES); ?>">
+                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                                 
                                 <div class="row mt-4">
@@ -357,10 +353,12 @@ if (!$has_schedule) {
 
 $js_page[] = "
 $(document).ready(function() {
-    $('#table-1').DataTable({
-        'language': { 'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
-        'pageLength': 50
-    });
+    if ($('#table-1').length) {
+        $('#table-1').DataTable({
+            'language': { 'url': 'https://cdn.datatables.net/plug-ins/1.10.25/i18n/Indonesian.json' },
+            'pageLength': 50
+        });
+    }
     
     $('#tanggalInput, #kelasSelect').on('change', function() {
         $('#filterForm').submit();

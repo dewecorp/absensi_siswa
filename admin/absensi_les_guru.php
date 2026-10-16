@@ -248,24 +248,13 @@ $(document).ready(function() {
         
         // Reset all buttons
         $('.btn-kehadiran[data-id=' + id + ']').each(function() {
-            var btnStat = $(this).attr('data-status');
-            $(this).removeClass('active btn-success btn-info btn-warning')
-                    .addClass('btn-outline-' + (btnStat == 'hadir' ? 'success' : (btnStat == 'sakit' ? 'info' : 'warning')))
-                    .css('opacity', '0.6');
+            $(this).removeClass('active');
         });
         
         // Set active button if not toggling off
         if (!isToggle && newStatus) {
             var activeBtn = $('.btn-kehadiran[data-id=' + id + '][data-status=' + newStatus + ']');
-            activeBtn.addClass('active').css('opacity', '1');
-            
-            if (newStatus == 'hadir') {
-                activeBtn.removeClass('btn-outline-success').addClass('btn-success');
-            } else if (newStatus == 'sakit') {
-                activeBtn.removeClass('btn-outline-info').addClass('btn-info');
-            } else if (newStatus == 'izin') {
-                activeBtn.removeClass('btn-outline-warning').addClass('btn-warning');
-            }
+            activeBtn.addClass('active');
         }
         
         // Update hidden field
@@ -395,37 +384,11 @@ include '../templates/sidebar.php';
 ?>
 
 <style>
+/* Tombol kartu kehadiran les guru */
 .btn-kehadiran {
-    font-size: 1.15rem;
-    font-weight: 600;
-    border-width: 2px;
     transition: all .15s ease-in-out;
 }
-.btn-kehadiran i { font-size: 1.55rem; }
 .btn-kehadiran:hover { transform: translateY(-1px); }
-
-/* Filled color for single-view buttons */
-.btn-kehadiran.btn-outline-success {
-    background-color: #28a745;
-    color: #fff;
-    border-color: #28a745;
-}
-.btn-kehadiran.btn-outline-info {
-    background-color: #17a2b8;
-    color: #fff;
-    border-color: #17a2b8;
-}
-.btn-kehadiran.btn-outline-warning {
-    background-color: #ffc107;
-    color: #212529;
-    border-color: #ffc107;
-}
-
-/* Table action buttons: stronger colors and bigger text */
-.table .btn-absensi {
-    font-size: 1rem;
-    font-weight: 600;
-}
 </style>
 
 <div class="main-content">
@@ -461,104 +424,84 @@ include '../templates/sidebar.php';
                                 if ($teacher):
                                     $status_lower = strtolower($teacher['status_kehadiran']);
                                 ?>
-                                    <div class="form-group text-center">
-                                        <label class="d-block font-weight-bold mb-3">Status Kehadiran Les Hari Ini (<?php echo formatDateIndonesia(date('Y-m-d')); ?>)</label>
-                                        <div class="row justify-content-center">
-                                            <div class="col-4 col-md-3">
-                                                <button type="button" class="btn btn-outline-success btn-block btn-lg py-3 btn-kehadiran d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir">
-                                                    <i class="fas fa-check-circle fa-2x mb-2"></i>
-                                                    <span>Hadir</span>
-                                                </button>
+                                    <?php 
+                                    $nm = trim((string)($teacher['nama_guru'] ?? ''));
+                                    $parts = preg_split('/\s+/', $nm);
+                                    $ini = '';
+                                    foreach (array_slice($parts, 0, 2) as $w) { if ($w !== '') $ini .= strtoupper(substr($w, 0, 1)); }
+                                    $badgeCls = $status_lower == 'hadir' ? 'badge-success' : ($status_lower == 'sakit' ? 'badge-info' : ($status_lower == 'izin' ? 'badge-warning' : 'badge-secondary'));
+                                    ?>
+                                    <div class="att-grid" style="grid-template-columns: minmax(280px, 440px); justify-content: center;">
+                                        <div class="att-card">
+                                            <div class="att-card-head">
+                                                <div class="att-avatar att-avatar--<?= $status_lower ?>"><?= htmlspecialchars($ini !== '' ? $ini : '?') ?></div>
+                                                <div class="att-card-id">
+                                                    <div class="att-name"><?= htmlspecialchars($nm) ?></div>
+                                                    <div class="att-sub">
+                                                        <span class="att-num"><?= formatDateIndonesia(date('Y-m-d')) ?></span>
+                                                        <span id="badge_<?= $teacher['id_guru'] ?>" class="badge <?= $badgeCls ?>"><?= $teacher['status_kehadiran'] ?: 'Belum Absen' ?></span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="col-4 col-md-3">
-                                                <button type="button" class="btn btn-outline-info btn-block btn-lg py-3 btn-kehadiran d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit">
-                                                    <i class="fas fa-procedures fa-2x mb-2"></i>
-                                                    <span>Sakit</span>
-                                                </button>
+                                            <div class="att-actions">
+                                                <button type="button" class="att-opt is-hadir btn-kehadiran <?= $status_lower == 'hadir' ? 'active' : '' ?>" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir"><i class="fas fa-check"></i><span>Hadir</span></button>
+                                                <button type="button" class="att-opt is-sakit btn-kehadiran <?= $status_lower == 'sakit' ? 'active' : '' ?>" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit"><i class="fas fa-procedures"></i><span>Sakit</span></button>
+                                                <button type="button" class="att-opt is-izin btn-kehadiran <?= $status_lower == 'izin' ? 'active' : '' ?>" data-id="<?= $teacher['id_guru'] ?>" data-status="izin"><i class="fas fa-envelope-open-text"></i><span>Izin</span></button>
                                             </div>
-                                            <div class="col-4 col-md-3">
-                                                <button type="button" class="btn btn-outline-warning btn-block btn-lg py-3 btn-kehadiran d-flex flex-column align-items-center" data-id="<?= $teacher['id_guru'] ?>" data-status="izin">
-                                                    <i class="fas fa-envelope-open-text fa-2x mb-2"></i>
-                                                    <span>Izin</span>
-                                                </button>
+                                            <div class="att-card-note" id="keterangan_container_<?= $teacher['id_guru'] ?>" style="display: <?= in_array($status_lower, ['izin', 'sakit']) ? 'block' : 'none'; ?>;">
+                                                <label class="font-weight-bold">Keterangan</label>
+                                                <textarea class="form-control keterangan-input" id="keterangan_<?= $teacher['id_guru'] ?>" placeholder="Tulis alasan jika sakit atau izin..."><?= htmlspecialchars($teacher['keterangan']) ?></textarea>
                                             </div>
+                                            <input type="hidden" id="status_<?= $teacher['id_guru'] ?>" class="status-input" data-id="<?= $teacher['id_guru'] ?>" value="<?= $teacher['status_kehadiran'] ?>">
+                                            <input type="hidden" id="waktu_<?= $teacher['id_guru'] ?>" value="<?= $teacher['waktu_input'] ? date('H:i:s', strtotime($teacher['waktu_input'])) : '' ?>">
                                         </div>
-                                        <input type="hidden" id="status_<?= $teacher['id_guru'] ?>" class="status-input" data-id="<?= $teacher['id_guru'] ?>" value="<?= $teacher['status_kehadiran'] ?>">
-                                        <input type="hidden" id="waktu_<?= $teacher['id_guru'] ?>" value="<?= $teacher['waktu_input'] ? date('H:i:s', strtotime($teacher['waktu_input'])) : '' ?>">
-                                    </div>
-
-                                    <div class="form-group" id="keterangan_container_<?= $teacher['id_guru'] ?>" style="display: <?php echo in_array($status_lower, ['izin', 'sakit']) ? 'block' : 'none'; ?>;">
-                                        <label class="font-weight-bold">Keterangan</label>
-                                        <textarea class="form-control keterangan-input" id="keterangan_<?= $teacher['id_guru'] ?>" placeholder="Tulis alasan jika sakit atau izin..."><?= htmlspecialchars($teacher['keterangan']) ?></textarea>
-                                    </div>
-
-                                    <div class="mt-3">
-                                        <span class="text-muted">Status: </span>
-                                        <span id="badge_<?= $teacher['id_guru'] ?>" class="badge badge-<?= $status_lower == 'hadir' ? 'success' : ($status_lower == 'sakit' ? 'info' : ($status_lower == 'izin' ? 'warning' : 'secondary')) ?>">
-                                            <?= $teacher['status_kehadiran'] ?: 'Belum Absen' ?>
-                                        </span>
                                     </div>
                                 <?php endif; ?>
 
                             <?php else: ?>
-                                <!-- Admin View (Table) -->
-                                <div class="table-responsive">
-                                    <table class="table table-striped" id="table-1">
-                                        <thead>
-                                            <tr>
-                                                <th class="text-center" width="5%">No</th>
-                                                <th>Nama Guru</th>
-                                                <th width="30%">Status Kehadiran</th>
-                                                <th width="25%">Keterangan</th>
-                                                <th width="10%">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php 
-                                            $no = 1;
-                                            foreach ($teachers as $teacher): 
-                                                $bg_color = '';
-                                                $status_lower = strtolower($teacher['status_kehadiran']);
-                                                if ($status_lower == 'hadir') $bg_color = 'rgba(40, 167, 69, 0.1)';
-                                                elseif ($status_lower == 'sakit') $bg_color = 'rgba(23, 162, 184, 0.1)';
-                                                elseif ($status_lower == 'izin') $bg_color = 'rgba(255, 193, 7, 0.1)';
-                                            ?>
-                                            <tr style="background-color: <?= $bg_color ?>">
-                                                <td class="text-center"><?= $no++ ?></td>
-                                                <td><?= htmlspecialchars($teacher['nama_guru']) ?></td>
-                                                <td>
-                                                    <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-success btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir">
-                                                            <i class="fas fa-check"></i> Hadir
-                                                        </button>
-                                                        <button type="button" class="btn btn-info btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit">
-                                                            <i class="fas fa-procedures"></i> Sakit
-                                                        </button>
-                                                        <button type="button" class="btn btn-warning btn-kehadiran" data-id="<?= $teacher['id_guru'] ?>" data-status="izin">
-                                                            <i class="fas fa-envelope-open-text"></i> Izin
-                                                        </button>
-                                                    </div>
-                                                    <input type="hidden" id="status_<?= $teacher['id_guru'] ?>" class="status-input" data-id="<?= $teacher['id_guru'] ?>" value="<?= $teacher['status_kehadiran'] ?>">
-                                                    <input type="hidden" id="waktu_<?= $teacher['id_guru'] ?>" value="<?= $teacher['waktu_input'] ? date('H:i:s', strtotime($teacher['waktu_input'])) : '' ?>">
-                                                </td>
-                                                <td>
-                                                    <div id="keterangan_container_<?= $teacher['id_guru'] ?>" style="display: none;">
-                                                        <input type="text" class="form-control keterangan-input" id="keterangan_<?= $teacher['id_guru'] ?>" value="<?= htmlspecialchars($teacher['keterangan']) ?>" placeholder="Tulis keterangan...">
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <?php if ($teacher['status_kehadiran']): ?>
-                                                        <span id="badge_<?= $teacher['id_guru'] ?>" class="badge badge-<?= $status_lower == 'hadir' ? 'success' : ($status_lower == 'sakit' ? 'info' : ($status_lower == 'izin' ? 'warning' : 'secondary')) ?>">
-                                                            <?= ucfirst($teacher['status_kehadiran']) ?>
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span id="badge_<?= $teacher['id_guru'] ?>" class="badge badge-secondary">Belum Absen</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                                <!-- Admin View (Kartu) -->
+                                <div class="att-grid">
+                                    <?php 
+                                    $no = 1;
+                                    foreach ($teachers as $teacher): 
+                                        $status_lower = strtolower($teacher['status_kehadiran']);
+                                        $nm = trim((string)($teacher['nama_guru'] ?? ''));
+                                        $parts = preg_split('/\s+/', $nm);
+                                        $ini = '';
+                                        foreach (array_slice($parts, 0, 2) as $w) { if ($w !== '') $ini .= strtoupper(substr($w, 0, 1)); }
+                                        $badgeCls = $status_lower == 'hadir' ? 'badge-success' : ($status_lower == 'sakit' ? 'badge-info' : ($status_lower == 'izin' ? 'badge-warning' : 'badge-secondary'));
+                                    ?>
+                                    <div class="att-card">
+                                        <div class="att-card-head">
+                                            <div class="att-avatar att-avatar--<?= $status_lower ?>"><?= htmlspecialchars($ini !== '' ? $ini : '?') ?></div>
+                                            <div class="att-card-id">
+                                                <div class="att-name"><?= htmlspecialchars($nm) ?></div>
+                                                <div class="att-sub">
+                                                    <span class="att-num">No <?= $no++ ?></span>
+                                                    <span id="badge_<?= $teacher['id_guru'] ?>" class="badge <?= $badgeCls ?>">
+                                                        <?= $teacher['status_kehadiran'] ? ucfirst($teacher['status_kehadiran']) : 'Belum Absen' ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="att-actions">
+                                            <button type="button" class="att-opt is-hadir btn-kehadiran <?= $status_lower == 'hadir' ? 'active' : '' ?>" data-id="<?= $teacher['id_guru'] ?>" data-status="hadir">
+                                                <i class="fas fa-check"></i><span>Hadir</span>
+                                            </button>
+                                            <button type="button" class="att-opt is-sakit btn-kehadiran <?= $status_lower == 'sakit' ? 'active' : '' ?>" data-id="<?= $teacher['id_guru'] ?>" data-status="sakit">
+                                                <i class="fas fa-procedures"></i><span>Sakit</span>
+                                            </button>
+                                            <button type="button" class="att-opt is-izin btn-kehadiran <?= $status_lower == 'izin' ? 'active' : '' ?>" data-id="<?= $teacher['id_guru'] ?>" data-status="izin">
+                                                <i class="fas fa-envelope-open-text"></i><span>Izin</span>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" id="status_<?= $teacher['id_guru'] ?>" class="status-input" data-id="<?= $teacher['id_guru'] ?>" value="<?= $teacher['status_kehadiran'] ?>">
+                                        <input type="hidden" id="waktu_<?= $teacher['id_guru'] ?>" value="<?= $teacher['waktu_input'] ? date('H:i:s', strtotime($teacher['waktu_input'])) : '' ?>">
+                                        <div class="att-card-note" id="keterangan_container_<?= $teacher['id_guru'] ?>" style="display: <?= in_array($status_lower, ['izin', 'sakit']) ? 'block' : 'none'; ?>;">
+                                            <input type="text" class="form-control keterangan-input" id="keterangan_<?= $teacher['id_guru'] ?>" value="<?= htmlspecialchars($teacher['keterangan']) ?>" placeholder="Tulis keterangan...">
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
                         </div>
