@@ -9,6 +9,7 @@
     if (sel.closest('#jurnalModal')) return false;
     if (sel.closest('#modalCatatan')) return false;
     if (sel.closest('#modalKomunikasi')) return false;
+    if (sel.closest('#modalTL')) return false;
     if (sel.classList.contains('select2-hidden-accessible')) return false;
     if (sel.closest('.select2-container')) return false;
     if (sel.className && (sel.className.indexOf('select2') !== -1 || sel.id === 'f_siswa' || sel.id === 'inp_siswa') && hasSelect2Lib()) return false;
@@ -117,21 +118,22 @@
       listEl.style.bottom = '';
       listEl.style.left = '';
       listEl.style.width = '';
-      var inModal = !!sel.closest('.modal');
-      if (inModal) {
-        try {
-          var r = btn.getBoundingClientRect();
-          listEl.style.left = Math.max(8, r.left) + 'px';
-          listEl.style.width = Math.max(160, r.width) + 'px';
-          var spaceBelow = window.innerHeight - r.bottom;
-          if (spaceBelow < 260) {
-            listEl.style.top = 'auto';
-            listEl.style.bottom = Math.max(8, window.innerHeight - r.top + 6) + 'px';
-          } else {
-            listEl.style.top = (r.bottom + 6) + 'px';
-          }
-        } catch (e2) {}
-      }
+      try {
+        var r = btn.getBoundingClientRect();
+        listEl.style.left = Math.max(8, r.left) + 'px';
+        listEl.style.width = Math.max(160, r.width) + 'px';
+        var spaceBelow = window.innerHeight - r.bottom;
+        var spaceAbove = r.top;
+        if (spaceBelow < 220 && spaceAbove > spaceBelow) {
+          listEl.style.top = 'auto';
+          listEl.style.bottom = Math.max(8, window.innerHeight - r.top + 6) + 'px';
+          listEl.style.maxHeight = Math.min(260, Math.max(140, spaceAbove - 20)) + 'px';
+        } else {
+          listEl.style.top = (r.bottom + 6) + 'px';
+          listEl.style.bottom = 'auto';
+          listEl.style.maxHeight = Math.min(260, Math.max(140, spaceBelow - 20)) + 'px';
+        }
+      } catch (e2) {}
     }
     btn.addEventListener('click', function(e) {
       e.preventDefault();

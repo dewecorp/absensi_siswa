@@ -313,6 +313,27 @@ try {
 }
 $f_sumber = trim((string)($_GET['f_sumber'] ?? ''));
 $f_status = trim((string)($_GET['f_status'] ?? ''));
+$f_siswa = (int)($_GET['f_siswa'] ?? 0);
+
+// Daftar semua siswa di kelas untuk filter
+$filter_siswa_list = [];
+try {
+    $sqlFS = "SELECT s.id_siswa, s.nama_siswa, s.nisn, k.nama_kelas
+              FROM tb_siswa s
+              LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
+              WHERE 1=1";
+    $parFS = [];
+    if ($selected_kelas_id > 0) {
+        $sqlFS .= " AND s.id_kelas = ?";
+        $parFS[] = $selected_kelas_id;
+    }
+    $sqlFS .= " ORDER BY s.nama_siswa ASC";
+    $stFS = $pdo->prepare($sqlFS);
+    $stFS->execute($parFS);
+    $filter_siswa_list = $stFS->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $filter_siswa_list = [];
+}
 
 $where = ["1=1"];
 $params = [];
@@ -331,6 +352,10 @@ if ($f_sumber !== '') {
 if ($f_status !== '') {
     $where[] = "t.status = ?";
     $params[] = $f_status;
+}
+if ($f_siswa > 0) {
+    $where[] = "t.id_siswa = ?";
+    $params[] = $f_siswa;
 }
 
 $where_sql = implode(' AND ', $where);
@@ -392,11 +417,10 @@ try {
 
 $page_title = 'Daftar Tindak Lanjut';
 $css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
 ];
 $js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
 ];
 
 $js_page = [<<<'JS'
@@ -413,20 +437,44 @@ var konselingList =
 JS
 . json_encode($konseling_list) . ";\n" . <<<'JS'
 $(document).ready(function() {
-    if ($('#table-tindak-lanjut').length) {
-        $('#table-tindak-lanjut').DataTable({
-            'order': [[1, 'desc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [9] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada data tindak lanjut',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
+    if ($.fn.select2) {
+        $('#f_siswa').select2({
+            placeholder: '-- Semua Siswa --',
+            allowClear: true,
+            width: '100%'
+        }).on('change', function() {
+            this.form.submit();
         });
     }
+
+    $('#cari-tl-timeline').on('input', function() {
+        var query = $(this).val().toLowerCase().trim();
+        var visibleCount = 0;
+        $('.tl-timeline-item').each(function() {
+            var text = $(this).text().toLowerCase();
+            if (text.indexOf(query) !== -1) {
+                $(this).show();
+                visibleCount++;
+            } else {
+                $(this).hide();
+            }
+        });
+        $('.tl-month-header').each(function() {
+            var month = $(this).data('month');
+            var hasVisible = $('.tl-timeline-item[data-month="' + month + '"]:visible').length > 0;
+            if (hasVisible) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+        if (visibleCount === 0 && query !== '') {
+            $('#no-tl-search').show();
+        } else {
+            $('#no-tl-search').hide();
+        }
+        $('#count-tl-timeline').text(visibleCount);
+    });
 
     function shortTL(s, n) {
         s = (s || '').toString().replace(/\s+/g, ' ').trim();
@@ -776,9 +824,59 @@ include '../templates/sidebar.php';
 
 <style>
 .aksi-satu-baris { display: inline-flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; white-space: nowrap; }
-.aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; border-radius: 6px; }
 .aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
-#table-tindak-lanjut td:last-child { white-space: nowrap; }
+
+.tl-timeline { position: relative; padding: 10px 0 10px 8px; }
+.tl-timeline::before { content: ''; position: absolute; left: 57px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #6777ef, #3abaf4); opacity: .35; }
+.tl-month-header { position: relative; z-index: 1; display: inline-block; margin: 16px 0 16px 34px; padding: 5px 18px; border-radius: 20px; background: #6777ef; color: #fff; font-weight: 800; font-size: 12.5px; letter-spacing: .3px; box-shadow: 0 4px 12px rgba(103,119,239,.35); }
+.tl-month-header:first-child { margin-top: 0; }
+.tl-timeline-item { position: relative; display: flex; gap: 14px; margin-bottom: 16px; }
+.tl-timeline-date { flex: 0 0 76px; text-align: center; z-index: 1; }
+.tl-timeline-date .d { display: block; width: 48px; height: 48px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid var(--tl-color, #6777ef); color: var(--tl-color, #6777ef); font-weight: 800; font-size: 18px; line-height: 42px; box-shadow: 0 3px 8px rgba(0,0,0,.10); }
+.tl-timeline-date .m { display: block; margin-top: 4px; font-size: 11px; font-weight: 800; color: #6c757d; text-transform: uppercase; }
+.tl-timeline-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,30,70,.06); padding: 14px 16px; border-left: 4.5px solid var(--tl-color, #6777ef); transition: box-shadow .2s ease, transform .2s ease; }
+.tl-timeline-card:hover { box-shadow: 0 8px 24px rgba(20,30,70,.12); transform: translateY(-2px); }
+
+.tl-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+.tl-preview-box {
+    background: #f8fafc;
+    border-left: 3.5px solid #6777ef;
+    border-top: 1px solid #edf2f7;
+    border-right: 1px solid #edf2f7;
+    border-bottom: 1px solid #edf2f7;
+    border-radius: 6px;
+    padding: 12px 14px;
+}
+.tl-source-box {
+    background: #f0f7ff;
+    border: 1px solid #cfe3ff;
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+.tl-source-box.is-konseling {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+@media (max-width: 575.98px) {
+    .tl-timeline::before { left: 47px; }
+    .tl-timeline-item { gap: 10px; }
+    .tl-timeline-date { flex-basis: 60px; }
+    .tl-timeline-date .d { width: 38px; height: 38px; font-size: 15px; line-height: 32px; }
+}
 </style>
 <div class="main-content">
     <section class="section">
@@ -809,10 +907,25 @@ include '../templates/sidebar.php';
 
             <!-- Filter Card -->
             <div class="card mb-3">
-                <div class="card-body p-3">
+                <div class="card-header py-2">
+                    <h6 class="mb-0 text-dark"><i class="fas fa-filter mr-1 text-primary"></i> Filter Tindak Lanjut</h6>
+                </div>
+                <div class="card-body py-3">
                     <form method="GET" class="row">
+                        <?php if (isset($_GET['session_type'])): ?><input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>"><?php endif; ?>
                         <?php if (isset($_GET['kelas'])): ?><input type="hidden" name="kelas" value="<?= (int)$_GET['kelas'] ?>"><?php endif; ?>
-                        <div class="col-md-4 mb-2">
+                        <div class="col-md-4 col-lg mb-2">
+                            <label class="small font-weight-bold">Siswa</label>
+                            <select name="f_siswa" id="f_siswa" class="form-control form-control-sm select2-filter-siswa">
+                                <option value="">-- Semua Siswa --</option>
+                                <?php foreach ($filter_siswa_list as $sw): ?>
+                                    <option value="<?= (int)$sw['id_siswa'] ?>" <?= $f_siswa === (int)$sw['id_siswa'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($sw['nama_siswa']) ?><?= !empty($sw['nisn']) ? ' (' . htmlspecialchars($sw['nisn']) . ')' : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 col-lg mb-2">
                             <label class="small font-weight-bold">Sumber Tindak Lanjut</label>
                             <select name="f_sumber" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Sumber --</option>
@@ -821,7 +934,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-2">
+                        <div class="col-md-4 col-lg mb-2">
                             <label class="small font-weight-bold">Status</label>
                             <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Status --</option>
@@ -830,8 +943,15 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-2 d-flex align-items-end">
-                            <a href="tindak_lanjut.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                        <div class="col-12 mt-1 d-flex align-items-center">
+                            <?php
+                            $reset_params = [];
+                            if (isset($_GET['session_type'])) $reset_params['session_type'] = $_GET['session_type'];
+                            if (isset($_GET['kelas'])) $reset_params['kelas'] = (int)$_GET['kelas'];
+                            $reset_url = 'tindak_lanjut.php' . (!empty($reset_params) ? '?' . http_build_query($reset_params) : '');
+                            ?>
+                            <a href="<?= htmlspecialchars($reset_url) ?>" class="btn btn-secondary btn-sm"><i class="fas fa-undo mr-1"></i> Reset</a>
+                            <small class="text-muted ml-2">Filter otomatis tersubmit saat opsi diubah.</small>
                         </div>
                     </form>
                 </div>
@@ -842,117 +962,226 @@ include '../templates/sidebar.php';
                 <strong>Pembinaan Siswa</strong> maupun <strong>Konseling Siswa</strong> yang BELUM ditindaklanjuti.
             </div>
 
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                    <h4>Monitoring Tindak Lanjut Siswa</h4>
+            <!-- Card Utama Timeline Monitoring Tindak Lanjut -->
+            <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9; gap: 10px;">
                     <div>
-                        <a href="data_tindak_lanjut.php" class="btn btn-info btn-sm mr-1">
-                            <i class="fas fa-database mr-1"></i> Data Tindak Lanjut
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-history text-primary mr-2"></i>Timeline Tindak Lanjut Pembinaan</h4>
+                        <small class="text-muted">Menampilkan <span id="count-tl-timeline" class="font-weight-bold text-primary"><?= count($rows) ?></span> riwayat tindak lanjut</small>
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                        <div class="input-group input-group-sm" style="width: 220px;">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-light border-right-0"><i class="fas fa-search text-muted"></i></span>
+                            </div>
+                            <input type="text" id="cari-tl-timeline" class="form-control form-control-sm border-left-0" placeholder="Cari siswa / tindakan...">
+                        </div>
+                        <a href="data_tindak_lanjut.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode($_GET['session_type']) : '' ?>" class="btn btn-info btn-sm font-weight-bold" style="border-radius: 6px;">
+                            <i class="fas fa-database mr-1"></i> Master Data
                         </a>
                         <?php
                         $qs_tl = [];
                         if ($selected_kelas_id > 0) { $qs_tl['kelas'] = $selected_kelas_id; }
+                        if ($f_siswa > 0) { $qs_tl['f_siswa'] = $f_siswa; }
                         if ($f_sumber !== '') { $qs_tl['f_sumber'] = $f_sumber; }
                         if ($f_status !== '') { $qs_tl['f_status'] = $f_status; }
+                        if (isset($_GET['session_type'])) { $qs_tl['session_type'] = $_GET['session_type']; }
                         $url_tl_cetak = 'export_tindak_lanjut_pdf.php?' . http_build_query(array_merge($qs_tl, ['mode' => 'print']));
                         $url_tl_xls = 'export_tindak_lanjut_excel.php?' . http_build_query($qs_tl);
                         ?>
-                        <a href="<?= htmlspecialchars($url_tl_cetak) ?>" target="_blank" class="btn btn-danger btn-sm mr-1" title="Cetak / Simpan PDF">
-                            <i class="fas fa-print mr-1"></i> Cetak / PDF
+                        <a href="<?= htmlspecialchars($url_tl_cetak) ?>" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF" style="border-radius: 6px;">
+                            <i class="fas fa-print mr-1"></i> PDF
                         </a>
-                        <a href="<?= htmlspecialchars($url_tl_xls) ?>" class="btn btn-success btn-sm mr-2" title="Ekspor Excel">
+                        <a href="<?= htmlspecialchars($url_tl_xls) ?>" class="btn btn-success btn-sm" title="Ekspor Excel" style="border-radius: 6px;">
                             <i class="fas fa-file-excel mr-1"></i> Excel
                         </a>
                         <?php if ($can_crud): ?>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahTL" <?= empty($siswa_list) && !$is_admin_or_kepala ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary btn-sm font-weight-bold" id="btnTambahTL" <?= empty($siswa_list) && !$is_admin_or_kepala ? 'disabled' : '' ?> style="border-radius: 6px;">
                             <i class="fas fa-plus mr-1"></i> Rencana Baru
                         </button>
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-tindak-lanjut">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Tanggal</th>
-                                    <th>Nama Siswa</th>
-                                    <th>Sumber</th>
-                                    <th>Tindakan</th>
-                                    <th>Penanggung Jawab</th>
-                                    <th>Target Selesai</th>
-                                    <th>Tanggal Selesai</th>
-                                    <th>Status</th>
-                                    <th style="width:165px;min-width:165px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $i => $r): ?>
-                                    <?php
-                                    $st_badge = 'secondary';
-                                    if ($r['status'] === 'Selesai') $st_badge = 'success';
-                                    elseif ($r['status'] === 'Proses') $st_badge = 'warning';
-                                    elseif ($r['status'] === 'Rencana') $st_badge = 'primary';
-                                    elseif ($r['status'] === 'Dibatalkan') $st_badge = 'danger';
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                        <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong>
-                                            <?php if ($r['sumber'] === 'Konseling' && (!empty($r['c_topik']) || !empty($r['c_masalah']))): ?>
-                                                <div class="mt-1" style="max-width: 230px;">
-                                                    <div><small class="badge badge-info" title="Topik konseling"><i class="fas fa-comments mr-1"></i><?= htmlspecialchars(mb_strimwidth((string)$r['c_topik'], 0, 28, '...')) ?></small></div>
-                                                    <?php if (!empty($r['c_masalah'])): ?>
-                                                    <div><small class="text-muted" title="<?= htmlspecialchars((string)$r['c_masalah']) ?>"><i class="fas fa-align-left mr-1"></i><?= htmlspecialchars(mb_strimwidth((string)$r['c_masalah'], 0, 48, '...')) ?></small></div>
-                                                    <?php endif; ?>
-                                                    <div><small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i><?= !empty($r['c_tanggal']) ? date('d/m/Y', strtotime($r['c_tanggal'])) : '-' ?> &bull; <?= htmlspecialchars($r['c_status'] ?? '-') ?></small></div>
+                <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
+                    <?php if (empty($rows)): ?>
+                        <div class="text-center py-5 bg-white rounded shadow-sm border">
+                            <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted font-weight-bold">Belum Ada Data Tindak Lanjut</h5>
+                            <p class="text-muted small mb-0">Silakan buat rencana tindak lanjut baru atau sesuaikan filter di atas.</p>
+                        </div>
+                    <?php else: ?>
+                        <?php
+                        $bulan_id = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                        $cur_month = '';
+                        ?>
+                        <div class="tl-timeline">
+                            <div id="no-tl-search" style="display: none;">
+                                <div class="text-center py-5 bg-white rounded shadow-sm border mb-3">
+                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted small mb-0">Tidak ada tindak lanjut yang cocok dengan kata kunci pencarian.</p>
+                                </div>
+                            </div>
+                            <?php foreach ($rows as $i => $r): ?>
+                                <?php
+                                $tgl_raw = $r['tanggal'] ?? date('Y-m-d');
+                                $mk = date('Y-m', strtotime($tgl_raw));
+                                if ($mk !== $cur_month):
+                                    $cur_month = $mk;
+                                ?>
+                                    <div class="tl-month-header" data-month="<?= $cur_month ?>">
+                                        <i class="far fa-calendar-alt mr-1"></i> <?= $bulan_id[(int)date('n', strtotime($tgl_raw))] . ' ' . date('Y', strtotime($tgl_raw)) ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php
+                                $st = $r['status'] ?? 'Rencana';
+                                $tl_color = '#6777ef';
+                                $st_badge = 'badge-primary';
+                                $st_icon = 'fas fa-clipboard-list';
+                                if ($st === 'Selesai') {
+                                    $tl_color = '#10b981';
+                                    $st_badge = 'badge-success';
+                                    $st_icon = 'fas fa-check-circle';
+                                } elseif ($st === 'Proses') {
+                                    $tl_color = '#ffa426';
+                                    $st_badge = 'badge-warning';
+                                    $st_icon = 'fas fa-spinner fa-spin';
+                                } elseif ($st === 'Dibatalkan') {
+                                    $tl_color = '#fc544b';
+                                    $st_badge = 'badge-danger';
+                                    $st_icon = 'fas fa-times-circle';
+                                }
+
+                                $is_konseling = ($r['sumber'] === 'Konseling');
+                                $src_badge = $is_konseling ? 'badge-info' : 'badge-primary';
+                                $src_icon = $is_konseling ? 'fas fa-comments' : 'fas fa-user-edit';
+
+                                // Initials siswa
+                                $parts = preg_split('/\s+/', trim((string)$r['nama_siswa']));
+                                $initials = '';
+                                if (!empty($parts[0])) $initials .= mb_strtoupper(mb_substr($parts[0], 0, 1));
+                                if (isset($parts[1]) && !empty($parts[1])) $initials .= mb_strtoupper(mb_substr($parts[1], 0, 1));
+                                if ($initials === '') $initials = 'S';
+                                ?>
+                                <div class="tl-timeline-item" data-month="<?= $cur_month ?>" style="--tl-color: <?= $tl_color ?>;">
+                                    <div class="tl-timeline-date">
+                                        <span class="d"><?= date('d', strtotime($tgl_raw)) ?></span>
+                                        <span class="m"><?= mb_substr($bulan_id[(int)date('n', strtotime($tgl_raw))], 0, 3) ?></span>
+                                    </div>
+                                    <div class="tl-timeline-card">
+                                        <!-- Header Siswa & Status -->
+                                        <div class="d-flex justify-content-between align-items-start mb-2.5 pb-2 border-bottom">
+                                            <div class="d-flex align-items-center" style="gap: 12px; min-width: 0;">
+                                                <div class="tl-avatar" style="background: <?= $tl_color ?>;">
+                                                    <?= htmlspecialchars($initials) ?>
                                                 </div>
-                                            <?php elseif (!empty($r['b_masalah']) || !empty($r['b_jenis'])): ?>
-                                                <div class="mt-1" style="max-width: 230px;">
-                                                    <div><small class="badge badge-primary" title="Jenis pembinaan"><i class="fas fa-user-edit mr-1"></i><?= htmlspecialchars(mb_strimwidth((string)($r['b_jenis'] ?? 'Pembinaan'), 0, 28, '...')) ?></small></div>
-                                                    <?php if (!empty($r['b_masalah'])): ?>
-                                                    <div><small class="text-muted" title="<?= htmlspecialchars((string)$r['b_masalah']) ?>"><i class="fas fa-align-left mr-1"></i><?= htmlspecialchars(mb_strimwidth((string)$r['b_masalah'], 0, 48, '...')) ?></small></div>
-                                                    <?php endif; ?>
+                                                <div style="min-width: 0;">
+                                                    <h6 class="mb-0 font-weight-bold text-truncate" style="font-size: 15px; line-height: 1.3;" title="<?= htmlspecialchars($r['nama_siswa']) ?>">
+                                                        <a href="javascript:void(0)" class="text-dark btn-detail-tl" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' style="text-decoration: none;">
+                                                            <?= htmlspecialchars($r['nama_siswa']) ?>
+                                                        </a>
+                                                    </h6>
+                                                    <div class="d-flex flex-wrap align-items-center small text-muted mt-1" style="gap: 6px;">
+                                                        <?php if (!empty($r['nisn'])): ?>
+                                                            <span class="text-muted"><i class="fas fa-id-card mr-1"></i>NISN: <?= htmlspecialchars($r['nisn']) ?></span>
+                                                            <span class="text-muted">&bull;</span>
+                                                        <?php endif; ?>
+                                                        <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 10.5px;">
+                                                            <i class="fas fa-chalkboard text-muted mr-1"></i> Kelas <?= htmlspecialchars($r['nama_kelas'] ?? '-') ?>
+                                                        </span>
+                                                        <span class="badge <?= $src_badge ?> px-2 py-0.5" style="border-radius: 4px; font-size: 10.5px;">
+                                                            <i class="<?= $src_icon ?> mr-1"></i> <?= htmlspecialchars($r['sumber']) ?>
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-<?= $r['sumber'] === 'Konseling' ? 'info' : 'primary' ?>"><?= htmlspecialchars($r['sumber']) ?></span>
-                                        </td>
-                                        <td><?= htmlspecialchars(mb_strimwidth($r['tindakan'], 0, 40, '...')) ?></td>
-                                        <td><?= htmlspecialchars($r['penanggung_jawab']) ?></td>
-                                        <td><?= !empty($r['target_selesai']) ? date('d/m/Y', strtotime($r['target_selesai'])) : '-' ?></td>
-                                        <td><?= !empty($r['tanggal_selesai']) ? date('d/m/Y', strtotime($r['tanggal_selesai'])) : '-' ?></td>
-                                        <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td class="text-center align-middle">
+                                            </div>
+                                            <div class="ml-2 flex-shrink-0">
+                                                <span class="badge <?= $st_badge ?> px-2.5 py-1 font-weight-bold" style="font-size: 11px; border-radius: 6px;">
+                                                    <i class="<?= $st_icon ?> mr-1"></i> <?= htmlspecialchars($r['status']) ?>
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Sumber Pembinaan / Konseling Highlight -->
+                                        <?php if ($is_konseling && (!empty($r['c_topik']) || !empty($r['c_masalah']))): ?>
+                                            <div class="tl-source-box is-konseling mb-2.5">
+                                                <div class="small font-weight-bold text-info mb-1 d-flex align-items-center">
+                                                    <i class="fas fa-comments mr-1.5"></i> Kasus Konseling Terkait: <?= htmlspecialchars((string)($r['c_topik'] ?: 'Konseling')) ?>
+                                                </div>
+                                                <?php if (!empty($r['c_masalah'])): ?>
+                                                    <div class="small text-dark" style="line-height: 1.45; padding-left: 2px;">
+                                                        <?= nl2br(htmlspecialchars((string)$r['c_masalah'])) ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php elseif (!empty($r['b_masalah']) || !empty($r['b_jenis'])): ?>
+                                            <div class="tl-source-box mb-2.5">
+                                                <div class="small font-weight-bold text-primary mb-1 d-flex align-items-center">
+                                                    <i class="fas fa-user-edit mr-1.5"></i> Permasalahan Pembinaan: <?= htmlspecialchars((string)($r['b_jenis'] ?: 'Pembinaan')) ?>
+                                                </div>
+                                                <?php if (!empty($r['b_masalah'])): ?>
+                                                    <div class="small text-dark" style="line-height: 1.45; padding-left: 2px;">
+                                                        <?= nl2br(htmlspecialchars((string)$r['b_masalah'])) ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <!-- Tindakan / Rencana Perbaikan (Highlight Box dengan Padding Lega) -->
+                                        <div class="tl-preview-box mb-2.5">
+                                            <div class="small font-weight-bold text-dark mb-1 d-flex align-items-center">
+                                                <i class="fas fa-tasks text-primary mr-2" style="font-size: 11px;"></i> Tindakan / Langkah Perbaikan:
+                                            </div>
+                                            <div class="text-dark small" style="line-height: 1.5; font-size: 12.5px; padding-left: 2px;">
+                                                <?= nl2br(htmlspecialchars($r['tindakan'])) ?>
+                                            </div>
+                                        </div>
+
+                                        <!-- Meta Info Bar & Aksi -->
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center pt-2 border-top" style="gap: 8px;">
+                                            <div class="d-flex flex-wrap align-items-center small text-muted" style="gap: 6px;">
+                                                <span class="badge badge-light border text-muted px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-user-tie mr-1 text-primary"></i> PJ: <?= htmlspecialchars($r['penanggung_jawab'] ?: '-') ?>
+                                                </span>
+                                                <span class="badge badge-light border text-dark px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-bullseye mr-1 text-warning"></i> Target: <?= !empty($r['target_selesai']) ? date('d/m/Y', strtotime($r['target_selesai'])) : '-' ?>
+                                                </span>
+                                                <?php if (!empty($r['tanggal_selesai'])): ?>
+                                                <span class="badge badge-light border text-success px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-check-double mr-1 text-success"></i> Selesai: <?= date('d/m/Y', strtotime($r['tanggal_selesai'])) ?>
+                                                </span>
+                                                <?php endif; ?>
+                                            </div>
                                             <div class="aksi-satu-baris">
-                                                <button type="button" class="btn btn-info btn-sm btn-detail-tl" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
+                                                <button type="button" class="btn btn-info btn-sm btn-detail-tl" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Rincian Lengkap">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                                 <?php if ($can_crud): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-tl" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-tl" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit Tindak Lanjut">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-danger btn-sm btn-hapus-tl" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                                 <?php endif; ?>
-                                                <a href="export_tindak_lanjut_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini">
+                                                <a href="export_tindak_lanjut_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF Siswa Ini">
                                                     <i class="fas fa-print"></i>
                                                 </a>
-                                                <a href="export_tindak_lanjut_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel siswa ini">
+                                                <a href="export_tindak_lanjut_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel Siswa Ini">
                                                     <i class="fas fa-file-excel"></i>
                                                 </a>
                                             </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
+        </div>
+    </section>
+</div>
         </div>
     </section>
 </div>

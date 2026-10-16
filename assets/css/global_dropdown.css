@@ -555,20 +555,18 @@ select[multiple].gds-source {
   transform: rotate(180deg);
 }
 .gds-list {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 9990;
+  position: fixed;
+  z-index: 99999;
   max-height: 240px;
-  overflow-y: auto;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
   overscroll-behavior: contain;
-  scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: #b9c4d8 transparent;
   background: #fff;
   border: 1px solid #e4e6fc;
-  border-radius: 3px;
+  border-radius: 6px;
   box-shadow: 0 12px 40px rgba(20,30,70,.18);
   padding: 6px;
   display: none;
