@@ -167,49 +167,6 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
-<style>
-.jadwal-card {
-    border-radius: 12px;
-    border: 1px solid #e2e8f0 !important;
-    background: #ffffff;
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-}
-.jadwal-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(103, 119, 239, 0.08) !important;
-    border-color: #cbd5e1 !important;
-}
-.jadwal-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-}
-.jadwal-act-btn {
-    border-radius: 6px;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-.seragam-preview-box {
-    background: #f8fafc;
-    border-left: 3.5px solid #6777ef;
-    border-top: 1px solid #edf2f7;
-    border-right: 1px solid #edf2f7;
-    border-bottom: 1px solid #edf2f7;
-    border-radius: 6px;
-    padding: 12px 14px;
-}
-</style>
-
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -273,10 +230,10 @@ include '../templates/sidebar.php';
                                                 </div>
                                             </div>
                                             <div class="seragam-preview-box">
-                                                <div class="small font-weight-bold text-dark mb-1">
-                                                    <i class="fas fa-tags text-primary mr-2" style="font-size: 11px;"></i> Jenis Seragam:
+                                                <div class="seragam-preview-label mb-1">
+                                                    <i class="fas fa-tags text-primary mr-2"></i> Jenis Seragam
                                                 </div>
-                                                <div class="text-dark small font-weight-bold" style="line-height: 1.45; font-size: 13px; padding-left: 2px;">
+                                                <div class="seragam-preview-value">
                                                     <?= htmlspecialchars($row['jenis_seragam']) ?>
                                                 </div>
                                             </div>

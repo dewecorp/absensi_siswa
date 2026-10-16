@@ -130,6 +130,16 @@ $page_title = 'Jadwal Seragam Siswa';
 $user_level = getUserLevel();
 $is_editable = in_array($user_level, ['admin', 'tata_usaha']);
 
+// Session type: konteks asal menu (admin | tata_usaha | kepala_madrasah | guru | wali | siswa)
+$session_type = '';
+if (isset($_POST['session_type'])) {
+    $session_type = (string)$_POST['session_type'];
+} elseif (isset($_GET['session_type'])) {
+    $session_type = (string)$_GET['session_type'];
+}
+$session_type = preg_replace('/[^a-z_]/i', '', $session_type);
+$session_type_query = $session_type !== '' ? '&session_type=' . urlencode($session_type) : '';
+
 // Handle Form Submission
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_editable) {
@@ -149,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $is_editable) {
                 $message = ['type' => 'success', 'text' => 'Jadwal berhasil dihapus!'];
             }
             // Refresh data after change
-            header("Location: jadwal_seragam_siswa.php?msg=" . urlencode($message['text']));
+            header("Location: jadwal_seragam_siswa.php?msg=" . urlencode($message['text']) . $session_type_query);
             exit;
         } catch (Exception $e) {
             $message = ['type' => 'danger', 'text' => 'Terjadi kesalahan: ' . $e->getMessage()];
@@ -186,41 +196,71 @@ include '../templates/sidebar.php';
                                     <i class="fas fa-plus"></i> Tambah Jadwal
                                 </button>
                                 <?php endif; ?>
-                                <a href="jadwal_seragam_siswa.php?print=1" target="_blank" class="btn btn-info">
+                                <a href="jadwal_seragam_siswa.php?print=1<?php echo $session_type_query; ?>" target="_blank" class="btn btn-info">
                                     <i class="fas fa-print"></i> Cetak
                                 </a>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center" width="10%">NO</th>
-                                            <th class="text-center" width="30%">HARI</th>
-                                            <th class="text-center">JENIS SERAGAM</th>
-                                            <?php if ($is_editable): ?>
-                                            <th class="text-center" width="15%">AKSI</th>
-                                            <?php endif; ?>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($schedules as $idx => $row): ?>
-                                        <tr>
-                                            <td class="text-center"><?php echo $idx + 1; ?></td>
-                                            <td class="text-center"><?php echo strtoupper($row['hari']); ?></td>
-                                            <td><?php echo $row['jenis_seragam']; ?></td>
-                                            <?php if ($is_editable): ?>
-                                            <td class="text-center">
-                                                <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#modalEdit<?php echo $row['id']; ?>"><i class="fas fa-edit"></i></button>
-                                                <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#modalDelete<?php echo $row['id']; ?>"><i class="fas fa-trash"></i></button>
-                                            </td>
-                                            <?php endif; ?>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <?php if (empty($schedules)): ?>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-tshirt fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted font-weight-bold">Belum Ada Jadwal Seragam</h5>
+                                    <p class="text-muted small mb-0">Silakan tambahkan jadwal seragam siswa terlebih dahulu.</p>
+                                </div>
+                            <?php else: ?>
+                                <div class="row" style="row-gap: 16px;">
+                                    <?php
+                                    $seragam_palette = [
+                                        ['#6777ef', '#3abaf4'],
+                                        ['#10b981', '#059669'],
+                                        ['#f59e0b', '#f97316'],
+                                        ['#8b5cf6', '#6366f1'],
+                                        ['#ec4899', '#f43f5e'],
+                                        ['#0ea5e9', '#06b6d4'],
+                                        ['#14b8a6', '#0d9488'],
+                                    ];
+                                    ?>
+                                    <?php foreach ($schedules as $idx => $row): ?>
+                                        <?php $pal = $seragam_palette[$idx % count($seragam_palette)]; ?>
+                                        <div class="col-12 col-md-6 col-xl-4 d-flex align-items-stretch">
+                                            <div class="card w-100 border-0 shadow-sm jadwal-card mb-0 d-flex flex-column justify-content-between" style="overflow: hidden;">
+                                                <div class="card-body p-3">
+                                                    <div class="d-flex align-items-center mb-2" style="gap: 12px;">
+                                                        <div class="jadwal-avatar flex-shrink-0" style="background: linear-gradient(135deg, <?= $pal[0] ?>, <?= $pal[1] ?>);">
+                                                            <i class="fas fa-tshirt"></i>
+                                                        </div>
+                                                        <div style="min-width: 0;">
+                                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 5px; font-size: 11px;">
+                                                                <i class="far fa-calendar-alt text-primary mr-1"></i> <?= strtoupper(htmlspecialchars($row['hari'])) ?>
+                                                            </span>
+                                                            <div class="small text-muted mt-1">Hari pemakaian seragam</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="seragam-preview-box">
+                                                        <div class="seragam-preview-label mb-1">
+                                                            <i class="fas fa-tags text-primary mr-2"></i> Jenis Seragam
+                                                        </div>
+                                                        <div class="seragam-preview-value">
+                                                            <?= htmlspecialchars($row['jenis_seragam']) ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <?php if ($is_editable): ?>
+                                                <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-end" style="gap: 6px;">
+                                                    <button class="btn btn-warning btn-sm jadwal-act-btn" data-toggle="modal" data-target="#modalEdit<?php echo $row['id']; ?>" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm jadwal-act-btn" data-toggle="modal" data-target="#modalDelete<?php echo $row['id']; ?>" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -238,6 +278,7 @@ include '../templates/sidebar.php';
                 <div class="modal-header"><h5 class="modal-title">Tambah Jadwal Seragam Siswa</h5></div>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="add">
+                    <input type="hidden" name="session_type" value="<?php echo htmlspecialchars($session_type, ENT_QUOTES); ?>">
                     <div class="form-group">
                         <label>Hari</label>
                         <select class="form-control" name="hari" required>
@@ -269,6 +310,7 @@ include '../templates/sidebar.php';
                 <div class="modal-header"><h5 class="modal-title">Edit Jadwal Seragam Siswa</h5></div>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="session_type" value="<?php echo htmlspecialchars($session_type, ENT_QUOTES); ?>">
                     <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
                     <div class="form-group">
                         <label>Hari</label>
@@ -298,6 +340,7 @@ include '../templates/sidebar.php';
                 <div class="modal-header"><h5 class="modal-title">Hapus Jadwal</h5></div>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="session_type" value="<?php echo htmlspecialchars($session_type, ENT_QUOTES); ?>">
                     <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
                     <p>Hapus jadwal seragam siswa hari <?php echo $row['hari']; ?>?</p>
                 </div>
