@@ -516,48 +516,87 @@ include '../templates/user_header.php';
                                                     </div>
                                                 </div>
                                                 
-                                                <div class="table-responsive">
-                                                    <table class="table table-striped table-md" id="dailyTable">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>No</th>
-                                                                <th>Nama Siswa</th>
-                                                                <th>Kelas</th>
-                                                                <th>Status</th>
-                                                                <th>Waktu Masuk</th>
-                                                                <th>Tanggal</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <?php $no = 1; foreach ($daily_results as $record): ?>
-                                                                <tr>
-                                                                    <td><?php echo $no++; ?></td>
-                                                                    <td><?php echo htmlspecialchars($record['nama_siswa']); ?></td>
-                                                                    <td><?php echo htmlspecialchars($record['nama_kelas']); ?></td>
-                                                                    <td>
-                                                                        <?php 
-                                                                        $status_class = '';
-                                                                        $status_text = $record['keterangan'] ?? 'Belum Absen';
-                                                                        switch ($status_text) {
-                                                                            case 'Hadir': $status_class = 'badge-success'; break;
-                                                                            case 'Sakit': $status_class = 'badge-warning'; break;
-                                                                            case 'Izin': $status_class = 'badge-info'; break;
-                                                                            case 'Alpa': $status_class = 'badge-danger'; break;
-                                                                            case 'Berhalangan': $status_class = 'badge-danger'; break;
-                                                                            default: $status_class = 'badge-secondary'; break;
-                                                                        }
-                                                                        ?>
-                                                                        <div class="badge <?php echo $status_class; ?>">
-                                                                            <?php echo $status_text; ?>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td><?php echo isset($record['jam_masuk']) && $record['jam_masuk'] ? date('H:i:s', strtotime($record['jam_masuk'])) : '-'; ?></td>
-                                                                    <td><?php echo $record['tanggal'] ? date('d M Y', strtotime($record['tanggal'])) : '-'; ?></td>
-                                                                </tr>
-                                                            <?php endforeach; ?>
-                                                        </tbody>
-                                                    </table>
+                                                <div class="att-rekap-timeline">
+                                                    <?php $no = 1; foreach ($daily_results as $record): ?>
+                                                        <?php 
+                                                        $status_text = $record['keterangan'] ?? 'Belum Absen';
+                                                        $status_class = 'badge-secondary';
+                                                        $tone_color = '#64748b';
+                                                        switch ($status_text) {
+                                                            case 'Hadir':
+                                                                $status_class = 'badge-success';
+                                                                $tone_color = '#10b981';
+                                                                break;
+                                                            case 'Sakit':
+                                                                $status_class = 'badge-warning';
+                                                                $tone_color = '#f59e0b';
+                                                                break;
+                                                            case 'Izin':
+                                                                $status_class = 'badge-info';
+                                                                $tone_color = '#0ea5e9';
+                                                                break;
+                                                            case 'Alpa':
+                                                            case 'Berhalangan':
+                                                                $status_class = 'badge-danger';
+                                                                $tone_color = '#ef4444';
+                                                                break;
+                                                            default:
+                                                                $status_class = 'badge-secondary';
+                                                                $tone_color = '#64748b';
+                                                                break;
+                                                        }
+                                                        $jam_str = (isset($record['jam_masuk']) && $record['jam_masuk']) ? date('H:i:s', strtotime($record['jam_masuk'])) : '-';
+                                                        $tgl_str = !empty($record['tanggal']) ? date('d M Y', strtotime($record['tanggal'])) : '-';
+                                                        ?>
+                                                        <div class="att-rekap-item" style="--att-tone-color: <?= $tone_color ?>;">
+                                                            <div class="att-rekap-num">
+                                                                <span class="seq"><?= $no++ ?></span>
+                                                                <span class="sub"><?= htmlspecialchars($record['nama_kelas'] ?? '') ?></span>
+                                                            </div>
+                                                            <div class="att-rekap-card">
+                                                                <div class="att-rekap-main">
+                                                                    <div class="att-rekap-name"><?= htmlspecialchars($record['nama_siswa']) ?></div>
+                                                                    <div class="att-rekap-meta">
+                                                                        <span><i class="far fa-clock"></i> <?= $jam_str ?></span>
+                                                                        <span><i class="far fa-calendar-alt"></i> <?= $tgl_str ?></span>
+                                                                        <?php if (!empty($record['nama_kelas'])): ?>
+                                                                            <span><i class="fas fa-school"></i> <?= htmlspecialchars($record['nama_kelas']) ?></span>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="att-rekap-badge">
+                                                                    <span class="badge <?= $status_class ?>"><?= htmlspecialchars($status_text) ?></span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
                                                 </div>
+
+                                                <!-- Hidden table to preserve exportDailyToExcel / exportDailyToPDF -->
+                                                <table class="d-none" id="dailyTable">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>No</th>
+                                                            <th>Nama Siswa</th>
+                                                            <th>Kelas</th>
+                                                            <th>Status</th>
+                                                            <th>Waktu Masuk</th>
+                                                            <th>Tanggal</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php $no = 1; foreach ($daily_results as $record): ?>
+                                                            <tr>
+                                                                <td><?php echo $no++; ?></td>
+                                                                <td><?php echo htmlspecialchars($record['nama_siswa']); ?></td>
+                                                                <td><?php echo htmlspecialchars($record['nama_kelas']); ?></td>
+                                                                <td><?php echo htmlspecialchars($record['keterangan'] ?? 'Belum Absen'); ?></td>
+                                                                <td><?php echo isset($record['jam_masuk']) && $record['jam_masuk'] ? date('H:i:s', strtotime($record['jam_masuk'])) : '-'; ?></td>
+                                                                <td><?php echo $record['tanggal'] ? date('d M Y', strtotime($record['tanggal'])) : '-'; ?></td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         <?php elseif (!empty($semester_results)): ?>
                                             <!-- Semester Results -->
@@ -672,7 +711,44 @@ include '../templates/user_header.php';
                                                     </div>
                                                 </div>
                                                 
-                                                <div class="table-responsive">
+                                                <div class="att-monthly-grid">
+                                                    <?php foreach ($monthly_results as $index => $student): ?>
+                                                        <div class="att-monthly-card">
+                                                            <div class="att-monthly-head">
+                                                                <div class="att-monthly-avatar">
+                                                                    <?= $index + 1 ?>
+                                                                </div>
+                                                                <div class="att-monthly-title">
+                                                                    <div class="att-monthly-name"><?= htmlspecialchars($student['nama_siswa']) ?></div>
+                                                                    <div class="att-monthly-sub">
+                                                                        <i class="far fa-calendar-alt"></i>
+                                                                        <?= $month_names[$month_num] . ' ' . substr($selected_month, 0, 4) ?>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="att-monthly-stats">
+                                                                <div class="att-monthly-stat-box stat-hadir">
+                                                                    <div class="att-monthly-stat-val"><?= (int)($student['summary']['Hadir'] ?? 0) ?></div>
+                                                                    <div class="att-monthly-stat-lbl">Hadir</div>
+                                                                </div>
+                                                                <div class="att-monthly-stat-box stat-sakit">
+                                                                    <div class="att-monthly-stat-val"><?= (int)($student['summary']['Sakit'] ?? 0) ?></div>
+                                                                    <div class="att-monthly-stat-lbl">Sakit</div>
+                                                                </div>
+                                                                <div class="att-monthly-stat-box stat-izin">
+                                                                    <div class="att-monthly-stat-val"><?= (int)($student['summary']['Izin'] ?? 0) ?></div>
+                                                                    <div class="att-monthly-stat-lbl">Izin</div>
+                                                                </div>
+                                                                <div class="att-monthly-stat-box stat-alpa">
+                                                                    <div class="att-monthly-stat-val"><?= (int)($student['summary']['Alpa'] ?? 0) ?></div>
+                                                                    <div class="att-monthly-stat-lbl">Alpa</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+
+                                                <div class="table-responsive d-none">
                                                     <table class="table table-bordered table-md" id="monthlyTable">
                                                         <thead>
                                                             <tr>

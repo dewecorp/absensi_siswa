@@ -1,0 +1,164 @@
+/* ============================================================
+   SIMAD Attendance Daily Recap Timeline
+   Dipakai: Rekap Harian Kehadiran Siswa, Sholat Dhuha,
+   Sholat Berjamaah, dan Kehadiran Les Siswa.
+   ============================================================ */
+
+.att-rekap-timeline {
+    position: relative;
+    padding: 12px 10px 12px 6px;
+    margin-top: 14px;
+    max-height: 520px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+.att-rekap-timeline::-webkit-scrollbar {
+    width: 6px;
+}
+.att-rekap-timeline::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 6px;
+}
+.att-rekap-timeline::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
+}
+.att-rekap-timeline::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+.att-rekap-timeline::before {
+    content: '';
+    position: absolute;
+    left: 48px;
+    top: 16px;
+    bottom: 16px;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #6777ef, #3abaf4);
+    opacity: .32;
+}
+
+.att-rekap-item {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+.att-rekap-item:last-child {
+    margin-bottom: 0;
+}
+
+.att-rekap-num {
+    flex: 0 0 66px;
+    text-align: center;
+    z-index: 1;
+}
+.att-rekap-num .seq {
+    display: block;
+    width: 44px;
+    height: 44px;
+    margin: 0 auto;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--att-tone-color, #6777ef);
+    color: var(--att-tone-color, #6777ef);
+    font-weight: 800;
+    font-size: 16px;
+    line-height: 38px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .08);
+}
+.att-rekap-num .sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+
+.att-rekap-card {
+    flex: 1;
+    min-width: 0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(20, 30, 70, .05);
+    padding: 12px 16px;
+    border-left: 4.5px solid var(--att-tone-color, #6777ef);
+    transition: box-shadow .2s ease, transform .2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+.att-rekap-card:hover {
+    box-shadow: 0 6px 20px rgba(20, 30, 70, .10);
+    transform: translateY(-2px);
+}
+
+.att-rekap-main {
+    min-width: 0;
+    flex: 1;
+}
+.att-rekap-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+.att-rekap-meta {
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+.att-rekap-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.att-rekap-meta i {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.att-rekap-badge {
+    flex: 0 0 auto;
+    text-align: right;
+}
+.att-rekap-badge .badge {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 8px;
+    letter-spacing: .02em;
+}
+
+@media (max-width: 575.98px) {
+    .att-rekap-timeline::before { left: 38px; }
+    .att-rekap-item { gap: 10px; }
+    .att-rekap-num { flex-basis: 52px; }
+    .att-rekap-num .seq {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+        line-height: 30px;
+    }
+    .att-rekap-card {
+        padding: 10px 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .att-rekap-badge {
+        width: 100%;
+        text-align: left;
+    }
+}

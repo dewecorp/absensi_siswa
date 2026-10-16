@@ -101,6 +101,18 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
     $_srgg_v_u = is_readable($_srgg_path_u) ? (string) filemtime($_srgg_path_u) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/seragam-cards.css?v=<?php echo htmlspecialchars($_srgg_v_u, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Attendance daily recap timeline CSS -->
+    <?php
+    $_att_tl_path_u = __DIR__ . '/../assets/css/attendance-timeline.css';
+    $_att_tl_v_u = is_readable($_att_tl_path_u) ? (string) filemtime($_att_tl_path_u) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/attendance-timeline.css?v=<?php echo htmlspecialchars($_att_tl_v_u, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Attendance monthly recap cards CSS -->
+    <?php
+    $_att_mc_path_u = __DIR__ . '/../assets/css/attendance-cards-monthly.css';
+    $_att_mc_v_u = is_readable($_att_mc_path_u) ? (string) filemtime($_att_mc_path_u) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/attendance-cards-monthly.css?v=<?php echo htmlspecialchars($_att_mc_v_u, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Attendance auto-save JS -->
     <?php
     $_attjs_path_u = __DIR__ . '/../assets/js/attendance-autosave.js';

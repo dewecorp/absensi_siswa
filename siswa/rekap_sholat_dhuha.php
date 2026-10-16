@@ -199,71 +199,129 @@ echo "<script>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="table-responsive mt-3">
-                                        <table class="table table-striped" id="table-harian">
-                                            <thead>
-                                                <tr>
-                                                    <th>Tanggal</th>
-                                                    <th>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if (count($harian_data) > 0): ?>
-                                                    <?php foreach ($harian_data as $row): ?>
-                                                        <tr>
-                                                            <td><?php echo formatDate($row['tanggal']); ?></td>
-                                                            <td>
-                                                                <?php
-                                                                $badge_class = 'secondary';
-                                                                if ($row['status'] == 'Melaksanakan' || $row['status'] == 'Hadir') $badge_class = 'success';
-                                                                elseif ($row['status'] == 'Tidak Melaksanakan' || $row['status'] == 'Tidak Hadir') $badge_class = 'danger';
-                                                                elseif ($row['status'] == 'Berhalangan') $badge_class = 'warning';
-                                                                elseif ($row['status'] == 'Belum Diisi') $badge_class = 'secondary';
-                                                                ?>
-                                                                <div class="badge badge-<?php echo $badge_class; ?>"><?php echo $row['status']; ?></div>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                <?php else: ?>
+                                    <?php if (count($harian_data) > 0): ?>
+                                        <div class="att-rekap-timeline">
+                                            <?php $no = 1; foreach ($harian_data as $row): ?>
+                                                <?php 
+                                                $status_text = $row['status'] ?? 'Belum Diisi';
+                                                $status_class = 'badge-secondary';
+                                                $tone_color = '#64748b';
+                                                if (in_array($status_text, ['Hadir', 'Melaksanakan'])) {
+                                                    $status_class = 'badge-success';
+                                                    $tone_color = '#10b981';
+                                                } elseif ($status_text === 'Berhalangan') {
+                                                    $status_class = 'badge-warning';
+                                                    $tone_color = '#f59e0b';
+                                                } elseif (in_array($status_text, ['Tidak Hadir', 'Tidak Melaksanakan'])) {
+                                                    $status_class = 'badge-danger';
+                                                    $tone_color = '#ef4444';
+                                                }
+                                                $tgl_str = !empty($row['tanggal']) ? formatDate($row['tanggal']) : '-';
+                                                $hari_label = !empty($row['tanggal']) ? date('d M', strtotime($row['tanggal'])) : '-';
+                                                ?>
+                                                <div class="att-rekap-item" style="--att-tone-color: <?= $tone_color ?>;">
+                                                    <div class="att-rekap-num">
+                                                        <span class="seq"><?= $no++ ?></span>
+                                                        <span class="sub"><?= $hari_label ?></span>
+                                                    </div>
+                                                    <div class="att-rekap-card">
+                                                        <div class="att-rekap-main">
+                                                            <div class="att-rekap-name"><?= $tgl_str ?></div>
+                                                            <div class="att-rekap-meta">
+                                                                <span><i class="fas fa-sun"></i> Sholat Dhuha</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="att-rekap-badge">
+                                                            <span class="badge <?= $status_class ?>"><?= htmlspecialchars($status_text) ?></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="alert alert-light border mt-3 text-center">Belum ada data sholat.</div>
+                                    <?php endif; ?>
+
+                                    <!-- Hidden table to preserve exportHarianToExcel / exportHarianToPDF -->
+                                    <table class="d-none" id="table-harian">
+                                        <thead>
+                                            <tr>
+                                                <th>Tanggal</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (count($harian_data) > 0): ?>
+                                                <?php foreach ($harian_data as $row): ?>
                                                     <tr>
-                                                        <td colspan="2" class="text-center">Belum ada data sholat.</td>
+                                                        <td><?php echo formatDate($row['tanggal']); ?></td>
+                                                        <td><?php echo $row['status']; ?></td>
                                                     </tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
 
                                 <!-- TAB BULANAN -->
                                 <div class="tab-pane fade" id="bulanan" role="tabpanel" aria-labelledby="bulanan-tab">
-                                    <div class="table-responsive mt-3">
-                                        <table class="table table-bordered table-md">
-                                            <thead>
-                                                <tr>
-                                                    <th>Periode</th>
-                                                    <th class="text-center text-success">Melaksanakan</th>
-                                                    <th class="text-center text-danger">Tidak Melaksanakan</th>
-                                                    <th class="text-center text-warning">Berhalangan</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if (count($bulanan_data) > 0): ?>
-                                                    <?php foreach ($bulanan_data as $row): ?>
-                                                        <tr>
-                                                            <td><?php echo getIndonesianMonth($row['periode']); ?></td>
-                                                            <td class="text-center"><?php echo $row['melaksanakan']; ?></td>
-                                                            <td class="text-center"><?php echo $row['tidak_melaksanakan']; ?></td>
-                                                            <td class="text-center"><?php echo $row['berhalangan']; ?></td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                <?php else: ?>
+                                    <?php if (count($bulanan_data) > 0): ?>
+                                        <div class="att-monthly-grid">
+                                            <?php foreach ($bulanan_data as $row): ?>
+                                                <div class="att-monthly-card">
+                                                    <div class="att-monthly-head">
+                                                        <div class="att-monthly-avatar">
+                                                            <i class="fas fa-sun"></i>
+                                                        </div>
+                                                        <div class="att-monthly-title">
+                                                            <div class="att-monthly-name"><?php echo getIndonesianMonth($row['periode']); ?></div>
+                                                            <div class="att-monthly-sub">Periode <?php echo htmlspecialchars($row['periode']); ?></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="att-monthly-stats cols-3">
+                                                        <div class="att-monthly-stat-box stat-hadir">
+                                                            <div class="att-monthly-stat-val"><?php echo (int)($row['melaksanakan'] ?? 0); ?></div>
+                                                            <div class="att-monthly-stat-lbl">Melaksanakan</div>
+                                                        </div>
+                                                        <div class="att-monthly-stat-box stat-alpa">
+                                                            <div class="att-monthly-stat-val"><?php echo (int)($row['tidak_melaksanakan'] ?? 0); ?></div>
+                                                            <div class="att-monthly-stat-lbl">Tidak Melaksanakan</div>
+                                                        </div>
+                                                        <div class="att-monthly-stat-box stat-sakit">
+                                                            <div class="att-monthly-stat-val"><?php echo (int)($row['berhalangan'] ?? 0); ?></div>
+                                                            <div class="att-monthly-stat-lbl">Berhalangan</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="alert alert-light border mt-3 text-center">Belum ada data sholat.</div>
+                                    <?php endif; ?>
+
+                                    <!-- Hidden table to preserve export/scripts if any -->
+                                    <table class="d-none" id="table-bulanan">
+                                        <thead>
+                                            <tr>
+                                                <th>Periode</th>
+                                                <th>Melaksanakan</th>
+                                                <th>Tidak Melaksanakan</th>
+                                                <th>Berhalangan</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (count($bulanan_data) > 0): ?>
+                                                <?php foreach ($bulanan_data as $row): ?>
                                                     <tr>
-                                                        <td colspan="4" class="text-center">Belum ada data sholat.</td>
+                                                        <td><?php echo getIndonesianMonth($row['periode']); ?></td>
+                                                        <td><?php echo $row['melaksanakan']; ?></td>
+                                                        <td><?php echo $row['tidak_melaksanakan']; ?></td>
+                                                        <td><?php echo $row['berhalangan']; ?></td>
                                                     </tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
 
                                 <!-- TAB SEMESTER -->

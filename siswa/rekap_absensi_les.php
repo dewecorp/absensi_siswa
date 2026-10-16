@@ -86,50 +86,75 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped" id="table-1">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center">No</th>
-                                            <th>Tanggal</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php if (empty($harian_data)): ?>
-                                            <tr>
-                                                <td colspan="3" class="text-center">Belum ada data kehadiran les.</td>
-                                            </tr>
-                                        <?php else: ?>
-                                            <?php $no = 1; foreach ($harian_data as $row): ?>
-                                                <tr>
-                                                    <td class="text-center"><?= $no++ ?></td>
-                                                    <td><?= formatDateIndonesia($row['tanggal']) ?></td>
-                                                    <td>
-                                                        <?php 
-                                                        $status = $row['status'] ?? '';
-                                                        $display_status = '';
-                                                        $badge_class = 'badge-secondary';
+                            <?php if (empty($harian_data)): ?>
+                                <div class="alert alert-light border text-center">Belum ada data kehadiran les.</div>
+                            <?php else: ?>
+                                <div class="att-rekap-timeline">
+                                    <?php $no = 1; foreach ($harian_data as $row): ?>
+                                        <?php 
+                                        $status = $row['status'] ?? '';
+                                        $display_status = '';
+                                        $badge_class = 'badge-secondary';
+                                        $tone_color = '#64748b';
 
-                                                        if ($status == 'Hadir') {
-                                                            $display_status = 'Hadir';
-                                                            $badge_class = 'badge-success';
-                                                        } elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) {
-                                                            $display_status = 'Tidak Hadir (' . $status . ')';
-                                                            $badge_class = 'badge-danger';
-                                                        } else {
-                                                            $display_status = 'Belum Absen';
-                                                            $badge_class = 'badge-warning';
-                                                        }
-                                                        ?>
-                                                        <span class="badge <?= $badge_class ?>"><?= $display_status ?></span>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                                        if ($status == 'Hadir') {
+                                            $display_status = 'Hadir';
+                                            $badge_class = 'badge-success';
+                                            $tone_color = '#10b981';
+                                        } elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) {
+                                            $display_status = 'Tidak Hadir (' . $status . ')';
+                                            $badge_class = ($status == 'Sakit') ? 'badge-warning' : (($status == 'Izin') ? 'badge-info' : 'badge-danger');
+                                            $tone_color = ($status == 'Sakit') ? '#f59e0b' : (($status == 'Izin') ? '#0ea5e9' : '#ef4444');
+                                        } else {
+                                            $display_status = 'Belum Absen';
+                                            $badge_class = 'badge-warning';
+                                            $tone_color = '#f59e0b';
+                                        }
+                                        $tgl_str = !empty($row['tanggal']) ? formatDateIndonesia($row['tanggal']) : '-';
+                                        $hari_label = !empty($row['hari']) ? $row['hari'] : (!empty($row['tanggal']) ? date('d M', strtotime($row['tanggal'])) : '-');
+                                        ?>
+                                        <div class="att-rekap-item" style="--att-tone-color: <?= $tone_color ?>;">
+                                            <div class="att-rekap-num">
+                                                <span class="seq"><?= $no++ ?></span>
+                                                <span class="sub"><?= htmlspecialchars($hari_label) ?></span>
+                                            </div>
+                                            <div class="att-rekap-card">
+                                                <div class="att-rekap-main">
+                                                    <div class="att-rekap-name"><?= $tgl_str ?></div>
+                                                    <div class="att-rekap-meta">
+                                                        <span><i class="fas fa-book-reader"></i> Kehadiran Les Siswa</span>
+                                                    </div>
+                                                </div>
+                                                <div class="att-rekap-badge">
+                                                    <span class="badge <?= $badge_class ?>"><?= htmlspecialchars($display_status) ?></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Hidden table to preserve table-1 for scripts -->
+                            <table class="d-none" id="table-1">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Tanggal</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($harian_data)): ?>
+                                        <?php $no = 1; foreach ($harian_data as $row): ?>
+                                            <tr>
+                                                <td><?= $no++ ?></td>
+                                                <td><?= formatDateIndonesia($row['tanggal']) ?></td>
+                                                <td><?= htmlspecialchars($row['status'] ?? 'Belum Absen') ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

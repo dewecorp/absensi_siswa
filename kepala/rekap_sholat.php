@@ -452,38 +452,68 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
 
-                        <div class="table-responsive mt-4">
-                            <table class="table table-striped" id="dailyTable">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Nama Siswa</th>
-                                        <th>Status</th>
-                                        <th>Keterangan</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php $no = 1; foreach ($daily_results as $r): ?>
-                                    <tr>
-                                        <td><?php echo $no++; ?></td>
-                                        <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
-                                        <td>
-                                            <?php if ($r['keterangan'] == 'Hadir'): ?>
-                                                <span class="badge badge-success">Hadir</span>
-                                            <?php elseif ($r['keterangan'] == 'Tidak Hadir'): ?>
-                                                <span class="badge badge-danger">Tidak Hadir</span>
-                                            <?php elseif ($r['keterangan'] == 'Berhalangan'): ?>
-                                                <span class="badge badge-danger">Berhalangan</span>
-                                            <?php else: ?>
-                                                <span class="badge badge-secondary">Belum Absen</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?php echo $r['note']; ?></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                        <div class="att-rekap-timeline">
+                            <?php $no = 1; foreach ($daily_results as $r): ?>
+                                <?php 
+                                $status_text = $r['keterangan'] ?? 'Belum Absen';
+                                $status_class = 'badge-secondary';
+                                $tone_color = '#64748b';
+                                if ($status_text === 'Hadir') {
+                                    $status_class = 'badge-success';
+                                    $tone_color = '#10b981';
+                                } elseif ($status_text === 'Berhalangan') {
+                                    $status_class = 'badge-warning';
+                                    $tone_color = '#f59e0b';
+                                } elseif ($status_text === 'Tidak Hadir') {
+                                    $status_class = 'badge-danger';
+                                    $tone_color = '#ef4444';
+                                }
+                                $note_str = trim((string)($r['note'] ?? ''));
+                                ?>
+                                <div class="att-rekap-item" style="--att-tone-color: <?= $tone_color ?>;\">
+                                    <div class="att-rekap-num">
+                                        <span class="seq"><?= $no++ ?></span>
+                                        <span class="sub">JAMAAH</span>
+                                    </div>
+                                    <div class="att-rekap-card">
+                                        <div class="att-rekap-main">
+                                            <div class="att-rekap-name"><?= htmlspecialchars($r['nama_siswa']) ?></div>
+                                            <div class="att-rekap-meta">
+                                                <span><i class="far fa-calendar-alt"></i> <?= date('d M Y', strtotime($selected_date)) ?></span>
+                                                <?php if ($note_str !== ''): ?>
+                                                    <span><i class="fas fa-info-circle"></i> <?= htmlspecialchars($note_str) ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <div class="att-rekap-badge">
+                                            <span class="badge <?= $status_class ?>"><?= htmlspecialchars($status_text) ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
+
+                        <!-- Hidden table to preserve exportDailyToExcel / exportDailyToPDF -->
+                        <table class="d-none" id="dailyTable">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Nama Siswa</th>
+                                    <th>Status</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $no = 1; foreach ($daily_results as $r): ?>
+                                <tr>
+                                    <td><?php echo $no++; ?></td>
+                                    <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
+                                    <td><?php echo htmlspecialchars($r['keterangan'] ?? 'Belum Absen'); ?></td>
+                                    <td><?php echo htmlspecialchars($r['note'] ?? ''); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
 
                     <?php elseif (!empty($monthly_results)): ?>
                         <!-- Export Buttons -->
@@ -500,7 +530,40 @@ include '../templates/sidebar.php';
                             </div>
                         </div>
 
-                        <div class="table-responsive mt-4">
+                        <div class="att-monthly-grid">
+                            <?php foreach ($monthly_results as $idx => $r): ?>
+                                <div class="att-monthly-card">
+                                    <div class="att-monthly-head">
+                                        <div class="att-monthly-avatar">
+                                            <?= $idx + 1 ?>
+                                        </div>
+                                        <div class="att-monthly-title">
+                                            <div class="att-monthly-name"><?= htmlspecialchars($r['nama_siswa']) ?></div>
+                                            <div class="att-monthly-sub">
+                                                <i class="fas fa-mosque"></i>
+                                                Jamaah · <?= date('F Y', strtotime($selected_month . '-01')) ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="att-monthly-stats cols-3">
+                                        <div class="att-monthly-stat-box stat-hadir">
+                                            <div class="att-monthly-stat-val"><?= (int)($r['summary']['Hadir'] ?? 0) ?></div>
+                                            <div class="att-monthly-stat-lbl">Hadir</div>
+                                        </div>
+                                        <div class="att-monthly-stat-box stat-alpa">
+                                            <div class="att-monthly-stat-val"><?= (int)($r['summary']['Tidak Hadir'] ?? 0) ?></div>
+                                            <div class="att-monthly-stat-lbl">Tidak Hadir</div>
+                                        </div>
+                                        <div class="att-monthly-stat-box stat-sakit">
+                                            <div class="att-monthly-stat-val"><?= (int)($r['summary']['Berhalangan'] ?? 0) ?></div>
+                                            <div class="att-monthly-stat-lbl">Berhalangan</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="table-responsive mt-4 d-none">
                             <table class="table table-bordered text-center table-sm" style="font-size: 0.9em;" id="monthlyTable">
                                 <thead>
                                     <tr>

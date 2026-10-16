@@ -328,46 +328,75 @@ include '../templates/sidebar.php';
                                             </div>
                                         <?php endif; ?>
                                     </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-striped table-md" id="table-daily">
-                                            <thead>
-                                                <tr>
-                                                    <th>No</th>
-                                                    <th>Nama Siswa</th>
-                                                    <th>Status</th>
-                                                    <th>Waktu Input</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($daily_results as $i => $r): ?>
-                                                <tr>
-                                                    <td><?= $i+1 ?></td>
-                                                    <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
-                                                    <td>
-                                                        <?php 
-                                                        $status = $r['status'] ?? '';
-                                                        $display_status = '';
-                                                        $badge = 'badge-secondary';
+                                    <div class="att-rekap-timeline">
+                                        <?php foreach ($daily_results as $i => $r): ?>
+                                            <?php 
+                                            $status = $r['status'] ?? '';
+                                            $display_status = '';
+                                            $badge = 'badge-secondary';
+                                            $tone_color = '#64748b';
 
-                                                        if ($status == 'Hadir') {
-                                                            $display_status = 'Hadir';
-                                                            $badge = 'badge-success';
-                                                        } elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) {
-                                                            $display_status = 'Tidak Hadir (' . $status . ')';
-                                                            $badge = 'badge-danger';
-                                                        } else {
-                                                            $display_status = 'Belum Absen';
-                                                            $badge = 'badge-warning';
-                                                        }
-                                                        ?>
+                                            if ($status == 'Hadir') {
+                                                $display_status = 'Hadir';
+                                                $badge = 'badge-success';
+                                                $tone_color = '#10b981';
+                                            } elseif (in_array($status, ['Sakit', 'Izin', 'Alpa'])) {
+                                                $display_status = 'Tidak Hadir (' . $status . ')';
+                                                $badge = ($status == 'Sakit') ? 'badge-warning' : (($status == 'Izin') ? 'badge-info' : 'badge-danger');
+                                                $tone_color = ($status == 'Sakit') ? '#f59e0b' : (($status == 'Izin') ? '#0ea5e9' : '#ef4444');
+                                            } else {
+                                                $display_status = 'Belum Absen';
+                                                $badge = 'badge-warning';
+                                                $tone_color = '#f59e0b';
+                                            }
+                                            $waktu_str = !empty($r['waktu_input']) ? date('H:i:s', strtotime($r['waktu_input'])) : '-';
+                                            $tgl_str = !empty($selected_date) ? date('d M Y', strtotime($selected_date)) : '-';
+                                            ?>
+                                            <div class="att-rekap-item" style="--att-tone-color: <?= $tone_color ?>;">
+                                                <div class="att-rekap-num">
+                                                    <span class="seq"><?= $i + 1 ?></span>
+                                                    <span class="sub">LES</span>
+                                                </div>
+                                                <div class="att-rekap-card">
+                                                    <div class="att-rekap-main">
+                                                        <div class="att-rekap-name"><?= htmlspecialchars($r['nama_siswa']) ?></div>
+                                                        <div class="att-rekap-meta">
+                                                            <span><i class="far fa-clock"></i> <?= $waktu_str ?></span>
+                                                            <span><i class="far fa-calendar-alt"></i> <?= $tgl_str ?></span>
+                                                            <?php if (!empty($nama_kelas_selected)): ?>
+                                                                <span><i class="fas fa-school"></i> <?= htmlspecialchars($nama_kelas_selected) ?></span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                    <div class="att-rekap-badge">
                                                         <span class="badge <?= $badge ?>"><?= $display_status ?></span>
-                                                    </td>
-                                                    <td><?= $r['waktu_input'] ? date('H:i:s', strtotime($r['waktu_input'])) : '-' ?></td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
                                     </div>
+
+                                    <!-- Hidden table to preserve exportToExcel / exportToPDF -->
+                                    <table class="d-none" id="table-daily">
+                                        <thead>
+                                            <tr>
+                                                <th>No</th>
+                                                <th>Nama Siswa</th>
+                                                <th>Status</th>
+                                                <th>Waktu Input</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($daily_results as $i => $r): ?>
+                                            <tr>
+                                                <td><?= $i+1 ?></td>
+                                                <td><?= htmlspecialchars($r['nama_siswa']) ?></td>
+                                                <td><?= htmlspecialchars($r['status'] ?? 'Belum Absen') ?></td>
+                                                <td><?= $r['waktu_input'] ? date('H:i:s', strtotime($r['waktu_input'])) : '-' ?></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             <?php elseif ($filter_type == 'all' && !empty($all_results)): ?>
                                 <div class="mt-4">

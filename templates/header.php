@@ -260,6 +260,18 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_srgg_v = is_readable($_srgg_path) ? (string) filemtime($_srgg_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/seragam-cards.css?v=<?php echo htmlspecialchars($_srgg_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Attendance daily recap timeline CSS -->
+    <?php
+    $_att_tl_path = __DIR__ . '/../assets/css/attendance-timeline.css';
+    $_att_tl_v = is_readable($_att_tl_path) ? (string) filemtime($_att_tl_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/attendance-timeline.css?v=<?php echo htmlspecialchars($_att_tl_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Attendance monthly recap cards CSS -->
+    <?php
+    $_att_mc_path = __DIR__ . '/../assets/css/attendance-cards-monthly.css';
+    $_att_mc_v = is_readable($_att_mc_path) ? (string) filemtime($_att_mc_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/attendance-cards-monthly.css?v=<?php echo htmlspecialchars($_att_mc_v, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Attendance auto-save JS -->
     <?php
     $_attjs_path = __DIR__ . '/../assets/js/attendance-autosave.js';

@@ -1,0 +1,130 @@
+/* ============================================================
+   SIMAD Monthly Attendance Cards CSS
+   Dipakai: Rekap Bulanan di semua level (Admin, Guru, Wali,
+   Kepala, Siswa).
+   ============================================================ */
+
+.att-monthly-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.att-monthly-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(20, 30, 70, .05);
+    padding: 14px 16px;
+    transition: transform .2s ease, box-shadow .2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.att-monthly-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(20, 30, 70, .10);
+}
+
+.att-monthly-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.att-monthly-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #4f46e5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    flex: 0 0 42px;
+}
+
+.att-monthly-title {
+    min-width: 0;
+    flex: 1;
+}
+
+.att-monthly-name {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    margin-bottom: 2px;
+    word-break: break-word;
+}
+
+.att-monthly-sub {
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.att-monthly-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+.att-monthly-stats.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.att-monthly-stat-box {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 8px 6px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+.att-monthly-stat-box.stat-hadir {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+}
+.att-monthly-stat-box.stat-sakit {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+.att-monthly-stat-box.stat-izin {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+    color: #075985;
+}
+.att-monthly-stat-box.stat-alpa {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.att-monthly-stat-val {
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.att-monthly-stat-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    margin-top: 2px;
+    opacity: .85;
+}
+
+@media (max-width: 575.98px) {
+    .att-monthly-grid {
+        grid-template-columns: 1fr;
+    }
+}
