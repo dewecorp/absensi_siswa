@@ -13,7 +13,9 @@ $nilai_ujian_praktik_menu_active = ($current_page === 'nilai_ujian.php' && isset
 $nilai_ujian_biasa_menu_active = ($current_page === 'nilai_ujian.php' && !$nilai_ujian_praktik_menu_active);
 
 // Define menu items based on user level
-$user_level = getUserLevel();
+$user_level = isset($_GET['session_type']) && in_array($_GET['session_type'], ['guru', 'wali', 'admin', 'kepala_madrasah', 'tata_usaha', 'siswa'], true) 
+    ? $_GET['session_type'] 
+    : getUserLevel();
 global $menu_items;
 $menu_items = [];
 

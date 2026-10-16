@@ -1071,7 +1071,7 @@ include_once '../templates/sidebar.php';
                                         <div class="alert-body text-center py-3">
                                             <div class="alert-title font-weight-bold mb-1">Informasi</div>
                                             <p class="mb-3">Tidak ada jadwal les untuk hari ini (<?php echo date('d-m-Y'); ?>).</p>
-                                            <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block shadow-sm mt-auto"><i class="fas fa-book mr-2"></i> Lihat Jurnal Les</a>
+                                            <a href="../guru/jurnal_les.php?session_type=wali" class="btn btn-primary btn-lg btn-block shadow-sm mt-auto"><i class="fas fa-book mr-2"></i> Lihat Jurnal Les</a>
                                         </div>
                                     </div>
                                     <?php endif; ?>
@@ -1090,7 +1090,7 @@ include_once '../templates/sidebar.php';
                                 </div>
                                 <div class="card-body">
                                     <div class="quick-app-grid">
-                                        <a href="jurnal_mengajar.php" class="quick-app-card">
+                                        <a href="../guru/jurnal_mengajar.php?session_type=wali" class="quick-app-card">
                                             <div class="quick-app-icon tone-cyan">
                                                 <i class="fas fa-book-open"></i>
                                             </div>
@@ -1104,7 +1104,7 @@ include_once '../templates/sidebar.php';
                                         </a>
 
                                         <?php if ($is_grade_6_wali): ?>
-                                        <a href="jurnal_les.php" class="quick-app-card">
+                                        <a href="../guru/jurnal_les.php?session_type=wali" class="quick-app-card">
                                             <div class="quick-app-icon tone-blue">
                                                 <i class="fas fa-book"></i>
                                             </div>

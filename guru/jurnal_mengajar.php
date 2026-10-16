@@ -3,7 +3,7 @@ require_once '../config/database.php';
 require_once '../config/functions.php';
 
 // Check if user is logged in and has guru or wali level
-if (!isAuthorized(['guru'])) {
+if (!isAuthorized(['guru', 'wali'])) {
     redirect('../login.php');
 }
 
@@ -676,6 +676,9 @@ include '../templates/header.php';
                 <div class="card">
                     <div class="card-body">
                         <form method="GET" action="">
+                            <?php if (isset($_GET['session_type'])): ?>
+                            <input type="hidden" name="session_type" value="<?php echo htmlspecialchars($_GET['session_type']); ?>">
+                            <?php endif; ?>
                             <?php if (count($classes) > 1): ?>
                             <div class="form-group row mb-4">
                                 <label class="col-form-label text-md-right col-12 col-md-3 col-lg-3">Pilih Kelas</label>
@@ -736,10 +739,13 @@ include '../templates/header.php';
                         <h4>Jurnal - <?php echo isset($class_info['nama_kelas']) ? htmlspecialchars($class_info['nama_kelas']) : ''; ?> (<?= count($journal_entries) ?>)</h4>
                         <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
                             <div class="btn-group mr-1">
-                                <a href="../config/export_jurnal_pdf?session_type=guru&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&jenis=<?php echo $_GET['jenis'] ?? ''; ?>&bulan=<?php echo $_GET['bulan'] ?? ''; ?>" target="_blank" class="btn btn-danger btn-sm">
+                                <?php
+                                $sess_param = isset($_GET['session_type']) ? urlencode($_GET['session_type']) : 'guru';
+                                ?>
+                                <a href="../config/export_jurnal_pdf?session_type=<?php echo $sess_param; ?>&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&jenis=<?php echo $_GET['jenis'] ?? ''; ?>&bulan=<?php echo $_GET['bulan'] ?? ''; ?>" target="_blank" class="btn btn-danger btn-sm">
                                     <i class="fas fa-file-pdf"></i> PDF
                                 </a>
-                                <a href="../config/export_jurnal_excel?session_type=guru&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&jenis=<?php echo $_GET['jenis'] ?? ''; ?>&bulan=<?php echo $_GET['bulan'] ?? ''; ?>" target="_blank" class="btn btn-success btn-sm">
+                                <a href="../config/export_jurnal_excel?session_type=<?php echo $sess_param; ?>&kelas=<?php echo $_GET['kelas'] ?? ''; ?>&jenis=<?php echo $_GET['jenis'] ?? ''; ?>&bulan=<?php echo $_GET['bulan'] ?? ''; ?>" target="_blank" class="btn btn-success btn-sm">
                                     <i class="fas fa-file-excel"></i> Excel
                                 </a>
                             </div>
