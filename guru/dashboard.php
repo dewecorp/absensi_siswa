@@ -894,7 +894,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="<?php echo $col_class; ?> mapp-col-absen">
                             <div class="card w-100 h-100 mapp-absen-card border-0 shadow-sm">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                                    <h4 class="mb-0"><i class="fas fa-user-check text-primary mr-2"></i>Kehadiran Saya Hari Ini</h4>
+                                    <h4 class="mb-0"><i class="fas fa-user-check text-primary mr-2"></i>Kehadiran Hari Ini</h4>
                                     <span class="badge badge-light border text-muted font-weight-bold"><?php echo date('d M Y'); ?></span>
                                 </div>
                                 <div class="card-body">
@@ -959,7 +959,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="<?php echo $col_class; ?> mapp-col-absen">
                             <div class="card w-100 h-100 mapp-absen-card border-0 shadow-sm">
                                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
-                                    <h4 class="mb-0"><i class="fas fa-user-check text-danger mr-2"></i>Kehadiran Saya Hari Ini</h4>
+                                    <h4 class="mb-0"><i class="fas fa-user-check text-danger mr-2"></i>Kehadiran Hari Ini</h4>
                                 </div>
                                 <div class="card-body">
                                     <div class="mapp-att-hero is-holiday">
