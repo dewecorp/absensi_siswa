@@ -922,7 +922,7 @@ include_once '../templates/sidebar.php';
                     
 
                     
-                    <div class="row">
+                    <div class="row mapp-hide-mobile">
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
