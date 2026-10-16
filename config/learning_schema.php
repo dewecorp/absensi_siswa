@@ -466,7 +466,7 @@ if (!function_exists('ensure_learning_schema')) {
                 ringkasan TEXT NOT NULL,
                 kendala TEXT NULL,
                 tindak_lanjut TEXT NULL,
-                status ENUM('Aktif','Selesai','Dalam Pemantauan') NOT NULL DEFAULT 'Aktif',
+                status ENUM('Dalam Pemantauan','Selesai') NOT NULL DEFAULT 'Dalam Pemantauan',
                 perkembangan_akademik TEXT NULL,
                 perkembangan_sikap TEXT NULL,
                 perkembangan_keterampilan TEXT NULL,
@@ -482,6 +482,11 @@ if (!function_exists('ensure_learning_schema')) {
                 INDEX idx_tanggal (tanggal)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+
+        try {
+            $pdo->exec("UPDATE tb_catatan_perkembangan SET status = 'Dalam Pemantauan' WHERE status = 'Aktif' OR status = '' OR status IS NULL");
+            $pdo->exec("ALTER TABLE tb_catatan_perkembangan MODIFY COLUMN status ENUM('Dalam Pemantauan','Selesai') NOT NULL DEFAULT 'Dalam Pemantauan'");
+        } catch (Exception $e) {}
 
         // 9. Komunikasi Kelas
         $pdo->exec("

@@ -164,30 +164,30 @@ $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = 'Komunikasi Kelas';
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-];
-$js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-];
+$css_libs = [];
+$js_libs = [];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    if ($('#table-komunikasi').length) {
-        $('#table-komunikasi').DataTable({
-            'order': [[1, 'desc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [6, 9] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada data komunikasi',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
+    $('#cari-kartu-komunikasi').on('input', function() {
+        var query = $(this).val().toLowerCase().trim();
+        var visibleCount = 0;
+        $('.komunikasi-card-col').each(function() {
+            var cardText = $(this).text().toLowerCase();
+            if (cardText.indexOf(query) !== -1) {
+                $(this).show();
+                visibleCount++;
+            } else {
+                $(this).hide();
             }
         });
-    }
+        if (visibleCount === 0 && query !== '') {
+            $('#no-komunikasi-search').show();
+        } else {
+            $('#no-komunikasi-search').hide();
+        }
+        $('#count-kartu-komunikasi').text(visibleCount);
+    });
 
     $('#btnTambahPesan').on('click', function() {
         $('#formKomunikasiAction').val('tambah');
@@ -199,6 +199,11 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-edit-pesan', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
+        if (!data || typeof data !== 'object') return;
+
         $('#formKomunikasiAction').val('edit');
         $('#komunikasiId').val(data.id);
         $('#modalKomunikasiTitle').text('Edit Komunikasi Kelas');
@@ -216,6 +221,11 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-detail-pesan', function() {
         var data = $(this).data('json');
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
+        if (!data || typeof data !== 'object') return;
+
         var tm = data.tanggal_mulai || data.tgl_mulai_ef || data.tanggal;
         var ts = data.tanggal_selesai || data.tgl_selesai_ef || tm;
         var shortT = function(v) { return v ? String(v).substring(0, 5).replace(':', '.') : ''; };
@@ -271,6 +281,58 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.card-komunikasi {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.card-komunikasi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(103, 119, 239, 0.08) !important;
+    border-color: #cbd5e1 !important;
+}
+.komunikasi-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.avatar-pengumuman {
+    background: linear-gradient(135deg, #6777ef, #3abaf4);
+}
+.avatar-pesan {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+.bullet {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: #cbd5e1;
+    margin: 0 4px;
+}
+.komunikasi-preview-box {
+    background: #f8fafc;
+    border-left: 3.5px solid #6777ef;
+    border-top: 1px solid #edf2f7;
+    border-right: 1px solid #edf2f7;
+    border-bottom: 1px solid #edf2f7;
+    border-radius: 6px;
+    padding: 12px 14px;
+}
+.komunikasi-preview-box.is-pesan {
+    border-left-color: #10b981;
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -281,12 +343,15 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <!-- Filter Card -->
             <div class="card mb-3">
-                <div class="card-header">
-                    <h4><i class="fas fa-filter mr-2"></i>Filter Komunikasi</h4>
+                <div class="card-header py-2">
+                    <h6 class="mb-0 text-dark"><i class="fas fa-filter mr-1 text-primary"></i> Filter Komunikasi</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body py-3">
                     <form method="GET" class="row">
-                        <div class="col-md-4 mb-2">
+                        <?php if (isset($_GET['session_type'])): ?>
+                            <input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>">
+                        <?php endif; ?>
+                        <div class="col-md-4 col-lg mb-2">
                             <label class="small font-weight-bold">Kelas</label>
                             <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Kelas --</option>
@@ -295,7 +360,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 col-lg mb-2">
                             <label class="small font-weight-bold">Jenis</label>
                             <select name="f_jenis" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Jenis --</option>
@@ -304,7 +369,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 col-lg mb-2">
                             <label class="small font-weight-bold">Status</label>
                             <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua --</option>
@@ -313,100 +378,191 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-12 mt-2 d-flex">
-                            <a href="komunikasi_kelas.php" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                        <div class="col-12 mt-1 d-flex align-items-center">
+                            <a href="komunikasi_kelas.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode($_GET['session_type']) : '' ?>" class="btn btn-secondary btn-sm"><i class="fas fa-undo mr-1"></i> Reset</a>
+                            <small class="text-muted ml-2">Filter otomatis tersubmit saat diubah.</small>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Table Card -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Papan Pengumuman & Komunikasi Siswa</h4>
-                    <?php if ($can_crud): ?>
-                    <button type="button" class="btn btn-primary" id="btnTambahPesan">
-                        <i class="fas fa-plus mr-1"></i> Buat Pesan / Pengumuman
-                    </button>
-                    <?php endif; ?>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-komunikasi">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Tanggal Mulai - Selesai</th>
-                                    <th class="text-center">Waktu</th>
-                                    <th>Judul</th>
-                                    <th>Jenis</th>
-                                    <th>Kelas</th>
-                                    <th>Penerima</th>
-                                    <th width="6%">Lampiran</th>
-                                    <th>Status</th>
-                                    <th>Dibaca</th>
-                                    <th width="12%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $i => $r): ?>
-                                    <?php
-                                    $tot_penerima = (int)$r['total_penerima'];
-                                    $tot_baca = (int)$r['total_dibaca'];
-                                    $st_badge = $r['status'] === 'Terkirim' ? 'success' : ($r['status'] === 'Draft' ? 'warning' : 'secondary');
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <?php
-                                        $tm_g = $r['tanggal_mulai'] ?? $r['tgl_mulai_ef'] ?? $r['tanggal'];
-                                        $ts_g = $r['tanggal_selesai'] ?? $r['tgl_selesai_ef'] ?? $tm_g;
-                                        $tgl_g = date('d/m/Y', strtotime($tm_g));
-                                        if ($ts_g && $ts_g !== $tm_g) $tgl_g .= ' - ' . date('d/m/Y', strtotime($ts_g));
-                                        $wm_g = !empty($r['waktu_mulai']) ? substr((string)$r['waktu_mulai'], 0, 5) : '';
-                                        $ws_g = !empty($r['waktu_selesai']) ? substr((string)$r['waktu_selesai'], 0, 5) : '';
-                                        $waktu_g = ($wm_g !== '' && $ws_g !== '' && $wm_g !== $ws_g) ? (str_replace(':', '.', $wm_g) . ' - ' . str_replace(':', '.', $ws_g)) : ($wm_g !== '' ? str_replace(':', '.', $wm_g) : ($ws_g !== '' ? str_replace(':', '.', $ws_g) : '-'));
-                                        ?>
-                                        <td><?= htmlspecialchars($tgl_g) ?></td>
-                                        <td class="text-center"><small><i class="far fa-clock mr-1 text-muted"></i><?= htmlspecialchars($waktu_g) ?></small></td>
-                                        <td><strong><?= htmlspecialchars($r['judul']) ?></strong></td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars($r['jenis']) ?></span></td>
-                                        <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                        <td><?= $tot_penerima ?> penerima</td>
-                                        <td class="text-center">
-                                            <?php $lamp_url = guru_file_url('komunikasi', $r['lampiran'] ?? ''); ?>
-                                            <?php if ($lamp_url): ?>
-                                                <a href="<?= htmlspecialchars($lamp_url) ?>" target="_blank" class="text-primary font-weight-bold" title="Lampiran">
-                                                    <i class="fas fa-paperclip"></i>
-                                                </a>
-                                            <?php else: ?>
-                                                <span class="text-muted">-</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td class="text-center">
-                                            <span class="badge badge-<?= $tot_baca >= $tot_penerima && $tot_penerima > 0 ? 'success' : ($tot_baca > 0 ? 'info' : 'secondary') ?>">
-                                                <?= $tot_baca ?>/<?= $tot_penerima ?>
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-info btn-sm btn-detail-pesan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <?php if ($can_crud): ?>
-                                            <button type="button" class="btn btn-warning btn-sm btn-edit-pesan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm btn-hapus-pesan" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+            <!-- Daftar Komunikasi Kelas (Bentuk Kartu Informatif) -->
+            <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9; gap: 10px;">
+                    <div>
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-bullhorn text-primary mr-2"></i>Papan Komunikasi &amp; Pengumuman Kelas</h4>
+                        <small class="text-muted">Menampilkan <span id="count-kartu-komunikasi" class="font-weight-bold text-primary"><?= count($rows) ?></span> pengumuman / pesan</small>
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                        <div class="input-group input-group-sm" style="width: 220px;">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-light border-right-0"><i class="fas fa-search text-muted"></i></span>
+                            </div>
+                            <input type="text" id="cari-kartu-komunikasi" class="form-control form-control-sm border-left-0" placeholder="Cari judul / pesan...">
+                        </div>
+                        <?php if ($can_crud): ?>
+                        <button type="button" class="btn btn-primary btn-sm px-3 font-weight-bold" id="btnTambahPesan" style="border-radius: 6px;">
+                            <i class="fas fa-plus mr-1"></i> Buat Pesan / Pengumuman
+                        </button>
+                        <?php endif; ?>
                     </div>
                 </div>
+                <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
+                    <?php if (empty($rows)): ?>
+                        <div class="text-center py-5 bg-white rounded shadow-sm border">
+                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted font-weight-bold">Belum Ada Komunikasi Kelas</h5>
+                            <p class="text-muted small mb-0">Silakan buat pengumuman baru atau sesuaikan filter pencarian di atas.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="row" id="container-kartu-komunikasi" style="row-gap: 16px;">
+                            <div class="col-12" id="no-komunikasi-search" style="display: none;">
+                                <div class="text-center py-5 bg-white rounded shadow-sm border">
+                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted small mb-0">Tidak ada komunikasi kelas yang cocok dengan kata kunci pencarian.</p>
+                                </div>
+                            </div>
+                            <?php foreach ($rows as $i => $r): ?>
+                                <?php
+                                $tot_penerima = (int)$r['total_penerima'];
+                                $tot_baca = (int)$r['total_dibaca'];
+                                $baca_pct = $tot_penerima > 0 ? round(($tot_baca / $tot_penerima) * 100) : 0;
+
+                                $st_badge = 'badge-success';
+                                $st_icon = 'fas fa-paper-plane';
+                                if ($r['status'] === 'Draft') {
+                                    $st_badge = 'badge-warning';
+                                    $st_icon = 'fas fa-pencil-alt';
+                                } elseif ($r['status'] === 'Arsip') {
+                                    $st_badge = 'badge-secondary';
+                                    $st_icon = 'fas fa-archive';
+                                }
+
+                                $is_pengumuman = ($r['jenis'] === 'Pengumuman');
+                                $avatar_cls = $is_pengumuman ? 'avatar-pengumuman' : 'avatar-pesan';
+                                $avatar_icon = $is_pengumuman ? 'fas fa-bullhorn' : 'fas fa-envelope-open-text';
+
+                                $tm_g = $r['tanggal_mulai'] ?? $r['tgl_mulai_ef'] ?? $r['tanggal'];
+                                $ts_g = $r['tanggal_selesai'] ?? $r['tgl_selesai_ef'] ?? $tm_g;
+                                $tgl_g = date('d M Y', strtotime($tm_g));
+                                if ($ts_g && $ts_g !== $tm_g) {
+                                    $tgl_g .= ' - ' . date('d M Y', strtotime($ts_g));
+                                }
+
+                                $wm_g = !empty($r['waktu_mulai']) ? substr((string)$r['waktu_mulai'], 0, 5) : '';
+                                $ws_g = !empty($r['waktu_selesai']) ? substr((string)$r['waktu_selesai'], 0, 5) : '';
+                                $waktu_g = ($wm_g !== '' && $ws_g !== '' && $wm_g !== $ws_g) ? (str_replace(':', '.', $wm_g) . ' - ' . str_replace(':', '.', $ws_g) . ' WIB') : ($wm_g !== '' ? (str_replace(':', '.', $wm_g) . ' WIB') : ($ws_g !== '' ? (str_replace(':', '.', $ws_g) . ' WIB') : ''));
+                                $lamp_url = guru_file_url('komunikasi', $r['lampiran'] ?? '');
+                                ?>
+                                <div class="col-12 col-md-6 col-xl-6 d-flex align-items-stretch komunikasi-card-col">
+                                    <div class="card w-100 border-0 shadow-sm card-komunikasi d-flex flex-column justify-content-between mb-0" style="overflow: hidden;">
+                                        <div class="card-body p-3 p-md-3.5">
+                                            <!-- Top Bar: Avatar + Judul + Status -->
+                                            <div class="d-flex justify-content-between align-items-start mb-2.5 pb-2 border-bottom">
+                                                <div class="d-flex align-items-center" style="gap: 12px; min-width: 0;">
+                                                    <div class="komunikasi-avatar <?= $avatar_cls ?>">
+                                                        <i class="<?= $avatar_icon ?>"></i>
+                                                    </div>
+                                                    <div style="min-width: 0;">
+                                                        <h6 class="mb-0 font-weight-bold text-truncate" style="font-size: 15px; line-height: 1.3;" title="<?= htmlspecialchars($r['judul']) ?>">
+                                                            <a href="javascript:void(0)" class="text-dark btn-detail-pesan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' style="text-decoration: none;">
+                                                                <?= htmlspecialchars($r['judul']) ?>
+                                                            </a>
+                                                        </h6>
+                                                        <div class="d-flex flex-wrap align-items-center small text-muted mt-1" style="gap: 6px;">
+                                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 10.5px;">
+                                                                <i class="fas fa-tag text-primary mr-1"></i><?= htmlspecialchars($r['jenis']) ?>
+                                                            </span>
+                                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 10.5px;">
+                                                                <i class="fas fa-chalkboard text-muted mr-1"></i> Kelas <?= htmlspecialchars($r['nama_kelas'] ?? '-') ?>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="ml-2 flex-shrink-0">
+                                                    <span class="badge <?= $st_badge ?> px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 6px;">
+                                                        <i class="<?= $st_icon ?> mr-1"></i> <?= htmlspecialchars($r['status']) ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Baris Meta: Tanggal, Waktu, Guru -->
+                                            <div class="d-flex flex-wrap align-items-center mb-2.5 small text-muted" style="gap: 6px;">
+                                                <span class="badge badge-light border text-muted px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="far fa-calendar-alt text-primary mr-1"></i> <?= htmlspecialchars($tgl_g) ?>
+                                                </span>
+                                                <?php if ($waktu_g !== ''): ?>
+                                                <span class="badge badge-light border text-dark px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="far fa-clock text-info mr-1"></i> <?= htmlspecialchars($waktu_g) ?>
+                                                </span>
+                                                <?php endif; ?>
+                                                <?php if (!empty($r['nama_guru'])): ?>
+                                                <span class="badge badge-light border text-muted px-2 py-1" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-user-tie mr-1"></i> <?= htmlspecialchars($r['nama_guru']) ?>
+                                                </span>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Preview Isi Pesan -->
+                                            <div class="mb-2.5 komunikasi-preview-box <?= $is_pengumuman ? '' : 'is-pesan' ?>">
+                                                <div class="small font-weight-bold text-dark mb-1 d-flex align-items-center">
+                                                    <i class="fas fa-quote-left text-muted mr-2" style="font-size: 11px;"></i> Isi Pesan / Instruksi:
+                                                </div>
+                                                <div class="text-dark small" style="line-height: 1.5; font-size: 12.5px; padding-left: 2px;">
+                                                    <?= nl2br(htmlspecialchars(mb_strimwidth($r['isi'], 0, 150, '...'))) ?>
+                                                </div>
+                                            </div>
+
+                                            <!-- Progress Baca & Lampiran Box -->
+                                            <div class="p-2 rounded bg-white border mb-1">
+                                                <div class="d-flex justify-content-between align-items-center mb-1 small">
+                                                    <span class="text-muted font-weight-bold">
+                                                        <i class="fas fa-user-check mr-1 text-success"></i> Dibaca: <?= $tot_baca ?> / <?= $tot_penerima ?> Siswa
+                                                    </span>
+                                                    <span class="font-weight-bold text-primary"><?= $baca_pct ?>%</span>
+                                                </div>
+                                                <div class="progress" style="height: 6px; border-radius: 4px; background-color: #e2e8f0;">
+                                                    <div class="progress-bar <?= $baca_pct >= 100 ? 'bg-success' : 'bg-primary' ?>" role="progressbar" style="width: <?= $baca_pct ?>%; border-radius: 4px;"></div>
+                                                </div>
+                                                <div class="mt-2 pt-1 border-top d-flex justify-content-between align-items-center small">
+                                                    <?php if ($lamp_url): ?>
+                                                        <a href="<?= htmlspecialchars($lamp_url) ?>" target="_blank" class="text-primary font-weight-bold text-truncate" style="max-width: 220px;" title="Unduh Lampiran">
+                                                            <i class="fas fa-paperclip mr-1"></i> Lampiran (<?= strtoupper(pathinfo($r['lampiran'], PATHINFO_EXTENSION)) ?>)
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <span class="text-muted"><i class="fas fa-paperclip mr-1 text-muted"></i> Tanpa lampiran</span>
+                                                    <?php endif; ?>
+                                                    <span class="text-muted font-weight-bold"><?= $tot_penerima ?> Penerima</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Card Footer Aksi -->
+                                        <div class="card-footer bg-white pt-2 pb-2.5 px-3 border-top d-flex flex-wrap justify-content-between align-items-center" style="gap: 6px;">
+                                            <button type="button" class="btn btn-outline-primary btn-sm btn-detail-pesan font-weight-bold px-2.5" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' style="border-radius: 6px; font-size: 12px;">
+                                                <i class="fas fa-eye mr-1"></i> Rincian &amp; Penerima
+                                            </button>
+                                            <div class="d-flex align-items-center" style="gap: 5px;">
+                                                <?php if ($can_crud): ?>
+                                                <button type="button" class="btn btn-warning btn-sm btn-edit-pesan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit Pesan" style="border-radius: 6px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-pesan" data-id="<?= (int)$r['id'] ?>" data-judul="<?= htmlspecialchars($r['judul'], ENT_QUOTES) ?>" title="Hapus Pesan" style="border-radius: 6px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
             </div>
         </div>
     </section>

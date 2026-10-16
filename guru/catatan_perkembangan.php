@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ringkasan = trim((string)($_POST['ringkasan'] ?? ''));
         $kendala = trim((string)($_POST['kendala'] ?? ''));
         $tindak_lanjut = trim((string)($_POST['tindak_lanjut'] ?? ''));
-        $status = in_array($_POST['status'] ?? '', ['Aktif', 'Selesai', 'Dalam Pemantauan'], true) ? $_POST['status'] : 'Aktif';
+        $status = in_array($_POST['status'] ?? '', ['Dalam Pemantauan', 'Selesai'], true) ? $_POST['status'] : 'Dalam Pemantauan';
 
         $perkembangan_akademik = trim((string)($_POST['perkembangan_akademik'] ?? ''));
         $perkembangan_sikap = trim((string)($_POST['perkembangan_sikap'] ?? ''));
@@ -473,6 +473,7 @@ $(document).ready(function() {
         $('#inp_kelas').val('');
         filterSiswaByKelas('');
         $('#inp_siswa').val('').trigger('change.select2');
+        $('#inp_status').val('Dalam Pemantauan');
         $('#sel_template_kendala').empty().append('<option value="">-- Pilih Aspek terlebih dahulu --</option>');
         $('#sel_template_tindak_lanjut').empty().append('<option value="">-- Pilih Kendala/Aspek terlebih dahulu --</option>');
         populateDetailDropdowns('');
@@ -512,13 +513,18 @@ $(document).ready(function() {
         // Filter siswa berdasar kelas target, lalu set siswa terpilih
         filterSiswaByKelas(targetKelas);
         if (data.id_siswa) {
+            var $optSiswa = $('#inp_siswa option[value="' + data.id_siswa + '"]');
+            if ($optSiswa.length === 0 && data.nama_siswa) {
+                var sText = data.nama_siswa + (data.nama_kelas ? ' (Kelas ' + data.nama_kelas + ' / NISN: ' + (data.nisn || '-') + ')' : '');
+                $('#inp_siswa').append($('<option>').val(data.id_siswa).text(sText).attr('data-kelas', targetKelas));
+            }
             $('#inp_siswa').val(String(data.id_siswa)).trigger('change.select2');
         }
 
         // 2. Set Mapel, Tanggal, Status
         $('#inp_mapel').val(data.id_mapel || '');
         $('#inp_tanggal').val(data.tanggal);
-        $('#inp_status').val(data.status || 'Aktif');
+        $('#inp_status').val(data.status || 'Dalam Pemantauan');
 
         // 3. Set Kategori / Aspek Perkembangan
         var targetKategori = (data.kategori || '').trim();
@@ -836,7 +842,6 @@ include '../templates/sidebar.php';
                         <div class="col-md-6 col-lg mb-2">
                             <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Status --</option>
-                                <option value="Aktif" <?= $f_status === 'Aktif' ? 'selected' : '' ?>>Aktif</option>
                                 <option value="Dalam Pemantauan" <?= $f_status === 'Dalam Pemantauan' ? 'selected' : '' ?>>Dalam Pemantauan</option>
                                 <option value="Selesai" <?= $f_status === 'Selesai' ? 'selected' : '' ?>>Selesai</option>
                             </select>
@@ -906,14 +911,11 @@ include '../templates/sidebar.php';
                             </div>
                             <?php foreach ($rows as $r): ?>
                                 <?php
-                                $st_badge = 'badge-success';
-                                $st_icon = 'fas fa-check-circle';
-                                if ($r['status'] === 'Dalam Pemantauan') {
-                                    $st_badge = 'badge-warning';
-                                    $st_icon = 'fas fa-eye';
-                                } elseif ($r['status'] === 'Selesai') {
-                                    $st_badge = 'badge-secondary';
-                                    $st_icon = 'fas fa-flag-checkered';
+                                $st_badge = 'badge-warning';
+                                $st_icon = 'fas fa-eye';
+                                if ($r['status'] === 'Selesai') {
+                                    $st_badge = 'badge-success';
+                                    $st_icon = 'fas fa-check-circle';
                                 }
 
                                 $has_kendala = (!empty($r['kendala']) && trim($r['kendala']) !== '-');
@@ -971,11 +973,11 @@ include '../templates/sidebar.php';
                                             </div>
 
                                             <!-- Ringkasan Perkembangan (Highlight Box) -->
-                                            <div class="p-2.5 mb-2.5 rounded" style="background: #f8fafc; border-left: 3.5px solid #6777ef; border-top: 1px solid #edf2f7; border-right: 1px solid #edf2f7; border-bottom: 1px solid #edf2f7;">
+                                            <div class="mb-2.5 rounded" style="background: #f8fafc; border-left: 3.5px solid #6777ef; border-top: 1px solid #edf2f7; border-right: 1px solid #edf2f7; border-bottom: 1px solid #edf2f7; padding: 12px 14px;">
                                                 <div class="small font-weight-bold text-dark mb-1 d-flex align-items-center">
-                                                    <i class="fas fa-quote-left text-primary mr-1.5" style="font-size: 11px;"></i> Ringkasan Perkembangan:
+                                                    <i class="fas fa-quote-left text-primary mr-2" style="font-size: 11px;"></i> Ringkasan Perkembangan:
                                                 </div>
-                                                <div class="text-dark small" style="line-height: 1.5; font-size: 12.5px;">
+                                                <div class="text-dark small" style="line-height: 1.5; font-size: 12.5px; padding-left: 2px;">
                                                     <?= nl2br(htmlspecialchars($r['ringkasan'])) ?>
                                                 </div>
                                             </div>
@@ -984,9 +986,9 @@ include '../templates/sidebar.php';
                                             <?php if ($has_kendala || $has_tl): ?>
                                             <div class="row no-gutters mb-1" style="gap: 8px;">
                                                 <?php if ($has_kendala): ?>
-                                                <div class="col p-2 rounded" style="background: #fff5f5; border: 1px solid #fed7d7;">
-                                                    <div class="small font-weight-bold text-danger mb-0.5" style="font-size: 11.5px;">
-                                                        <i class="fas fa-exclamation-triangle mr-1"></i> Kendala:
+                                                <div class="col rounded" style="background: #fff5f5; border: 1px solid #fed7d7; padding: 10px 12px;">
+                                                    <div class="small font-weight-bold text-danger mb-1" style="font-size: 11.5px;">
+                                                        <i class="fas fa-exclamation-triangle mr-1.5"></i> Kendala:
                                                     </div>
                                                     <div class="small text-danger" style="line-height: 1.35; font-size: 11.5px;">
                                                         <?= htmlspecialchars($r['kendala']) ?>
@@ -995,9 +997,9 @@ include '../templates/sidebar.php';
                                                 <?php endif; ?>
 
                                                 <?php if ($has_tl): ?>
-                                                <div class="col p-2 rounded" style="background: #f0fff4; border: 1px solid #c6f6d5;">
-                                                    <div class="small font-weight-bold text-success mb-0.5" style="font-size: 11.5px;">
-                                                        <i class="fas fa-clipboard-check mr-1"></i> Tindak Lanjut:
+                                                <div class="col rounded" style="background: #f0fff4; border: 1px solid #c6f6d5; padding: 10px 12px;">
+                                                    <div class="small font-weight-bold text-success mb-1" style="font-size: 11.5px;">
+                                                        <i class="fas fa-clipboard-check mr-1.5"></i> Tindak Lanjut:
                                                     </div>
                                                     <div class="small text-success" style="line-height: 1.35; font-size: 11.5px;">
                                                         <?= htmlspecialchars($r['tindak_lanjut']) ?>
@@ -1067,7 +1069,7 @@ include '../templates/sidebar.php';
                                     <label class="font-weight-bold small">Pilih Kelas</label>
                                     <select name="id_kelas" id="inp_kelas" class="form-control form-control-sm">
                                         <option value="">-- Pilih Kelas --</option>
-                                        <?php foreach ($all_kelas_list as $k): ?>
+                                        <?php foreach ($kelas_list as $k): ?>
                                             <option value="<?= (int)$k['id_kelas'] ?>">Kelas <?= htmlspecialchars($k['nama_kelas']) ?></option>
                                         <?php endforeach; ?>
                                     </select>
@@ -1077,7 +1079,7 @@ include '../templates/sidebar.php';
                                     <label class="font-weight-bold small">Pilih Siswa <span class="text-danger">*</span></label>
                                     <select name="id_siswa" id="inp_siswa" class="form-control select2-siswa" required style="width:100%;">
                                         <option value="">-- Cari &amp; Pilih Siswa --</option>
-                                        <?php foreach ($all_siswa_list as $s): ?>
+                                        <?php foreach ($siswa_list as $s): ?>
                                             <option value="<?= (int)$s['id_siswa'] ?>" data-kelas="<?= (int)$s['id_kelas'] ?>">
                                                 <?= htmlspecialchars($s['nama_siswa']) ?> (Kelas <?= htmlspecialchars($s['nama_kelas'] ?? '-') ?> / NISN: <?= htmlspecialchars($s['nisn'] ?? '-') ?>)
                                             </option>
@@ -1100,8 +1102,7 @@ include '../templates/sidebar.php';
                                 <div class="col-md-3 form-group mb-0 mt-2">
                                     <label class="font-weight-bold small">Status Pemantauan</label>
                                     <select name="status" id="inp_status" class="form-control form-control-sm">
-                                        <option value="Aktif">Aktif</option>
-                                        <option value="Dalam Pemantauan">Dalam Pemantauan</option>
+                                        <option value="Dalam Pemantauan" selected>Dalam Pemantauan</option>
                                         <option value="Selesai">Selesai</option>
                                     </select>
                                 </div>
