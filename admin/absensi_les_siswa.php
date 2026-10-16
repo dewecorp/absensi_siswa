@@ -79,6 +79,19 @@ $stmt_check_sched = $pdo->prepare("SELECT COUNT(*) FROM tb_jadwal_les WHERE tang
 $stmt_check_sched->execute([$tanggal]);
 $has_schedule = $stmt_check_sched->fetchColumn() > 0;
 
+// Auto-save kehadiran les satu siswa (tanpa tombol simpan)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi_siswa'])) {
+    header('Content-Type: application/json');
+    if (!$has_schedule) {
+        echo json_encode(['success' => false, 'error' => 'Tidak ada jadwal les untuk tanggal ini.']);
+        exit;
+    }
+    $tanggal_js = $_POST['tanggal'] ?? date('Y-m-d');
+    $res = simadSaveSingleAttendance($pdo, 'les', (int)($_POST['id_siswa'] ?? 0), $tanggal_js, (string)($_POST['status'] ?? ''), null);
+    echo json_encode($res);
+    exit;
+}
+
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     if (!$has_schedule) {
@@ -301,13 +314,7 @@ include '../templates/sidebar.php';
                                     <?php endforeach; ?>
                                 </div>
                                 
-                                <div class="row mt-4">
-                                    <div class="col-12 text-center">
-                                        <button type="submit" class="btn btn-primary" id="saveAttendanceBtn" <?php echo !$has_schedule ? 'disabled' : ''; ?>>
-                                            <i class="fas fa-save"></i> Simpan Kehadiran
-                                        </button>
-                                    </div>
-                                </div>
+                                <p class="text-center text-muted mb-0"><i class="fas fa-info-circle"></i> Perubahan tersimpan otomatis saat memilih status.</p>
                             </form>
                             <?php elseif (empty($students)): ?>
                                 <div class="alert alert-info text-center">Data siswa tidak ditemukan untuk kelas <?php echo $nama_kelas_selected; ?>.</div>
@@ -395,6 +402,11 @@ $(document).ready(function() {
             case 'Izin': badge.addClass('badge-info'); break;
             case 'Alpa': badge.addClass('badge-danger'); break;
             default: badge.addClass('badge-secondary');
+        }
+
+        // Auto-save tanpa tombol simpan
+        if (typeof simadAutoSaveAttendance === 'function') {
+            simadAutoSaveAttendance(studentId, nextStatus);
         }
     });
 });

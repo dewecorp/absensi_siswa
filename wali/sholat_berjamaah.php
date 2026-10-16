@@ -45,6 +45,15 @@ if (!$wali_kelas) {
 $id_kelas = $wali_kelas['id_kelas'];
 $nama_kelas = $wali_kelas['nama_kelas'];
 
+// Auto-save kehadiran sholat satu siswa (tanpa tombol simpan)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi_siswa'])) {
+    header('Content-Type: application/json');
+    $tanggal_js = $_POST['tanggal'] ?? date('Y-m-d');
+    $res = simadSaveSingleAttendance($pdo, 'sholat_berjamaah', (int)($_POST['id_siswa'] ?? 0), $tanggal_js, (string)($_POST['status'] ?? ''), null, true);
+    echo json_encode($res);
+    exit;
+}
+
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     // Validate that the posted class ID matches the wali's class
@@ -216,11 +225,7 @@ include '../templates/header.php';
                                 <?php endforeach; ?>
                             </div>
                             
-                            <div class="row mt-4">
-                                <div class="col-12 text-center">
-                                    <button type="submit" class="btn btn-primary" id="saveAttendanceBtn">Simpan Kehadiran</button>
-                                </div>
-                            </div>
+                            <p class="text-center text-muted mb-0"><i class="fas fa-info-circle"></i> Perubahan tersimpan otomatis saat memilih status.</p>
                         </form>
                         <?php else: ?>
                         <div class="alert alert-info">
@@ -289,6 +294,9 @@ function updateBadgeLocal(el, id, status) {
         var group = $(el).closest('.att-actions');
         group.find('.att-opt').removeClass('active');
         $(el).addClass('active');
+    }
+    if (typeof simadAutoSaveAttendance === 'function') {
+        simadAutoSaveAttendance(id, status);
     }
 }
 ";

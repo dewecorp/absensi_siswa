@@ -254,6 +254,12 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_att_v = is_readable($_att_path) ? (string) filemtime($_att_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/attendance-cards.css?v=<?php echo htmlspecialchars($_att_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Attendance auto-save JS -->
+    <?php
+    $_attjs_path = __DIR__ . '/../assets/js/attendance-autosave.js';
+    $_attjs_v = is_readable($_attjs_path) ? (string) filemtime($_attjs_path) : '1';
+    ?>
+    <script src="../assets/js/attendance-autosave.js?v=<?php echo htmlspecialchars($_attjs_v, ENT_QUOTES, 'UTF-8'); ?>"></script>
 
     <!-- Dynamic breadcrumb rendering will be handled in the page content -->
         <!-- Custom Responsive CSS -->

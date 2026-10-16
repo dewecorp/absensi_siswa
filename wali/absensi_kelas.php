@@ -46,6 +46,26 @@ $wali_kelas_stmt = $pdo->prepare("SELECT id_kelas, nama_kelas FROM tb_kelas WHER
 $wali_kelas_stmt->execute([$teacher_name]);
 $wali_kelas = $wali_kelas_stmt->fetch(PDO::FETCH_ASSOC);
 
+// Auto-save kehadiran satu siswa (tanpa tombol simpan)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi_siswa'])) {
+    header('Content-Type: application/json');
+    $tanggal_js = $_POST['tanggal'] ?? date('Y-m-d');
+    $holiday_js = isSchoolHoliday($pdo, $tanggal_js);
+    if ($holiday_js['is_holiday']) {
+        echo json_encode(['success' => false, 'error' => 'Hari libur: ' . $holiday_js['name'] . '. Kehadiran ditutup.']);
+        exit;
+    }
+    $now_hour_js = (int)date('H');
+    if ($now_hour_js < 7 || $now_hour_js >= 14) {
+        echo json_encode(['success' => false, 'error' => 'Kehadiran siswa hanya dapat diisi pukul 07:00 - 14:00 WIB.']);
+        exit;
+    }
+    $id_guru_js = ($_SESSION['level'] === 'admin') ? null : ($_SESSION['user_id'] ?? null);
+    $res = simadSaveSingleAttendance($pdo, 'harian', (int)($_POST['id_siswa'] ?? 0), $tanggal_js, (string)($_POST['status'] ?? ''), $id_guru_js);
+    echo json_encode($res);
+    exit;
+}
+
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     // Time validation: only 07:00-14:00 for student attendance
@@ -248,11 +268,7 @@ endif;
                                             <?php endforeach; ?>
                                         </div>
                                         
-                                        <div class="row mt-4">
-                                            <div class="col-12 text-center">
-                                                <button type="submit" class="btn btn-primary">Simpan Kehadiran</button>
-                                            </div>
-                                        </div>
+                                        <p class="text-center text-muted mb-0"><i class="fas fa-info-circle"></i> Perubahan tersimpan otomatis saat memilih status.</p>
                                     </form>
                                     <?php elseif ($wali_kelas): ?>
                                     <div class="alert alert-info">
@@ -361,6 +377,11 @@ $js_page[] = "
 
             input.val(nextStatus);
             updateBadgeByValue(studentId, nextStatus);
+
+            // Auto-save tanpa tombol simpan
+            if (typeof simadAutoSaveAttendance === 'function') {
+                simadAutoSaveAttendance(studentId, nextStatus);
+            }
         });
         
         // Handle form submission to ensure all inputs are sent

@@ -3699,3 +3699,102 @@ function sync_pelanggaran_statuses(PDO $pdo): void {
         ");
     } catch (Throwable $e) {}
 }
+
+// ============================================================
+// Simpan kehadiran satu siswa (auto-save tanpa tombol simpan)
+// $context: harian | les | sholat_dhuha | sholat_berjamaah
+// ============================================================
+if (!function_exists('simadSaveSingleAttendance')) {
+    function simadSaveSingleAttendance(PDO $pdo, string $context, int $id_siswa, string $tanggal, string $status, $id_guru = null, bool $sync = true): array {
+        $id_siswa = (int)$id_siswa;
+        $tanggal  = trim((string)$tanggal);
+        $status   = trim((string)$status);
+
+        if ($id_siswa <= 0 || $tanggal === '') {
+            return ['success' => false, 'error' => 'Data tidak lengkap.'];
+        }
+
+        try {
+            if ($context === 'harian') {
+                if (!in_array($status, ['', 'Hadir', 'Sakit', 'Izin', 'Alpa'], true)) {
+                    return ['success' => false, 'error' => 'Status tidak valid.'];
+                }
+                $check = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
+                $check->execute([$id_siswa, $tanggal]);
+                $existing = $check->fetch(PDO::FETCH_ASSOC);
+
+                if ($status === '') {
+                    if ($existing) {
+                        $d = $pdo->prepare("DELETE FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");
+                        $d->execute([$id_siswa, $tanggal]);
+                    }
+                    return ['success' => true];
+                }
+
+                $now = date('H:i:s');
+                if ($existing) {
+                    $u = $pdo->prepare("UPDATE tb_absensi SET keterangan = ?, jam_masuk = IF(? = 'Hadir', IF(jam_masuk IS NULL, ?, jam_masuk), NULL) WHERE id_siswa = ? AND tanggal = ?");
+                    $u->execute([$status, $status, $now, $id_siswa, $tanggal]);
+                } else {
+                    $jam = ($status === 'Hadir') ? $now : null;
+                    $i = $pdo->prepare("INSERT INTO tb_absensi (id_siswa, tanggal, keterangan, id_guru, jam_masuk) VALUES (?, ?, ?, ?, ?)");
+                    $i->execute([$id_siswa, $tanggal, $status, $id_guru, $jam]);
+                }
+                return ['success' => true];
+            }
+
+            if ($context === 'les') {
+                if (!in_array($status, ['', 'Hadir', 'Sakit', 'Izin', 'Alpa'], true)) {
+                    return ['success' => false, 'error' => 'Status tidak valid.'];
+                }
+                $check = $pdo->prepare("SELECT id_absensi_les FROM tb_absensi_les WHERE id_siswa = ? AND tanggal = ?");
+                $check->execute([$id_siswa, $tanggal]);
+                $existing = $check->fetch(PDO::FETCH_ASSOC);
+
+                if ($status === '') {
+                    if ($existing) {
+                        $d = $pdo->prepare("DELETE FROM tb_absensi_les WHERE id_absensi_les = ?");
+                        $d->execute([$existing['id_absensi_les']]);
+                    }
+                    return ['success' => true];
+                }
+
+                if ($existing) {
+                    $u = $pdo->prepare("UPDATE tb_absensi_les SET status = ?, waktu_input = NOW() WHERE id_absensi_les = ?");
+                    $u->execute([$status, $existing['id_absensi_les']]);
+                } else {
+                    $i = $pdo->prepare("INSERT INTO tb_absensi_les (id_siswa, tanggal, status) VALUES (?, ?, ?)");
+                    $i->execute([$id_siswa, $tanggal, $status]);
+                }
+                return ['success' => true];
+            }
+
+            if ($context === 'sholat_dhuha' || $context === 'sholat_berjamaah') {
+                if (!in_array($status, ['Hadir', 'Tidak Hadir', 'Berhalangan'], true)) {
+                    return ['success' => false, 'error' => 'Status tidak valid.'];
+                }
+                $primary = ($context === 'sholat_dhuha') ? 'tb_sholat_dhuha' : 'tb_sholat';
+                $tables  = [$primary];
+                if ($sync) {
+                    $tables[] = ($context === 'sholat_dhuha') ? 'tb_sholat' : 'tb_sholat_dhuha';
+                }
+                foreach ($tables as $tbl) {
+                    $check = $pdo->prepare("SELECT * FROM $tbl WHERE id_siswa = ? AND tanggal = ?");
+                    $check->execute([$id_siswa, $tanggal]);
+                    if ($check->rowCount() > 0) {
+                        $u = $pdo->prepare("UPDATE $tbl SET status = ? WHERE id_siswa = ? AND tanggal = ?");
+                        $u->execute([$status, $id_siswa, $tanggal]);
+                    } else {
+                        $i = $pdo->prepare("INSERT INTO $tbl (id_siswa, tanggal, status) VALUES (?, ?, ?)");
+                        $i->execute([$id_siswa, $tanggal, $status]);
+                    }
+                }
+                return ['success' => true];
+            }
+
+            return ['success' => false, 'error' => 'Konteks tidak dikenal.'];
+        } catch (Throwable $e) {
+            return ['success' => false, 'error' => 'Gagal menyimpan kehadiran: ' . $e->getMessage()];
+        }
+    }
+}
