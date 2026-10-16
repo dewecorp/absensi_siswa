@@ -26,24 +26,78 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <div class="row">
-                <div class="col-12 col-md-6 col-lg-6">
+            <div class="row scan-app">
+                <div class="col-12 col-lg-7">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Scanner</h4>
+                            <h4><i class="fas fa-qrcode mr-2"></i>Scanner</h4>
                         </div>
                         <div class="card-body">
                             <style>
-                                #reader {
-                                    width: 100%;
-                                    border-radius: 5px;
+                                /* ===== Scan Kehadiran: look ala mobile app ===== */
+                                .scan-app .card {
+                                    border: 1px solid #e8ebf0;
+                                    border-radius: 18px;
+                                    box-shadow: 0 8px 24px rgba(17, 38, 146, .07);
                                     overflow: hidden;
                                 }
-                                #reader video {
+                                .scan-app .card .card-header {
+                                    background: #fff;
+                                    border-bottom: 1px solid #eef1f6;
+                                    padding: 16px 18px;
+                                }
+                                .scan-app .card .card-header h4 {
+                                    margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;
+                                }
+                                .scan-app .card .card-header h4 i { color: #2f6ef0; }
+                                .scan-app .card .card-body { padding: 16px 18px; }
+
+                                .scan-app #reader {
+                                    width: 100%;
+                                    min-height: 300px;
+                                    border-radius: 16px;
+                                    overflow: hidden;
+                                    background: #0f172a;
+                                }
+                                .scan-app #reader:empty::before {
+                                    content: "\f029";
+                                    font-family: "Font Awesome 5 Free"; font-weight: 900;
+                                    font-size: 64px; color: rgba(255, 255, 255, .22);
+                                    display: block; text-align: center; padding: 96px 0;
+                                }
+                                .scan-app #reader video {
                                     width: 100% !important;
                                     height: auto !important;
                                     object-fit: cover;
-                                    border-radius: 5px;
+                                    border-radius: 16px;
+                                }
+
+                                .scan-app .btn-group-toggle { gap: 8px; }
+                                .scan-app .btn-group-toggle .btn {
+                                    border-radius: 12px !important;
+                                    margin-left: 0 !important;
+                                    padding: 11px 12px;
+                                    font-weight: 700;
+                                }
+                                .scan-app #start-scan,
+                                .scan-app #stop-scan {
+                                    border-radius: 14px !important;
+                                    height: 52px;
+                                    font-weight: 800;
+                                }
+                                .scan-app .form-control,
+                                .scan-app .custom-select {
+                                    border-radius: 12px;
+                                    min-height: 46px;
+                                    border-color: #e2e8f0;
+                                }
+                                .scan-app #scan-result-container { min-height: 240px; }
+                                .scan-app .activities { max-height: 440px; overflow-y: auto; }
+
+                                @media (max-width: 991.98px) {
+                                    .scan-app .card { border-radius: 18px !important; }
+                                    .scan-app #reader { min-height: 240px; }
+                                    .scan-app #reader:empty::before { padding: 72px 0; }
                                 }
                             </style>
                             <div class="mb-3">
@@ -92,10 +146,10 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 
-                <div class="col-12 col-md-6 col-lg-6">
+                <div class="col-12 col-lg-5">
                     <div class="card">
                         <div class="card-header">
-                            <h4>Hasil Scan Terakhir</h4>
+                            <h4><i class="fas fa-id-card-alt mr-2"></i>Hasil Scan Terakhir</h4>
                         </div>
                         <div class="card-body" id="scan-result-container">
                             <div class="text-center text-muted py-5">
@@ -107,23 +161,14 @@ include '../templates/sidebar.php';
                     
                     <div class="card mt-4">
                         <div class="card-header">
-                            <h4>Log Aktivitas Scan</h4>
+                            <h4><i class="fas fa-history mr-2"></i>Log Aktivitas Scan</h4>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-sm w-100 text-center">
-                                    <thead>
-                                        <tr>
-                                            <th>Waktu</th>
-                                            <th>Nama</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="scan-log-body">
-                                        <!-- Log items will be added here -->
-                                    </tbody>
-                                </table>
+                            <div id="scan-log-empty" class="text-center text-muted py-4">
+                                <i class="fas fa-history fa-2x mb-2 d-block"></i>
+                                <p class="mb-0">Belum ada aktivitas scan.</p>
                             </div>
+                            <div class="activities" id="scan-log-body" style="max-height: 420px; overflow-y: auto;"></div>
                         </div>
                     </div>
                 </div>
@@ -228,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     
                     updateResultView(response.data);
-                    addToLog(response.data);
+                    addToLog(response.data, true);
 
                     // Clear scanner input for next scan
                     const scannerInput = document.getElementById('scanner-input');
@@ -239,6 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         title: response.title || 'Gagal!',
                         text: response.message
                     });
+                    addToLog(response, false);
                 }
             },
             error: function() {
@@ -247,6 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     title: 'Error',
                     text: 'Terjadi kesalahan koneksi server.'
                 });
+                addToLog({ title: 'Koneksi Gagal', message: 'Terjadi kesalahan koneksi server.' }, false);
             }
         });
     }
@@ -272,25 +319,73 @@ document.addEventListener('DOMContentLoaded', function() {
         container.innerHTML = html;
     }
     
-    function addToLog(data) {
-        const tbody = document.getElementById('scan-log-body');
-        const row = document.createElement('tr');
-        const logBadge = data.keterangan == 'Hadir' ? 'success' : 'warning';
-        row.innerHTML = `
-            <td>${data.jam_masuk}</td>
-            <td>${data.nama_siswa}</td>
-            <td><div class="badge badge-${logBadge}">${data.keterangan}</div></td>
+    function nowClock() {
+        const d = new Date();
+        const p = n => String(n).padStart(2, '0');
+        return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    }
+
+    function escapeHtml(str) {
+        return (str ?? '').toString().replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function addLogItem(opts) {
+        const container = document.getElementById('scan-log-body');
+        if (!container) return;
+
+        const empty = document.getElementById('scan-log-empty');
+        if (empty) empty.style.display = 'none';
+
+        const tone = opts.tone === 'warning' ? 'warning' : (opts.tone === 'danger' ? 'danger' : 'success');
+        const colors = { success: 'bg-success', warning: 'bg-warning', danger: 'bg-danger' };
+        const icons = { success: 'fa-check', warning: 'fa-clock', danger: 'fa-times' };
+
+        const item = document.createElement('div');
+        item.className = 'activity animate__animated animate__fadeIn';
+
+        const detail = (opts.detail ?? '').toString();
+        item.innerHTML = `
+            <div class="activity-icon ${colors[tone]} text-white">
+                <i class="fas ${icons[tone]}"></i>
+            </div>
+            <div class="activity-detail w-100">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="font-weight-bold text-capitalize text-truncate" style="max-width: 70%;">${escapeHtml(opts.title || '-')}</span>
+                    <small class="text-muted"><i class="far fa-clock mr-1"></i>${escapeHtml(opts.time || nowClock())}</small>
+                </div>
+                <div class="d-flex align-items-center flex-wrap" style="gap:6px;">
+                    <span class="badge badge-${tone}">${escapeHtml(opts.status || '-')}</span>
+                    ${detail ? `<span class="text-muted small">${escapeHtml(detail)}</span>` : ''}
+                </div>
+            </div>
         `;
-        
-        if (tbody.firstChild) {
-            tbody.insertBefore(row, tbody.firstChild);
-        } else {
-            tbody.appendChild(row);
-        }
-        
+
+        container.insertBefore(item, container.firstChild);
+
         // Keep only last 10 items
-        if (tbody.children.length > 10) {
-            tbody.removeChild(tbody.lastChild);
+        while (container.children.length > 10) {
+            container.removeChild(container.lastChild);
+        }
+    }
+
+    function addToLog(data, ok) {
+        if (ok && data) {
+            addLogItem({
+                title: data.nama_siswa,
+                time: data.jam_masuk,
+                status: data.keterangan,
+                tone: data.keterangan === 'Hadir' ? 'success' : 'warning',
+                detail: [data.kelas, data.nisn].filter(Boolean).join(' • ')
+            });
+        } else {
+            addLogItem({
+                title: (data && data.title) ? data.title : 'Gagal',
+                status: 'Gagal',
+                tone: 'danger',
+                detail: (data && data.message) ? data.message : ''
+            });
         }
     }
 
