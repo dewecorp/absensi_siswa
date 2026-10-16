@@ -80,6 +80,9 @@
 .att-monthly-stats.cols-3 {
     grid-template-columns: repeat(3, 1fr);
 }
+.att-monthly-stats.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
 
 .att-monthly-stat-box {
     background: #f8fafc;

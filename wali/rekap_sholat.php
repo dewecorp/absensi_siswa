@@ -108,7 +108,7 @@ $class_info = $wali_kelas;
 
 // Process search based on filter type
 if ($class_id > 0) {
-    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
+    $stmt = $pdo->prepare("SELECT id_siswa, nama_siswa, nisn, jenis_kelamin FROM tb_siswa WHERE id_kelas = ? ORDER BY nama_siswa ASC");
     $stmt->execute([$class_id]);
     $all_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -216,6 +216,7 @@ if ($class_id > 0) {
             $student_attendance[] = [
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
+                'jenis_kelamin' => $student['jenis_kelamin'] ?? '',
                 'days' => $days,
                 'summary' => $summary
             ];
@@ -597,6 +598,10 @@ echo "<script>
 
                         <div class="att-monthly-grid">
                             <?php $no = 1; foreach ($monthly_results as $r): ?>
+                                <?php 
+                                $jk = strtoupper(trim((string)($r['jenis_kelamin'] ?? '')));
+                                $is_laki = in_array($jk, ['L', 'LAKI-LAKI', 'LAKI - LAKI', 'PRIA']);
+                                ?>
                                 <div class="att-monthly-card">
                                     <div class="att-monthly-head">
                                         <div class="att-monthly-avatar">
@@ -607,10 +612,13 @@ echo "<script>
                                             <div class="att-monthly-sub">
                                                 <i class="fas fa-mosque"></i>
                                                 Jamaah · <?= date('F Y', strtotime($selected_month . '-01')) ?>
+                                                <?php if (!empty($jk)): ?>
+                                                    · <span class="badge badge-light border py-0 px-1" style="font-size: 10px;"><?= htmlspecialchars($jk) ?></span>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="att-monthly-stats cols-3">
+                                    <div class="att-monthly-stats <?= $is_laki ? 'cols-2' : 'cols-3' ?>">
                                         <div class="att-monthly-stat-box stat-hadir">
                                             <div class="att-monthly-stat-val"><?= (int)($r['summary']['Hadir'] ?? 0) ?></div>
                                             <div class="att-monthly-stat-lbl">Hadir</div>
@@ -619,10 +627,12 @@ echo "<script>
                                             <div class="att-monthly-stat-val"><?= (int)($r['summary']['Tidak Hadir'] ?? 0) ?></div>
                                             <div class="att-monthly-stat-lbl">Tidak Hadir</div>
                                         </div>
-                                        <div class="att-monthly-stat-box stat-sakit">
-                                            <div class="att-monthly-stat-val"><?= (int)($r['summary']['Berhalangan'] ?? 0) ?></div>
-                                            <div class="att-monthly-stat-lbl">Berhalangan</div>
-                                        </div>
+                                        <?php if (!$is_laki): ?>
+                                            <div class="att-monthly-stat-box stat-sakit">
+                                                <div class="att-monthly-stat-val"><?= (int)($r['summary']['Berhalangan'] ?? 0) ?></div>
+                                                <div class="att-monthly-stat-lbl">Berhalangan</div>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
