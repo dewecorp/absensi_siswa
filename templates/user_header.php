@@ -113,6 +113,12 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
     $_att_mc_v_u = is_readable($_att_mc_path_u) ? (string) filemtime($_att_mc_path_u) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/attendance-cards-monthly.css?v=<?php echo htmlspecialchars($_att_mc_v_u, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Quick actions mobile app CSS -->
+    <?php
+    $_qa_path_u = __DIR__ . '/../assets/css/quick-actions-app.css';
+    $_qa_v_u = is_readable($_qa_path_u) ? (string) filemtime($_qa_path_u) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/quick-actions-app.css?v=<?php echo htmlspecialchars($_qa_v_u, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Attendance auto-save JS -->
     <?php
     $_attjs_path_u = __DIR__ . '/../assets/js/attendance-autosave.js';

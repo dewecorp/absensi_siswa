@@ -272,6 +272,12 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_att_mc_v = is_readable($_att_mc_path) ? (string) filemtime($_att_mc_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/attendance-cards-monthly.css?v=<?php echo htmlspecialchars($_att_mc_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Quick actions mobile app CSS -->
+    <?php
+    $_qa_path = __DIR__ . '/../assets/css/quick-actions-app.css';
+    $_qa_v = is_readable($_qa_path) ? (string) filemtime($_qa_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/quick-actions-app.css?v=<?php echo htmlspecialchars($_qa_v, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Attendance auto-save JS -->
     <?php
     $_attjs_path = __DIR__ . '/../assets/js/attendance-autosave.js';

@@ -1084,25 +1084,52 @@ include_once '../templates/sidebar.php';
                     <div class="row">
                         <div class="col-12">
                             <div class="card mapp-link-card">
-                                <div class="card-header">
-                                    <h4>Tautan Cepat</h4>
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h4 class="mb-0"><i class="fas fa-bolt text-warning mr-2"></i>Tautan Cepat</h4>
+                                    <span class="badge badge-light border text-muted">Aksi Cepat</span>
                                 </div>
                                 <div class="card-body">
-                                    <div class="row">
-                                        <?php 
-                                        $btn_col_wali = $is_grade_6_wali ? 'col-12 col-md-4' : 'col-12 col-md-6';
-                                        ?>
-                                        <div class="<?php echo $btn_col_wali; ?> mb-2">
-                                            <a href="jurnal_mengajar.php" class="btn btn-info btn-lg btn-block btn-icon icon-left shadow-sm"><i class="fas fa-book-open"></i> Isi Jurnal Mengajar</a>
-                                        </div>
+                                    <div class="quick-app-grid">
+                                        <a href="jurnal_mengajar.php" class="quick-app-card">
+                                            <div class="quick-app-icon tone-cyan">
+                                                <i class="fas fa-book-open"></i>
+                                            </div>
+                                            <div class="quick-app-info">
+                                                <div class="quick-app-title">Jurnal Mengajar</div>
+                                                <div class="quick-app-sub">Catat materi harian</div>
+                                            </div>
+                                            <div class="quick-app-arrow">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </div>
+                                        </a>
+
                                         <?php if ($is_grade_6_wali): ?>
-                                        <div class="<?php echo $btn_col_wali; ?> mb-2">
-                                            <a href="jurnal_les.php" class="btn btn-primary btn-lg btn-block btn-icon icon-left shadow-sm"><i class="fas fa-book"></i> Isi Jurnal Les</a>
-                                        </div>
+                                        <a href="jurnal_les.php" class="quick-app-card">
+                                            <div class="quick-app-icon tone-blue">
+                                                <i class="fas fa-book"></i>
+                                            </div>
+                                            <div class="quick-app-info">
+                                                <div class="quick-app-title">Jurnal Les</div>
+                                                <div class="quick-app-sub">Kelas 6 intensif</div>
+                                            </div>
+                                            <div class="quick-app-arrow">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </div>
+                                        </a>
                                         <?php endif; ?>
-                                        <div class="<?php echo $btn_col_wali; ?> mb-2">
-                                            <button type="button" class="btn btn-warning btn-lg btn-block btn-icon icon-left shadow-sm" data-toggle="modal" data-target="#qrCodeModal"><i class="fas fa-qrcode"></i> Tampilkan QR Code</button>
-                                        </div>
+
+                                        <button type="button" class="quick-app-card border-0" data-toggle="modal" data-target="#qrCodeModal">
+                                            <div class="quick-app-icon tone-amber">
+                                                <i class="fas fa-qrcode"></i>
+                                            </div>
+                                            <div class="quick-app-info">
+                                                <div class="quick-app-title">QR Code Saya</div>
+                                                <div class="quick-app-sub">Scan presensi cepat</div>
+                                            </div>
+                                            <div class="quick-app-arrow">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </div>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
