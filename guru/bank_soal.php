@@ -568,31 +568,11 @@ try {
 } catch (Throwable $e) { /* abaikan, tampilkan hitungan dasar */ }
 
 $page_title = 'Daftar Bank Soal';
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-];
-$js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-];
+$css_libs = [];
+$js_libs = [];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    if ($('#table-paket').length) {
-        $('#table-paket').DataTable({
-            'order': [[0, 'asc']],
-            'columnDefs': [{ 'sortable': false, 'targets': [8] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Tidak ada paket ditemukan',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 sampai 0 dari 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
-        });
-    }
-
     $(document).on('change', '#filter-soal-form [data-auto-submit]', function() {
         $('#filter-soal-form').submit();
     });
@@ -687,6 +667,50 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+.card-soal {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.card-soal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(103, 119, 239, 0.08) !important;
+    border-color: #cbd5e1 !important;
+}
+.soal-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.avatar-generator {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+.avatar-upload {
+    background: linear-gradient(135deg, #6777ef, #3abaf4);
+}
+.soal-preview-box {
+    background: #f8fafc;
+    border-left: 3.5px solid #6777ef;
+    border-top: 1px solid #edf2f7;
+    border-right: 1px solid #edf2f7;
+    border-bottom: 1px solid #edf2f7;
+    border-radius: 6px;
+    padding: 12px 14px;
+}
+.soal-preview-box.is-gen {
+    border-left-color: #10b981;
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -697,12 +721,15 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <!-- Filter Card -->
             <div class="card mb-3">
-                <div class="card-header">
-                    <h4><i class="fas fa-filter mr-2"></i>Filter Soal</h4>
+                <div class="card-header py-2">
+                    <h6 class="mb-0 text-dark"><i class="fas fa-filter mr-1 text-primary"></i> Filter Bank Soal</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body py-3">
                     <form method="GET" class="row" id="filter-soal-form">
-                        <div class="col-md-3 mb-2">
+                        <?php if (isset($_GET['session_type'])): ?>
+                            <input type="hidden" name="session_type" value="<?= htmlspecialchars($_GET['session_type']) ?>">
+                        <?php endif; ?>
+                        <div class="col-12 col-md-4 mb-2">
                             <label class="small font-weight-bold">Mata Pelajaran</label>
                             <select name="f_mapel" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Mapel --</option>
@@ -711,7 +738,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-12 col-md-4 mb-2">
                             <label class="small font-weight-bold">Kelas</label>
                             <select name="f_kelas" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Kelas --</option>
@@ -720,16 +747,7 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="small font-weight-bold">Status</label>
-                            <select name="f_status" class="form-control form-control-sm" onchange="this.form.submit()">
-                                <option value="">-- Semua Status --</option>
-                                <?php foreach (['Aktif', 'Draft', 'Arsip'] as $st): ?>
-                                    <option value="<?= $st ?>" <?= $f_status === $st ? 'selected' : '' ?>><?= $st ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-12 col-md-4 mb-2">
                             <label class="small font-weight-bold">Jenis Asesmen</label>
                             <select name="f_asesmen" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">-- Semua Asesmen --</option>
@@ -738,93 +756,156 @@ include '../templates/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-12 mt-2 d-flex">
-                            <a href="bank_soal.php<?= $session_q ?>" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Reset</a>
+                        <div class="col-12 mt-1 d-flex align-items-center">
+                            <a href="bank_soal.php<?= $session_q ?>" class="btn btn-secondary btn-sm"><i class="fas fa-undo mr-1"></i> Reset</a>
+                            <small class="text-muted ml-2">Filter otomatis tersubmit saat opsi diubah.</small>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Bank Soal Card -->
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4><i class="fas fa-box mr-2"></i>Bank Soal</h4>
-                    <?php if ($can_crud): ?>
+            <!-- Card Utama Bank Soal (Bentuk Kartu Informatif) -->
+            <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9; gap: 10px;">
                     <div>
-                        <button type="button" class="btn btn-primary" id="btnTambahSoal">
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-box text-primary mr-2"></i>Daftar Paket Bank Soal</h4>
+                        <small class="text-muted">Menampilkan <span class="font-weight-bold text-primary"><?= count($paket_rows) ?></span> paket soal</small>
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                        <?php if ($can_crud): ?>
+                        <button type="button" class="btn btn-primary btn-sm font-weight-bold" id="btnTambahSoal" style="border-radius: 6px;">
                             <i class="fas fa-plus mr-1"></i> Tambah Soal
                         </button>
-                        <a href="generate_soal.php<?= $session_q ?>" class="btn btn-success">
+                        <a href="generate_soal.php<?= $session_q ?>" class="btn btn-success btn-sm font-weight-bold" style="border-radius: 6px;">
                             <i class="fas fa-magic mr-1"></i> Generate Soal
                         </a>
+                        <?php endif; ?>
                     </div>
-                    <?php endif; ?>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-paket">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Kode Paket</th>
-                                    <th>Asesmen</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Kelas</th>
-                                    <th>Topik</th>
-                                    <th>Butir</th>
-                                    <th>Tanggal</th>
-                                    <th width="1%" class="text-center text-nowrap">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($paket_rows as $i => $p): ?>
-                                    <?php
-                                    $kodePkt = (string)$p['kode_paket'];
-                                    $is_gen = str_starts_with($kodePkt, 'GEN-')
-                                        || !empty($p['has_kisi'])
-                                        || ((int)($p['variasi_bentuk'] ?? 1) > 1 && (int)$p['jumlah_butir'] >= 5 && empty($p['file_soal']));
-                                    $is_upl = !$is_gen && (str_starts_with($kodePkt, 'UPL-') || !empty($p['file_soal']));
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><strong><?= htmlspecialchars($p['kode_paket']) ?></strong><br>
-                                            <?php if ($is_gen): ?>
-                                                <span class="badge badge-success mt-1" title="Paket dibuat oleh Generator AI"><i class="fas fa-magic mr-1"></i>GENERATOR</span>
-                                            <?php elseif ($is_upl): ?>
-                                                <span class="badge badge-warning mt-1" title="Paket diupload manual"><i class="fas fa-upload mr-1"></i>UPLOAD</span>
-                                            <?php endif; ?>
-                                            <?php if (!empty($p['file_soal'])): ?><br><span class="badge badge-info mt-1" title="Paket memiliki file soal asli: <?= htmlspecialchars(basename((string)$p['file_soal'])) ?>"><i class="fas fa-paperclip mr-1"></i><?= strtoupper(htmlspecialchars(pathinfo((string)$p['file_soal'], PATHINFO_EXTENSION))) ?> ASLI</span><?php endif; ?>
-                                        </td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars($p['jenis_asesmen'] ?? '-') ?></span></td>
-                                        <td><?= htmlspecialchars($p['nama_mapel'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($p['nama_kelas'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($p['topik'] ?? '-') ?></td>
-                                        <td class="text-center"><span class="badge badge-primary"><?= (int)$p['jumlah_butir'] + (int)($extra_butir[$p['kode_paket']] ?? 0) ?></span></td>
-                                        <td><?= htmlspecialchars(substr($p['created_at'] ?? '', 0, 10)) ?></td>
-                                        <td class="text-center text-nowrap" style="white-space: nowrap;">
-                                            <div class="d-inline-flex align-items-center" style="gap: 4px;">
-                                                <a href="preview_bank_soal.php?kode_paket=<?= urlencode($p['kode_paket']) ?><?= $session_q ? '&' . ltrim($session_q, '?') : '' ?>" target="_blank" class="btn btn-info btn-sm" title="Pratinjau di laman penuh">
-                                                    <i class="fas fa-eye mr-1"></i> Preview
-                                                </a>
-                                                <?php if ($can_crud): ?>
-                                                <?php if (!$is_gen): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-paket" data-json='<?= htmlspecialchars(json_encode($p + ['extra_butir' => (int)($extra_butir[$p['kode_paket']] ?? 0)]), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <?php endif; ?>
-                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-paket" data-kode="<?= htmlspecialchars($p['kode_paket'], ENT_QUOTES) ?>" title="Hapus Paket">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                <div class="card-body bg-light p-3 p-md-4" style="border-radius: 0 0 14px 14px;">
+                    <?php if (empty($paket_rows)): ?>
+                        <div class="text-center py-5 bg-white rounded shadow-sm border">
+                            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted font-weight-bold">Belum Ada Paket Soal</h5>
+                            <p class="text-muted small mb-0">Silakan buat paket soal baru, generate dengan AI, atau sesuaikan filter di atas.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="row" id="container-kartu-soal" style="row-gap: 16px;">
+                            <?php foreach ($paket_rows as $i => $p): ?>
+                                <?php
+                                $kodePkt = (string)$p['kode_paket'];
+                                $is_gen = str_starts_with($kodePkt, 'GEN-')
+                                    || !empty($p['has_kisi'])
+                                    || ((int)($p['variasi_bentuk'] ?? 1) > 1 && (int)$p['jumlah_butir'] >= 5 && empty($p['file_soal']));
+                                $is_upl = !$is_gen && (str_starts_with($kodePkt, 'UPL-') || !empty($p['file_soal']));
+
+                                $avatar_cls = $is_gen ? 'avatar-generator' : 'avatar-upload';
+                                $avatar_icon = $is_gen ? 'fas fa-magic' : 'fas fa-file-alt';
+
+                                $tot_butir = (int)$p['jumlah_butir'] + (int)($extra_butir[$p['kode_paket']] ?? 0);
+                                $tgl_fmt = !empty($p['created_at']) ? date('d M Y', strtotime($p['created_at'])) : '-';
+                                $ext_asli = !empty($p['file_soal']) ? strtoupper(pathinfo((string)$p['file_soal'], PATHINFO_EXTENSION)) : '';
+                                ?>
+                                <div class="col-12 col-md-6 col-xl-6 d-flex align-items-stretch soal-card-col">
+                                    <div class="card w-100 border-0 shadow-sm card-soal d-flex flex-column justify-content-between mb-0" style="overflow: hidden;">
+                                        <div class="card-body p-3 p-md-3.5">
+                                            <!-- Top Bar: Avatar + Kode Paket + Asesmen & Status Badges -->
+                                            <div class="d-flex justify-content-between align-items-start mb-2.5 pb-2 border-bottom">
+                                                <div class="d-flex align-items-center" style="gap: 12px; min-width: 0;">
+                                                    <div class="soal-avatar <?= $avatar_cls ?>">
+                                                        <i class="<?= $avatar_icon ?>"></i>
+                                                    </div>
+                                                    <div style="min-width: 0;">
+                                                        <h6 class="mb-0 font-weight-bold text-truncate" style="font-size: 15px; line-height: 1.3;" title="<?= htmlspecialchars($p['kode_paket']) ?>">
+                                                            <a href="preview_bank_soal.php?kode_paket=<?= urlencode($p['kode_paket']) ?><?= $session_q ? '&' . ltrim($session_q, '?') : '' ?>" target="_blank" class="text-dark" style="text-decoration: none;">
+                                                                <?= htmlspecialchars($p['kode_paket']) ?>
+                                                            </a>
+                                                        </h6>
+                                                        <div class="d-flex flex-wrap align-items-center small text-muted mt-1" style="gap: 6px;">
+                                                            <?php if ($is_gen): ?>
+                                                                <span class="badge badge-success px-2 py-0.5 font-weight-bold" style="border-radius: 4px; font-size: 10px;">
+                                                                    <i class="fas fa-magic mr-1"></i>GENERATOR AI
+                                                                </span>
+                                                            <?php elseif ($is_upl): ?>
+                                                                <span class="badge badge-warning text-white px-2 py-0.5 font-weight-bold" style="border-radius: 4px; font-size: 10px;">
+                                                                    <i class="fas fa-upload mr-1"></i>UPLOAD
+                                                                </span>
+                                                            <?php else: ?>
+                                                                <span class="badge badge-secondary px-2 py-0.5 font-weight-bold" style="border-radius: 4px; font-size: 10px;">
+                                                                    <i class="fas fa-edit mr-1"></i>MANUAL
+                                                                </span>
+                                                            <?php endif; ?>
+                                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-0.5" style="border-radius: 4px; font-size: 10px;">
+                                                                <i class="fas fa-clipboard-check text-primary mr-1"></i><?= htmlspecialchars($p['jenis_asesmen'] ?? '-') ?>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="ml-2 flex-shrink-0 text-right">
+                                                    <span class="badge badge-primary px-2.5 py-1 font-weight-bold" style="font-size: 11px; border-radius: 6px;" title="Jumlah butir pertanyaan">
+                                                        <i class="fas fa-list-ol mr-1"></i> <?= $tot_butir ?> Butir
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Metadata Bar: Mapel, Kelas, Tanggal -->
+                                            <div class="d-flex flex-wrap align-items-center mb-2.5 small text-muted" style="gap: 6px;">
+                                                <span class="badge badge-light border text-dark px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-book text-primary mr-1"></i> <?= htmlspecialchars($p['nama_mapel'] ?? '-') ?>
+                                                </span>
+                                                <span class="badge badge-light border text-dark px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="fas fa-chalkboard text-info mr-1"></i> Kelas <?= htmlspecialchars($p['nama_kelas'] ?? '-') ?>
+                                                </span>
+                                                <span class="badge badge-light border text-muted px-2 py-1" style="font-size: 11px; border-radius: 5px;">
+                                                    <i class="far fa-calendar-alt mr-1"></i> <?= htmlspecialchars($tgl_fmt) ?>
+                                                </span>
+                                            </div>
+
+                                            <!-- Preview Box: Materi / Topik Soal -->
+                                            <div class="soal-preview-box mb-2 <?= $is_gen ? 'is-gen' : '' ?>">
+                                                <div class="small font-weight-bold text-dark mb-1 d-flex align-items-center">
+                                                    <i class="fas fa-bookmark text-primary mr-2" style="font-size: 11px;"></i> Materi / Topik Pembahasan:
+                                                </div>
+                                                <div class="text-dark small font-weight-bold" style="line-height: 1.45; font-size: 12.5px; padding-left: 2px;">
+                                                    <?= nl2br(htmlspecialchars($p['topik'] ?: 'Belum ditentukan')) ?>
+                                                </div>
+                                                <?php if (!empty($ext_asli)): ?>
+                                                <div class="mt-2 pt-1 border-top small text-muted d-flex align-items-center">
+                                                    <i class="fas fa-paperclip text-info mr-1.5"></i> File lampiran: <strong class="ml-1 text-primary"><?= htmlspecialchars(basename((string)$p['file_soal'])) ?> (<?= $ext_asli ?>)</strong>
+                                                </div>
                                                 <?php endif; ?>
                                             </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+
+                                        <!-- Card Footer Aksi -->
+                                        <div class="card-footer bg-white pt-2 pb-2.5 px-3 border-top d-flex flex-wrap justify-content-between align-items-center" style="gap: 6px;">
+                                            <a href="preview_bank_soal.php?kode_paket=<?= urlencode($p['kode_paket']) ?><?= $session_q ? '&' . ltrim($session_q, '?') : '' ?>" target="_blank" class="btn btn-outline-primary btn-sm font-weight-bold px-3" style="border-radius: 6px; font-size: 12px;">
+                                                <i class="fas fa-eye mr-1"></i> Pratinjau Soal
+                                            </a>
+                                            <div class="d-flex align-items-center" style="gap: 5px;">
+                                                <?php if ($can_crud): ?>
+                                                    <?php if (!$is_gen): ?>
+                                                    <button type="button" class="btn btn-warning btn-sm btn-edit-paket" data-json='<?= htmlspecialchars(json_encode($p + ['extra_butir' => (int)($extra_butir[$p['kode_paket']] ?? 0)]), ENT_QUOTES, 'UTF-8') ?>' title="Edit Paket Soal" style="border-radius: 6px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <?php endif; ?>
+                                                    <button type="button" class="btn btn-danger btn-sm btn-hapus-paket" data-kode="<?= htmlspecialchars($p['kode_paket'], ENT_QUOTES) ?>" title="Hapus Paket" style="border-radius: 6px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
+
+        </div>
+    </section>
+</div>
 
         </div>
     </section>

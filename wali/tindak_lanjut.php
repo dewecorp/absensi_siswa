@@ -447,35 +447,6 @@ $(document).ready(function() {
         });
     }
 
-    $('#cari-tl-timeline').on('input', function() {
-        var query = $(this).val().toLowerCase().trim();
-        var visibleCount = 0;
-        $('.tl-timeline-item').each(function() {
-            var text = $(this).text().toLowerCase();
-            if (text.indexOf(query) !== -1) {
-                $(this).show();
-                visibleCount++;
-            } else {
-                $(this).hide();
-            }
-        });
-        $('.tl-month-header').each(function() {
-            var month = $(this).data('month');
-            var hasVisible = $('.tl-timeline-item[data-month="' + month + '"]:visible').length > 0;
-            if (hasVisible) {
-                $(this).show();
-            } else {
-                $(this).hide();
-            }
-        });
-        if (visibleCount === 0 && query !== '') {
-            $('#no-tl-search').show();
-        } else {
-            $('#no-tl-search').hide();
-        }
-        $('#count-tl-timeline').text(visibleCount);
-    });
-
     function shortTL(s, n) {
         s = (s || '').toString().replace(/\s+/g, ' ').trim();
         n = n || 110;
@@ -966,16 +937,10 @@ include '../templates/sidebar.php';
             <div class="card mb-4 border-0 shadow-sm" style="border-radius: 14px;">
                 <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-3" style="border-radius: 14px 14px 0 0; border-bottom: 1px solid #f1f5f9; gap: 10px;">
                     <div>
-                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-history text-primary mr-2"></i>Timeline Tindak Lanjut Pembinaan</h4>
+                        <h4 class="mb-0 font-weight-bold text-dark"><i class="fas fa-history text-primary mr-2"></i>Tindak Lanjut Pembinaan</h4>
                         <small class="text-muted">Menampilkan <span id="count-tl-timeline" class="font-weight-bold text-primary"><?= count($rows) ?></span> riwayat tindak lanjut</small>
                     </div>
                     <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
-                        <div class="input-group input-group-sm" style="width: 220px;">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text bg-light border-right-0"><i class="fas fa-search text-muted"></i></span>
-                            </div>
-                            <input type="text" id="cari-tl-timeline" class="form-control form-control-sm border-left-0" placeholder="Cari siswa / tindakan...">
-                        </div>
                         <a href="data_tindak_lanjut.php<?= isset($_GET['session_type']) ? '?session_type=' . urlencode($_GET['session_type']) : '' ?>" class="btn btn-info btn-sm font-weight-bold" style="border-radius: 6px;">
                             <i class="fas fa-database mr-1"></i> Master Data
                         </a>
@@ -1015,12 +980,6 @@ include '../templates/sidebar.php';
                         $cur_month = '';
                         ?>
                         <div class="tl-timeline">
-                            <div id="no-tl-search" style="display: none;">
-                                <div class="text-center py-5 bg-white rounded shadow-sm border mb-3">
-                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
-                                    <p class="text-muted small mb-0">Tidak ada tindak lanjut yang cocok dengan kata kunci pencarian.</p>
-                                </div>
-                            </div>
                             <?php foreach ($rows as $i => $r): ?>
                                 <?php
                                 $tgl_raw = $r['tanggal'] ?? date('Y-m-d');
