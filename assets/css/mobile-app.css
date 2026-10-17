@@ -755,6 +755,7 @@
 .mapp-att-btn.is-hadir.active { background: #10b981; border-color: #10b981; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(16,185,129,.35); outline: none !important; }
 .mapp-att-btn.is-sakit.active { background: #f97316; border-color: #f97316; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(249,115,22,.35); outline: none !important; }
 .mapp-att-btn.is-izin.active { background: #3abaf4; border-color: #3abaf4; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(58,186,244,.35); outline: none !important; }
+.mapp-att-btn.active { pointer-events: none; cursor: default; }
 .mapp-att-btn.is-hadir:focus,
 .mapp-att-btn.is-hadir.active:focus {
   outline: none !important;

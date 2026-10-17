@@ -200,8 +200,9 @@ if ($class_id > 0) {
             }
             $day = (int)$record['day'];
             $student_attendance[$student_id]['days'][$day] = $record['keterangan'];
-            if (isset($student_attendance[$student_id]['summary'][$record['keterangan']])) {
-                $student_attendance[$student_id]['summary'][$record['keterangan']]++;
+            $stat_key = ($record['keterangan'] === 'Terlambat') ? 'Hadir' : $record['keterangan'];
+            if (isset($student_attendance[$student_id]['summary'][$stat_key])) {
+                $student_attendance[$student_id]['summary'][$stat_key]++;
             }
         }
         
@@ -232,8 +233,9 @@ if ($class_id > 0) {
         // Calculate summary statistics
         $summary = ['Hadir' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0, 'Berhalangan' => 0];
         foreach ($student_results as $record) {
-            if (isset($summary[$record['keterangan']])) {
-                $summary[$record['keterangan']]++;
+            $stat_key = ($record['keterangan'] === 'Terlambat') ? 'Hadir' : $record['keterangan'];
+            if (isset($summary[$stat_key])) {
+                $summary[$stat_key]++;
             }
         }
         $student_attendance_summary = $summary;
@@ -312,9 +314,10 @@ if ($class_id > 0) {
             }
             
             // Count attendance status for the month
-            if (isset($student_attendance[$student_id]['monthly_totals'][$month][$status])) {
-                $student_attendance[$student_id]['monthly_totals'][$month][$status]++;
-                $student_attendance[$student_id]['summary'][$status]++;
+            $stat_key = ($status === 'Terlambat') ? 'Hadir' : $status;
+            if (isset($student_attendance[$student_id]['monthly_totals'][$month][$stat_key])) {
+                $student_attendance[$student_id]['monthly_totals'][$month][$stat_key]++;
+                $student_attendance[$student_id]['summary'][$stat_key]++;
             }
         }
         

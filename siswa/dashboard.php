@@ -371,131 +371,94 @@ include_once '../templates/sidebar.php';
         </div>
 
         <div class="row">
-            <!-- Box Kehadiran Manual -->
-            <div class="col-12 mb-4">
-                <div class="card card-warning mapp-absen-card">
-                    <div class="card-header py-3">
-                        <h4 class="mb-0">Kehadiran Hari Ini</h4>
-                        <div class="card-header-action">
-                            <span class="badge badge-primary"><?php echo getCurrentDateIndonesia(); ?></span>
-                        </div>
+            <!-- Box Kehadiran Siswa Ala Mobile Apps -->
+            <div class="col-12 mb-4 mapp-col-absen">
+                <div class="card w-100 mapp-absen-card border-0 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                        <h4 class="mb-0"><i class="fas fa-user-check text-primary mr-2"></i>Kehadiran Hari Ini</h4>
+                        <span class="badge badge-light border text-muted font-weight-bold"><?php echo getCurrentDateIndonesia(); ?></span>
                     </div>
                     <div class="card-body">
                         <?php if (!$holiday['is_holiday']): ?>
-                        <div class="alert alert-light alert-has-icon shadow-sm border mb-3">
-                            <div class="alert-icon text-warning"><i class="far fa-bell"></i></div>
-                            <div class="alert-body">
-                                <div class="alert-title font-weight-bold">Penting</div>
-                                Silakan pilih status kehadiran Anda hari ini. Jika tidak memilih, status otomatis dianggap <b>Alpa</b>.
-                            </div>
-                        </div>
+                            <?php
+                            $status_siswa = $attendance ? $attendance['keterangan'] : '';
+                            $jam_masuk_siswa = ($attendance && !empty($attendance['jam_masuk'])) ? date('H.i', strtotime($attendance['jam_masuk'])) . ' WIB' : '';
 
-                        <!-- Status Buttons - Simple Click Like Guru -->
-                        <div class="row justify-content-center mb-3">
-                            <div class="col-4 mb-2">
-                                <form method="POST" action="" class="mb-0">
-                                    <?php $siswa_sudah_hadir = ($attendance && in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])); ?>
-                                    <button type="submit" name="absen_status" value="Hadir" class="btn btn-success btn-block py-2" style="<?php echo $siswa_sudah_hadir ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo $siswa_sudah_hadir ? 'false' : 'true'; ?>;">
-                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-check mr-1" style="font-size:0.75rem;"></i>Hadir</span>
-                                    </button>
-                                </form>
-                            </div>
-                            <div class="col-4 mb-2">
-                                <form method="POST" action="" class="mb-0">
-                                    <button type="submit" name="absen_status" value="Sakit" class="btn btn-warning btn-block py-2" style="<?php echo ($attendance && $attendance['keterangan'] == 'Sakit') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo ($attendance && $attendance['keterangan'] == 'Sakit') ? 'false' : 'true'; ?>;">
-                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-procedures mr-1" style="font-size:0.75rem;"></i>Sakit</span>
-                                    </button>
-                                </form>
-                            </div>
-                            <div class="col-4 mb-2">
-                                <form method="POST" action="" class="mb-0">
-                                    <button type="submit" name="absen_status" value="Izin" class="btn btn-info btn-block py-2" style="<?php echo ($attendance && $attendance['keterangan'] == 'Izin') ? 'cursor: not-allowed;' : 'opacity: 0.45;'; ?>" onclick="return <?php echo ($attendance && $attendance['keterangan'] == 'Izin') ? 'false' : 'true'; ?>;">
-                                        <span class="font-weight-bold" style="font-size: 0.8rem;"><i class="fas fa-envelope mr-1" style="font-size:0.75rem;"></i>Izin</span>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                            $hero_cls = 'is-empty';
+                            $hero_icon = 'fas fa-hourglass-half';
+                            $hero_title = 'Belum Absen';
+                            $hero_sub = 'Silakan pilih status kehadiran Anda hari ini.';
 
-                        <?php if ($attendance && in_array($attendance['keterangan'], ['Hadir', 'Terlambat'])): ?>
-                        <div class="text-center mb-3">
-                            <span class="badge badge-<?= $attendance['keterangan'] === 'Terlambat' ? 'warning' : 'success'; ?> px-4 py-2">
-                                <i class="fas fa-<?= $attendance['keterangan'] === 'Terlambat' ? 'clock' : 'check-circle'; ?> mr-2"></i>
-                                <?= $attendance['keterangan'] === 'Terlambat' ? 'Terlambat' : 'Tepat Waktu'; ?>
-                            </span>
-                        </div>
-                        <?php endif; ?>
-
-                        <?php if ($attendance): ?>
-                        <div class="text-center">
-                            <div class="badge badge-<?php 
-                                echo $attendance['keterangan'] == 'Hadir' ? 'success' : 
-                                    ($attendance['keterangan'] == 'Terlambat' ? 'warning' : 
-                                    ($attendance['keterangan'] == 'Sakit' ? 'warning' : 
-                                    ($attendance['keterangan'] == 'Izin' ? 'info' : 'danger'))); 
-                            ?> px-4 py-2" style="font-size: 1.1rem;">
-                                <i class="fas fa-<?php 
-                                    echo $attendance['keterangan'] == 'Hadir' ? 'check' : 
-                                        ($attendance['keterangan'] == 'Terlambat' ? 'clock' : 
-                                        ($attendance['keterangan'] == 'Sakit' ? 'procedures' : 
-                                        ($attendance['keterangan'] == 'Izin' ? 'envelope' : 'times'))); 
-                                ?> mr-2"></i>
-                                Status: <?php echo htmlspecialchars($attendance['keterangan']); ?> pada <?php echo $attendance['jam_masuk']; ?>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-
-                        <?php if ($attendance && $attendance['keterangan'] == 'Izin'): ?>
-                        <!-- Keterangan for Izin only -->
-                        <?php 
-                        $show_keterangan_form = empty($attendance['keterangan']);
-                        ?>
-                        <div class="mt-4">
-                            <?php if ($show_keterangan_form): ?>
-                            <form method="POST" action="">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Keterangan Izin</label>
-                                    <textarea name="keterangan" class="form-control" rows="3" placeholder="Masukkan keterangan izin..." required></textarea>
+                            if ($status_siswa === 'Hadir') {
+                                $hero_cls = 'is-hadir';
+                                $hero_icon = 'fas fa-check-circle';
+                                $hero_title = 'Hadir - Tepat Waktu';
+                                $hero_sub = $jam_masuk_siswa !== '' ? 'Kehadiran dicatat pukul ' . $jam_masuk_siswa : 'Kehadiran Anda sudah tercatat tepat waktu.';
+                            } elseif ($status_siswa === 'Terlambat') {
+                                $hero_cls = 'is-late';
+                                $hero_icon = 'fas fa-clock';
+                                $hero_title = 'Hadir - Terlambat';
+                                $hero_sub = $jam_masuk_siswa !== '' ? 'Kehadiran dicatat pukul ' . $jam_masuk_siswa : 'Kehadiran dicatat melebihi pukul 07:15 WIB.';
+                            } elseif ($status_siswa === 'Sakit') {
+                                $hero_cls = 'is-sakit';
+                                $hero_icon = 'fas fa-procedures';
+                                $hero_title = 'Sakit';
+                                $hero_sub = 'Semoga lekas sembuh.';
+                            } elseif ($status_siswa === 'Izin') {
+                                $hero_cls = 'is-izin';
+                                $hero_icon = 'fas fa-paper-plane';
+                                $hero_title = 'Izin';
+                                $hero_sub = 'Izin Anda sudah tercatat.';
+                            }
+                            ?>
+                            <div class="mapp-att-hero <?= $hero_cls ?>">
+                                <div class="mapp-att-hero-ico"><i class="<?= $hero_icon ?>"></i></div>
+                                <div class="mapp-att-hero-txt">
+                                    <div class="mapp-att-hero-title"><?= $hero_title ?></div>
+                                    <div class="mapp-att-hero-sub"><?= $hero_sub ?></div>
                                 </div>
-                                <button type="submit" name="submit_keterangan" class="btn btn-info btn-block">
-                                    <i class="fas fa-save mr-2"></i> Simpan Keterangan
-                                </button>
+                            </div>
+
+                            <div class="mapp-att-hint">
+                                <i class="far fa-bell"></i>
+                                <span>Silakan pilih status kehadiran Anda hari ini. Jika tidak memilih, status otomatis dianggap <b>Alpa</b>.</span>
+                            </div>
+
+                            <form method="POST" action="" id="attendanceFormSiswa">
+                                <div class="mapp-att-label">Pilih Status Kehadiran</div>
+                                <div class="mapp-att-actions">
+                                    <button type="button" onclick="siswaAutoAtt('Hadir')" class="mapp-att-btn is-hadir <?= in_array($status_siswa, ['Hadir', 'Terlambat']) ? 'active' : '' ?>">
+                                        <i class="fas fa-check"></i><span>Hadir</span>
+                                    </button>
+                                    <button type="button" onclick="siswaAutoAtt('Sakit')" class="mapp-att-btn is-sakit <?= ($status_siswa === 'Sakit') ? 'active' : '' ?>">
+                                        <i class="fas fa-procedures"></i><span>Sakit</span>
+                                    </button>
+                                    <button type="button" onclick="siswaAutoAtt('Izin')" class="mapp-att-btn is-izin <?= ($status_siswa === 'Izin') ? 'active' : '' ?>">
+                                        <i class="fas fa-paper-plane"></i><span>Izin</span>
+                                    </button>
+                                </div>
+                                <input type="hidden" name="absen_status" id="attStatusSiswa" value="">
                             </form>
-                            <?php else: ?>
-                            <div class="form-group">
-                                <label class="font-weight-bold">Keterangan Izin</label>
-                                <div class="alert alert-light border shadow-sm mb-2">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div class="flex-grow-1">
-                                            <i class="fas fa-info-circle text-info mr-2"></i>
-                                            <span><?php echo htmlspecialchars($attendance['keterangan']); ?></span>
-                                        </div>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="editKeteranganSiswa()">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                        <?php endif; ?>
+                            <script>
+                            function siswaAutoAtt(status) {
+                                var cur = '<?= in_array($status_siswa, ['Hadir', 'Terlambat']) ? 'Hadir' : $status_siswa ?>';
+                                if (cur !== '' && status === cur) { return; }
+                                document.getElementById('attStatusSiswa').value = status;
+                                document.getElementById('attendanceFormSiswa').submit();
+                            }
+                            </script>
                         <?php else: ?>
-                            <div class="d-flex align-items-center justify-content-center text-center py-2">
-                                <div>
-                                    <div class="mb-3">
-                                        <i class="fas fa-umbrella-beach text-warning" style="font-size: 60px;"></i>
-                                    </div>
-                                    <h5 class="font-weight-bold mb-1">Hari Libur Sekolah</h5>
-                                    <p class="text-muted mb-2">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo $holiday['name']; ?></strong>.</p>
-                                    <div class="badge badge-warning px-3 py-1" style="font-size: 0.9rem; border-radius: 30px;">
-                                        <i class="fas fa-info-circle mr-2"></i> Kehadiran Harian Ditutup
-                                    </div>
+                            <div class="mapp-att-hero is-holiday">
+                                <div class="mapp-att-hero-ico"><i class="fas fa-umbrella-beach"></i></div>
+                                <div class="mapp-att-hero-txt">
+                                    <div class="mapp-att-hero-title">Hari Libur Sekolah</div>
+                                    <div class="mapp-att-hero-sub">Hari ini, <strong><?php echo formatDateIndonesia(date('Y-m-d')); ?></strong> adalah <strong><?php echo htmlspecialchars($holiday['name']); ?></strong>. Kehadiran harian ditutup.</div>
                                 </div>
                             </div>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
-
         </div>
 
         <div class="row">
@@ -953,14 +916,19 @@ include '../templates/footer.php';
 if (isset($swal_message)): ?>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        Swal.fire({
-            title: '<?php echo $swal_message['title']; ?>',
-            text: '<?php echo $swal_message['text']; ?>',
-            icon: '<?php echo $swal_message['icon']; ?>',
-            timer: 3000,
-            timerProgressBar: true,
-            showConfirmButton: false
-        });
+        if (typeof toastr !== 'undefined') {
+            toastr.options = { positionClass: 'toast-top-right', timeOut: 2000, progressBar: false };
+            var type = '<?= ($swal_message['icon'] === 'success') ? 'success' : (($swal_message['icon'] === 'warning') ? 'warning' : 'error') ?>';
+            toastr[type]('<?= addslashes($swal_message['text']) ?>', '<?= addslashes($swal_message['title']) ?>');
+        } else if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: '<?= addslashes($swal_message['title']) ?>',
+                text: '<?= addslashes($swal_message['text']) ?>',
+                icon: '<?= addslashes($swal_message['icon']) ?>',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
     });
 </script>
 <?php endif; ?>

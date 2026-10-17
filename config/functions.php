@@ -3716,7 +3716,7 @@ if (!function_exists('simadSaveSingleAttendance')) {
 
         try {
             if ($context === 'harian') {
-                if (!in_array($status, ['', 'Hadir', 'Sakit', 'Izin', 'Alpa'], true)) {
+                if (!in_array($status, ['', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Terlambat'], true)) {
                     return ['success' => false, 'error' => 'Status tidak valid.'];
                 }
                 $check = $pdo->prepare("SELECT * FROM tb_absensi WHERE id_siswa = ? AND tanggal = ?");

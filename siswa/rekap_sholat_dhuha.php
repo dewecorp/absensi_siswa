@@ -8,6 +8,11 @@ if (!isAuthorized(['siswa'])) {
 }
 
 $id_siswa = $_SESSION['user_id'];
+$stmt_stu = $pdo->prepare("SELECT jenis_kelamin FROM tb_siswa WHERE id_siswa = ?");
+$stmt_stu->execute([$id_siswa]);
+$student_jk = $stmt_stu->fetchColumn() ?: '';
+$is_laki = ($student_jk === 'L');
+
 $school_profile = getSchoolProfile($pdo);
 $current_start_year = getTahunAjaranBerjalanStartYear();
 $tahun_ajaran = sprintf('%04d/%04d', $current_start_year, $current_start_year + 1);
@@ -278,7 +283,7 @@ echo "<script>
                                                             <div class="att-monthly-sub">Periode <?php echo htmlspecialchars($row['periode']); ?></div>
                                                         </div>
                                                     </div>
-                                                    <div class="att-monthly-stats cols-3">
+                                                    <div class="att-monthly-stats <?= $is_laki ? 'cols-2' : 'cols-3' ?>">
                                                         <div class="att-monthly-stat-box stat-hadir">
                                                             <div class="att-monthly-stat-val"><?php echo (int)($row['melaksanakan'] ?? 0); ?></div>
                                                             <div class="att-monthly-stat-lbl">Melaksanakan</div>
@@ -287,10 +292,12 @@ echo "<script>
                                                             <div class="att-monthly-stat-val"><?php echo (int)($row['tidak_melaksanakan'] ?? 0); ?></div>
                                                             <div class="att-monthly-stat-lbl">Tidak Melaksanakan</div>
                                                         </div>
+                                                        <?php if (!$is_laki): ?>
                                                         <div class="att-monthly-stat-box stat-sakit">
                                                             <div class="att-monthly-stat-val"><?php echo (int)($row['berhalangan'] ?? 0); ?></div>
                                                             <div class="att-monthly-stat-lbl">Berhalangan</div>
                                                         </div>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             <?php endforeach; ?>
@@ -344,7 +351,7 @@ echo "<script>
                                         </div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-4 col-md-4 col-lg-4">
+                                        <div class="<?= $is_laki ? 'col-6 col-md-6 col-lg-6' : 'col-4 col-md-4 col-lg-4' ?>">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-success">
                                                     <i class="fas fa-check"></i>
@@ -359,7 +366,7 @@ echo "<script>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-4 col-md-4 col-lg-4">
+                                        <div class="<?= $is_laki ? 'col-6 col-md-6 col-lg-6' : 'col-4 col-md-4 col-lg-4' ?>">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-danger">
                                                     <i class="fas fa-times"></i>
@@ -374,6 +381,7 @@ echo "<script>
                                                 </div>
                                             </div>
                                         </div>
+                                        <?php if (!$is_laki): ?>
                                         <div class="col-4 col-md-4 col-lg-4">
                                             <div class="card card-statistic-1">
                                                 <div class="card-icon bg-warning">
@@ -389,6 +397,7 @@ echo "<script>
                                                 </div>
                                             </div>
                                         </div>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="row">
                                         <div class="col-12 text-center mt-3">

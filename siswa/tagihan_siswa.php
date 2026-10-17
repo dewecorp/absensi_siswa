@@ -19,20 +19,81 @@ function normalizeSibayarItems($items): array {
 function renderSibayarDetailTagihan(array $row): string {
     $items = $row['item_belum_bayar'] ?? [];
     if (!is_array($items) || empty($items)) {
-        return '<span class="text-muted">Tidak ada rincian tunggakan.</span>';
+        return '<span class="text-muted small">Tidak ada rincian tunggakan.</span>';
     }
 
-    $html = '<div class="d-flex flex-wrap" style="gap: 6px;">';
+    $html = '<div class="sfin-detail-chips">';
     foreach ($items as $item) {
-        $html .= '<span class="badge badge-warning px-2 py-1">' . htmlspecialchars((string)$item, ENT_QUOTES, 'UTF-8') . '</span>';
+        $html .= '<span class="sfin-detail-chip"><i class="fas fa-clock mr-1"></i>' . htmlspecialchars((string)$item, ENT_QUOTES, 'UTF-8') . '</span>';
     }
     $html .= '</div>';
     return $html;
 }
 
+function renderSibayarTagihanCards(array $items): void {
+    ?>
+    <div class="sfin-card-list">
+        <?php foreach ($items as $row): ?>
+            <?php 
+            $sisa = (int)($row['sisa_tagihan'] ?? 0); 
+            $total_nom = (int)($row['total_nominal'] ?? 0);
+            $total_bay = isset($row['total_bayar']) ? (int)$row['total_bayar'] : ($total_nom - $sisa);
+            ?>
+            <div class="sfin-bill-card">
+                <div class="sfin-bill-head">
+                    <div>
+                        <div class="sfin-bill-title"><?php echo htmlspecialchars((string)($row['nama_pembayaran'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div class="sfin-bill-type">
+                            <i class="fas fa-tag"></i> <?php echo htmlspecialchars((string)($row['tipe_bayar'] ?? 'Tagihan'), ENT_QUOTES, 'UTF-8'); ?>
+                            <span>•</span>
+                            <span>TA <?php echo htmlspecialchars((string)($row['tahun_ajaran'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-<?php echo $sisa > 0 ? 'danger' : 'success'; ?> px-2 py-1" style="font-size: 10px; font-weight: 800;">
+                            <?php echo $sisa > 0 ? 'Belum Lunas' : 'Lunas'; ?>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="sfin-bill-meta-grid">
+                    <div class="sfin-bill-meta-item">
+                        <div class="meta-lbl">Total Biaya</div>
+                        <div class="meta-val"><?php echo rupiahSibayar($total_nom); ?></div>
+                    </div>
+                    <div class="sfin-bill-meta-item">
+                        <div class="meta-lbl">Sudah Dibayar</div>
+                        <div class="meta-val text-success"><?php echo rupiahSibayar($total_bay); ?></div>
+                    </div>
+                    <div class="sfin-bill-meta-item" style="grid-column: span 2; border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 2px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="meta-lbl font-weight-bold">Sisa Tagihan</div>
+                            <div class="meta-val text-danger" style="font-size: 15px;"><?php echo rupiahSibayar($sisa); ?></div>
+                        </div>
+                    </div>
+                </div>
+
+                <?php if (!empty($row['item_belum_bayar'])): ?>
+                    <div class="mt-2">
+                        <div class="small text-muted font-weight-bold" style="font-size: 10.5px;">Rincian Tunggakan:</div>
+                        <?php echo renderSibayarDetailTagihan($row); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php
+}
+
 function renderSibayarTagihanTable(array $items): void {
     ?>
-    <div class="table-responsive">
+    <!-- Mobile Cards View -->
+    <div class="d-md-none">
+        <?php renderSibayarTagihanCards($items); ?>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="table-responsive d-none d-md-block">
         <table class="table table-bordered table-hover text-dark mb-0">
             <thead class="bg-light">
                 <tr>
@@ -164,6 +225,8 @@ include '../templates/header.php';
 include_once '../templates/sidebar.php';
 ?>
 
+<link rel="stylesheet" href="../assets/css/siswa-keuangan-mobile.css">
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -172,105 +235,114 @@ include_once '../templates/sidebar.php';
 
         <div class="section-body">
             <?php if ($api_status !== 'success'): ?>
-                <div class="alert alert-warning alert-has-icon">
+                <div class="alert alert-warning alert-has-icon mb-3" style="border-radius: 14px;">
                     <div class="alert-icon"><i class="fas fa-plug"></i></div>
                     <div class="alert-body">
-                        <div class="alert-title">Koneksi Terputus</div>
-                        Sistem tidak dapat mengambil data tagihan terbaru dari server Sibayar.<br>
-                        <small class="text-dark"><strong>Detail Teknis:</strong> <?php echo htmlspecialchars((string)$api_message, ENT_QUOTES, 'UTF-8'); ?></small>
+                        <div class="alert-title font-weight-bold">Koneksi Server Sibayar</div>
+                        Sistem menampilkan data tagihan lokal. Data realtime belum tersambung.<br>
+                        <small class="text-dark"><strong>Catatan:</strong> <?php echo htmlspecialchars((string)$api_message, ENT_QUOTES, 'UTF-8'); ?></small>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-4">
-                        <div class="mb-3 mb-md-0">
-                            <h5 class="font-weight-bold mb-2"><?php echo htmlspecialchars((string)($api_student['nama'] ?? $student['nama_siswa'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></h5>
-                            <div class="text-muted">NISN: <strong class="text-dark"><?php echo htmlspecialchars((string)($api_student['nisn'] ?? $student['nisn'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></strong></div>
-                            <div class="text-muted">Kelas: <strong class="text-dark"><?php echo htmlspecialchars((string)($api_student['kelas'] ?? $student['nama_kelas'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></strong></div>
-                            <div class="text-muted">Tahun ajaran aktif Sibayar: <strong class="text-dark"><?php echo htmlspecialchars($tahun_ajaran_aktif, ENT_QUOTES, 'UTF-8'); ?></strong></div>
+            <!-- Hero Card Tagihan Siswa Ala Mobile Apps -->
+            <div class="sfin-hero-card <?php echo $total_all > 0 ? 'theme-danger' : 'theme-success'; ?>">
+                <div class="sfin-hero-top">
+                    <div class="sfin-student-info">
+                        <div class="sfin-student-name">
+                            <i class="fas fa-receipt mr-1"></i> <?php echo htmlspecialchars((string)($api_student['nama'] ?? $student['nama_siswa'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?>
                         </div>
-                        <span class="badge badge-<?php echo $api_status === 'success' ? 'success' : 'warning'; ?> px-3 py-2">
-                            <i class="fas fa-<?php echo $api_status === 'success' ? 'sync-alt' : 'exclamation-triangle'; ?> mr-1"></i>
-                            <?php echo $api_status === 'success' ? 'Data realtime Sibayar' : 'Data belum tersambung'; ?>
+                        <div class="sfin-student-sub">
+                            <span>NISN: <?php echo htmlspecialchars((string)($api_student['nisn'] ?? $student['nisn'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></span>
+                            <span>•</span>
+                            <span>Kelas <?php echo htmlspecialchars((string)($api_student['kelas'] ?? $student['nama_kelas'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="sfin-badge-pill">
+                            <i class="fas fa-<?php echo $api_status === 'success' ? 'sync-alt' : 'exclamation-circle'; ?> mr-1"></i>
+                            <?php echo $api_status === 'success' ? 'Sibayar Live' : 'Offline'; ?>
                         </span>
                     </div>
+                </div>
 
-                    <div class="row mb-4">
-                        <div class="col-md-3 col-6 mb-3">
-                            <div class="border rounded bg-light p-3 h-100">
-                                <div class="small text-muted">Total Tunggakan</div>
-                                <div class="h5 mb-0 text-danger font-weight-bold"><?php echo rupiahSibayar($total_all); ?></div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <div class="border rounded p-3 h-100">
-                                <div class="small text-muted">Tahun Ajaran Aktif</div>
-                                <div class="h6 mb-0 text-dark"><?php echo htmlspecialchars($tahun_ajaran_aktif, ENT_QUOTES, 'UTF-8'); ?></div>
-                                <div class="font-weight-bold text-danger"><?php echo rupiahSibayar($total_active); ?></div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <div class="border rounded p-3 h-100">
-                                <div class="small text-muted">Tahun Ajaran Lama</div>
-                                <div class="h6 mb-0 text-dark"><?php echo empty($tahun_tunggakan) ? '-' : htmlspecialchars(implode(', ', $tahun_tunggakan), ENT_QUOTES, 'UTF-8'); ?></div>
-                                <div class="font-weight-bold text-danger"><?php echo rupiahSibayar($total_old); ?></div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <div class="border rounded p-3 h-100">
-                                <div class="small text-muted">Status</div>
-                                <span class="badge badge-<?= $status_color ?> mt-1"><i class="fas fa-<?= $status_icon ?> mr-1"></i> <?= $status_text ?></span>
-                            </div>
-                        </div>
+                <div class="mt-2">
+                    <div class="sfin-hero-main-title">Total Seluruh Tunggakan</div>
+                    <div class="sfin-hero-amount <?php echo $total_all > 0 ? 'gold' : ''; ?>">
+                        <?php echo rupiahSibayar($total_all); ?>
                     </div>
+                </div>
 
-                    <?php if ($api_status === 'success' && $status_text === 'Lunas'): ?>
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle mr-2"></i> Tidak ada tagihan yang belum dibayar.
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="font-weight-bold mb-0">Tagihan Tahun Ajaran Aktif</h6>
-                            <span class="badge badge-light border"><?php echo htmlspecialchars($tahun_ajaran_aktif, ENT_QUOTES, 'UTF-8'); ?></span>
-                        </div>
-                        <?php if (!empty($billing_data)): ?>
-                            <?php renderSibayarTagihanTable($billing_data); ?>
-                        <?php else: ?>
-                            <div class="alert alert-light border mb-0">Tidak ada tagihan aktif yang belum dibayar.</div>
-                        <?php endif; ?>
+                <div class="sfin-stats-grid cols-3">
+                    <div class="sfin-stat-box">
+                        <div class="lbl">Tahun Aktif</div>
+                        <div class="val"><?php echo rupiahSibayar($total_active); ?></div>
                     </div>
-
-                    <div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="font-weight-bold mb-0">Tunggakan Tahun Ajaran Lama</h6>
-                            <span class="badge badge-warning border">Data dari Sibayar</span>
+                    <div class="sfin-stat-box">
+                        <div class="lbl">Tahun Lama</div>
+                        <div class="val"><?php echo rupiahSibayar($total_old); ?></div>
+                    </div>
+                    <div class="sfin-stat-box">
+                        <div class="lbl">Status</div>
+                        <div class="val">
+                            <i class="fas fa-<?= $status_icon ?> mr-1"></i> <?= $status_text ?>
                         </div>
-                        <?php if (!empty($old_arrears_normalized)): ?>
-                            <?php foreach ($old_arrears_normalized as $tahun => $group): ?>
-                                <div class="border rounded mb-3">
-                                    <div class="bg-light px-3 py-2 d-flex justify-content-between align-items-center">
-                                        <strong><?php echo htmlspecialchars($tahun, ENT_QUOTES, 'UTF-8'); ?></strong>
-                                        <span class="text-danger font-weight-bold"><?php echo rupiahSibayar($group['total']); ?></span>
-                                    </div>
-                                    <div class="p-3">
-                                        <?php if (!empty($group['items'])): ?>
-                                            <?php renderSibayarTagihanTable($group['items']); ?>
-                                        <?php else: ?>
-                                            <div class="alert alert-warning mb-0">Ada tunggakan tahun ajaran ini, tetapi rincian item tidak dikirim oleh Sibayar.</div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="alert alert-light border mb-0">Tidak ada tunggakan tahun ajaran lama.</div>
-                        <?php endif; ?>
                     </div>
                 </div>
             </div>
+
+            <!-- Konten Tagihan Aktif -->
+            <div class="sfin-section-head">
+                <div class="sfin-section-title">
+                    <i class="fas fa-calendar-alt text-primary"></i> Tagihan Tahun Ajaran Aktif
+                </div>
+                <div class="sfin-section-count"><?php echo htmlspecialchars($tahun_ajaran_aktif, ENT_QUOTES, 'UTF-8'); ?></div>
+            </div>
+
+            <?php if (!empty($billing_data)): ?>
+                <?php renderSibayarTagihanTable($billing_data); ?>
+            <?php else: ?>
+                <div class="card border-0 shadow-sm text-center py-4 mb-4" style="border-radius: 14px;">
+                    <div class="text-success font-weight-bold">
+                        <i class="fas fa-check-circle fa-2x mb-2 d-block"></i>
+                        Tidak ada tagihan aktif yang belum dibayar.
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Konten Tunggakan Tahun Lama -->
+            <div class="sfin-section-head mt-4">
+                <div class="sfin-section-title">
+                    <i class="fas fa-history text-warning"></i> Tunggakan Tahun Ajaran Lama
+                </div>
+                <div class="sfin-section-count"><?php echo count($old_arrears_normalized); ?> Periode</div>
+            </div>
+
+            <?php if (!empty($old_arrears_normalized)): ?>
+                <?php foreach ($old_arrears_normalized as $tahun => $group): ?>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center bg-white border px-3 py-2" style="border-radius: 12px 12px 0 0; border-bottom: 2px solid #e2e8f0 !important;">
+                            <span class="font-weight-bold text-dark"><i class="fas fa-folder-open text-warning mr-1"></i> TA <?php echo htmlspecialchars($tahun, ENT_QUOTES, 'UTF-8'); ?></span>
+                            <span class="text-danger font-weight-bold"><?php echo rupiahSibayar($group['total']); ?></span>
+                        </div>
+                        <div class="bg-white border border-top-0 p-2" style="border-radius: 0 0 12px 12px;">
+                            <?php if (!empty($group['items'])): ?>
+                                <?php renderSibayarTagihanTable($group['items']); ?>
+                            <?php else: ?>
+                                <div class="text-muted small p-2">Rincian item tagihan tidak dikirim oleh Sibayar.</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="card border-0 shadow-sm text-center py-4 mb-4" style="border-radius: 14px;">
+                    <div class="text-muted small">
+                        <i class="fas fa-clipboard-check fa-2x mb-2 d-block text-success"></i>
+                        Tidak ada tunggakan tahun ajaran lama.
+                    </div>
+                </div>
+            <?php endif; ?>
+
         </div>
     </section>
 </div>

@@ -125,7 +125,25 @@ $progress_percent = $progress_total > 0 ? round(($progress_filled / $progress_to
 
 require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
+
+function get_nilai_badge_class($val) {
+    if ($val <= 0) return 'snilai-badge-muted';
+    if ($val >= 85) return 'snilai-badge-success';
+    if ($val >= 75) return 'snilai-badge-primary';
+    if ($val >= 60) return 'snilai-badge-warning';
+    return 'snilai-badge-danger';
+}
+
+function get_nilai_status_text($val) {
+    if ($val <= 0) return 'Belum Diisi';
+    if ($val >= 85) return 'Sangat Baik';
+    if ($val >= 75) return 'Baik';
+    if ($val >= 60) return 'Cukup';
+    return 'Perlu Belajar';
+}
 ?>
+
+<link rel="stylesheet" href="../assets/css/siswa-nilai-mobile.css">
 
 <div class="main-content">
     <section class="section">
@@ -134,105 +152,149 @@ require_once '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <table class="table table-sm table-borderless">
-                                <tr>
-                                    <th width="150">Nama Siswa</th>
-                                    <td>: <?= htmlspecialchars($student['nama_siswa']) ?></td>
-                                </tr>
-                                <tr>
-                                    <th>Kelas</th>
-                                    <td>: <?= htmlspecialchars($student['nama_kelas']) ?></td>
-                                </tr>
-                                <tr>
-                                    <th>Tahun Ajaran</th>
-                                    <td>: <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars(formatSemesterLabelForExport($semester_aktif)) ?>)</td>
-                                </tr>
-                            </table>
+            <!-- Hero Card Ringkasan Nilai Siswa -->
+            <div class="snilai-hero-card">
+                <div class="snilai-hero-top">
+                    <div class="snilai-student-info">
+                        <div class="snilai-student-name">
+                            <i class="fas fa-award mr-1"></i> <?= htmlspecialchars($student['nama_siswa']) ?>
                         </div>
-                        <div class="col-md-6 text-right">
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-success" onclick="exportToExcel()">
-                                    <i class="fas fa-file-excel"></i> Ekspor Excel
-                                </button>
-                                <button type="button" class="btn btn-warning" onclick="exportToPDF()">
-                                    <i class="fas fa-file-pdf"></i> Ekspor PDF
-                                </button>
-                            </div>
+                        <div class="snilai-student-sub">
+                            <span>Kelas <?= htmlspecialchars($student['nama_kelas']) ?></span>
+                            <span>•</span>
+                            <span class="snilai-badge-ta">TA <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars(formatSemesterLabelForExport($semester_aktif)) ?>)</span>
                         </div>
                     </div>
+                </div>
 
-                    <form method="GET" action="" class="mb-4">
-                        <div class="row align-items-end">
-                            <div class="col-md-6 col-lg-5">
-                                <div class="form-group mb-0">
-                                    <label>Jenis Penilaian</label>
-                                    <select name="jenis" class="form-control" onchange="this.form.submit()">
-                                        <option value="Harian" <?= $selected_jenis == 'Harian' ? 'selected' : '' ?>>Nilai Harian (Rerata)</option>
-                                        <option value="PTS" <?= $selected_jenis == 'PTS' ? 'selected' : '' ?>>Penilaian Tengah Semester (PTS)</option>
-                                        <option value="PAS" <?= $selected_jenis == 'PAS' ? 'selected' : '' ?>>Penilaian Akhir Semester (PAS)</option>
-                                        <option value="PAT" <?= $selected_jenis == 'PAT' ? 'selected' : '' ?>>Penilaian Akhir Tahun (PAT)</option>
-                                        <option value="Kokurikuler" <?= $selected_jenis == 'Kokurikuler' ? 'selected' : '' ?>>Nilai Kokurikuler</option>
-                                    </select>
+                <div class="snilai-stats-grid">
+                    <div class="snilai-stat-box">
+                        <div class="snilai-stat-val gold"><?= $rerata ?></div>
+                        <div class="snilai-stat-lbl">Rerata Nilai</div>
+                    </div>
+                    <div class="snilai-stat-box">
+                        <div class="snilai-stat-val"><?= $total_nilai ?></div>
+                        <div class="snilai-stat-lbl">Total Nilai</div>
+                    </div>
+                    <div class="snilai-stat-box">
+                        <div class="snilai-stat-val"><?= (int)$progress_filled ?>/<?= (int)$progress_total ?></div>
+                        <div class="snilai-stat-lbl">Mapel Terisi</div>
+                    </div>
+                </div>
+
+                <div class="snilai-hero-progress">
+                    <div class="snilai-hero-progress-head">
+                        <span>Capaian Penilaian (<?= htmlspecialchars($selected_jenis) ?>)</span>
+                        <span><?= (float)$progress_percent ?>%</span>
+                    </div>
+                    <div class="snilai-progress-bar-bg">
+                        <div class="snilai-progress-bar-fill" style="width: <?= (float)$progress_percent ?>%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tombol Aksi Ekspor -->
+            <div class="snilai-actions-bar">
+                <button type="button" class="snilai-chip-btn btn-excel" onclick="exportToExcel()">
+                    <i class="fas fa-file-excel"></i> Ekspor Excel
+                </button>
+                <button type="button" class="snilai-chip-btn btn-pdf" onclick="exportToPDF()">
+                    <i class="fas fa-file-pdf"></i> Ekspor PDF
+                </button>
+            </div>
+
+            <!-- Navigasi Jenis Penilaian (Pill Tabs Horizontal Scroll) -->
+            <div class="snilai-pills-container">
+                <div class="snilai-pills-scroll">
+                    <a href="?jenis=Harian" class="snilai-pill-item <?= $selected_jenis === 'Harian' ? 'active' : '' ?>">
+                        <i class="fas fa-book-reader"></i> Nilai Harian
+                    </a>
+                    <a href="?jenis=PTS" class="snilai-pill-item <?= $selected_jenis === 'PTS' ? 'active' : '' ?>">
+                        <i class="fas fa-clipboard-check"></i> PTS (Tengah Sem.)
+                    </a>
+                    <a href="?jenis=PAS" class="snilai-pill-item <?= $selected_jenis === 'PAS' ? 'active' : '' ?>">
+                        <i class="fas fa-file-alt"></i> PAS (Akhir Sem.)
+                    </a>
+                    <a href="?jenis=PAT" class="snilai-pill-item <?= $selected_jenis === 'PAT' ? 'active' : '' ?>">
+                        <i class="fas fa-calendar-check"></i> PAT (Akhir Thn)
+                    </a>
+                    <a href="?jenis=Kokurikuler" class="snilai-pill-item <?= $selected_jenis === 'Kokurikuler' ? 'active' : '' ?>">
+                        <i class="fas fa-palette"></i> Kokurikuler
+                    </a>
+                </div>
+            </div>
+
+            <!-- Daftar Kartu Nilai Per Mata Pelajaran (Mobile Apps View) -->
+            <div class="snilai-grade-list">
+                <?php if (empty($subjects)): ?>
+                    <div class="card border-0 shadow-sm text-center py-4" style="border-radius: 14px;">
+                        <div class="text-muted small">Tidak ada mata pelajaran yang ditemukan.</div>
+                    </div>
+                <?php else: ?>
+                    <?php 
+                    $no = 1;
+                    foreach ($subjects as $mapel): 
+                        $val = $rekap_data[$mapel['id_mapel']] ?? 0;
+                        $badge_class = get_nilai_badge_class($val);
+                        $status_text = get_nilai_status_text($val);
+                    ?>
+                        <div class="snilai-grade-card">
+                            <div class="snilai-grade-left">
+                                <div class="snilai-grade-icon <?= $val > 0 ? 'tone-green' : 'tone-slate' ?>">
+                                    <?= $no++ ?>
                                 </div>
-                            </div>
-                            <div class="col-md-6 col-lg-7">
-                                <div class="card border mb-0">
-                                    <div class="card-body p-2">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <strong class="small">Progres Nilai Anda:</strong>
-                                            <span class="text-muted small"><?= (int)$progress_filled ?>/<?= (int)$progress_total ?> Mapel</span>
-                                        </div>
-                                        <div class="progress" style="height: 10px;">
-                                            <div class="progress-bar bg-primary" role="progressbar" style="width: <?= (float)$progress_percent ?>%;" aria-valuenow="<?= (float)$progress_percent ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                        <div class="text-right small mt-1" style="font-size: 10px;"><?= (float)$progress_percent ?>%</div>
+                                <div class="min-w-0">
+                                    <div class="snilai-grade-title"><?= htmlspecialchars($mapel['nama_mapel']) ?></div>
+                                    <div class="snilai-grade-sub">
+                                        <i class="fas fa-tag mr-1 text-muted"></i> <?= htmlspecialchars($selected_jenis) ?>
                                     </div>
                                 </div>
                             </div>
+                            <div class="snilai-grade-badge <?= $badge_class ?>">
+                                <div class="val"><?= $val > 0 ? $val : '-' ?></div>
+                                <div class="lbl"><?= $status_text ?></div>
+                            </div>
                         </div>
-                    </form>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped" id="rekapNilaiTable">
-                            <thead>
-                                <tr>
-                                    <th width="50" class="text-center">No</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th width="150" class="text-center">Nilai</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $no = 1;
-                                foreach ($subjects as $mapel): 
-                                    $val = $rekap_data[$mapel['id_mapel']] ?? 0;
-                                ?>
-                                    <tr>
-                                        <td class="text-center"><?= $no++ ?></td>
-                                        <td><?= htmlspecialchars($mapel['nama_mapel']) ?></td>
-                                        <td class="text-center font-weight-bold">
-                                            <?= $val > 0 ? $val : '-' ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                            <tfoot>
-                                <tr class="bg-light">
-                                    <th colspan="2" class="text-right">Total Nilai</th>
-                                    <th class="text-center"><?= $total_nilai ?></th>
-                                </tr>
-                                <tr class="bg-light">
-                                    <th colspan="2" class="text-right">Rerata</th>
-                                    <th class="text-center"><?= $rerata ?></th>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
+            <!-- Tabel Tersembunyi (Untuk kompatibilitas Ekspor Excel & PDF) -->
+            <div class="d-none">
+                <table class="table table-bordered table-striped" id="rekapNilaiTable">
+                    <thead>
+                        <tr>
+                            <th width="50" class="text-center">No</th>
+                            <th>Mata Pelajaran</th>
+                            <th width="150" class="text-center">Nilai</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $no_t = 1;
+                        foreach ($subjects as $mapel): 
+                            $val = $rekap_data[$mapel['id_mapel']] ?? 0;
+                        ?>
+                            <tr>
+                                <td class="text-center"><?= $no_t++ ?></td>
+                                <td><?= htmlspecialchars($mapel['nama_mapel']) ?></td>
+                                <td class="text-center font-weight-bold">
+                                    <?= $val > 0 ? $val : '-' ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-light">
+                            <th colspan="2" class="text-right">Total Nilai</th>
+                            <th class="text-center"><?= $total_nilai ?></th>
+                        </tr>
+                        <tr class="bg-light">
+                            <th colspan="2" class="text-right">Rerata</th>
+                            <th class="text-center"><?= $rerata ?></th>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
         </div>
     </section>

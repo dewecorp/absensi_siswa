@@ -105,6 +105,8 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<link rel="stylesheet" href="../assets/css/siswa-keuangan-mobile.css">
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -116,83 +118,132 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            
-            <!-- Summary Cards -->
-            <div class="row">
-                <div class="col-lg-6 col-md-6 col-sm-12 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-warning">
-                            <i class="fas fa-money-bill-wave"></i>
+            <!-- Hero Card Biaya Ujian Siswa Ala Mobile Apps -->
+            <div class="sfin-hero-card theme-amber">
+                <div class="sfin-hero-top">
+                    <div class="sfin-student-info">
+                        <div class="sfin-student-name">
+                            <i class="fas fa-file-invoice mr-1"></i> Rencana Biaya Ujian
                         </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Total Biaya Ujian</h4>
-                            </div>
-                            <div class="card-body">
-                                Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?>
-                            </div>
+                        <div class="sfin-student-sub">
+                            <span>Kelas VI</span>
+                            <span>•</span>
+                            <span>TA <?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '-') ?></span>
                         </div>
                     </div>
+                    <div>
+                        <span class="sfin-badge-pill">
+                            <?= $jumlah_siswa ?> Siswa Kelas 6
+                        </span>
+                    </div>
                 </div>
-                <div class="col-lg-6 col-md-6 col-sm-12 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-info">
-                            <i class="fas fa-users"></i>
+
+                <div class="mt-2">
+                    <div class="sfin-hero-main-title">Biaya Per Siswa</div>
+                    <div class="sfin-hero-amount gold">
+                        Rp <?= number_format($biaya_per_siswa, 0, ',', '.') ?>
+                    </div>
+                </div>
+
+                <div class="sfin-stats-grid">
+                    <div class="sfin-stat-box">
+                        <div class="lbl">Total Anggaran</div>
+                        <div class="val text-white">
+                            Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?>
                         </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Biaya Per Siswa</h4>
-                            </div>
-                            <div class="card-body">
-                                Rp <?= number_format($biaya_per_siswa, 0, ',', '.') ?>
-                            </div>
+                    </div>
+                    <div class="sfin-stat-box">
+                        <div class="lbl">Status Publikasi</div>
+                        <div class="val text-white">
+                            <?= ($visibility_setting === 'open' || !$is_student) ? 'Terbuka' : 'Ditutup' ?>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- TABEL 2: RENCANA PENGELUARAN -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Rincian Biaya Ujian</h4>
+            <?php if ($visibility_setting == 'closed' && $is_student): ?>
+                <div class="card border-0 shadow-sm text-center py-5" style="border-radius: 16px;">
+                    <div class="card-body">
+                        <i class="fas fa-lock fa-3x mb-3 text-warning"></i>
+                        <h6 class="font-weight-bold text-dark mb-1">Rincian Belum Dipublikasikan</h6>
+                        <p class="text-muted small mb-0 px-3">
+                            Rincian komponen biaya ujian kelas 6 masih dalam tahap penyusunan oleh madrasah dan belum dibuka untuk siswa.
+                        </p>
+                    </div>
+                </div>
+            <?php else: ?>
+                <!-- Rincian Biaya Ujian -->
+                <div class="sfin-section-head">
+                    <div class="sfin-section-title">
+                        <i class="fas fa-list-alt text-primary"></i> Rincian Komponen Biaya Ujian
+                    </div>
+                    <div class="sfin-section-count"><?= count($rencana_pengeluaran) ?> Komponen</div>
+                </div>
+
+                <!-- Mobile Cards View -->
+                <div class="sfin-card-list d-md-none">
+                    <?php if (empty($rencana_pengeluaran)): ?>
+                        <div class="card border-0 shadow-sm text-center py-4" style="border-radius: 14px;">
+                            <div class="text-muted small">Belum ada rincian pengeluaran ujian.</div>
                         </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover" id="table-pengeluaran">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center" width="5%">No</th>
-                                            <th>Uraian</th>
-                                            <th>Kategori</th>
-                                            <th class="text-center">Volume</th>
-                                            <th class="text-right">Satuan (Rp)</th>
-                                            <th class="text-center">Jumlah</th>
-                                            <th class="text-center">X</th>
-                                            <th class="text-right">Total (Rp)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($rencana_pengeluaran as $i => $row): ?>
-                                        <tr>
-                                            <td class="text-center"><?= $i + 1 ?></td>
-                                            <td><?= htmlspecialchars($row['uraian']) ?></td>
-                                            <td><?= htmlspecialchars($row['kategori'] ?? '-') ?></td>
-                                            <td class="text-center"><?= number_format($row['volume'], 0, ',', '.') ?></td>
-                                            <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
-                                            <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
-                                            <td class="text-center"><?= number_format($row['perkalian'] ?? 1, 0, ',', '.') ?></td>
-                                            <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                    <?php else: ?>
+                        <?php foreach ($rencana_pengeluaran as $row): ?>
+                            <div class="sfin-exam-card">
+                                <div class="min-w-0 flex-grow-1 pr-2">
+                                    <div class="sfin-exam-uraian"><?= htmlspecialchars($row['uraian']) ?></div>
+                                    <div class="sfin-exam-kategori">
+                                        <span class="badge badge-light border mr-1 font-weight-bold" style="font-size: 9.5px;"><?= htmlspecialchars($row['kategori'] ?? 'Umum') ?></span>
+                                        <?= (int)$row['volume'] ?> x Rp <?= number_format($row['satuan'], 0, ',', '.') ?>
+                                    </div>
+                                </div>
+                                <div class="sfin-exam-total">
+                                    Rp <?= number_format($row['total'], 0, ',', '.') ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Desktop Table View -->
+                <div class="row d-none d-md-flex">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm" style="border-radius: 14px;">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="table-pengeluaran">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center" width="5%">No</th>
+                                                <th>Uraian</th>
+                                                <th>Kategori</th>
+                                                <th class="text-center">Volume</th>
+                                                <th class="text-right">Satuan (Rp)</th>
+                                                <th class="text-center">Jumlah</th>
+                                                <th class="text-center">X</th>
+                                                <th class="text-right">Total (Rp)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($rencana_pengeluaran as $i => $row): ?>
+                                            <tr>
+                                                <td class="text-center"><?= $i + 1 ?></td>
+                                                <td><?= htmlspecialchars($row['uraian']) ?></td>
+                                                <td><?= htmlspecialchars($row['kategori'] ?? '-') ?></td>
+                                                <td class="text-center"><?= number_format($row['volume'], 0, ',', '.') ?></td>
+                                                <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
+                                                <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
+                                                <td class="text-center"><?= number_format($row['perkalian'] ?? 1, 0, ',', '.') ?></td>
+                                                <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
 
         </div>
     </section>

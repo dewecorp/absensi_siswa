@@ -23,7 +23,14 @@ $riwayatTransaksi = fetchEtabsData($nis, 'riwayat');
 
 include '../templates/header.php';
 include_once '../templates/sidebar.php';
+
+$saldo_nominal = $tabunganSummary['data']['saldo'] ?? 0;
+$setor_nominal = $tabunganSummary['data']['total_setor'] ?? 0;
+$tarik_nominal = $tabunganSummary['data']['total_tarik'] ?? 0;
+$transaksinya = $riwayatTransaksi['data']['transaksi'] ?? [];
 ?>
+
+<link rel="stylesheet" href="../assets/css/siswa-keuangan-mobile.css">
 
 <div class="main-content">
     <section class="section">
@@ -32,150 +39,154 @@ include_once '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <div class="card">
-                <div class="card-body">
-                    <div class="mb-4">
-                        <table class="table-borderless">
-                            <tr>
-                                <td width="120">Nama Siswa</td>
-                                <td width="20">:</td>
-                                <td class="font-weight-bold"><?= htmlspecialchars($student['nama_siswa'] ?? '-') ?></td>
-                            </tr>
-                            <tr>
-                                <td>Kelas</td>
-                                <td>:</td>
-                                <td class="font-weight-bold"><?= htmlspecialchars($student['nama_kelas'] ?? '-') ?></td>
-                            </tr>
-                            <tr>
-                                <td>NIS</td>
-                                <td>:</td>
-                                <td class="font-weight-bold"><?= htmlspecialchars($nis ?? '-') ?></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="card card-statistic-1 bg-primary">
-                                <div class="card-icon">
-                                    <i class="fas fa-piggy-bank"></i>
-                                </div>
-                                <div class="card-wrap text-white">
-                                    <div class="card-header">
-                                        <h4 class="text-white font-weight-bold">Total Setoran</h4>
-                                    </div>
-                                    <div class="card-body text-white font-weight-bold">
-                                        <?php if ($tabunganSummary['success'] ?? false): ?>
-                                            Rp <?= number_format($tabunganSummary['data']['total_setor'] ?? 0, 0, ',', '.') ?>
-                                        <?php else: ?>
-                                            -
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
+            <!-- Hero Card Tabungan Siswa Ala Mobile Apps -->
+            <div class="sfin-hero-card theme-success">
+                <div class="sfin-hero-top">
+                    <div class="sfin-student-info">
+                        <div class="sfin-student-name">
+                            <i class="fas fa-piggy-bank mr-1"></i> <?= htmlspecialchars($student['nama_siswa'] ?? '-') ?>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card card-statistic-1 bg-warning">
-                                <div class="card-icon">
-                                    <i class="fas fa-hand-holding-usd"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4 class="text-dark font-weight-bold">Total Tarikan</h4>
-                                    </div>
-                                    <div class="card-body text-dark font-weight-bold">
-                                        <?php if ($tabunganSummary['success'] ?? false): ?>
-                                            Rp <?= number_format($tabunganSummary['data']['total_tarik'] ?? 0, 0, ',', '.') ?>
-                                        <?php else: ?>
-                                            -
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card card-statistic-1 bg-success">
-                                <div class="card-icon">
-                                    <i class="fas fa-wallet"></i>
-                                </div>
-                                <div class="card-wrap text-white">
-                                    <div class="card-header">
-                                        <h4 class="text-white font-weight-bold">Saldo</h4>
-                                    </div>
-                                    <div class="card-body text-white font-weight-bold">
-                                        <?php if ($tabunganSummary['success'] ?? false): ?>
-                                            Rp <?= number_format($tabunganSummary['data']['saldo'] ?? 0, 0, ',', '.') ?>
-                                        <?php else: ?>
-                                            -
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="sfin-student-sub">
+                            <span>NIS: <?= htmlspecialchars($nis ?? '-') ?></span>
+                            <span>•</span>
+                            <span>Kelas <?= htmlspecialchars($student['nama_kelas'] ?? '-') ?></span>
                         </div>
                     </div>
+                    <div>
+                        <span class="sfin-badge-pill">
+                            <i class="fas fa-shield-alt mr-1"></i> E-Tabs Simad
+                        </span>
+                    </div>
+                </div>
 
-                    <h5 class="mb-3">Riwayat Transaksi</h5>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Jenis</th>
-                                    <th>Nominal</th>
-                                    <th>Keterangan</th>
-                                    <th>Petugas</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $transaksinya = $riwayatTransaksi['data']['transaksi'] ?? [];
-                                if (($riwayatTransaksi['success'] ?? false) && !empty($transaksinya)): ?>
-                                    <?php foreach ($transaksinya as $transaksi): ?>
-                                        <?php 
-                                        $keterangan = '';
-                                        if ($transaksi['jenis'] === 'setoran') {
-                                            $keterangan = 'Setoran Tunai';
-                                        } else {
-                                            if (!empty($transaksi['keterangan'])) {
-                                                $keterangan = $transaksi['keterangan'];
-                                            } else {
-                                                $keterangan = 'Penarikan Tunai';
-                                            }
-                                        }
-                                        ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars(date('d-m-Y', strtotime($transaksi['tanggal'] ?? '-'))) ?></td>
-                                            <td>
-                                                <?php if ($transaksi['jenis'] === 'setoran'): ?>
-                                                    <span class="badge badge-success"><?= htmlspecialchars($transaksi['jenis']) ?></span>
-                                                <?php else: ?>
-                                                    <span class="badge badge-danger"><?= htmlspecialchars($transaksi['jenis']) ?></span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>Rp <?= number_format($transaksi['nominal'] ?? 0, 0, ',', '.') ?></td>
-                                            <td><?= htmlspecialchars($keterangan) ?></td>
-                                            <td><?= htmlspecialchars($transaksi['petugas'] ?? '-') ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="5" class="text-center py-4">
-                                            <?php if (!($tabunganSummary['success'] ?? false) || !($riwayatTransaksi['success'] ?? false)): ?>
-                                                <div class="alert alert-warning">
-                                                    <i class="fas fa-exclamation-triangle"></i> 
-                                                    <?= htmlspecialchars($tabunganSummary['message'] ?? $riwayatTransaksi['message'] ?? 'Tidak dapat mengambil data dari server.') ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="text-muted">Belum ada data transaksi.</span>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                <div class="mt-2">
+                    <div class="sfin-hero-main-title">Saldo Tabungan Saat Ini</div>
+                    <div class="sfin-hero-amount gold">
+                        <?php if ($tabunganSummary['success'] ?? false): ?>
+                            Rp <?= number_format($saldo_nominal, 0, ',', '.') ?>
+                        <?php else: ?>
+                            Rp 0
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="sfin-stats-grid">
+                    <div class="sfin-stat-box">
+                        <div class="lbl">Total Setoran</div>
+                        <div class="val text-white">
+                            <?php if ($tabunganSummary['success'] ?? false): ?>
+                                Rp <?= number_format($setor_nominal, 0, ',', '.') ?>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="sfin-stat-box">
+                        <div class="lbl">Total Tarikan</div>
+                        <div class="val text-white">
+                            <?php if ($tabunganSummary['success'] ?? false): ?>
+                                Rp <?= number_format($tarik_nominal, 0, ',', '.') ?>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Riwayat Transaksi -->
+            <div class="sfin-section-head">
+                <div class="sfin-section-title">
+                    <i class="fas fa-history text-primary"></i> Riwayat Transaksi Tabungan
+                </div>
+                <div class="sfin-section-count"><?= count($transaksinya) ?> Transaksi</div>
+            </div>
+
+            <?php if (($riwayatTransaksi['success'] ?? false) && !empty($transaksinya)): ?>
+                <!-- Mobile Cards List View -->
+                <div class="sfin-card-list d-md-none">
+                    <?php foreach ($transaksinya as $transaksi): ?>
+                        <?php 
+                        $is_setor = ($transaksi['jenis'] === 'setoran');
+                        $keterangan = $is_setor ? 'Setoran Tunai' : (!empty($transaksi['keterangan']) ? $transaksi['keterangan'] : 'Penarikan Tunai');
+                        ?>
+                        <div class="sfin-trx-card">
+                            <div class="sfin-trx-left">
+                                <div class="sfin-trx-icon <?= $is_setor ? 'setor' : 'tarik' ?>">
+                                    <i class="fas fa-arrow-<?= $is_setor ? 'down' : 'up' ?>"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="sfin-trx-title"><?= htmlspecialchars($keterangan) ?></div>
+                                    <div class="sfin-trx-sub">
+                                        <i class="far fa-calendar-alt text-muted"></i> <?= htmlspecialchars(date('d M Y', strtotime($transaksi['tanggal'] ?? '-'))) ?>
+                                        <span>•</span>
+                                        <span><?= htmlspecialchars($transaksi['petugas'] ?? 'Petugas') ?></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sfin-trx-amount">
+                                <div class="val <?= $is_setor ? 'plus' : 'minus' ?>">
+                                    <?= $is_setor ? '+' : '-' ?> Rp <?= number_format($transaksi['nominal'] ?? 0, 0, ',', '.') ?>
+                                </div>
+                                <div class="badge-txt text-<?= $is_setor ? 'success' : 'danger' ?>">
+                                    <?= htmlspecialchars($transaksi['jenis']) ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Desktop Table View -->
+                <div class="table-responsive d-none d-md-block">
+                    <table class="table table-striped table-hover bg-white border" style="border-radius: 12px; overflow: hidden;">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Jenis</th>
+                                <th>Nominal</th>
+                                <th>Keterangan</th>
+                                <th>Petugas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($transaksinya as $transaksi): ?>
+                                <?php 
+                                $is_setor = ($transaksi['jenis'] === 'setoran');
+                                $keterangan = $is_setor ? 'Setoran Tunai' : (!empty($transaksi['keterangan']) ? $transaksi['keterangan'] : 'Penarikan Tunai');
+                                ?>
+                                <tr>
+                                    <td><?= htmlspecialchars(date('d-m-Y', strtotime($transaksi['tanggal'] ?? '-'))) ?></td>
+                                    <td>
+                                        <span class="badge badge-<?= $is_setor ? 'success' : 'danger' ?>">
+                                            <?= htmlspecialchars($transaksi['jenis']) ?>
+                                        </span>
+                                    </td>
+                                    <td class="font-weight-bold text-<?= $is_setor ? 'success' : 'danger' ?>">
+                                        <?= $is_setor ? '+' : '-' ?> Rp <?= number_format($transaksi['nominal'] ?? 0, 0, ',', '.') ?>
+                                    </td>
+                                    <td><?= htmlspecialchars($keterangan) ?></td>
+                                    <td><?= htmlspecialchars($transaksi['petugas'] ?? '-') ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="card border-0 shadow-sm text-center py-5" style="border-radius: 16px;">
+                    <div class="card-body">
+                        <?php if (!($tabunganSummary['success'] ?? false) || !($riwayatTransaksi['success'] ?? false)): ?>
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3 text-warning"></i><br>
+                            <div class="text-dark font-weight-bold">
+                                <?= htmlspecialchars($tabunganSummary['message'] ?? $riwayatTransaksi['message'] ?? 'Tidak dapat mengambil data dari server tabungan.') ?>
+                            </div>
+                        <?php else: ?>
+                            <i class="fas fa-wallet fa-2x mb-3 text-muted"></i><br>
+                            <div class="text-muted font-weight-bold">Belum ada riwayat transaksi tabungan.</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
         </div>
     </section>
 </div>

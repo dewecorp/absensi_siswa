@@ -6,7 +6,7 @@
 
 .att-monthly-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr));
     gap: 14px;
     margin-top: 14px;
 }
@@ -21,6 +21,8 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    min-width: 0;
+    overflow: hidden;
 }
 .att-monthly-card:hover {
     transform: translateY(-2px);
@@ -74,22 +76,30 @@
 
 .att-monthly-stats {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
+    width: 100%;
+    min-width: 0;
 }
 .att-monthly-stats.cols-3 {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .att-monthly-stats.cols-2 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .att-monthly-stat-box {
     background: #f8fafc;
     border-radius: 8px;
-    padding: 8px 6px;
+    padding: 8px 4px;
     text-align: center;
     border: 1px solid #e2e8f0;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 .att-monthly-stat-box.stat-hadir {
     background: #ecfdf5;
@@ -118,12 +128,18 @@
     line-height: 1.2;
 }
 .att-monthly-stat-lbl {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .02em;
+    letter-spacing: .01em;
     margin-top: 2px;
     opacity: .85;
+    line-height: 1.2;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    text-align: center;
+    width: 100%;
+    padding: 0 1px;
 }
 
 @media (max-width: 575.98px) {

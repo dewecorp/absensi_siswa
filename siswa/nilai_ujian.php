@@ -69,6 +69,8 @@ if ($selected_jenis === 'Ujian') {
     require_once '../templates/sidebar.php';
     ?>
 
+    <link rel="stylesheet" href="../assets/css/siswa-nilai-mobile.css">
+
     <div class="main-content">
         <section class="section">
             <div class="section-header">
@@ -80,42 +82,61 @@ if ($selected_jenis === 'Ujian') {
             </div>
 
             <div class="section-body">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row mb-4">
-                            <div class="col-md-12">
-                                <table class="table table-sm table-borderless">
-                                    <tr>
-                                        <th width="150">Nama Siswa</th>
-                                        <td>: <?= htmlspecialchars($student['nama_siswa']) ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Kelas</th>
-                                        <td>: <?= htmlspecialchars($student['nama_kelas']) ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Tahun Ajaran</th>
-                                        <td>: <?= htmlspecialchars($tahun_ajaran) ?></td>
-                                    </tr>
-                                </table>
+                <!-- Hero Siswa Info -->
+                <div class="snilai-hero-card">
+                    <div class="snilai-hero-top">
+                        <div class="snilai-student-info">
+                            <div class="snilai-student-name">
+                                <i class="fas fa-certificate mr-1"></i> <?= htmlspecialchars($student['nama_siswa']) ?>
+                            </div>
+                            <div class="snilai-student-sub">
+                                <span>Kelas <?= htmlspecialchars($student['nama_kelas']) ?></span>
+                                <span>•</span>
+                                <span class="snilai-badge-ta">Tahun Ajaran <?= htmlspecialchars($tahun_ajaran) ?></span>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <?php if ($nilai_resmi): ?>
-                            <div class="text-center py-4">
-                                <div class="text-muted mb-2">Nilai Ujian Resmi</div>
-                                <div class="display-4 font-weight-bold text-primary"><?= number_format((float)$nilai_resmi['nilai_ujian'], 2) ?></div>
-                                <?php if (!empty($nilai_resmi['keterangan'])): ?>
-                                    <div class="mt-3"><?= htmlspecialchars($nilai_resmi['keterangan']) ?></div>
-                                <?php endif; ?>
+                <!-- Kartu Nilai Ujian Resmi Ala Mobile Apps -->
+                <?php if ($nilai_resmi): ?>
+                    <div class="snilai-official-card">
+                        <div class="snilai-official-ribbon">RESMI</div>
+                        <div class="text-muted small text-uppercase font-weight-bold letter-spacing-1">
+                            <i class="fas fa-medal text-warning mr-1"></i> Nilai Ujian Resmi
+                        </div>
+                        <div class="snilai-official-score">
+                            <?= number_format((float)$nilai_resmi['nilai_ujian'], 2) ?>
+                        </div>
+                        <div class="mb-2">
+                            <span class="snilai-official-badge">
+                                <i class="fas fa-check-circle"></i> Terverifikasi Madrasah
+                            </span>
+                        </div>
+                        <?php if (!empty($nilai_resmi['keterangan'])): ?>
+                            <div class="snilai-official-note">
+                                <i class="fas fa-info-circle text-primary mr-1"></i> <?= htmlspecialchars($nilai_resmi['keterangan']) ?>
                             </div>
-                        <?php else: ?>
-                            <div class="alert alert-light text-center mb-0">
-                                Nilai ujian resmi tahun ajaran ini belum diinput oleh madrasah.
+                        <?php endif; ?>
+                        <?php if (!empty($nilai_resmi['updated_at'])): ?>
+                            <div class="text-muted small mt-3" style="font-size: 11px;">
+                                <i class="far fa-clock mr-1"></i> Diperbarui: <?= date('d M Y, H:i', strtotime($nilai_resmi['updated_at'])) ?> WIB
                             </div>
                         <?php endif; ?>
                     </div>
-                </div>
+                <?php else: ?>
+                    <div class="card border-0 shadow-sm text-center py-5" style="border-radius: 18px;">
+                        <div class="card-body">
+                            <div class="text-warning mb-3">
+                                <i class="fas fa-clock fa-3x"></i>
+                            </div>
+                            <h6 class="font-weight-bold text-dark mb-1">Nilai Ujian Belum Diterbitkan</h6>
+                            <p class="text-muted small mb-0 px-3">
+                                Nilai ujian resmi untuk Tahun Ajaran <?= htmlspecialchars($tahun_ajaran) ?> belum diinput atau masih dalam proses rekapitulasi madrasah.
+                            </p>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
     </div>
@@ -194,10 +215,35 @@ foreach ($subjects as $mapel) {
 }
 
 $rerata = $count_mapel > 0 ? round($total_nilai / $count_mapel, 1) : 0;
+$progress_total = count($subjects);
+$progress_filled = $count_mapel;
+$progress_percent = $progress_total > 0 ? round(($progress_filled / $progress_total) * 100, 1) : 0;
 
 require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
+
+if (!function_exists('get_nilai_badge_class')) {
+    function get_nilai_badge_class($val) {
+        if ($val <= 0) return 'snilai-badge-muted';
+        if ($val >= 85) return 'snilai-badge-success';
+        if ($val >= 75) return 'snilai-badge-primary';
+        if ($val >= 60) return 'snilai-badge-warning';
+        return 'snilai-badge-danger';
+    }
+}
+
+if (!function_exists('get_nilai_status_text')) {
+    function get_nilai_status_text($val) {
+        if ($val <= 0) return 'Belum Diisi';
+        if ($val >= 85) return 'Sangat Baik';
+        if ($val >= 75) return 'Baik';
+        if ($val >= 60) return 'Cukup';
+        return 'Perlu Belajar';
+    }
+}
 ?>
+
+<link rel="stylesheet" href="../assets/css/siswa-nilai-mobile.css">
 
 <div class="main-content">
     <section class="section">
@@ -210,60 +256,118 @@ require_once '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row mb-4">
-                        <div class="col-md-12">
-                            <table class="table table-sm table-borderless">
-                                <tr>
-                                    <th width="150">Nama Siswa</th>
-                                    <td>: <?= htmlspecialchars($student['nama_siswa']) ?></td>
-                                </tr>
-                                <tr>
-                                    <th>Kelas</th>
-                                    <td>: <?= htmlspecialchars($student['nama_kelas']) ?></td>
-                                </tr>
-                            </table>
+            <!-- Hero Card Ringkasan Nilai Ujian Praktik -->
+            <div class="snilai-hero-card">
+                <div class="snilai-hero-top">
+                    <div class="snilai-student-info">
+                        <div class="snilai-student-name">
+                            <i class="fas fa-flask mr-1"></i> <?= htmlspecialchars($student['nama_siswa']) ?>
+                        </div>
+                        <div class="snilai-student-sub">
+                            <span>Kelas <?= htmlspecialchars($student['nama_kelas']) ?></span>
+                            <span>•</span>
+                            <span class="snilai-badge-ta">TA <?= htmlspecialchars($tahun_ajaran) ?> (<?= htmlspecialchars(formatSemesterLabelForExport($semester_aktif)) ?>)</span>
                         </div>
                     </div>
+                </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th width="50" class="text-center">No</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th width="150" class="text-center">Nilai</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $no = 1;
-                                foreach ($subjects as $mapel): 
-                                    $val = $rekap_data[$mapel['id_mapel']] ?? 0;
-                                ?>
-                                    <tr>
-                                        <td class="text-center"><?= $no++ ?></td>
-                                        <td><?= htmlspecialchars($mapel['nama_mapel']) ?></td>
-                                        <td class="text-center font-weight-bold">
-                                            <?= $val > 0 ? $val : '-' ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                            <tfoot>
-                                <tr class="bg-light">
-                                    <th colspan="2" class="text-right">Total Nilai</th>
-                                    <th class="text-center"><?= $total_nilai ?></th>
-                                </tr>
-                                <tr class="bg-light">
-                                    <th colspan="2" class="text-right">Rerata</th>
-                                    <th class="text-center"><?= $rerata ?></th>
-                                </tr>
-                            </tfoot>
-                        </table>
+                <div class="snilai-stats-grid">
+                    <div class="snilai-stat-box">
+                        <div class="snilai-stat-val gold"><?= $rerata ?></div>
+                        <div class="snilai-stat-lbl">Rerata Nilai</div>
+                    </div>
+                    <div class="snilai-stat-box">
+                        <div class="snilai-stat-val"><?= $total_nilai ?></div>
+                        <div class="snilai-stat-lbl">Total Nilai</div>
+                    </div>
+                    <div class="snilai-stat-box">
+                        <div class="snilai-stat-val"><?= (int)$progress_filled ?>/<?= (int)$progress_total ?></div>
+                        <div class="snilai-stat-lbl">Mapel Terisi</div>
                     </div>
                 </div>
+
+                <div class="snilai-hero-progress">
+                    <div class="snilai-hero-progress-head">
+                        <span>Capaian Penilaian (Ujian Praktik)</span>
+                        <span><?= (float)$progress_percent ?>%</span>
+                    </div>
+                    <div class="snilai-progress-bar-bg">
+                        <div class="snilai-progress-bar-fill" style="width: <?= (float)$progress_percent ?>%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daftar Kartu Nilai Per Mata Pelajaran (Mobile Apps View) -->
+            <div class="snilai-grade-list">
+                <?php if (empty($subjects)): ?>
+                    <div class="card border-0 shadow-sm text-center py-4" style="border-radius: 14px;">
+                        <div class="text-muted small">Tidak ada mata pelajaran Ujian Praktik yang terdaftar.</div>
+                    </div>
+                <?php else: ?>
+                    <?php 
+                    $no = 1;
+                    foreach ($subjects as $mapel): 
+                        $val = $rekap_data[$mapel['id_mapel']] ?? 0;
+                        $badge_class = get_nilai_badge_class($val);
+                        $status_text = get_nilai_status_text($val);
+                    ?>
+                        <div class="snilai-grade-card">
+                            <div class="snilai-grade-left">
+                                <div class="snilai-grade-icon <?= $val > 0 ? 'tone-green' : 'tone-slate' ?>">
+                                    <?= $no++ ?>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="snilai-grade-title"><?= htmlspecialchars($mapel['nama_mapel']) ?></div>
+                                    <div class="snilai-grade-sub">
+                                        <i class="fas fa-tag mr-1 text-muted"></i> Ujian Praktik
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="snilai-grade-badge <?= $badge_class ?>">
+                                <div class="val"><?= $val > 0 ? $val : '-' ?></div>
+                                <div class="lbl"><?= $status_text ?></div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
+            <!-- Tabel Fallback Desktop / Export -->
+            <div class="d-none">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th width="50" class="text-center">No</th>
+                            <th>Mata Pelajaran</th>
+                            <th width="150" class="text-center">Nilai</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $no_t = 1;
+                        foreach ($subjects as $mapel): 
+                            $val = $rekap_data[$mapel['id_mapel']] ?? 0;
+                        ?>
+                            <tr>
+                                <td class="text-center"><?= $no_t++ ?></td>
+                                <td><?= htmlspecialchars($mapel['nama_mapel']) ?></td>
+                                <td class="text-center font-weight-bold">
+                                    <?= $val > 0 ? $val : '-' ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-light">
+                            <th colspan="2" class="text-right">Total Nilai</th>
+                            <th class="text-center"><?= $total_nilai ?></th>
+                        </tr>
+                        <tr class="bg-light">
+                            <th colspan="2" class="text-right">Rerata</th>
+                            <th class="text-center"><?= $rerata ?></th>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
         </div>
     </section>
