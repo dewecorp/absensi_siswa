@@ -202,6 +202,10 @@ include '../templates/user_header.php';
         </div>
 
         <div class="section-body">
+            <!-- ==========================================
+                 DESKTOP VIEW (ORIGINAL LAYOUT UNCHANGED)
+                 ========================================== -->
+            <div class="nilai-desktop-view">
             <div class="row">
                 <div class="col-12 col-lg-6 mb-4">
                     <div class="card profile-card shadow-sm h-100">
@@ -367,6 +371,180 @@ include '../templates/user_header.php';
                     </div>
                 </div>
             </div>
+            </div> <!-- End .nilai-desktop-view -->
+
+            <!-- ==========================================
+                 MOBILE APP VIEW (MODERN APP UX)
+                 ========================================== -->
+            <div class="nilai-mobile-app">
+                <div class="profile-mobile-app">
+                    <!-- Hero Profile Header -->
+                    <div class="profile-hero-card">
+                        <div class="profile-avatar-wrap">
+                            <?php 
+                            $avatarHtml = getTeacherAvatarImage($teacher, 96);
+                            // Ensure class profile-avatar-img
+                            $avatarHtml = preg_replace('/class="([^"]*)"/', 'class="$1 profile-avatar-img"', $avatarHtml);
+                            echo $avatarHtml;
+                            ?>
+                            <button type="button" class="profile-avatar-camera-btn" title="Ubah Foto Profil" onclick="document.getElementById('foto_profil_input_m').click()">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <input type="file" id="foto_profil_input_m" accept="image/jpeg,image/png,image/jpg" style="display:none;" onchange="$('#foto_profil_input')[0].files = this.files; $('#foto_profil_input').trigger('change');">
+                        </div>
+
+                        <div class="profile-user-name"><?php echo htmlspecialchars($teacher['nama_guru']); ?></div>
+                        <div class="profile-badge-row">
+                            <span class="profile-pill-badge"><i class="fas fa-id-badge mr-1"></i>Kode: <?php echo htmlspecialchars($teacher['kode_guru'] ?? '-'); ?></span>
+                            <span class="profile-pill-badge"><i class="fas fa-graduation-cap mr-1"></i><?php echo htmlspecialchars($teacher['pendidikan'] ?? '-'); ?></span>
+                            <span class="profile-pill-badge"><i class="fas fa-user-tie mr-1"></i><?= ucfirst($_SESSION['level'] ?? 'Guru') ?></span>
+                        </div>
+
+                        <div class="profile-hero-actions">
+                            <button type="button" class="profile-hero-btn" data-toggle="modal" data-target="#editProfileModal">
+                                <i class="fas fa-pen"></i> Edit Profil
+                            </button>
+                            <button type="button" class="profile-hero-btn" data-toggle="modal" data-target="#modalPasswordMobile">
+                                <i class="fas fa-key"></i> Password
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Shortcut Tiles -->
+                    <div class="profile-section-card">
+                        <div class="profile-section-header">
+                            <span class="profile-section-title">
+                                <i class="fas fa-bolt text-warning"></i> Menu Pintas
+                            </span>
+                        </div>
+                        <div class="profile-shortcut-grid">
+                            <a href="dashboard.php" class="profile-shortcut-tile">
+                                <div class="profile-shortcut-icon" style="background:#e0f2fe;color:#0284c7;">
+                                    <i class="fas fa-home"></i>
+                                </div>
+                                <div>
+                                    <div class="profile-shortcut-name">Dashboard</div>
+                                    <div class="profile-shortcut-sub">Beranda</div>
+                                </div>
+                            </a>
+                            <a href="nilai_harian.php" class="profile-shortcut-tile">
+                                <div class="profile-shortcut-icon" style="background:#ecfdf5;color:#059669;">
+                                    <i class="fas fa-pen-alt"></i>
+                                </div>
+                                <div>
+                                    <div class="profile-shortcut-name">Nilai Harian</div>
+                                    <div class="profile-shortcut-sub">Entri Nilai</div>
+                                </div>
+                            </a>
+                            <a href="rekap_nilai.php" class="profile-shortcut-tile">
+                                <div class="profile-shortcut-icon" style="background:#fef3c7;color:#d97706;">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                                <div>
+                                    <div class="profile-shortcut-name">Rekap Nilai</div>
+                                    <div class="profile-shortcut-sub">Peringkat</div>
+                                </div>
+                            </a>
+                            <a href="jadwal_mengajar.php" class="profile-shortcut-tile">
+                                <div class="profile-shortcut-icon" style="background:#f3e8ff;color:#9333ea;">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                                <div>
+                                    <div class="profile-shortcut-name">Jadwal</div>
+                                    <div class="profile-shortcut-sub">Mengajar</div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Detail Data Diri -->
+                    <div class="profile-section-card">
+                        <div class="profile-section-header">
+                            <span class="profile-section-title">
+                                <i class="fas fa-id-card text-primary"></i> Data Pribadi & Kepegawaian
+                            </span>
+                            <button type="button" class="btn btn-sm btn-light text-primary font-weight-bold" data-toggle="modal" data-target="#editProfileModal" style="border-radius:8px;">
+                                <i class="fas fa-pen mr-1"></i>Ubah
+                            </button>
+                        </div>
+                        <div class="profile-cell-list">
+                            <div class="profile-cell-item">
+                                <div class="profile-cell-left"><i class="fas fa-fingerprint"></i> NUPTK</div>
+                                <div class="profile-cell-right"><?php echo htmlspecialchars($teacher['nuptk'] ?: '-'); ?></div>
+                            </div>
+                            <div class="profile-cell-item">
+                                <div class="profile-cell-left"><i class="fas fa-venus-mars"></i> Jenis Kelamin</div>
+                                <div class="profile-cell-right"><?php echo htmlspecialchars($teacher['jenis_kelamin'] ?: '-'); ?></div>
+                            </div>
+                            <div class="profile-cell-item">
+                                <div class="profile-cell-left"><i class="fas fa-map-marker-alt"></i> Tempat Lahir</div>
+                                <div class="profile-cell-right"><?php echo htmlspecialchars($teacher['tempat_lahir'] ?? '-'); ?></div>
+                            </div>
+                            <div class="profile-cell-item">
+                                <div class="profile-cell-left"><i class="fas fa-birthday-cake"></i> Tanggal Lahir</div>
+                                <div class="profile-cell-right"><?php echo !empty($teacher['tanggal_lahir']) ? date('d-m-Y', strtotime($teacher['tanggal_lahir'])) : '-'; ?></div>
+                            </div>
+                            <div class="profile-cell-item">
+                                <div class="profile-cell-left"><i class="fas fa-calendar-check"></i> TMT</div>
+                                <div class="profile-cell-right"><?php echo !empty($teacher['tmt']) ? date('d-m-Y', strtotime($teacher['tmt'])) : '-'; ?></div>
+                            </div>
+                            <div class="profile-cell-item">
+                                <div class="profile-cell-left"><i class="fas fa-clock text-success"></i> Masa Bakti</div>
+                                <div class="profile-cell-right text-success font-weight-bold"><?php echo calculateMasaBakti($teacher['tmt'] ?? null); ?></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Konektor AI Collapsible Card -->
+                    <div class="profile-section-card">
+                        <div class="profile-section-header" style="cursor:pointer;" onclick="$('#collapseAiMobile').slideToggle(200);">
+                            <span class="profile-section-title">
+                                <i class="fas fa-robot text-info"></i> Konektor AI Madrasah
+                            </span>
+                            <span class="badge badge-info"><?= htmlspecialchars($ai_cfg['provider'] === 'openai' ? 'ChatGPT' : 'Gemini') ?> <i class="fas fa-chevron-down ml-1"></i></span>
+                        </div>
+                        <div id="collapseAiMobile" style="display:none; padding:16px;">
+                            <form method="POST" action="">
+                                <div class="form-group mb-2">
+                                    <label class="small font-weight-bold">Penyedia AI:</label>
+                                    <div class="d-flex" style="gap:10px;">
+                                        <div class="custom-control custom-radio">
+                                            <input type="radio" id="prov_gemini_m" name="ai_provider" value="gemini" class="custom-control-input" <?= $ai_cfg['provider'] === 'gemini' ? 'checked' : '' ?> onchange="$('input[name=ai_provider][value=gemini]').prop('checked', true).trigger('change');">
+                                            <label class="custom-control-label small font-weight-bold text-success" for="prov_gemini_m">Gemini</label>
+                                        </div>
+                                        <div class="custom-control custom-radio">
+                                            <input type="radio" id="prov_openai_m" name="ai_provider" value="openai" class="custom-control-input" <?= $ai_cfg['provider'] === 'openai' ? 'checked' : '' ?> onchange="$('input[name=ai_provider][value=openai]').prop('checked', true).trigger('change');">
+                                            <label class="custom-control-label small font-weight-bold text-primary" for="prov_openai_m">OpenAI</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label class="small font-weight-bold">API Key:</label>
+                                    <input type="password" name="ai_gemini_key" class="form-control form-control-sm" value="<?= htmlspecialchars($ai_cfg['gemini_key_pribadi'] ?? '') ?>" placeholder="Kunci API...">
+                                </div>
+                                <div class="d-flex" style="gap:6px;">
+                                    <button type="submit" name="simpan_konektor_ai" class="btn btn-primary btn-sm flex-fill font-weight-bold">
+                                        <i class="fas fa-save mr-1"></i>Simpan
+                                    </button>
+                                    <button type="submit" name="tes_konektor_ai" class="btn btn-outline-info btn-sm flex-fill font-weight-bold">
+                                        <i class="fas fa-plug mr-1"></i>Tes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Logout Button Tile -->
+                    <div class="profile-section-card">
+                        <a href="../logout.php" class="d-flex align-items-center justify-content-between p-3 text-danger text-decoration-none" onclick="return confirm('Apakah Anda yakin ingin keluar?');">
+                            <span class="font-weight-bold d-flex align-items-center" style="gap:10px;">
+                                <i class="fas fa-sign-out-alt fa-lg"></i> Keluar dari Aplikasi
+                            </span>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </a>
+                    </div>
+                </div>
+            </div> <!-- End .nilai-mobile-app -->
         </div>
     </section>
 </div>
@@ -413,6 +591,39 @@ include '../templates/user_header.php';
                 <div class="modal-footer bg-whitesmoke br">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ubah Password Mobile -->
+<div class="modal fade" id="modalPasswordMobile" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="border-radius:18px;overflow:hidden;">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-key mr-2 text-warning"></i>Ubah Password</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <form method="POST" action="">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Password Lama</label>
+                        <input type="password" class="form-control" name="current_password" required placeholder="Masukkan password lama">
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Password Baru</label>
+                        <input type="password" class="form-control" name="new_password" minlength="6" required placeholder="Minimal 6 karakter">
+                        <small class="form-text text-muted">Minimal 6 karakter</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Konfirmasi Password Baru</label>
+                        <input type="password" class="form-control" name="confirm_password" minlength="6" required placeholder="Ulangi password baru">
+                    </div>
+                </div>
+                <div class="modal-footer bg-whitesmoke br">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" name="ubah_password" class="btn btn-primary font-weight-bold"><i class="fas fa-key mr-1"></i>Simpan Password</button>
                 </div>
             </form>
         </div>

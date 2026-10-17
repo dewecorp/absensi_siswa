@@ -1745,7 +1745,7 @@ if (!function_exists('get_app_menu_icon')) {
             'jadwal' => 'fas fa-calendar-alt',
             'kehadiran' => 'fas fa-user-check',
             'keuangan' => 'fas fa-wallet',
-            'nilai siswa' => 'fas fa-award',
+            'nilai siswa' => 'fas fa-graduation-cap',
             'pembelajaran' => 'fas fa-book-reader',
             'pengelolaan kelas' => 'fas fa-users-cog',
             'remidial' => 'fas fa-clipboard-check',
@@ -1802,20 +1802,43 @@ if (!function_exists('get_bottom_nav_quick_links')) {
         $user_level = getUserLevel();
 
         $ordered_items = [];
-        foreach ($menu_items as $item) {
-            if (($item['title'] ?? '') === 'Kehadiran') {
-                $ordered_items[] = $item;
-                break;
+        if (in_array($user_level, ['guru', 'wali'], true)) {
+            // Khusus guru & wali: urutan bottom nav adalah Kehadiran, Nilai Siswa, Forum Guru
+            $priority_titles = ['Kehadiran', 'Nilai Siswa', 'Forum Guru'];
+            foreach ($priority_titles as $pt) {
+                foreach ($menu_items as $item) {
+                    if (($item['title'] ?? '') === $pt) {
+                        $ordered_items[] = $item;
+                        break;
+                    }
+                }
             }
-        }
-        foreach ($menu_items as $item) {
-            if (($item['title'] ?? '') !== 'Kehadiran') {
-                $ordered_items[] = $item;
+            foreach ($menu_items as $item) {
+                if (!in_array($item['title'] ?? '', $priority_titles, true)) {
+                    $ordered_items[] = $item;
+                }
+            }
+        } else {
+            foreach ($menu_items as $item) {
+                if (($item['title'] ?? '') === 'Kehadiran') {
+                    $ordered_items[] = $item;
+                    break;
+                }
+            }
+            foreach ($menu_items as $item) {
+                if (($item['title'] ?? '') !== 'Kehadiran') {
+                    $ordered_items[] = $item;
+                }
             }
         }
 
         foreach ($ordered_items as $item) {
             if ($item['title'] === 'Logout' || $item['title'] === 'Dashboard' || $item['title'] === 'Data Utama' || $item['title'] === 'Profil' || $item['title'] === 'Profil & Pengaturan') {
+                continue;
+            }
+
+            // Untuk guru dan wali, jika ekstrakurikuler masih tersisa, skip agar Nilai Siswa dan Forum tetap prioritas
+            if (in_array($user_level, ['guru', 'wali'], true) && $item['title'] === 'Ekstrakurikuler') {
                 continue;
             }
 

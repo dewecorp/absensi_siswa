@@ -37,6 +37,10 @@ include_once '../templates/sidebar.php';
                         </div>
                     </div>
 
+                    <!-- ==========================================
+                         DESKTOP VIEW (ORIGINAL LAYOUT UNCHANGED)
+                         ========================================== -->
+                    <div class="nilai-desktop-view">
                     <!-- Banner profil full width -->
                     <div class="row">
                         <div class="col-12 mb-4">
@@ -124,6 +128,138 @@ include_once '../templates/sidebar.php';
                             </div>
                         </div>
                     </div>
+                    </div> <!-- End .nilai-desktop-view -->
+
+                    <!-- ==========================================
+                         MOBILE APP VIEW (MODERN APP UX)
+                         ========================================== -->
+                    <div class="nilai-mobile-app">
+                        <div class="profile-mobile-app">
+                            <!-- Hero Profile Card -->
+                            <div class="profile-hero-card">
+                                <div class="profile-avatar-wrap">
+                                    <?php if ($foto_profil): ?>
+                                        <img alt="foto" src="<?php echo $foto_profil; ?>" class="profile-avatar-img">
+                                    <?php else: ?>
+                                        <div class="profile-avatar-img bg-white text-primary d-flex align-items-center justify-content-center" style="font-weight:800;font-size:2.2rem;">
+                                            <?php echo $inisial; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <button type="button" class="profile-avatar-camera-btn" data-toggle="modal" data-target="#modalUploadFoto" title="Ubah foto">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
+
+                                <div class="profile-user-name"><?php echo htmlspecialchars($student['nama_siswa']); ?></div>
+                                <div class="profile-badge-row">
+                                    <span class="profile-pill-badge"><i class="fas fa-chalkboard mr-1"></i>Kelas <?php echo htmlspecialchars($student['nama_kelas'] ?? '-'); ?></span>
+                                    <span class="profile-pill-badge">
+                                        <i class="fas fa-<?php echo $student['jenis_kelamin'] == 'L' ? 'mars' : 'venus'; ?> mr-1"></i>
+                                        <?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan'; ?>
+                                    </span>
+                                    <span class="profile-pill-badge"><i class="fas fa-fingerprint mr-1"></i>NISN <?= htmlspecialchars($student['nisn'] ?? '-') ?></span>
+                                </div>
+
+                                <div class="profile-hero-actions">
+                                    <button type="button" class="profile-hero-btn" data-toggle="modal" data-target="#modalUploadFoto">
+                                        <i class="fas fa-camera"></i> Ganti Foto
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Tiles -->
+                            <div class="profile-section-card">
+                                <div class="profile-section-header">
+                                    <span class="profile-section-title">
+                                        <i class="fas fa-bolt text-warning"></i> Menu Pintas Siswa
+                                    </span>
+                                </div>
+                                <div class="profile-shortcut-grid">
+                                    <a href="tugas.php" class="profile-shortcut-tile">
+                                        <div class="profile-shortcut-icon" style="background:#e0f2fe;color:#0284c7;">
+                                            <i class="fas fa-tasks"></i>
+                                        </div>
+                                        <div>
+                                            <div class="profile-shortcut-name">Tugas</div>
+                                            <div class="profile-shortcut-sub">Tugas Saya</div>
+                                        </div>
+                                    </a>
+                                    <a href="rekap_nilai.php" class="profile-shortcut-tile">
+                                        <div class="profile-shortcut-icon" style="background:#ecfdf5;color:#059669;">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </div>
+                                        <div>
+                                            <div class="profile-shortcut-name">Nilai</div>
+                                            <div class="profile-shortcut-sub">Rekap Nilai</div>
+                                        </div>
+                                    </a>
+                                    <a href="tabungan_siswa.php" class="profile-shortcut-tile">
+                                        <div class="profile-shortcut-icon" style="background:#fef3c7;color:#d97706;">
+                                            <i class="fas fa-piggy-bank"></i>
+                                        </div>
+                                        <div>
+                                            <div class="profile-shortcut-name">Tabungan</div>
+                                            <div class="profile-shortcut-sub">Saldo Simpanan</div>
+                                        </div>
+                                    </a>
+                                    <a href="tagihan_siswa.php" class="profile-shortcut-tile">
+                                        <div class="profile-shortcut-icon" style="background:#fee2e2;color:#dc2626;">
+                                            <i class="fas fa-file-invoice-dollar"></i>
+                                        </div>
+                                        <div>
+                                            <div class="profile-shortcut-name">Tagihan</div>
+                                            <div class="profile-shortcut-sub">Iuran & SPP</div>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Detail Data Diri -->
+                            <div class="profile-section-card">
+                                <div class="profile-section-header">
+                                    <span class="profile-section-title">
+                                        <i class="fas fa-id-card text-primary"></i> Data Siswa
+                                    </span>
+                                </div>
+                                <div class="profile-cell-list">
+                                    <div class="profile-cell-item">
+                                        <div class="profile-cell-left"><i class="fas fa-fingerprint"></i> NISN</div>
+                                        <div class="profile-cell-right"><?php echo htmlspecialchars($student['nisn'] ?? '-'); ?></div>
+                                    </div>
+                                    <div class="profile-cell-item">
+                                        <div class="profile-cell-left"><i class="fas fa-chalkboard"></i> Kelas</div>
+                                        <div class="profile-cell-right"><span class="badge badge-info px-2 py-1"><?php echo htmlspecialchars($student['nama_kelas'] ?? '-'); ?></span></div>
+                                    </div>
+                                    <div class="profile-cell-item">
+                                        <div class="profile-cell-left"><i class="fas fa-venus-mars"></i> Jenis Kelamin</div>
+                                        <div class="profile-cell-right"><?php echo $student['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan'; ?></div>
+                                    </div>
+                                    <div class="profile-cell-item">
+                                        <div class="profile-cell-left"><i class="fas fa-map-marker-alt"></i> Tempat Lahir</div>
+                                        <div class="profile-cell-right"><?php echo htmlspecialchars($student['tempat_lahir'] ?? '-'); ?></div>
+                                    </div>
+                                    <div class="profile-cell-item">
+                                        <div class="profile-cell-left"><i class="fas fa-birthday-cake"></i> Tanggal Lahir</div>
+                                        <div class="profile-cell-right"><?php echo !empty($student['tanggal_lahir']) ? date('d-m-Y', strtotime($student['tanggal_lahir'])) : '-'; ?></div>
+                                    </div>
+                                    <div class="profile-cell-item">
+                                        <div class="profile-cell-left"><i class="fas fa-user-tie"></i> Orang Tua / Wali</div>
+                                        <div class="profile-cell-right"><?php echo htmlspecialchars($student['wali'] ?? $student['nama_ortu'] ?? '-'); ?></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Logout Button Tile -->
+                            <div class="profile-section-card">
+                                <a href="../logout.php" class="d-flex align-items-center justify-content-between p-3 text-danger text-decoration-none" onclick="return confirm('Apakah Anda yakin ingin keluar?');">
+                                    <span class="font-weight-bold d-flex align-items-center" style="gap:10px;">
+                                        <i class="fas fa-sign-out-alt fa-lg"></i> Keluar dari Aplikasi
+                                    </span>
+                                    <i class="fas fa-chevron-right text-muted"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div> <!-- End .nilai-mobile-app -->
                 </section>
             </div>
 

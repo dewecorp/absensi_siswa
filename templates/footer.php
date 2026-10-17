@@ -162,6 +162,42 @@
 
                     var page = lastSeg(location.pathname);
                     var hash = location.hash || '';
+                    var search = location.search || '';
+
+                    // Khusus dashboard
+                    if (page === 'dashboard.php' && !hash) {
+                        setActive(home);
+                        return;
+                    }
+
+                    // Khusus halaman m_menu.php dengan param g=
+                    if (page === 'm_menu.php') {
+                        var gParam = (new URLSearchParams(search).get('g') || '').toLowerCase();
+                        var matchedG = null;
+                        Array.prototype.forEach.call(items, function(a) {
+                            var t = titleOf(a).toLowerCase();
+                            if (gParam && (t.indexOf(gParam) !== -1 || gParam.indexOf(t) !== -1)) matchedG = a;
+                        });
+                        if (matchedG) { setActive(matchedG); return; }
+                    }
+
+                    // Pemetaan halaman khusus ke menu bottom nav
+                    var matchedSpecial = null;
+                    if (page.indexOf('nilai_') === 0 || page.indexOf('rekap_nilai') === 0 || page.indexOf('program_remidi') === 0 || page.indexOf('program_pengayaan') === 0) {
+                        Array.prototype.forEach.call(items, function(a) {
+                            if (titleOf(a).toLowerCase().indexOf('nilai') !== -1) matchedSpecial = a;
+                        });
+                    } else if (page.indexOf('absensi_') === 0 || page.indexOf('rekap_absensi') === 0 || page.indexOf('sholat_') === 0 || page.indexOf('rekap_sholat') === 0) {
+                        Array.prototype.forEach.call(items, function(a) {
+                            if (titleOf(a).toLowerCase().indexOf('kehadiran') !== -1) matchedSpecial = a;
+                        });
+                    } else if (page === 'forum.php') {
+                        Array.prototype.forEach.call(items, function(a) {
+                            if (titleOf(a).toLowerCase().indexOf('forum') !== -1) matchedSpecial = a;
+                        });
+                    }
+                    if (matchedSpecial) { setActive(matchedSpecial); return; }
+
                     if (!hash) {
                         var matched = null;
                         Array.prototype.forEach.call(items, function(a) {

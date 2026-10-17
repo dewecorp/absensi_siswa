@@ -172,23 +172,54 @@ if (!isset($school_profile)) {
 
             var page = lastSeg(location.pathname);
             var hash = location.hash || '';
+            var search = location.search || '';
 
-            // Tanpa anchor: Home adalah default aktif
-            if (!hash) {
+            // Khusus dashboard
+            if (page === 'dashboard.php' && !hash) {
                 setActive(home);
                 return;
             }
 
-            // 1) Cocokkan anchor persis
-            var matched = null;
-            Array.prototype.forEach.call(items, function(a) {
-                try {
-                    var u = new URL(a.getAttribute('href'), location.href);
-                    if (u.hash === hash && lastSeg(u.pathname) === page) matched = a;
-                } catch (e) {}
-            });
+            // Khusus halaman m_menu.php dengan param g=
+            if (page === 'm_menu.php') {
+                var gParam = (new URLSearchParams(search).get('g') || '').toLowerCase();
+                var matchedG = null;
+                Array.prototype.forEach.call(items, function(a) {
+                    var t = titleOf(a).toLowerCase();
+                    if (gParam && (t.indexOf(gParam) !== -1 || gParam.indexOf(t) !== -1)) matchedG = a;
+                });
+                if (matchedG) { setActive(matchedG); return; }
+            }
 
-            // 2) Jaring pengaman: anchor tak cocok -> item dengan halaman sama
+            // Pemetaan halaman khusus ke menu bottom nav
+            var matchedSpecial = null;
+            if (page.indexOf('nilai_') === 0 || page.indexOf('rekap_nilai') === 0 || page.indexOf('program_remidi') === 0 || page.indexOf('program_pengayaan') === 0) {
+                Array.prototype.forEach.call(items, function(a) {
+                    if (titleOf(a).toLowerCase().indexOf('nilai') !== -1) matchedSpecial = a;
+                });
+            } else if (page.indexOf('absensi_') === 0 || page.indexOf('rekap_absensi') === 0 || page.indexOf('sholat_') === 0 || page.indexOf('rekap_sholat') === 0) {
+                Array.prototype.forEach.call(items, function(a) {
+                    if (titleOf(a).toLowerCase().indexOf('kehadiran') !== -1) matchedSpecial = a;
+                });
+            } else if (page === 'forum.php') {
+                Array.prototype.forEach.call(items, function(a) {
+                    if (titleOf(a).toLowerCase().indexOf('forum') !== -1) matchedSpecial = a;
+                });
+            }
+            if (matchedSpecial) { setActive(matchedSpecial); return; }
+
+            // 1) Cocokkan anchor persis bila ada
+            var matched = null;
+            if (hash) {
+                Array.prototype.forEach.call(items, function(a) {
+                    try {
+                        var u = new URL(a.getAttribute('href'), location.href);
+                        if (u.hash === hash && lastSeg(u.pathname) === page) matched = a;
+                    } catch (e) {}
+                });
+            }
+
+            // 2) Jaring pengaman: cocokkan nama file halaman
             if (!matched) {
                 Array.prototype.forEach.call(items, function(a) {
                     try {
