@@ -373,53 +373,329 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
             }
         }
 
-        /* ===== Mobile app style (<= 767px) ===== */
+        /* Base mobile splash screen hidden by default on desktop */
+        #mobileSplashScreen {
+            display: none;
+        }
+
+        /* ===== Mobile Native App UI (<= 767px) ===== */
         @media (max-width: 767.98px) {
-            body { background: linear-gradient(160deg, #2f6ef0 0%, #5a8ff7 55%, #7ea4f9 100%) !important; }
-            .section { padding: 0 22px !important; align-items: center !important; min-height: 100vh; height: 100vh; height: 100dvh; }
-            .col-12.col-sm-8 { padding: 0; }
+            html,
+            body {
+                height: 100% !important;
+                height: 100dvh !important;
+                max-height: 100% !important;
+                max-height: 100dvh !important;
+                overflow: hidden !important;
+                background-color: #f8fafc !important;
+                background-image: 
+                    radial-gradient(circle at 10% 8%, rgba(37, 99, 235, 0.09) 0%, transparent 45%),
+                    radial-gradient(circle at 90% 92%, rgba(59, 130, 246, 0.07) 0%, transparent 40%),
+                    url("data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%232563eb' stroke-width='1.2' stroke-opacity='0.055'%3E%3Cpath d='M24 0l6 18 18 6-18 6-6 18-6-18-18-6 18-6z'/%3E%3Ccircle cx='24' cy='24' r='8'/%3E%3Ccircle cx='0' cy='0' r='6'/%3E%3Ccircle cx='48' cy='0' r='6'/%3E%3Ccircle cx='0' cy='48' r='6'/%3E%3Ccircle cx='48' cy='48' r='6'/%3E%3C/g%3E%3C/svg%3E") !important;
+                background-repeat: no-repeat, no-repeat, repeat !important;
+                background-size: 100% 100%, 100% 100%, 48px 48px !important;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            #app {
+                height: 100% !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                overflow: hidden !important;
+                background: transparent !important;
+            }
+
+            .section {
+                height: 100% !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                justify-content: stretch !important;
+                background: transparent !important;
+            }
+
+            .section > .col-12 {
+                height: 100% !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                overflow: hidden !important;
+                padding: calc(14px + env(safe-area-inset-top, 6px)) 22px calc(10px + env(safe-area-inset-bottom, 6px)) 22px !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                box-sizing: border-box !important;
+                background: transparent !important;
+            }
+
+            /* Native App Card - Transparent container */
             .card {
                 background: transparent !important;
-                border: 0 !important;
+                border: none !important;
+                border-radius: 0 !important;
                 box-shadow: none !important;
                 margin: 0 !important;
+                flex: 1 !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                padding: 0 !important;
             }
+
+            /* Sleek App Branding Header */
             .card-header {
                 background: transparent !important;
-                padding-top: 18px !important;
-                padding-bottom: 6px !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                flex-shrink: 0 !important;
+                text-align: center !important;
+            }
+            .card-header::before,
+            .card-header::after {
+                display: none !important;
             }
             .card-header img {
-                width: 76px !important;
-                height: 76px !important;
-                margin-bottom: 10px !important;
-                filter: drop-shadow(0 8px 18px rgba(0,0,0,.25));
+                width: 54px !important;
+                height: 54px !important;
+                margin-bottom: 6px !important;
+                border-radius: 15px !important;
+                background: #ffffff !important;
+                padding: 5px !important;
+                border: 1.5px solid #e2e8f0 !important;
+                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+                display: inline-block !important;
             }
-            .card-header h5 { font-size: 1.15rem; letter-spacing: .3px; }
-            .card-header h6 { opacity: .85; font-weight: 400; }
-            .card-body { padding: 18px 0 0 !important; }
-            .card-body label { color: rgba(255,255,255,.9) !important; font-size: .85rem; font-weight: 600; }
+            .card-header h5 {
+                font-size: 17.5px !important;
+                font-weight: 800 !important;
+                letter-spacing: -0.2px !important;
+                color: #0f172a !important;
+                margin-bottom: 4px !important;
+                line-height: 1.3 !important;
+            }
+            .card-header h6 {
+                font-size: 11px !important;
+                color: #2563eb !important;
+                font-weight: 700 !important;
+                letter-spacing: 0.4px !important;
+                text-transform: uppercase !important;
+                display: inline-block !important;
+                background: #eff6ff !important;
+                border: 1px solid #dbeafe !important;
+                padding: 2.5px 10px !important;
+                border-radius: 999px !important;
+                margin-bottom: 0 !important;
+            }
+
+            /* Central Form Area */
+            .card-body {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                flex: 1 !important;
+                min-height: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                max-width: 380px !important;
+                width: 100% !important;
+                align-self: center !important;
+            }
+
+            .mobile-login-intro {
+                margin-bottom: 12px !important;
+                text-align: center !important;
+            }
+            .mobile-login-intro .intro-desc {
+                font-size: 13px !important;
+                font-weight: 700 !important;
+                color: #1e293b !important;
+                text-align: center !important;
+                margin-bottom: 0 !important;
+            }
+
+            .card-body label {
+                color: #334155 !important;
+                font-size: 11px !important;
+                font-weight: 700 !important;
+                display: flex !important;
+                align-items: center !important;
+                letter-spacing: 0.2px !important;
+                margin-bottom: 4px !important;
+            }
+            .card-body .form-group {
+                margin-bottom: 10px !important;
+            }
+
             .form-control {
                 background: #ffffff !important;
-                border: 0 !important;
-                border-radius: 14px !important;
-                height: 48px;
-                box-shadow: 0 6px 16px rgba(13, 40, 106, .18) !important;
-                font-size: .95rem;
+                border: 1.5px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                height: 44px !important;
+                box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+                font-size: 13px !important;
+                font-weight: 600 !important;
+                color: #0f172a !important;
+                padding: 8px 13px !important;
+                transition: all 0.2s ease !important;
             }
-            .form-text { color: rgba(255,255,255,.75) !important; font-size: .75rem !important; }
-            #loginForm button[type="submit"] {
-                border-radius: 999px !important;
-                height: 50px;
-                font-weight: 700;
-                letter-spacing: .4px;
+            .form-control:focus {
                 background: #ffffff !important;
-                color: #2f6ef0 !important;
-                border: 0 !important;
-                box-shadow: 0 10px 24px rgba(13, 40, 106, .30) !important;
+                border-color: #2563eb !important;
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             }
-            #togglePassword { color: #2f6ef0 !important; }
-            .simple-footer { color: rgba(255,255,255,.8) !important; margin-top: 14px !important; }
+            .form-text {
+                color: #94a3b8 !important;
+                font-size: 10px !important;
+                margin-top: 2px !important;
+            }
+
+            #loginForm button[type="submit"] {
+                border-radius: 12px !important;
+                height: 45px !important;
+                font-size: 14px !important;
+                font-weight: 700 !important;
+                letter-spacing: 0.2px !important;
+                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+                color: #ffffff !important;
+                border: 0 !important;
+                box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25) !important;
+                transition: transform 0.12s ease !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                margin-top: 4px !important;
+            }
+            #loginForm button[type="submit"]:active {
+                transform: scale(0.98) !important;
+            }
+            #togglePassword {
+                color: #64748b !important;
+            }
+
+            /* Bottom Pinned Footer */
+            .simple-footer {
+                color: #94a3b8 !important;
+                margin: 0 !important;
+                padding: 4px 0 0 0 !important;
+                font-size: 10.5px !important;
+                flex-shrink: 0 !important;
+                text-align: center !important;
+                line-height: 1.3 !important;
+            }
+
+            /* Flash Screen Mobile Animation */
+            #mobileSplashScreen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 100005;
+                background: linear-gradient(155deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: #ffffff;
+                transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s ease;
+            }
+            #mobileSplashScreen.splash-leave {
+                opacity: 0;
+                transform: scale(1.05);
+                pointer-events: none;
+            }
+            .splash-inner {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                padding: 0 24px;
+                margin-top: -20px;
+            }
+            .splash-logo-card {
+                width: 90px;
+                height: 90px;
+                border-radius: 24px;
+                background: #ffffff;
+                padding: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+                margin-bottom: 20px;
+                animation: splashPulse 2s ease-in-out infinite;
+            }
+            .splash-logo-card img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+            .splash-app-name {
+                font-size: 1.25rem;
+                font-weight: 800;
+                letter-spacing: -0.2px;
+                color: #ffffff;
+                margin-bottom: 4px;
+                text-align: center;
+                text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+            }
+            .splash-app-tagline {
+                font-size: 12px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.85);
+                letter-spacing: 0.5px;
+                margin-bottom: 28px;
+                text-transform: uppercase;
+            }
+            .splash-loader-pill {
+                width: 140px;
+                height: 4.5px;
+                background: rgba(255, 255, 255, 0.25);
+                border-radius: 999px;
+                overflow: hidden;
+                position: relative;
+            }
+            .splash-loader-bar {
+                width: 40%;
+                height: 100%;
+                background: #ffffff;
+                border-radius: 999px;
+                position: absolute;
+                animation: splashBar 1.2s ease-in-out infinite;
+            }
+            .splash-version {
+                position: absolute;
+                bottom: calc(24px + env(safe-area-inset-bottom, 12px));
+                font-size: 11px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.7);
+                letter-spacing: 0.5px;
+            }
+            @keyframes splashPulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+            @keyframes splashBar {
+                0% { left: -40%; width: 30%; }
+                50% { width: 50%; }
+                100% { left: 100%; width: 30%; }
+            }
         }
     </style>
     
@@ -427,8 +703,53 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
-<body style="height: 100vh; margin: 0; overflow: hidden;">
-    <!-- Splash awal: hanya GET buka awal, bukan reload hasil POST -->
+<body class="login-body">
+    <!-- Flash Screen khusus Mobile saat aplikasi pertama dibuka -->
+    <?php if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'): ?>
+    <div id="mobileSplashScreen" class="mobile-splash-screen">
+        <div class="splash-inner">
+            <div class="splash-logo-card">
+                <img src="assets/img/<?php echo htmlspecialchars($school_profile['logo'] ?: 'logo.png', ENT_QUOTES, 'UTF-8'); ?>?v=<?php echo htmlspecialchars($favicon_version ?? '1', ENT_QUOTES, 'UTF-8'); ?>" alt="Logo">
+            </div>
+            <div class="splash-app-name"><?php echo htmlspecialchars($school_profile['nama_madrasah'] ?? 'SIMAD', ENT_QUOTES, 'UTF-8'); ?></div>
+            <div class="splash-app-tagline">Sistem Informasi Madrasah</div>
+            <div class="splash-loader-pill">
+                <div class="splash-loader-bar"></div>
+            </div>
+        </div>
+        <div class="splash-version">
+            <span>SIMAD Mobile</span> &bull; <span>v2.0</span>
+        </div>
+    </div>
+    <script>
+    (function(){
+        var s = document.getElementById('mobileSplashScreen');
+        if (!s) return;
+        if (window.innerWidth > 767.98) {
+            s.style.display = 'none';
+            s.remove();
+            return;
+        }
+        function hideMobileSplash() {
+            s.classList.add('splash-leave');
+            setTimeout(function() {
+                s.style.display = 'none';
+                try { s.remove(); } catch(e){}
+            }, 500);
+        }
+        if (document.readyState === 'complete') {
+            setTimeout(hideMobileSplash, 850);
+        } else {
+            window.addEventListener('load', function() {
+                setTimeout(hideMobileSplash, 750);
+            });
+            setTimeout(hideMobileSplash, 2600);
+        }
+    })();
+    </script>
+    <?php endif; ?>
+
+    <!-- Desktop Page Navigation Preloader -->
     <?php if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'): ?>
     <div id="pagePreloader" hidden style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:100000;background:#fff;">
         <div class="page-loader">
@@ -440,7 +761,52 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
         <div class="page-loader-bar"><span></span></div>
     </div>
     <script>
-    (function(){var o=document.getElementById('pagePreloader');if(!o)return;function isReload(){try{var n=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];if(n&&n.type)return n.type==='reload';}catch(e){}try{if(performance.navigation&&typeof performance.navigation.type!=='undefined'){return performance.navigation.type===performance.navigation.TYPE_RELOAD;}}catch(e){}return false;}if(isReload()){o.hidden=true;o.style.display='none';o.remove();return;}o.hidden=false;o.style.display='block';var t0=Date.now(),min=800,SPIN=800,done=false;function doHide(){if(done)return;done=true;o.classList.add('hide');setTimeout(function(){o.hidden=true;o.style.display='none';},400);}function h(){var el=Date.now()-t0,rem=el%SPIN;setTimeout(doHide,rem===0?0:SPIN-rem);}function hl(){setTimeout(h,Math.max(0,min-(Date.now()-t0)));}window.addEventListener('load',hl);setTimeout(hl,100);setTimeout(doHide,4000);})();
+    (function(){
+        // On mobile, mobileSplashScreen handles the splash animation
+        if (window.innerWidth <= 767.98) return;
+        var o = document.getElementById('pagePreloader');
+        if (!o) return;
+        function isReload(){
+            try {
+                var n = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+                if (n && n.type) return n.type === 'reload';
+            } catch(e) {}
+            try {
+                if (performance.navigation && typeof performance.navigation.type !== 'undefined') {
+                    return performance.navigation.type === performance.navigation.TYPE_RELOAD;
+                }
+            } catch(e) {}
+            return false;
+        }
+        if (isReload()) {
+            o.hidden = true;
+            o.style.display = 'none';
+            o.remove();
+            return;
+        }
+        o.hidden = false;
+        o.style.display = 'block';
+        var t0 = Date.now(), min = 800, SPIN = 800, done = false;
+        function doHide() {
+            if (done) return;
+            done = true;
+            o.classList.add('hide');
+            setTimeout(function() {
+                o.hidden = true;
+                o.style.display = 'none';
+            }, 400);
+        }
+        function h() {
+            var el = Date.now() - t0, rem = el % SPIN;
+            setTimeout(doHide, rem === 0 ? 0 : SPIN - rem);
+        }
+        function hl() {
+            setTimeout(h, Math.max(0, min - (Date.now() - t0)));
+        }
+        window.addEventListener('load', hl);
+        setTimeout(hl, 100);
+        setTimeout(doHide, 4000);
+    })();
     </script>
     <?php endif; ?>
     <style>
@@ -459,7 +825,7 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
     #pagePreloader.hide{opacity:0;visibility:hidden;pointer-events:none;}
     </style>
     <div id="app">
-        <section class="section d-flex align-items-center justify-content-center" style="min-height: 100vh; padding: 0;">
+        <section class="section d-flex align-items-center justify-content-center">
                 <div class="col-12 col-sm-8 col-md-6 col-lg-4">
                     <div class="card shadow mt-3 mb-3">
                         <div class="card-header text-center bg-primary text-white pt-4 pb-4">
@@ -470,17 +836,20 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
                             </div>
                         </div>
                         <div class="card-body">
+                            <div class="mobile-login-intro d-md-none text-center">
+                                <p class="intro-desc text-center font-weight-bold">Masukkan username dan password Anda</p>
+                            </div>
                             <form method="POST" action="" id="loginForm">
                                 <input type="hidden" name="csrf_token" value="<?php echo appCsrfToken(); ?>">
                                 <div class="form-group">
-                                    <label for="username">Username / NUPTK / NISN</label>
+                                    <label for="username"><i class="fas fa-user-circle mr-1 text-primary"></i> Username / NUPTK / NISN</label>
                                     <input id="username" type="text" class="form-control" name="username" placeholder="Admin: Username | Guru: NUPTK | Siswa: NISN" tabindex="1" required autofocus>
                                     <small class="form-text text-muted">Gunakan NISN (Siswa) atau NUPTK (Guru) untuk login</small>
                                 </div>
 
                                 <div class="form-group">
                                     <div class="d-block">
-                                        <label for="password" class="control-label">Password</label>
+                                        <label for="password" class="control-label"><i class="fas fa-lock mr-1 text-primary"></i> Password</label>
                                     </div>
                                     <div class="position-relative">
                                         <input id="password" type="password" class="form-control" name="password" tabindex="2" required style="padding-right: 42px;">
@@ -493,9 +862,9 @@ $favicon_version = is_readable($favicon_path) ? (string)filemtime($favicon_path)
                                     </div>
                                 </div>
 
-                                <div class="form-group">
+                                <div class="form-group mb-1">
                                     <button type="submit" class="btn btn-primary btn-lg btn-block" tabindex="4">
-                                        <i class="fas fa-sign-in-alt"></i> Login
+                                        <span>Masuk</span>
                                     </button>
                                 </div>
                             </form>
