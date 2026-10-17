@@ -1014,6 +1014,66 @@ include '../templates/sidebar.php';
     box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
     z-index: 1060 !important;
 }
+
+/* Select2 mobile: panel center (atas-bawah ada jarak), tanpa overlay backdrop */
+@media (max-width: 767.98px) {
+    #modalAnggotaProjek .select2-dropdown {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        bottom: auto !important;
+        right: auto !important;
+        transform: translate(-50%, -50%) !important;
+        width: calc(100% - 32px) !important;
+        max-width: 420px !important;
+        max-height: 72vh !important;
+        margin: 0 !important;
+        padding: 14px !important;
+        animation: none !important;
+        border: none !important;
+        border-radius: 18px !important;
+        background: #ffffff !important;
+        box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28) !important;
+        z-index: 99999 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+    }
+    #modalAnggotaProjek .select2-dropdown::before {
+        display: none !important;
+    }
+    #modalAnggotaProjek .select2-search--dropdown {
+        padding: 0 0 10px 0 !important;
+        flex: 0 0 auto;
+    }
+    #modalAnggotaProjek .select2-search--dropdown .select2-search__field {
+        height: 44px !important;
+        padding: 8px 14px !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        border-radius: 12px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        background: #f8fafc !important;
+    }
+    #modalAnggotaProjek .select2-results {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    #modalAnggotaProjek .select2-results > .select2-results__options {
+        max-height: calc(72vh - 100px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    #modalAnggotaProjek .select2-container--default .select2-results__option {
+        padding: 11px 12px !important;
+        font-size: 13.5px !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        border-radius: 12px !important;
+        margin-bottom: 4px !important;
+    }
+}
 </style>
 
 <div class="main-content">

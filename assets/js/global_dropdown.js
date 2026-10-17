@@ -403,20 +403,15 @@
     try { enhanceAll(e.target || document); } catch (err) {}
   });
 
-  // Select2 mobile backdrop support
+  // Select2 mobile: panel sudah tampil center dialog, jadi TIDAK pakai backdrop overlay
+  // (overlay gelap+blur ini yang bikin tampilan rusak, terutama saat select2 ada di dalam modal)
   if (window.jQuery) {
-    window.jQuery(document).on('select2:open', function() {
-      if (window.innerWidth <= 767.98) {
-        var bd = getOrCreateBackdrop();
-        bd.classList.add('active');
-        document.body.style.overflow = 'hidden';
-      }
-    });
     window.jQuery(document).on('select2:close', function() {
-      var bd = document.getElementById('gdsBackdropMobile');
       var anyGdsOpen = document.querySelectorAll('.gds-wrap.open').length > 0;
-      if (bd && !anyGdsOpen) {
-        bd.classList.remove('active');
+      if (anyGdsOpen) return;
+      var bd = document.getElementById('gdsBackdropMobile');
+      if (bd) bd.classList.remove('active');
+      if (!document.querySelector('.modal.show')) {
         document.body.style.overflow = '';
       }
     });
