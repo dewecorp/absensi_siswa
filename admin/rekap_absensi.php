@@ -496,7 +496,7 @@ include '../templates/sidebar.php';
                                             
                                             <div class="form-group col-md-2">
                                                 <label>Jenis Filter</label>
-                                                <select name="filter_type" class="form-control selectric" id="filterType" onchange="this.form.submit()">
+                                                <select name="filter_type" class="form-control selectric" id="filterType">
                                                     <option value="daily" <?php echo ($filter_type == 'daily') ? 'selected' : ''; ?>>Harian</option>
                                                     <option value="monthly" <?php echo ($filter_type == 'monthly') ? 'selected' : ''; ?>>Bulanan</option>
                                                     <option value="semester" <?php echo ($filter_type == 'semester') ? 'selected' : ''; ?>>Per Semester</option>
@@ -518,7 +518,7 @@ include '../templates/sidebar.php';
                                             
                                             <div class="form-group col-md-3 student-filter" style="<?php echo ($filter_type == 'student') ? '' : 'display:none;'; ?>">
                                                 <label>Pilih Siswa</label>
-                                                <select name="student_id" class="form-control selectric" id="studentSelect" onchange="this.form.submit()">
+                                                <select name="student_id" class="form-control selectric" id="studentSelect">
                                                     <option value="">Pilih Siswa...</option>
                                                     <?php 
                                                     if ($class_id > 0) {
@@ -1006,6 +1006,14 @@ function recoverDropdownUiState() {
     $('.dropdown.show').removeClass('show');
     $('.dropdown-menu.show').removeClass('show');
 
+    // Bersihkan juga overlay backdrop dropdown custom (gds) di mobile
+    var gdsBd = document.getElementById('gdsBackdropMobile');
+    if (gdsBd) gdsBd.classList.remove('active');
+    document.querySelectorAll('.gds-wrap.open, .gds-list.open').forEach(function (el) {
+        el.classList.remove('open');
+    });
+    $('body').css('overflow', '');
+
     // Re-init Select2 jika terpasang pada dropdown siswa.
     if ($.fn.select2 && $('#studentSelect').length) {
         try {
@@ -1400,6 +1408,35 @@ $(document).ready(function() {
             $('.monthly-filter').show();
         } else if (filterType === 'student') {
             $('.student-filter').show();
+        }
+
+        // Jangan submit saat jenis filter baru dipilih bila input yang diminta
+        // (tanggal/bulan/siswa) masih kosong -> itu penyebab alert Swal sekilas.
+        var needSubmit;
+        if (filterType === 'daily') {
+            needSubmit = !!$('#datePicker').val();
+        } else if (filterType === 'monthly') {
+            needSubmit = !!$('#monthPicker').val();
+        } else if (filterType === 'student') {
+            needSubmit = !!$('#studentSelect').val();
+        } else {
+            needSubmit = true; // semester & lainnya tidak butuh input tambahan
+        }
+        if (needSubmit) {
+            var filterForm = document.getElementById('attendanceFilterForm');
+            if (filterForm) {
+                if (filterForm.requestSubmit) { filterForm.requestSubmit(); } else { filterForm.submit(); }
+            }
+        }
+    });
+
+    // Auto-submit saat siswa dipilih. Tidak lagi memakai atribut onchange pada
+    // <select> supaya tetap bekerja baik lewat dropdown gds maupun select2.
+    $('#studentSelect').on('change', function() {
+        if (!$(this).val()) { return; }
+        var studentForm = document.getElementById('attendanceFilterForm');
+        if (studentForm) {
+            if (studentForm.requestSubmit) { studentForm.requestSubmit(); } else { studentForm.submit(); }
         }
     });
     

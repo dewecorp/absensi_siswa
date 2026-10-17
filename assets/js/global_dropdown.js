@@ -223,19 +223,21 @@
     btn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
-      var wasOpen = wrap.classList.contains('open');
-      closeAll(wrap);
-      if (!wasOpen) {
-        renderOptions('');
-        wrap.classList.add('open');
-        list.classList.add('open');
-        if (window.innerWidth <= 767.98) {
-          var bd = getOrCreateBackdrop();
-          bd.classList.add('active');
-          document.body.style.overflow = 'hidden';
-        }
-        positionList();
+      // Toggle: tap tombol yang sama = tutup (sebelumnya harus tap di luar)
+      if (wrap.classList.contains('open')) {
+        closeAll();
+        return;
       }
+      closeAll(wrap);
+      renderOptions('');
+      wrap.classList.add('open');
+      list.classList.add('open');
+      if (window.innerWidth <= 767.98) {
+        var bd = getOrCreateBackdrop();
+        bd.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+      positionList();
     });
     window.addEventListener('resize', function() {
       if (wrap.classList.contains('open')) positionList();
@@ -253,6 +255,53 @@
       refreshLabel();
     };
     refreshLabel();
+
+    // Bila select2 mengambil alih select yang sama (select2-hidden-accessible),
+    // lepas UI gds supaya tidak ada dua dropdown bertumpuk untuk satu select.
+    // Dipantau lewat MutationObserver (bukan setInterval) supaya deterministik dan
+    // tidak terpengaruh throttle timer pada tab background.
+    function detachGdsForSelect2() {
+      var taken = false;
+      try {
+        taken = sel.classList.contains('select2-hidden-accessible')
+             || (sel.nextElementSibling && sel.nextElementSibling.classList
+                 && sel.nextElementSibling.classList.contains('select2-container'));
+      } catch (err) { taken = false; }
+      if (!taken) return false;
+
+      try {
+        var parent = wrap.parentNode;
+        if (parent) {
+          var s2 = wrap.querySelector('.select2-container');
+          parent.insertBefore(sel, wrap);       // kembalikan select ke posisi asli
+          if (s2) parent.insertBefore(s2, wrap); // UI select2 ikut dipindah keluar
+          parent.removeChild(wrap);              // buang tombol/wrap gds
+        }
+      } catch (err) {}
+      try { if (list.parentNode) list.parentNode.removeChild(list); } catch (err) {}
+
+      sel.classList.remove('gds-source');
+      sel.removeAttribute('data-gds-done');
+      sel.gdsRefresh = null;
+      sel.gdsDetachForSelect2 = null;
+      if (window.jQuery) {
+        try { window.jQuery(sel).off('change', refreshLabel); } catch (err) {}
+      }
+      try { sel.removeEventListener('change', refreshLabel); } catch (err) {}
+      closeAll();
+      return true;
+    }
+    sel.gdsDetachForSelect2 = detachGdsForSelect2;
+
+    try {
+      var s2Obs = new MutationObserver(function() {
+        if (detachGdsForSelect2()) {
+          try { s2Obs.disconnect(); } catch (err) {}
+        }
+      });
+      s2Obs.observe(sel, { attributes: true, attributeFilter: ['class'] });
+    } catch (err) {}
+    detachGdsForSelect2(); // jaga-jaga bila select2 sudah init sebelum gds
 
     if (!document.body.dataset.gdsBound) {
       document.body.dataset.gdsBound = '1';

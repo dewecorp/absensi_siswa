@@ -571,7 +571,10 @@ select[multiple].gds-source {
   padding: 6px;
   display: none;
 }
-.gds-wrap.open .gds-list {
+/* List di-mount ke document.body (bukan anak .gds-wrap), jadi .gds-wrap.open .gds-list
+   tidak akan match. Pakai .gds-list.open agar desktop ikut tampil. */
+.gds-wrap.open .gds-list,
+.gds-list.open {
   display: block;
 }
 .gds-list::-webkit-scrollbar {
