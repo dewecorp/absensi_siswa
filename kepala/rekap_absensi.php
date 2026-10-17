@@ -222,7 +222,7 @@ if ($class_id > 0) {
     } elseif ($filter_type == 'student' && $selected_student > 0) {
         // Student filter - get attendance data for specific student
         $sqlSt = "
-            SELECT s.nama_siswa, s.nisn, k.nama_kelas, a.keterangan, a.tanggal
+            SELECT s.nama_siswa, s.nisn, s.jenis_kelamin, k.nama_kelas, a.keterangan, a.tanggal
             FROM tb_absensi a
             LEFT JOIN tb_siswa s ON a.id_siswa = s.id_siswa
             LEFT JOIN tb_kelas k ON s.id_kelas = k.id_kelas
@@ -539,11 +539,6 @@ include '../templates/sidebar.php';
                                                     }
                                                     ?>
                                                 </select>
-                                            </div>
-                                            <div class="form-group col-md-1 d-flex align-items-end">
-                                                <button type="submit" class="btn btn-primary btn-block">
-                                                    <i class="fas fa-search"></i>
-                                                </button>
                                             </div>
                                         </form>
                                         
@@ -880,7 +875,7 @@ include '../templates/sidebar.php';
                                                 <div class="alert alert-success alert-has-icon">
                                                     <div class="alert-icon"><i class="far fa-check-circle"></i></div>
                                                     <div class="alert-body">
-                                                        <div class="alert-title">Data Kehadiran Siswa</div>
+                                                        <div class="alert-title" data-jk="<?php echo htmlspecialchars(strtoupper(trim((string)($student_results[0]['jenis_kelamin'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>">Data Kehadiran Siswa</div>
                                                         Menampilkan riwayat kehadiran untuk <?php echo htmlspecialchars($student_results[0]['nama_siswa'] ?? ''); ?>
                                                     </div>
                                                 </div>

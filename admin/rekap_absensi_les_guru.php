@@ -163,7 +163,15 @@ include '../templates/sidebar.php';
                                 <h4 style="margin-top: 15px; text-decoration: underline;">REKAP ABSENSI LES GURU</h4>
                             </div>
 
-                            <form method="POST" class="row">
+                            <?php
+                                $excel_export_url = '../config/export_rekap_les_guru_excel?filter_type=' . urlencode($filter_type)
+                                    . ($filter_type == 'daily' ? '&date=' . urlencode($selected_date) : '')
+                                    . '&session_type=' . urlencode($session_type);
+                                $pdf_export_url = '../config/export_rekap_les_guru_pdf?filter_type=' . urlencode($filter_type)
+                                    . ($filter_type == 'daily' ? '&date=' . urlencode($selected_date) : '')
+                                    . '&session_type=' . urlencode($session_type);
+                            ?>
+                            <form method="POST" class="row att-filter-form">
                                 <div class="form-group col-md-3">
                                     <label>Jenis Rekap</label>
                                     <select name="filter_type" class="form-control" id="filterType" onchange="this.form.submit()">
@@ -176,57 +184,97 @@ include '../templates/sidebar.php';
                                     <label>Pilih Tanggal</label>
                                     <input type="date" name="attendance_date" class="form-control" value="<?= $selected_date ?>" onchange="this.form.submit()">
                                 </div>
+                                <div class="form-group col-12 att-export-row">
+                                    <label class="att-export-label">&nbsp;</label>
+                                    <div class="btn-group">
+                                        <a href="<?= htmlspecialchars($excel_export_url) ?>" target="_blank" class="btn btn-success">
+                                            <i class="fas fa-file-excel"></i> Excel
+                                        </a>
+                                        <a href="<?= htmlspecialchars($pdf_export_url) ?>" target="_blank" class="btn btn-danger">
+                                            <i class="fas fa-file-pdf"></i> PDF
+                                        </a>
+                                    </div>
+                                </div>
                             </form>
 
                             <?php if ($filter_type == 'daily' && !empty($daily_results)): ?>
                                 <div class="mt-4">
-                                    <div class="btn-group mb-3 float-right">
-                                        <a href="../config/export_rekap_les_guru_excel?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a href="../config/export_rekap_les_guru_pdf?filter_type=daily&date=<?= $selected_date ?>&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
+                                    <div class="att-rekap-timeline">
+                                        <?php foreach ($daily_results as $i => $r): ?>
+                                            <?php
+                                            $status = $r['status'] ?? '';
+                                            $display_status = $status !== '' ? $status : 'Belum Absen';
+                                            $badge = 'badge-secondary';
+                                            $tone_color = '#64748b';
+
+                                            if ($status == 'Hadir') {
+                                                $badge = 'badge-success';
+                                                $tone_color = '#10b981';
+                                            } elseif ($status == 'Sakit') {
+                                                $badge = 'badge-info';
+                                                $tone_color = '#0ea5e9';
+                                            } elseif ($status == 'Izin') {
+                                                $badge = 'badge-warning';
+                                                $tone_color = '#f59e0b';
+                                            } elseif ($status == 'Alpa') {
+                                                $badge = 'badge-danger';
+                                                $tone_color = '#ef4444';
+                                            }
+                                            $waktu_str = !empty($r['waktu_input']) ? date('H:i:s', strtotime($r['waktu_input'])) : '-';
+                                            $tgl_str = !empty($selected_date) ? date('d M Y', strtotime($selected_date)) : '-';
+                                            ?>
+                                            <div class="att-rekap-item" style="--att-tone-color: <?= $tone_color ?>;">
+                                                <div class="att-rekap-num">
+                                                    <span class="seq"><?= $i + 1 ?></span>
+                                                    <span class="sub">LES</span>
+                                                </div>
+                                                <div class="att-rekap-card">
+                                                    <div class="att-rekap-main">
+                                                        <div class="att-rekap-name"><?= htmlspecialchars($r['nama_guru']) ?></div>
+                                                        <div class="att-rekap-meta">
+                                                            <?php if (!empty($r['nuptk'])): ?>
+                                                                <span><i class="fas fa-id-card"></i> <?= htmlspecialchars($r['nuptk']) ?></span>
+                                                            <?php endif; ?>
+                                                            <span><i class="far fa-clock"></i> <?= $waktu_str ?></span>
+                                                            <span><i class="far fa-calendar-alt"></i> <?= $tgl_str ?></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="att-rekap-badge">
+                                                        <span class="badge <?= $badge ?>"><?= htmlspecialchars($display_status) ?></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
                                     </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-striped table-md" id="table-daily">
-                                            <thead>
-                                                <tr>
-                                                    <th>No</th>
-                                                    <th>Nama Guru</th>
-                                                    <th>NUPTK</th>
-                                                    <th>Status</th>
-                                                    <th>Waktu Input</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($daily_results as $i => $r): ?>
-                                                <tr>
-                                                    <td><?= $i+1 ?></td>
-                                                    <td><?= htmlspecialchars($r['nama_guru']) ?></td>
-                                                    <td><?= htmlspecialchars($r['nuptk'] ?: '-') ?></td>
-                                                    <td>
-                                                        <?php 
-                                                        $badge = 'badge-secondary';
-                                                        $status = $r['status'] ?: 'Belum Absen';
-                                                        if ($status == 'Hadir') $badge = 'badge-success';
-                                                        elseif ($status == 'Sakit') $badge = 'badge-info';
-                                                        elseif ($status == 'Izin') $badge = 'badge-warning';
-                                                        elseif ($status == 'Alpa') $badge = 'badge-danger';
-                                                        ?>
-                                                        <span class="badge <?= $badge ?>"><?= $status ?></span>
-                                                    </td>
-                                                    <td><?= $r['waktu_input'] ? date('H:i:s', strtotime($r['waktu_input'])) : '-' ?></td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
+
+                                    <!-- Tabel tersembunyi: dipakai exportToExcel() sisi klien -->
+                                    <table class="d-none" id="table-daily">
+                                        <thead>
+                                            <tr>
+                                                <th>No</th>
+                                                <th>Nama Guru</th>
+                                                <th>NUPTK</th>
+                                                <th>Status</th>
+                                                <th>Waktu Input</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($daily_results as $i => $r): ?>
+                                            <tr>
+                                                <td><?= $i+1 ?></td>
+                                                <td><?= htmlspecialchars($r['nama_guru']) ?></td>
+                                                <td><?= htmlspecialchars($r['nuptk'] ?: '-') ?></td>
+                                                <td><?= htmlspecialchars($r['status'] ?: 'Belum Absen') ?></td>
+                                                <td><?= $r['waktu_input'] ? date('H:i:s', strtotime($r['waktu_input'])) : '-' ?></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             <?php elseif ($filter_type == 'all' && !empty($all_results)): ?>
                                 <div class="mt-4">
-                                    <div class="btn-group mb-3 float-right">
-                                        <a href="../config/export_rekap_les_guru_excel?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
-                                        <a href="../config/export_rekap_les_guru_pdf?filter_type=all&session_type=<?= $session_type ?>" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
-                                    </div>
                                     <div class="table-responsive">
-                                        <table class="table table-bordered table-sm" id="table-all">
+                                        <table class="table table-bordered table-sm semester-card-source" id="table-all">
                                             <thead>
                                                 <tr>
                                                     <th rowspan="2" class="align-middle text-center">No</th>

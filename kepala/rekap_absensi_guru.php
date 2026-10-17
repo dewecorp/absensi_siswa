@@ -377,11 +377,6 @@ include '../templates/sidebar.php';
                                                     <?php endforeach; ?>
                                                 </select>
                                             </div>
-                                            <div class="form-group col-md-1 d-flex align-items-end">
-                                                <button type="submit" class="btn btn-primary btn-block">
-                                                    <i class="fas fa-search"></i>
-                                                </button>
-                                            </div>
                                         </form>
                                     </div>
                                 </div>

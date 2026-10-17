@@ -273,6 +273,18 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_att_mc_v = is_readable($_att_mc_path) ? (string) filemtime($_att_mc_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/attendance-cards-monthly.css?v=<?php echo htmlspecialchars($_att_mc_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Attendance semester recap cards CSS (mobile) -->
+    <?php
+    $_att_sc_path = __DIR__ . '/../assets/css/attendance-cards-semester.css';
+    $_att_sc_v = is_readable($_att_sc_path) ? (string) filemtime($_att_sc_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/attendance-cards-semester.css?v=<?php echo htmlspecialchars($_att_sc_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Attendance student detail (per siswa) cards CSS (mobile) -->
+    <?php
+    $_att_sd_path = __DIR__ . '/../assets/css/attendance-student-detail.css';
+    $_att_sd_v = is_readable($_att_sd_path) ? (string) filemtime($_att_sd_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/attendance-student-detail.css?v=<?php echo htmlspecialchars($_att_sd_v, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Quick actions mobile app CSS -->
     <?php
     $_qa_path = __DIR__ . '/../assets/css/quick-actions-app.css';

@@ -226,9 +226,13 @@ if ($class_id > 0) {
 
     } elseif ($filter_type == 'student' && $selected_student > 0) {
         // Student filter
-        $stmt = $pdo->prepare("SELECT nama_siswa, nisn, k.nama_kelas FROM tb_siswa s JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ? AND s.id_kelas = ?");
+        $stmt = $pdo->prepare("SELECT nama_siswa, nisn, s.jenis_kelamin, k.nama_kelas FROM tb_siswa s JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ? AND s.id_kelas = ?");
         $stmt->execute([$selected_student, $class_id]);
         $student_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Berhalangan hanya untuk siswa perempuan (udzur), jadi kartu Berhalangan
+        // tidak ditampilkan untuk siswa laki-laki.
+        $is_siswa_laki = in_array(strtoupper(trim((string)($student_info['jenis_kelamin'] ?? ''))), ['L', 'LAKI-LAKI', 'LAKI - LAKI', 'PRIA'], true);
         
         if ($student_info) {
              $stmt = $pdo->prepare("SELECT status, tanggal FROM tb_sholat WHERE id_siswa = ? ORDER BY tanggal DESC");
@@ -369,7 +373,8 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'monthly_totals' => $monthly_totals,
-                'summary' => $sem_summary
+                'summary' => $sem_summary,
+                'jenis_kelamin' => $student['jenis_kelamin'] ?? ''
             ];
         }
     }
@@ -498,10 +503,6 @@ echo "<script>
                             </select>
                         </div>
                         <?php endif; ?>
-                        
-                        <div class="form-group col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-search"></i> Cari</button>
-                        </div>
                     </form>
 
                     <?php if (!empty($daily_results)): ?>
@@ -720,11 +721,13 @@ echo "<script>
                                             Tidak Hadir/Melaksanakan: <strong><?php echo $student_attendance_summary['Tidak Hadir']; ?></strong>
                                         </div>
                                     </div>
+                                    <?php if (!$is_siswa_laki): ?>
                                     <div class="col-md-3">
                                         <div class="alert alert-danger">
                                             Berhalangan: <strong><?php echo $student_attendance_summary['Berhalangan'] ?? 0; ?></strong>
                                         </div>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="table-responsive mt-3">
                                     <table class="table table-striped" id="studentTable">
@@ -799,7 +802,7 @@ echo "<script>
                                 </thead>
                                 <tbody>
                                     <?php $no = 1; foreach ($semester_results as $r): ?>
-                                    <tr>
+                                    <tr data-jk="<?php echo htmlspecialchars(strtoupper(trim((string)($r['jenis_kelamin'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>">
                                         <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($m=$start_month; $m<=$end_month; $m++): ?>

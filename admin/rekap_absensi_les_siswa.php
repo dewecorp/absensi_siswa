@@ -218,7 +218,7 @@ include '../templates/sidebar.php';
                                     . '&session_type=' . urlencode($session_type)
                                     . '&kelas=' . $id_kelas_selected;
                             ?>
-                            <form method="POST" class="row align-items-end">
+                            <form method="POST" class="row att-filter-form">
                                 <div class="form-group col-md-3">
                                     <label>Jenis Rekap</label>
                                     <select name="filter_type" class="form-control" id="filterType" onchange="this.form.submit()">
@@ -246,7 +246,8 @@ include '../templates/sidebar.php';
                                     <label>Pilih Tanggal</label>
                                     <input type="date" name="attendance_date" class="form-control" value="<?= $selected_date ?>" onchange="this.form.submit()">
                                 </div>
-                                <div class="form-group col-md-<?= count($classes_to_show) > 1 ? '3' : '6' ?> text-md-right text-left mb-3">
+                                <div class="form-group col-12 att-export-row">
+                                    <label class="att-export-label">&nbsp;</label>
                                     <div class="btn-group">
                                         <a href="<?= htmlspecialchars($excel_export_url) ?>" target="_blank" class="btn btn-success">
                                             <i class="fas fa-file-excel"></i> Excel
@@ -401,7 +402,7 @@ include '../templates/sidebar.php';
                             <?php elseif ($filter_type == 'all' && !empty($all_results)): ?>
                                 <div class="mt-4">
                                     <div class="table-responsive">
-                                        <table class="table table-bordered table-sm" id="table-all">
+                                        <table class="table table-bordered table-sm semester-card-source" id="table-all">
                                             <thead>
                                                 <tr>
                                                     <th rowspan="2" class="align-middle text-center">No</th>

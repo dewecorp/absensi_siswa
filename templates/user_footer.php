@@ -344,6 +344,14 @@ if (!isset($school_profile)) {
     <script src="../assets/js/scripts.js"></script>
     <script src="../assets/js/custom.js"></script>
     <script src="../assets/js/global_dropdown.js?v=<?= filemtime(__DIR__ . '/../assets/js/global_dropdown.js') ?>"></script>
+    <!-- Rekap semester: tabel di desktop, kartu di mobile -->
+    <script src="../assets/js/attendance-semester-cards.js?v=<?= filemtime(__DIR__ . '/../assets/js/attendance-semester-cards.js') ?>"></script>
+    <!-- Rekap per siswa: judul + ringkasan rapi (desktop) & kartu (mobile) -->
+    <script src="../assets/js/attendance-student-detail.js?v=<?= filemtime(__DIR__ . '/../assets/js/attendance-student-detail.js') ?>"></script>
+    <!-- Tombol ekspor sejajar dengan filter -->
+    <script src="../assets/js/rekap-toolbar.js?v=<?= filemtime(__DIR__ . '/../assets/js/rekap-toolbar.js') ?>"></script>
+    <!-- Filter siswa: pilih siswa langsung submit -->
+    <script src="../assets/js/filter-auto-submit.js?v=<?= filemtime(__DIR__ . '/../assets/js/filter-auto-submit.js') ?>"></script>
 
     <!-- Page Specific JS File -->
     <?php if (isset($js_page) && is_array($js_page)): ?>

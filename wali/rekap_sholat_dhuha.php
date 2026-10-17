@@ -401,7 +401,8 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'monthly_totals' => $monthly_totals,
-                'summary' => $sem_summary
+                'summary' => $sem_summary,
+                'jenis_kelamin' => $student['jenis_kelamin'] ?? ''
             ];
         }
     }
@@ -485,10 +486,6 @@ echo "<script>
                             </select>
                         </div>
                         <?php endif; ?>
-                        
-                        <div class="form-group col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-search"></i> Cari</button>
-                        </div>
                     </form>
 
                     <?php if (!empty($daily_results)): ?>
@@ -781,7 +778,7 @@ echo "<script>
                                 </thead>
                                 <tbody>
                                     <?php $no = 1; foreach ($semester_results as $r): ?>
-                                    <tr>
+                                    <tr data-jk="<?php echo htmlspecialchars(strtoupper(trim((string)($r['jenis_kelamin'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>">
                                         <td><?php echo $no++; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php for($m=$start_month; $m<=$end_month; $m++): ?>

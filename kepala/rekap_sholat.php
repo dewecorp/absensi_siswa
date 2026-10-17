@@ -210,9 +210,13 @@ if ($class_id > 0) {
 
     } elseif ($filter_type == 'student' && $selected_student > 0) {
         // Student filter
-        $stmt = $pdo->prepare("SELECT nama_siswa, nisn, k.nama_kelas FROM tb_siswa s JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ?");
+        $stmt = $pdo->prepare("SELECT nama_siswa, nisn, s.jenis_kelamin, k.nama_kelas FROM tb_siswa s JOIN tb_kelas k ON s.id_kelas = k.id_kelas WHERE s.id_siswa = ?");
         $stmt->execute([$selected_student]);
         $student_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Berhalangan hanya untuk siswa perempuan (udzur), jadi kartu Berhalangan
+        // tidak ditampilkan untuk siswa laki-laki.
+        $is_siswa_laki = in_array(strtoupper(trim((string)($student_info['jenis_kelamin'] ?? ''))), ['L', 'LAKI-LAKI', 'LAKI - LAKI', 'PRIA'], true);
         
         if ($student_info) {
              $stmt = $pdo->prepare("SELECT status, tanggal FROM tb_sholat WHERE id_siswa = ? ORDER BY tanggal DESC");
@@ -361,7 +365,8 @@ if ($class_id > 0) {
                 'nama_siswa' => $student['nama_siswa'],
                 'nisn' => $student['nisn'],
                 'monthly_totals' => $monthly_totals,
-                'summary' => $sem_summary
+                'summary' => $sem_summary,
+                'jenis_kelamin' => $student['jenis_kelamin'] ?? ''
             ];
         }
     }
@@ -432,10 +437,6 @@ include '../templates/sidebar.php';
                             </select>
                         </div>
                         <?php endif; ?>
-                        
-                        <div class="form-group col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-search"></i> Cari</button>
-                        </div>
                     </form>
 
                     <?php if (!empty($daily_results)): ?>
@@ -655,7 +656,7 @@ include '../templates/sidebar.php';
                                 </thead>
                                 <tbody>
                                     <?php foreach ($semester_results as $idx => $r): ?>
-                                    <tr>
+                                    <tr data-jk="<?php echo htmlspecialchars(strtoupper(trim((string)($r['jenis_kelamin'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>">
                                         <td><?php echo $idx + 1; ?></td>
                                         <td><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
                                         <?php 
@@ -701,10 +702,12 @@ include '../templates/sidebar.php';
                                         <h3 class="mb-0"><?php echo $student_attendance_summary['Tidak Hadir']; ?></h3>
                                         <small>Total Tidak Hadir</small>
                                     </div>
+                                    <?php if (!$is_siswa_laki): ?>
                                     <div class="d-inline-block p-2 bg-danger text-white rounded text-center" style="min-width: 100px;">
                                         <h3 class="mb-0"><?php echo $student_attendance_summary['Berhalangan'] ?? 0; ?></h3>
                                         <small>Berhalangan</small>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 
