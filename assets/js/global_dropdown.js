@@ -11,6 +11,8 @@
     if (sel.closest('#modalKomunikasi')) return false;
     if (sel.closest('#modalTL')) return false;
     if (sel.closest('#modalSoal')) return false;
+    if (sel.closest('#modal-remedial')) return false;
+    if (sel.closest('#modal-enrichment')) return false;
     if (sel.classList.contains('select2-hidden-accessible')) return false;
     if (sel.closest('.select2-container')) return false;
     if (sel.className && (sel.className.indexOf('select2') !== -1 || sel.id === 'f_siswa' || sel.id === 'inp_siswa') && hasSelect2Lib()) return false;

@@ -1,0 +1,718 @@
+/* ===================================================================
+   SIMAD Mobile App - Nilai Harian Modern Interface
+   (Exclusively styled for mobile phones <= 767.98px)
+   =================================================================== */
+
+@media (max-width: 767.98px) {
+    /* Prevent whole page from shifting horizontally */
+    html, body {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+
+    .main-content, .section, .section-body {
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+    }
+
+    /* Hide desktop table and wrappers */
+    .nilai-desktop-view {
+        display: none !important;
+    }
+
+    /* Mobile wrapper */
+    .nilai-mobile-app {
+        display: block !important;
+        padding-bottom: 155px; /* Generous space for floating card + bottom bar */
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Hero Info Card */
+    .nilai-hero-card {
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
+        border-radius: 20px;
+        padding: 16px 16px 14px;
+        color: #ffffff;
+        box-shadow: 0 8px 24px rgba(37, 99, 235, .22);
+        margin-bottom: 12px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .nilai-hero-card::before {
+        content: "";
+        position: absolute;
+        top: -30px;
+        right: -30px;
+        width: 130px;
+        height: 130px;
+        background: radial-gradient(circle, rgba(255, 255, 255, .2) 0%, rgba(255, 255, 255, 0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .nilai-hero-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .nilai-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(255, 255, 255, .18);
+        backdrop-filter: blur(8px);
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .2px;
+    }
+
+    .nilai-hero-title {
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1.25;
+        margin-bottom: 3px;
+        color: #ffffff;
+    }
+
+    .nilai-hero-sub {
+        font-size: 12px;
+        color: rgba(255, 255, 255, .88);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .nilai-kktp-badge {
+        background: rgba(245, 158, 11, .28);
+        color: #fef3c7;
+        border: 1px solid rgba(251, 191, 36, .45);
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 10.5px;
+        font-weight: 800;
+    }
+
+    /* Actions Bar */
+    .nilai-actions-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, .15);
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .nilai-actions-bar::-webkit-scrollbar { display: none; }
+
+    .nilai-action-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(255, 255, 255, .2);
+        color: #ffffff;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+        text-decoration: none !important;
+        border: 1px solid rgba(255, 255, 255, .25);
+        transition: all .2s;
+    }
+    .nilai-action-chip:hover, .nilai-action-chip:active {
+        background: rgba(255, 255, 255, .32);
+        color: #ffffff;
+    }
+
+    /* Horizontal Column Tabs (Horizontal Scroll Pill Selector) */
+    .nilai-tabs-container {
+        margin-bottom: 12px;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .nilai-tabs-scroll {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding: 4px 4px 10px 4px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .nilai-tabs-scroll::-webkit-scrollbar { display: none; }
+
+    .nilai-tab-item {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all .2s ease;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, .03);
+        user-select: none;
+    }
+
+    .nilai-tab-item.active {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, .3);
+        transform: translateY(-1px);
+    }
+
+    .nilai-tab-item .badge-count {
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-weight: 800;
+    }
+
+    .nilai-tab-item.active .badge-count {
+        background: rgba(255, 255, 255, .25);
+        color: #ffffff;
+    }
+
+    .nilai-tab-item.btn-add-tab {
+        border-style: dashed;
+        border-color: #cbd5e1;
+        background: #f8fafc;
+        color: #2563eb;
+    }
+
+    /* Active Assessment Info Banner */
+    .nilai-banner-info {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-left: 4.5px solid #2563eb;
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .03);
+    }
+
+    .nilai-banner-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+
+    .nilai-banner-name {
+        font-size: 14.5px;
+        font-weight: 800;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .nilai-banner-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    .nilai-banner-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #475569;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        cursor: pointer;
+    }
+    .nilai-banner-btn.btn-edit:hover { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+    .nilai-banner-btn.btn-delete:hover { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+
+    .nilai-banner-materi {
+        font-size: 12px;
+        color: #64748b;
+        font-style: italic;
+        margin-bottom: 6px;
+        line-height: 1.35;
+    }
+
+    .nilai-banner-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 11px;
+        color: #475569;
+    }
+
+    .nilai-banner-pill {
+        background: #f1f5f9;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+    }
+
+    .nilai-banner-pill.val-max { color: #059669; }
+    .nilai-banner-pill.val-min { color: #dc2626; }
+
+    /* Student List Cards */
+    .nilai-student-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nilai-student-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 12px 14px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .03);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        transition: border-color .15s ease;
+    }
+
+    .nilai-student-card:focus-within {
+        border-color: #2563eb;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, .1);
+    }
+
+    .nilai-student-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .nilai-student-num {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 11.5px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .nilai-student-info {
+        min-width: 0;
+    }
+
+    .nilai-student-name {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        margin-bottom: 2px;
+    }
+
+    .nilai-student-sub {
+        font-size: 11px;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .nilai-student-sub .badge-rerata {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-weight: 700;
+        font-size: 10px;
+    }
+
+    /* Right Inputs Side */
+    .nilai-student-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    .nilai-input-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .mobile-grade-input {
+        width: 72px !important;
+        height: 40px !important;
+        background: #f8fafc !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        font-size: 16px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        text-align: center !important;
+        outline: none !important;
+        box-shadow: none !important;
+        padding: 2px !important;
+        -moz-appearance: textfield;
+    }
+    .mobile-grade-input::-webkit-outer-spin-button,
+    .mobile-grade-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .mobile-grade-input:focus {
+        background: #ffffff !important;
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, .15) !important;
+    }
+
+    .mobile-grade-input.is-filled {
+        background: #eff6ff !important;
+        border-color: #93c5fd !important;
+        color: #1e3a8a !important;
+    }
+
+    .nilai-badge-jadi {
+        font-size: 10.5px;
+        font-weight: 800;
+        color: #059669;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        padding: 1px 7px;
+        border-radius: 6px;
+        line-height: 1.3;
+        white-space: nowrap;
+    }
+
+    /* Dual input row for semester/exam (Asli & Remidi) */
+    .mobile-dual-inputs {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .mobile-dual-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .mobile-dual-col label {
+        font-size: 10px;
+        font-weight: 800;
+        color: #64748b;
+        margin-bottom: 0;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+    .mobile-dual-col .mobile-grade-input {
+        width: 62px !important;
+        height: 38px !important;
+        font-size: 15px !important;
+    }
+
+    /* Summary Stats Card (Footer Nilai Tertinggi & Terendah Kelas) */
+    .nilai-summary-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 14px 16px;
+        margin-top: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, .04);
+    }
+
+    .nilai-summary-header {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .nilai-summary-title {
+        font-size: 13px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .nilai-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .nilai-summary-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px 8px;
+        text-align: center;
+    }
+
+    .nilai-summary-box.box-max {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+    }
+
+    .nilai-summary-box.box-min {
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+
+    .nilai-summary-box.box-avg {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+    }
+
+    .nilai-summary-box .box-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #64748b;
+        margin-bottom: 4px;
+        white-space: nowrap;
+    }
+
+    .nilai-summary-box.box-max .box-label { color: #166534; }
+    .nilai-summary-box.box-min .box-label { color: #991b1b; }
+    .nilai-summary-box.box-avg .box-label { color: #1e40af; }
+
+    .nilai-summary-box .box-value {
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin-bottom: 3px;
+    }
+
+    .nilai-summary-box .box-sub {
+        font-size: 9.5px;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    /* Floating Bottom Action Bar */
+    .nilai-bottom-bar {
+        position: fixed;
+        bottom: 74px; /* Lifted clearly above the 60px bottom navigation */
+        left: 12px;
+        right: 12px;
+        max-width: 480px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, .96);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(226, 232, 240, .95);
+        border-radius: 18px;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        z-index: 990;
+        box-shadow: 0 8px 26px rgba(15, 23, 42, .14);
+    }
+
+    .nilai-bar-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .nilai-bar-title {
+        font-size: 12px;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+
+    .nilai-bar-sub {
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .nilai-btn-save {
+        background: #059669;
+        color: #ffffff;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 18px;
+        font-size: 13px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, .3);
+        transition: all .2s ease;
+        flex-shrink: 0;
+    }
+
+    .nilai-btn-save:active {
+        transform: scale(.96);
+        background: #047857;
+    }
+
+    /* Modal Mobile Adaptations */
+    #editColModalMobile .modal-dialog {
+        margin: 10px;
+    }
+
+    /* Rekap Nilai Mobile Badges & Chips */
+    .nilai-rank-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 900;
+        flex-shrink: 0;
+    }
+    .nilai-rank-1 {
+        background: #fef3c7;
+        color: #b45309;
+        border: 1.5px solid #fde68a;
+    }
+    .nilai-rank-2 {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1.5px solid #cbd5e1;
+    }
+    .nilai-rank-3 {
+        background: #ffedd5;
+        color: #c2410c;
+        border: 1.5px solid #fed7aa;
+    }
+    .nilai-rank-other {
+        background: #f8fafc;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+    .rekap-scores-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed #e2e8f0;
+    }
+    .rekap-score-item {
+        background: #f8fafc;
+        border: 1px solid #f1f5f9;
+        border-radius: 8px;
+        padding: 4px 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+    }
+    .rekap-score-name {
+        color: #64748b;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 95px;
+    }
+    .rekap-score-val {
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    /* Program Remidial & Pengayaan Mobile Cards */
+    .program-card-actions {
+        display: inline-flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 6px !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+    .program-action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border: none;
+        cursor: pointer;
+        transition: all .2s ease;
+        flex-shrink: 0;
+    }
+    .program-action-btn.btn-edit-card {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    .program-action-btn.btn-delete-card {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    .program-score-pill {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        min-width: 52px;
+    }
+    .program-score-pill .score-lbl {
+        font-size: 9.5px;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        line-height: 1;
+        margin-bottom: 2px;
+    }
+    .program-score-pill .score-val {
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1;
+    }
+}
+
+@media (min-width: 768px) {
+    .nilai-mobile-app {
+        display: none !important;
+    }
+    .nilai-desktop-view {
+        display: block !important;
+    }
+}

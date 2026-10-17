@@ -49,6 +49,25 @@ $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : (count($classes) =
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
 $selected_exam_type = isset($_GET['jenis']) ? $_GET['jenis'] : null;
 
+$selected_class = null;
+if ($selected_class_id) {
+    foreach ($classes as $c) {
+        if ($c['id_kelas'] == $selected_class_id) {
+            $selected_class = $c;
+            break;
+        }
+    }
+}
+$selected_mapel = null;
+if ($selected_mapel_id) {
+    foreach ($subjects as $m) {
+        if ($m['id_mapel'] == $selected_mapel_id) {
+            $selected_mapel = $m;
+            break;
+        }
+    }
+}
+
 // Check if selected class is grade 6 (kelas 6)
 $is_grade_6 = false;
 if ($selected_class_id) {
@@ -204,7 +223,7 @@ $js_libs = ['https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/js/iziToast.m
 ob_start();
 ?>
 $(document).ready(function() {
-    $('#btn-add-enrichment').on('click', function() {
+    $(document).on('click', '#btn-add-enrichment, #btn-add-enrichment-mobile', function() {
         $('#form-enrichment')[0].reset();
         $('#form-action').val('save');
         $('#select-siswa').prop('disabled', false);
@@ -231,7 +250,7 @@ $(document).ready(function() {
         });
     });
 
-    $('.btn-edit').on('click', function() {
+    $(document).on('click', '.btn-edit', function() {
         const data = $(this).data('data');
         $('#form-enrichment')[0].reset();
         $('#form-action').val('update');
@@ -268,7 +287,7 @@ $(document).ready(function() {
         });
     });
 
-    $('.btn-delete').on('click', function() {
+    $(document).on('click', '.btn-delete', function() {
         const id = $(this).data('id');
         Swal.fire({
             title: 'Hapus data pengayaan?',
@@ -366,6 +385,10 @@ require_once '../templates/sidebar.php';
                     </form>
 
                     <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
+                        <!-- ==========================================
+                             DESKTOP VIEW (TABLE UNCHANGED)
+                             ========================================== -->
+                        <div class="nilai-desktop-view">
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <button type="button" class="btn btn-primary" id="btn-add-enrichment">
@@ -406,18 +429,141 @@ require_once '../templates/sidebar.php';
                                             <td><?= htmlspecialchars($p['nama_siswa']) ?></td>
                                             <td class="text-center"><?= (float)$p['nilai_asli'] ?></td>
                                             <td><?= htmlspecialchars($p['bentuk_pengayaan']) ?></td>
-                                            <td class="text-center">
-                                                <button class="btn btn-warning btn-sm btn-edit" data-data='<?= json_encode($p) ?>'>
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm btn-delete" data-id="<?= $p['id_pengayaan'] ?>">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                                            <td class="text-center text-nowrap">
+                                                <div class="d-inline-flex align-items-center" style="gap: 4px;">
+                                                    <button class="btn btn-warning btn-sm btn-edit" data-data='<?= json_encode($p) ?>' title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm btn-delete" data-id="<?= $p['id_pengayaan'] ?>" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     <?php endforeach; endif; ?>
                                 </tbody>
                             </table>
+                        </div>
+                        </div> <!-- End .nilai-desktop-view -->
+
+                        <!-- ==========================================
+                             MOBILE APP VIEW (NO HORIZONTAL SCROLL)
+                             ========================================== -->
+                        <div class="nilai-mobile-app">
+                            <!-- Hero Info Card -->
+                            <div class="nilai-hero-card">
+                                <div class="nilai-hero-top">
+                                    <span class="nilai-hero-badge">
+                                        <i class="fas fa-book-open"></i> TA <?= htmlspecialchars($tahun_ajaran) ?> &bull; Sem <?= htmlspecialchars($semester_aktif) ?>
+                                    </span>
+                                    <span class="nilai-kktp-badge">
+                                        <i class="fas fa-layer-group mr-1"></i><?= htmlspecialchars($selected_exam_type) ?>
+                                    </span>
+                                </div>
+                                <div class="nilai-hero-title"><?= htmlspecialchars($selected_mapel['nama_mapel'] ?? 'Mata Pelajaran') ?></div>
+                                <div class="nilai-hero-sub">
+                                    <span><i class="fas fa-chalkboard mr-1"></i><?= htmlspecialchars($selected_class['nama_kelas'] ?? 'Kelas') ?></span>
+                                    <span>&bull;</span>
+                                    <span><?= count($enrichment_list) ?> Siswa Pengayaan</span>
+                                </div>
+
+                                <div class="nilai-actions-bar">
+                                    <button type="button" class="nilai-action-chip" id="btn-add-enrichment-mobile">
+                                        <i class="fas fa-plus text-primary"></i> Tambah Pengayaan
+                                    </button>
+                                    <a href="export_program_pengayaan_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="nilai-action-chip">
+                                        <i class="fas fa-file-excel text-success"></i> Excel
+                                    </a>
+                                    <a href="export_program_pengayaan_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="nilai-action-chip">
+                                        <i class="fas fa-file-pdf text-danger"></i> PDF
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Student Pengayaan Cards -->
+                            <?php if (empty($enrichment_list)): ?>
+                                <div class="card p-4 text-center" style="border-radius: 18px;">
+                                    <i class="fas fa-award fa-3x text-muted mb-3"></i>
+                                    <h6 class="font-weight-bold">Belum Ada Data Pengayaan</h6>
+                                    <p class="text-muted small">Data program pengayaan untuk ulangan ini belum ditambahkan.</p>
+                                    <button type="button" class="btn btn-primary btn-sm mx-auto font-weight-bold" id="btn-add-enrichment-empty" onclick="$('#btn-add-enrichment').click()" style="border-radius: 10px;">
+                                        <i class="fas fa-plus mr-1"></i> Tambah Siswa Pengayaan
+                                    </button>
+                                </div>
+                            <?php else: ?>
+                                <div class="nilai-student-list">
+                                    <?php 
+                                    $pNo = 1;
+                                    $maxScore = -INF;
+                                    $sumScore = 0;
+                                    $countScore = 0;
+                                    foreach ($enrichment_list as $p): 
+                                        $vScore = (float)$p['nilai_asli'];
+                                        if ($vScore > $maxScore) $maxScore = $vScore;
+                                        $sumScore += $vScore;
+                                        $countScore++;
+                                    ?>
+                                        <div class="nilai-student-card flex-column align-items-stretch">
+                                            <div class="d-flex align-items-start justify-content-between mb-2">
+                                                <div class="nilai-student-left">
+                                                    <div class="nilai-student-num"><?= $pNo++ ?></div>
+                                                    <div class="nilai-student-info">
+                                                        <div class="nilai-student-name"><?= htmlspecialchars($p['nama_siswa']) ?></div>
+                                                        <div class="nilai-student-sub">
+                                                            <span><i class="fas fa-calendar-alt mr-1"></i><?= date('d/m/Y', strtotime($p['tanggal'])) ?></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="program-card-actions">
+                                                    <button type="button" class="program-action-btn btn-edit-card btn-edit" data-data='<?= json_encode($p) ?>' title="Edit">
+                                                        <i class="fas fa-pen"></i>
+                                                    </button>
+                                                    <button type="button" class="program-action-btn btn-delete-card btn-delete" data-id="<?= $p['id_pengayaan'] ?>" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                                                <div class="small text-muted font-weight-bold" style="font-size: 11px;">
+                                                    <i class="fas fa-tag mr-1 text-primary"></i><?= htmlspecialchars($p['bentuk_pengayaan']) ?>
+                                                </div>
+                                                <div class="program-score-pill">
+                                                    <span class="score-lbl">Nilai</span>
+                                                    <span class="score-val text-primary"><?= (float)$p['nilai_asli'] ?></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                                <!-- Summary Stats Card -->
+                                <div class="nilai-summary-card">
+                                    <div class="nilai-summary-header">
+                                        <span class="nilai-summary-title">
+                                            <i class="fas fa-chart-line text-primary mr-1"></i>
+                                            Rekap Program Pengayaan
+                                        </span>
+                                    </div>
+                                    <div class="nilai-summary-grid">
+                                        <div class="nilai-summary-box box-max">
+                                            <div class="box-label">Nilai Tertinggi</div>
+                                            <div class="box-value text-success"><?= $maxScore !== -INF ? $maxScore : '-' ?></div>
+                                            <div class="box-sub">Peserta Pengayaan</div>
+                                        </div>
+                                        <div class="nilai-summary-box box-avg">
+                                            <div class="box-label">Rata-rata Nilai</div>
+                                            <div class="box-value text-primary"><?= $countScore > 0 ? round($sumScore / $countScore, 1) : '-' ?></div>
+                                            <div class="box-sub">Peserta Pengayaan</div>
+                                        </div>
+                                        <div class="nilai-summary-box box-min">
+                                            <div class="box-label">Total Peserta</div>
+                                            <div class="box-value text-dark"><?= count($enrichment_list) ?></div>
+                                            <div class="box-sub">Siswa Tuntas &gt;= KKTP</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php else: ?>
                         <div class="alert alert-info">Pilih filter di atas untuk melihat data pengayaan.</div>

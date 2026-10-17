@@ -586,6 +586,10 @@ require_once '../templates/sidebar.php';
                                 Belum ada mata pelajaran yang terisi untuk jenis penilaian ini.
                             </div>
                         <?php else: ?>
+                        <!-- ==========================================
+                             DESKTOP VIEW (TABLE UNCHANGED)
+                             ========================================== -->
+                        <div class="nilai-desktop-view">
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped table-sm" id="rekapTable">
                                 <thead>
@@ -647,6 +651,141 @@ require_once '../templates/sidebar.php';
                                     <?php endif; ?>
                                 </tbody>
                             </table>
+                        </div>
+                        </div> <!-- End .nilai-desktop-view -->
+
+                        <!-- ==========================================
+                             MOBILE APP VIEW (NO HORIZONTAL SCROLL)
+                             ========================================== -->
+                        <div class="nilai-mobile-app">
+                            <!-- Hero Info Card -->
+                            <div class="nilai-hero-card">
+                                <div class="nilai-hero-top">
+                                    <span class="nilai-hero-badge">
+                                        <i class="fas fa-book-open"></i> TA <?= htmlspecialchars($tahun_ajaran) ?> &bull; Sem <?= htmlspecialchars($semester_aktif) ?>
+                                    </span>
+                                    <span class="nilai-kktp-badge">
+                                        <i class="fas fa-layer-group mr-1"></i><?= htmlspecialchars($selected_jenis) ?>
+                                    </span>
+                                </div>
+                                <div class="nilai-hero-title">Rekap Nilai Siswa</div>
+                                <div class="nilai-hero-sub">
+                                    <span><i class="fas fa-chalkboard mr-1"></i><?= htmlspecialchars($selected_class['nama_kelas']) ?></span>
+                                    <span>&bull;</span>
+                                    <span><?= count($students) ?> Siswa</span>
+                                    <span>&bull;</span>
+                                    <span><?= count($subjects) ?> Mapel</span>
+                                </div>
+
+                                <div class="nilai-actions-bar">
+                                    <a href="export_rekap_nilai_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="nilai-action-chip">
+                                        <i class="fas fa-file-excel text-success"></i> Excel
+                                    </a>
+                                    <a href="export_rekap_nilai_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&jenis=<?= urlencode($selected_jenis) ?>&tipe=<?= $selected_tipe ?>" target="_blank" class="nilai-action-chip">
+                                        <i class="fas fa-file-pdf text-danger"></i> PDF
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Student List Cards -->
+                            <div class="nilai-student-list">
+                                <?php 
+                                $sNo = 1;
+                                foreach ($students as $student): 
+                                    $data = $rekap_data[$student['id_siswa']] ?? [];
+                                    $rank = $data['ranking'] ?? '-';
+                                    $rankClass = 'nilai-rank-other';
+                                    if ($rank === 1 || $rank === '1') $rankClass = 'nilai-rank-1';
+                                    elseif ($rank === 2 || $rank === '2') $rankClass = 'nilai-rank-2';
+                                    elseif ($rank === 3 || $rank === '3') $rankClass = 'nilai-rank-3';
+                                    $rerata = $data['rerata'] ?? 0;
+                                    $total = $data['total'] ?? 0;
+                                    $sId = $student['id_siswa'];
+                                ?>
+                                    <div class="nilai-student-card flex-column align-items-stretch" style="cursor: pointer;" onclick="$('#detail-rekap-<?= $sId ?>').slideToggle(200); $(this).find('.rekap-toggle-icon').toggleClass('fa-chevron-down fa-chevron-up');">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="nilai-student-left">
+                                                <div class="nilai-rank-badge <?= $rankClass ?>" title="Peringkat <?= $rank ?>">
+                                                    <?= $rank !== '-' ? $rank : '#' ?>
+                                                </div>
+                                                <div class="nilai-student-info ml-2">
+                                                    <div class="nilai-student-name">
+                                                        <?= htmlspecialchars($student['nama_siswa']) ?>
+                                                    </div>
+                                                    <div class="nilai-student-sub">
+                                                        <span>No. <?= $sNo++ ?></span>
+                                                        <span>&bull;</span>
+                                                        <span>Total: <strong><?= $total ?></strong></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="nilai-student-right d-flex align-items-center" style="gap: 8px;">
+                                                <div class="text-right">
+                                                    <div style="font-size: 9.5px; font-weight: 800; color: #64748b; text-transform: uppercase;">Rerata</div>
+                                                    <div style="font-size: 16px; font-weight: 900; color: #2563eb; line-height: 1.1;"><?= $rerata ?></div>
+                                                </div>
+                                                <i class="fas fa-chevron-down rekap-toggle-icon text-muted" style="font-size: 12px;"></i>
+                                            </div>
+                                        </div>
+
+                                        <!-- Collapsible Subject Scores -->
+                                        <div id="detail-rekap-<?= $sId ?>" class="rekap-scores-grid" style="display: none;" onclick="event.stopPropagation();">
+                                            <?php foreach ($subjects as $mapel): ?>
+                                                <?php 
+                                                $v = $data[$mapel['id_mapel']] ?? 0;
+                                                ?>
+                                                <div class="rekap-score-item">
+                                                    <span class="rekap-score-name" title="<?= htmlspecialchars($mapel['nama_mapel']) ?>">
+                                                        <?= htmlspecialchars($mapel['nama_mapel']) ?>
+                                                    </span>
+                                                    <span class="rekap-score-val <?= $v > 0 ? '' : 'text-muted' ?>">
+                                                        <?= $v > 0 ? $v : '-' ?>
+                                                    </span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <!-- Summary Class Average Card -->
+                            <?php if (!empty($subjects)): ?>
+                            <?php 
+                            $class_total_avg = 0;
+                            $count_valid_mapel = 0;
+                            foreach ($subjects as $m) {
+                                $avgM = $kelas_avg[$m['id_mapel']] ?? 0;
+                                if ($avgM > 0) {
+                                    $class_total_avg += $avgM;
+                                    $count_valid_mapel++;
+                                }
+                            }
+                            $overall_class_avg = $count_valid_mapel > 0 ? round($class_total_avg / $count_valid_mapel, 1) : '-';
+                            ?>
+                            <div class="nilai-summary-card">
+                                <div class="nilai-summary-header">
+                                    <span class="nilai-summary-title">
+                                        <i class="fas fa-chart-pie text-primary mr-1"></i>
+                                        Rerata Kelas per Mata Pelajaran
+                                    </span>
+                                </div>
+                                <div class="rekap-scores-grid mt-2 pt-0 border-0">
+                                    <?php foreach ($subjects as $mapel): ?>
+                                        <?php 
+                                        $vAvg = $kelas_avg[$mapel['id_mapel']] ?? 0;
+                                        ?>
+                                        <div class="rekap-score-item">
+                                            <span class="rekap-score-name" title="<?= htmlspecialchars($mapel['nama_mapel']) ?>">
+                                                <?= htmlspecialchars($mapel['nama_mapel']) ?>
+                                            </span>
+                                            <span class="rekap-score-val text-primary font-weight-bold">
+                                                <?= $vAvg > 0 ? $vAvg : '-' ?>
+                                            </span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                         </div>
                         <?php endif; ?>
                     <?php else: ?>

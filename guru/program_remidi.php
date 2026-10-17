@@ -49,6 +49,25 @@ $selected_class_id = isset($_GET['kelas']) ? $_GET['kelas'] : (count($classes) =
 $selected_mapel_id = isset($_GET['mapel']) ? $_GET['mapel'] : null;
 $selected_exam_type = isset($_GET['jenis']) ? $_GET['jenis'] : null;
 
+$selected_class = null;
+if ($selected_class_id) {
+    foreach ($classes as $c) {
+        if ($c['id_kelas'] == $selected_class_id) {
+            $selected_class = $c;
+            break;
+        }
+    }
+}
+$selected_mapel = null;
+if ($selected_mapel_id) {
+    foreach ($subjects as $m) {
+        if ($m['id_mapel'] == $selected_mapel_id) {
+            $selected_mapel = $m;
+            break;
+        }
+    }
+}
+
 // Check if selected class is grade 6 (kelas 6)
 $is_grade_6 = false;
 if ($selected_class_id) {
@@ -266,7 +285,7 @@ $js_libs = ['https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/js/iziToast.m
 ob_start();
 ?>
 $(document).ready(function() {
-    $('#btn-add-remedial').on('click', function() {
+    $(document).on('click', '#btn-add-remedial, #btn-add-remedial-mobile', function() {
         $('#form-remedial')[0].reset();
         $('#form-action').val('save');
         $('#select-siswa').prop('disabled', false);
@@ -299,7 +318,7 @@ $(document).ready(function() {
         $('#input-nilai-asli').val(selected.data('grade') || 0);
     });
 
-    $('.btn-edit').on('click', function() {
+    $(document).on('click', '.btn-edit', function() {
         const data = $(this).data('data');
         $('#form-remedial')[0].reset();
         $('#form-action').val('update');
@@ -339,7 +358,7 @@ $(document).ready(function() {
         });
     });
 
-    $('.btn-delete').on('click', function() {
+    $(document).on('click', '.btn-delete', function() {
         const id = $(this).data('id');
         Swal.fire({
             title: 'Hapus data remedial?',
@@ -437,6 +456,10 @@ require_once '../templates/sidebar.php';
                     </form>
 
                     <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
+                        <!-- ==========================================
+                             DESKTOP VIEW (TABLE UNCHANGED)
+                             ========================================== -->
+                        <div class="nilai-desktop-view">
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <button type="button" class="btn btn-primary" id="btn-add-remedial">
@@ -454,9 +477,7 @@ require_once '../templates/sidebar.php';
                                 </div>
                             </div>
                         </div>
-                    <?php endif; ?>
 
-                    <?php if ($selected_class_id && $selected_mapel_id && $selected_exam_type): ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead>
@@ -489,18 +510,154 @@ require_once '../templates/sidebar.php';
                                                     <?= $r['keterangan'] ?>
                                                 </span>
                                             </td>
-                                            <td class="text-center">
-                                                <button class="btn btn-warning btn-sm btn-edit" data-data='<?= json_encode($r) ?>'>
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm btn-delete" data-id="<?= $r['id_remidi'] ?>">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                                            <td class="text-center text-nowrap">
+                                                <div class="d-inline-flex align-items-center" style="gap: 4px;">
+                                                    <button class="btn btn-warning btn-sm btn-edit" data-data='<?= json_encode($r) ?>' title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm btn-delete" data-id="<?= $r['id_remidi'] ?>" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     <?php endforeach; endif; ?>
                                 </tbody>
                             </table>
+                        </div>
+                        </div> <!-- End .nilai-desktop-view -->
+
+                        <!-- ==========================================
+                             MOBILE APP VIEW (NO HORIZONTAL SCROLL)
+                             ========================================== -->
+                        <div class="nilai-mobile-app">
+                            <!-- Hero Info Card -->
+                            <div class="nilai-hero-card">
+                                <div class="nilai-hero-top">
+                                    <span class="nilai-hero-badge">
+                                        <i class="fas fa-book-open"></i> TA <?= htmlspecialchars($tahun_ajaran) ?> &bull; Sem <?= htmlspecialchars($semester_aktif) ?>
+                                    </span>
+                                    <span class="nilai-kktp-badge">
+                                        <i class="fas fa-layer-group mr-1"></i><?= htmlspecialchars($selected_exam_type) ?>
+                                    </span>
+                                </div>
+                                <div class="nilai-hero-title"><?= htmlspecialchars($selected_mapel['nama_mapel'] ?? 'Mata Pelajaran') ?></div>
+                                <div class="nilai-hero-sub">
+                                    <span><i class="fas fa-chalkboard mr-1"></i><?= htmlspecialchars($selected_class['nama_kelas'] ?? 'Kelas') ?></span>
+                                    <span>&bull;</span>
+                                    <span><?= count($remedial_list) ?> Siswa Remidi</span>
+                                </div>
+
+                                <div class="nilai-actions-bar">
+                                    <button type="button" class="nilai-action-chip" id="btn-add-remedial-mobile">
+                                        <i class="fas fa-plus text-primary"></i> Tambah Remidi
+                                    </button>
+                                    <a href="export_program_remidi_excel.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="nilai-action-chip">
+                                        <i class="fas fa-file-excel text-success"></i> Excel
+                                    </a>
+                                    <a href="export_program_remidi_pdf.php?kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>&jenis=<?= urlencode($selected_exam_type) ?>" target="_blank" class="nilai-action-chip">
+                                        <i class="fas fa-file-pdf text-danger"></i> PDF
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Student Remidi Cards -->
+                            <?php if (empty($remedial_list)): ?>
+                                <div class="card p-4 text-center" style="border-radius: 18px;">
+                                    <i class="fas fa-user-check fa-3x text-muted mb-3"></i>
+                                    <h6 class="font-weight-bold">Belum Ada Data Remidi</h6>
+                                    <p class="text-muted small">Semua siswa tuntas atau data remidi belum ditambahkan untuk ulangan ini.</p>
+                                    <button type="button" class="btn btn-primary btn-sm mx-auto font-weight-bold" id="btn-add-remedial-empty" onclick="$('#btn-add-remedial').click()" style="border-radius: 10px;">
+                                        <i class="fas fa-plus mr-1"></i> Tambah Siswa Remidi
+                                    </button>
+                                </div>
+                            <?php else: ?>
+                                <div class="nilai-student-list">
+                                    <?php 
+                                    $mNo = 1;
+                                    $countTuntas = 0;
+                                    $sumRemidi = 0;
+                                    $countRemidiVal = 0;
+                                    foreach ($remedial_list as $r): 
+                                        $isTuntas = ($r['keterangan'] === 'Tuntas');
+                                        if ($isTuntas) $countTuntas++;
+                                        if ((float)$r['nilai_tes_remidi'] > 0) {
+                                            $sumRemidi += (float)$r['nilai_tes_remidi'];
+                                            $countRemidiVal++;
+                                        }
+                                    ?>
+                                        <div class="nilai-student-card flex-column align-items-stretch">
+                                            <div class="d-flex align-items-start justify-content-between mb-2">
+                                                <div class="nilai-student-left">
+                                                    <div class="nilai-student-num"><?= $mNo++ ?></div>
+                                                    <div class="nilai-student-info">
+                                                        <div class="nilai-student-name"><?= htmlspecialchars($r['nama_siswa']) ?></div>
+                                                        <div class="nilai-student-sub">
+                                                            <span><i class="fas fa-calendar-alt mr-1"></i><?= date('d/m/Y', strtotime($r['tanggal'])) ?></span>
+                                                            <span>&bull;</span>
+                                                            <span>KKM: <strong><?= (float)$r['kkm'] ?></strong></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="program-card-actions">
+                                                    <button type="button" class="program-action-btn btn-edit-card btn-edit" data-data='<?= json_encode($r) ?>' title="Edit">
+                                                        <i class="fas fa-pen"></i>
+                                                    </button>
+                                                    <button type="button" class="program-action-btn btn-delete-card btn-delete" data-id="<?= $r['id_remidi'] ?>" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                                                <div class="small text-muted font-weight-bold" style="font-size: 11px;">
+                                                    <?= htmlspecialchars($r['bentuk_remidial']) ?>
+                                                </div>
+                                                <div class="d-flex align-items-center" style="gap: 6px;">
+                                                    <div class="program-score-pill">
+                                                        <span class="score-lbl">Asli</span>
+                                                        <span class="score-val text-danger"><?= (float)$r['nilai_ulangan'] ?></span>
+                                                    </div>
+                                                    <div class="program-score-pill">
+                                                        <span class="score-lbl">Remidi</span>
+                                                        <span class="score-val text-success"><?= (float)$r['nilai_tes_remidi'] ?></span>
+                                                    </div>
+                                                    <span class="badge badge-<?= $isTuntas ? 'success' : 'danger' ?>" style="border-radius: 8px; font-weight: 800; font-size: 11px; padding: 6px 8px;">
+                                                        <?= $r['keterangan'] ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                                <!-- Summary Stats Card -->
+                                <div class="nilai-summary-card">
+                                    <div class="nilai-summary-header">
+                                        <span class="nilai-summary-title">
+                                            <i class="fas fa-chart-pie text-primary mr-1"></i>
+                                            Rekap Hasil Remidial
+                                        </span>
+                                    </div>
+                                    <div class="nilai-summary-grid">
+                                        <div class="nilai-summary-box box-max">
+                                            <div class="box-label">Siswa Tuntas</div>
+                                            <div class="box-value text-success"><?= $countTuntas ?></div>
+                                            <div class="box-sub">Dari <?= count($remedial_list) ?> Siswa</div>
+                                        </div>
+                                        <div class="nilai-summary-box box-min">
+                                            <div class="box-label">Belum Tuntas</div>
+                                            <div class="box-value text-danger"><?= count($remedial_list) - $countTuntas ?></div>
+                                            <div class="box-sub">Perlu Tindak Lanjut</div>
+                                        </div>
+                                        <div class="nilai-summary-box box-avg">
+                                            <div class="box-label">Rata-rata Tes</div>
+                                            <div class="box-value text-primary"><?= $countRemidiVal > 0 ? round($sumRemidi / $countRemidiVal, 1) : '-' ?></div>
+                                            <div class="box-sub">Nilai Akhir Remidi</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php else: ?>
                         <div class="alert alert-info">Pilih filter di atas untuk melihat data remedial.</div>

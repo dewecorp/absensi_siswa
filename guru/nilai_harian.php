@@ -141,6 +141,46 @@ if ($selected_class && $selected_mapel) {
                 'nilai_jadi' => $g['nilai_jadi']
             ];
         }
+
+        // Calculate stats for each header (Max, Min, Avg)
+        $header_stats = [];
+        foreach ($grade_headers as $h) {
+            $hId = $h['id_header'];
+            $max = -INF;
+            $min = INF;
+            $max_jadi = -INF;
+            $min_jadi = INF;
+            $sum = 0;
+            $count = 0;
+
+            foreach ($students as $s) {
+                $val_raw = $grades_data[$s['id_siswa']][$hId]['nilai'] ?? '';
+                $val_jadi_raw = $grades_data[$s['id_siswa']][$hId]['nilai_jadi'] ?? '';
+
+                if ($val_raw !== '' && is_numeric($val_raw) && (float)$val_raw > 0) {
+                    $v = (float)$val_raw;
+                    if ($v > $max) $max = $v;
+                    if ($v < $min) $min = $v;
+                    $sum += $v;
+                    $count++;
+                }
+
+                if ($val_jadi_raw !== '' && is_numeric($val_jadi_raw) && (float)$val_jadi_raw > 0) {
+                    $vj = (float)$val_jadi_raw;
+                    if ($vj > $max_jadi) $max_jadi = $vj;
+                    if ($vj < $min_jadi) $min_jadi = $vj;
+                }
+            }
+
+            $header_stats[$hId] = [
+                'max' => $max !== -INF ? $max : '-',
+                'min' => $min !== INF ? $min : '-',
+                'max_jadi' => $max_jadi !== -INF ? $max_jadi : '-',
+                'min_jadi' => $min_jadi !== INF ? $min_jadi : '-',
+                'avg' => $count > 0 ? round($sum / $count, 1) : '-',
+                'count' => $count
+            ];
+        }
     }
 }
 
@@ -292,6 +332,10 @@ require_once '../templates/sidebar.php';
             </div>
 
             <?php if ($selected_class && $selected_mapel): ?>
+            <!-- ==========================================
+                 DESKTOP VIEW (TABLE UNCHANGED)
+                 ========================================== -->
+            <div class="nilai-desktop-view">
             <div class="card">
                 <div class="card-header">
                     <h4>Data Nilai Harian - <?= $selected_class['nama_kelas'] ?> - <?= $selected_mapel['nama_mapel'] ?></h4>
@@ -493,6 +537,235 @@ require_once '../templates/sidebar.php';
                     </div>
                 </div>
             </div>
+            </div> <!-- End .nilai-desktop-view -->
+
+            <!-- ==========================================
+                 MOBILE APP VIEW (NO HORIZONTAL SCROLL)
+                 ========================================== -->
+            <div class="nilai-mobile-app">
+                <!-- Hero Info Card -->
+                <div class="nilai-hero-card">
+                    <div class="nilai-hero-top">
+                        <span class="nilai-hero-badge">
+                            <i class="fas fa-book-open"></i> TA <?= htmlspecialchars($school_profile['tahun_ajaran'] ?? '') ?> &bull; Sem <?= htmlspecialchars($school_profile['semester'] ?? '') ?>
+                        </span>
+                        <?php if (isset($selected_mapel['kktp']) && $selected_mapel['kktp'] > 0): ?>
+                        <span class="nilai-kktp-badge">
+                            <i class="fas fa-bullseye mr-1"></i>KKTP: <?= (float)$selected_mapel['kktp'] ?>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="nilai-hero-title"><?= htmlspecialchars($selected_mapel['nama_mapel']) ?></div>
+                    <div class="nilai-hero-sub">
+                        <span><i class="fas fa-chalkboard mr-1"></i><?= htmlspecialchars($selected_class['nama_kelas']) ?></span>
+                        <span>&bull;</span>
+                        <span><?= count($students) ?> Siswa</span>
+                        <span>&bull;</span>
+                        <span><?= count($grade_headers) ?> Penilaian</span>
+                    </div>
+
+                    <div class="nilai-actions-bar">
+                        <?php if ($can_edit): ?>
+                        <button type="button" class="nilai-action-chip" data-toggle="modal" data-target="#addColumnModal">
+                            <i class="fas fa-plus"></i> Tambah Kolom
+                        </button>
+                        <?php endif; ?>
+                        <a href="export_nilai_harian_excel?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="nilai-action-chip">
+                            <i class="fas fa-file-excel text-success"></i> Excel
+                        </a>
+                        <a href="export_nilai_harian_pdf?session_type=<?= $_SESSION['level'] ?>&kelas=<?= $selected_class_id ?>&mapel=<?= $selected_mapel_id ?>" target="_blank" class="nilai-action-chip">
+                            <i class="fas fa-file-pdf text-danger"></i> PDF
+                        </a>
+                    </div>
+                </div>
+
+                <?php if (empty($grade_headers)): ?>
+                    <div class="card p-4 text-center" style="border-radius: 18px;">
+                        <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                        <h6 class="font-weight-bold">Belum Ada Kolom Penilaian</h6>
+                        <p class="text-muted small">Tambahkan kolom penilaian seperti UH 1, Tugas 1, dll untuk mulai menginput nilai siswa.</p>
+                        <?php if ($can_edit): ?>
+                        <button class="btn btn-primary btn-sm mx-auto font-weight-bold" data-toggle="modal" data-target="#addColumnModal" style="border-radius: 10px;">
+                            <i class="fas fa-plus mr-1"></i> Tambah Kolom Pertama
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <!-- Horizontal Scrollable Assessment Tabs -->
+                    <div class="nilai-tabs-container">
+                        <div class="nilai-tabs-scroll" id="mobileAssessmentTabs">
+                            <?php foreach ($grade_headers as $idx => $header): ?>
+                                <?php 
+                                $graded_count = 0;
+                                foreach ($students as $s) {
+                                    $v = $grades_data[$s['id_siswa']][$header['id_header']]['nilai'] ?? '';
+                                    if ($v !== '' && (float)$v > 0) $graded_count++;
+                                }
+                                ?>
+                                <div class="nilai-tab-item <?= $idx === 0 ? 'active' : '' ?>" 
+                                     data-header-id="<?= $header['id_header'] ?>"
+                                     data-name="<?= htmlspecialchars($header['nama_penilaian']) ?>"
+                                     data-materi="<?= htmlspecialchars($header['materi'] ?? '-') ?>"
+                                     data-min="<?= $header['nilai_min_target'] ?? '' ?>"
+                                     data-max="<?= $header['nilai_max_target'] ?? '' ?>">
+                                    <span><?= htmlspecialchars($header['nama_penilaian']) ?></span>
+                                    <span class="badge-count"><?= $graded_count ?>/<?= count($students) ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                            <?php if ($can_edit): ?>
+                            <div class="nilai-tab-item btn-add-tab" data-toggle="modal" data-target="#addColumnModal">
+                                <i class="fas fa-plus"></i> Tambah
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Active Assessment Info Banner -->
+                    <div class="nilai-banner-info" id="mobileActiveBanner">
+                        <div class="nilai-banner-header">
+                            <div class="nilai-banner-name">
+                                <i class="fas fa-layer-group text-primary mr-1"></i>
+                                <span id="mobileBannerTitle"><?= htmlspecialchars($grade_headers[0]['nama_penilaian']) ?></span>
+                            </div>
+                            <?php if ($can_edit): ?>
+                            <div class="nilai-banner-actions">
+                                <button type="button" class="nilai-banner-btn btn-edit" id="btnEditHeaderMobile" title="Edit Kolom">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button type="button" class="nilai-banner-btn btn-delete" id="btnDeleteHeaderMobile" title="Hapus Kolom">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="nilai-banner-materi" id="mobileBannerMateri">
+                            <?= htmlspecialchars($grade_headers[0]['materi'] ?? 'Belum ada deskripsi materi') ?>
+                        </div>
+                        <div class="nilai-banner-meta">
+                            <span class="nilai-banner-pill">
+                                Target Min: <strong id="mobileBannerMin" class="val-min"><?= $grade_headers[0]['nilai_min_target'] ?? '-' ?></strong>
+                            </span>
+                            <span class="nilai-banner-pill">
+                                Target Max: <strong id="mobileBannerMax" class="val-max"><?= $grade_headers[0]['nilai_max_target'] ?? '-' ?></strong>
+                            </span>
+                            <?php 
+                            $first_h_id = $grade_headers[0]['id_header'];
+                            $init_stat = $header_stats[$first_h_id] ?? ['max' => '-', 'min' => '-', 'max_jadi' => '-', 'min_jadi' => '-'];
+                            ?>
+                            <span class="nilai-banner-pill">
+                                Tertinggi: <strong id="mobileBannerStatMax" class="val-max"><?= $init_stat['max_jadi'] !== '-' ? $init_stat['max_jadi'] : $init_stat['max'] ?></strong>
+                            </span>
+                            <span class="nilai-banner-pill">
+                                Terendah: <strong id="mobileBannerStatMin" class="val-min"><?= $init_stat['min_jadi'] !== '-' ? $init_stat['min_jadi'] : $init_stat['min'] ?></strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Student List Cards -->
+                    <div class="nilai-student-list" id="mobileStudentList">
+                        <?php foreach ($students as $idx => $student): ?>
+                            <?php
+                            $st_total = 0;
+                            $st_count = 0;
+                            foreach ($grade_headers as $h) {
+                                $v = $grades_data[$student['id_siswa']][$h['id_header']]['nilai'] ?? '';
+                                if ($v !== '' && (float)$v > 0) {
+                                    $st_total += (float)$v;
+                                    $st_count++;
+                                }
+                            }
+                            $st_rerata = $st_count > 0 ? round($st_total / $st_count, 1) : '-';
+                            ?>
+                            <div class="nilai-student-card" data-student-id="<?= $student['id_siswa'] ?>">
+                                <div class="nilai-student-left">
+                                    <div class="nilai-student-num"><?= $idx + 1 ?></div>
+                                    <div class="nilai-student-info">
+                                        <div class="nilai-student-name" title="<?= htmlspecialchars($student['nama_siswa']) ?>">
+                                            <?= htmlspecialchars($student['nama_siswa']) ?>
+                                        </div>
+                                        <div class="nilai-student-sub">
+                                            <span>Rerata: <strong class="mobile-rerata-val"><?= $st_rerata ?></strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="nilai-student-right">
+                                    <?php foreach ($grade_headers as $hIdx => $h): ?>
+                                        <?php 
+                                        $d_val = $grades_data[$student['id_siswa']][$h['id_header']]['nilai'] ?? '';
+                                        $d_jadi = $grades_data[$student['id_siswa']][$h['id_header']]['nilai_jadi'] ?? '';
+                                        $d_val_f = ($d_val !== '' && (float)$d_val > 0) ? (float)$d_val : '';
+                                        $d_jadi_f = ($d_jadi !== '' && (float)$d_jadi > 0) ? (float)$d_jadi : '';
+                                        ?>
+                                        <div class="mobile-input-group-item mobile-hdr-group-<?= $h['id_header'] ?> <?= $hIdx === 0 ? '' : 'd-none' ?>" 
+                                             data-header-id="<?= $h['id_header'] ?>" 
+                                             data-student-id="<?= $student['id_siswa'] ?>">
+                                            <div class="nilai-input-wrap">
+                                                <input type="number" 
+                                                       inputmode="numeric" 
+                                                       pattern="[0-9]*"
+                                                       class="mobile-grade-input <?= $d_val_f !== '' ? 'is-filled' : '' ?>" 
+                                                       data-header-id="<?= $h['id_header'] ?>" 
+                                                       data-student-id="<?= $student['id_siswa'] ?>"
+                                                       value="<?= $d_val_f ?>" 
+                                                       min="0" 
+                                                       max="100" 
+                                                       placeholder="-"
+                                                       <?= $can_edit ? '' : 'disabled' ?>>
+                                            </div>
+                                            <div class="text-right mt-1">
+                                                <span class="nilai-badge-jadi mobile-badge-jadi-<?= $h['id_header'] ?>-<?= $student['id_siswa'] ?> <?= $d_jadi_f !== '' ? '' : 'd-none' ?>">
+                                                    Jadi: <strong class="val-jadi"><?= $d_jadi_f ?></strong>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- Summary Stats Card (Footer Nilai Tertinggi & Terendah Kelas) -->
+                    <div class="nilai-summary-card" id="mobileSummaryCard">
+                        <div class="nilai-summary-header">
+                            <span class="nilai-summary-title">
+                                <i class="fas fa-chart-line text-primary mr-1"></i>
+                                Rekap Penilaian <strong id="summaryAssessmentName"><?= htmlspecialchars($grade_headers[0]['nama_penilaian']) ?></strong>
+                            </span>
+                        </div>
+                        <div class="nilai-summary-grid">
+                            <div class="nilai-summary-box box-max">
+                                <div class="box-label">Nilai Tertinggi</div>
+                                <div class="box-value text-success" id="summaryStatMax"><?= $init_stat['max'] ?></div>
+                                <div class="box-sub">Jadi: <strong id="summaryStatMaxJadi"><?= $init_stat['max_jadi'] ?></strong></div>
+                            </div>
+                            <div class="nilai-summary-box box-min">
+                                <div class="box-label">Nilai Terendah</div>
+                                <div class="box-value text-danger" id="summaryStatMin"><?= $init_stat['min'] ?></div>
+                                <div class="box-sub">Jadi: <strong id="summaryStatMinJadi"><?= $init_stat['min_jadi'] ?></strong></div>
+                            </div>
+                            <div class="nilai-summary-box box-avg">
+                                <div class="box-label">Rata-rata Kelas</div>
+                                <div class="box-value text-primary" id="summaryStatAvg"><?= $init_stat['avg'] ?></div>
+                                <div class="box-sub">Ternilai: <strong id="summaryStatCount"><?= $init_stat['count'] ?></strong>/<?= count($students) ?></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Bottom Action Bar -->
+                    <?php if ($can_edit): ?>
+                    <div class="nilai-bottom-bar" id="mobileFloatingBar">
+                        <div class="nilai-bar-info">
+                            <span class="nilai-bar-title" id="mobileBarActiveName"><?= htmlspecialchars($grade_headers[0]['nama_penilaian']) ?></span>
+                            <span class="nilai-bar-sub"><?= count($students) ?> Siswa Terdaftar</span>
+                        </div>
+                        <button type="button" class="nilai-btn-save" id="btnSaveMobileGrades">
+                            <i class="fas fa-save"></i>
+                            <span>Simpan Nilai</span>
+                        </button>
+                    </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
             <?php endif; ?>
         </div>
     </section>
@@ -535,6 +808,47 @@ require_once '../templates/sidebar.php';
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Header Mobile -->
+<div class="modal fade" id="editHeaderModalMobile" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="border-radius: 18px; overflow: hidden;">
+            <div class="modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <h5 class="modal-title font-weight-bold" style="font-size: 16px;"><i class="fas fa-edit text-primary mr-2"></i>Edit Penilaian</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editHeaderFormMobile">
+                <div class="modal-body">
+                    <input type="hidden" name="id_header" id="mobileEditIdHeader">
+                    <div class="form-group">
+                        <label class="font-weight-bold">Nama Penilaian</label>
+                        <input type="text" class="form-control" name="nama_penilaian" id="mobileEditNama" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-weight-bold">Materi / Topik</label>
+                        <textarea class="form-control" name="materi" id="mobileEditMateri" rows="2" placeholder="Deskripsi materi"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label class="font-weight-bold">Target Min</label>
+                            <input type="number" class="form-control" name="nilai_min_target" id="mobileEditMin" placeholder="Kosongkan = KKTP">
+                        </div>
+                        <div class="form-group col-6">
+                            <label class="font-weight-bold">Target Max</label>
+                            <input type="number" class="form-control" name="nilai_max_target" id="mobileEditMax" min="0" max="99" placeholder="Maks 99">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm font-weight-bold">Simpan Perubahan</button>
                 </div>
             </form>
         </div>
@@ -958,5 +1272,418 @@ $(document).ready(function() {
         $('.col-max-jadi-' + headerId).text(hasDataJadi ? maxJadi : '-');
         $('.col-min-jadi-' + headerId).text(hasDataJadi ? minJadi : '-');
     }
+
+    // ==========================================
+    // MOBILE APP INTERACTION LOGIC
+    // ==========================================
+    var currentActiveHeaderId = $('#mobileAssessmentTabs .nilai-tab-item.active').data('header-id');
+
+    function updateMobileStats(headerId) {
+        var max = -Infinity;
+        var min = Infinity;
+        var maxJadi = -Infinity;
+        var minJadi = Infinity;
+        var sum = 0;
+        var count = 0;
+        var totalStudents = $('.nilai-student-card').length;
+
+        $('.mobile-grade-input[data-header-id="' + headerId + '"]').each(function() {
+            var val = $(this).val();
+            var stId = $(this).data('student-id');
+            if (val !== '') {
+                var v = parseFloat(val);
+                if (!isNaN(v) && v > 0) {
+                    if (v > max) max = v;
+                    if (v < min) min = v;
+                    sum += v;
+                    count++;
+                }
+            }
+            var jadiVal = $('.mobile-badge-jadi-' + headerId + '-' + stId + ' .val-jadi').text();
+            if (jadiVal !== '') {
+                var vj = parseFloat(jadiVal);
+                if (!isNaN(vj) && vj > 0) {
+                    if (vj > maxJadi) maxJadi = vj;
+                    if (vj < minJadi) minJadi = vj;
+                }
+            }
+        });
+
+        var maxText = max !== -Infinity ? max : '-';
+        var minText = min !== Infinity ? min : '-';
+        var maxJadiText = maxJadi !== -Infinity ? maxJadi : '-';
+        var minJadiText = minJadi !== Infinity ? minJadi : '-';
+        var avgText = count > 0 ? (sum / count).toFixed(1) : '-';
+        if (avgText !== '-' && avgText.endsWith('.0')) avgText = parseInt(avgText, 10).toString();
+
+        // Top banner: isi dengan nilai jadi (jika belum ada nilai jadi, fallback ke nilai mentah)
+        var bannerMax = maxJadiText !== '-' ? maxJadiText : maxText;
+        var bannerMin = minJadiText !== '-' ? minJadiText : minText;
+        $('#mobileBannerStatMax').text(bannerMax);
+        $('#mobileBannerStatMin').text(bannerMin);
+
+        // Bottom summary card
+        $('#summaryStatMax').text(maxText);
+        $('#summaryStatMaxJadi').text(maxJadiText);
+        $('#summaryStatMin').text(minText);
+        $('#summaryStatMinJadi').text(minJadiText);
+        $('#summaryStatAvg').text(avgText);
+        $('#summaryStatCount').text(count);
+    }
+
+    function syncMobileBanner(tabEl) {
+        if (!tabEl || !tabEl.length) return;
+        var headerId = tabEl.data('header-id');
+        currentActiveHeaderId = headerId;
+        var name = tabEl.data('name');
+        var materi = tabEl.data('materi');
+        var minVal = tabEl.data('min');
+        var maxVal = tabEl.data('max');
+
+        $('#mobileBannerTitle').text(name);
+        $('#mobileBannerMateri').text(materi && materi !== '-' ? materi : 'Belum ada deskripsi materi');
+        $('#mobileBannerMin').text(minVal !== '' && minVal !== null && typeof minVal !== 'undefined' ? minVal : '-');
+        $('#mobileBannerMax').text(maxVal !== '' && maxVal !== null && typeof maxVal !== 'undefined' ? maxVal : '-');
+
+        $('#mobileBarActiveName').text(name);
+        $('#summaryAssessmentName').text(name);
+
+        // Switch input columns for each student
+        $('.mobile-input-group-item').addClass('d-none');
+        $('.mobile-hdr-group-' + headerId).removeClass('d-none');
+
+        // Recalculate and display min/max stats for this assessment
+        updateMobileStats(headerId);
+    }
+
+    // Switch tab on tap
+    $(document).on('click', '#mobileAssessmentTabs .nilai-tab-item:not(.btn-add-tab)', function() {
+        $('#mobileAssessmentTabs .nilai-tab-item').removeClass('active');
+        $(this).addClass('active');
+        syncMobileBanner($(this));
+        
+        // Scroll internal container ONLY (never push entire page/body)
+        var $container = $('#mobileAssessmentTabs');
+        if ($container.length) {
+            var scrollLeft = $container.scrollLeft();
+            var itemLeft = $(this).position().left;
+            var targetScroll = scrollLeft + itemLeft - ($container.width() / 2) + ($(this).outerWidth() / 2);
+            $container.stop().animate({ scrollLeft: targetScroll }, 250);
+        }
+    });
+
+    // Edit Header from Mobile
+    $('#btnEditHeaderMobile').click(function() {
+        var activeTab = $('#mobileAssessmentTabs .nilai-tab-item.active');
+        if (!activeTab.length) return;
+
+        var headerId = activeTab.data('header-id');
+        var name = activeTab.data('name');
+        var materi = activeTab.data('materi');
+        var minVal = activeTab.data('min');
+        var maxVal = activeTab.data('max');
+
+        $('#mobileEditIdHeader').val(headerId);
+        $('#mobileEditNama').val(name);
+        $('#mobileEditMateri').val(materi && materi !== '-' ? materi : '');
+        $('#mobileEditMin').val(minVal !== '' && minVal !== null && typeof minVal !== 'undefined' ? minVal : '');
+        $('#mobileEditMax').val(maxVal !== '' && maxVal !== null && typeof maxVal !== 'undefined' ? maxVal : '');
+
+        $('#editHeaderModalMobile').modal('show');
+    });
+
+    // Save edited header from mobile
+    $('#editHeaderFormMobile').submit(function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var headerId = $('#mobileEditIdHeader').val();
+        var namaVal = $('#mobileEditNama').val();
+        var materiVal = $('#mobileEditMateri').val();
+        var minVal = $('#mobileEditMin').val();
+        var maxVal = $('#mobileEditMax').val();
+        var kktp = <?= json_encode(isset($selected_mapel['kktp']) ? (float)$selected_mapel['kktp'] : 0) ?>;
+
+        if (minVal && parseFloat(minVal) < kktp) {
+            Swal.fire('Nilai Tidak Valid', 'Target Min tidak boleh di bawah KKTP (' + kktp + ').', 'error');
+            return;
+        }
+        if (maxVal && parseFloat(maxVal) > 99) {
+            Swal.fire('Nilai Tidak Valid', 'Target Max tidak boleh lebih dari 99.', 'error');
+            return;
+        }
+
+        var grades = [];
+        $('.mobile-grade-input[data-header-id="' + headerId + '"]').each(function() {
+            grades.push({
+                id_siswa: $(this).data('student-id'),
+                nilai: $(this).val()
+            });
+        });
+
+        var btnSubmit = form.find('button[type="submit"]');
+        btnSubmit.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+        $.ajax({
+            url: 'ajax_nilai_harian.php',
+            type: 'POST',
+            data: {
+                action: 'save_grades',
+                id_header: headerId,
+                grades: grades,
+                materi: materiVal,
+                nama_penilaian: namaVal,
+                nilai_min_target: minVal,
+                nilai_max_target: maxVal
+            },
+            success: function(response) {
+                btnSubmit.prop('disabled', false).text('Simpan Perubahan');
+                var res = (typeof response === 'string') ? JSON.parse(response) : response;
+                if (res.success) {
+                    $('#editHeaderModalMobile').modal('hide');
+                    var tabEl = $('#mobileAssessmentTabs .nilai-tab-item[data-header-id="' + headerId + '"]');
+                    tabEl.data('name', namaVal);
+                    tabEl.data('materi', materiVal);
+                    tabEl.data('min', minVal);
+                    tabEl.data('max', maxVal);
+                    tabEl.find('span:first-child').text(namaVal);
+
+                    syncMobileBanner(tabEl);
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: 'Info penilaian berhasil diperbarui',
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire('Gagal', res.message, 'error');
+                }
+            },
+            error: function() {
+                btnSubmit.prop('disabled', false).text('Simpan Perubahan');
+                Swal.fire('Error', 'Terjadi kesalahan jaringan', 'error');
+            }
+        });
+    });
+
+    // Delete column from mobile
+    $('#btnDeleteHeaderMobile').click(function() {
+        var activeTab = $('#mobileAssessmentTabs .nilai-tab-item.active');
+        if (!activeTab.length) return;
+        var id = activeTab.data('header-id');
+        var name = activeTab.data('name');
+
+        Swal.fire({
+            title: 'Hapus Kolom?',
+            text: 'Yakin ingin menghapus kolom penilaian "' + name + '"? Semua data nilai di kolom ini akan terhapus.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: 'ajax_nilai_harian.php',
+                    type: 'POST',
+                    data: {
+                        action: 'delete_column',
+                        id_header: id
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Gagal', response.message, 'error');
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    // Quick Jump to Next Student on Enter/Done
+    $(document).on('keydown', '.mobile-grade-input', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            var currentCard = $(this).closest('.nilai-student-card');
+            var nextInput = currentCard.next('.nilai-student-card').find('.mobile-input-group-item:not(.d-none) .mobile-grade-input');
+            if (nextInput.length) {
+                nextInput.focus().select();
+            } else {
+                $(this).blur();
+            }
+        }
+    });
+
+    // Update style when filled
+    $(document).on('input', '.mobile-grade-input', function() {
+        var val = $(this).val();
+        if (val !== '' && parseFloat(val) > 0) {
+            $(this).addClass('is-filled');
+        } else {
+            $(this).removeClass('is-filled');
+        }
+
+        var studentId = $(this).data('student-id');
+        var headerId = $(this).data('header-id');
+
+        var desktopInput = $('.grade-col-' + headerId + '[data-student-id="' + studentId + '"]');
+        if (desktopInput.length) {
+            desktopInput.val(val);
+        }
+
+        updateMobileRowAverage(studentId);
+    });
+
+    function updateMobileRowAverage(studentId) {
+        var total = 0;
+        var count = 0;
+        $('.nilai-student-card[data-student-id="' + studentId + '"] .mobile-grade-input').each(function() {
+            var val = $(this).val();
+            if (val !== '') {
+                var v = parseFloat(val);
+                if (!isNaN(v) && v > 0) {
+                    total += v;
+                    count++;
+                }
+            }
+        });
+        var avg = count > 0 ? (total / count).toFixed(1) : '-';
+        if (avg !== '-' && avg.endsWith('.0')) avg = parseInt(avg, 10).toString();
+
+        var card = $('.nilai-student-card[data-student-id="' + studentId + '"]');
+        card.find('.mobile-rerata-val').text(avg);
+    }
+
+    // Save Mobile Grades Button
+    $('#btnSaveMobileGrades').click(function() {
+        var activeTab = $('#mobileAssessmentTabs .nilai-tab-item.active');
+        if (!activeTab.length) return;
+
+        var headerId = activeTab.data('header-id');
+        var name = activeTab.data('name');
+        var materi = activeTab.data('materi');
+        var minVal = activeTab.data('min');
+        var maxVal = activeTab.data('max');
+        var kktp = <?= json_encode(isset($selected_mapel['kktp']) ? (float)$selected_mapel['kktp'] : 0) ?>;
+
+        var inputs = $('.mobile-grade-input[data-header-id="' + headerId + '"]');
+        var grades = [];
+        var isValid = true;
+        var underCount = 0;
+        var floorVal = (minVal !== '' && minVal !== null && typeof minVal !== 'undefined') ? parseFloat(minVal) : (kktp > 0 ? kktp : 0);
+
+        inputs.each(function() {
+            var val = $(this).val();
+            var studentId = $(this).data('student-id');
+            if (val !== '') {
+                var n = parseFloat(val);
+                if (!isFinite(n) || n < 0 || n > 100) {
+                    isValid = false;
+                    return false;
+                }
+                if (floorVal > 0 && n > 0 && n < floorVal) {
+                    underCount++;
+                }
+            }
+            grades.push({
+                id_siswa: studentId,
+                nilai: val
+            });
+        });
+
+        if (!isValid) {
+            Swal.fire('Nilai Tidak Valid', 'Pastikan semua nilai berada di antara 0 s.d 100.', 'error');
+            return;
+        }
+
+        var btn = $(this);
+        var originalHtml = btn.html();
+
+        var doSaveMobile = function() {
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+            $.ajax({
+                url: 'ajax_nilai_harian.php',
+                type: 'POST',
+                data: {
+                    action: 'save_grades',
+                    id_header: headerId,
+                    grades: grades,
+                    materi: materi && materi !== '-' ? materi : '',
+                    nama_penilaian: name,
+                    nilai_min_target: minVal,
+                    nilai_max_target: maxVal
+                },
+                success: function(response) {
+                    btn.prop('disabled', false).html(originalHtml);
+                    var res = (typeof response === 'string') ? JSON.parse(response) : response;
+
+                    if (res.success) {
+                        var gradedCount = 0;
+                        if (res.data && Array.isArray(res.data.grades)) {
+                            res.data.grades.forEach(function(g) {
+                                var badge = $('.mobile-badge-jadi-' + headerId + '-' + g.id_siswa);
+                                if (g.nilai_jadi && parseFloat(g.nilai_jadi) > 0) {
+                                    badge.find('.val-jadi').text(g.nilai_jadi);
+                                    badge.removeClass('d-none');
+                                } else {
+                                    badge.addClass('d-none');
+                                }
+
+                                if (g.nilai && parseFloat(g.nilai) > 0) {
+                                    gradedCount++;
+                                }
+
+                                var desktopJadi = $('.grade-col-jadi-' + headerId + '[data-student-id="' + g.id_siswa + '"]');
+                                if (desktopJadi.length) {
+                                    desktopJadi.val(g.nilai_jadi > 0 ? g.nilai_jadi : '');
+                                }
+                                updateRowAverage(g.id_siswa);
+                            });
+                        }
+
+                        activeTab.find('.badge-count').text(gradedCount + '/' + inputs.length);
+                        updateMobileStats(headerId);
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Tersimpan!',
+                            text: 'Nilai ' + name + ' berhasil disimpan.',
+                            timer: 1400,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire('Gagal', res.message, 'error');
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html(originalHtml);
+                    Swal.fire('Error', 'Terjadi kesalahan jaringan server', 'error');
+                }
+            });
+        };
+
+        if (underCount > 0) {
+            Swal.fire({
+                title: 'Ada Nilai di Bawah Batas',
+                text: underCount + ' nilai berada di bawah batas minimal (' + floorVal + '). Nilai jadi akan otomatis disesuaikan minimal ' + floorVal + '. Lanjut simpan?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                confirmButtonText: 'Lanjut Simpan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    doSaveMobile();
+                }
+            });
+        } else {
+            doSaveMobile();
+        }
+    });
 });
 </script>
