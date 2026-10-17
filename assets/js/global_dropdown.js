@@ -21,6 +21,35 @@
     return true;
   }
 
+  function getOrCreateBackdrop() {
+    var bd = document.getElementById('gdsBackdropMobile');
+    if (!bd) {
+      bd = document.createElement('div');
+      bd.id = 'gdsBackdropMobile';
+      bd.className = 'gds-mobile-backdrop';
+      document.body.appendChild(bd);
+      bd.addEventListener('click', function() {
+        closeAll();
+      });
+    }
+    return bd;
+  }
+
+  function closeAll(except) {
+    document.querySelectorAll('.gds-wrap.open').forEach(function(w) {
+      if (w !== except) w.classList.remove('open');
+    });
+    document.querySelectorAll('.gds-list.open').forEach(function(l) {
+      if (!except || l._gdsWrap !== except) l.classList.remove('open');
+    });
+    var anyOpen = document.querySelectorAll('.gds-wrap.open, .gds-list.open').length > 0;
+    var bd = document.getElementById('gdsBackdropMobile');
+    if (bd && !anyOpen) {
+      bd.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  }
+
   function buildOne(sel) {
     sel.dataset.gdsDone = '1';
     sel.classList.add('gds-source');
@@ -38,7 +67,19 @@
     var list = document.createElement('div');
     list.className = 'gds-list modern-notif-scroll';
     list.setAttribute('role', 'listbox');
-    wrap.appendChild(list);
+    list._gdsWrap = wrap;
+    wrap._gdsList = list;
+
+    // Direct mount to body for zero z-index clipping/blur interference
+    document.body.appendChild(list);
+
+    function getFieldTitle() {
+      var label = null;
+      var fg = sel.closest('.form-group') || sel.closest('.col-md-3') || sel.closest('.col-md-4') || sel.closest('div');
+      if (fg) label = fg.querySelector('label');
+      if (label) return label.textContent.replace(/[*:]/g, '').trim();
+      return sel.getAttribute('aria-label') || sel.getAttribute('placeholder') || 'Pilih Opsi';
+    }
 
     function refreshLabel() {
       var opt = sel.options[sel.selectedIndex];
@@ -62,6 +103,35 @@
 
     function renderOptions(filter) {
       list.innerHTML = '';
+      var isMobile = window.innerWidth <= 767.98;
+
+      if (isMobile) {
+        // Header Title + Close button
+        var titleRow = document.createElement('div');
+        titleRow.className = 'gds-sheet-title';
+        var titleText = document.createElement('span');
+        titleText.innerHTML = '<i class="fas fa-list-ul"></i> ' + getFieldTitle();
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'gds-sheet-close';
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        closeBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeAll();
+        });
+        titleRow.appendChild(titleText);
+        titleRow.appendChild(closeBtn);
+        list.appendChild(titleRow);
+      }
+
+      var optionsWrap = list;
+      if (isMobile) {
+        optionsWrap = document.createElement('div');
+        optionsWrap.className = 'gds-options-scroll';
+        list.appendChild(optionsWrap);
+      }
+
       var q = (filter || '').toLowerCase();
       var count = 0;
       Array.prototype.forEach.call(sel.options, function(o) {
@@ -76,68 +146,77 @@
         span.textContent = o.text;
         var check = document.createElement('span');
         check.className = 'gds-check';
-        check.textContent = '✔';
+        check.innerHTML = '<i class="fas fa-check"></i>';
         b.appendChild(span);
         b.appendChild(check);
         b.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          var prevVal = sel.value;
           sel.value = o.value;
           refreshLabel();
           closeAll();
-          var ev;
-          try {
-            ev = new Event('change', { bubbles: true });
-          } catch (err) {
-            ev = document.createEvent('Event');
-            ev.initEvent('change', true, true);
-          }
-          sel.dispatchEvent(ev);
-          var form = sel.closest('form');
-          if (form && (sel.hasAttribute('onchange') || sel.dataset.autoSubmit === '1')) {
-            if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+          if (prevVal !== o.value || sel.hasAttribute('onchange')) {
+            var ev;
+            try {
+              ev = new Event('change', { bubbles: true });
+            } catch (err) {
+              ev = document.createEvent('Event');
+              ev.initEvent('change', true, true);
+            }
+            sel.dispatchEvent(ev);
+            var form = sel.closest('form');
+            if (form && (sel.hasAttribute('onchange') || sel.dataset.autoSubmit === '1')) {
+              // Allow close animation / backdrop dismiss to complete before submit
+              setTimeout(function() {
+                if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+              }, 60);
+            }
           }
         });
-        list.appendChild(b);
+        optionsWrap.appendChild(b);
       });
       if (count === 0) {
         var d = document.createElement('div');
         d.className = 'gds-empty';
         d.textContent = 'Tidak ada pilihan';
-        list.appendChild(d);
+        optionsWrap.appendChild(d);
       }
     }
 
-    function closeAll(except) {
-      document.querySelectorAll('.gds-wrap.open').forEach(function(w) {
-        if (w !== except) w.classList.remove('open');
-      });
-    }
-
     function positionList() {
-      var listEl = wrap.querySelector('.gds-list');
-      if (!listEl) return;
-      listEl.style.top = '';
-      listEl.style.bottom = '';
-      listEl.style.left = '';
-      listEl.style.width = '';
+      if (!list) return;
+      if (window.innerWidth <= 767.98) {
+        // On mobile, bottom sheet handles positioning via CSS fixed bottom 0
+        list.style.top = '';
+        list.style.bottom = '';
+        list.style.left = '';
+        list.style.width = '';
+        list.style.maxHeight = '';
+        return;
+      }
+      list.style.top = '';
+      list.style.bottom = '';
+      list.style.left = '';
+      list.style.width = '';
       try {
         var r = btn.getBoundingClientRect();
-        listEl.style.left = Math.max(8, r.left) + 'px';
-        listEl.style.width = Math.max(160, r.width) + 'px';
+        list.style.left = Math.max(8, r.left) + 'px';
+        list.style.width = Math.max(160, r.width) + 'px';
         var spaceBelow = window.innerHeight - r.bottom;
         var spaceAbove = r.top;
         if (spaceBelow < 220 && spaceAbove > spaceBelow) {
-          listEl.style.top = 'auto';
-          listEl.style.bottom = Math.max(8, window.innerHeight - r.top + 6) + 'px';
-          listEl.style.maxHeight = Math.min(260, Math.max(140, spaceAbove - 20)) + 'px';
+          list.style.top = 'auto';
+          list.style.bottom = Math.max(8, window.innerHeight - r.top + 6) + 'px';
+          list.style.maxHeight = Math.min(260, Math.max(140, spaceAbove - 20)) + 'px';
         } else {
-          listEl.style.top = (r.bottom + 6) + 'px';
-          listEl.style.bottom = 'auto';
-          listEl.style.maxHeight = Math.min(260, Math.max(140, spaceBelow - 20)) + 'px';
+          list.style.top = (r.bottom + 6) + 'px';
+          list.style.bottom = 'auto';
+          list.style.maxHeight = Math.min(260, Math.max(140, spaceBelow - 20)) + 'px';
         }
       } catch (e2) {}
     }
+
     btn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
@@ -146,6 +225,12 @@
       if (!wasOpen) {
         renderOptions('');
         wrap.classList.add('open');
+        list.classList.add('open');
+        if (window.innerWidth <= 767.98) {
+          var bd = getOrCreateBackdrop();
+          bd.classList.add('active');
+          document.body.style.overflow = 'hidden';
+        }
         positionList();
       }
     });
@@ -169,17 +254,13 @@
     if (!document.body.dataset.gdsBound) {
       document.body.dataset.gdsBound = '1';
       document.addEventListener('click', function(e) {
-        if (!e.target.closest || !e.target.closest('.gds-wrap')) {
-          document.querySelectorAll('.gds-wrap.open').forEach(function(w) {
-            w.classList.remove('open');
-          });
+        if (!e.target.closest || (!e.target.closest('.gds-wrap') && !e.target.closest('.gds-list'))) {
+          closeAll();
         }
       });
       document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-          document.querySelectorAll('.gds-wrap.open').forEach(function(w) {
-            w.classList.remove('open');
-          });
+          closeAll();
         }
       });
     }
@@ -252,8 +333,96 @@
     });
     gdsObs.observe(document.documentElement, { childList: true, subtree: true });
   } catch (e) {}
+
+  /* Auto-apply native mobile card styling to filter cards on mobile devices */
+  function enhanceMobileFilters(root) {
+    if (window.innerWidth > 768) return;
+    var base = root || document;
+
+    // 1. Explicit filter form IDs and class selectors
+    var filterSelectors = [
+      '#filterForm', '#formFilter', '#formFilterCatatan', '#filter-soal-form',
+      'form[action*="filter"]', 'form[id*="filter"]', 'form[id*="Filter"]',
+      'form[name*="filter"]', 'form[name*="Filter"]',
+      'form[method="GET"]', 'form[method="get"]'
+    ];
+
+    var forms = base.querySelectorAll(filterSelectors.join(','));
+    forms.forEach(function(form) {
+      // Avoid modal forms or search bars inside nav
+      if (form.closest('.modal') || form.closest('.navbar')) return;
+      var card = form.closest('.card');
+      if (card && !card.classList.contains('mobile-filter-app-card')) {
+        // Only classify as filter card if it contains select elements or date inputs
+        if (card.querySelector('select') || card.querySelector('input[type="date"]') || card.querySelector('input[type="month"]')) {
+          card.classList.add('mobile-filter-app-card');
+        }
+      }
+    });
+
+    // 2. Target top filter cards with select filters (e.g., nilai_harian, rekap_nilai)
+    var allCards = base.querySelectorAll('.section-body > .card, .section-body > .row:first-child .card, .section-body > form > .card');
+    allCards.forEach(function(card) {
+      if (card.classList.contains('mobile-filter-app-card') || card.closest('.modal')) return;
+      var selects = card.querySelectorAll('select');
+      var tables = card.querySelectorAll('table');
+      // If card has selects (kelas/mapel/semester) and no heavy data tables, treat as filter card
+      if (selects.length > 0 && tables.length === 0) {
+        card.classList.add('mobile-filter-app-card');
+      }
+    });
+
+    // 3. Ensure filter card header has icon if header exists
+    var filterCards = base.querySelectorAll('.mobile-filter-app-card');
+    filterCards.forEach(function(card) {
+      var headerH = card.querySelector('.card-header h4, .card-header h5');
+      if (headerH && !headerH.querySelector('i')) {
+        var icon = document.createElement('i');
+        icon.className = 'fas fa-sliders-h mr-1';
+        headerH.insertBefore(icon, headerH.firstChild);
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      enhanceMobileFilters(document);
+    });
+  } else {
+    enhanceMobileFilters(document);
+  }
+
+  window.addEventListener('resize', function() {
+    enhanceMobileFilters(document);
+  });
+
   document.addEventListener('shown.bs.modal', function(e) {
     try { enhanceAll(e.target || document); } catch (err) {}
   });
-  window.GDSRefresh = function(root) { try { enhanceAll(root || document); } catch (err) {} };
+
+  // Select2 mobile backdrop support
+  if (window.jQuery) {
+    window.jQuery(document).on('select2:open', function() {
+      if (window.innerWidth <= 767.98) {
+        var bd = getOrCreateBackdrop();
+        bd.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    });
+    window.jQuery(document).on('select2:close', function() {
+      var bd = document.getElementById('gdsBackdropMobile');
+      var anyGdsOpen = document.querySelectorAll('.gds-wrap.open').length > 0;
+      if (bd && !anyGdsOpen) {
+        bd.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    });
+  }
+
+  window.GDSRefresh = function(root) {
+    try {
+      enhanceAll(root || document);
+      enhanceMobileFilters(root || document);
+    } catch (err) {}
+  };
 })();

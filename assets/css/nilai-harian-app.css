@@ -951,6 +951,181 @@
         color: #64748b;
         font-weight: 600;
     }
+
+    /* ===================================================================
+       Mobile Filter Card - Native App Style (< 768px)
+       Transforms top filter cards across SIMAD into sleek mobile cards
+       =================================================================== */
+    .card.mobile-filter-app-card,
+    .mobile-filter-app-card {
+        border-radius: 18px !important;
+        border: 1px solid #e2e8f0 !important;
+        background: #ffffff !important;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06) !important;
+        overflow: hidden !important;
+        margin-bottom: 16px !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .mobile-filter-app-card .card-header,
+    .card.mobile-filter-app-card > .card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 11px 16px !important;
+        min-height: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+
+    .mobile-filter-app-card .card-header h4,
+    .mobile-filter-app-card .card-header h5 {
+        font-size: 13px !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.2px !important;
+        color: #1e293b !important;
+        margin: 0 !important;
+        text-transform: none !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    .mobile-filter-app-card .card-header h4 i,
+    .mobile-filter-app-card .card-header h5 i {
+        color: #2563eb !important;
+        font-size: 13px !important;
+    }
+
+    .mobile-filter-app-card .card-body,
+    .card.mobile-filter-app-card > .card-body {
+        padding: 14px 15px 12px 15px !important;
+    }
+
+    .mobile-filter-app-card .form-group {
+        margin-bottom: 11px !important;
+    }
+
+    .mobile-filter-app-card label {
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
+        margin-bottom: 5px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.4px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+    }
+
+    .mobile-filter-app-card label i {
+        font-size: 10px !important;
+        color: #64748b !important;
+    }
+
+    /* Native app-like inputs and selects */
+    .mobile-filter-app-card select.form-control,
+    .mobile-filter-app-card input.form-control,
+    .mobile-filter-app-card .form-control {
+        border-radius: 12px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        height: 44px !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+        background-color: #f8fafc !important;
+        padding: 8px 14px !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .mobile-filter-app-card select.form-control:focus,
+    .mobile-filter-app-card input.form-control:focus,
+    .mobile-filter-app-card .form-control:focus {
+        border-color: #3b82f6 !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+    }
+
+    /* Native select caret icon styling */
+    .mobile-filter-app-card select.form-control:not(.select2-hidden-accessible) {
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 14px center !important;
+        background-size: 14px !important;
+        padding-right: 36px !important;
+    }
+
+    /* Select2 integration inside mobile filter card */
+    .mobile-filter-app-card .select2-container--default .select2-selection--single {
+        border-radius: 12px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        height: 44px !important;
+        background-color: #f8fafc !important;
+        padding: 6px 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .mobile-filter-app-card .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 28px !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+        padding-left: 2px !important;
+    }
+
+    .mobile-filter-app-card .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 42px !important;
+        right: 10px !important;
+    }
+
+    .mobile-filter-app-card .select2-container--default.select2-container--focus .select2-selection--single,
+    .mobile-filter-app-card .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: #3b82f6 !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+    }
+
+    /* Filter submit / action button styling */
+    .mobile-filter-app-card .btn,
+    .mobile-filter-app-card button[type="submit"] {
+        border-radius: 12px !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        padding: 10px 18px !important;
+        height: 44px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        letter-spacing: -0.1px !important;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.18) !important;
+        transition: all 0.15s ease !important;
+    }
+
+    .mobile-filter-app-card .btn:active {
+        transform: scale(0.97) !important;
+    }
+
+    .mobile-filter-app-card .btn-primary {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+        border-color: transparent !important;
+        color: #ffffff !important;
+    }
+
+    /* Subtle helper hint inside filter */
+    .mobile-filter-app-card .filter-app-hint {
+        font-size: 10.5px;
+        color: #64748b;
+        margin-top: 4px;
+        display: block;
+    }
 }
 
 @media (min-width: 768px) {
