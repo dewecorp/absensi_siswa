@@ -146,6 +146,168 @@ require_once '../templates/header.php';
 require_once '../templates/sidebar.php';
 ?>
 
+<style>
+/* ============================================================
+   Responsif: Tabel Data Nilai Ujian menjadi Kartu saat Mobile
+   ============================================================ */
+@media (max-width: 767.98px) {
+    #table-nilai-ujian thead { display: none; }
+
+    #table-nilai-ujian,
+    #table-nilai-ujian tbody,
+    #table-nilai-ujian tr,
+    #table-nilai-ujian td {
+        display: block;
+        width: 100%;
+    }
+
+    #table-nilai-ujian {
+        background: transparent;
+        margin-bottom: 0;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    #table-nilai-ujian tbody tr {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        background: #fff;
+        border: 1px solid #e9edf5;
+        border-left: 5px solid #6777ef;
+        border-radius: 14px;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, .06);
+        padding: 14px 16px;
+        margin-bottom: 12px;
+    }
+
+    #table-nilai-ujian tbody tr:hover {
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .12);
+    }
+
+    #table-nilai-ujian td {
+        border: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    /* Nomor urut jadi chip kecil di kanan atas */
+    #table-nilai-ujian td.td-no {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        bottom: auto !important;
+        left: auto !important;
+        width: auto !important;
+        height: auto !important;
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 800;
+        color: #6777ef;
+        background: #eef2ff !important;
+        border-radius: 999px;
+        padding: 3px 10px !important;
+        line-height: 1.4;
+        z-index: 1;
+    }
+    #table-nilai-ujian td.td-no::before {
+        content: 'No. ';
+        font-weight: 700;
+        color: #94a3b8;
+    }
+
+    /* Tahun ajaran jadi judul kartu */
+    #table-nilai-ujian td.td-ta {
+        flex: 0 0 100%;
+        font-size: 17px;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.3;
+        padding-right: 64px !important;
+        margin-bottom: 12px;
+    }
+    #table-nilai-ujian td.td-ta::before {
+        content: 'Tahun Ajaran';
+        display: block;
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        color: #94a3b8;
+        margin-bottom: 2px;
+    }
+
+    /* Nilai terendah & tertinggi berdampingan */
+    #table-nilai-ujian td.td-min,
+    #table-nilai-ujian td.td-max {
+        flex: 0 0 50%;
+        text-align: left !important;
+        margin-bottom: 12px;
+    }
+    #table-nilai-ujian td.td-min::before,
+    #table-nilai-ujian td.td-max::before {
+        display: block;
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        color: #94a3b8;
+        margin-bottom: 6px;
+    }
+    #table-nilai-ujian td.td-min::before { content: 'Nilai Terendah'; }
+    #table-nilai-ujian td.td-max::before { content: 'Nilai Tertinggi'; }
+
+    #table-nilai-ujian td.td-min .badge,
+    #table-nilai-ujian td.td-max .badge {
+        font-size: 15px;
+        font-weight: 800;
+        padding: 7px 14px;
+        border-radius: 10px;
+    }
+
+    /* Kolom aksi jadi tombol ikon sejajar */
+    #table-nilai-ujian td.td-aksi {
+        flex: 0 0 100%;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: flex-start;
+        margin-top: 2px;
+        padding-top: 12px !important;
+        border-top: 1px solid #f1f5f9 !important;
+    }
+    #table-nilai-ujian td.td-aksi .btn {
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 8px 14px;
+        flex: 0 0 auto;
+        width: auto;
+    }
+    #table-nilai-ujian td.td-aksi form {
+        display: inline-flex;
+        flex: 0 0 auto;
+        margin: 0;
+    }
+    #table-nilai-ujian td.td-aksi form .btn { width: auto; }
+
+    /* Baris kosong */
+    #table-nilai-ujian td.td-empty {
+        flex: 0 0 100%;
+        text-align: center;
+        padding: 20px 0 !important;
+    }
+}
+
+@media (max-width: 400px) {
+    #table-nilai-ujian td.td-min,
+    #table-nilai-ujian td.td-max {
+        flex: 0 0 100%;
+    }
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -210,17 +372,17 @@ require_once '../templates/sidebar.php';
                                     <tbody>
                                         <?php if (empty($nilai_data)): ?>
                                             <tr>
-                                                <td colspan="<?= $can_crud ? 5 : 4 ?>" class="text-center text-muted py-4">Belum ada data nilai ujian</td>
+                                                <td colspan="<?= $can_crud ? 5 : 4 ?>" class="td-empty text-center text-muted py-4">Belum ada data nilai ujian</td>
                                             </tr>
                                         <?php else: ?>
                                             <?php $no = 1; foreach ($nilai_data as $data): ?>
                                                 <tr>
-                                                    <td class="text-center"><?= $no++ ?></td>
-                                                    <td><?= htmlspecialchars($data['tahun_ajaran']) ?></td>
-                                                    <td class="text-center"><span class="badge badge-danger"><?= number_format((float)$data['nilai_terendah'], 2) ?></span></td>
-                                                    <td class="text-center"><span class="badge badge-success"><?= number_format((float)$data['nilai_tertinggi'], 2) ?></span></td>
+                                                    <td class="td-no text-center"><?= $no++ ?></td>
+                                                    <td class="td-ta"><?= htmlspecialchars($data['tahun_ajaran']) ?></td>
+                                                    <td class="td-min text-center"><span class="badge badge-danger"><?= number_format((float)$data['nilai_terendah'], 2) ?></span></td>
+                                                    <td class="td-max text-center"><span class="badge badge-success"><?= number_format((float)$data['nilai_tertinggi'], 2) ?></span></td>
                                                     <?php if ($can_crud): ?>
-                                                        <td class="text-center">
+                                                        <td class="td-aksi text-center">
                                                             <button type="button" class="btn btn-warning btn-sm btn-edit-rekap" data-toggle="modal" data-target="#modalEditNilai"
                                                                 data-id="<?= (int)$data['id_rekap_nilai_ujian'] ?>"
                                                                 data-tahun-ajaran="<?= htmlspecialchars($data['tahun_ajaran'], ENT_QUOTES) ?>"
@@ -231,7 +393,7 @@ require_once '../templates/sidebar.php';
                                                             <form method="POST" class="d-inline" onsubmit="return confirm('Hapus data nilai ujian ini?')">
                                                                 <input type="hidden" name="action" value="hapus">
                                                                 <input type="hidden" name="id_rekap_nilai_ujian" value="<?= (int)$data['id_rekap_nilai_ujian'] ?>">
-                                                                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+                                                                <button type="submit" class="btn btn-danger btn-sm" title="Hapus"><i class="fas fa-trash"></i></button>
                                                             </form>
                                                         </td>
                                                     <?php endif; ?>

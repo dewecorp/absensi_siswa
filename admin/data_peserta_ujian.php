@@ -24,6 +24,9 @@ $current_level = getUserLevel();
 $is_wali = $current_level === 'wali';
 $is_tata_usaha = $current_level === 'tata_usaha';
 $is_admin = $current_level === 'admin';
+// Mode pratinjau (session_type) — petunjuk Generate hanya untuk tampilan admin asli
+$view_session_type = strtolower(trim((string)($_GET['session_type'] ?? '')));
+$is_admin_view = $is_admin && ($view_session_type === '' || $view_session_type === 'admin');
 $is_wali_kelas_6 = false;
 
 if ($is_wali && isset($_SESSION['nama_guru'])) {
@@ -967,7 +970,18 @@ require_once '../templates/sidebar.php';
 
                             <?php if (empty($rows)): ?>
 
+                            <?php if ($is_admin_view): ?>
+
                             <p class="text-muted mb-0">Belum ada peserta tersimpan untuk tahun ajaran ini (0 peserta). Pilih tahun ajaran yang sesuai, lalu klik <strong>Generate Nomor Ujian</strong> (data mengikuti siswa kelas VI saat ini).</p>
+
+                            <?php else: ?>
+
+                            <div class="text-center text-muted py-4">
+                                <i class="far fa-folder-open fa-3x mb-3"></i>
+                                <p class="mb-0">Belum ada data peserta ujian untuk tahun ajaran ini.</p>
+                            </div>
+
+                            <?php endif; ?>
 
                             <?php else: ?>
 

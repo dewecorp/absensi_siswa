@@ -257,6 +257,33 @@ $(document).ready(function() {
         $(this).find('td:first-child').text(currentPageNumber);
     });
 
+    // Switcher View: Kartu vs Tabel
+    $('#btn-show-cards').on('click', function() {
+        $(this).addClass('active');
+        $('#btn-show-table').removeClass('active');
+        $('#mapel-card-view').show();
+        $('#mapel-table-view').hide();
+    });
+    $('#btn-show-table').on('click', function() {
+        $(this).addClass('active');
+        $('#btn-show-cards').removeClass('active');
+        $('#mapel-card-view').hide();
+        $('#mapel-table-view').show();
+        table.columns.adjust().draw();
+    });
+
+    // Live search kartu
+    $('#mapel-search').on('input', function() {
+        var q = $(this).val().toLowerCase().trim();
+        var visible = 0;
+        $('#mapelCardContainer .mapel-card').each(function() {
+            var hay = $(this).data('search') || '';
+            if (!q || String(hay).indexOf(q) !== -1) { $(this).show(); visible++; }
+            else { $(this).hide(); }
+        });
+        $('#mapel-empty-search').toggle(visible === 0 && q !== '' && $('#mapelCardContainer .mapel-card').length > 0);
+    });
+
     // Handle Edit Button
     $(document).on('click', '.edit-btn', function() {
         var id = $(this).data('id');
@@ -477,6 +504,155 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+/* ============ Kartu Mata Pelajaran ============ */
+.mapel-stat-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.mapel-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #fff;
+    border: 1px solid #e9edf5;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    box-shadow: 0 2px 8px rgba(15,23,42,.04);
+}
+.mapel-stat-pill i { font-size: 12px; }
+.mapel-stat-pill .num { font-size: 14px; font-weight: 800; color: #0f172a; }
+
+.mapel-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+@media (max-width: 575.98px) {
+    .mapel-card-grid { grid-template-columns: 1fr; gap: 12px; }
+}
+.mapel-card {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e9edf5;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(15,23,42,.06);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    transition: all .2s ease;
+    overflow: hidden;
+}
+.mapel-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    background: var(--mk-color, #6777ef);
+}
+.mapel-card:hover {
+    box-shadow: 0 10px 26px rgba(15,23,42,.13);
+    transform: translateY(-2px);
+}
+.mapel-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.mapel-kode-badge {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    font-weight: 800;
+    color: #fff;
+    background: var(--mk-color, #6777ef);
+    box-shadow: 0 4px 10px rgba(15,23,42,.16);
+}
+.mapel-jenis-pill {
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--mk-soft, #eef2ff);
+    color: var(--mk-color, #6777ef);
+    white-space: nowrap;
+}
+.mapel-card-title {
+    font-size: 15.5px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    margin-bottom: 10px;
+    word-break: break-word;
+}
+.mapel-kktp-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 11px;
+    padding: 9px 12px;
+    margin-bottom: 12px;
+}
+.mapel-kktp-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.mapel-kktp-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--mk-color, #6777ef);
+    line-height: 1;
+}
+.mapel-kktp-value.empty { font-size: 13px; color: #94a3b8; font-weight: 700; }
+.mapel-card-actions {
+    display: flex;
+    gap: 7px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+}
+.mapel-card-actions .btn {
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 700;
+    flex: 1;
+}
+.mapel-empty {
+    text-align: center;
+    padding: 48px 16px;
+    color: #94a3b8;
+}
+.mapel-search-wrap { max-width: 260px; }
+.btn-toggle-view.active {
+    background-color: #6777ef !important;
+    color: #fff !important;
+    border-color: #6777ef !important;
+}
+</style>
+
 <!-- Main Content -->
 <div class="main-content">
     <section class="section">
@@ -489,75 +665,169 @@ include '../templates/sidebar.php';
             <div class="row">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header">
-                            <h4>Data Mata Pelajaran</h4>
-                            <div class="card-header-action">
+                        <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:10px;">
+                            <div class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                                <h4 class="mb-0"><i class="fas fa-book text-primary mr-2"></i>Data Mata Pelajaran</h4>
+                                <span class="badge badge-info font-weight-bold" style="font-size:11.5px;border-radius:999px;"><?= count($mata_pelajaran) ?> mapel</span>
+                            </div>
+                            <div class="card-header-action d-flex align-items-center flex-wrap" style="gap:6px;">
+                                <div class="btn-group btn-group-sm mr-1">
+                                    <button type="button" class="btn btn-outline-primary btn-toggle-view active" id="btn-show-cards" title="Tampilan Kartu"><i class="fas fa-th-large mr-1"></i>Kartu</button>
+                                    <button type="button" class="btn btn-outline-primary btn-toggle-view" id="btn-show-table" title="Tampilan Tabel"><i class="fas fa-table mr-1"></i>Tabel</button>
+                                </div>
                                 <?php if (!$is_readonly): ?>
-                                <button class="btn btn-primary" data-toggle="modal" data-target="#addModal">
-                                    <i class="fas fa-plus"></i> Tambah Mapel
+                                <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addModal">
+                                    <i class="fas fa-plus mr-1"></i> Tambah Mapel
                                 </button>
-                                <button class="btn btn-info ml-1" data-toggle="modal" data-target="#globalKktpModal">
-                                    <i class="fas fa-cog"></i> Set KKTP Global
+                                <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#globalKktpModal">
+                                    <i class="fas fa-cog mr-1"></i> Set KKTP Global
                                 </button>
                                 <?php endif; ?>
-                                <a href="#" class="btn btn-success ml-1 export-btn" data-type="excel">
-                                    <i class="fas fa-file-excel"></i> Export Excel
+                                <a href="#" class="btn btn-success btn-sm export-btn" data-type="excel">
+                                    <i class="fas fa-file-excel mr-1"></i> Excel
                                 </a>
-                                <a href="#" class="btn btn-danger ml-1 export-btn" data-type="pdf">
-                                    <i class="fas fa-file-pdf"></i> Export PDF
+                                <a href="#" class="btn btn-danger btn-sm export-btn" data-type="pdf">
+                                    <i class="fas fa-file-pdf mr-1"></i> PDF
                                 </a>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped" id="table-1">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center" width="5%">No</th>
-                                            <th>Kode Mapel</th>
-                                            <th>Mata Pelajaran</th>
-                                            <?php if (!$is_readonly): ?>
-                                                <th>Jenis</th>
-                                            <?php endif; ?>
-                                            <th>KKTP</th>
-                                            <?php if (!$is_readonly): ?>
-                                                <th width="15%">Aksi</th>
-                                            <?php endif; ?>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php 
-                                        foreach ($mata_pelajaran as $row): 
+                            <div class="d-flex justify-content-between align-items-center flex-wrap mb-3" style="gap:10px;">
+                                <div class="mapel-stat-strip mb-0">
+                                    <?php
+                                    $cnt_akademik = 0; $cnt_non = 0; $cnt_tambahan = 0; $cnt_kktp_kosong = 0;
+                                    foreach ($mata_pelajaran as $mp) {
+                                        $jns = $mp['jenis_mapel'] ?? 'Akademik';
+                                        if ($jns === 'Tambahan') $cnt_tambahan++;
+                                        elseif ($jns === 'Non Akademik') $cnt_non++;
+                                        else $cnt_akademik++;
+                                        if ($mp['kktp'] === null || $mp['kktp'] === '') $cnt_kktp_kosong++;
+                                    }
+                                    ?>
+                                    <span class="mapel-stat-pill"><i class="fas fa-book-open text-primary"></i>Akademik <span class="num"><?= $cnt_akademik ?></span></span>
+                                    <span class="mapel-stat-pill"><i class="fas fa-palette text-info"></i>Non Akademik <span class="num"><?= $cnt_non ?></span></span>
+                                    <span class="mapel-stat-pill"><i class="fas fa-star text-warning"></i>Tambahan <span class="num"><?= $cnt_tambahan ?></span></span>
+                                    <span class="mapel-stat-pill"><i class="fas fa-exclamation-triangle text-danger"></i>KKTP Kosong <span class="num"><?= $cnt_kktp_kosong ?></span></span>
+                                </div>
+                                <div class="mapel-search-wrap w-100">
+                                    <div class="input-group input-group-sm">
+                                        <div class="input-group-prepend"><span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span></div>
+                                        <input type="text" id="mapel-search" class="form-control" placeholder="Cari mata pelajaran...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ================= TAMPILAN KARTU (DEFAULT) ================= -->
+                            <div id="mapel-card-view">
+                                <?php if (empty($mata_pelajaran)): ?>
+                                    <div class="mapel-empty">
+                                        <i class="fas fa-book fa-3x mb-3"></i>
+                                        <div class="font-weight-bold text-dark">Belum ada mata pelajaran</div>
+                                        <div class="small">Tambahkan mata pelajaran terlebih dahulu.</div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="mapel-card-grid" id="mapelCardContainer">
+                                        <?php foreach ($mata_pelajaran as $row):
+                                            $jns = $row['jenis_mapel'] ?? 'Akademik';
+                                            if ($jns === 'Tambahan') { $mk_color = '#ffa426'; $mk_soft = '#fff7e6'; $mk_icon = 'fas fa-star'; }
+                                            elseif ($jns === 'Non Akademik') { $mk_color = '#3abaf4'; $mk_soft = '#e8f7fe'; $mk_icon = 'fas fa-palette'; }
+                                            else { $mk_color = '#6777ef'; $mk_soft = '#eef2ff'; $mk_icon = 'fas fa-book-open'; }
+                                            $search_str = strtolower(($row['nama_mapel'] ?? '') . ' ' . ($row['kode_mapel'] ?? '') . ' ' . $jns);
                                         ?>
-                                        <tr>
-                                            <td class="text-center"></td>
-                                            <td><?= htmlspecialchars($row['kode_mapel'] ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['nama_mapel']) ?></td>
+                                        <div class="mapel-card" style="--mk-color: <?= $mk_color ?>; --mk-soft: <?= $mk_soft ?>;" data-search="<?= htmlspecialchars($search_str, ENT_QUOTES, 'UTF-8') ?>">
+                                            <div class="mapel-card-top">
+                                                <div class="mapel-kode-badge"><?= htmlspecialchars($row['kode_mapel'] ?? '-') ?></div>
+                                                <span class="mapel-jenis-pill"><i class="<?= $mk_icon ?> mr-1"></i><?= htmlspecialchars($jns) ?></span>
+                                            </div>
+                                            <div class="mapel-card-title"><?= htmlspecialchars($row['nama_mapel']) ?></div>
+                                            <div class="mapel-kktp-box">
+                                                <span class="mapel-kktp-label"><i class="fas fa-bullseye"></i> KKTP</span>
+                                                <?php if ($row['kktp'] !== null && $row['kktp'] !== ''): ?>
+                                                    <span class="mapel-kktp-value"><?= htmlspecialchars($row['kktp']) ?></span>
+                                                <?php else: ?>
+                                                    <span class="mapel-kktp-value empty">Belum diisi</span>
+                                                <?php endif; ?>
+                                            </div>
                                             <?php if (!$is_readonly): ?>
-                                                <td><?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?></td>
+                                            <div class="mapel-card-actions">
+                                                <button class="btn btn-warning edit-btn"
+                                                        data-id="<?= $row['id_mapel'] ?>"
+                                                        data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>"
+                                                        data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>"
+                                                        data-jenis="<?= htmlspecialchars($jns) ?>"
+                                                        data-kktp="<?= htmlspecialchars($row['kktp'] ?? '') ?>">
+                                                    <i class="fas fa-edit mr-1"></i>Edit
+                                                </button>
+                                                <button class="btn btn-outline-danger delete-btn"
+                                                        data-id="<?= $row['id_mapel'] ?>"
+                                                        data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>">
+                                                    <i class="fas fa-trash mr-1"></i>Hapus
+                                                </button>
+                                            </div>
                                             <?php endif; ?>
-                                            <td><?= $row['kktp'] !== null ? htmlspecialchars($row['kktp']) : '-' ?></td>
-                                            <?php if (!$is_readonly): ?>
-                                                <td>
-                                                    <button class="btn btn-warning btn-sm edit-btn" 
-                                                            data-id="<?= $row['id_mapel'] ?>"
-                                                            data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>"
-                                                            data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>"
-                                                            data-jenis="<?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?>"
-                                                            data-kktp="<?= htmlspecialchars($row['kktp'] ?? '') ?>">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <button class="btn btn-danger btn-sm delete-btn" 
-                                                            data-id="<?= $row['id_mapel'] ?>"
-                                                            data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </td>
-                                            <?php endif; ?>
-                                        </tr>
+                                        </div>
                                         <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                                    </div>
+                                    <div id="mapel-empty-search" class="mapel-empty" style="display:none;">
+                                        <i class="fas fa-search fa-3x mb-3"></i>
+                                        <div class="font-weight-bold text-dark">Tidak ada mapel cocok</div>
+                                        <div class="small">Coba kata kunci lain.</div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- ================= TAMPILAN TABEL (CADANGAN, UNTUK EXPORT) ================= -->
+                            <div id="mapel-table-view" style="display:none;">
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="table-1">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center" width="5%">No</th>
+                                                <th>Kode Mapel</th>
+                                                <th>Mata Pelajaran</th>
+                                                <?php if (!$is_readonly): ?>
+                                                    <th>Jenis</th>
+                                                <?php endif; ?>
+                                                <th>KKTP</th>
+                                                <?php if (!$is_readonly): ?>
+                                                    <th width="15%">Aksi</th>
+                                                <?php endif; ?>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php 
+                                            foreach ($mata_pelajaran as $row): 
+                                            ?>
+                                            <tr>
+                                                <td class="text-center"></td>
+                                                <td><?= htmlspecialchars($row['kode_mapel'] ?? '') ?></td>
+                                                <td><?= htmlspecialchars($row['nama_mapel']) ?></td>
+                                                <?php if (!$is_readonly): ?>
+                                                    <td><?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?></td>
+                                                <?php endif; ?>
+                                                <td><?= $row['kktp'] !== null ? htmlspecialchars($row['kktp']) : '-' ?></td>
+                                                <?php if (!$is_readonly): ?>
+                                                    <td>
+                                                        <button class="btn btn-warning btn-sm edit-btn" 
+                                                                data-id="<?= $row['id_mapel'] ?>"
+                                                                data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>"
+                                                                data-kode="<?= htmlspecialchars($row['kode_mapel'] ?? '') ?>"
+                                                                data-jenis="<?= htmlspecialchars($row['jenis_mapel'] ?? 'Akademik') ?>"
+                                                                data-kktp="<?= htmlspecialchars($row['kktp'] ?? '') ?>">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm delete-btn" 
+                                                                data-id="<?= $row['id_mapel'] ?>"
+                                                                data-nama="<?= htmlspecialchars($row['nama_mapel']) ?>">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                <?php endif; ?>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
