@@ -1730,6 +1730,37 @@ if (!function_exists('mapp_tile_url')) {
     }
 }
 
+if (!function_exists('get_app_menu_icon')) {
+    function get_app_menu_icon(string $title, string $default_icon = ''): string
+    {
+        $map = [
+            'dashboard' => 'fas fa-home',
+            'beranda' => 'fas fa-home',
+            'forum guru' => 'fas fa-comments',
+            'forum' => 'fas fa-comments',
+            'profil & pengaturan' => 'fas fa-user-cog',
+            'profil' => 'fas fa-user-circle',
+            'data utama' => 'fas fa-layer-group',
+            'ekstrakurikuler' => 'fas fa-running',
+            'jadwal' => 'fas fa-calendar-alt',
+            'kehadiran' => 'fas fa-user-check',
+            'keuangan' => 'fas fa-wallet',
+            'nilai siswa' => 'fas fa-award',
+            'pembelajaran' => 'fas fa-book-reader',
+            'pengelolaan kelas' => 'fas fa-users-cog',
+            'remidial' => 'fas fa-clipboard-check',
+            'supervisi' => 'fas fa-user-tie',
+            'arsip / surat' => 'fas fa-envelope-open-text',
+            'surat' => 'fas fa-envelope',
+            'buku tamu' => 'fas fa-address-book',
+            'sarana & prasarana' => 'fas fa-boxes',
+            'laporan' => 'fas fa-chart-line'
+        ];
+        $key = strtolower(trim($title));
+        return $map[$key] ?? ($default_icon !== '' ? $default_icon : 'fas fa-th-large');
+    }
+}
+
 if (!function_exists('get_mobile_menu_groups')) {
     function get_mobile_menu_groups(array $menu_items): array
     {
@@ -1739,17 +1770,18 @@ if (!function_exists('get_mobile_menu_groups')) {
             if ($item['title'] === 'Logout') {
                 continue;
             }
+            $icon = get_app_menu_icon($item['title'] ?? '', $item['icon'] ?? '');
             $has_submenu = isset($item['submenu']) && is_array($item['submenu']);
             if ($has_submenu) {
                 $grouped[] = [
                     'title' => $item['title'],
-                    'icon' => isset($item['icon']) ? $item['icon'] : '',
+                    'icon' => $icon,
                     'items' => $item['submenu']
                 ];
             } else {
                 $single[] = [
                     'title' => $item['title'],
-                    'icon' => isset($item['icon']) ? $item['icon'] : '',
+                    'icon' => $icon,
                     'url' => $item['url']
                 ];
             }
@@ -1788,7 +1820,7 @@ if (!function_exists('get_bottom_nav_quick_links')) {
             }
 
             $title = $item['title'];
-            $icon = isset($item['icon']) ? $item['icon'] : '';
+            $icon = get_app_menu_icon($title, $item['icon'] ?? '');
             $has_submenu = isset($item['submenu']) && is_array($item['submenu']) && count($item['submenu']) > 0;
             $url = $has_submenu ? $item['submenu'][0]['url'] : $item['url'];
             $display_title = $title;

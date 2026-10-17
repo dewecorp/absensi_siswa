@@ -27,6 +27,7 @@ if (!isset($_SESSION['nama_guru']) || empty($_SESSION['nama_guru'])) {
 }
 
 $guru_id = $teacher['id_guru'];
+$page_title = 'Data Gaji Guru';
 
 // URL + key sigaji 100% dari Pengaturan Endpoint (tanpa hardcode domain).
 $api_url = '';
@@ -269,134 +270,189 @@ function formatRupiah($amount) {
                     <i class="fas fa-info-circle mr-2"></i>Belum ada data penggajian untuk Anda.
                 </div>
             <?php else: ?>
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-body py-3">
-                                <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap: 10px;">
-                                    <div>
-                                        <h5 class="mb-1"><i class="fas fa-user-tie mr-2"></i><?php echo htmlspecialchars($teacher['nama_guru'] ?? 'Guru'); ?></h5>
-                                        <?php if (!empty($teacher['nip'])): ?>
-                                            <small class="text-muted">NIP. <?php echo htmlspecialchars($teacher['nip']); ?></small>
-                                        <?php endif; ?>
-                                        <?php if (!empty($teacher['nuptk'])): ?>
-                                            <small class="text-muted ml-3">NUPTK. <?php echo htmlspecialchars($teacher['nuptk']); ?></small>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="text-right">
-                                        <span class="badge badge-info p-2"><i class="fas fa-calendar-alt mr-1"></i>Periode: <strong><?php echo htmlspecialchars($period_label ?: 'Juli 2026'); ?></strong></span>
-                                    </div>
+                <!-- Hero Salary Card (E-Wallet Style) -->
+                <div class="gaji-hero-card">
+                    <div class="gaji-hero-top">
+                        <div class="gaji-hero-user">
+                            <div class="gaji-hero-avatar">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div>
+                                <div class="gaji-hero-name"><?php echo htmlspecialchars($teacher['nama_guru'] ?? 'Guru'); ?></div>
+                                <div class="gaji-hero-sub">
+                                    <?php if (!empty($teacher['nip'])): ?>
+                                        <span>NIP. <?php echo htmlspecialchars($teacher['nip']); ?></span>
+                                    <?php elseif (!empty($teacher['nuptk'])): ?>
+                                        <span>NUPTK. <?php echo htmlspecialchars($teacher['nuptk']); ?></span>
+                                    <?php else: ?>
+                                        <span>Tenaga Pendidik</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12 col-md-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center d-flex flex-column justify-content-center" style="padding:0.6rem 0.5rem">
-                                <div class="h5 font-weight-bold mb-1"><i class="fas fa-coins mr-1"></i>Gaji Pokok</div>
-                                <div class="h2 font-weight-bold text-primary mb-0"><?php echo formatRupiah($total_gp); ?></div>
-                                <div class="text-muted" style="font-size:0.9rem"><?php echo formatRupiah($gp_per_bulan); ?>/bln × <?php echo $num_periods; ?> bln</div>
-                            </div>
+                        <div class="gaji-hero-badge">
+                            <i class="far fa-calendar-alt"></i>
+                            <span><?= htmlspecialchars($period_label ?: 'Bulan Berjalan'); ?></span>
                         </div>
                     </div>
-                    <div class="col-12 col-md-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center d-flex flex-column justify-content-center" style="padding:0.6rem 0.5rem">
-                                <div class="h5 font-weight-bold mb-1"><i class="fas fa-plus-circle mr-1"></i>Tunjangan</div>
-                                <div class="h2 font-weight-bold text-success mb-0"><?php echo formatRupiah($total_tunj); ?></div>
-                                <div class="text-muted" style="font-size:0.9rem"><?php echo formatRupiah($sum_tunj_per_bulan); ?>/bln × <?php echo $num_periods; ?> bln</div>
-                            </div>
+
+                    <div class="gaji-hero-balance-wrap">
+                        <div class="gaji-hero-balance-lbl">Total Gaji Bersih Diterima</div>
+                        <div class="gaji-hero-balance"><?php echo formatRupiah($total_akhir); ?></div>
+                        <div class="gaji-hero-balance-sub">
+                            <i class="fas fa-check-circle mr-1"></i><?php echo formatRupiah($per_bulan_all); ?> / bulan &bull; <?= $num_periods; ?> periode
                         </div>
                     </div>
-                    <div class="col-12 col-md-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center d-flex flex-column justify-content-center" style="padding:0.6rem 0.5rem">
-                                <div class="h5 font-weight-bold mb-1"><i class="fas fa-minus-circle mr-1"></i>Potongan</div>
-                                <div class="h2 font-weight-bold text-danger mb-0"><?php echo formatRupiah($total_pot); ?></div>
-                                <div class="text-muted" style="font-size:0.9rem"><?php echo formatRupiah($sum_pot_per_bulan); ?>/bln × <?php echo $num_periods; ?> bln</div>
-                            </div>
+
+                    <div class="gaji-hero-stats">
+                        <div class="gaji-hero-stat-pill tone-pokok">
+                            <div class="lbl">Gaji Pokok</div>
+                            <div class="val"><?php echo formatRupiah($total_gp); ?></div>
                         </div>
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center d-flex flex-column justify-content-center" style="padding:0.6rem 0.5rem">
-                                <div class="h5 font-weight-bold mb-1"><i class="fas fa-file-invoice mr-1"></i>Gaji Bersih</div>
-                                <div class="h2 font-weight-bold text-dark mb-0"><?php echo formatRupiah($total_akhir); ?></div>
-                                <div class="text-muted" style="font-size:0.9rem"><?php echo formatRupiah($per_bulan_all); ?>/bln × <?php echo $num_periods; ?> bln</div>
-                            </div>
+                        <div class="gaji-hero-stat-pill tone-tunj">
+                            <div class="lbl">+ Tunjangan</div>
+                            <div class="val"><?php echo formatRupiah($total_tunj); ?></div>
+                        </div>
+                        <div class="gaji-hero-stat-pill tone-pot">
+                            <div class="lbl">- Potongan</div>
+                            <div class="val"><?php echo formatRupiah($total_pot); ?></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h4><i class="fas fa-list mr-2"></i>Rincian Gaji</h4>
-                                <div class="card-header-action text-muted small">
-                                    <?php echo htmlspecialchars($period_label); ?>
+                <!-- 4 KPI Stat Cards Grid -->
+                <div class="gaji-stat-grid">
+                    <div class="gaji-stat-card">
+                        <div class="gaji-stat-header">
+                            <span class="gaji-stat-title">Gaji Pokok</span>
+                            <div class="gaji-stat-ico tone-blue"><i class="fas fa-coins"></i></div>
+                        </div>
+                        <div class="gaji-stat-val c-blue"><?php echo formatRupiah($total_gp); ?></div>
+                        <div class="gaji-stat-sub"><?php echo formatRupiah($gp_per_bulan); ?>/bln &bull; <?= $num_periods ?> bln</div>
+                    </div>
+
+                    <div class="gaji-stat-card">
+                        <div class="gaji-stat-header">
+                            <span class="gaji-stat-title">Tunjangan</span>
+                            <div class="gaji-stat-ico tone-green"><i class="fas fa-plus-circle"></i></div>
+                        </div>
+                        <div class="gaji-stat-val c-green"><?php echo formatRupiah($total_tunj); ?></div>
+                        <div class="gaji-stat-sub"><?php echo formatRupiah($sum_tunj_per_bulan); ?>/bln &bull; <?= $num_periods ?> bln</div>
+                    </div>
+
+                    <div class="gaji-stat-card">
+                        <div class="gaji-stat-header">
+                            <span class="gaji-stat-title">Potongan</span>
+                            <div class="gaji-stat-ico tone-red"><i class="fas fa-minus-circle"></i></div>
+                        </div>
+                        <div class="gaji-stat-val c-red"><?php echo formatRupiah($total_pot); ?></div>
+                        <div class="gaji-stat-sub"><?php echo formatRupiah($sum_pot_per_bulan); ?>/bln &bull; <?= $num_periods ?> bln</div>
+                    </div>
+
+                    <div class="gaji-stat-card">
+                        <div class="gaji-stat-header">
+                            <span class="gaji-stat-title">Gaji Bersih</span>
+                            <div class="gaji-stat-ico tone-teal"><i class="fas fa-receipt"></i></div>
+                        </div>
+                        <div class="gaji-stat-val c-teal"><?php echo formatRupiah($total_akhir); ?></div>
+                        <div class="gaji-stat-sub"><?php echo formatRupiah($per_bulan_all); ?>/bln &bull; <?= $num_periods ?> bln</div>
+                    </div>
+                </div>
+
+                <!-- Rincian Slip Gaji Ala Modern App List -->
+                <div class="gaji-breakdown-card">
+                    <div class="gaji-breakdown-header">
+                        <h4 class="gaji-breakdown-title">
+                            <i class="fas fa-file-invoice-dollar"></i>Rincian Komponen Gaji
+                        </h4>
+                        <span class="badge badge-light border text-muted font-weight-bold" style="border-radius: 8px;">
+                            <?= htmlspecialchars($period_label); ?>
+                        </span>
+                    </div>
+
+                    <!-- Kategori Gaji Pokok -->
+                    <div class="gaji-section-tag">
+                        <span><i class="fas fa-coins text-primary mr-1.5"></i> Gaji Pokok</span>
+                        <span>Total (× <?= $num_periods ?> bln)</span>
+                    </div>
+                    <div class="gaji-item-row">
+                        <div class="gaji-item-info">
+                            <div class="gaji-item-bullet tone-blue"><i class="fas fa-money-bill-wave"></i></div>
+                            <div>
+                                <div class="gaji-item-name">Gaji Pokok Guru</div>
+                                <div class="gaji-item-sub">Besaran pokok bulanan</div>
+                            </div>
+                        </div>
+                        <div class="gaji-item-values">
+                            <div class="gaji-item-total"><?php echo formatRupiah($total_gp); ?></div>
+                            <div class="gaji-item-perbulan"><?php echo formatRupiah($gp_per_bulan); ?> / bln</div>
+                        </div>
+                    </div>
+
+                    <!-- Kategori Tunjangan -->
+                    <div class="gaji-section-tag">
+                        <span><i class="fas fa-plus-circle text-success mr-1.5"></i> Tunjangan Tambahan</span>
+                        <span class="text-success font-weight-bold"><?php echo formatRupiah($total_tunj); ?></span>
+                    </div>
+                    <?php if (!empty($tunjangan_items)): ?>
+                        <?php $has_tunj_nonzero = false; foreach ($tunjangan_items as $ti): ?>
+                            <?php if ($ti['per_bulan'] > 0): $has_tunj_nonzero = true; ?>
+                            <div class="gaji-item-row">
+                                <div class="gaji-item-info">
+                                    <div class="gaji-item-bullet tone-green"><i class="fas fa-arrow-down"></i></div>
+                                    <div>
+                                        <div class="gaji-item-name"><?php echo htmlspecialchars($ti['nama']); ?></div>
+                                        <div class="gaji-item-sub">Komponen penambah</div>
+                                    </div>
+                                </div>
+                                <div class="gaji-item-values">
+                                    <div class="gaji-item-total c-green">+ <?php echo formatRupiah($ti['per_bulan'] * $num_periods); ?></div>
+                                    <div class="gaji-item-perbulan"><?php echo formatRupiah($ti['per_bulan']); ?> / bln</div>
                                 </div>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-striped mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>Keterangan</th>
-                                                <th class="text-right">Per Bulan</th>
-                                                <th class="text-right">Total (× <?php echo $num_periods; ?>)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr class="bg-primary text-white">
-                                                <td><strong>Gaji Pokok</strong></td>
-                                                <td class="text-right"><?php echo formatRupiah($gp_per_bulan); ?></td>
-                                                <td class="text-right"><?php echo formatRupiah($total_gp); ?></td>
-                                            </tr>
-                                            <tr class="bg-light">
-                                                <td colspan="3"><strong class="text-success"><i class="fas fa-plus-circle mr-1"></i>Tunjangan</strong></td>
-                                            </tr>
-                                            <?php if (!empty($tunjangan_items)): ?>
-                                                <?php $has_tunj_nonzero = false; foreach ($tunjangan_items as $ti): ?>
-                                                    <?php if ($ti['per_bulan'] > 0): $has_tunj_nonzero = true; ?>
-                                                        <tr>
-                                                            <td class="pl-4"><?php echo htmlspecialchars($ti['nama']); ?></td>
-                                                            <td class="text-right text-success"><?php echo formatRupiah($ti['per_bulan']); ?></td>
-                                                            <td class="text-right text-success"><?php echo formatRupiah($ti['per_bulan'] * $num_periods); ?></td>
-                                                        </tr>
-                                                    <?php endif; ?>
-                                                <?php endforeach; ?>
-                                                <?php if (!$has_tunj_nonzero): ?>
-                                                    <tr><td class="pl-4 text-muted" colspan="3"><em>Belum ada tunjangan</em></td></tr>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <tr><td class="pl-4 text-muted" colspan="3"><em>Belum ada tunjangan</em></td></tr>
-                                            <?php endif; ?>
-                                            <?php if (!empty($potongan_items) && array_sum(array_column($potongan_items, 'per_bulan')) > 0): ?>
-                                                <tr class="bg-light">
-                                                    <td colspan="3"><strong class="text-danger"><i class="fas fa-minus-circle mr-1"></i>Potongan</strong></td>
-                                                </tr>
-                                                <?php foreach ($potongan_items as $pi): ?>
-                                                    <?php if ($pi['per_bulan'] > 0): ?>
-                                                        <tr>
-                                                            <td class="pl-4"><?php echo htmlspecialchars($pi['nama']); ?></td>
-                                                            <td class="text-right text-danger"><?php echo formatRupiah($pi['per_bulan']); ?></td>
-                                                            <td class="text-right text-danger"><?php echo formatRupiah($pi['per_bulan'] * $num_periods); ?></td>
-                                                        </tr>
-                                                    <?php endif; ?>
-                                                <?php endforeach; ?>
-                                            <?php endif; ?>
-                                            <tr class="bg-dark text-white font-weight-bold">
-                                                <td><i class="fas fa-file-invoice mr-1"></i>Total Gaji Bersih</td>
-                                                <td class="text-right"><?php echo formatRupiah($per_bulan_all); ?></td>
-                                                <td class="text-right"><?php echo formatRupiah($total_akhir); ?></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                        <?php if (!$has_tunj_nonzero): ?>
+                            <div class="p-3 text-center text-muted small"><em>Belum ada tunjangan yang tercatat.</em></div>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="p-3 text-center text-muted small"><em>Belum ada tunjangan yang tercatat.</em></div>
+                    <?php endif; ?>
+
+                    <!-- Kategori Potongan -->
+                    <?php if (!empty($potongan_items) && array_sum(array_column($potongan_items, 'per_bulan')) > 0): ?>
+                        <div class="gaji-section-tag">
+                            <span><i class="fas fa-minus-circle text-danger mr-1.5"></i> Potongan Gaji</span>
+                            <span class="text-danger font-weight-bold">- <?php echo formatRupiah($total_pot); ?></span>
+                        </div>
+                        <?php foreach ($potongan_items as $pi): ?>
+                            <?php if ($pi['per_bulan'] > 0): ?>
+                            <div class="gaji-item-row">
+                                <div class="gaji-item-info">
+                                    <div class="gaji-item-bullet tone-red"><i class="fas fa-arrow-up"></i></div>
+                                    <div>
+                                        <div class="gaji-item-name"><?php echo htmlspecialchars($pi['nama']); ?></div>
+                                        <div class="gaji-item-sub">Iuran / potongan wajib</div>
+                                    </div>
+                                </div>
+                                <div class="gaji-item-values">
+                                    <div class="gaji-item-total c-red">- <?php echo formatRupiah($pi['per_bulan'] * $num_periods); ?></div>
+                                    <div class="gaji-item-perbulan"><?php echo formatRupiah($pi['per_bulan']); ?> / bln</div>
                                 </div>
                             </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+
+                    <!-- Total Bar Gaji Bersih -->
+                    <div class="gaji-total-bar">
+                        <div class="lbl">
+                            <i class="fas fa-check-double"></i>
+                            <span>Total Gaji Bersih Diterima</span>
+                        </div>
+                        <div class="val-wrap">
+                            <div class="val"><?php echo formatRupiah($total_akhir); ?></div>
+                            <div class="val-sub"><?php echo formatRupiah($per_bulan_all); ?> / bln</div>
                         </div>
                     </div>
                 </div>

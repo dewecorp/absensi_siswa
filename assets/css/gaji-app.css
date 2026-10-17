@@ -1,0 +1,452 @@
+/* ============================================================
+   SIMAD Mobile App Styling: Data Gaji Guru
+   File: assets/css/gaji-app.css
+   ============================================================ */
+
+/* ---------- Hero Salary Card (Ala Banking App / E-Wallet) ---------- */
+.gaji-hero-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f766e 100%);
+    border-radius: 20px;
+    padding: 22px 20px 20px;
+    color: #ffffff;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .22);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, .10);
+}
+
+.gaji-hero-card::after {
+    content: '';
+    position: absolute;
+    right: -30px;
+    bottom: -30px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(20, 184, 166, .25) 0%, rgba(20, 184, 166, 0) 70%);
+    pointer-events: none;
+}
+
+.gaji-hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.gaji-hero-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.gaji-hero-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .15);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, .25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #5eead4;
+    flex-shrink: 0;
+}
+
+.gaji-hero-name {
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 2px;
+    color: #ffffff;
+}
+
+.gaji-hero-sub {
+    font-size: 11px;
+    opacity: .75;
+    color: #cbd5e1;
+    letter-spacing: .2px;
+}
+
+.gaji-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, .14);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, .20);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #e2e8f0;
+    white-space: nowrap;
+}
+
+.gaji-hero-badge i {
+    color: #5eead4;
+}
+
+.gaji-hero-balance-wrap {
+    text-align: left;
+    margin-bottom: 18px;
+}
+
+.gaji-hero-balance-lbl {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    opacity: .8;
+    color: #94a3b8;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.gaji-hero-balance {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1.15;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+}
+
+.gaji-hero-balance-sub {
+    font-size: 11.5px;
+    opacity: .85;
+    color: #5eead4;
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+/* Three mini tiles inside hero */
+.gaji-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.gaji-hero-stat-pill {
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 12px;
+    padding: 8px 6px;
+    text-align: center;
+}
+
+.gaji-hero-stat-pill .lbl {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    opacity: .75;
+    margin-bottom: 2px;
+}
+
+.gaji-hero-stat-pill .val {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.gaji-hero-stat-pill.tone-pokok .val { color: #60a5fa; }
+.gaji-hero-stat-pill.tone-tunj .val { color: #4ade80; }
+.gaji-hero-stat-pill.tone-pot .val { color: #f87171; }
+
+/* ---------- Stat Cards Grid (Mobile Card Look) ---------- */
+.gaji-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.gaji-stat-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 14px 14px 12px;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .04);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform .2s ease, box-shadow .2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.gaji-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .08);
+    border-color: #cbd5e1;
+}
+
+.gaji-stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.gaji-stat-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.gaji-stat-ico {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.gaji-stat-ico.tone-blue { background: #eff6ff; color: #2563eb; }
+.gaji-stat-ico.tone-green { background: #ecfdf5; color: #059669; }
+.gaji-stat-ico.tone-red { background: #fef2f2; color: #dc2626; }
+.gaji-stat-ico.tone-teal { background: #f0fdfa; color: #0d9488; }
+
+.gaji-stat-val {
+    font-size: 18px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-bottom: 2px;
+    letter-spacing: -0.3px;
+}
+
+.gaji-stat-val.c-blue { color: #2563eb; }
+.gaji-stat-val.c-green { color: #059669; }
+.gaji-stat-val.c-red { color: #dc2626; }
+.gaji-stat-val.c-teal { color: #0d9488; }
+
+.gaji-stat-sub {
+    font-size: 10.5px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+/* ---------- Breakdown Section (List Groups Ala Mobile App) ---------- */
+.gaji-breakdown-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .04);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.gaji-breakdown-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gaji-breakdown-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gaji-breakdown-title i {
+    color: #0d9488;
+}
+
+.gaji-section-tag {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 8px 18px;
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.gaji-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid #f8fafc;
+    transition: background-color .15s ease;
+}
+
+.gaji-item-row:last-child {
+    border-bottom: none;
+}
+
+.gaji-item-row:hover {
+    background-color: #f8fafc;
+}
+
+.gaji-item-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.gaji-item-bullet {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.gaji-item-bullet.tone-blue { background: #eff6ff; color: #2563eb; }
+.gaji-item-bullet.tone-green { background: #ecfdf5; color: #059669; }
+.gaji-item-bullet.tone-red { background: #fef2f2; color: #dc2626; }
+.gaji-item-bullet.tone-dark { background: #f1f5f9; color: #0f172a; }
+
+.gaji-item-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.3;
+}
+
+.gaji-item-sub {
+    font-size: 10.5px;
+    color: #94a3b8;
+    margin-top: 1px;
+}
+
+.gaji-item-values {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.gaji-item-total {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.gaji-item-total.c-green { color: #059669; }
+.gaji-item-total.c-red { color: #dc2626; }
+
+.gaji-item-perbulan {
+    font-size: 10.5px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* Total Bar at the bottom */
+.gaji-total-bar {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #ffffff;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.gaji-total-bar .lbl {
+    font-size: 13.5px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gaji-total-bar .lbl i {
+    color: #5eead4;
+}
+
+.gaji-total-bar .val-wrap {
+    text-align: right;
+}
+
+.gaji-total-bar .val {
+    font-size: 19px;
+    font-weight: 900;
+    color: #5eead4;
+    letter-spacing: -0.3px;
+}
+
+.gaji-total-bar .val-sub {
+    font-size: 10px;
+    color: #cbd5e1;
+    opacity: .85;
+}
+
+/* ---------- Responsive Layout (<= 767px Mobile Phone) ---------- */
+@media (max-width: 767.98px) {
+    .gaji-hero-card {
+        padding: 18px 16px 16px;
+        border-radius: 18px;
+    }
+
+    .gaji-hero-balance {
+        font-size: 24px;
+    }
+
+    .gaji-stat-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .gaji-stat-card {
+        padding: 12px 10px;
+        border-radius: 14px;
+    }
+
+    .gaji-stat-val {
+        font-size: 15px;
+    }
+
+    .gaji-item-row {
+        padding: 10px 14px;
+    }
+
+    .gaji-item-bullet {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+
+    .gaji-item-name {
+        font-size: 12px;
+    }
+
+    .gaji-item-total {
+        font-size: 12.5px;
+    }
+
+    .gaji-total-bar {
+        padding: 14px 14px;
+    }
+
+    .gaji-total-bar .val {
+        font-size: 16px;
+    }
+}

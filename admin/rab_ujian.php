@@ -200,90 +200,121 @@ include '../templates/sidebar.php';
         <div class="section-body">
             
             <?php if ($is_admin): ?>
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Pengaturan Tampilan Siswa</h4>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" action="">
-                                <div class="form-group">
-                                    <label class="d-block">Status Biaya Ujian di Akun Siswa</label>
-                                    <div class="custom-control custom-radio custom-control-inline">
-                                        <input type="radio" id="visibility_open" name="biaya_ujian_visibility" class="custom-control-input" value="open" <?= $visibility_setting == 'open' ? 'checked' : '' ?>>
-                                        <label class="custom-control-label" for="visibility_open">Dibuka (Terlihat)</label>
-                                    </div>
-                                    <div class="custom-control custom-radio custom-control-inline">
-                                        <input type="radio" id="visibility_closed" name="biaya_ujian_visibility" class="custom-control-input" value="closed" <?= $visibility_setting == 'closed' ? 'checked' : '' ?>>
-                                        <label class="custom-control-label" for="visibility_closed">Ditutup (Disembunyikan)</label>
-                                    </div>
-                                    <button type="submit" name="update_visibility" class="btn btn-primary btn-sm ml-3">Simpan Pengaturan</button>
+            <div class="rab-card mb-3">
+                <div class="rab-card-header">
+                    <h4 class="rab-card-title"><i class="fas fa-user-shield"></i>Pengaturan Tampilan Siswa</h4>
+                </div>
+                <div class="card-body py-3">
+                    <form method="POST" action="">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap: 12px;">
+                            <div>
+                                <div class="font-weight-bold text-dark mb-1">Status Biaya Ujian di Akun Siswa</div>
+                                <div class="text-muted small">Atur apakah rincian biaya ujian dapat dilihat langsung oleh siswa/wali murid.</div>
+                            </div>
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 12px;">
+                                <div class="custom-control custom-radio custom-control-inline mb-0">
+                                    <input type="radio" id="visibility_open" name="biaya_ujian_visibility" class="custom-control-input" value="open" <?= $visibility_setting == 'open' ? 'checked' : '' ?>>
+                                    <label class="custom-control-label font-weight-bold text-success" for="visibility_open">
+                                        <i class="fas fa-eye mr-1"></i>Dibuka (Terlihat)
+                                    </label>
                                 </div>
-                            </form>
+                                <div class="custom-control custom-radio custom-control-inline mb-0">
+                                    <input type="radio" id="visibility_closed" name="biaya_ujian_visibility" class="custom-control-input" value="closed" <?= $visibility_setting == 'closed' ? 'checked' : '' ?>>
+                                    <label class="custom-control-label font-weight-bold text-danger" for="visibility_closed">
+                                        <i class="fas fa-eye-slash mr-1"></i>Ditutup (Disembunyikan)
+                                    </label>
+                                </div>
+                                <button type="submit" name="update_visibility" class="rab-chip-btn chip-primary border-0">Simpan Pengaturan</button>
+                            </div>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
             <?php endif; ?>
 
-            <!-- Summary Cards -->
-            <div class="row">
-                <div class="col-lg-6 col-md-6 col-sm-12 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-warning">
-                            <i class="fas fa-money-bill-wave"></i>
+            <!-- Hero Budget Overview Card -->
+            <div class="rab-hero-card theme-ujian">
+                <div class="rab-hero-top">
+                    <div class="rab-hero-meta">
+                        <div class="rab-hero-icon">
+                            <i class="fas fa-graduation-cap"></i>
                         </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Total Biaya Ujian</h4>
-                            </div>
-                            <div class="card-body">
-                                Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?>
-                            </div>
+                        <div>
+                            <div class="rab-hero-title">RAB Ujian</div>
+                            <div class="rab-hero-sub">Rencana Anggaran Biaya Ujian Madrasah</div>
                         </div>
                     </div>
+                    <div class="rab-hero-badge">
+                        <i class="far fa-calendar-alt"></i>
+                        <span>TA <?= htmlspecialchars($tahun_ajaran) ?></span>
+                    </div>
                 </div>
-                <div class="col-lg-6 col-md-6 col-sm-12 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-info">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Biaya Per Siswa (<?= $jumlah_siswa ?> Siswa Kelas 6)</h4>
-                            </div>
-                            <div class="card-body">
-                                Rp <?= number_format($biaya_per_siswa, 0, ',', '.') ?>
-                            </div>
-                        </div>
+
+                <div class="rab-hero-balance-wrap">
+                    <div class="rab-hero-balance-lbl">Total Biaya Anggaran Ujian</div>
+                    <div class="rab-hero-balance">Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?></div>
+                    <div class="rab-hero-balance-sub">
+                        <span class="pill-sisa">
+                            <i class="fas fa-user-graduate mr-1"></i>Rp <?= number_format($biaya_per_siswa, 0, ',', '.') ?> / siswa
+                        </span>
+                        <span>&bull; <?= $jumlah_siswa ?> Siswa Kelas 6</span>
+                    </div>
+                </div>
+
+                <div class="rab-hero-stats two-cols">
+                    <div class="rab-hero-stat-pill">
+                        <div class="lbl">Total Kebutuhan</div>
+                        <div class="val">Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?></div>
+                    </div>
+                    <div class="rab-hero-stat-pill">
+                        <div class="lbl">Beban Per Siswa</div>
+                        <div class="val">Rp <?= number_format($biaya_per_siswa, 0, ',', '.') ?></div>
                     </div>
                 </div>
             </div>
 
+            <!-- App Stat Grid (2 KPI Cards) -->
+            <div class="rab-stat-grid two-cards">
+                <div class="rab-stat-card">
+                    <div class="rab-stat-top">
+                        <span class="rab-stat-title">Total Biaya Ujian</span>
+                        <div class="rab-stat-ico tone-purple"><i class="fas fa-money-bill-wave"></i></div>
+                    </div>
+                    <div class="rab-stat-val c-purple">Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?></div>
+                    <div class="rab-stat-sub">Seluruh pos pengeluaran ujian</div>
+                </div>
+
+                <div class="rab-stat-card">
+                    <div class="rab-stat-top">
+                        <span class="rab-stat-title">Biaya Per Siswa</span>
+                        <div class="rab-stat-ico tone-blue"><i class="fas fa-users"></i></div>
+                    </div>
+                    <div class="rab-stat-val c-blue">Rp <?= number_format($biaya_per_siswa, 0, ',', '.') ?></div>
+                    <div class="rab-stat-sub"><?= $jumlah_siswa ?> Siswa Tingkat Akhir</div>
+                </div>
+            </div>
+
             <!-- TABEL 2: RENCANA PENGELUARAN -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Rencana Anggaran (Pengeluaran)</h4>
-                            <div class="card-header-action">
-                                <a href="export_excel_rab_ujian?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="btn btn-success mr-2">
-                                    <i class="fas fa-file-excel"></i> Export Excel
-                                </a>
-                                <a href="cetak_rab_ujian?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="btn btn-warning mr-2">
-                                    <i class="fas fa-print"></i> Cetak Laporan
-                                </a>
-                                <?php if ($is_admin): ?>
-                                <button class="btn btn-primary" data-toggle="modal" data-target="#addPengeluaranModal">
-                                    <i class="fas fa-plus"></i> Tambah Pengeluaran
-                                </button>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover" id="table-pengeluaran">
+            <div class="rab-card">
+                <div class="rab-card-header">
+                    <h4 class="rab-card-title"><i class="fas fa-file-invoice-dollar"></i>Rencana Anggaran (Pengeluaran)</h4>
+                    <div class="rab-actions-bar mb-0">
+                        <a href="export_excel_rab_ujian?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="rab-chip-btn chip-success">
+                            <i class="fas fa-file-excel"></i> Export Excel
+                        </a>
+                        <a href="cetak_rab_ujian?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="rab-chip-btn chip-warning">
+                            <i class="fas fa-print"></i> Cetak Laporan
+                        </a>
+                        <?php if ($is_admin): ?>
+                        <button type="button" class="rab-chip-btn chip-primary" data-toggle="modal" data-target="#addPengeluaranModal">
+                            <i class="fas fa-plus"></i> Tambah Pengeluaran
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                                <table class="table table-striped table-hover rab-table-responsive" id="table-pengeluaran">
                                     <thead>
                                         <tr>
                                             <th class="text-center" width="5%">No</th>
@@ -302,16 +333,16 @@ include '../templates/sidebar.php';
                                     <tbody>
                                         <?php foreach ($rencana_pengeluaran as $i => $row): ?>
                                         <tr id="pengeluaran-<?= (int)$row['id_pengeluaran'] ?>">
-                                            <td class="text-center"><?= $i + 1 ?></td>
-                                            <td><?= htmlspecialchars($row['uraian']) ?></td>
-                                            <td><?= htmlspecialchars($row['kategori'] ?? '-') ?></td>
-                                            <td class="text-center"><?= number_format($row['volume'], 0, ',', '.') ?></td>
-                                            <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
-                                            <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
-                                            <td class="text-center"><?= number_format($row['perkalian'] ?? 1, 0, ',', '.') ?></td>
-                                            <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
+                                            <td class="cell-no text-center" data-label="No"><?= $i + 1 ?></td>
+                                            <td class="cell-uraian font-weight-bold" data-label="Uraian"><?= htmlspecialchars($row['uraian']) ?></td>
+                                            <td class="cell-kategori" data-label="Kategori"><?= htmlspecialchars($row['kategori'] ?? '-') ?></td>
+                                            <td class="cell-calc cell-volume text-center" data-label="Volume"><span class="cell-val"><?= number_format($row['volume'], 0, ',', '.') ?></span></td>
+                                            <td class="cell-calc cell-satuan text-right" data-label="Satuan (Rp)"><span class="cell-val"><?= number_format($row['satuan'], 0, ',', '.') ?></span></td>
+                                            <td class="cell-calc cell-jumlah text-center" data-label="Jumlah"><span class="cell-val"><?= number_format($row['jumlah'], 0, ',', '.') ?></span></td>
+                                            <td class="cell-calc cell-perkalian text-center" data-label="Perkalian (X)"><span class="cell-val"><?= number_format($row['perkalian'] ?? 1, 0, ',', '.') ?></span></td>
+                                            <td class="cell-total text-right font-weight-bold" data-label="Total (Rp)"><span class="cell-val font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></span></td>
                                             <?php if ($is_admin): ?>
-                                            <td class="text-center">
+                                            <td class="cell-aksi text-center" data-label="Aksi">
                                                 <button class="btn btn-warning btn-sm edit-pengeluaran-btn" 
                                                     data-id="<?= $row['id_pengeluaran'] ?>"
                                                     data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
@@ -495,12 +526,12 @@ $(document).ready(function() {
                 var totalStr = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                 var groupName = group ? group : 'Tanpa Kategori';
 
-                var row = $('<tr/>')
-                    .append( '<td colspan="6" style="background-color:#e2e3e5; font-weight:bold;">'+groupName+'</td>' )
-                    .append( '<td style="background-color:#e2e3e5; font-weight:bold; text-align:right;">'+totalStr+'</td>' );
+                var row = $('<tr class="rab-group-row"/>')
+                    .append( '<td colspan="6" class="rab-group-title"><i class="fas fa-layer-group mr-2 text-primary"></i>'+groupName+'</td>' )
+                    .append( '<td class="rab-group-total text-right font-weight-bold">'+totalStr+'</td>' );
                 
                 if (isAdmin) {
-                    row.append( '<td style="background-color:#e2e3e5;"></td>' );
+                    row.append( '<td class="rab-group-empty"></td>' );
                 }
                 
                 return row;

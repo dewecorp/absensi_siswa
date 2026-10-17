@@ -278,6 +278,24 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_qa_v = is_readable($_qa_path) ? (string) filemtime($_qa_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/quick-actions-app.css?v=<?php echo htmlspecialchars($_qa_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Dashboard app cards CSS -->
+    <?php
+    $_dac_path = __DIR__ . '/../assets/css/dashboard-app-cards.css';
+    $_dac_v = is_readable($_dac_path) ? (string) filemtime($_dac_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/dashboard-app-cards.css?v=<?php echo htmlspecialchars($_dac_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Gaji Mobile App CSS -->
+    <?php
+    $_gaji_css_path = __DIR__ . '/../assets/css/gaji-app.css';
+    $_gaji_css_v = is_readable($_gaji_css_path) ? (string) filemtime($_gaji_css_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/gaji-app.css?v=<?php echo htmlspecialchars($_gaji_css_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- RAB Mobile App CSS -->
+    <?php
+    $_rab_css_path = __DIR__ . '/../assets/css/rab-app.css';
+    $_rab_css_v = is_readable($_rab_css_path) ? (string) filemtime($_rab_css_path) : '1';
+    ?>
+    <link rel="stylesheet" href="../assets/css/rab-app.css?v=<?php echo htmlspecialchars($_rab_css_v, ENT_QUOTES, 'UTF-8'); ?>">
     <!-- Attendance auto-save JS -->
     <?php
     $_attjs_path = __DIR__ . '/../assets/js/attendance-autosave.js';
@@ -570,32 +588,44 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
 
         /* Menu grid gaya mobile app */
         .menu-grid-icon {
-            width: 62px;
-            height: 62px;
-            border-radius: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 8px;
+            margin: 0 auto 6px;
             color: #fff;
-            font-size: 30px;
-            box-shadow: 0 6px 14px rgba(15, 23, 42, .16);
-            transition: transform .15s ease, box-shadow .2s ease;
+            font-size: 24px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, .12), inset 0 1px 1px rgba(255, 255, 255, .35);
+            transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .menu-grid-icon::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 40%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .25), rgba(255, 255, 255, 0));
+            pointer-events: none;
+            border-radius: 18px 18px 0 0;
         }
         .menu-grid-icon i {
             font-size: inherit !important;
         }
         a:active .menu-grid-icon {
-            transform: scale(.9);
+            transform: scale(.92);
+            box-shadow: 0 3px 8px rgba(15, 23, 42, .15);
         }
-        .mg-c1 { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
-        .mg-c2 { background: linear-gradient(135deg, #0ea5e9, #2563eb); }
-        .mg-c3 { background: linear-gradient(135deg, #10b981, #059669); }
-        .mg-c4 { background: linear-gradient(135deg, #f59e0b, #ea580c); }
-        .mg-c5 { background: linear-gradient(135deg, #ec4899, #db2777); }
-        .mg-c6 { background: linear-gradient(135deg, #14b8a6, #0891b2); }
-        .mg-c7 { background: linear-gradient(135deg, #f43f5e, #e11d48); }
-        .mg-c8 { background: linear-gradient(135deg, #8b5cf6, #d946ef); }
+        .mg-c1 { background: linear-gradient(135deg, #10b981, #059669); }
+        .mg-c2 { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .mg-c3 { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+        .mg-c4 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .mg-c5 { background: linear-gradient(135deg, #ec4899, #be185d); }
+        .mg-c6 { background: linear-gradient(135deg, #06b6d4, #0e7490); }
+        .mg-c7 { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+        .mg-c8 { background: linear-gradient(135deg, #6366f1, #4338ca); }
     </style>
 </head>
 
@@ -605,11 +635,11 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
 
             <?php if (!in_array(basename($_SERVER['PHP_SELF']), ['dashboard.php', 'simple_dashboard.php'])): ?>
             <!-- Mobile App Page Header (mobile only) -->
-            <div class="mobile-app-header d-md-none">
+            <div class="mobile-app-header d-lg-none">
                 <a href="javascript:history.back()" class="mobile-app-back" aria-label="Kembali">
                     <i class="fas fa-arrow-left"></i>
                 </a>
-                <div class="mobile-app-title"><?php echo htmlspecialchars(trim($page_title ?? '')); ?></div>
+                <div class="mobile-app-title"><?php echo htmlspecialchars(trim(!empty($page_title) ? $page_title : 'Sistem Informasi Madrasah')); ?></div>
             </div>
             <?php endif; ?>
             

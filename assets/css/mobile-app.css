@@ -182,28 +182,65 @@
   .mapp-section-head h6 { font-size: 14px; font-weight: 800; color: #0f172a; margin: 0; }
   .mapp-section-head a { font-size: 11.5px; font-weight: 700; color: var(--mapp-green); }
 
-  /* ---------- Menu grid: ikon besar memenuhi kolom ---------- */
+  /* ---------- Menu grid: ikon modern mobile app (squircle glass + vivid gradient) ---------- */
   .menu-grid-icon {
-    width: 72px !important; height: 72px !important; border-radius: 22px !important;
-    font-size: 30px !important; box-shadow: 0 5px 12px rgba(15,23,42,.10) !important;
+    width: 60px !important; height: 60px !important; border-radius: 18px !important;
+    font-size: 24px !important;
+    display: inline-flex !important; align-items: center !important; justify-content: center !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .12), inset 0 1px 1px rgba(255, 255, 255, .35) !important;
+    transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease !important;
+    position: relative;
+    overflow: hidden;
   }
-  .mg-c1 { background: linear-gradient(135deg, #22c55e, #15803d) !important; }
-  .mg-c2 { background: linear-gradient(135deg, #60a5fa, #2563eb) !important; }
-  .mg-c3 { background: linear-gradient(135deg, #a78bfa, #7c3aed) !important; }
-  .mg-c4 { background: linear-gradient(135deg, #fdba74, #ea580c) !important; }
-  .mg-c5 { background: linear-gradient(135deg, #f472b6, #db2777) !important; }
-  .mg-c6 { background: linear-gradient(135deg, #2dd4bf, #0d9488) !important; }
-  .mg-c7 { background: linear-gradient(135deg, #fb7185, #e11d48) !important; }
-  .mg-c8 { background: linear-gradient(135deg, #818cf8, #9333ea) !important; }
-  .mobile-menu-label { font-size: 10.5px !important; font-weight: 600 !important; color: #1e293b !important; }
+  .menu-grid-icon::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 40%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .25), rgba(255, 255, 255, 0));
+    pointer-events: none;
+    border-radius: 18px 18px 0 0;
+  }
+  a:active .menu-grid-icon {
+    transform: scale(.92) !important;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, .15) !important;
+  }
+  .mg-c1 { background: linear-gradient(135deg, #10b981, #059669) !important; }
+  .mg-c2 { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; }
+  .mg-c3 { background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important; }
+  .mg-c4 { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
+  .mg-c5 { background: linear-gradient(135deg, #ec4899, #be185d) !important; }
+  .mg-c6 { background: linear-gradient(135deg, #06b6d4, #0e7490) !important; }
+  .mg-c7 { background: linear-gradient(135deg, #ef4444, #b91c1c) !important; }
+  .mg-c8 { background: linear-gradient(135deg, #6366f1, #4338ca) !important; }
+  .mobile-menu-label {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    line-height: 1.3 !important;
+    margin-top: 4px;
+    letter-spacing: -0.1px;
+  }
   /* Grid menu gabungan: full selebar box, tinggi tile seragam, label rata tengah 2 baris */
-  .mapp-menu-grid { margin-left: -15px !important; margin-right: -15px !important; }
-  .mapp-menu-grid > .col-3 { display: flex !important; flex: 0 0 25% !important; max-width: 25% !important; padding-left: 5px !important; padding-right: 5px !important; }
-  .mapp-menu-grid > .col-3 > a { flex: 1 1 auto; display: flex !important; flex-direction: column; align-items: center; }
-  .mapp-menu-grid .menu-grid-icon { flex: 0 0 auto; }
+  .mapp-menu-grid { margin-left: -8px !important; margin-right: -8px !important; row-gap: 6px; }
+  .mapp-menu-grid > .col-3 { display: flex !important; flex: 0 0 25% !important; max-width: 25% !important; padding-left: 4px !important; padding-right: 4px !important; }
+  .mapp-menu-grid > .col-3 > a {
+    flex: 1 1 auto;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 2px;
+    border-radius: 16px;
+    transition: background-color .15s ease;
+  }
+  .mapp-menu-grid > .col-3 > a:active {
+    background-color: rgba(15, 23, 42, .04);
+  }
+  .mapp-menu-grid .menu-grid-icon { flex: 0 0 auto; margin-bottom: 4px !important; }
   .mapp-menu-grid .mobile-menu-label {
     flex: 1 1 auto; display: flex !important; align-items: flex-start; justify-content: center;
-    text-align: center !important; min-height: 2.7em; line-height: 1.35 !important;
+    text-align: center !important; min-height: 2.6em; line-height: 1.3 !important;
   }
 
   /* ---------- Grouped sections -> list-card ala Halaman Akademik ---------- */
@@ -253,6 +290,9 @@
 
   /* ---------- Sub-halaman header tetap BIRU template ---------- */
   .mobile-app-header {
+    display: flex !important;
+    align-items: center !important;
+    position: relative !important;
     background: linear-gradient(135deg, #2f6ef0 0%, #5a8ff7 100%) !important;
     border-radius: 0 0 22px 22px !important;
     padding: 14px 16px 18px !important;
@@ -335,9 +375,20 @@
   .mapp-lainnya-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 8px; padding: 16px; }
   .mapp-lainnya-item { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none !important; }
   .mapp-lainnya-icon {
-    width: 56px; height: 56px; border-radius: 18px;
+    width: 58px; height: 58px; border-radius: 18px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px; margin-bottom: 6px; box-shadow: 0 5px 12px rgba(15,23,42,.10); color: #fff;
+    font-size: 22px; margin-bottom: 6px;
+    box-shadow: 0 8px 18px rgba(15,23,42,.12), inset 0 1px 1px rgba(255, 255, 255, .35); color: #fff;
+    position: relative; overflow: hidden;
+    transition: transform .18s cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .mapp-lainnya-icon::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 40%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .25), rgba(255, 255, 255, 0));
+    pointer-events: none; border-radius: 18px 18px 0 0;
+  }
+  .mapp-lainnya-item:active .mapp-lainnya-icon {
+    transform: scale(.92);
   }
   .mapp-lainnya-label { font-size: 11px; font-weight: 600; color: #1e293b; line-height: 1.3; }
 
@@ -687,16 +738,37 @@
   background: #fff; border: 2px solid #e2e8f0; border-radius: 14px;
   padding: 10px 6px; font-size: 12px; font-weight: 800; color: #475569;
   cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+  outline: none !important; -webkit-appearance: none; appearance: none;
+}
+.mapp-att-btn:focus,
+.mapp-att-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 .mapp-att-btn i { font-size: 20px; }
-.mapp-att-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(20,30,70,.10); }
-.mapp-att-btn:active { transform: scale(.97); }
+.mapp-att-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(20,30,70,.10); outline: none !important; }
+.mapp-att-btn:active { transform: scale(.97); outline: none !important; }
 .mapp-att-btn.is-hadir { color: #059669; border-color: #a7f3d0; background: #f0fdf4; }
 .mapp-att-btn.is-sakit { color: #c2410c; border-color: #fed7aa; background: #fff7ed; }
 .mapp-att-btn.is-izin { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
-.mapp-att-btn.is-hadir.active { background: #10b981; border-color: #10b981; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(16,185,129,.35); }
-.mapp-att-btn.is-sakit.active { background: #f97316; border-color: #f97316; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(249,115,22,.35); }
-.mapp-att-btn.is-izin.active { background: #3abaf4; border-color: #3abaf4; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(58,186,244,.35); }
+.mapp-att-btn.is-hadir.active { background: #10b981; border-color: #10b981; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(16,185,129,.35); outline: none !important; }
+.mapp-att-btn.is-sakit.active { background: #f97316; border-color: #f97316; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(249,115,22,.35); outline: none !important; }
+.mapp-att-btn.is-izin.active { background: #3abaf4; border-color: #3abaf4; color: #fff; cursor: default; box-shadow: 0 8px 18px rgba(58,186,244,.35); outline: none !important; }
+.mapp-att-btn.is-hadir:focus,
+.mapp-att-btn.is-hadir.active:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(16,185,129,.30) !important;
+}
+.mapp-att-btn.is-sakit:focus,
+.mapp-att-btn.is-sakit.active:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(249,115,22,.30) !important;
+}
+.mapp-att-btn.is-izin:focus,
+.mapp-att-btn.is-izin.active:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(58,186,244,.30) !important;
+}
 .mapp-att-note textarea { border-radius: 12px; }
 
 @media (max-width: 575.98px) {

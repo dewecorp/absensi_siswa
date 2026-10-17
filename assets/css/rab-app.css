@@ -1,0 +1,907 @@
+/* ============================================================
+   SIMAD Mobile App Styling: Halaman RAB (Madrasah, Ekstra, Ujian)
+   File: assets/css/rab-app.css
+   ============================================================ */
+
+/* ---------- Hero Budget Card (Ala FinTech / E-Wallet) ---------- */
+.rab-hero-card {
+    border-radius: 20px;
+    padding: 22px 20px 20px;
+    color: #ffffff;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .20);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, .12);
+}
+
+/* Theme variants */
+.rab-hero-card.theme-madrasah {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #0284c7 100%);
+}
+.rab-hero-card.theme-ekstra {
+    background: linear-gradient(135deg, #0f172a 0%, #065f46 55%, #059669 100%);
+}
+.rab-hero-card.theme-ujian {
+    background: linear-gradient(135deg, #0f172a 0%, #4c1d95 55%, #7c3aed 100%);
+}
+
+.rab-hero-card::after {
+    content: '';
+    position: absolute;
+    right: -30px;
+    bottom: -30px;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, .15) 0%, rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
+}
+
+.rab-hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.rab-hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.rab-hero-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .15);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, .25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
+.rab-hero-title {
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 2px;
+    color: #ffffff;
+}
+
+.rab-hero-sub {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, .8);
+    letter-spacing: .2px;
+}
+
+.rab-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, .15);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, .22);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+.rab-hero-balance-wrap {
+    text-align: left;
+    margin-bottom: 18px;
+}
+
+.rab-hero-balance-lbl {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    opacity: .85;
+    color: rgba(255, 255, 255, .85);
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.rab-hero-balance {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1.15;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+}
+
+.rab-hero-balance-sub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, .9);
+    margin-top: 4px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.rab-hero-balance-sub .pill-sisa {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, .2);
+}
+
+/* 3 Mini Stats inside hero */
+.rab-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, .15);
+}
+
+.rab-hero-stat-pill {
+    background: rgba(255, 255, 255, .10);
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 12px;
+    padding: 8px 6px;
+    text-align: center;
+}
+
+.rab-hero-stat-pill .lbl {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    opacity: .8;
+    margin-bottom: 2px;
+}
+
+.rab-hero-stat-pill .val {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+/* Two mini stats variant (for Ujian) */
+.rab-hero-stats.two-cols {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* ---------- Stat Grid (App Cards Look) ---------- */
+.rab-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.rab-stat-grid.two-cards {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.rab-stat-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 14px 14px 12px;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .04);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.rab-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .08);
+    border-color: #cbd5e1;
+}
+
+.rab-stat-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.rab-stat-title {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.rab-stat-ico {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+.rab-stat-ico.tone-blue { background: #eff6ff; color: #2563eb; }
+.rab-stat-ico.tone-green { background: #ecfdf5; color: #059669; }
+.rab-stat-ico.tone-red { background: #fef2f2; color: #dc2626; }
+.rab-stat-ico.tone-dark { background: #f1f5f9; color: #334155; }
+.rab-stat-ico.tone-amber { background: #fffbeb; color: #d97706; }
+.rab-stat-ico.tone-purple { background: #f5f3ff; color: #7c3aed; }
+
+.rab-stat-val {
+    font-size: 17px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-bottom: 2px;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rab-stat-val.c-blue { color: #2563eb; }
+.rab-stat-val.c-green { color: #059669; }
+.rab-stat-val.c-red { color: #dc2626; }
+.rab-stat-val.c-dark { color: #1e293b; }
+.rab-stat-val.c-amber { color: #d97706; }
+.rab-stat-val.c-purple { color: #7c3aed; }
+
+.rab-stat-sub {
+    font-size: 10.5px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+/* ---------- Action Bar / Chips ---------- */
+.rab-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.rab-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all .2s ease;
+    border: 1px solid transparent;
+    text-decoration: none !important;
+    cursor: pointer;
+    line-height: 1.2;
+}
+
+.rab-chip-btn i {
+    font-size: 12px;
+}
+
+.rab-chip-btn.chip-primary {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, .25);
+}
+.rab-chip-btn.chip-primary:hover {
+    background: #1d4ed8;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.rab-chip-btn.chip-success {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+.rab-chip-btn.chip-success:hover {
+    background: #059669;
+    color: #ffffff;
+}
+
+.rab-chip-btn.chip-warning {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+}
+.rab-chip-btn.chip-warning:hover {
+    background: #d97706;
+    color: #ffffff;
+}
+
+/* ---------- Card Container for Tables ---------- */
+.rab-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .04);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.rab-card-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.rab-card-title {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rab-card-title i {
+    color: #2563eb;
+}
+
+.rab-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Custom modern checkbox for status toggle */
+.rab-toggle-status {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #059669;
+    vertical-align: middle;
+}
+
+/* DataTables & Desktop Table Styling (No edge sticking, no bottom border) */
+.rab-card .dataTables_wrapper {
+    padding: 16px 20px 8px !important;
+}
+
+.rab-card .dataTables_wrapper .row:first-child {
+    margin-bottom: 14px !important;
+    align-items: center !important;
+}
+
+.rab-card .dataTables_filter {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin: 0 !important;
+}
+
+.rab-card .dataTables_filter label {
+    margin: 0 !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.rab-card .dataTables_filter input[type="search"] {
+    margin-left: 0 !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    padding: 6px 14px !important;
+    font-size: 13px !important;
+    height: 38px !important;
+    background-color: #f8fafc !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transition: all .15s ease !important;
+}
+
+.rab-card .dataTables_filter input[type="search"]:focus {
+    background-color: #ffffff !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .15) !important;
+}
+
+/* Eliminate bottom line and empty space below table */
+.rab-card table.dataTable.no-footer,
+.rab-card table.dataTable,
+.rab-card .table {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+}
+
+.rab-card .dataTables_wrapper .row:last-child {
+    display: none !important;
+}
+
+.rab-card .table-responsive {
+    border: none !important;
+    margin-bottom: 0 !important;
+}
+
+/* Category Group Row Styling (Desktop) */
+.rab-card table tr.rab-group-row td {
+    background: #f8fafc !important;
+    border-top: 2px solid #e2e8f0 !important;
+    border-bottom: 1.5px solid #e2e8f0 !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+    color: #1e293b !important;
+}
+
+.rab-card table tr.rab-group-row td.rab-group-title {
+    font-weight: 800 !important;
+    color: #1e3a8a !important;
+}
+
+.rab-card table tr.rab-group-row td.rab-group-total {
+    font-weight: 900 !important;
+    color: #1d4ed8 !important;
+}
+
+.rab-card table tr.rab-group-row.rab-group-level-0 td {
+    background: #eff6ff !important;
+}
+
+.rab-card table tr.rab-group-row.rab-group-level-1 td {
+    background: #f8fafc !important;
+}
+
+/* Table refinements */
+.rab-card .table {
+    margin-bottom: 0;
+    font-size: 13px;
+}
+
+.rab-card .table thead th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    padding: 10px 12px;
+}
+
+.rab-card .table td {
+    vertical-align: middle;
+    padding: 10px 12px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.rab-card .table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* ---------- Responsive Rules (<= 767px Mobile Phone) ---------- */
+@media (max-width: 767.98px) {
+    .rab-hero-card {
+        padding: 18px 16px 16px;
+        border-radius: 18px;
+        margin-bottom: 14px;
+    }
+
+    .rab-hero-balance {
+        font-size: 24px;
+    }
+
+    .rab-hero-stats {
+        gap: 6px;
+        padding-top: 12px;
+    }
+
+    .rab-hero-stat-pill {
+        padding: 6px 4px;
+    }
+
+    .rab-hero-stat-pill .val {
+        font-size: 11.5px;
+    }
+
+    .rab-stat-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        margin-bottom: 14px;
+    }
+
+    .rab-stat-card {
+        padding: 10px 10px 8px;
+        border-radius: 14px;
+    }
+
+    .rab-stat-val {
+        font-size: 14.5px;
+    }
+
+    .rab-actions-bar {
+        gap: 6px;
+        margin-bottom: 10px;
+    }
+
+    .rab-chip-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .rab-card-header {
+        padding: 12px 14px;
+    }
+
+    .rab-card-title {
+        font-size: 13px;
+    }
+
+    /* Mobile: Card-based Table (No horizontal scrolling, no container overflow!) */
+    .rab-card {
+        overflow: hidden !important;
+    }
+
+    .rab-card .card-body {
+        padding: 0 !important;
+        overflow: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .rab-card .table-responsive {
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-sizing: border-box !important;
+    }
+
+    .rab-card .dataTables_wrapper {
+        padding: 12px 10px 4px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    .rab-card .dataTables_wrapper .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .rab-card .dataTables_wrapper [class*="col-"] {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .rab-card .dataTables_filter {
+        justify-content: stretch !important;
+        width: 100% !important;
+        margin-bottom: 10px !important;
+    }
+
+    .rab-card .dataTables_filter label {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+    }
+
+    .rab-card .dataTables_filter input[type="search"] {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Transform table elements into clean cards */
+    table.rab-table-responsive,
+    .rab-card table.dataTable.rab-table-responsive {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+
+    table.rab-table-responsive thead,
+    table.rab-table-responsive colgroup,
+    table.rab-table-responsive col {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+
+    table.rab-table-responsive tbody {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    table.rab-table-responsive tbody tr:not(.rab-group-row) {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        margin: 0 0 10px 0 !important;
+        padding: 12px 14px !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, .04) !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+
+    /* Category Group Header Banner in Mobile Card View */
+    table.rab-table-responsive tbody tr.rab-group-row,
+    table.rab-table-responsive tbody tr.dtrg-group {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%) !important;
+        border: 1px solid #bfdbfe !important;
+        border-left: 4.5px solid #2563eb !important;
+        border-radius: 12px !important;
+        padding: 10px 14px !important;
+        margin: 18px 0 10px 0 !important;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, .08) !important;
+    }
+
+    table.rab-table-responsive tbody tr.rab-group-row.rab-group-level-1 {
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+        border-color: #a7f3d0 !important;
+        border-left: 4px solid #059669 !important;
+        margin: 14px 0 8px 8px !important;
+        width: calc(100% - 8px) !important;
+    }
+
+    table.rab-table-responsive tbody tr.rab-group-row td,
+    table.rab-table-responsive tbody tr.dtrg-group td {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    table.rab-table-responsive tbody tr.rab-group-row td.rab-group-title,
+    table.rab-table-responsive tbody tr.rab-group-row td:first-child {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        width: auto !important;
+        max-width: 65% !important;
+        font-size: 13.5px !important;
+        font-weight: 800 !important;
+        color: #1e3a8a !important;
+        line-height: 1.3 !important;
+        word-break: break-word !important;
+    }
+
+    table.rab-table-responsive tbody tr.rab-group-row.rab-group-level-1 td.rab-group-title,
+    table.rab-table-responsive tbody tr.rab-group-row.rab-group-level-1 td:first-child {
+        color: #065f46 !important;
+    }
+
+    table.rab-table-responsive tbody tr.rab-group-row td.rab-group-total,
+    table.rab-table-responsive tbody tr.rab-group-row td:nth-child(2) {
+        display: inline-flex !important;
+        align-items: center !important;
+        width: auto !important;
+        margin-left: auto !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        color: #1d4ed8 !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+    }
+
+    table.rab-table-responsive tbody tr.rab-group-row td.rab-group-total::before,
+    table.rab-table-responsive tbody tr.rab-group-row td:nth-child(2)::before {
+        content: "Subtotal: " !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        margin-right: 4px !important;
+    }
+
+    table.rab-table-responsive tbody tr.rab-group-row.rab-group-level-1 td.rab-group-total,
+    table.rab-table-responsive tbody tr.rab-group-row.rab-group-level-1 td:nth-child(2) {
+        color: #059669 !important;
+    }
+
+    table.rab-table-responsive tbody tr.rab-group-row td.rab-group-empty,
+    table.rab-table-responsive tbody tr.rab-group-row td:nth-child(n+3) {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Cells inside card */
+    table.rab-table-responsive td {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        padding: 3px 0 !important;
+        border: none !important;
+        text-align: left !important;
+    }
+
+    table.rab-table-responsive td.cell-no {
+        position: absolute !important;
+        top: 10px !important;
+        right: 12px !important;
+        width: auto !important;
+        max-width: max-content !important;
+        background: #f1f5f9 !important;
+        color: #475569 !important;
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        border-radius: 999px !important;
+        padding: 2px 8px !important;
+        line-height: 1.3 !important;
+        z-index: 2 !important;
+    }
+
+    table.rab-table-responsive td.cell-uraian {
+        font-size: 14px !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        line-height: 1.35 !important;
+        padding-right: 42px !important;
+        margin-bottom: 6px !important;
+        word-break: break-word !important;
+    }
+
+    table.rab-table-responsive td.cell-kategori,
+    table.rab-table-responsive td.cell-subkat {
+        font-size: 11.5px !important;
+        color: #64748b !important;
+        margin-bottom: 3px !important;
+        word-break: break-word !important;
+    }
+
+    table.rab-table-responsive td.cell-calc {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 8px !important;
+        font-size: 12px !important;
+        color: #334155 !important;
+        padding: 4px 0 !important;
+        border-bottom: 1px dashed #f1f5f9 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    table.rab-table-responsive td.cell-calc::before {
+        content: attr(data-label);
+        font-size: 10.5px !important;
+        color: #64748b !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .3px !important;
+        flex-shrink: 0 !important;
+    }
+
+    table.rab-table-responsive td.cell-calc .cell-val {
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        text-align: right !important;
+        margin-left: auto !important;
+        word-break: break-word !important;
+    }
+
+    table.rab-table-responsive td.cell-total {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 8px !important;
+        margin-top: 6px !important;
+        padding-top: 6px !important;
+        border-top: 1.5px solid #e2e8f0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    table.rab-table-responsive td.cell-total::before {
+        content: "Total (Rp)";
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        color: #475569 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .4px !important;
+        flex-shrink: 0 !important;
+    }
+
+    table.rab-table-responsive td.cell-total .cell-val {
+        font-size: 14.5px !important;
+        font-weight: 900 !important;
+        color: #059669 !important;
+        text-align: right !important;
+        margin-left: auto !important;
+    }
+
+    table.rab-table-responsive td.cell-status {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 6px 0 !important;
+        margin-top: 2px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    table.rab-table-responsive td.cell-status::before {
+        content: "Status";
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        color: #475569 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .3px !important;
+        flex-shrink: 0 !important;
+    }
+
+    table.rab-table-responsive td.cell-aksi {
+        display: flex !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding-top: 8px !important;
+        margin-top: 4px !important;
+        border-top: 1px solid #f1f5f9 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    table.rab-table-responsive td.cell-aksi::before {
+        content: "Aksi";
+        margin-right: auto !important;
+        font-size: 10.5px !important;
+        font-weight: 700 !important;
+        color: #94a3b8 !important;
+        text-transform: uppercase !important;
+    }
+}

@@ -1,0 +1,562 @@
+/* ============================================================
+   SIMAD Mobile App Styling: Info KBM & Jadwal Hari Ini
+   Dipakai: Dashboard Guru & Wali
+   ============================================================ */
+
+/* ---------- Box Informasi KBM Hari Ini ---------- */
+.mapp-kbm-card {
+    background: #ffffff;
+    border-radius: 18px !important;
+    border: 1px solid #edf2f7 !important;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .04) !important;
+    overflow: hidden;
+    position: relative;
+    transition: all .25s ease;
+}
+
+.mapp-kbm-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #06b6d4, #10b981);
+}
+
+.mapp-kbm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px 12px;
+}
+
+.mapp-kbm-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.mapp-kbm-icon-pulse {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, .25);
+    flex-shrink: 0;
+}
+
+.mapp-kbm-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.25;
+}
+
+.mapp-kbm-subtitle {
+    font-size: 11.5px;
+    color: #64748b;
+    margin: 2px 0 0;
+    line-height: 1.35;
+}
+
+.mapp-kbm-notice {
+    margin: 0 18px 14px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #fffbeb;
+    border: 1px solid #fef3c7;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mapp-kbm-notice-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #fde68a;
+    color: #b45309;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.mapp-kbm-notice-text {
+    font-size: 11.5px;
+    color: #92400e;
+    margin: 0;
+    line-height: 1.35;
+}
+
+.mapp-kbm-notice-text b {
+    color: #78350f;
+}
+
+.mapp-kbm-badges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 0 18px 16px;
+}
+
+.mapp-kbm-pill-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+    transition: transform .2s ease, border-color .2s ease;
+}
+
+.mapp-kbm-pill-card:hover {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+    background: #ffffff;
+}
+
+.mapp-kbm-pill-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.mapp-kbm-pill-icon.tone-green {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.mapp-kbm-pill-icon.tone-blue {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.mapp-kbm-pill-icon.tone-amber {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.mapp-kbm-pill-label {
+    font-size: 13px;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1.25;
+}
+
+.mapp-kbm-pill-time {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: .3px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-top: 4px;
+}
+
+.mapp-kbm-pill-time.time-green {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.mapp-kbm-pill-time.time-blue {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.mapp-kbm-pill-time.time-amber {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+/* ---------- Box Jadwal Mengajar Hari Ini ---------- */
+.mapp-jadwal-card {
+    border-radius: 18px !important;
+    border: 1px solid #edf2f7 !important;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .04) !important;
+    overflow: hidden;
+}
+
+.mapp-jadwal-card .card-header {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 16px 18px;
+}
+
+.mapp-jadwal-card .card-header h4 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.mapp-day-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+    color: #ffffff;
+    border-radius: 16px !important;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 6px 18px rgba(30, 58, 138, .22) !important;
+}
+
+.mapp-day-date {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .18);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, .35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.mapp-day-date .d {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.mapp-day-date .m {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-top: 2px;
+    opacity: .95;
+}
+
+.mapp-day-info {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mapp-day-name {
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+.mapp-day-sub {
+    font-size: 11px;
+    opacity: .9;
+    margin-top: 3px;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mapp-day-stats {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.mapp-day-stat {
+    min-width: 46px;
+    text-align: center;
+    background: rgba(255, 255, 255, .15);
+    border: 1px solid rgba(255, 255, 255, .25);
+    border-radius: 11px;
+    padding: 5px 6px;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.mapp-day-stat .num {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.mapp-day-stat .lbl {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    opacity: .88;
+    margin-top: 1px;
+}
+
+.mapp-agenda-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.mapp-agenda-item {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #edf2f7 !important;
+    border-left: 4px solid #3b82f6 !important;
+    border-radius: 14px !important;
+    padding: 10px 12px;
+    transition: all .2s cubic-bezier(.4, 0, .2, 1);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, .03);
+}
+
+.mapp-agenda-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .07);
+    border-color: #cbd5e1 !important;
+}
+
+.mapp-agenda-clock {
+    flex: 0 0 68px;
+    min-width: 68px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1.5px solid #bfdbfe;
+    border-radius: 13px;
+    padding: 7px 6px;
+    line-height: 1.1;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, .08);
+}
+
+.mapp-agenda-clock .jam {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #2563eb;
+    letter-spacing: .6px;
+}
+
+.mapp-agenda-clock .val {
+    font-size: 20px;
+    font-weight: 900;
+    color: #1e3a8a;
+    margin-top: 2px;
+    letter-spacing: -0.5px;
+}
+
+.mapp-agenda-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.mapp-agenda-mapel {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.3;
+    margin-bottom: 4px;
+}
+
+.mapp-agenda-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.mapp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 2.5px 8px;
+}
+
+.mapp-chip i {
+    color: #3b82f6;
+    font-size: 9.5px;
+}
+
+.mapp-empty-state {
+    text-align: center;
+    padding: 24px 16px;
+    background: #f8fafc;
+    border-radius: 14px;
+    border: 1.5px dashed #cbd5e1;
+}
+
+.mapp-empty-state .ico {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 10px;
+    border-radius: 14px;
+    background: #eff6ff;
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.mapp-empty-state h6 {
+    font-weight: 800;
+    color: #0f172a;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.mapp-empty-state p {
+    font-size: 11.5px;
+    color: #64748b;
+    line-height: 1.45;
+    margin: 0 auto;
+}
+
+/* Responsiveness on screens <= 767px (mobile phone) */
+@media (max-width: 767.98px) {
+    .mapp-kbm-header {
+        padding: 12px 14px 10px;
+    }
+
+    .mapp-kbm-icon-pulse {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+        border-radius: 11px;
+    }
+
+    .mapp-kbm-title {
+        font-size: 13.5px;
+    }
+
+    .mapp-kbm-subtitle {
+        font-size: 10.5px;
+    }
+
+    .mapp-kbm-notice {
+        margin: 0 14px 10px;
+        padding: 8px 10px;
+    }
+
+    .mapp-kbm-notice-text {
+        font-size: 10.5px;
+    }
+
+    .mapp-kbm-badges-grid {
+        padding: 0 14px 12px;
+        gap: 6px;
+    }
+
+    .mapp-kbm-pill-card {
+        padding: 8px 4px;
+    }
+
+    .mapp-kbm-pill-icon {
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
+        border-radius: 8px;
+    }
+
+    .mapp-kbm-pill-label {
+        font-size: 11px;
+    }
+
+    .mapp-kbm-pill-time {
+        font-size: 11.5px;
+        font-weight: 800;
+        padding: 3px 8px;
+    }
+
+    .mapp-day-banner {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .mapp-day-date {
+        width: 42px;
+        height: 42px;
+    }
+
+    .mapp-day-date .d {
+        font-size: 16px;
+    }
+
+    .mapp-day-date .m {
+        font-size: 8.5px;
+    }
+
+    .mapp-day-name {
+        font-size: 14px;
+    }
+
+    .mapp-day-sub {
+        font-size: 10px;
+    }
+
+    .mapp-day-stat {
+        min-width: 38px;
+        padding: 3px 4px;
+    }
+
+    .mapp-day-stat .num {
+        font-size: 13.5px;
+    }
+
+    .mapp-day-stat .lbl {
+        font-size: 8px;
+    }
+
+    .mapp-agenda-item {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+
+    .mapp-agenda-clock {
+        flex: 0 0 58px;
+        min-width: 58px;
+        padding: 6px 4px;
+        border-radius: 11px;
+    }
+
+    .mapp-agenda-clock .jam {
+        font-size: 9px;
+    }
+
+    .mapp-agenda-clock .val {
+        font-size: 17px;
+        font-weight: 900;
+    }
+
+    .mapp-agenda-mapel {
+        font-size: 12px;
+    }
+}

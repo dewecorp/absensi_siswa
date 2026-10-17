@@ -686,50 +686,50 @@ include_once '../templates/sidebar.php';
                     <?php if (!$holiday['is_holiday']): ?>
                     <div class="row">
                         <div class="col-12 mb-3">
-                            <div class="card border-0 shadow-sm mapp-kbm-info-card" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 12px; border-left: 5px solid #2563eb !important; overflow: hidden;">
-                                <div class="card-body p-3 p-md-4">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mr-3 shadow-sm" style="width: 44px; height: 44px; min-width: 44px; font-size: 18px;">
+                            <div class="card mapp-kbm-card">
+                                <div class="mapp-kbm-header">
+                                    <div class="mapp-kbm-title-group">
+                                        <div class="mapp-kbm-icon-pulse">
                                             <i class="fas fa-bell"></i>
                                         </div>
                                         <div>
-                                            <h5 class="font-weight-bold mb-1 text-dark" style="font-size: 1.05rem;">Informasi & Jadwal KBM Hari Ini</h5>
-                                            <p class="text-muted mb-0" style="font-size: 12px;">Pastikan seluruh aktivitas harian tercatat tepat waktu demi kelancaran proses pembelajaran.</p>
+                                            <h5 class="mapp-kbm-title">Informasi &amp; Jadwal KBM Hari Ini</h5>
+                                            <p class="mapp-kbm-subtitle">Pastikan aktivitas harian tercatat tepat waktu demi kelancaran proses pembelajaran.</p>
                                         </div>
                                     </div>
+                                    <span class="badge badge-primary px-2.5 py-1.5 font-weight-bold d-none d-sm-inline-block" style="border-radius: 8px; font-size: 11px;">Aktif</span>
+                                </div>
 
-                                    <div class="alert alert-warning border-0 shadow-sm mb-3" style="background: #fffbeb; border-radius: 10px; border-left: 4px solid #f59e0b !important; padding: 10px 14px;">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-exclamation-triangle text-warning fa-2x mr-3"></i>
-                                            <div>
-                                                <h6 class="font-weight-bold mb-0.5" style="color: #92400e; font-size: 13px;">Catatan Penting Hari Ini</h6>
-                                                <p class="mb-0 text-dark" style="font-size: 12px;">Mohon segera lakukan pengisian <b>Kehadiran Siswa</b> sebelum memulai jam pelajaran pertama.</p>
-                                            </div>
-                                        </div>
+                                <div class="mapp-kbm-notice">
+                                    <div class="mapp-kbm-notice-icon">
+                                        <i class="fas fa-exclamation-triangle"></i>
                                     </div>
+                                    <p class="mapp-kbm-notice-text">
+                                        <b>Catatan Penting:</b> Mohon segera lakukan pengisian <b>Kehadiran Siswa</b> sebelum memulai jam pelajaran pertama.
+                                    </p>
+                                </div>
 
-                                    <div class="row text-center mt-2 mapp-kbm-info-grid" style="row-gap: 8px;">
-                                        <div class="col-4 col-md-4 px-1 px-md-2 mb-2 mb-md-0">
-                                            <div class="p-2 p-md-3 rounded bg-white shadow-sm border border-light h-100 d-flex flex-column align-items-center justify-content-center">
-                                                <div class="text-success mb-1" style="font-size: 16px;"><i class="fas fa-user-check"></i></div>
-                                                <div class="font-weight-bold text-dark" style="font-size: 11.5px; line-height: 1.2;">Kehadiran Siswa</div>
-                                                <div class="badge badge-success mt-1 px-1.5 py-0.5" style="font-size: 10px;">07:00 - 14:00</div>
-                                            </div>
+                                <div class="mapp-kbm-badges-grid">
+                                    <div class="mapp-kbm-pill-card">
+                                        <div class="mapp-kbm-pill-icon tone-green">
+                                            <i class="fas fa-user-check"></i>
                                         </div>
-                                        <div class="col-4 col-md-4 px-1 px-md-2 mb-2 mb-md-0">
-                                            <div class="p-2 p-md-3 rounded bg-white shadow-sm border border-light h-100 d-flex flex-column align-items-center justify-content-center">
-                                                <div class="text-primary mb-1" style="font-size: 16px;"><i class="fas fa-chalkboard-teacher"></i></div>
-                                                <div class="font-weight-bold text-dark" style="font-size: 11.5px; line-height: 1.2;">Kehadiran Guru</div>
-                                                <div class="badge badge-primary mt-1 px-1.5 py-0.5" style="font-size: 10px;">06:00 - 15:00</div>
-                                            </div>
+                                        <div class="mapp-kbm-pill-label">Kehadiran Siswa</div>
+                                        <span class="mapp-kbm-pill-time time-green">07:00 - 14:00</span>
+                                    </div>
+                                    <div class="mapp-kbm-pill-card">
+                                        <div class="mapp-kbm-pill-icon tone-blue">
+                                            <i class="fas fa-chalkboard-teacher"></i>
                                         </div>
-                                        <div class="col-4 col-md-4 px-1 px-md-2 mb-2 mb-md-0">
-                                            <div class="p-2 p-md-3 rounded bg-white shadow-sm border border-light h-100 d-flex flex-column align-items-center justify-content-center">
-                                                <div class="text-warning mb-1" style="font-size: 16px;"><i class="fas fa-book-open"></i></div>
-                                                <div class="font-weight-bold text-dark" style="font-size: 11.5px; line-height: 1.2;">Jurnal Mengajar</div>
-                                                <div class="badge badge-warning mt-1 px-1.5 py-0.5" style="font-size: 10px;">07:00 - 14:00</div>
-                                            </div>
+                                        <div class="mapp-kbm-pill-label">Kehadiran Guru</div>
+                                        <span class="mapp-kbm-pill-time time-blue">06:00 - 15:00</span>
+                                    </div>
+                                    <div class="mapp-kbm-pill-card">
+                                        <div class="mapp-kbm-pill-icon tone-amber">
+                                            <i class="fas fa-book-open"></i>
                                         </div>
+                                        <div class="mapp-kbm-pill-label">Jurnal Mengajar</div>
+                                        <span class="mapp-kbm-pill-time time-amber">07:00 - 14:00</span>
                                     </div>
                                 </div>
                             </div>

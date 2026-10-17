@@ -336,279 +336,246 @@ include '../templates/sidebar.php';
 
         <div class="section-body">
             
-            <!-- Summary Cards -->
-            <div class="row">
-                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-success">
-                            <i class="fas fa-wallet"></i>
+            <!-- Hero Budget Overview Card -->
+            <div class="rab-hero-card theme-ekstra">
+                <div class="rab-hero-top">
+                    <div class="rab-hero-meta">
+                        <div class="rab-hero-icon">
+                            <i class="fas fa-running"></i>
                         </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Total Sumber Anggaran</h4>
-                            </div>
-                            <div class="card-body">
-                                Rp&nbsp;<?= number_format($total_sumber, 0, ',', '.') ?>
-                            </div>
+                        <div>
+                            <div class="rab-hero-title">RAB Ekstrakurikuler</div>
+                            <div class="rab-hero-sub">Rencana Anggaran Belanja Ekstrakurikuler</div>
                         </div>
                     </div>
-                </div>
-                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-warning">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Total Pengeluaran</h4>
-                            </div>
-                            <div class="card-body">
-                                Rp&nbsp;<?= number_format($total_pengeluaran, 0, ',', '.') ?>
-                            </div>
-                        </div>
+                    <div class="rab-hero-badge">
+                        <i class="far fa-calendar-alt"></i>
+                        <span>TA <?= htmlspecialchars($tahun_ajaran) ?></span>
                     </div>
                 </div>
-                <div class="col-lg-4 col-md-6 col-sm-6 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-<?= $sisa_anggaran >= 0 ? 'info' : 'danger' ?>">
-                            <i class="fas fa-balance-scale"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Sisa Anggaran</h4>
-                            </div>
-                            <div class="card-body">
-                                Rp&nbsp;<?= number_format($sisa_anggaran, 0, ',', '.') ?>
-                            </div>
-                        </div>
+
+                <div class="rab-hero-balance-wrap">
+                    <div class="rab-hero-balance-lbl">Total Sumber Anggaran</div>
+                    <div class="rab-hero-balance">Rp <?= number_format($total_sumber, 0, ',', '.') ?></div>
+                    <div class="rab-hero-balance-sub">
+                        <span class="pill-sisa">
+                            <i class="fas fa-balance-scale mr-1"></i>Sisa: Rp <?= number_format($sisa_anggaran, 0, ',', '.') ?>
+                        </span>
+                        <span class="badge badge-pill <?= $sisa_anggaran >= 0 ? 'badge-success' : 'badge-danger' ?>">
+                            <?= $sisa_anggaran >= 0 ? 'Surplus / Seimbang' : 'Defisit Anggaran' ?>
+                        </span>
                     </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12 rab-card-nominal">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-primary">
-                            <i class="fas fa-hand-holding-usd"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Anggaran Terpakai</h4>
-                            </div>
-                            <div class="card-body" id="total-anggaran-terpakai">
-                                Rp&nbsp;<?= number_format($total_anggaran_terpakai, 0, ',', '.') ?>
-                            </div>
-                        </div>
+
+                <div class="rab-hero-stats">
+                    <div class="rab-hero-stat-pill">
+                        <div class="lbl">Sumber Dana</div>
+                        <div class="val">Rp <?= number_format($total_sumber, 0, ',', '.') ?></div>
                     </div>
-                </div>
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12 rab-card-nominal">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-secondary">
-                            <i class="fas fa-piggy-bank"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Anggaran Belum Terpakai</h4>
-                            </div>
-                            <div class="card-body" id="total-anggaran-belum-terpakai">
-                                Rp&nbsp;<?= number_format($total_anggaran_belum_terpakai, 0, ',', '.') ?>
-                            </div>
-                        </div>
+                    <div class="rab-hero-stat-pill">
+                        <div class="lbl">Total Belanja</div>
+                        <div class="val">Rp <?= number_format($total_pengeluaran, 0, ',', '.') ?></div>
                     </div>
-                </div>
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-success">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Kegiatan Terlaksana</h4>
-                            </div>
-                            <div class="card-body" id="jumlah-kegiatan-terlaksana">
-                                <?= number_format($jumlah_kegiatan_terlaksana, 0, ',', '.') ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-icon bg-danger">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="card-wrap">
-                            <div class="card-header">
-                                <h4>Belum Terlaksana</h4>
-                            </div>
-                            <div class="card-body" id="jumlah-kegiatan-belum-terlaksana">
-                                <?= number_format($jumlah_kegiatan_belum_terlaksana, 0, ',', '.') ?>
-                            </div>
-                        </div>
+                    <div class="rab-hero-stat-pill">
+                        <div class="lbl">Sisa Kas</div>
+                        <div class="val">Rp <?= number_format($sisa_anggaran, 0, ',', '.') ?></div>
                     </div>
                 </div>
             </div>
 
+            <!-- App Stat Grid (4 KPI Cards) -->
+            <div class="rab-stat-grid">
+                <div class="rab-stat-card">
+                    <div class="rab-stat-top">
+                        <span class="rab-stat-title">Terpakai</span>
+                        <div class="rab-stat-ico tone-green"><i class="fas fa-hand-holding-usd"></i></div>
+                    </div>
+                    <div class="rab-stat-val c-green" id="total-anggaran-terpakai">Rp&nbsp;<?= number_format($total_anggaran_terpakai, 0, ',', '.') ?></div>
+                    <div class="rab-stat-sub">Realisasi belanja</div>
+                </div>
+
+                <div class="rab-stat-card">
+                    <div class="rab-stat-top">
+                        <span class="rab-stat-title">Belum Terpakai</span>
+                        <div class="rab-stat-ico tone-dark"><i class="fas fa-piggy-bank"></i></div>
+                    </div>
+                    <div class="rab-stat-val c-dark" id="total-anggaran-belum-terpakai">Rp&nbsp;<?= number_format($total_anggaran_belum_terpakai, 0, ',', '.') ?></div>
+                    <div class="rab-stat-sub">Sisa rencana belanja</div>
+                </div>
+
+                <div class="rab-stat-card">
+                    <div class="rab-stat-top">
+                        <span class="rab-stat-title">Kegiatan Selesai</span>
+                        <div class="rab-stat-ico tone-green"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                    <div class="rab-stat-val c-green" id="jumlah-kegiatan-terlaksana"><?= number_format($jumlah_kegiatan_terlaksana, 0, ',', '.') ?></div>
+                    <div class="rab-stat-sub">Item terlaksana</div>
+                </div>
+
+                <div class="rab-stat-card">
+                    <div class="rab-stat-top">
+                        <span class="rab-stat-title">Belum Selesai</span>
+                        <div class="rab-stat-ico tone-red"><i class="fas fa-clock"></i></div>
+                    </div>
+                    <div class="rab-stat-val c-red" id="jumlah-kegiatan-belum-terlaksana"><?= number_format($jumlah_kegiatan_belum_terlaksana, 0, ',', '.') ?></div>
+                    <div class="rab-stat-sub">Menunggu realisasi</div>
+                </div>
+            </div>
+
             <!-- TABEL 1: SUMBER ANGGARAN -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Sumber Anggaran</h4>
-                            <div class="card-header-action">
-                                <a href="export_excel_rab_ekstra?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="btn btn-success mr-2">
-                                    <i class="fas fa-file-excel"></i> Export Excel
-                                </a>
-                                <a href="cetak_rab_ekstra?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="btn btn-warning mr-2">
-                                    <i class="fas fa-print"></i> Cetak Laporan
-                                </a>
-                                <?php if ($is_admin): ?>
-                                <button class="btn btn-primary" data-toggle="modal" data-target="#addSumberModal">
-                                    <i class="fas fa-plus"></i> Tambah Sumber
-                                </button>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover" id="table-sumber">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center" width="5%">No</th>
-                                            <th>Uraian</th>
-                                            <th class="text-center">Volume</th>
-                                            <th class="text-right">Satuan (Rp)</th>
-                                            <th class="text-center">Jumlah</th>
-                                            <th class="text-right">Total (Rp)</th>
-                                            <?php if ($is_admin): ?>
-                                            <th width="15%" class="text-center">Aksi</th>
-                                            <?php endif; ?>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($sumber_anggaran as $i => $row): ?>
-                                        <tr>
-                                            <td class="text-center"><?= $i + 1 ?></td>
-                                            <td><?= htmlspecialchars($row['uraian']) ?></td>
-                                            <td class="text-center"><?= number_format($row['volume'], 0, ',', '.') ?></td>
-                                            <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
-                                            <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
-                                            <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
-                                            <?php if ($is_admin): ?>
-                                            <td class="text-center">
-                                                <button class="btn btn-warning btn-sm edit-sumber-btn" 
-                                                    data-id="<?= $row['id_sumber'] ?>"
-                                                    data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
-                                                    data-volume="<?= $row['volume'] ?>"
-                                                    data-satuan="<?= $row['satuan'] ?>"
-                                                    data-jumlah="<?= $row['jumlah'] ?>">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm delete-sumber-btn" 
-                                                    data-id="<?= $row['id_sumber'] ?>"
-                                                    data-uraian="<?= htmlspecialchars($row['uraian']) ?>">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                            <?php endif; ?>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+            <div class="rab-card">
+                <div class="rab-card-header">
+                    <h4 class="rab-card-title"><i class="fas fa-wallet"></i>Sumber Anggaran</h4>
+                    <div class="rab-actions-bar mb-0">
+                        <a href="export_excel_rab_ekstra?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="rab-chip-btn chip-success">
+                            <i class="fas fa-file-excel"></i> Export Excel
+                        </a>
+                        <a href="cetak_rab_ekstra?session_type=<?= $_SESSION['level'] ?>" target="_blank" class="rab-chip-btn chip-warning">
+                            <i class="fas fa-print"></i> Cetak Laporan
+                        </a>
+                        <?php if ($is_admin): ?>
+                        <button type="button" class="rab-chip-btn chip-primary" data-toggle="modal" data-target="#addSumberModal">
+                            <i class="fas fa-plus"></i> Tambah Sumber
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover rab-table-responsive" id="table-sumber">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" width="5%">No</th>
+                                    <th>Uraian</th>
+                                    <th class="text-center">Volume</th>
+                                    <th class="text-right">Satuan (Rp)</th>
+                                    <th class="text-center">Jumlah</th>
+                                    <th class="text-right">Total (Rp)</th>
+                                    <?php if ($is_admin): ?>
+                                    <th width="15%" class="text-center">Aksi</th>
+                                    <?php endif; ?>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($sumber_anggaran as $i => $row): ?>
+                                <tr>
+                                    <td class="cell-no text-center" data-label="No"><?= $i + 1 ?></td>
+                                    <td class="cell-uraian font-weight-bold" data-label="Uraian"><?= htmlspecialchars($row['uraian']) ?></td>
+                                    <td class="cell-calc cell-volume text-center" data-label="Volume"><span class="cell-val"><?= number_format($row['volume'], 0, ',', '.') ?></span></td>
+                                    <td class="cell-calc cell-satuan text-right" data-label="Satuan (Rp)"><span class="cell-val"><?= number_format($row['satuan'], 0, ',', '.') ?></span></td>
+                                    <td class="cell-calc cell-jumlah text-center" data-label="Jumlah"><span class="cell-val"><?= number_format($row['jumlah'], 0, ',', '.') ?></span></td>
+                                    <td class="cell-total text-right font-weight-bold" data-label="Total (Rp)"><span class="cell-val font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></span></td>
+                                    <?php if ($is_admin): ?>
+                                    <td class="cell-aksi text-center" data-label="Aksi">
+                                        <button class="btn btn-warning btn-sm edit-sumber-btn" 
+                                            data-id="<?= $row['id_sumber'] ?>"
+                                            data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
+                                            data-volume="<?= $row['volume'] ?>"
+                                            data-satuan="<?= $row['satuan'] ?>"
+                                            data-jumlah="<?= $row['jumlah'] ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm delete-sumber-btn" 
+                                            data-id="<?= $row['id_sumber'] ?>"
+                                            data-uraian="<?= htmlspecialchars($row['uraian']) ?>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                    <?php endif; ?>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
             <!-- TABEL 2: RENCANA PENGELUARAN -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Rencana Anggaran (Pengeluaran)</h4>
-                            <div class="card-header-action">
-                                <?php if ($is_admin): ?>
-                                <button class="btn btn-primary" data-toggle="modal" data-target="#addPengeluaranModal">
-                                    <i class="fas fa-plus"></i> Tambah Pengeluaran
-                                </button>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover" id="table-pengeluaran">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center" width="5%">No</th>
-                                            <th>Uraian</th>
-                                            <th>Kategori</th>
-                                            <th class="text-center">Volume</th>
-                                            <th class="text-right">Satuan (Rp)</th>
-                                            <th class="text-center">Jumlah</th>
-                                            <th class="text-center">X</th>
-                                            <th class="text-right">Total (Rp)</th>
-                                            <th class="text-center">
-                                                Status
-                                                <?php if ($is_admin): ?>
-                                                <div>
-                                                    <input type="checkbox" id="toggle-status-all-pengeluaran" title="Centang semua / reset semua" <?= $all_status_terlaksana ? 'checked' : '' ?>>
-                                                </div>
-                                                <?php endif; ?>
-                                            </th>
-                                            <?php if ($is_admin): ?>
-                                            <th width="15%" class="text-center">Aksi</th>
-                                            <?php endif; ?>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($rencana_pengeluaran as $i => $row): ?>
-                                        <tr>
-                                            <td class="text-center"><?= $i + 1 ?></td>
-                                            <td><?= htmlspecialchars($row['uraian']) ?></td>
-                                            <td><?= htmlspecialchars($row['kategori'] ?? '-') ?></td>
-                                            <td class="text-center"><?= number_format($row['volume'], 0, ',', '.') ?></td>
-                                            <td class="text-right"><?= number_format($row['satuan'], 0, ',', '.') ?></td>
-                                            <td class="text-center"><?= number_format($row['jumlah'], 0, ',', '.') ?></td>
-                                            <td class="text-center"><?= number_format($row['perkalian'] ?? 1, 0, ',', '.') ?></td>
-                                            <td class="text-right font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></td>
-                                            <td class="text-center">
-                                                <?php if ($is_admin): ?>
-                                                <input
-                                                    type="checkbox"
-                                                    class="toggle-status-pengeluaran"
-                                                    data-id="<?= $row['id_pengeluaran'] ?>"
-                                                    <?= !empty($row['status_terlaksana']) ? 'checked' : '' ?>
-                                                >
-                                                <?php else: ?>
-                                                <span class="badge <?= !empty($row['status_terlaksana']) ? 'badge-success' : 'badge-secondary' ?>">
-                                                    <?= !empty($row['status_terlaksana']) ? 'Terlaksana' : 'Belum' ?>
-                                                </span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <?php if ($is_admin): ?>
-                                            <td class="text-center">
-                                                <button class="btn btn-warning btn-sm edit-pengeluaran-btn" 
-                                                    data-id="<?= $row['id_pengeluaran'] ?>"
-                                                    data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
-                                                    data-volume="<?= $row['volume'] ?>"
-                                                    data-satuan="<?= $row['satuan'] ?>"
-                                                    data-jumlah="<?= $row['jumlah'] ?>"
-                                                    data-perkalian="<?= $row['perkalian'] ?? 1 ?>"
-                                                    data-kategori="<?= htmlspecialchars($row['kategori'] ?? '') ?>">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm delete-pengeluaran-btn" 
-                                                    data-id="<?= $row['id_pengeluaran'] ?>"
-                                                    data-uraian="<?= htmlspecialchars($row['uraian']) ?>">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                            <?php endif; ?>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+            <div class="rab-card">
+                <div class="rab-card-header">
+                    <h4 class="rab-card-title"><i class="fas fa-file-invoice-dollar"></i>Rencana Anggaran (Pengeluaran)</h4>
+                    <div class="rab-actions-bar mb-0">
+                        <?php if ($is_admin): ?>
+                        <button type="button" class="rab-chip-btn chip-primary" data-toggle="modal" data-target="#addPengeluaranModal">
+                            <i class="fas fa-plus"></i> Tambah Pengeluaran
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover rab-table-responsive" id="table-pengeluaran">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" width="5%">No</th>
+                                    <th>Uraian</th>
+                                    <th>Kategori</th>
+                                    <th class="text-center">Volume</th>
+                                    <th class="text-right">Satuan (Rp)</th>
+                                    <th class="text-center">Jumlah</th>
+                                    <th class="text-center">X</th>
+                                    <th class="text-right">Total (Rp)</th>
+                                    <th class="text-center">
+                                        Status
+                                        <?php if ($is_admin): ?>
+                                        <div>
+                                            <input type="checkbox" id="toggle-status-all-pengeluaran" class="rab-toggle-status" title="Centang semua / reset semua" <?= $all_status_terlaksana ? 'checked' : '' ?>>
+                                        </div>
+                                        <?php endif; ?>
+                                    </th>
+                                    <?php if ($is_admin): ?>
+                                    <th width="15%" class="text-center">Aksi</th>
+                                    <?php endif; ?>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($rencana_pengeluaran as $i => $row): ?>
+                                <tr>
+                                    <td class="cell-no text-center" data-label="No"><?= $i + 1 ?></td>
+                                    <td class="cell-uraian font-weight-bold" data-label="Uraian"><?= htmlspecialchars($row['uraian']) ?></td>
+                                    <td class="cell-kategori" data-label="Kategori"><?= htmlspecialchars($row['kategori'] ?? '-') ?></td>
+                                    <td class="cell-calc cell-volume text-center" data-label="Volume"><span class="cell-val"><?= number_format($row['volume'], 0, ',', '.') ?></span></td>
+                                    <td class="cell-calc cell-satuan text-right" data-label="Satuan (Rp)"><span class="cell-val"><?= number_format($row['satuan'], 0, ',', '.') ?></span></td>
+                                    <td class="cell-calc cell-jumlah text-center" data-label="Jumlah"><span class="cell-val"><?= number_format($row['jumlah'], 0, ',', '.') ?></span></td>
+                                    <td class="cell-calc cell-perkalian text-center" data-label="Perkalian (X)"><span class="cell-val"><?= number_format($row['perkalian'] ?? 1, 0, ',', '.') ?></span></td>
+                                    <td class="cell-total text-right font-weight-bold" data-label="Total (Rp)"><span class="cell-val font-weight-bold"><?= number_format($row['total'], 0, ',', '.') ?></span></td>
+                                    <td class="cell-status text-center" data-label="Status">
+                                        <?php if ($is_admin): ?>
+                                        <input
+                                            type="checkbox"
+                                            class="toggle-status-pengeluaran rab-toggle-status"
+                                            data-id="<?= $row['id_pengeluaran'] ?>"
+                                            <?= !empty($row['status_terlaksana']) ? 'checked' : '' ?>
+                                        >
+                                        <?php else: ?>
+                                        <span class="badge <?= !empty($row['status_terlaksana']) ? 'badge-success' : 'badge-secondary' ?>">
+                                            <?= !empty($row['status_terlaksana']) ? 'Terlaksana' : 'Belum' ?>
+                                        </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <?php if ($is_admin): ?>
+                                    <td class="cell-aksi text-center" data-label="Aksi">
+                                        <button class="btn btn-warning btn-sm edit-pengeluaran-btn" 
+                                            data-id="<?= $row['id_pengeluaran'] ?>"
+                                            data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
+                                            data-volume="<?= $row['volume'] ?>"
+                                            data-satuan="<?= $row['satuan'] ?>"
+                                            data-jumlah="<?= $row['jumlah'] ?>"
+                                            data-perkalian="<?= $row['perkalian'] ?? 1 ?>"
+                                            data-kategori="<?= htmlspecialchars($row['kategori'] ?? '') ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm delete-pengeluaran-btn" 
+                                            data-id="<?= $row['id_pengeluaran'] ?>"
+                                            data-uraian="<?= htmlspecialchars($row['uraian']) ?>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                    <?php endif; ?>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -906,13 +873,13 @@ $(document).ready(function() {
                 var totalStr = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                 var groupName = group ? group : 'Tanpa Kategori';
 
-                var row = $('<tr/>')
-                    .append( '<td colspan="6" style="background-color:#e2e3e5; font-weight:bold;">'+groupName+'</td>' )
-                    .append( '<td style="background-color:#e2e3e5; font-weight:bold; text-align:right;">'+totalStr+'</td>' );
-                row.append( '<td style="background-color:#e2e3e5;"></td>' );
+                var row = $('<tr class="rab-group-row"/>')
+                    .append( '<td colspan="6" class="rab-group-title"><i class="fas fa-layer-group mr-2 text-primary"></i>'+groupName+'</td>' )
+                    .append( '<td class="rab-group-total text-right font-weight-bold">'+totalStr+'</td>' );
+                row.append( '<td class="rab-group-empty"></td>' );
                 
                 if (isAdmin) {
-                    row.append( '<td style="background-color:#e2e3e5;"></td>' );
+                    row.append( '<td class="rab-group-empty"></td>' );
                 }
                 
                 return row;
