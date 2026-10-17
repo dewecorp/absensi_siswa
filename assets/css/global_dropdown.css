@@ -1049,3 +1049,89 @@ div[id*="ascrail"] {
   visibility: hidden !important;
   opacity: 0 !important;
 }
+
+/* ===================================================================
+   Mobile: rapikan kontrol DataTables (Tampilkan N entri / Cari / info / paginate)
+   Supaya tidak menempel/bertumpuk pada kotak card saat layar kecil
+   =================================================================== */
+@media (max-width: 767.98px) {
+  .dataTables_wrapper {
+    padding: 0 !important;
+  }
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter,
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_paginate {
+    float: none !important;
+    display: block !important;
+    width: 100% !important;
+    clear: both !important;
+    text-align: left !important;
+    margin: 0 0 12px !important;
+    padding: 0 !important;
+  }
+  .dataTables_wrapper .dataTables_length label,
+  .dataTables_wrapper .dataTables_filter label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    color: #334155 !important;
+  }
+  .dataTables_wrapper .dataTables_length .gds-wrap,
+  .dataTables_wrapper .dataTables_length .gds-wrap.gds-inline {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  .dataTables_wrapper .dataTables_length .gds-btn,
+  .dataTables_wrapper .dataTables_length select {
+    width: auto !important;
+    min-width: 78px !important;
+    margin: 0 !important;
+  }
+  .dataTables_wrapper .dataTables_filter input {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  .dataTables_wrapper .dataTables_info {
+    text-align: center !important;
+    color: #64748b !important;
+    font-size: 12.5px !important;
+    margin-bottom: 8px !important;
+  }
+  .dataTables_wrapper .dataTables_paginate {
+    text-align: center !important;
+    margin-bottom: 4px !important;
+  }
+  .dataTables_wrapper .dataTables_paginate .pagination {
+    display: flex !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    margin: 0 !important;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    float: none !important;
+    margin: 0 2px !important;
+  }
+  /* Jarak aman dari tepi kotak: .table-responsive punya border sendiri di mobile */
+  .table-responsive > .dataTables_wrapper {
+    padding: 12px 12px 0 !important;
+  }
+  .table-responsive > .dataTables_wrapper > .dataTables_length:first-child {
+    margin-top: 0 !important;
+  }
+  .table-responsive > .dataTables_wrapper table.dataTable {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}

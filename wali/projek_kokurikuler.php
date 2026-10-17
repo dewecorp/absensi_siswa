@@ -671,7 +671,10 @@ JS
 ];
 
 if (!empty($message)) {
-    $js_page[] = "Swal.fire({ icon: '" . ($message['type'] === 'danger' ? 'error' : $message['type']) . "', title: '" . ($message['type'] === 'success' ? 'Berhasil' : 'Perhatian') . "', text: " . json_encode($message['text']) . ", timer: 2200, showConfirmButton: false });";
+    $swal_icon = $message['type'] === 'danger' ? 'error' : $message['type'];
+    $swal_icon = in_array($swal_icon, ['success', 'error', 'warning', 'info'], true) ? $swal_icon : 'info';
+    $swal_title = $message['type'] === 'success' ? 'Berhasil' : 'Perhatian';
+    $js_page[] = "if (window.Swal) { Swal.fire({ icon: " . json_encode($swal_icon) . ", title: " . json_encode($swal_title) . ", text: " . json_encode($message['text']) . ", timer: 2400, timerProgressBar: true, showConfirmButton: false }); } else { alert(" . json_encode($message['text']) . "); }";
 }
 
 include '../templates/header.php';

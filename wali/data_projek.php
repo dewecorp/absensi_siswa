@@ -121,29 +121,39 @@ if (!function_exists('getMasterProjekTemaStyle')) {
 }
 
 $page_title = 'Data Projek Kokurikuler';
-$css_libs = [
-    'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
-];
-$js_libs = [
-    'https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js',
-    'https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js',
-];
+$css_libs = [];
+$js_libs = [];
 
 $js_page = [<<<'JS'
 $(document).ready(function() {
-    if ($('#table-master-projek').length) {
-        $('#table-master-projek').DataTable({
-            'columnDefs': [{ 'orderable': false, 'targets': [4] }],
-            'language': {
-                'lengthMenu': 'Tampilkan _MENU_ entri',
-                'zeroRecords': 'Belum ada data projek',
-                'info': 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
-                'infoEmpty': 'Menampilkan 0 entri',
-                'search': 'Cari:',
-                'paginate': { 'first': 'Pertama', 'last': 'Terakhir', 'next': 'Selanjutnya', 'previous': 'Sebelumnya' }
-            }
+    // Filter kartu data projek (cari nama / tema)
+    function dpApplyFilter() {
+        var q = ($('#dpSearch').val() || '').toLowerCase().trim();
+        var shown = 0;
+        $('.dp-item').each(function() {
+            var $i = $(this);
+            var hay = ($i.data('nama') || '') + ' ' + ($i.data('tema') || '');
+            var ok = (q === '' || hay.indexOf(q) !== -1);
+            $i.toggleClass('d-none', !ok);
+            if (ok) shown++;
         });
+        $('#dpCount').text(shown);
+        $('#dpEmpty').toggleClass('d-none', shown !== 0);
     }
+    $('#dpSearch').on('input', dpApplyFilter);
+    $('#dpSearch').on('keyup', dpApplyFilter);
+    dpApplyFilter();
+
+    // Buka/tutup teks tujuan panjang
+    $(document).on('click', '.dp-more', function() {
+        var $d = $(this).closest('.dp-card-desc');
+        $d.toggleClass('expanded');
+        if ($d.hasClass('expanded')) {
+            $(this).html('Sembunyikan <i class="bi bi-chevron-up"></i>');
+        } else {
+            $(this).html('Selengkapnya <i class="bi bi-chevron-down"></i>');
+        }
+    });
 
     $('#btnTambahDataProjek').on('click', function() {
         $('#formDataProjekAction').val('tambah');
@@ -204,6 +214,13 @@ $(document).ready(function() {
 JS
 ];
 
+if (!empty($message)) {
+    $swal_icon = $message['type'] === 'danger' ? 'error' : $message['type'];
+    $swal_icon = in_array($swal_icon, ['success', 'error', 'warning', 'info'], true) ? $swal_icon : 'info';
+    $swal_title = $message['type'] === 'success' ? 'Berhasil' : 'Perhatian';
+    $js_page[] = "if (window.Swal) { Swal.fire({ icon: " . json_encode($swal_icon) . ", title: " . json_encode($swal_title) . ", text: " . json_encode($message['text']) . ", timer: 2400, timerProgressBar: true, showConfirmButton: false }); } else { alert(" . json_encode($message['text']) . "); }";
+}
+
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
@@ -220,37 +237,169 @@ include '../templates/sidebar.php';
     line-height: 1.2;
     white-space: nowrap;
 }
-#table-master-projek td {
-    vertical-align: middle;
+/* ===== Tampilan Kartu Data Projek ===== */
+.dp-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
 }
-.dp-nama-projek {
+.dp-search { position: relative; flex: 1 1 240px; max-width: 420px; }
+.dp-search i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 14px;
+    pointer-events: none;
+}
+.dp-search input {
+    padding-left: 34px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    font-size: 13.5px;
+    background: #f8fafc;
+}
+.dp-search input:focus {
+    background: #fff;
+    border-color: #93a0f4;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+.dp-count {
+    font-size: 12.5px;
     font-weight: 700;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 5px 13px;
+    white-space: nowrap;
+}
+.dp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 16px;
+    align-items: stretch;
+}
+.dp-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #fff;
+    border: 1.5px solid #e8ecf3;
+    border-radius: 16px;
+    padding: 14px 16px 12px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+.dp-card:hover {
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.09);
+    transform: translateY(-2px);
+    border-color: #dbe3ef;
+}
+.dp-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.dp-card .dp-tema-badge {
+    white-space: normal;
+    text-align: left;
+    max-width: 100%;
+}
+.dp-flag-template {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 3px 9px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+.dp-flag-template i { color: #f59e0b; }
+.dp-card-title {
+    font-size: 14.5px;
+    font-weight: 800;
     color: #0f172a;
+    line-height: 1.35;
+    margin: 0;
 }
-.dp-tujuan-cell {
-    max-width: 420px;
+.dp-card-desc { flex: 1 1 auto; }
+.dp-card-desc p {
     font-size: 13px;
-    color: #334155;
-    line-height: 1.5;
+    color: #475569;
+    line-height: 1.55;
+    margin: 0;
 }
-.dp-btn-act {
-    width: 34px;
-    height: 34px;
-    border-radius: 11px;
+.dp-card-desc p.dp-tujuan.clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.dp-card-desc.expanded p.dp-tujuan.clamped {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+.dp-more {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #4f46e5;
+    cursor: pointer;
+}
+.dp-more:hover { text-decoration: underline; }
+.dp-more i { font-size: 10px; }
+.dp-card-actions {
+    display: flex;
+    gap: 8px;
+    border-top: 1px dashed #e8ecf3;
+    padding-top: 10px;
+    margin-top: auto;
+}
+.dp-act {
+    border: none;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 6px 13px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    border: none !important;
-    outline: none !important;
+    gap: 5px;
     cursor: pointer;
-    font-size: 13.5px;
-    transition: transform 0.15s ease, background-color 0.15s ease;
+    transition: background-color 0.15s ease, transform 0.15s ease;
 }
-.dp-btn-act:active { transform: scale(0.92); }
-.dp-btn-edit { background: #fef3c7; color: #b45309; }
-.dp-btn-edit:hover { background: #fde68a; color: #92400e; }
-.dp-btn-del { background: #fee2e2; color: #b91c1c; }
-.dp-btn-del:hover { background: #fecaca; color: #991b1b; }
+.dp-act:active { transform: scale(0.96); }
+.dp-act-edit { background: #eef2ff; color: #4338ca; }
+.dp-act-edit:hover { background: #e0e7ff; color: #3730a3; }
+.dp-act-del { background: #fef2f2; color: #b91c1c; }
+.dp-act-del:hover { background: #fee2e2; color: #991b1b; }
+.dp-empty {
+    text-align: center;
+    padding: 34px 16px;
+    color: #94a3b8;
+}
+.dp-empty i { font-size: 34px; display: block; margin-bottom: 8px; }
+@media (max-width: 767.98px) {
+    .dp-search { max-width: none; flex: 1 1 100%; }
+    .dp-search input { height: 44px; }
+    .dp-grid { grid-template-columns: 1fr; gap: 12px; }
+    .dp-card { border-radius: 14px; padding: 13px 14px 11px; }
+    .dp-card-title { font-size: 14px; }
+}
 
 .quick-tema-tag {
     cursor: pointer;
@@ -280,15 +429,6 @@ include '../templates/sidebar.php';
         </div>
 
         <div class="section-body">
-            <?php if ($message): ?>
-                <div class="alert alert-<?= $message['type'] ?> alert-dismissible show fade">
-                    <div class="alert-body">
-                        <button class="close" data-dismiss="alert"><span>&times;</span></button>
-                        <?= htmlspecialchars($message['text']) ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-
             <div class="card card-primary">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center flex-wrap">
                     <div>
@@ -301,62 +441,67 @@ include '../templates/sidebar.php';
                 </div>
 
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped table-hover" id="table-master-projek" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 45px;" class="text-center">No</th>
-                                    <th>Nama Projek</th>
-                                    <th style="width: 200px;">Tema</th>
-                                    <th>Tujuan</th>
-                                    <th style="width: 110px;" class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php $no = 1; foreach ($rows as $r): ?>
-                                    <?php $ts = getMasterProjekTemaStyle($r['tema'] ?? ''); ?>
-                                    <tr>
-                                        <td class="text-center font-weight-bold text-muted"><?= $no++ ?></td>
-                                        <td>
-                                            <div class="dp-nama-projek">
-                                                <i class="<?= $ts['icon'] ?> mr-1" style="color: <?= $ts['color'] ?>;"></i>
-                                                <?= htmlspecialchars($r['nama_projek']) ?>
-                                                <?php if (!empty($r['is_template'])): ?>
-                                                    <span class="badge badge-light border ml-1" style="font-size: 10px; font-weight: 600; color: #64748b; vertical-align: middle;">
-                                                        <i class="bi bi-bookmark-star-fill text-warning"></i> Template
-                                                    </span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="dp-tema-badge" style="background: <?= $ts['bg'] ?>; color: <?= $ts['color'] ?>;">
-                                                <?= htmlspecialchars($r['tema']) ?>
-                                            </span>
-                                        </td>
-                                        <td class="dp-tujuan-cell">
-                                            <?php if (!empty($r['tujuan'])): ?>
-                                                <?= nl2br(htmlspecialchars($r['tujuan'])) ?>
-                                            <?php else: ?>
-                                                <span class="text-muted font-italic small">Belum ada tujuan</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center">
-                                            <button type="button" class="dp-btn-act dp-btn-edit btn-edit-data-projek"
-                                                data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>'
-                                                title="Edit Data Projek">
-                                                <i class="bi bi-pencil-fill"></i>
-                                            </button>
-                                            <button type="button" class="dp-btn-act dp-btn-del btn-hapus-data-projek ml-1"
-                                                data-id="<?= (int)$r['id'] ?>"
-                                                data-nama="<?= htmlspecialchars($r['nama_projek'], ENT_QUOTES) ?>"
-                                                title="Hapus Data Projek">
-                                                <i class="bi bi-trash-fill"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <div class="dp-toolbar">
+                        <div class="dp-search">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="dpSearch" class="form-control" autocomplete="off" placeholder="Cari nama projek atau tema...">
+                        </div>
+                        <div class="dp-count"><span id="dpCount"><?= count($rows) ?></span> projek</div>
+                    </div>
+
+                    <div class="dp-grid" id="dpGrid">
+                        <?php foreach ($rows as $r): ?>
+                            <?php
+                            $ts = getMasterProjekTemaStyle($r['tema'] ?? '');
+                            $nama_lc = function_exists('mb_strtolower') ? mb_strtolower($r['nama_projek'], 'UTF-8') : strtolower($r['nama_projek']);
+                            $tema_lc = function_exists('mb_strtolower') ? mb_strtolower((string)($r['tema'] ?? ''), 'UTF-8') : strtolower((string)($r['tema'] ?? ''));
+                            ?>
+                            <div class="dp-item"
+                                 data-nama="<?= htmlspecialchars($nama_lc, ENT_QUOTES) ?>"
+                                 data-tema="<?= htmlspecialchars($tema_lc, ENT_QUOTES) ?>">
+                                <div class="dp-card">
+                                    <div class="dp-card-top">
+                                        <span class="dp-tema-badge" style="background: <?= $ts['bg'] ?>; color: <?= $ts['color'] ?>;">
+                                            <i class="<?= $ts['icon'] ?>"></i>
+                                            <?= htmlspecialchars($r['tema']) ?>
+                                        </span>
+                                        <?php if (!empty($r['is_template'])): ?>
+                                            <span class="dp-flag-template"><i class="bi bi-bookmark-star-fill"></i> Template</span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <h6 class="dp-card-title"><?= htmlspecialchars($r['nama_projek']) ?></h6>
+
+                                    <div class="dp-card-desc">
+                                        <?php if (!empty($r['tujuan'])): ?>
+                                            <p class="dp-tujuan clamped"><?= nl2br(htmlspecialchars($r['tujuan'])) ?></p>
+                                            <button type="button" class="dp-more">Selengkapnya <i class="bi bi-chevron-down"></i></button>
+                                        <?php else: ?>
+                                            <p class="text-muted font-italic small mb-0">Belum ada tujuan</p>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div class="dp-card-actions">
+                                        <button type="button" class="dp-act dp-act-edit btn-edit-data-projek"
+                                            data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>'
+                                            title="Edit Data Projek">
+                                            <i class="bi bi-pencil-fill"></i> Edit
+                                        </button>
+                                        <button type="button" class="dp-act dp-act-del btn-hapus-data-projek"
+                                            data-id="<?= (int)$r['id'] ?>"
+                                            data-nama="<?= htmlspecialchars($r['nama_projek'], ENT_QUOTES) ?>"
+                                            title="Hapus Data Projek">
+                                            <i class="bi bi-trash-fill"></i> Hapus
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div id="dpEmpty" class="dp-empty d-none">
+                        <i class="bi bi-inbox"></i>
+                        <p class="mb-0">Tidak ada data projek yang cocok.</p>
                     </div>
                 </div>
             </div>
