@@ -5,6 +5,64 @@
    Sholat Berjamaah (guru/wali/admin).
    ============================================================ */
 (function () {
+    // Konfigurasi toastr default jika library toastr aktif
+    if (typeof toastr !== 'undefined') {
+        toastr.options = {
+            closeButton: false,
+            debug: false,
+            newestOnTop: true,
+            progressBar: false,
+            positionClass: 'toast-top-right',
+            preventDuplicates: false,
+            onclick: null,
+            showDuration: '200',
+            hideDuration: '300',
+            timeOut: '1500',
+            extendedTimeOut: '800',
+            showEasing: 'swing',
+            hideEasing: 'linear',
+            showMethod: 'fadeIn',
+            hideMethod: 'fadeOut'
+        };
+    }
+
+    function showToast(type, message, title) {
+        if (typeof toastr !== 'undefined') {
+            toastr.options = toastr.options || {};
+            toastr.options.positionClass = 'toast-top-right';
+            toastr.options.timeOut = 1500;
+            if (type === 'success') {
+                toastr.success(message, title || 'Tersimpan');
+            } else if (type === 'warning') {
+                toastr.warning(message, title || 'Peringatan');
+            } else {
+                toastr.error(message, title || 'Error');
+            }
+            return;
+        }
+
+        // Fallback jika toastr belum termuat
+        if (typeof Swal !== 'undefined') {
+            if (type === 'success') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tersimpan',
+                    text: message,
+                    timer: 900,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire({
+                    icon: type === 'warning' ? 'warning' : 'error',
+                    title: type === 'warning' ? 'Gagal' : 'Error',
+                    text: message,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        }
+    }
+
     window.simadAutoSaveAttendance = function (idSiswa, status) {
         var tanggalEl = document.getElementById('tanggalInput');
         var tanggal = tanggalEl && tanggalEl.value
@@ -24,34 +82,14 @@
         })
         .then(function (res) { return res.json(); })
         .then(function (resp) {
-            if (typeof Swal === 'undefined') return;
             if (resp && resp.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Tersimpan',
-                    text: 'Kehadiran diperbarui',
-                    timer: 900,
-                    showConfirmButton: false
-                });
+                showToast('success', 'Kehadiran diperbarui', 'Tersimpan');
             } else {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Gagal',
-                    text: (resp && resp.error) ? resp.error : 'Gagal menyimpan kehadiran',
-                    confirmButtonText: 'OK'
-                });
+                showToast('warning', (resp && resp.error) ? resp.error : 'Gagal menyimpan kehadiran', 'Gagal');
             }
         })
         .catch(function () {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Gagal menyimpan kehadiran',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            }
+            showToast('error', 'Gagal menyimpan kehadiran', 'Error');
         });
     };
 })();

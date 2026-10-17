@@ -329,6 +329,10 @@ if (!isset($school_profile)) {
     <!-- SweetAlert Library -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Toastr Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
     <!-- JS Libraries -->
     <?php if (isset($js_libs) && is_array($js_libs)): ?>
         <?php foreach ($js_libs as $js): ?>

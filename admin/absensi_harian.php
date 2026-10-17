@@ -225,9 +225,10 @@ endif;
                                         <div class="att-grid">
                                             <?php foreach ($students as $index => $student): ?>
                                             <?php
-                                                $status = $student['keterangan'] ?? 'Hadir';
-                                                $status_now = $status;
-                                                $stat_slug = strtolower($status_now);
+                                                $status = $student['keterangan'] ?? null;
+                                                $status_now = $status ?: '';
+                                                $is_locked = !empty($status);
+                                                $stat_slug = $status ? strtolower($status) : 'belum-absen';
                                                 switch ($status) {
                                                     case 'Hadir': $badgeClass = 'badge-success'; break;
                                                     case 'Sakit': $badgeClass = 'badge-warning'; break;
@@ -247,21 +248,21 @@ endif;
                                                         <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                                         <div class="att-sub">
                                                             <span class="att-num">No <?= $index + 1 ?></span>
-                                                            <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($status) ?></span>
+                                                            <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($status ?: 'Belum Absen') ?></span>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="att-actions attendance-btn-group">
-                                                    <button type="button" class="att-opt is-hadir btn-kehadiran-siswa <?= $status_now === 'Hadir' ? 'active' : '' ?>" data-id="<?= $student['id_siswa'] ?>" data-status="Hadir">
+                                                    <button type="button" class="att-opt is-hadir btn-kehadiran-siswa <?= $status_now === 'Hadir' ? 'active' : '' ?>" data-id="<?= $student['id_siswa'] ?>" data-status="Hadir" <?= $status_now === 'Hadir' ? 'disabled' : '' ?>>
                                                         <i class="fas fa-check"></i><span>Hadir</span>
                                                     </button>
-                                                    <button type="button" class="att-opt is-sakit btn-kehadiran-siswa <?= $status_now === 'Sakit' ? 'active' : '' ?>" data-id="<?= $student['id_siswa'] ?>" data-status="Sakit">
+                                                    <button type="button" class="att-opt is-sakit btn-kehadiran-siswa <?= $status_now === 'Sakit' ? 'active' : '' ?>" data-id="<?= $student['id_siswa'] ?>" data-status="Sakit" <?= $status_now === 'Sakit' ? 'disabled' : '' ?>>
                                                         <i class="fas fa-procedures"></i><span>Sakit</span>
                                                     </button>
-                                                    <button type="button" class="att-opt is-izin btn-kehadiran-siswa <?= $status_now === 'Izin' ? 'active' : '' ?>" data-id="<?= $student['id_siswa'] ?>" data-status="Izin">
+                                                    <button type="button" class="att-opt is-izin btn-kehadiran-siswa <?= $status_now === 'Izin' ? 'active' : '' ?>" data-id="<?= $student['id_siswa'] ?>" data-status="Izin" <?= $status_now === 'Izin' ? 'disabled' : '' ?>>
                                                         <i class="fas fa-envelope-open-text"></i><span>Izin</span>
                                                     </button>
-                                                    <button type="button" class="att-opt is-alpa btn-kehadiran-siswa <?= $status_now === 'Alpa' ? 'active' : '' ?>" data-id="<?= $student['id_siswa'] ?>" data-status="Alpa">
+                                                    <button type="button" class="att-opt is-alpa btn-kehadiran-siswa <?= $status_now === 'Alpa' ? 'active' : '' ?>" data-id="<?= $student['id_siswa'] ?>" data-status="Alpa" <?= $status_now === 'Alpa' ? 'disabled' : '' ?>>
                                                         <i class="fas fa-user-times"></i><span>Alpa</span>
                                                     </button>
                                                 </div>
@@ -561,26 +562,32 @@ var reportDate = '$report_date';
             $(document).ready(function() {
                 initDataTable();
                 
-                // Tombol status per siswa (klik ulang tombol aktif = reset Belum Absen)
+                // Tombol status per siswa: status yang sama dicegah, tapi bisa pilih status lain
                 $(document).on('click', '.btn-kehadiran-siswa', function() {
                     var studentId = $(this).data('id');
                     var status = $(this).data('status');
                     var input = $('#status_' + studentId);
                     var currentStatus = input.val();
-                    var nextStatus = (currentStatus === status) ? '' : status;
+
+                    // Cegah klik status yang sedang aktif (tidak ada aksi / tidak ganda)
+                    if (currentStatus === status) return false;
+
                     var group = $(this).closest('.attendance-btn-group');
+                    group.find('.btn-kehadiran-siswa').removeClass('active').prop('disabled', false);
+                    $(this).addClass('active').prop('disabled', true);
 
-                    group.find('.btn-kehadiran-siswa').removeClass('active');
-                    if (nextStatus !== '') {
-                        group.find('.btn-kehadiran-siswa[data-status=\"' + nextStatus + '\"]').addClass('active');
-                    }
+                    input.val(status);
+                    updateBadgeByValue(studentId, status);
 
-                    input.val(nextStatus);
-                    updateBadgeByValue(studentId, nextStatus);
+                    // Update avatar warna
+                    var card = $(this).closest('.att-card');
+                    var avatar = card.find('.att-avatar');
+                    avatar.removeClass(function(i, c) { return (c.match(/att-avatar--\S+/g) || []).join(' '); });
+                    avatar.addClass('att-avatar--' + status.toLowerCase());
 
                     // Auto-save tanpa tombol simpan
                     if (typeof simadAutoSaveAttendance === 'function') {
-                        simadAutoSaveAttendance(studentId, nextStatus);
+                        simadAutoSaveAttendance(studentId, status);
                     }
                 });
 

@@ -156,6 +156,10 @@ $notif_list_h_u = $n_notif_nav_u <= 0 ? 'height:auto;max-height:140px;overflow:h
     $_nh_css_v_u = is_readable($_nh_css_path_u) ? (string) filemtime($_nh_css_path_u) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/nilai-harian-app.css?v=<?php echo htmlspecialchars($_nh_css_v_u, ENT_QUOTES, 'UTF-8'); ?>">
+    <!-- Toastr Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
     <!-- Attendance auto-save JS -->
     <?php
     $_attjs_path_u = __DIR__ . '/../assets/js/attendance-autosave.js';

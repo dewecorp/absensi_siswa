@@ -28,8 +28,9 @@
   flex: 0 0 auto; width: 42px; height: 42px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; font-weight: 800; color: #fff; letter-spacing: .5px;
-  background: linear-gradient(135deg, #6777ef 0%, #3abaf4 100%);
+  background: linear-gradient(135deg, #94a3b8 0%, #cbd5e1 100%);
 }
+.att-avatar--belum-absen { background: linear-gradient(135deg, #94a3b8 0%, #cbd5e1 100%); }
 .att-avatar--hadir { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
 .att-avatar--sakit { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); }
 .att-avatar--izin { background: linear-gradient(135deg, #3abaf4 0%, #60a5fa 100%); }
@@ -86,6 +87,10 @@
 .att-card-note .form-control { border-radius: 12px; font-size: 12.5px; }
 
 .att-actions.attendance-btn-group.disabled { opacity: .6; pointer-events: none; }
+
+/* Status yang sedang aktif tidak bisa diklik lagi (cegah tekan status yang sama berulang/ganda),
+   namun tombol status lainnya tetap aktif dan dapat dipilih jika ingin mengubah status. */
+.att-opt.active { pointer-events: none; cursor: default; }
 
 .att-save-bar { display: flex; justify-content: center; margin-top: 4px; }
 

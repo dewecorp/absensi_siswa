@@ -280,11 +280,13 @@ include '../templates/header.php';
                                     $is_absent_daily = in_array($status_absensi, ['Sakit', 'Izin', 'Alpa']);
                                     if ($is_absent_daily) { $current_status = 'Tidak Hadir'; }
                                     elseif ($status_sholat) { $current_status = $status_sholat; }
-                                    else { $current_status = 'Hadir'; }
-                                    $stat_slug = strtolower($current_status);
+                                    else { $current_status = ''; }
+                                    $is_locked = !empty($current_status);
+                                    $stat_slug = $current_status ? strtolower(str_replace(' ', '-', $current_status)) : 'belum-absen';
                                     if ($current_status == 'Hadir') $badgeClass = 'badge-success';
                                     elseif ($current_status == 'Berhalangan') $badgeClass = 'badge-warning';
-                                    else $badgeClass = 'badge-danger';
+                                    elseif ($current_status == 'Tidak Hadir') $badgeClass = 'badge-danger';
+                                    else $badgeClass = 'badge-secondary';
                                     $nm = trim((string)($student['nama_siswa'] ?? ''));
                                     $parts = preg_split('/\s+/', $nm);
                                     $ini = '';
@@ -297,7 +299,7 @@ include '../templates/header.php';
                                             <div class="att-name"><?= htmlspecialchars($nm) ?></div>
                                             <div class="att-sub">
                                                 <span class="att-num">No <?= $index + 1 ?></span>
-                                                <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($current_status) ?></span>
+                                                <span class="badge <?= $badgeClass ?>" id="badge_<?= $student['id_siswa'] ?>"><?= htmlspecialchars($current_status ?: 'Belum Absen') ?></span>
                                             </div>
                                             <?php if ($is_absent_daily): ?>
                                                 <small class="att-note-daily">(Absensi: <?= htmlspecialchars($status_absensi) ?>)</small>
@@ -393,8 +395,11 @@ $(document).ready(function() {
 });
 
 function updateBadgeLocal(el, id, status) {
+    if (!el) return;
+    if ($(el).hasClass('active')) return false;
+
     var badge = $('#badge_' + id);
-    badge.removeClass('badge-danger badge-success badge-warning');
+    badge.removeClass('badge-danger badge-success badge-warning badge-secondary');
     if (status === 'Hadir') {
         badge.addClass('badge-success').text('Hadir');
     } else if (status === 'Berhalangan') {
@@ -402,11 +407,22 @@ function updateBadgeLocal(el, id, status) {
     } else {
         badge.addClass('badge-danger').text('Tidak Hadir');
     }
-    if (el) {
-        var group = $(el).closest('.att-actions');
+
+    var group = $(el).closest('.att-actions');
+    if (group) {
         group.find('.att-opt').removeClass('active');
         $(el).addClass('active');
+        $(el).find('input[type=\"radio\"]').prop('checked', true);
     }
+
+    var card = el ? $(el).closest('.att-card') : null;
+    if (card) {
+        var avatar = card.find('.att-avatar');
+        avatar.removeClass(function(i, c) { return (c.match(/att-avatar--\S+/g) || []).join(' '); });
+        var slug = status.toLowerCase().replace(/\s+/g, '-');
+        avatar.addClass('att-avatar--' + slug);
+    }
+
     if (typeof simadAutoSaveAttendance === 'function') {
         simadAutoSaveAttendance(id, status);
     }
