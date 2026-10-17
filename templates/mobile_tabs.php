@@ -86,6 +86,74 @@ if (!function_exists('mapp_tab_groups')) {
     }
 }
 
+if (!function_exists('mapp_item_icon')) {
+    function mapp_item_icon(string $title, string $group_title = ''): string
+    {
+        $t = strtolower(trim($title));
+        $map = [
+            'nilai harian' => 'fas fa-calendar-day',
+            'nilai tengah semester' => 'fas fa-file-signature',
+            'nilai uts' => 'fas fa-file-signature',
+            'nilai akhir semester' => 'fas fa-file-alt',
+            'nilai uas' => 'fas fa-file-alt',
+            'nilai akhir tahun' => 'fas fa-award',
+            'nilai pat' => 'fas fa-award',
+            'nilai kokurikuler' => 'fas fa-palette',
+            'nilai pra ujian' => 'fas fa-clipboard-list',
+            'nilai ujian' => 'fas fa-graduation-cap',
+            'nilai ujian praktik' => 'fas fa-flask',
+            'data nilai ujian' => 'fas fa-table',
+            'rekap nilai' => 'fas fa-chart-line',
+            'rekap nilai siswa' => 'fas fa-chart-line',
+            'program remidi' => 'fas fa-tools',
+            'program pengayaan' => 'fas fa-layer-group',
+        ];
+        if (isset($map[$t])) {
+            return $map[$t];
+        }
+        foreach ($map as $k => $icon) {
+            if (strpos($t, $k) !== false) {
+                return $icon;
+            }
+        }
+        return 'fas fa-file-alt';
+    }
+}
+
+if (!function_exists('mapp_item_desc')) {
+    function mapp_item_desc(string $title): string
+    {
+        $t = strtolower(trim($title));
+        $map = [
+            'nilai harian' => 'Input & pantau nilai asesmen formatif harian per materi/KD',
+            'nilai tengah semester' => 'Nilai asesmen sumatif tengah semester (PTS/UTS)',
+            'nilai uts' => 'Nilai asesmen sumatif tengah semester (PTS/UTS)',
+            'nilai akhir semester' => 'Nilai asesmen sumatif akhir semester (PAS/UAS)',
+            'nilai uas' => 'Nilai asesmen sumatif akhir semester (PAS/UAS)',
+            'nilai akhir tahun' => 'Nilai kenaikan kelas akhir tahun ajaran (PAT)',
+            'nilai pat' => 'Nilai kenaikan kelas akhir tahun ajaran (PAT)',
+            'nilai kokurikuler' => 'Penilaian projek penguatan profil & kokurikuler madrasah',
+            'nilai pra ujian' => 'Nilai simulasi dan uji coba persiapan ujian akhir',
+            'nilai ujian' => 'Nilai asesmen madrasah/ujian akhir resmi kelulusan',
+            'nilai ujian praktik' => 'Nilai asesmen unjuk kerja & praktik ibadah/mapel',
+            'data nilai ujian' => 'Pusat master dan rekapitulasi nilai ujian madrasah',
+            'rekap nilai' => 'Rekapitulasi lengkap nilai seluruh mapel & peringkat kelas',
+            'rekap nilai siswa' => 'Rekapitulasi lengkap nilai seluruh mapel & peringkat kelas',
+            'program remidi' => 'Perencanaan & pelaksanaan tindak lanjut ketuntasan remidi',
+            'program pengayaan' => 'Program pendalaman materi bagi siswa berprestasi',
+        ];
+        if (isset($map[$t])) {
+            return $map[$t];
+        }
+        foreach ($map as $k => $desc) {
+            if (strpos($t, $k) !== false) {
+                return $desc;
+            }
+        }
+        return '';
+    }
+}
+
 if (!function_exists('mapp_render_tab_list')) {
     // Render list-card mobile + search client-side. $search_id unik per halaman.
     function mapp_render_tab_list(array $tab_data, string $search_id = 'mappSearch'): string
@@ -94,7 +162,7 @@ if (!function_exists('mapp_render_tab_list')) {
         $singles = $tab_data['singles'] ?? [];
         ob_start();
         ?>
-        <div class="d-lg-none">
+        <div class="mapp-tab-wrapper">
             <div class="mapp-search">
                 <i class="fas fa-search"></i>
                 <input type="text" id="<?php echo htmlspecialchars($search_id, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Cari menu..." autocomplete="off">
@@ -112,12 +180,14 @@ if (!function_exists('mapp_render_tab_list')) {
                                 $stitle = (string)($sub['title'] ?? '-');
                                 $surl = (strpos($url, 'http') === 0 || strpos($url, 'javascript:') === 0 || strpos($url, '#') === 0)
                                     ? $url : (function_exists('app_url') ? app_url($url) : $url);
+                                $item_icon = function_exists('mapp_item_icon') ? mapp_item_icon($stitle, (string)$g['title']) : ($g['icon'] ?? 'fas fa-folder');
+                                $item_desc = function_exists('mapp_item_desc') ? mapp_item_desc($stitle) : '';
                                 ?>
-                                <a class="mapp-tab-item" data-key="<?php echo htmlspecialchars(strtolower($stitle), ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($surl, ENT_QUOTES, 'UTF-8'); ?>">
-                                    <span class="mapp-tab-icon mg-c<?php echo ((int)$ii % 8) + 1; ?>"><i class="<?php echo htmlspecialchars($g['icon'] ?? 'fas fa-folder', ENT_QUOTES, 'UTF-8'); ?>"></i></span>
+                                <a class="mapp-tab-item" data-key="<?php echo htmlspecialchars(strtolower($stitle . ' ' . $item_desc), ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($surl, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <span class="mapp-tab-icon mg-c<?php echo ((int)$ii % 8) + 1; ?>"><i class="<?php echo htmlspecialchars($item_icon, ENT_QUOTES, 'UTF-8'); ?>"></i></span>
                                     <span class="mapp-tab-text">
                                         <span class="mapp-tab-title d-block"><?php echo htmlspecialchars($stitle, ENT_QUOTES, 'UTF-8'); ?></span>
-                                        <span class="mapp-tab-sub d-block"><?php echo htmlspecialchars($g['title'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="mapp-tab-sub d-block"><?php echo htmlspecialchars($item_desc !== '' ? $item_desc : $g['title'], ENT_QUOTES, 'UTF-8'); ?></span>
                                     </span>
                                 </a>
                             <?php endforeach; ?>

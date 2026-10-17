@@ -86,15 +86,29 @@ try {
 } catch (Throwable $e) {
 }
 
-// Jadwal terdekat
+// Jadwal terdekat (prioritas status Terjadwal terdekat, fallback riwayat jadwal aktif)
 $jadwal_terdekat = [];
 try {
-    $stmt = $pdo->prepare("SELECT j.*, i.nama_instrumen FROM tb_sv_jadwal j
+    // 1. Coba ambil yang status Terjadwal dan tanggal >= hari ini
+    $stmt = $pdo->prepare("SELECT j.*, i.nama_instrumen, p.nama_program 
+                           FROM tb_sv_jadwal j
                            LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = j.id_instrumen
+                           LEFT JOIN tb_sv_program p ON p.id_program = j.id_program
                            WHERE j.status = 'Terjadwal' AND j.tanggal >= CURDATE()
-                           ORDER BY j.tanggal ASC, j.jam_mulai ASC LIMIT 5");
+                           ORDER BY j.tanggal ASC, j.jam_mulai ASC LIMIT 6");
     $stmt->execute();
     $jadwal_terdekat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 2. Jika tidak ada jadwal masa depan yang berstatus Terjadwal, tampilkan jadwal terbaru (seluruh status) agar timeline informatif
+    if (empty($jadwal_terdekat)) {
+        $stmt = $pdo->prepare("SELECT j.*, i.nama_instrumen, p.nama_program 
+                               FROM tb_sv_jadwal j
+                               LEFT JOIN tb_sv_instrumen i ON i.id_instrumen = j.id_instrumen
+                               LEFT JOIN tb_sv_program p ON p.id_program = j.id_program
+                               ORDER BY j.tanggal DESC, j.jam_mulai DESC LIMIT 6");
+        $stmt->execute();
+        $jadwal_terdekat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (Throwable $e) {
 }
 
@@ -387,27 +401,171 @@ include '../templates/sidebar.php';
                 </div>
                 <div class="col-lg-6 d-flex">
                     <div class="card flex-fill">
-                        <div class="card-header">
-                            <h4>Jadwal Supervisi Terdekat</h4>
-                            <div class="card-header-action"><a href="jadwal_supervisi.php" class="btn btn-sm btn-primary">Lihat Semua</a></div>
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4><i class="far fa-calendar-alt text-primary mr-2"></i>Timeline Jadwal Terdekat</h4>
+                            <div class="card-header-action"><a href="jadwal_supervisi.php" class="btn btn-sm btn-primary"><i class="fas fa-list mr-1"></i>Lihat Semua</a></div>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-striped mb-0">
-                                    <thead><tr><th>Tanggal</th><th>Guru/Unit</th><th>Jenis</th><th>Jam</th></tr></thead>
-                                    <tbody>
-                                    <?php if ($jadwal_terdekat): foreach ($jadwal_terdekat as $j): ?>
-                                        <tr>
-                                            <td><?= $j['tanggal'] ? date('d/m/Y', strtotime($j['tanggal'])) : '-' ?></td>
-                                            <td><?= htmlspecialchars($j['nama_guru'] ?? '-') ?></td>
-                                            <td><span class="badge badge-info"><?= htmlspecialchars($j['jenis_supervisi']) ?></span></td>
-                                            <td><?= $j['jam_mulai'] ? substr($j['jam_mulai'], 0, 5) : '-' ?></td>
-                                        </tr>
-                                    <?php endforeach; else: ?>
-                                        <tr><td colspan="4" class="text-center text-muted">Belum ada jadwal terdekat.</td></tr>
-                                    <?php endif; ?>
-                                    </tbody>
-                                </table>
+                        <div class="card-body">
+                            <style>
+                            .sv-jd-timeline {
+                                position: relative;
+                                padding-left: 28px;
+                            }
+                            .sv-jd-timeline::before {
+                                content: '';
+                                position: absolute;
+                                left: 11px;
+                                top: 8px;
+                                bottom: 8px;
+                                width: 3px;
+                                border-radius: 3px;
+                                background: #e9edf5;
+                            }
+                            .sv-jd-item {
+                                position: relative;
+                                padding-bottom: 16px;
+                            }
+                            .sv-jd-item:last-child {
+                                padding-bottom: 0;
+                            }
+                            .sv-jd-dot {
+                                position: absolute;
+                                left: -28px;
+                                top: 2px;
+                                width: 25px;
+                                height: 25px;
+                                border-radius: 50%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 11px;
+                                color: #fff;
+                                background: var(--dot-color, #6777ef);
+                                box-shadow: 0 2px 6px rgba(0,0,0,.15);
+                            }
+                            .sv-jd-card {
+                                background: #f8fafc;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 12px;
+                                padding: 11px 14px;
+                                transition: all .2s ease;
+                            }
+                            .sv-jd-card:hover {
+                                background: #ffffff;
+                                border-color: #cbd5e1;
+                                box-shadow: 0 4px 12px rgba(15,23,42,.06);
+                                transform: translateY(-1px);
+                            }
+                            .sv-jd-date-pill {
+                                font-size: 11px;
+                                font-weight: 700;
+                                padding: 3px 8px;
+                                border-radius: 6px;
+                                background: #e2e8f0;
+                                color: #334155;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 4px;
+                            }
+                            .sv-jd-date-pill.today {
+                                background: #fee2e2;
+                                color: #dc2626;
+                                animation: sv-pulse 1.6s infinite;
+                            }
+                            .sv-jd-meta {
+                                font-size: 11.5px;
+                                color: #64748b;
+                                display: flex;
+                                flex-wrap: wrap;
+                                gap: 10px;
+                                margin-top: 5px;
+                            }
+                            .sv-jd-meta-item {
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 4px;
+                            }
+                            </style>
+
+                            <div class="sv-scroll" style="max-height: 280px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; scrollbar-width: thin; scrollbar-color: #b9c4d8 transparent;">
+                                <?php if (!empty($jadwal_terdekat)): ?>
+                                    <div class="sv-jd-timeline">
+                                        <?php 
+                                        $today_str = date('Y-m-d');
+                                        foreach ($jadwal_terdekat as $j): 
+                                            $st_val = $j['status'] ?? 'Terjadwal';
+                                            $st_badge = 'badge-primary';
+                                            $dot_color = '#6777ef';
+                                            $dot_icon = 'far fa-calendar-check';
+
+                                            if ($st_val === 'Terlaksana') {
+                                                $st_badge = 'badge-success';
+                                                $dot_color = '#47c363';
+                                                $dot_icon = 'fas fa-check';
+                                            } elseif ($st_val === 'Ditunda') {
+                                                $st_badge = 'badge-warning';
+                                                $dot_color = '#ffa426';
+                                                $dot_icon = 'fas fa-clock';
+                                            } elseif ($st_val === 'Dibatalkan') {
+                                                $st_badge = 'badge-danger';
+                                                $dot_color = '#fc544b';
+                                                $dot_icon = 'fas fa-times';
+                                            }
+
+                                            $is_today = ($j['tanggal'] === $today_str);
+                                            $tgl_display = $j['tanggal'] ? date('d/m/Y', strtotime($j['tanggal'])) : '-';
+                                            $jam_str = $j['jam_mulai'] ? substr($j['jam_mulai'], 0, 5) : '';
+                                            if ($jam_str && !empty($j['jam_selesai'])) {
+                                                $jam_str .= ' - ' . substr($j['jam_selesai'], 0, 5);
+                                            }
+                                        ?>
+                                            <div class="sv-jd-item">
+                                                <span class="sv-jd-dot" style="--dot-color: <?= $dot_color ?>;">
+                                                    <i class="<?= $dot_icon ?>"></i>
+                                                </span>
+                                                <div class="sv-jd-card">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap" style="gap: 6px;">
+                                                        <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
+                                                            <span class="sv-jd-date-pill <?= $is_today ? 'today' : '' ?>">
+                                                                <i class="far fa-calendar"></i> <?= $tgl_display ?><?= $is_today ? ' (Hari ini)' : '' ?>
+                                                            </span>
+                                                            <span class="badge badge-info" style="font-size: 10px; padding: 3px 7px;"><?= htmlspecialchars($j['jenis_supervisi']) ?></span>
+                                                        </div>
+                                                        <span class="badge <?= $st_badge ?>" style="font-size: 10.5px;"><?= htmlspecialchars($st_val) ?></span>
+                                                    </div>
+
+                                                    <div class="font-weight-bold text-dark" style="font-size: 13.5px; line-height: 1.35;">
+                                                        <?= htmlspecialchars($j['nama_guru'] ?: 'Unit / Sasaran') ?>
+                                                    </div>
+                                                    
+                                                    <?php if (!empty($j['nama_program'])): ?>
+                                                        <div class="small text-muted text-truncate" style="font-size: 11.5px;" title="<?= htmlspecialchars($j['nama_program']) ?>">
+                                                            <i class="fas fa-clipboard-list text-muted mr-1"></i><?= htmlspecialchars($j['nama_program']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                    <div class="sv-jd-meta">
+                                                        <?php if ($jam_str): ?>
+                                                            <span class="sv-jd-meta-item"><i class="far fa-clock text-info"></i> <?= $jam_str ?></span>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($j['tempat'])): ?>
+                                                            <span class="sv-jd-meta-item"><i class="fas fa-map-marker-alt text-danger"></i> <?= htmlspecialchars($j['tempat']) ?></span>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($j['supervisor'])): ?>
+                                                            <span class="sv-jd-meta-item"><i class="fas fa-user-shield text-primary"></i> <?= htmlspecialchars($j['supervisor']) ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="text-center text-muted py-4">
+                                        <i class="far fa-calendar-times fa-3x mb-2 text-muted"></i>
+                                        <div class="font-weight-bold">Belum ada jadwal terdekat</div>
+                                        <div class="small">Silakan buat jadwal di modul Jadwal Supervisi.</div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

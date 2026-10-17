@@ -425,6 +425,22 @@ function svFilterModalByJenis(jenis, keepVal) {
 $(document).ready(function () {
     document.querySelectorAll('form[method="GET"]').forEach(function(f){f.querySelectorAll('select, input[type="date"]').forEach(function(el){el.addEventListener('change',function(){f.submit();});});});
     var dttablejadwal=$('#table-jadwal').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[[1,'desc']],columnDefs:[],responsive:false});dttablejadwal.on('order.dt search.dt draw.dt',function(){var info=dttablejadwal.page.info();dttablejadwal.column(0,{search:'applied',order:'applied'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.page*info.length+i+1;});}).draw();
+
+    // Switcher View: Timeline vs Table
+    $('#btn-show-timeline').on('click', function () {
+        $(this).addClass('active');
+        $('#btn-show-table').removeClass('active');
+        $('#sv-timeline-container').show();
+        $('#sv-table-container').hide();
+    });
+    $('#btn-show-table').on('click', function () {
+        $(this).addClass('active');
+        $('#btn-show-timeline').removeClass('active');
+        $('#sv-timeline-container').hide();
+        $('#sv-table-container').show();
+        dttablejadwal.columns.adjust().draw();
+    });
+
     $('#modal-jadwal').on('shown.bs.modal', function(){ svInitFokusJadwalSelect2(); });
     function svAutoInstrumenByProgram(pid){
         var iid = svProgramInstrumen[String(pid)] || '';
@@ -532,6 +548,159 @@ JS;
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<style>
+/* Styling Timeline Jadwal Supervisi */
+.sv-timeline-view {
+    position: relative;
+    padding-left: 36px;
+    margin-top: 10px;
+}
+.sv-timeline-view::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 14px;
+    bottom: 14px;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #6777ef, #e2e8f0);
+}
+.sv-timeline-date-group {
+    position: relative;
+    margin-bottom: 24px;
+}
+.sv-timeline-date-header {
+    position: sticky;
+    top: 70px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(15,23,42,.08);
+    font-size: 13px;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 14px;
+    margin-left: -20px;
+}
+.sv-timeline-date-header.today {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+.sv-timeline-item {
+    position: relative;
+    margin-bottom: 14px;
+}
+.sv-timeline-item:last-child {
+    margin-bottom: 0;
+}
+.sv-timeline-dot {
+    position: absolute;
+    left: -36px;
+    top: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #fff;
+    background: var(--dot-color, #6777ef);
+    box-shadow: 0 3px 8px rgba(0,0,0,.18);
+    z-index: 1;
+}
+.sv-timeline-card {
+    background: #ffffff;
+    border: 1px solid #e9edf5;
+    border-left: 4px solid var(--dot-color, #6777ef);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    padding: 16px 18px;
+    transition: all .2s ease;
+}
+.sv-timeline-card:hover {
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+    transform: translateY(-2px);
+}
+.sv-timeline-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.sv-timeline-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    margin-bottom: 4px;
+}
+.sv-timeline-program {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.sv-timeline-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px 16px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+}
+.sv-timeline-meta-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #64748b;
+}
+.sv-timeline-meta-cell i {
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.sv-timeline-meta-cell strong {
+    color: #1e293b;
+}
+.sv-timeline-fokus {
+    font-size: 12px;
+    color: #475569;
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+}
+.sv-timeline-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+}
+.btn-toggle-view.active {
+    background-color: #6777ef !important;
+    color: #ffffff !important;
+    border-color: #6777ef !important;
+}
+</style>
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -593,70 +762,233 @@ include '../templates/sidebar.php';
             </div>
 
             <div class="card">
-                <div class="card-header">
-                    <h4>Daftar Jadwal Supervisi</h4>
-                    <div class="card-header-action">
-                        <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
-                        <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap: 10px;">
+                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                        <h4 class="mb-0"><i class="fas fa-calendar-alt text-primary mr-2"></i>Jadwal Supervisi</h4>
+                        <span class="badge badge-info font-weight-bold" style="font-size: 11.5px; border-radius: 999px;"><?= count($rows) ?> Jadwal</span>
+                    </div>
+                    <div class="card-header-action d-flex align-items-center flex-wrap" style="gap: 6px;">
+                        <div class="btn-group btn-group-sm mr-1">
+                            <button type="button" class="btn btn-outline-primary btn-toggle-view active" id="btn-show-timeline" title="Tampilan Timeline"><i class="fas fa-stream mr-1"></i>Timeline</button>
+                            <button type="button" class="btn btn-outline-primary btn-toggle-view" id="btn-show-table" title="Tampilan Tabel"><i class="fas fa-table mr-1"></i>Tabel</button>
+                        </div>
+                        <button class="btn btn-success btn-sm" id="btn-excel" type="button" title="Export Excel"><i class="fas fa-file-excel mr-1"></i>Excel</button>
+                        <button class="btn btn-warning btn-sm" id="btn-pdf" type="button" title="Cetak PDF"><i class="fas fa-file-pdf mr-1"></i>PDF</button>
                         <?php if ($can_manage): ?>
-                        <button class="btn btn-primary" id="btn-tambah" type="button"><i class="fas fa-plus"></i> Tambah</button>
+                        <button class="btn btn-primary btn-sm" id="btn-tambah" type="button"><i class="fas fa-plus mr-1"></i>Tambah</button>
                         <?php endif; ?>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-jadwal">
-                            <thead>
-                                <tr>
-                                    <th width="5%">No</th>
-                                    <th>Program</th>
-                                    <th>Guru/PTK</th>
-                                    <th>Jenis</th>
-                                    <th>Instrumen</th>
-                                    <th>Supervisor</th>
-                                    <th>Tanggal</th>
-                                    <th>Jam Mulai</th>
-                                    <th>Jam Selesai</th>
-                                    <th>Tempat</th>
-                                    <th>Status</th>
-                                    <th>Keterangan</th>
-                                    <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $r): ?>
-                                    <?php
-                                    $badge = 'info';
-                                    if ($r['status'] === 'Terlaksana') $badge = 'success';
-                                    elseif ($r['status'] === 'Ditunda') $badge = 'warning';
-                                    elseif ($r['status'] === 'Dibatalkan') $badge = 'danger';
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"></td>
-                                        <td><?= htmlspecialchars((string)$r['nama_program']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['nama_guru']) ?></td>
-                                        <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_supervisi']) ?></span></td>
-                                        <td><?= htmlspecialchars((string)$r['nama_instrumen']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['supervisor']) ?></td>
-                                        <td><?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?></td>
-                                        <td><?= $r['jam_mulai'] ? substr($r['jam_mulai'], 0, 5) : '-' ?></td>
-                                        <td><?= $r['jam_selesai'] ? substr($r['jam_selesai'], 0, 5) : '-' ?></td>
-                                        <td><?= htmlspecialchars((string)$r['tempat']) ?></td>
-                                        <td><span class="badge badge-<?= $badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
-                                        <?php if ($can_manage): ?>
-                                        <td style="white-space:nowrap">
-                                            <div class="d-inline-flex align-items-center">
-                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button"
-                                                data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_jadwal'] ?>"><i class="fas fa-trash"></i></button>
+                    <!-- ============================================================
+                         TAMPILAN TIMELINE UTAMA (TIMELINE VIEW - DEFAULT)
+                         ============================================================ -->
+                    <div id="sv-timeline-container">
+                        <?php if (empty($rows)): ?>
+                            <div class="text-center text-muted py-5">
+                                <i class="far fa-calendar-times fa-4x mb-3 text-muted"></i>
+                                <h5 class="font-weight-bold text-dark mb-1">Belum Ada Jadwal Supervisi</h5>
+                                <p class="small text-muted">Tidak ditemukan jadwal untuk filter yang dipilih.</p>
+                                <?php if ($can_manage): ?>
+                                    <button class="btn btn-primary btn-sm mt-2" onclick="$('#btn-tambah').click()"><i class="fas fa-plus mr-1"></i>Tambah Jadwal Sekarang</button>
+                                <?php endif; ?>
+                            </div>
+                        <?php else: ?>
+                            <?php
+                            // Kelompokkan rows berdasarkan tanggal
+                            $grouped_jadwal = [];
+                            foreach ($rows as $r) {
+                                $tgl_key = !empty($r['tanggal']) ? $r['tanggal'] : 'Tanpa Tanggal';
+                                $grouped_jadwal[$tgl_key][] = $r;
+                            }
+                            $today_str = date('Y-m-d');
+                            ?>
+                            <div class="sv-timeline-view">
+                                <?php foreach ($grouped_jadwal as $tgl_key => $items_in_date): 
+                                    $is_today = ($tgl_key === $today_str);
+                                    if ($tgl_key !== 'Tanpa Tanggal') {
+                                        $tgl_header_text = date('d F Y', strtotime($tgl_key));
+                                        // Hari dalam bahasa Indonesia sederhana
+                                        $hari_arr = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+                                        $w_day = $hari_arr[(int)date('w', strtotime($tgl_key))];
+                                        $tgl_header_full = $w_day . ', ' . $tgl_header_text;
+                                    } else {
+                                        $tgl_header_full = 'Tanggal Belum Ditentukan';
+                                    }
+                                ?>
+                                    <div class="sv-timeline-date-group">
+                                        <div class="sv-timeline-date-header <?= $is_today ? 'today' : '' ?>">
+                                            <i class="far fa-calendar-alt <?= $is_today ? 'text-danger' : 'text-primary' ?>"></i>
+                                            <span><?= $tgl_header_full ?><?= $is_today ? ' &bull; <strong class="badge badge-danger text-uppercase px-2" style="font-size:10px;">Hari ini</strong>' : '' ?></span>
+                                            <span class="badge badge-light border text-muted ml-1" style="font-size:10px;"><?= count($items_in_date) ?> jadwal</span>
+                                        </div>
+
+                                        <?php foreach ($items_in_date as $r): 
+                                            $st_val = $r['status'] ?? 'Terjadwal';
+                                            $badge_cls = 'badge-primary';
+                                            $dot_color = '#6777ef';
+                                            $dot_icon = 'far fa-calendar-check';
+
+                                            if ($st_val === 'Terlaksana') {
+                                                $badge_cls = 'badge-success';
+                                                $dot_color = '#47c363';
+                                                $dot_icon = 'fas fa-check';
+                                            } elseif ($st_val === 'Ditunda') {
+                                                $badge_cls = 'badge-warning';
+                                                $dot_color = '#ffa426';
+                                                $dot_icon = 'fas fa-clock';
+                                            } elseif ($st_val === 'Dibatalkan') {
+                                                $badge_cls = 'badge-danger';
+                                                $dot_color = '#fc544b';
+                                                $dot_icon = 'fas fa-times';
+                                            }
+
+                                            $jam_str = $r['jam_mulai'] ? substr($r['jam_mulai'], 0, 5) : '';
+                                            if ($jam_str && !empty($r['jam_selesai'])) {
+                                                $jam_str .= ' - ' . substr($r['jam_selesai'], 0, 5) . ' WIB';
+                                            }
+                                        ?>
+                                            <div class="sv-timeline-item">
+                                                <span class="sv-timeline-dot" style="--dot-color: <?= $dot_color ?>;">
+                                                    <i class="<?= $dot_icon ?>"></i>
+                                                </span>
+                                                <div class="sv-timeline-card" style="--dot-color: <?= $dot_color ?>;">
+                                                    <div class="sv-timeline-top">
+                                                        <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
+                                                            <span class="badge badge-info" style="font-size: 11px; padding: 4px 9px;">
+                                                                <i class="fas fa-tag mr-1"></i><?= htmlspecialchars($r['jenis_supervisi']) ?>
+                                                            </span>
+                                                            <?php if (!empty($r['tempat'])): ?>
+                                                                <span class="badge badge-light border text-dark" style="font-size: 11px; padding: 4px 9px;">
+                                                                    <i class="fas fa-map-marker-alt text-danger mr-1"></i><?= htmlspecialchars($r['tempat']) ?>
+                                                                </span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <span class="badge <?= $badge_cls ?>" style="font-size: 11px; padding: 4px 10px;">
+                                                            <i class="<?= $dot_icon ?> mr-1"></i><?= htmlspecialchars($st_val) ?>
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="sv-timeline-title">
+                                                        <?= htmlspecialchars((string)$r['nama_guru'] ?: 'Unit / Sasaran Supervisi') ?>
+                                                    </div>
+
+                                                    <?php if (!empty($r['nama_program'])): ?>
+                                                        <div class="sv-timeline-program">
+                                                            <i class="fas fa-clipboard-list text-primary"></i>
+                                                            <span><?= htmlspecialchars((string)$r['nama_program']) ?></span>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                    <div class="sv-timeline-meta-grid">
+                                                        <div class="sv-timeline-meta-cell">
+                                                            <i class="far fa-clock text-info"></i>
+                                                            <span>Waktu: <strong><?= $jam_str ?: 'Fleksibel' ?></strong></span>
+                                                        </div>
+                                                        <div class="sv-timeline-meta-cell">
+                                                            <i class="fas fa-user-shield text-success"></i>
+                                                            <span>Supervisor: <strong><?= htmlspecialchars((string)$r['supervisor'] ?: '-') ?></strong></span>
+                                                        </div>
+                                                        <div class="sv-timeline-meta-cell">
+                                                            <i class="fas fa-file-alt text-warning"></i>
+                                                            <span>Instrumen: <strong><?= htmlspecialchars((string)$r['nama_instrumen'] ?: '-') ?></strong></span>
+                                                        </div>
+                                                    </div>
+
+                                                    <?php if (!empty($r['fokus'])): ?>
+                                                        <div class="sv-timeline-fokus">
+                                                            <strong class="d-block mb-1 text-warning-dark" style="font-size: 11px; text-transform: uppercase; letter-spacing: .3px;"><i class="fas fa-bullseye mr-1"></i>Fokus Supervisi:</strong>
+                                                            <span><?= htmlspecialchars((string)$r['fokus']) ?></span>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                    <?php if (!empty($r['keterangan'])): ?>
+                                                        <div class="small text-muted mb-2 font-italic">
+                                                            <i class="far fa-comment-dots mr-1"></i>Catatan: <?= htmlspecialchars((string)$r['keterangan']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                    <div class="sv-timeline-footer">
+                                                        <div>
+                                                            <a href="pelaksanaan_supervisi.php?jenis=<?= urlencode($r['jenis_supervisi']) ?>&id_jadwal=<?= (int)$r['id_jadwal'] ?>" class="btn btn-outline-primary btn-sm font-weight-bold">
+                                                                <i class="fas fa-clipboard-check mr-1"></i>Pelaksanaan
+                                                            </a>
+                                                        </div>
+                                                        <?php if ($can_manage): ?>
+                                                        <div class="d-flex align-items-center" style="gap: 5px;">
+                                                            <button class="btn btn-warning btn-sm btn-edit font-weight-bold" type="button"
+                                                                data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit mr-1"></i>Edit</button>
+                                                            <button class="btn btn-outline-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_jadwal'] ?>"><i class="fas fa-trash"></i></button>
+                                                        </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </td>
-                                        <?php endif; ?>
-                                    </tr>
+                                        <?php endforeach; ?>
+                                    </div>
                                 <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- ============================================================
+                         TAMPILAN TABEL CADANGAN (TABLE VIEW - DEFAULT HIDDEN)
+                         ============================================================ -->
+                    <div id="sv-table-container" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="table-jadwal" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th width="5%">No</th>
+                                        <th>Program</th>
+                                        <th>Guru/PTK</th>
+                                        <th>Jenis</th>
+                                        <th>Instrumen</th>
+                                        <th>Supervisor</th>
+                                        <th>Tanggal</th>
+                                        <th>Jam Mulai</th>
+                                        <th>Jam Selesai</th>
+                                        <th>Tempat</th>
+                                        <th>Status</th>
+                                        <th>Keterangan</th>
+                                        <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($rows as $r): ?>
+                                        <?php
+                                        $badge = 'info';
+                                        if ($r['status'] === 'Terlaksana') $badge = 'success';
+                                        elseif ($r['status'] === 'Ditunda') $badge = 'warning';
+                                        elseif ($r['status'] === 'Dibatalkan') $badge = 'danger';
+                                        ?>
+                                        <tr>
+                                            <td class="text-center"></td>
+                                            <td><?= htmlspecialchars((string)$r['nama_program']) ?></td>
+                                            <td><?= htmlspecialchars((string)$r['nama_guru']) ?></td>
+                                            <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_supervisi']) ?></span></td>
+                                            <td><?= htmlspecialchars((string)$r['nama_instrumen']) ?></td>
+                                            <td><?= htmlspecialchars((string)$r['supervisor']) ?></td>
+                                            <td><?= $r['tanggal'] ? date('d/m/Y', strtotime($r['tanggal'])) : '-' ?></td>
+                                            <td><?= $r['jam_mulai'] ? substr($r['jam_mulai'], 0, 5) : '-' ?></td>
+                                            <td><?= $r['jam_selesai'] ? substr($r['jam_selesai'], 0, 5) : '-' ?></td>
+                                            <td><?= htmlspecialchars((string)$r['tempat']) ?></td>
+                                            <td><span class="badge badge-<?= $badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
+                                            <td><?= htmlspecialchars((string)$r['keterangan']) ?></td>
+                                            <?php if ($can_manage): ?>
+                                            <td style="white-space:nowrap">
+                                                <div class="d-inline-flex align-items-center">
+                                                <button class="btn btn-warning btn-sm btn-edit mr-1" type="button"
+                                                    data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
+                                                <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_jadwal'] ?>"><i class="fas fa-trash"></i></button>
+                                                </div>
+                                            </td>
+                                            <?php endif; ?>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

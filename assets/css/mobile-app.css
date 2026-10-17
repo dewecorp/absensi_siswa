@@ -456,24 +456,28 @@
   }
   .mapp-tab-item {
     display: flex !important; align-items: center !important; gap: 12px;
-    padding: 12px 14px !important; border-bottom: 1px solid #eef2f0 !important;
+    padding: 13px 14px !important; border-bottom: 1px solid #f1f5f9 !important;
     position: relative; text-decoration: none !important;
+    transition: background-color .15s ease;
+  }
+  .mapp-tab-item:active {
+    background-color: #f8fafc !important;
   }
   .mapp-tab-item:last-child { border-bottom: none !important; }
   .mapp-tab-item::after {
     content: '\f054'; font-family: 'Font Awesome 5 Free'; font-weight: 900;
     position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-    font-size: 12px; color: #cbd5e1;
+    font-size: 11px; color: #94a3b8;
   }
   .mapp-tab-icon {
     width: 44px; height: 44px; border-radius: 14px; flex: 0 0 auto;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; color: #fff;
-    box-shadow: 0 4px 10px rgba(15,23,42,.12);
+    font-size: 17px;
+    box-shadow: 0 4px 10px rgba(15,23,42,.08);
   }
   .mapp-tab-text { flex: 1; min-width: 0; padding-right: 18px; }
-  .mapp-tab-title { font-size: 13.5px; font-weight: 700; color: #0f172a; line-height: 1.35; }
-  .mapp-tab-sub { font-size: 11.5px; color: #64748b; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mapp-tab-title { font-size: 14px; font-weight: 800; color: #0f172a; line-height: 1.35; }
+  .mapp-tab-sub { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .mapp-tab-group { font-size: 13px; font-weight: 800; color: #0f172a; margin: 14px 2px 8px; }
   .mapp-tab-group:first-child { margin-top: 0; }
   .mapp-empty { text-align: center; padding: 28px 16px; color: #94a3b8; font-size: 13px; }
@@ -626,6 +630,73 @@
 /* Desktop: pastikan komponen mapp tidak bocor */
 @media (min-width: 992px) {
   .mapp-topbar, .mapp-greet, .mapp-section-head, .mapp-info-card, .mapp-lainnya-grid { display: none !important; }
+}
+
+/* ============================================================
+   Styling Halaman Menu Bertumpuk (Kategori) - Desktop & Mobile
+   ============================================================ */
+.mapp-menu-page-wrap { width: 100%; }
+.mapp-search {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff; border: 1.5px solid var(--mapp-border, #e2e8f0);
+  border-radius: 14px; padding: 10px 14px; margin-bottom: 12px;
+  box-shadow: var(--mapp-shadow, 0 4px 12px rgba(0,0,0,.04));
+}
+.mapp-search i { color: #94a3b8; font-size: 14px; }
+.mapp-search input {
+  border: none !important; outline: none !important; box-shadow: none !important;
+  flex: 1; font-size: 13.5px; background: transparent; padding: 0;
+}
+.mapp-tab-list {
+  background: #fff; border: 1.5px solid var(--mapp-border, #e2e8f0);
+  border-radius: var(--mapp-card-radius, 16px); overflow: hidden;
+  box-shadow: var(--mapp-shadow, 0 4px 12px rgba(0,0,0,.04)); margin-bottom: 14px;
+}
+.mapp-tab-item {
+  display: flex !important; align-items: center !important; gap: 14px;
+  padding: 14px 16px !important; border-bottom: 1px solid #f1f5f9 !important;
+  position: relative; text-decoration: none !important;
+  transition: all .15s ease;
+}
+.mapp-tab-item:hover {
+  background-color: #f8fafc !important;
+  text-decoration: none !important;
+}
+.mapp-tab-item:active {
+  background-color: #f1f5f9 !important;
+}
+.mapp-tab-item:last-child { border-bottom: none !important; }
+.mapp-tab-item::after {
+  content: '\f054'; font-family: 'Font Awesome 5 Free'; font-weight: 900;
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  font-size: 12px; color: #94a3b8; transition: transform .15s ease;
+}
+.mapp-tab-item:hover::after {
+  transform: translateY(-50%) translateX(3px);
+  color: #64748b;
+}
+.mapp-tab-icon {
+  width: 46px; height: 46px; border-radius: 14px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 10px rgba(15,23,42,.08);
+}
+.mapp-tab-text { flex: 1; min-width: 0; padding-right: 20px; }
+.mapp-tab-title { font-size: 14.5px; font-weight: 800; color: #0f172a; line-height: 1.35; }
+.mapp-tab-sub { font-size: 11.5px; color: #64748b; margin-top: 2px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mapp-tab-group { font-size: 13.5px; font-weight: 800; color: #0f172a; margin: 14px 2px 8px; }
+.mapp-tab-group:first-child { margin-top: 0; }
+.mapp-empty { text-align: center; padding: 28px 16px; color: #94a3b8; font-size: 13px; }
+.mg-c1 { background: #dcfce7 !important; color: #15803d !important; }
+.mg-c2 { background: #e0f2fe !important; color: #0284c7 !important; }
+.mg-c3 { background: #f3e8ff !important; color: #7e22ce !important; }
+.mg-c4 { background: #fef3c7 !important; color: #b45309 !important; }
+.mg-c5 { background: #fce7f3 !important; color: #be185d !important; }
+.mg-c6 { background: #ccfbf1 !important; color: #0f766e !important; }
+.mg-c7 { background: #fee2e2 !important; color: #b91c1c !important; }
+.mg-c8 { background: #e0e7ff !important; color: #4338ca !important; }
+.mg-c1 i, .mg-c2 i, .mg-c3 i, .mg-c4 i, .mg-c5 i, .mg-c6 i, .mg-c7 i, .mg-c8 i {
+  color: inherit !important;
 }
 
 /* ============================================================
