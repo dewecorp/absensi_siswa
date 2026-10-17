@@ -308,14 +308,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  if ($update_stmt->execute([$status_to_save, $keterangan_wali, $now_time, $current_teacher_id, $current_date])) {
                      echo "<script>
                         document.addEventListener('DOMContentLoaded', function() {
-                            Swal.fire({
-                                title: 'Berhasil!',
-                                text: 'Kehadiran berhasil diperbarui.$late_text_wali',
-                                icon: 'success',
-                                timer: 3000,
-                                timerProgressBar: true,
-                                showConfirmButton: false
-                            });
+                            if (typeof toastr !== 'undefined') {
+                                toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 2500 };
+                                toastr.success('Kehadiran berhasil diperbarui.$late_text_wali', 'Berhasil!');
+                            } else if (window.Swal) {
+                                Swal.fire({ title: 'Berhasil!', text: 'Kehadiran berhasil diperbarui.$late_text_wali', icon: 'success', timer: 2500, showConfirmButton: false });
+                            }
                         });
                      </script>";
                  }
@@ -337,14 +335,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                      echo "<script>
                         document.addEventListener('DOMContentLoaded', function() {
-                            Swal.fire({
-                                title: 'Berhasil!',
-                                text: 'Kehadiran berhasil disimpan.$late_text_wali',
-                                icon: 'success',
-                                timer: 3000,
-                                timerProgressBar: true,
-                                showConfirmButton: false
-                            });
+                            if (typeof toastr !== 'undefined') {
+                                toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 2500 };
+                                toastr.success('Kehadiran berhasil disimpan.$late_text_wali', 'Berhasil!');
+                            } else if (window.Swal) {
+                                Swal.fire({ title: 'Berhasil!', text: 'Kehadiran berhasil disimpan.$late_text_wali', icon: 'success', timer: 2500, showConfirmButton: false });
+                            }
                         });
                      </script>";
                 }
@@ -378,7 +374,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 3000, showConfirmButton: false });
+                        if (typeof toastr !== 'undefined') {
+                            toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 2500 };
+                            toastr.success('$msg_text', 'Berhasil!');
+                        } else if (window.Swal) {
+                            Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 2500, showConfirmButton: false });
+                        }
                     });
                 </script>";
             } else {

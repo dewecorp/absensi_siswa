@@ -336,15 +336,26 @@ $js_libs = [
 $js_page = [];
 
 if (isset($message)) {
-    $js_page[] = "
-    Swal.fire({
-        title: '" . ($message['type'] === 'success' ? 'Sukses!' : 'Gagal!') . "',
-        text: '" . addslashes($message['text']) . "',
-        icon: '" . $message['type'] . "',
-        timer: 3000,
-        showConfirmButton: false
-    });
-    ";
+    if ($message['type'] === 'success') {
+        $js_page[] = "
+        if (typeof toastr !== 'undefined') {
+            toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 2500 };
+            toastr.success('" . addslashes($message['text']) . "', 'Sukses!');
+        } else if (window.Swal) {
+            Swal.fire({ title: 'Sukses!', text: '" . addslashes($message['text']) . "', icon: 'success', timer: 2500, showConfirmButton: false });
+        }
+        ";
+    } else {
+        $js_page[] = "
+        Swal.fire({
+            title: 'Gagal!',
+            text: '" . addslashes($message['text']) . "',
+            icon: '" . $message['type'] . "',
+            timer: 3000,
+            showConfirmButton: false
+        });
+        ";
+    }
 }
 
 if (!$has_schedule) {

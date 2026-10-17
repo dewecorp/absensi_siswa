@@ -298,18 +298,29 @@ $js_libs = [
 // Prepare Page Specific JS
 $js_page = [];
 
-// SweetAlert logic
+// SweetAlert / Toastr logic
 if (isset($message)) {
-    $js_page[] = "
-    Swal.fire({
-        title: '" . ($message['type'] === 'success' ? 'Sukses!' : 'Info!') . "',
-        text: '" . addslashes($message['text']) . "',
-        icon: '" . $message['type'] . "',
-        timer: " . ($message['type'] === 'success' ? '1500' : '5000') . ",
-        timerProgressBar: true,
-        showConfirmButton: false
-    });
-    ";
+    if ($message['type'] === 'success') {
+        $js_page[] = "
+        if (typeof toastr !== 'undefined') {
+            toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 2000 };
+            toastr.success('" . addslashes($message['text']) . "', 'Sukses!');
+        } else if (window.Swal) {
+            Swal.fire({ title: 'Sukses!', text: '" . addslashes($message['text']) . "', icon: 'success', timer: 1500, showConfirmButton: false });
+        }
+        ";
+    } else {
+        $js_page[] = "
+        Swal.fire({
+            title: 'Info!',
+            text: '" . addslashes($message['text']) . "',
+            icon: '" . $message['type'] . "',
+            timer: 5000,
+            timerProgressBar: true,
+            showConfirmButton: false
+        });
+        ";
+    }
 }
 
 // Main Page JS

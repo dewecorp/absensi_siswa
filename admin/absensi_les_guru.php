@@ -314,13 +314,24 @@ $(document).ready(function() {
                 console.log('Response:', response);
                 if (response && response.success) {
                     var msg = isToggle ? 'Kehadiran les berhasil dibatalkan' : 'Kehadiran les berhasil disimpan';
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: msg,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    if (typeof toastr !== 'undefined') {
+                        toastr.options = {
+                            closeButton: true,
+                            progressBar: true,
+                            positionClass: 'toast-top-right',
+                            timeOut: 2000,
+                            extendedTimeOut: 1000
+                        };
+                        toastr.success(msg, 'Berhasil');
+                    } else if (window.Swal) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: msg,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
                 } else if (response && response.error) {
                     Swal.fire({
                         icon: 'error',

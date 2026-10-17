@@ -525,7 +525,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 3000, showConfirmButton: false });
+                        if (typeof toastr !== 'undefined') {
+                            toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 2500 };
+                            toastr.success('$msg_text', 'Berhasil!');
+                        } else if (window.Swal) {
+                            Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 2500, showConfirmButton: false });
+                        }
                     });
                 </script>";
             }
@@ -556,7 +561,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 echo "<script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 3000, showConfirmButton: false });
+                        if (typeof toastr !== 'undefined') {
+                            toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 2500 };
+                            toastr.success('$msg_text', 'Berhasil!');
+                        } else if (window.Swal) {
+                            Swal.fire({ title: 'Berhasil!', text: '$msg_text', icon: 'success', timer: 2500, showConfirmButton: false });
+                        }
                     });
                 </script>";
             } else {
