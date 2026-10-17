@@ -101,6 +101,19 @@ try {
 
 $message = null;
 
+// Query string untuk ekspor (semua projek / per projek)
+$qs_projek_export = [];
+if (!empty($_GET['session_type'])) {
+    $qs_projek_export['session_type'] = (string)$_GET['session_type'];
+}
+if ($selected_kelas_id > 0) {
+    $qs_projek_export['kelas'] = (int)$selected_kelas_id;
+}
+$url_projek_xls = 'export_projek_excel.php' . (!empty($qs_projek_export) ? '?' . http_build_query($qs_projek_export) : '');
+$qs_projek_pdf_all = $qs_projek_export;
+$qs_projek_pdf_all['mode'] = 'print';
+$url_projek_pdf = 'export_projek_pdf.php?' . http_build_query($qs_projek_pdf_all);
+
 // Handle CRUD Projek & Anggota
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$can_crud) {
@@ -833,6 +846,10 @@ include '../templates/sidebar.php';
     gap: 5px;
 }
 .simad-btn-anggota:hover { background: #bae6fd; color: #0369a1; }
+.simad-btn-excel { background: #dcfce7; color: #15803d; }
+.simad-btn-excel:hover { background: #bbf7d0; color: #166534; }
+.simad-btn-pdf { background: #fee2e2; color: #dc2626; }
+.simad-btn-pdf:hover { background: #fecaca; color: #b91c1c; }
 .simad-btn-edit { background: #fef3c7; color: #b45309; }
 .simad-btn-edit:hover { background: #fde68a; color: #92400e; }
 .simad-btn-del { background: #fee2e2; color: #b91c1c; }
@@ -1022,13 +1039,21 @@ include '../templates/sidebar.php';
             <?php endif; ?>
 
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Projek P5 / Kokurikuler Kelas</h4>
-                    <?php if ($can_crud): ?>
-                    <button type="button" class="btn btn-primary" id="btnTambahProjek">
-                        <i class="fas fa-plus mr-1"></i> Buat Projek Baru
-                    </button>
-                    <?php endif; ?>
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                    <h4 class="mb-0">Projek Kokurikuler Kelas</h4>
+                    <div class="d-flex align-items-center" style="gap: 6px; flex-wrap: wrap;">
+                        <a href="<?= htmlspecialchars($url_projek_xls) ?>" class="btn btn-success btn-sm" title="Ekspor Semua Projek ke Excel">
+                            <i class="bi bi-file-earmark-excel mr-1"></i> Excel
+                        </a>
+                        <a href="<?= htmlspecialchars($url_projek_pdf) ?>" target="_blank" class="btn btn-danger btn-sm" title="Cetak / PDF Semua Projek">
+                            <i class="bi bi-file-earmark-pdf mr-1"></i> PDF
+                        </a>
+                        <?php if ($can_crud): ?>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahProjek">
+                            <i class="fas fa-plus mr-1"></i> Buat Projek Baru
+                        </button>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="card-body">
                     <!-- Quick Search Bar -->
@@ -1150,10 +1175,22 @@ include '../templates/sidebar.php';
                                         </div>
                                     </div>
                                     <div class="simad-card-footer">
+                                        <?php
+                                        $qs_one = $qs_projek_export;
+                                        $qs_one['id'] = (int)$r['id'];
+                                        $qs_one_pdf = $qs_one;
+                                        $qs_one_pdf['mode'] = 'print';
+                                        ?>
                                         <div class="simad-card-actions">
                                             <button type="button" class="simad-btn-act simad-btn-anggota btn-anggota-projek" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Lihat/Kelola Anggota & Kelompok">
                                                 <i class="bi bi-people-fill"></i> Kelola Anggota
                                             </button>
+                                            <a href="export_projek_excel.php?<?= htmlspecialchars(http_build_query($qs_one)) ?>" class="simad-btn-act simad-btn-excel" title="Ekspor Excel Projek Ini">
+                                                <i class="bi bi-file-earmark-excel"></i>
+                                            </a>
+                                            <a href="export_projek_pdf.php?<?= htmlspecialchars(http_build_query($qs_one_pdf)) ?>" target="_blank" class="simad-btn-act simad-btn-pdf" title="Cetak / PDF Projek Ini">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </a>
                                         </div>
                                         <?php if ($can_crud): ?>
                                         <div class="simad-card-actions">

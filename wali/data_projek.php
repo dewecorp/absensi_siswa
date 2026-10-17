@@ -387,7 +387,7 @@ include '../templates/sidebar.php';
                     </div>
 
                     <div class="form-group mb-3">
-                        <label class="font-weight-bold text-dark">Tema Projek (P5 / PPRA) <span class="text-danger">*</span></label>
+                        <label class="font-weight-bold text-dark">Tema Projek Kokurikuler <span class="text-danger">*</span></label>
                         <input type="text" name="tema" id="inp_dp_tema" list="listTemaP5" class="form-control" required placeholder="Pilih atau ketik tema projek">
                         <datalist id="listTemaP5">
                             <?php foreach ($standar_tema as $st): ?>
@@ -395,7 +395,7 @@ include '../templates/sidebar.php';
                             <?php endforeach; ?>
                         </datalist>
                         <div class="mt-2">
-                            <span class="small text-muted d-block mb-1">Pilihan Cepat Tema P5:</span>
+                            <span class="small text-muted d-block mb-1">Pilihan Cepat Tema:</span>
                             <div class="d-flex flex-wrap">
                                 <?php foreach ($standar_tema as $st): ?>
                                     <span class="quick-tema-tag btn-quick-tema" data-tema="<?= htmlspecialchars($st) ?>">
