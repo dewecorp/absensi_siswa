@@ -194,6 +194,30 @@ if (isset($_GET['ajax_timeline']) && (int)$_GET['ajax_timeline'] === 1) {
 }
 
 $page_title = 'Daftar Pelanggaran Siswa';
+
+if (!function_exists('getPelanggaranKatStyle')) {
+    function getPelanggaranKatStyle(string $kat): array {
+        $k = strtolower(trim($kat));
+        if ($k === 'berat') {
+            return ['bg' => '#fee2e2', 'color' => '#b91c1c', 'icon' => 'bi bi-exclamation-octagon-fill'];
+        } elseif ($k === 'sedang') {
+            return ['bg' => '#fef3c7', 'color' => '#b45309', 'icon' => 'bi bi-exclamation-triangle-fill'];
+        }
+        return ['bg' => '#e0f2fe', 'color' => '#0284c7', 'icon' => 'bi bi-info-circle-fill'];
+    }
+}
+
+if (!function_exists('getPelanggaranStatusStyle')) {
+    function getPelanggaranStatusStyle(string $status): array {
+        if ($status === 'Selesai') {
+            return ['bg' => '#dcfce7', 'color' => '#15803d', 'icon' => 'bi bi-check-circle-fill'];
+        } elseif ($status === 'Ditindaklanjuti') {
+            return ['bg' => '#fef3c7', 'color' => '#b45309', 'icon' => 'bi bi-clock-history'];
+        }
+        return ['bg' => '#fee2e2', 'color' => '#b91c1c', 'icon' => 'bi bi-exclamation-diamond-fill'];
+    }
+}
+
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
 ];
@@ -428,6 +452,18 @@ $(document).ready(function() {
             }
         });
     });
+
+    $('#quick-search-pelanggaran').on('input', function() {
+        var val = $(this).val().toLowerCase().trim();
+        var count = 0;
+        $('.pelanggaran-card-item').each(function() {
+            var text = $(this).text().toLowerCase();
+            var show = text.indexOf(val) > -1;
+            $(this).toggle(show);
+            if (show) count++;
+        });
+        $('#count-pelanggaran').text(count);
+    });
 });
 JS
 ];
@@ -441,10 +477,205 @@ include '../templates/sidebar.php';
 ?>
 
 <style>
-.aksi-satu-baris { display: inline-flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; white-space: nowrap; }
-.aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
-.aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
-#table-pelanggaran td:last-child { white-space: nowrap; }
+/* Styling Kartu Modern Pelanggaran Siswa */
+.simad-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+.simad-item-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    overflow: hidden;
+    position: relative;
+}
+.simad-item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.09);
+    border-color: #e2e8f0;
+}
+.simad-card-header {
+    padding: 16px 18px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+.simad-card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-card-main {
+    flex: 1;
+    min-width: 0;
+}
+.simad-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+.simad-meta-date {
+    font-size: 11.5px;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.simad-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    line-height: 1.2;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-card-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    margin-bottom: 2px;
+}
+.simad-card-sub {
+    font-size: 11.5px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.simad-card-body {
+    padding: 0 18px 14px;
+    flex: 1;
+}
+.simad-info-box {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    color: #334155;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.simad-info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.simad-info-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+}
+.simad-info-val {
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+.simad-card-footer {
+    padding: 12px 18px;
+    background: #ffffff;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.simad-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.simad-btn-act {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    font-size: 13.5px;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    text-decoration: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.simad-btn-act:active {
+    transform: scale(0.92);
+}
+.simad-btn-act:focus,
+.simad-btn-act:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-btn-detail { background: #e0f2fe; color: #0284c7; }
+.simad-btn-detail:hover { background: #bae6fd; color: #0369a1; }
+.simad-btn-edit { background: #fef3c7; color: #b45309; }
+.simad-btn-edit:hover { background: #fde68a; color: #92400e; }
+.simad-btn-del { background: #fee2e2; color: #b91c1c; }
+.simad-btn-del:hover { background: #fecaca; color: #991b1b; }
+.simad-btn-pdf { background: #fee2e2; color: #dc2626; }
+.simad-btn-pdf:hover { background: #fecaca; color: #b91c1c; }
+.simad-btn-excel { background: #dcfce7; color: #15803d; }
+.simad-btn-excel:hover { background: #bbf7d0; color: #166534; }
+
+@media (max-width: 575.98px) {
+    .simad-card-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .simad-item-card {
+        border-radius: 16px;
+    }
+    .simad-card-header {
+        padding: 14px 14px 10px;
+    }
+    .simad-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        font-size: 22px;
+    }
+    .simad-card-body {
+        padding: 0 14px 12px;
+    }
+    .simad-card-footer {
+        padding: 10px 14px;
+    }
+}
 </style>
 <div class="main-content">
     <section class="section">
@@ -519,77 +750,130 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-pelanggaran">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Tanggal</th>
-                                    <th>Nama Siswa</th>
-                                    <th>NISN</th>
-                                    <th>Jenis Pelanggaran</th>
-                                    <th>Kategori</th>
-                                    <th width="6%">Poin</th>
-                                    <th>Tindakan</th>
-                                    <th>Orang Tua</th>
-                                    <th>Status</th>
-                                    <th style="width:180px;min-width:180px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $i => $r): ?>
-                                    <?php
-                                    $st_badge = $r['status'] === 'Selesai' ? 'success' : ($r['status'] === 'Ditindaklanjuti' ? 'warning' : 'danger');
-                                    $kat_badge = $r['kategori'] === 'Berat' ? 'danger' : ($r['kategori'] === 'Sedang' ? 'warning' : 'info');
-                                    $sid = (int)$r['id_siswa'];
-                                    $tot = (int)($poin_total_map[$sid] ?? 0);
-                                    $sk = function_exists('pelanggaran_sanksi_by_poin') ? pelanggaran_sanksi_by_poin($tot) : ['level' => '-', 'badge' => 'secondary'];
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                        <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong>
-                                            <div class="mt-1"><span class="badge badge-<?= $sk['badge'] ?>" title="<?= htmlspecialchars($sk['level']) ?>">Total <?= $tot ?> poin &bull; <?= htmlspecialchars($sk['level']) ?></span></div>
-                                        </td>
-                                        <td><?= htmlspecialchars($r['nisn'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['jenis_pelanggaran']) ?>
-                                            <?php if ((int)($r['n_bina'] ?? 0) > 0): ?>
-                                                <div class="mt-1"><span class="badge badge-success">Sudah dibina</span></div>
-                                            <?php else: ?>
-                                                <div class="mt-1"><span class="badge badge-warning">Belum dibina</span></div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center"><span class="badge badge-<?= $kat_badge ?>"><?= htmlspecialchars($r['kategori']) ?></span></td>
-                                        <td class="text-center font-weight-bold text-danger"><?= (int)$r['poin'] ?></td>
-                                        <td><?= htmlspecialchars(mb_strimwidth($r['tindakan'], 0, 35, '...')) ?></td>
-                                        <td><small><?= htmlspecialchars($r['orang_tua'] ?: '-') ?></small></td>
-                                        <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td class="text-center align-middle">
-                                            <div class="aksi-satu-baris">
-                                                <button type="button" class="btn btn-info btn-sm btn-detail-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <?php if ($can_crud): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-pelanggaran" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                                <?php endif; ?>
-                                                <a href="export_pelanggaran_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                                <a href="export_pelanggaran_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel siswa ini">
-                                                    <i class="fas fa-file-excel"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <!-- Quick Search Bar -->
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-6 col-12 mb-2 mb-md-0">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white border-right-0" style="border-radius: 14px 0 0 14px; border-color: #e2e8f0;"><i class="bi bi-search text-muted"></i></span>
+                                </div>
+                                <input type="text" id="quick-search-pelanggaran" class="form-control border-left-0" style="border-radius: 0 14px 14px 0; border-color: #e2e8f0; box-shadow: none;" placeholder="Cari nama siswa, jenis pelanggaran, atau kata kunci...">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12 text-md-right text-muted small">
+                            Menampilkan <span id="count-pelanggaran" class="font-weight-bold text-dark"><?= count($rows) ?></span> catatan pelanggaran
+                        </div>
                     </div>
+
+                    <?php if (!empty($rows)): ?>
+                        <div class="simad-card-grid">
+                            <?php foreach ($rows as $i => $r): ?>
+                                <?php
+                                $katStyle = getPelanggaranKatStyle($r['kategori'] ?? '');
+                                $statusStyle = getPelanggaranStatusStyle($r['status'] ?? '');
+                                $sid = (int)$r['id_siswa'];
+                                $tot = (int)($poin_total_map[$sid] ?? 0);
+                                $sk = function_exists('pelanggaran_sanksi_by_poin') ? pelanggaran_sanksi_by_poin($tot) : ['level' => '-', 'badge' => 'secondary'];
+                                $hasBina = (int)($r['n_bina'] ?? 0) > 0;
+                                ?>
+                                <div class="simad-item-card pelanggaran-card-item">
+                                    <div class="simad-card-header">
+                                        <div class="simad-card-icon" style="background: <?= $katStyle['bg'] ?>; color: <?= $katStyle['color'] ?>;">
+                                            <i class="<?= $katStyle['icon'] ?>"></i>
+                                        </div>
+                                        <div class="simad-card-main">
+                                            <div class="simad-card-meta">
+                                                <span class="simad-meta-date">
+                                                    <i class="bi bi-calendar3"></i> <?= date('d/m/Y', strtotime($r['tanggal'])) ?>
+                                                </span>
+                                                <div class="d-inline-flex align-items-center" style="gap: 5px;">
+                                                    <span class="simad-badge-pill" style="background: #fee2e2; color: #b91c1c;">
+                                                        <i class="bi bi-lightning-charge-fill"></i> +<?= (int)$r['poin'] ?> Poin
+                                                    </span>
+                                                    <span class="simad-badge-pill" style="background: <?= $statusStyle['bg'] ?>; color: <?= $statusStyle['color'] ?>;">
+                                                        <i class="<?= $statusStyle['icon'] ?>"></i> <?= htmlspecialchars($r['status']) ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="simad-card-name" title="<?= htmlspecialchars($r['nama_siswa']) ?>">
+                                                <?= htmlspecialchars($r['nama_siswa']) ?>
+                                            </div>
+                                            <div class="simad-card-sub">
+                                                <span>NISN: <?= !empty($r['nisn']) ? htmlspecialchars($r['nisn']) : '-' ?></span>
+                                                <span>&bull;</span>
+                                                <span>Kelas: <?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="simad-card-body">
+                                        <div class="d-flex align-items-center flex-wrap mb-2" style="gap: 6px;">
+                                            <span class="simad-badge-pill" style="background: <?= $katStyle['bg'] ?>; color: <?= $katStyle['color'] ?>;">
+                                                <i class="bi bi-shield-shaded"></i> <?= htmlspecialchars($r['kategori']) ?>
+                                            </span>
+                                            <span class="simad-badge-pill" style="background: <?= $hasBina ? '#dcfce7' : '#fef3c7' ?>; color: <?= $hasBina ? '#15803d' : '#b45309' ?>;">
+                                                <i class="<?= $hasBina ? 'bi bi-check-all' : 'bi bi-hourglass-split' ?>"></i> <?= $hasBina ? 'Sudah dibina' : 'Belum dibina' ?>
+                                            </span>
+                                            <span class="simad-badge-pill" style="background: #f1f5f9; color: #475569;" title="<?= htmlspecialchars($sk['level']) ?>">
+                                                <i class="bi bi-bar-chart-fill"></i> Total: <?= $tot ?> poin &bull; <?= htmlspecialchars($sk['level']) ?>
+                                            </span>
+                                        </div>
+                                        <div class="simad-info-box">
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Pelanggaran</span>
+                                                <div class="simad-info-val text-dark font-weight-500">
+                                                    <?= htmlspecialchars($r['jenis_pelanggaran']) ?>
+                                                </div>
+                                            </div>
+                                            <?php if (!empty($r['tindakan'])): ?>
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Tindakan</span>
+                                                <div class="simad-info-val text-muted">
+                                                    <?= htmlspecialchars(mb_strimwidth($r['tindakan'], 0, 85, '...')) ?>
+                                                </div>
+                                            </div>
+                                            <?php endif; ?>
+                                            <?php if (!empty($r['orang_tua'])): ?>
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Pemberitahuan Orang Tua</span>
+                                                <div class="simad-info-val text-primary">
+                                                    <i class="bi bi-telephone mr-1"></i><?= htmlspecialchars($r['orang_tua']) ?>
+                                                </div>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="simad-card-footer">
+                                        <div class="simad-card-actions">
+                                            <button type="button" class="simad-btn-act simad-btn-detail btn-detail-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
+                                                <i class="bi bi-eye-fill"></i>
+                                            </button>
+                                            <?php if ($can_crud): ?>
+                                            <button type="button" class="simad-btn-act simad-btn-edit btn-edit-pelanggaran" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button type="button" class="simad-btn-act simad-btn-del btn-hapus-pelanggaran" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="simad-card-actions">
+                                            <a href="export_pelanggaran_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="simad-btn-act simad-btn-pdf" title="Cetak / PDF">
+                                                <i class="bi bi-printer-fill"></i>
+                                            </a>
+                                            <a href="export_pelanggaran_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="simad-btn-act simad-btn-excel" title="Ekspor Excel">
+                                                <i class="bi bi-file-earmark-excel-fill"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-check mb-2" style="font-size: 2.5rem; display: block; color: #cbd5e1;"></i>
+                            <div>Belum ada data pelanggaran yang sesuai kriteria.</div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

@@ -45,7 +45,7 @@ button.quick-app-card:hover {
 button.quick-app-card:focus,
 button.quick-app-card:focus-visible {
     outline: none !important;
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .08) !important;
 }
 
 .quick-app-card:active,
@@ -54,28 +54,32 @@ button.quick-app-card:active {
 }
 
 .quick-app-icon {
-    flex: 0 0 46px;
-    width: 46px;
-    height: 46px;
-    border-radius: 13px;
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 19px;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+    font-size: 24px;
+    box-shadow: none !important;
+    border: none !important;
+    transition: transform .18s cubic-bezier(.34, 1.56, .64, 1);
 }
 
 .quick-app-icon.tone-cyan {
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    background: #ccfbf1 !important;
+    color: #0f766e !important;
 }
 
 .quick-app-icon.tone-blue {
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    background: #e0f2fe !important;
+    color: #0284c7 !important;
 }
 
 .quick-app-icon.tone-amber {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background: #fef3c7 !important;
+    color: #b45309 !important;
 }
 
 .quick-app-info {
@@ -137,10 +141,12 @@ button.quick-app-card:active {
     }
 
     .quick-app-icon {
-        width: 48px !important;
-        height: 48px !important;
-        border-radius: 14px !important;
-        font-size: 20px !important;
+        width: 52px !important;
+        height: 52px !important;
+        border-radius: 18px !important;
+        font-size: 26px !important;
+        box-shadow: none !important;
+        border: none !important;
     }
 
     .quick-app-title {

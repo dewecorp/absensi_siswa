@@ -207,6 +207,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     <!-- General CSS Files -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 
 
@@ -592,46 +593,59 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
             text-overflow: ellipsis;
         }
 
-        /* Menu grid gaya mobile app */
+        /* Menu grid gaya mobile app modern (Card lembut sesuai referensi) */
         .menu-grid-icon {
-            width: 60px;
-            height: 60px;
+            width: 52px;
+            height: 52px;
             border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 6px;
-            color: #fff;
-            font-size: 24px;
-            box-shadow: 0 8px 18px rgba(15, 23, 42, .12), inset 0 1px 1px rgba(255, 255, 255, .35);
+            font-size: 26px;
             transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease;
             position: relative;
             overflow: hidden;
+            box-shadow: none !important;
+            border: none !important;
+            outline: none !important;
+        }
+        .menu-grid-icon:focus,
+        .menu-grid-icon:focus-visible,
+        a:focus .menu-grid-icon,
+        a:focus-visible .menu-grid-icon {
+            outline: none !important;
+            box-shadow: none !important;
         }
         .menu-grid-icon::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 40%;
-            background: linear-gradient(180deg, rgba(255, 255, 255, .25), rgba(255, 255, 255, 0));
-            pointer-events: none;
-            border-radius: 18px 18px 0 0;
+            display: none !important;
         }
         .menu-grid-icon i {
             font-size: inherit !important;
+            line-height: 1;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
         a:active .menu-grid-icon {
             transform: scale(.92);
-            box-shadow: 0 3px 8px rgba(15, 23, 42, .15);
+            outline: none !important;
+            box-shadow: none !important;
         }
-        .mg-c1 { background: linear-gradient(135deg, #10b981, #059669); }
-        .mg-c2 { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
-        .mg-c3 { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-        .mg-c4 { background: linear-gradient(135deg, #f59e0b, #d97706); }
-        .mg-c5 { background: linear-gradient(135deg, #ec4899, #be185d); }
-        .mg-c6 { background: linear-gradient(135deg, #06b6d4, #0e7490); }
-        .mg-c7 { background: linear-gradient(135deg, #ef4444, #b91c1c); }
-        .mg-c8 { background: linear-gradient(135deg, #6366f1, #4338ca); }
+
+        /* Warna pastel lembut + warna icon solid */
+        .mg-c1 { background: #dcfce7 !important; color: #15803d !important; } /* Emerald */
+        .mg-c2 { background: #e0f2fe !important; color: #0284c7 !important; } /* Sky / Blue */
+        .mg-c3 { background: #f3e8ff !important; color: #7e22ce !important; } /* Purple */
+        .mg-c4 { background: #fef3c7 !important; color: #b45309 !important; } /* Amber */
+        .mg-c5 { background: #fce7f3 !important; color: #be185d !important; } /* Pink */
+        .mg-c6 { background: #ccfbf1 !important; color: #0f766e !important; } /* Teal */
+        .mg-c7 { background: #fee2e2 !important; color: #b91c1c !important; } /* Red */
+        .mg-c8 { background: #e0e7ff !important; color: #4338ca !important; } /* Indigo */
+        .mg-c1 i, .mg-c2 i, .mg-c3 i, .mg-c4 i, .mg-c5 i, .mg-c6 i, .mg-c7 i, .mg-c8 i {
+            color: inherit !important;
+            background: transparent !important;
+        }
     </style>
 </head>
 

@@ -421,6 +421,31 @@ $stMasterBina = $pdo->prepare("
 $stMasterBina->execute([$guru_id]);
 $master_pembinaan = $stMasterBina->fetchAll(PDO::FETCH_ASSOC);
 
+if (!function_exists('getPembinaanJenisStyle')) {
+    function getPembinaanJenisStyle(string $jenis): array {
+        $j = strtolower(trim($jenis));
+        if (strpos($j, 'akademik') !== false || strpos($j, 'belajar') !== false) {
+            return ['bg' => '#e0f2fe', 'color' => '#0284c7', 'icon' => 'bi bi-mortarboard-fill'];
+        } elseif (strpos($j, 'kedisiplinan') !== false || strpos($j, 'disiplin') !== false) {
+            return ['bg' => '#fef3c7', 'color' => '#b45309', 'icon' => 'bi bi-shield-check'];
+        } elseif (strpos($j, 'sosial') !== false) {
+            return ['bg' => '#ccfbf1', 'color' => '#0f766e', 'icon' => 'bi bi-people-fill'];
+        }
+        return ['bg' => '#f3e8ff', 'color' => '#7e22ce', 'icon' => 'bi bi-person-heart'];
+    }
+}
+
+if (!function_exists('getPembinaanStatusStyle')) {
+    function getPembinaanStatusStyle(string $status): array {
+        if ($status === 'Selesai') {
+            return ['bg' => '#dcfce7', 'color' => '#15803d', 'icon' => 'bi bi-check-circle-fill'];
+        } elseif ($status === 'Dalam Pemantauan') {
+            return ['bg' => '#fef3c7', 'color' => '#b45309', 'icon' => 'bi bi-eye-fill'];
+        }
+        return ['bg' => '#e0f2fe', 'color' => '#0284c7', 'icon' => 'bi bi-calendar-check-fill'];
+    }
+}
+
 $page_title = 'Daftar Pembinaan Siswa';
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
@@ -967,6 +992,18 @@ $(document).ready(function() {
             $('#inp_konseling').val(kMatch.id).trigger('change');
         }
     }
+
+    $('#quick-search-pembinaan').on('input', function() {
+        var val = $(this).val().toLowerCase().trim();
+        var count = 0;
+        $('.pembinaan-card-item').each(function() {
+            var text = $(this).text().toLowerCase();
+            var show = text.indexOf(val) > -1;
+            $(this).toggle(show);
+            if (show) count++;
+        });
+        $('#count-pembinaan').text(count);
+    });
 });
 JS
 ];
@@ -980,6 +1017,206 @@ include '../templates/sidebar.php';
 ?>
 
 <style>
+/* Styling Kartu Modern Pembinaan Siswa */
+.simad-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+.simad-item-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    overflow: hidden;
+    position: relative;
+}
+.simad-item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.09);
+    border-color: #e2e8f0;
+}
+.simad-card-header {
+    padding: 16px 18px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+.simad-card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-card-main {
+    flex: 1;
+    min-width: 0;
+}
+.simad-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+.simad-meta-date {
+    font-size: 11.5px;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.simad-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    line-height: 1.2;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-card-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    margin-bottom: 2px;
+}
+.simad-card-sub {
+    font-size: 11.5px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.simad-card-body {
+    padding: 0 18px 14px;
+    flex: 1;
+}
+.simad-info-box {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    color: #334155;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.simad-info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.simad-info-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+}
+.simad-info-val {
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+.simad-card-footer {
+    padding: 12px 18px;
+    background: #ffffff;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.simad-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.simad-btn-act {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    font-size: 13.5px;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    text-decoration: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.simad-btn-act:active {
+    transform: scale(0.92);
+}
+.simad-btn-act:focus,
+.simad-btn-act:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-btn-detail { background: #e0f2fe; color: #0284c7; }
+.simad-btn-detail:hover { background: #bae6fd; color: #0369a1; }
+.simad-btn-edit { background: #fef3c7; color: #b45309; }
+.simad-btn-edit:hover { background: #fde68a; color: #92400e; }
+.simad-btn-del { background: #fee2e2; color: #b91c1c; }
+.simad-btn-del:hover { background: #fecaca; color: #991b1b; }
+.simad-btn-pdf { background: #fee2e2; color: #dc2626; }
+.simad-btn-pdf:hover { background: #fecaca; color: #b91c1c; }
+.simad-btn-excel { background: #dcfce7; color: #15803d; }
+.simad-btn-excel:hover { background: #bbf7d0; color: #166534; }
+
+@media (max-width: 575.98px) {
+    .simad-card-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .simad-item-card {
+        border-radius: 16px;
+    }
+    .simad-card-header {
+        padding: 14px 14px 10px;
+    }
+    .simad-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        font-size: 22px;
+    }
+    .simad-card-body {
+        padding: 0 14px 12px;
+    }
+    .simad-card-footer {
+        padding: 10px 14px;
+    }
+}
+
 .aksi-satu-baris { display: inline-flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; white-space: nowrap; }
 .aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
 .aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
@@ -1085,76 +1322,131 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-pembinaan">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Tanggal</th>
-                                    <th>Nama Siswa</th>
-                                    <th>NISN</th>
-                                    <th>Kelas</th>
-                                    <th>Jenis Pembinaan</th>
-                                    <th>Permasalahan</th>
-                                    <th>Tindakan</th>
-                                    <th>Tindak Lanjut</th>
-                                    <th>Status</th>
-                                    <th style="width:180px;min-width:180px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $i => $r): ?>
-                                    <?php
-                                    $st_badge = $r['status'] === 'Selesai' ? 'success' : ($r['status'] === 'Dalam Pemantauan' ? 'warning' : 'primary');
-                                    $masalah_cut = mb_strlen($r['permasalahan']) > 35 ? mb_substr($r['permasalahan'], 0, 35) . '...' : $r['permasalahan'];
-                                    $tindakan_cut = mb_strlen($r['tindakan']) > 35 ? mb_substr($r['tindakan'], 0, 35) . '...' : $r['tindakan'];
-                                    $tl_cut = mb_strlen($r['tindak_lanjut'] ?? '') > 35 ? mb_substr($r['tindak_lanjut'], 0, 35) . '...' : ($r['tindak_lanjut'] ?: '-');
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                         <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong>
-                                             <?php if (!empty($r['kg_topik'])): ?>
-                                                 <div class="mt-1"><span class="badge badge-primary" title="Sumber Konseling"><i class="fas fa-comments mr-1"></i>Konseling: <?= htmlspecialchars($r['kg_topik']) ?></span></div>
-                                             <?php elseif (!empty($r['lg_jenis'])): ?>
-                                                 <div class="mt-1"><span class="badge badge-warning text-dark" title="Sumber Pelanggaran"><i class="fas fa-exclamation-triangle mr-1"></i>Pelanggaran: <?= htmlspecialchars(mb_strimwidth($r['lg_jenis'], 0, 25, '...')) ?> (+<?= (int)($r['lg_poin'] ?? 0) ?>)</span></div>
-                                             <?php else: ?>
-                                                 <div class="mt-1"><span class="badge badge-secondary" title="Pembinaan Mandiri"><i class="fas fa-user-edit mr-1"></i>Mandiri</span></div>
-                                             <?php endif; ?>
-                                         </td>
-                                        <td><?= htmlspecialchars($r['nisn'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                        <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_pembinaan']) ?></span></td>
-                                        <td><span title="<?= htmlspecialchars($r['permasalahan']) ?>"><?= htmlspecialchars($masalah_cut) ?></span></td>
-                                        <td><span title="<?= htmlspecialchars($r['tindakan']) ?>"><?= htmlspecialchars($tindakan_cut) ?></span></td>
-                                        <td><span title="<?= htmlspecialchars($r['tindak_lanjut'] ?? '') ?>"><?= htmlspecialchars($tl_cut) ?></span></td>
-                                        <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td class="text-center align-middle">
-                                            <div class="aksi-satu-baris">
-                                                <button type="button" class="btn btn-info btn-sm btn-detail-pembinaan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <?php if ($can_crud): ?>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-pembinaan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-pembinaan" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                                <?php endif; ?>
-                                                <a href="export_pembinaan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                                <a href="export_pembinaan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel siswa ini">
-                                                    <i class="fas fa-file-excel"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <!-- Quick Search Bar -->
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-6 col-12 mb-2 mb-md-0">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white border-right-0" style="border-radius: 14px 0 0 14px; border-color: #e2e8f0;"><i class="bi bi-search text-muted"></i></span>
+                                </div>
+                                <input type="text" id="quick-search-pembinaan" class="form-control border-left-0" style="border-radius: 0 14px 14px 0; border-color: #e2e8f0; box-shadow: none;" placeholder="Cari nama siswa, jenis pembinaan, atau kata kunci...">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12 text-md-right text-muted small">
+                            Menampilkan <span id="count-pembinaan" class="font-weight-bold text-dark"><?= count($rows) ?></span> catatan pembinaan
+                        </div>
                     </div>
+
+                    <?php if (!empty($rows)): ?>
+                        <div class="simad-card-grid">
+                            <?php foreach ($rows as $i => $r): ?>
+                                <?php
+                                $jenisStyle = getPembinaanJenisStyle($r['jenis_pembinaan'] ?? '');
+                                $statusStyle = getPembinaanStatusStyle($r['status'] ?? '');
+                                $raw_m = strip_tags($r['permasalahan'] ?? '');
+                                $raw_t = strip_tags($r['tindakan'] ?? '');
+                                $raw_tl = strip_tags($r['tindak_lanjut'] ?? '');
+                                ?>
+                                <div class="simad-item-card pembinaan-card-item">
+                                    <div class="simad-card-header">
+                                        <div class="simad-card-icon" style="background: <?= $jenisStyle['bg'] ?>; color: <?= $jenisStyle['color'] ?>;">
+                                            <i class="<?= $jenisStyle['icon'] ?>"></i>
+                                        </div>
+                                        <div class="simad-card-main">
+                                            <div class="simad-card-meta">
+                                                <span class="simad-meta-date">
+                                                    <i class="bi bi-calendar3"></i> <?= date('d/m/Y', strtotime($r['tanggal'])) ?>
+                                                </span>
+                                                <span class="simad-badge-pill" style="background: <?= $statusStyle['bg'] ?>; color: <?= $statusStyle['color'] ?>;">
+                                                    <i class="<?= $statusStyle['icon'] ?>"></i> <?= htmlspecialchars($r['status']) ?>
+                                                </span>
+                                            </div>
+                                            <div class="simad-card-name" title="<?= htmlspecialchars($r['nama_siswa']) ?>">
+                                                <?= htmlspecialchars($r['nama_siswa']) ?>
+                                            </div>
+                                            <div class="simad-card-sub">
+                                                <span>NISN: <?= !empty($r['nisn']) ? htmlspecialchars($r['nisn']) : '-' ?></span>
+                                                <span>&bull;</span>
+                                                <span>Kelas: <?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="simad-card-body">
+                                        <div class="d-flex align-items-center flex-wrap mb-2" style="gap: 6px;">
+                                            <span class="simad-badge-pill" style="background: <?= $jenisStyle['bg'] ?>; color: <?= $jenisStyle['color'] ?>;">
+                                                <i class="bi bi-bookmark-fill"></i> <?= htmlspecialchars($r['jenis_pembinaan']) ?>
+                                            </span>
+                                            <?php if (!empty($r['kg_topik'])): ?>
+                                                <span class="simad-badge-pill" style="background: #f3e8ff; color: #7e22ce;" title="Sumber Konseling">
+                                                    <i class="bi bi-chat-heart-fill"></i> Konseling: <?= htmlspecialchars($r['kg_topik']) ?>
+                                                </span>
+                                            <?php elseif (!empty($r['lg_jenis'])): ?>
+                                                <span class="simad-badge-pill" style="background: #fef3c7; color: #b45309;" title="Sumber Pelanggaran">
+                                                    <i class="bi bi-exclamation-triangle-fill"></i> Pelanggaran: <?= htmlspecialchars(mb_strimwidth($r['lg_jenis'], 0, 20, '...')) ?> (+<?= (int)($r['lg_poin'] ?? 0) ?>)
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="simad-badge-pill" style="background: #f1f5f9; color: #475569;" title="Pembinaan Mandiri">
+                                                    <i class="bi bi-person-fill-gear"></i> Mandiri
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="simad-info-box">
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Permasalahan</span>
+                                                <div class="simad-info-val text-dark font-weight-500">
+                                                    <?= htmlspecialchars(mb_strimwidth($raw_m, 0, 95, '...')) ?>
+                                                </div>
+                                            </div>
+                                            <?php if (!empty($raw_t)): ?>
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Tindakan</span>
+                                                <div class="simad-info-val text-muted">
+                                                    <?= htmlspecialchars(mb_strimwidth($raw_t, 0, 85, '...')) ?>
+                                                </div>
+                                            </div>
+                                            <?php endif; ?>
+                                            <?php if (!empty($raw_tl)): ?>
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Tindak Lanjut</span>
+                                                <div class="simad-info-val text-success">
+                                                    <?= htmlspecialchars(mb_strimwidth($raw_tl, 0, 85, '...')) ?>
+                                                </div>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="simad-card-footer">
+                                        <div class="simad-card-actions">
+                                            <button type="button" class="simad-btn-act simad-btn-detail btn-detail-pembinaan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail">
+                                                <i class="bi bi-eye-fill"></i>
+                                            </button>
+                                            <?php if ($can_crud): ?>
+                                            <button type="button" class="simad-btn-act simad-btn-edit btn-edit-pembinaan" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button type="button" class="simad-btn-act simad-btn-del btn-hapus-pembinaan" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="simad-card-actions">
+                                            <a href="export_pembinaan_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="simad-btn-act simad-btn-pdf" title="Cetak / PDF">
+                                                <i class="bi bi-printer-fill"></i>
+                                            </a>
+                                            <a href="export_pembinaan_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="simad-btn-act simad-btn-excel" title="Ekspor Excel">
+                                                <i class="bi bi-file-earmark-excel-fill"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-person-check mb-2" style="font-size: 2.5rem; display: block; color: #cbd5e1;"></i>
+                            <div>Belum ada data pembinaan yang sesuai kriteria.</div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

@@ -436,6 +436,7 @@ switch ($user_level) {
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php?session_type=admin', 'active' => $current_page === 'pembinaan_siswa.php'],
             ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php?session_type=admin', 'active' => $is_wali_tl_page],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=admin', 'active' => $current_page === 'projek_kokurikuler.php'],
+            ['title' => 'Data Projek Kokurikuler', 'url' => '../wali/data_projek.php?session_type=admin', 'active' => $current_page === 'data_projek.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php', 'active' => $current_page === 'struktur_kelas.php'],
         ];
 
@@ -456,7 +457,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_admin,
-                'active' => (in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'data_tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'struktur_kelas.php']) || $is_wali_tl_page)
+                'active' => (in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'data_tindak_lanjut.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'data_projek.php', 'struktur_kelas.php']) || $is_wali_tl_page)
             ],
             [
                 'title' => 'Master Data',
@@ -668,6 +669,7 @@ switch ($user_level) {
             ['title' => 'Pelanggaran Siswa', 'url' => '../wali/pelanggaran_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'pelanggaran_siswa.php'],
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php?session_type=kepala_madrasah', 'active' => $current_page === 'pembinaan_siswa.php'],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php?session_type=kepala_madrasah', 'active' => $current_page === 'projek_kokurikuler.php'],
+            ['title' => 'Data Projek Kokurikuler', 'url' => '../wali/data_projek.php?session_type=kepala_madrasah', 'active' => $current_page === 'data_projek.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=kepala_madrasah', 'active' => $current_page === 'struktur_kelas.php'],
             ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php?session_type=kepala_madrasah', 'active' => $is_wali_tl_page],
         ];
@@ -700,7 +702,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_kepala,
-                'active' => (in_array($current_page, ['konseling_awal.php', 'data_konseling.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'struktur_kelas.php']) || $is_wali_tl_page)
+                'active' => (in_array($current_page, ['konseling_awal.php', 'data_konseling.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'data_projek.php', 'struktur_kelas.php']) || $is_wali_tl_page)
             ],
             [
                 'title' => 'Program Kerja',
@@ -1096,6 +1098,7 @@ switch ($user_level) {
         if ($is_grade_6_guru) {
             $pembelajaran_submenu_guru[] = ['title' => 'Jurnal Les', 'url' => '../guru/jurnal_les.php', 'active' => $current_page === 'jurnal_les.php'];
         }
+        $pembelajaran_submenu_guru[] = ['title' => 'Data Projek Kokurikuler', 'url' => '../wali/data_projek.php', 'active' => in_array($current_page, ['data_projek.php', 'projek_kokurikuler.php'])];
         usort($pembelajaran_submenu_guru, static function ($a, $b) { return strcasecmp($a['title'] ?? '', $b['title'] ?? ''); });
 
         $menu_items = [
@@ -1393,6 +1396,7 @@ switch ($user_level) {
             ['title' => 'Pembinaan Siswa', 'url' => '../wali/pembinaan_siswa.php', 'active' => $current_page === 'pembinaan_siswa.php'],
             ['title' => 'Tindak Lanjut Pembinaan', 'url' => '../wali/tindak_lanjut.php', 'active' => $is_wali_tl_page],
             ['title' => 'Projek / Kokurikuler', 'url' => '../wali/projek_kokurikuler.php', 'active' => $current_page === 'projek_kokurikuler.php'],
+            ['title' => 'Data Projek Kokurikuler', 'url' => '../wali/data_projek.php', 'active' => $current_page === 'data_projek.php'],
             ['title' => 'Struktur Kelas', 'url' => '../admin/struktur_kelas.php?session_type=wali', 'active' => $current_page === 'struktur_kelas.php'],
         ];
 
@@ -1407,7 +1411,7 @@ switch ($user_level) {
                 'title' => 'Pengelolaan Kelas',
                 'icon' => 'fas fa-user-graduate',
                 'submenu' => $pengelolaan_kelas_submenu_wali,
-                'active' => (in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'data_tindak_lanjut.php', 'struktur_kelas.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php']) || $is_wali_tl_page)
+                'active' => (in_array($current_page, ['pembinaan_siswa.php', 'data_pembinaan.php', 'pelanggaran_siswa.php', 'data_pelanggaran.php', 'konseling_awal.php', 'data_konseling.php', 'data_tindak_lanjut.php', 'struktur_kelas.php', 'komunikasi_ortu.php', 'agenda_kelas.php', 'jadwal_piket_kelas.php', 'projek_kokurikuler.php', 'data_projek.php']) || $is_wali_tl_page)
             ],
             [
                 'title' => 'Pembelajaran',
@@ -1734,30 +1738,30 @@ if (!function_exists('get_app_menu_icon')) {
     function get_app_menu_icon(string $title, string $default_icon = ''): string
     {
         $map = [
-            'dashboard' => 'fas fa-home',
-            'beranda' => 'fas fa-home',
-            'forum guru' => 'fas fa-comments',
-            'forum' => 'fas fa-comments',
-            'profil & pengaturan' => 'fas fa-user-cog',
-            'profil' => 'fas fa-user-circle',
-            'data utama' => 'fas fa-layer-group',
-            'ekstrakurikuler' => 'fas fa-running',
-            'jadwal' => 'fas fa-calendar-alt',
-            'kehadiran' => 'fas fa-user-check',
-            'keuangan' => 'fas fa-wallet',
-            'nilai siswa' => 'fas fa-graduation-cap',
-            'pembelajaran' => 'fas fa-book-reader',
-            'pengelolaan kelas' => 'fas fa-users-cog',
-            'remidial' => 'fas fa-clipboard-check',
-            'supervisi' => 'fas fa-user-tie',
-            'arsip / surat' => 'fas fa-envelope-open-text',
-            'surat' => 'fas fa-envelope',
-            'buku tamu' => 'fas fa-address-book',
-            'sarana & prasarana' => 'fas fa-boxes',
-            'laporan' => 'fas fa-chart-line'
+            'dashboard' => 'bi bi-grid-1x2-fill',
+            'beranda' => 'bi bi-house-door-fill',
+            'forum guru' => 'bi bi-chat-square-dots-fill',
+            'forum' => 'bi bi-chat-square-dots-fill',
+            'profil & pengaturan' => 'bi bi-person-gear',
+            'profil' => 'bi bi-person-circle',
+            'data utama' => 'bi bi-collection-fill',
+            'ekstrakurikuler' => 'bi bi-trophy-fill',
+            'jadwal' => 'bi bi-calendar3',
+            'kehadiran' => 'bi bi-calendar-check-fill',
+            'keuangan' => 'bi bi-wallet2',
+            'nilai siswa' => 'bi bi-mortarboard-fill',
+            'pembelajaran' => 'bi bi-book-fill',
+            'pengelolaan kelas' => 'bi bi-people-fill',
+            'remidial' => 'bi bi-clipboard2-check-fill',
+            'supervisi' => 'bi bi-shield-check',
+            'arsip / surat' => 'bi bi-envelope-paper-fill',
+            'surat' => 'bi bi-envelope-fill',
+            'buku tamu' => 'bi bi-journal-bookmark-fill',
+            'sarana & prasarana' => 'bi bi-box-seam-fill',
+            'laporan' => 'bi bi-graph-up-arrow'
         ];
         $key = strtolower(trim($title));
-        return $map[$key] ?? ($default_icon !== '' ? $default_icon : 'fas fa-th-large');
+        return $map[$key] ?? ($default_icon !== '' ? $default_icon : 'bi bi-grid-fill');
     }
 }
 

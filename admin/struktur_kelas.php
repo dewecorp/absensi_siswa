@@ -113,7 +113,7 @@ $available_students = [];
 if ($selected_class_id > 0) {
     try {
         $stmt = $pdo->prepare("
-            SELECT sk.id, s.id_siswa, s.nama_siswa, sk.jabatan
+            SELECT sk.id, s.id_siswa, s.nama_siswa, s.nisn, s.jenis_kelamin, sk.jabatan
             FROM tb_struktur_kelas sk
             INNER JOIN tb_siswa s ON s.id_siswa = sk.id_siswa
             WHERE s.id_kelas = ?
@@ -137,6 +137,26 @@ if ($selected_class_id > 0) {
 }
 
 $page_title = 'Struktur Kelas';
+
+function getJabatanBadgeStyle(string $jabatan): array {
+    $j = strtolower(trim($jabatan));
+    if (strpos($j, 'ketua') !== false) {
+        return ['bg' => '#e0f2fe', 'color' => '#0284c7', 'icon' => 'bi bi-person-badge-fill'];
+    } elseif (strpos($j, 'wakil') !== false) {
+        return ['bg' => '#dbeafe', 'color' => '#1d4ed8', 'icon' => 'bi bi-person-badge'];
+    } elseif (strpos($j, 'sekretaris') !== false) {
+        return ['bg' => '#f3e8ff', 'color' => '#7e22ce', 'icon' => 'bi bi-pencil-square'];
+    } elseif (strpos($j, 'bendahara') !== false) {
+        return ['bg' => '#fef3c7', 'color' => '#b45309', 'icon' => 'bi bi-wallet2'];
+    } elseif (strpos($j, 'keamanan') !== false || strpos($j, 'ketertiban') !== false) {
+        return ['bg' => '#fee2e2', 'color' => '#b91c1c', 'icon' => 'bi bi-shield-check'];
+    } elseif (strpos($j, 'kebersihan') !== false) {
+        return ['bg' => '#dcfce7', 'color' => '#15803d', 'icon' => 'bi bi-stars'];
+    } elseif (strpos($j, 'keagamaan') !== false || strpos($j, 'ibadah') !== false) {
+        return ['bg' => '#ccfbf1', 'color' => '#0f766e', 'icon' => 'bi bi-book-half'];
+    }
+    return ['bg' => '#f1f5f9', 'color' => '#475569', 'icon' => 'bi bi-award-fill'];
+}
 
 // --- Ekspor Excel / PDF ---
 $export_type = (string)($_GET['export'] ?? '');
@@ -367,6 +387,156 @@ include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
 
+<style>
+/* Styling Kartu Struktur Kelas Ala Mobile App */
+.struktur-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+.struktur-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #f1f5f9;
+    padding: 16px 18px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.struktur-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.09);
+    border-color: #e2e8f0;
+}
+.struktur-card-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
+}
+.struktur-card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transition: transform 0.18s ease;
+}
+.struktur-card:hover .struktur-card-icon {
+    transform: scale(1.05);
+}
+.struktur-card-info {
+    min-width: 0;
+    flex: 1;
+}
+.struktur-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.2px;
+    margin-bottom: 5px;
+    line-height: 1.2;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.struktur-card-name {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    margin-bottom: 2px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+.struktur-card-nisn {
+    font-size: 11.5px;
+    color: #64748b;
+    font-weight: 500;
+}
+.struktur-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.struktur-btn-act {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease;
+}
+.struktur-btn-act:focus,
+.struktur-btn-act:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+.struktur-btn-act:active {
+    transform: scale(0.9);
+}
+.struktur-btn-edit {
+    background: #fef3c7;
+    color: #b45309;
+}
+.struktur-btn-edit:hover {
+    background: #fde68a;
+    color: #92400e;
+}
+.struktur-btn-del {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.struktur-btn-del:hover {
+    background: #fecaca;
+    color: #991b1b;
+}
+@media (max-width: 575.98px) {
+    .struktur-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .struktur-card {
+        padding: 14px 16px;
+        border-radius: 16px;
+    }
+    .struktur-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        font-size: 22px;
+    }
+    .struktur-card-name {
+        font-size: 14px;
+    }
+}
+</style>
+
 <div class="main-content">
     <section class="section">
         <div class="section-header">
@@ -422,52 +592,56 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Nama Siswa</th>
-                                    <th>Jabatan</th>
-                                    <?php if ($is_wali): ?><th>Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($struktur)): ?>
-                                    <?php foreach ($struktur as $i => $row): ?>
-                                        <tr>
-                                            <td><?= $i + 1 ?></td>
-                                            <td><?= htmlspecialchars($row['nama_siswa']) ?></td>
-                                            <td><span class="badge badge-info"><?= htmlspecialchars($row['jabatan']) ?></span></td>
-                                            <?php if ($is_wali): ?>
-                                            <td>
-                                                <button type="button" class="btn btn-warning btn-sm btn-edit-jabatan"
-                                                        data-id="<?= (int)$row['id'] ?>"
-                                                        data-nama="<?= htmlspecialchars($row['nama_siswa'], ENT_QUOTES) ?>"
-                                                        data-jabatan="<?= htmlspecialchars($row['jabatan'], ENT_QUOTES) ?>">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <form method="POST" class="d-inline form-hapus-jabatan">
-                                                    <input type="hidden" name="action" value="hapus">
-                                                    <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                                    <button type="submit" class="btn btn-danger btn-sm">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </td>
-                                            <?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="<?= $is_wali ? 4 : 3 ?>" class="text-center">
-                                            Belum ada data jabatan pada kelas ini.
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                    <?php if (!empty($struktur)): ?>
+                        <div class="struktur-grid">
+                            <?php foreach ($struktur as $i => $row): ?>
+                                <?php
+                                $badgeStyle = getJabatanBadgeStyle($row['jabatan']);
+                                ?>
+                                <div class="struktur-card">
+                                    <div class="struktur-card-left">
+                                        <div class="struktur-card-icon" style="background: <?= $badgeStyle['bg'] ?>; color: <?= $badgeStyle['color'] ?>;">
+                                            <i class="<?= $badgeStyle['icon'] ?>"></i>
+                                        </div>
+                                        <div class="struktur-card-info">
+                                            <span class="struktur-badge-pill" style="background: <?= $badgeStyle['bg'] ?>; color: <?= $badgeStyle['color'] ?>;">
+                                                <?= htmlspecialchars($row['jabatan']) ?>
+                                            </span>
+                                            <div class="struktur-card-name" title="<?= htmlspecialchars($row['nama_siswa']) ?>">
+                                                <?= htmlspecialchars($row['nama_siswa']) ?>
+                                            </div>
+                                            <div class="struktur-card-nisn">
+                                                NISN: <?= !empty($row['nisn']) ? htmlspecialchars($row['nisn']) : '-' ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php if ($is_wali): ?>
+                                    <div class="struktur-card-actions">
+                                        <button type="button" class="struktur-btn-act struktur-btn-edit btn-edit-jabatan"
+                                                title="Edit Jabatan"
+                                                data-id="<?= (int)$row['id'] ?>"
+                                                data-nama="<?= htmlspecialchars($row['nama_siswa'], ENT_QUOTES) ?>"
+                                                data-jabatan="<?= htmlspecialchars($row['jabatan'], ENT_QUOTES) ?>">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                        <form method="POST" class="d-inline form-hapus-jabatan mb-0">
+                                            <input type="hidden" name="action" value="hapus">
+                                            <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
+                                            <button type="submit" class="struktur-btn-act struktur-btn-del" title="Hapus">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-people mb-2" style="font-size: 2.5rem; display: block; color: #cbd5e1;"></i>
+                            <div>Belum ada data jabatan pada kelas ini.</div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endif; ?>

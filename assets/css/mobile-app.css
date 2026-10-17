@@ -204,16 +204,19 @@
   }
   a:active .menu-grid-icon {
     transform: scale(.92) !important;
-    box-shadow: 0 3px 8px rgba(15, 23, 42, .15) !important;
+    box-shadow: none !important;
   }
-  .mg-c1 { background: linear-gradient(135deg, #10b981, #059669) !important; }
-  .mg-c2 { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; }
-  .mg-c3 { background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important; }
-  .mg-c4 { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
-  .mg-c5 { background: linear-gradient(135deg, #ec4899, #be185d) !important; }
-  .mg-c6 { background: linear-gradient(135deg, #06b6d4, #0e7490) !important; }
-  .mg-c7 { background: linear-gradient(135deg, #ef4444, #b91c1c) !important; }
-  .mg-c8 { background: linear-gradient(135deg, #6366f1, #4338ca) !important; }
+  .mg-c1 { background: #dcfce7 !important; color: #15803d !important; }
+  .mg-c2 { background: #e0f2fe !important; color: #0284c7 !important; }
+  .mg-c3 { background: #f3e8ff !important; color: #7e22ce !important; }
+  .mg-c4 { background: #fef3c7 !important; color: #b45309 !important; }
+  .mg-c5 { background: #fce7f3 !important; color: #be185d !important; }
+  .mg-c6 { background: #ccfbf1 !important; color: #0f766e !important; }
+  .mg-c7 { background: #fee2e2 !important; color: #b91c1c !important; }
+  .mg-c8 { background: #e0e7ff !important; color: #4338ca !important; }
+  .mg-c1 i, .mg-c2 i, .mg-c3 i, .mg-c4 i, .mg-c5 i, .mg-c6 i, .mg-c7 i, .mg-c8 i {
+    color: inherit !important;
+  }
   .mobile-menu-label {
     font-size: 11px !important;
     font-weight: 700 !important;
@@ -375,17 +378,15 @@
   .mapp-lainnya-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 8px; padding: 16px; }
   .mapp-lainnya-item { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none !important; }
   .mapp-lainnya-icon {
-    width: 58px; height: 58px; border-radius: 18px;
+    width: 52px; height: 52px; border-radius: 18px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px; margin-bottom: 6px;
-    box-shadow: 0 8px 18px rgba(15,23,42,.12), inset 0 1px 1px rgba(255, 255, 255, .35); color: #fff;
+    font-size: 26px; margin-bottom: 6px;
     position: relative; overflow: hidden;
+    box-shadow: none !important; border: none !important;
     transition: transform .18s cubic-bezier(.34, 1.56, .64, 1);
   }
   .mapp-lainnya-icon::after {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 40%;
-    background: linear-gradient(180deg, rgba(255, 255, 255, .25), rgba(255, 255, 255, 0));
-    pointer-events: none; border-radius: 18px 18px 0 0;
+    display: none !important;
   }
   .mapp-lainnya-item:active .mapp-lainnya-icon {
     transform: scale(.92);

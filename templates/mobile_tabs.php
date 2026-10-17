@@ -21,13 +21,13 @@ if (!function_exists('mapp_tab_meta')) {
     function mapp_tab_meta(string $tab): array
     {
         $meta = [
-            'akademik' => ['title' => 'Akademik', 'sub' => 'Kelola seluruh data akademik madrasah', 'icon' => 'fas fa-book-open'],
-            'supervisi' => ['title' => 'Supervisi', 'sub' => 'Pantau dan kelola kegiatan supervisi', 'icon' => 'fas fa-clipboard-check'],
-            'laporan' => ['title' => 'Laporan', 'sub' => 'Akses berbagai laporan madrasah', 'icon' => 'fas fa-chart-bar'],
-            'lainnya' => ['title' => 'Lainnya', 'sub' => 'Menu tambahan dan pengaturan akun', 'icon' => 'fas fa-ellipsis-h'],
-            'informasi' => ['title' => 'Informasi', 'sub' => 'Pengumuman dan agenda terbaru', 'icon' => 'fas fa-bullhorn'],
+            'akademik' => ['title' => 'Akademik', 'sub' => 'Kelola seluruh data akademik madrasah', 'icon' => 'ri-book-open-line'],
+            'supervisi' => ['title' => 'Supervisi', 'sub' => 'Pantau dan kelola kegiatan supervisi', 'icon' => 'ri-survey-line'],
+            'laporan' => ['title' => 'Laporan', 'sub' => 'Akses berbagai laporan madrasah', 'icon' => 'ri-bar-chart-2-line'],
+            'lainnya' => ['title' => 'Lainnya', 'sub' => 'Menu tambahan dan pengaturan akun', 'icon' => 'ri-more-fill'],
+            'informasi' => ['title' => 'Informasi', 'sub' => 'Pengumuman dan agenda terbaru', 'icon' => 'ri-megaphone-line'],
         ];
-        return $meta[$tab] ?? ['title' => ucfirst($tab), 'sub' => '', 'icon' => 'fas fa-th'];
+        return $meta[$tab] ?? ['title' => ucfirst($tab), 'sub' => '', 'icon' => 'ri-apps-2-line'];
     }
 }
 

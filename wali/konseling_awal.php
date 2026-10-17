@@ -158,6 +158,36 @@ $stMasterKons->execute([$guru_id]);
 $master_konseling = $stMasterKons->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = 'Daftar Konseling Siswa';
+
+if (!function_exists('getKonselingTopikStyle')) {
+    function getKonselingTopikStyle(string $topik): array {
+        $t = strtolower(trim($topik));
+        if (strpos($t, 'belajar') !== false || strpos($t, 'akademik') !== false || strpos($t, 'bakat') !== false) {
+            return ['bg' => '#e0f2fe', 'color' => '#0284c7', 'icon' => 'bi bi-mortarboard-fill'];
+        } elseif (strpos($t, 'emosi') !== false || strpos($t, 'cemas') !== false || strpos($t, 'keluarga') !== false) {
+            return ['bg' => '#ffe4e6', 'color' => '#e11d48', 'icon' => 'bi bi-heart-pulse-fill'];
+        } elseif (strpos($t, 'disiplin') !== false || strpos($t, 'tertib') !== false) {
+            return ['bg' => '#fef3c7', 'color' => '#b45309', 'icon' => 'bi bi-shield-check'];
+        } elseif (strpos($t, 'sosial') !== false || strpos($t, 'teman') !== false) {
+            return ['bg' => '#ccfbf1', 'color' => '#0f766e', 'icon' => 'bi bi-people-fill'];
+        } elseif (strpos($t, 'ibadah') !== false || strpos($t, 'spiritual') !== false || strpos($t, 'agama') !== false) {
+            return ['bg' => '#dcfce7', 'color' => '#15803d', 'icon' => 'bi bi-book-half'];
+        }
+        return ['bg' => '#f3e8ff', 'color' => '#7e22ce', 'icon' => 'bi bi-chat-heart-fill'];
+    }
+}
+
+if (!function_exists('getKonselingStatusStyle')) {
+    function getKonselingStatusStyle(string $status): array {
+        if ($status === 'Selesai') {
+            return ['bg' => '#dcfce7', 'color' => '#15803d', 'icon' => 'bi bi-check-circle-fill'];
+        } elseif ($status === 'Pembinaan') {
+            return ['bg' => '#fef3c7', 'color' => '#b45309', 'icon' => 'bi bi-exclamation-circle-fill'];
+        }
+        return ['bg' => '#e0f2fe', 'color' => '#0284c7', 'icon' => 'bi bi-clock-history'];
+    }
+}
+
 $css_libs = [
     'https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css',
 ];
@@ -338,6 +368,18 @@ $(document).ready(function() {
             }
         });
     });
+
+    $('#quick-search-konseling').on('input', function() {
+        var val = $(this).val().toLowerCase().trim();
+        var count = 0;
+        $('.konseling-card-item').each(function() {
+            var text = $(this).text().toLowerCase();
+            var show = text.indexOf(val) > -1;
+            $(this).toggle(show);
+            if (show) count++;
+        });
+        $('#count-konseling').text(count);
+    });
 });
 JS
 ];
@@ -351,10 +393,207 @@ include '../templates/sidebar.php';
 ?>
 
 <style>
-.aksi-satu-baris { display: inline-flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; white-space: nowrap; }
-.aksi-satu-baris .btn { margin: 0; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
-.aksi-satu-baris .btn i { margin: 0; font-size: 13px; line-height: 1; }
-#table-konseling td:last-child { white-space: nowrap; }
+/* Styling Kartu Modern Konseling Siswa */
+.simad-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+.simad-item-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    overflow: hidden;
+    position: relative;
+}
+.simad-item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.09);
+    border-color: #e2e8f0;
+}
+.simad-card-header {
+    padding: 16px 18px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+.simad-card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-card-main {
+    flex: 1;
+    min-width: 0;
+}
+.simad-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+.simad-meta-date {
+    font-size: 11.5px;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.simad-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    line-height: 1.2;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-card-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    margin-bottom: 2px;
+}
+.simad-card-sub {
+    font-size: 11.5px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.simad-card-body {
+    padding: 0 18px 14px;
+    flex: 1;
+}
+.simad-info-box {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    color: #334155;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.simad-info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.simad-info-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+}
+.simad-info-val {
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+.simad-card-footer {
+    padding: 12px 18px;
+    background: #ffffff;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.simad-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.simad-btn-act {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    font-size: 13.5px;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    text-decoration: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.simad-btn-act:active {
+    transform: scale(0.92);
+}
+.simad-btn-act:focus,
+.simad-btn-act:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+.simad-btn-detail { background: #e0f2fe; color: #0284c7; }
+.simad-btn-detail:hover { background: #bae6fd; color: #0369a1; }
+.simad-btn-edit { background: #fef3c7; color: #b45309; }
+.simad-btn-edit:hover { background: #fde68a; color: #92400e; }
+.simad-btn-del { background: #fee2e2; color: #b91c1c; }
+.simad-btn-del:hover { background: #fecaca; color: #991b1b; }
+.simad-btn-pdf { background: #fee2e2; color: #dc2626; }
+.simad-btn-pdf:hover { background: #fecaca; color: #b91c1c; }
+.simad-btn-excel { background: #dcfce7; color: #15803d; }
+.simad-btn-excel:hover { background: #bbf7d0; color: #166534; }
+.simad-btn-proc { background: #f3e8ff; color: #7e22ce; padding: 0 10px; width: auto; font-size: 11.5px; font-weight: 700; gap: 4px; }
+.simad-btn-proc:hover { background: #e9d5ff; color: #6b21a8; }
+
+@media (max-width: 575.98px) {
+    .simad-card-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .simad-item-card {
+        border-radius: 16px;
+    }
+    .simad-card-header {
+        padding: 14px 14px 10px;
+    }
+    .simad-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        font-size: 22px;
+    }
+    .simad-card-body {
+        padding: 0 14px 12px;
+    }
+    .simad-card-footer {
+        padding: 10px 14px;
+    }
+}
 </style>
 <div class="main-content">
     <section class="section">
@@ -429,74 +668,123 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm" id="table-konseling">
-                            <thead>
-                                <tr>
-                                    <th width="4%">No</th>
-                                    <th>Tanggal</th>
-                                    <th>Nama Siswa</th>
-                                    <th>NISN</th>
-                                    <th>Kelas</th>
-                                    <th>Topik</th>
-                                    <th width="20%">Ringkasan Masalah</th>
-                                    <th>Tindak Lanjut</th>
-                                    <th>Status</th>
-                                    <th>Follow Up</th>
-                                    <th style="width:180px;min-width:180px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $i => $r): ?>
-                                    <?php
-                                    $st_badge = $r['status'] === 'Selesai' ? 'success' : 'warning';
-                                    $raw_m = strip_tags($r['ringkasan_masalah']);
-                                    $m_cut = mb_strlen($raw_m) > 35 ? mb_substr($raw_m, 0, 35) . '...' : $raw_m;
-                                    $raw_tl = strip_tags($r['tindak_lanjut'] ?? '');
-                                    $tl_cut = mb_strlen($raw_tl) > 30 ? mb_substr($raw_tl, 0, 30) . '...' : ($raw_tl ?: '-');
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><?= date('d/m/Y', strtotime($r['tanggal'])) ?></td>
-                                        <td><strong><?= htmlspecialchars($r['nama_siswa']) ?></strong></td>
-                                        <td><?= htmlspecialchars($r['nisn'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></td>
-                                        <td><span class="badge badge-light border"><?= htmlspecialchars($r['topik']) ?></span></td>
-                                        <td><span title="<?= htmlspecialchars($raw_m) ?>"><?= htmlspecialchars($m_cut) ?></span></td>
-                                        <td><small class="text-success"><?= htmlspecialchars($tl_cut) ?></small></td>
-                                        <td class="text-center"><span class="badge badge-<?= $st_badge ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-                                        <td><small><?= htmlspecialchars(mb_strimwidth($r['follow_up'] ?? '-', 0, 25, '...')) ?></small></td>
-                                        <td class="text-center align-middle">
-                                             <div class="aksi-satu-baris">
-                                                 <button type="button" class="btn btn-info btn-sm btn-detail-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail Rahasia">
-                                                     <i class="fas fa-eye"></i>
-                                                 </button>
-                                                 <?php if ($can_crud && $r['status'] === 'Pembinaan'): ?>
-                                                 <a href="pembinaan_siswa.php?konseling_id=<?= (int)$r['id'] ?>" class="btn btn-primary btn-sm" title="Proses Pembinaan">
-                                                     <i class="fas fa-user-edit"></i>
-                                                 </a>
-                                                 <?php endif; ?>
-                                                 <?php if ($can_crud): ?>
-                                                 <button type="button" class="btn btn-warning btn-sm btn-edit-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
-                                                     <i class="fas fa-edit"></i>
-                                                 </button>
-                                                 <button type="button" class="btn btn-danger btn-sm btn-hapus-konseling" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
-                                                     <i class="fas fa-trash"></i>
-                                                 </button>
-                                                 <?php endif; ?>
-                                                 <a href="export_konseling_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="btn btn-danger btn-sm" title="Cetak / Simpan PDF laporan siswa ini">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                                <a href="export_konseling_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="btn btn-success btn-sm" title="Ekspor Excel siswa ini">
-                                                    <i class="fas fa-file-excel"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <!-- Quick Search Bar -->
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-6 col-12 mb-2 mb-md-0">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white border-right-0" style="border-radius: 14px 0 0 14px; border-color: #e2e8f0;"><i class="bi bi-search text-muted"></i></span>
+                                </div>
+                                <input type="text" id="quick-search-konseling" class="form-control border-left-0" style="border-radius: 0 14px 14px 0; border-color: #e2e8f0; box-shadow: none;" placeholder="Cari nama siswa, topik, atau kata kunci...">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12 text-md-right text-muted small">
+                            Menampilkan <span id="count-konseling" class="font-weight-bold text-dark"><?= count($rows) ?></span> sesi konseling
+                        </div>
                     </div>
+
+                    <?php if (!empty($rows)): ?>
+                        <div class="simad-card-grid">
+                            <?php foreach ($rows as $i => $r): ?>
+                                <?php
+                                $topikStyle = getKonselingTopikStyle($r['topik'] ?? '');
+                                $statusStyle = getKonselingStatusStyle($r['status'] ?? '');
+                                $raw_m = strip_tags($r['ringkasan_masalah'] ?? '');
+                                $raw_tl = strip_tags($r['tindak_lanjut'] ?? '');
+                                $raw_fu = strip_tags($r['follow_up'] ?? '');
+                                ?>
+                                <div class="simad-item-card konseling-card-item">
+                                    <div class="simad-card-header">
+                                        <div class="simad-card-icon" style="background: <?= $topikStyle['bg'] ?>; color: <?= $topikStyle['color'] ?>;">
+                                            <i class="<?= $topikStyle['icon'] ?>"></i>
+                                        </div>
+                                        <div class="simad-card-main">
+                                            <div class="simad-card-meta">
+                                                <span class="simad-meta-date">
+                                                    <i class="bi bi-calendar3"></i> <?= date('d/m/Y', strtotime($r['tanggal'])) ?>
+                                                </span>
+                                                <span class="simad-badge-pill" style="background: <?= $statusStyle['bg'] ?>; color: <?= $statusStyle['color'] ?>;">
+                                                    <i class="<?= $statusStyle['icon'] ?>"></i> <?= htmlspecialchars($r['status']) ?>
+                                                </span>
+                                            </div>
+                                            <div class="simad-card-name" title="<?= htmlspecialchars($r['nama_siswa']) ?>">
+                                                <?= htmlspecialchars($r['nama_siswa']) ?>
+                                            </div>
+                                            <div class="simad-card-sub">
+                                                <span>NISN: <?= !empty($r['nisn']) ? htmlspecialchars($r['nisn']) : '-' ?></span>
+                                                <span>&bull;</span>
+                                                <span>Kelas: <?= htmlspecialchars($r['nama_kelas'] ?? '-') ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="simad-card-body">
+                                        <div class="mb-2">
+                                            <span class="simad-badge-pill" style="background: <?= $topikStyle['bg'] ?>; color: <?= $topikStyle['color'] ?>;">
+                                                <i class="bi bi-tag-fill"></i> <?= htmlspecialchars($r['topik']) ?>
+                                            </span>
+                                        </div>
+                                        <div class="simad-info-box">
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Ringkasan Masalah</span>
+                                                <div class="simad-info-val text-dark font-weight-500">
+                                                    <?= htmlspecialchars(mb_strimwidth($raw_m, 0, 95, '...')) ?>
+                                                </div>
+                                            </div>
+                                            <?php if (!empty($raw_tl)): ?>
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Tindak Lanjut</span>
+                                                <div class="simad-info-val text-success">
+                                                    <?= htmlspecialchars(mb_strimwidth($raw_tl, 0, 85, '...')) ?>
+                                                </div>
+                                            </div>
+                                            <?php endif; ?>
+                                            <?php if (!empty($raw_fu)): ?>
+                                            <div class="simad-info-row">
+                                                <span class="simad-info-label">Follow Up</span>
+                                                <div class="simad-info-val text-muted">
+                                                    <?= htmlspecialchars(mb_strimwidth($raw_fu, 0, 85, '...')) ?>
+                                                </div>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="simad-card-footer">
+                                        <div class="simad-card-actions">
+                                            <button type="button" class="simad-btn-act simad-btn-detail btn-detail-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Detail Rahasia">
+                                                <i class="bi bi-eye-fill"></i>
+                                            </button>
+                                            <?php if ($can_crud && $r['status'] === 'Pembinaan'): ?>
+                                            <a href="pembinaan_siswa.php?konseling_id=<?= (int)$r['id'] ?>" class="simad-btn-act simad-btn-proc" title="Proses ke Pembinaan Siswa">
+                                                <i class="bi bi-person-gear"></i> Bina
+                                            </a>
+                                            <?php endif; ?>
+                                            <?php if ($can_crud): ?>
+                                            <button type="button" class="simad-btn-act simad-btn-edit btn-edit-konseling" data-json='<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>' title="Edit">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button type="button" class="simad-btn-act simad-btn-del btn-hapus-konseling" data-id="<?= (int)$r['id'] ?>" data-nama="<?= htmlspecialchars($r['nama_siswa'], ENT_QUOTES) ?>" title="Hapus">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="simad-card-actions">
+                                            <a href="export_konseling_pdf.php?id_siswa=<?= (int)$r['id_siswa'] ?>&mode=print" target="_blank" class="simad-btn-act simad-btn-pdf" title="Cetak / PDF">
+                                                <i class="bi bi-printer-fill"></i>
+                                            </a>
+                                            <a href="export_konseling_excel.php?id_siswa=<?= (int)$r['id_siswa'] ?>" class="simad-btn-act simad-btn-excel" title="Ekspor Excel">
+                                                <i class="bi bi-file-earmark-excel-fill"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-chat-heart mb-2" style="font-size: 2.5rem; display: block; color: #cbd5e1;"></i>
+                            <div>Belum ada data konseling yang sesuai kriteria.</div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

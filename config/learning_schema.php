@@ -1213,6 +1213,84 @@ if (!function_exists('ensure_learning_schema')) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
+        // 20. Master Data Projek Kokurikuler (Daftar Induk Projek, Tema & Tujuan)
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tb_data_projek (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nama_projek VARCHAR(255) NOT NULL,
+                tema VARCHAR(255) NOT NULL,
+                tujuan TEXT NULL,
+                is_template TINYINT(1) NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        try {
+            $pdo->exec("ALTER TABLE tb_data_projek ADD COLUMN is_template TINYINT(1) NOT NULL DEFAULT 0");
+        } catch (Throwable $e) {
+            // kolom sudah ada
+        }
+
+        // Isi template data projek sebagai referensi guru (idempotent, tambah yang belum ada)
+        try {
+            $template_projek = [
+                // Tema P5 / PPRA Kurikulum Merdeka
+                ['Pembuatan Pupuk Kompos Organik', 'Gaya Hidup Berkelanjutan', 'Peserta didik memanfaatkan sampah organik di lingkungan madrasah menjadi pupuk kompos sehingga tumbuh kepedulian terhadap pengelolaan sampah dan gaya hidup berkelanjutan.'],
+                ['Budidaya Sayuran Hidroponik', 'Gaya Hidup Berkelanjutan', 'Peserta didik mempraktikkan budidaya sayuran dengan sistem hidroponik serta memahami pentingnya ketahanan pangan dan pertanian berkelanjutan.'],
+                ['Pengelolaan Bank Sampah Madrasah', 'Gaya Hidup Berkelanjutan', 'Peserta didik merancang dan mengelola bank sampah madrasah untuk menumbuhkan sikap tanggung jawab serta peduli terhadap kebersihan lingkungan.'],
+                ['Katalog Digital Makanan Tradisional', 'Kearifan Lokal', 'Peserta didik menggali dan mendokumentasikan makanan tradisional daerah dalam bentuk katalog digital sebagai upaya melestarikan kearifan lokal.'],
+                ['Festival Permainan Tradisional', 'Kearifan Lokal', 'Peserta didik mengenal, mempraktikkan, dan mempopulerkan permainan tradisional daerah untuk melestarikan warisan budaya dan menumbuhkan kebersamaan.'],
+                ['Wisata Edukasi Sejarah Daerah', 'Kearifan Lokal', 'Peserta didik menyusun paket wisata edukasi berbasis sejarah dan budaya daerah sehingga tumbuh rasa bangga dan cinta terhadap daerahnya.'],
+                ['Kampanye Toleransi Antar Umat Beragama', 'Bhinneka Tunggal Ika', 'Peserta didik merancang kampanye digital tentang toleransi dan keberagaman sebagai wujud penguatan sikap menghargai perbedaan.'],
+                ['Pekan Budaya Nusantara', 'Bhinneka Tunggal Ika', 'Peserta didik menyelenggarakan kegiatan pekan budaya yang menampilkan keberagaman budaya Indonesia untuk menumbuhkan persatuan dalam perbedaan.'],
+                ['Aksi Bergizi Madrasah Sehat', 'Bangunlah Jiwa dan Raganya', 'Peserta didik menyusun program pola makan sehat dan aktivitas fisik untuk membiasakan hidup sehat jasmani dan rohani.'],
+                ['Kelas Bebas Perundungan', 'Bangunlah Jiwa dan Raganya', 'Peserta didik membuat program kampanye anti perundungan untuk menumbuhkan empati, kesehatan mental, dan rasa aman di sekolah.'],
+                ['Pemilihan Ketua OSIS Mini', 'Suara Demokrasi', 'Peserta didik menyimulasikan proses pemilihan umum untuk memahami nilai demokrasi, jujur, adil, dan berpartisipasi aktif dalam kehidupan bermasyarakat.'],
+                ['Mading Digital Suara Siswa', 'Suara Demokrasi', 'Peserta didik menyusun kanal informasi digital sebagai sarana menyampaikan aspirasi dan gagasan secara bertanggung jawab.'],
+                ['Alat Pengairan Otomatis Sederhana', 'Rekayasa dan Teknologi', 'Peserta didik merancang alat pengairan tanaman otomatis sederhana berbasis sensor sehingga mengasah kemampuan berpikir kritis dan kreatif di bidang teknologi.'],
+                ['Aplikasi Absensi Digital Kelas', 'Rekayasa dan Teknologi', 'Peserta didik mengembangkan aplikasi sederhana pencatatan kehadiran kelas untuk melatih literasi digital dan pemecahan masalah.'],
+                ['Produk Daur Ulang Bernilai Jual', 'Kewirausahaan', 'Peserta didik mengolah barang bekas menjadi produk kerajinan bernilai jual serta memasarkannya untuk menumbuhkan jiwa wirausaha dan kreativitas.'],
+                ['Kantin Sehat Kewirausahaan Siswa', 'Kewirausahaan', 'Peserta didik merintis usaha kantin sehat sebagai praktik kewirausahaan yang menekankan kualitas produk dan pelayanan.'],
+                ['Pelatihan Keterampilan Siap Kerja', 'Kebekerjaan', 'Peserta didik mengikuti pelatihan keterampilan dasar dan menyusun portofolio kerja untuk mempersiapkan diri memasuki dunia kerja.'],
+                ['Eksplorasi Profesi dan Cita-Cita', 'Kebekerjaan', 'Peserta didik menggali informasi berbagai profesi serta menyusun rencana karier sesuai minat dan bakatnya.'],
+
+                // Tema Dimensi Delapan Profil Lulusan (khusus MI)
+                ['Kelas Cinta Masjid dan Hafalan Juz Amma', 'Keimanan dan Ketakwaan kepada Tuhan YME', 'Peserta didik dapat membiasakan salat berjamaah, berdoa, dan menghafal Juz Amma sehingga tumbuh cinta kepada Allah dan Rasulullah sejak dini.'],
+                ['Aku Cinta Indonesia: Upacara dan Bendera Merah Putih', 'Kewargaan', 'Peserta didik dapat mengenal lambang negara, mengikuti upacara, dan menyanyikan lagu nasional sehingga tumbuh rasa cinta tanah air dan bangga menjadi anak Indonesia.'],
+                ['Detektif Cilik: Percobaan Sederhana', 'Penalaran Kritis', 'Peserta didik dapat melakukan percobaan sederhana dan mengamati lingkungan sekitar untuk melatih kemampuan bertanya, mengamati, dan menyimpulkan.'],
+                ['Panggung Kreasi Anak Saleh', 'Kreativitas', 'Peserta didik dapat membuat karya seni, kolase, dan pertunjukan sederhana untuk mengembangkan imajinasi serta keberanian berkarya.'],
+                ['Kerja Bakti Taman Kelas', 'Kolaborasi', 'Peserta didik dapat bekerja bersama merawat taman dan membersihkan kelas untuk melatih gotong royong, berbagi tugas, dan kebersamaan.'],
+                ['Aku Bisa Sendiri: Merawat Diri Sendiri', 'Kemandirian', 'Peserta didik dapat merapikan alat tulis, menyiapkan perlengkapan sekolah, dan mengurus kebutuhan diri untuk menumbuhkan kemandirian.'],
+                ['Anak Sehat, Badan Kuat', 'Kesehatan', 'Peserta didik dapat membiasakan cuci tangan, olahraga ringan, dan makan makanan bergizi untuk menjaga kesehatan jasmani dan rohani.'],
+                ['Bercerita dengan Baik dan Santun', 'Komunikasi', 'Peserta didik dapat bercerita, menyampaikan pendapat, dan berbahasa santun di depan teman untuk melatih kemampuan berkomunikasi yang baik.'],
+
+                // Tema Nilai Kurikulum Berbasis Cinta (KBC) khusus MI
+                ['Aku Cinta Allah dan Rasulullah', 'Cinta kepada Allah dan Rasul-Nya', 'Peserta didik dapat mengenal sifat-sifat Allah, meneladani akhlak Rasulullah, dan membiasakan ibadah harian sebagai wujud cinta kepada Allah dan Rasul-Nya.'],
+                ['Cinta Ilmu: Rajin Membaca dan Bertanya', 'Cinta kepada Ilmu', 'Peserta didik dapat membiasakan membaca buku, mengunjungi sudut baca kelas, dan berani bertanya untuk menumbuhkan cinta terhadap ilmu pengetahuan.'],
+                ['Menjaga Kebersihan dan Kesehatan Diri', 'Cinta kepada Diri Sendiri', 'Peserta didik dapat membiasakan mandi, sikat gigi, dan memakai pakaian bersih sebagai bentuk cinta dan syukur kepada diri sendiri.'],
+                ['Sahabat Baik: Berbagi dan Menolong', 'Cinta kepada Sesama Manusia', 'Peserta didik dapat berbagi bekal, menolong teman, dan meminta maaf untuk menumbuhkan cinta kepada sesama.'],
+                ['Merawat Ciptaan Allah: Taman Madrasah', 'Cinta kepada Lingkungan', 'Peserta didik dapat menanam dan merawat tanaman serta menjaga kebersihan lingkungan madrasah sebagai wujud cinta kepada alam ciptaan Allah.'],
+                ['Cinta Indonesia: Lagu dan Pahlawan Bangsa', 'Cinta kepada Tanah Air', 'Peserta didik dapat mengenal pahlawan nasional dan menyanyikan lagu kebangsaan untuk menumbuhkan cinta kepada tanah air dan bangsa Indonesia.'],
+                ['Hidup Damai: Saling Menghargai Teman', 'Cinta kepada Kedamaian', 'Peserta didik dapat hidup damai, tidak bertengkar, dan menghargai perbedaan teman sebagai wujud cinta terhadap kedamaian dan persatuan.'],
+            ];
+
+            $insSeed = $pdo->prepare("
+                INSERT INTO tb_data_projek (nama_projek, tema, tujuan, is_template)
+                SELECT ?, ?, ?, 1 FROM DUAL
+                WHERE NOT EXISTS (SELECT 1 FROM tb_data_projek WHERE nama_projek = ?)
+            ");
+            $updSeed = $pdo->prepare("
+                UPDATE tb_data_projek SET tema = ?, tujuan = ?
+                WHERE nama_projek = ? AND is_template = 1
+            ");
+            foreach ($template_projek as $tp) {
+                $insSeed->execute([$tp[0], $tp[1], $tp[2], $tp[0]]);
+                $updSeed->execute([$tp[1], $tp[2], $tp[0]]);
+            }
+        } catch (Throwable $e) {
+            // abaikan kegagalan seeding
+        }
+
         $done = true;
     }
 }

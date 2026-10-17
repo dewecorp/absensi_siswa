@@ -77,27 +77,47 @@ if (!isset($school_profile)) {
         .bottom-nav-row .col { flex: 1 1 0 !important; min-width: 0 !important; overflow: hidden; }
         .bottom-nav-row .bottom-nav-label { white-space: normal !important; line-height: 1.15 !important; }
     }
-    /* Bottom nav gaya mobile app modern */
+    /* Bottom nav gaya mobile app modern (tanpa bingkai kotak) */
     @media (max-width: 991.98px) {
-        .bottom-nav-row a.nav-link { color: #8e9aad; padding-top: 5px; transition: color .2s ease; position: relative; }
+        .bottom-nav-row a.nav-link {
+            color: #64748b;
+            padding: 6px 0 4px 0;
+            transition: color .2s ease, transform .15s ease;
+            position: relative;
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+        }
+        .bottom-nav-row a.nav-link:focus,
+        .bottom-nav-row a.nav-link:focus-visible {
+            outline: none !important;
+            box-shadow: none !important;
+        }
         .bottom-nav-row a.nav-link i {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 36px; height: 36px; margin-bottom: 2px;
-            border-radius: 12px; font-size: 16px;
-            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-            color: #64748b;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, .08);
-            transition: transform .15s ease, background .25s ease, color .25s ease, box-shadow .25s ease;
+            width: auto; height: 28px; margin-bottom: 2px;
+            border-radius: 0; font-size: 24px; line-height: 1;
+            background: transparent !important;
+            color: inherit;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            transition: transform .15s ease, color .2s ease;
         }
         .bottom-nav-row a.nav-link:active i { transform: scale(.88); }
-        .bottom-nav-row .bottom-nav-label { font-weight: 600; font-size: 10.5px !important; margin-top: 1px; }
-        .bottom-nav-row a.nav-link.bottom-nav-active,
-        .bottom-nav-row a.nav-link.bottom-nav-active .bottom-nav-label { color: #2563eb !important; }
-        .bottom-nav-row a.nav-link.bottom-nav-active .bottom-nav-label { font-weight: 700; }
-        .bottom-nav-row a.nav-link.bottom-nav-active i {
-            background: #e8f1ff;
+        .bottom-nav-row .bottom-nav-label { font-weight: 500; font-size: 11px !important; margin-top: 1px; color: inherit; letter-spacing: -0.1px; }
+        .bottom-nav-row a.nav-link.bottom-nav-active {
             color: #2563eb !important;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, .35);
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        .bottom-nav-row a.nav-link.bottom-nav-active i {
+            color: #2563eb !important;
+            transform: scale(1.08);
+        }
+        .bottom-nav-row a.nav-link.bottom-nav-active .bottom-nav-label {
+            color: #2563eb !important;
+            font-weight: 700;
         }
     }
     </style>
@@ -113,7 +133,7 @@ if (!isset($school_profile)) {
             <div class="row w-100 mx-0 h-100 no-gutters bottom-nav-row">
                 <div class="col px-0 h-100">
                     <a href="<?php echo htmlspecialchars(app_url($bottom_home_url), ENT_QUOTES, 'UTF-8'); ?>" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-home">
-                        <i class="fas fa-home"></i>
+                        <i class="bi bi-house-door-fill"></i>
                         <span class="bottom-nav-label">Beranda</span>
                     </a>
                 </div>
@@ -127,7 +147,7 @@ if (!isset($school_profile)) {
                 <?php endforeach; ?>
                 <div class="col px-0 h-100">
                     <a href="#" data-toggle="modal" data-target="#mobileUserMenu" class="nav-link h-100 d-flex flex-column align-items-center justify-content-center bottom-nav-account">
-                        <i class="fas fa-user"></i>
+                        <i class="bi bi-person-fill"></i>
                         <span class="bottom-nav-label">Akun</span>
                     </a>
                 </div>
@@ -279,11 +299,11 @@ if (!isset($school_profile)) {
                 <div class="modal-body p-0">
                     <div class="mapp-lainnya-grid">
                         <a href="<?php echo htmlspecialchars(app_url($bottom_profile_url), ENT_QUOTES, 'UTF-8'); ?>" class="mapp-lainnya-item">
-                            <span class="mapp-lainnya-icon mg-c3"><i class="fas fa-user"></i></span>
+                            <span class="mapp-lainnya-icon mg-c3"><i class="ri-user-3-line"></i></span>
                             <span class="mapp-lainnya-label">Profil</span>
                         </a>
                         <a href="#" onclick="confirmLogoutInline('../logout.php?level=<?php echo htmlspecialchars(getUserLevel(), ENT_QUOTES, 'UTF-8'); ?>'); return false;" class="mapp-lainnya-item">
-                            <span class="mapp-lainnya-icon mg-c7"><i class="fas fa-sign-out-alt"></i></span>
+                            <span class="mapp-lainnya-icon mg-c7"><i class="ri-logout-box-r-line"></i></span>
                             <span class="mapp-lainnya-label" style="color:#e11d48;">Keluar</span>
                         </a>
                     </div>
