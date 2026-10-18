@@ -6,6 +6,7 @@
   function isEnhanceable(sel) {
     if (!sel || sel.tagName !== 'SELECT') return false;
     if (sel.multiple) return false;
+    if (sel.closest('.modal')) return false;
     if (sel.closest('#jurnalModal')) return false;
     if (sel.closest('#modalCatatan')) return false;
     if (sel.closest('#modalKomunikasi')) return false;

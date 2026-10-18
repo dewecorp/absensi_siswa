@@ -154,14 +154,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage) {
     redirect('sasaran_supervisi.php');
 }
 
+$filter_ta = trim((string)($_GET['tahun_ajaran'] ?? $periode['tahun_ajaran']));
+$filter_sem = trim((string)($_GET['semester'] ?? ''));
+
 $rows = [];
 try {
-    $rows = $pdo->query("SELECT s.*, p.nama_program,
+    $sql = "SELECT s.*, p.nama_program,
             (SELECT MAX(pk.tanggal) FROM tb_sv_pelaksanaan pk WHERE pk.id_guru = s.id_guru AND pk.status = 'Selesai') AS supervisi_terakhir,
             (SELECT pk.nilai FROM tb_sv_pelaksanaan pk WHERE pk.id_guru = s.id_guru AND pk.status = 'Selesai' ORDER BY pk.tanggal DESC, pk.id_pelaksanaan DESC LIMIT 1) AS nilai_terakhir
         FROM tb_sv_sasaran s
-        LEFT JOIN tb_sv_program p ON p.id_program = s.id_program
-        ORDER BY s.tahun_ajaran DESC, s.nama_guru ASC")->fetchAll(PDO::FETCH_ASSOC);
+        LEFT JOIN tb_sv_program p ON p.id_program = s.id_program";
+    $params = [];
+    $where = [];
+    if ($filter_ta !== '' && $filter_ta !== 'semua') {
+        $where[] = "s.tahun_ajaran = ?";
+        $params[] = $filter_ta;
+    }
+    if ($filter_sem !== '') {
+        $where[] = "s.semester = ?";
+        $params[] = $filter_sem;
+    }
+    if ($where) {
+        $sql .= " WHERE " . implode(' AND ', $where);
+    }
+    $sql .= " ORDER BY s.tahun_ajaran DESC, s.nama_guru ASC";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
 }
 
@@ -172,10 +191,36 @@ if ($flash !== '') {
 }
 $js_page[] = 'var svMapelByGuru = ' . $mapel_by_guru_json . ';';
 $js_page[] = 'var svKelasByGuru = ' . $kelas_by_guru_json . ';';
+$js_page[] = 'var svSasaranData = ' . json_encode($rows) . ';';
 $js_page[] = <<<'JS'
 $(document).ready(function () {
-    var dtSasaran=$('#table-sasaran').DataTable({language:{search:'Cari:',lengthMenu:'Tampilkan _MENU_ data',info:'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',infoEmpty:'Tidak ada data',zeroRecords:'Data tidak ditemukan',paginate:{first:'Awal',last:'Akhir',next:'Berikutnya',previous:'Sebelumnya'}},pageLength:10,order:[],columnDefs:[],responsive:false});
-    dtSasaran.on('order.dt search.dt draw.dt',function(){var info=dtSasaran.page.info();dtSasaran.column(0,{search:'applied',order:'applied',page:'current'}).nodes().each(function(cell,i){if(cell) cell.innerHTML=info.start+i+1;});}).draw();
+    function svFilterSasaranCards() {
+        var query = $.trim($('#filter-search-sasaran').val() || '').toLowerCase();
+        var status = $.trim($('#filter-status-card').val() || '');
+        var jenis = $.trim($('#filter-jenis-card').val() || '');
+        var visible = 0;
+        $('.sasaran-card-col').each(function () {
+            var searchTxt = $(this).attr('data-search') || '';
+            var cardStatus = $(this).attr('data-status') || '';
+            var cardJenis = $(this).attr('data-jenis') || '';
+            var matchQuery = !query || searchTxt.indexOf(query) !== -1;
+            var matchStatus = !status || cardStatus === status;
+            var matchJenis = !jenis || cardJenis === jenis;
+            if (matchQuery && matchStatus && matchJenis) {
+                $(this).removeClass('d-none');
+                visible++;
+            } else {
+                $(this).addClass('d-none');
+            }
+        });
+        $('#empty-search-msg').toggle(visible === 0);
+        $('#sasaran-count-badge').text(visible + ' Guru/PTK');
+    }
+
+    $('#filter-search-sasaran').on('input', svFilterSasaranCards);
+    $('#filter-status-card').on('change', svFilterSasaranCards);
+    $('#filter-jenis-card').on('change', svFilterSasaranCards);
+
     function escapeHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
     function svBuildAddDropdowns() {
         var gid = $('#sv-guru-select').val();
@@ -249,7 +294,39 @@ $(document).ready(function () {
         var id = $(this).data('id');
         Swal.fire({title:'Konfirmasi Hapus',text:'Sasaran supervisi akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33',cancelButtonColor:'#6c757d',confirmButtonText:'Ya, Hapus!',cancelButtonText:'Batal'}).then(function(r){if(r.isConfirmed){var f=document.createElement('form');f.method='POST';f.action='sasaran_supervisi.php';var fields={aksi:'hapus',id_sasaran:id};Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=fields[k];f.appendChild(i);});document.body.appendChild(f);f.submit();}});
     });
-    $('#btn-excel').on('click', function () { var table=document.getElementById('table-sasaran');if(!table) return;if(typeof XLSX!=='undefined'){var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var wb=XLSX.utils.table_to_book(clone,{sheet:"Sheet1"});XLSX.writeFile(wb,'sasaran_supervisi.xlsx');}else{var clone=table.cloneNode(true);for(var i=0;i<clone.rows.length;i++){if(clone.rows[i].cells.length>0) clone.rows[i].deleteCell(-1);}var html='<table border="1">'+clone.innerHTML+'</table>';var a=document.createElement('a');a.href='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(html);a.download='sasaran_supervisi.xls';a.click();} });
+    $('#btn-excel').on('click', function () {
+        var data = [];
+        data.push(['No', 'Nama Guru', 'NUPTK / NIP', 'Jabatan', 'Mata Pelajaran', 'Kelas', 'Jenis Supervisi', 'Program Supervisi', 'Tahun Ajaran', 'Semester', 'Status Supervisi', 'Supervisi Terakhir', 'Nilai Terakhir']);
+        
+        if (typeof svSasaranData !== 'undefined' && Array.isArray(svSasaranData)) {
+            svSasaranData.forEach(function (r, i) {
+                data.push([
+                    i + 1,
+                    r.nama_guru || '-',
+                    r.nip_npk || '-',
+                    r.jabatan || '-',
+                    r.mata_pelajaran || '-',
+                    r.kelas || '-',
+                    r.jenis_supervisi || '-',
+                    r.nama_program || '-',
+                    r.tahun_ajaran || '-',
+                    r.semester || '-',
+                    r.status_supervisi || '-',
+                    r.supervisi_terakhir ? r.supervisi_terakhir : '-',
+                    r.nilai_terakhir !== null ? Number(r.nilai_terakhir).toFixed(2) : '-'
+                ]);
+            });
+        }
+        
+        if (typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.aoa_to_sheet(data);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sasaran Supervisi");
+            XLSX.writeFile(wb, 'sasaran_supervisi.xlsx');
+        } else {
+            alert('Library XLSX tidak tersedia');
+        }
+    });
     $('#btn-pdf').on('click', function () { window.open('cetak_supervisi.php?page=sasaran', '_blank'); });
 });
 JS;
@@ -257,7 +334,25 @@ JS;
 include '../templates/header.php';
 include '../templates/sidebar.php';
 ?>
+<?php
+$total_sasaran = count($rows);
+$count_sudah = count(array_filter($rows, fn($r) => ($r['status_supervisi'] ?? '') === 'Sudah Disupervisi'));
+$count_belum = $total_sasaran - $count_sudah;
+$persen_selesai = $total_sasaran > 0 ? round(($count_sudah / $total_sasaran) * 100) : 0;
+?>
 <div class="main-content">
+    <style>
+    .hover-shadow {
+        transition: all 0.2s ease-in-out;
+    }
+    .hover-shadow:hover {
+        box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important;
+        transform: translateY(-2px);
+    }
+    .transition {
+        transition: all 0.2s ease-in-out;
+    }
+    </style>
     <section class="section">
         <div class="section-header">
             <h1>Sasaran Supervisi</h1>
@@ -266,16 +361,80 @@ include '../templates/sidebar.php';
         <div class="section-body">
             <input type="hidden" id="svSchoolName" value="<?= htmlspecialchars($school_profile['nama_madrasah'] ?? 'MADRASAH', ENT_QUOTES) ?>">
             <input type="hidden" id="svSchoolLogo" value="<?= !empty($school_profile['logo']) ? '../assets/img/' . htmlspecialchars($school_profile['logo'], ENT_QUOTES) : '' ?>">
-            <input type="hidden" id="svAcademicYear" value="<?= htmlspecialchars($periode['tahun_ajaran'], ENT_QUOTES) ?>">
-            <input type="hidden" id="svSemester" value="<?= htmlspecialchars($periode['semester'], ENT_QUOTES) ?>">
+            <input type="hidden" id="svAcademicYear" value="<?= htmlspecialchars($filter_ta !== '' ? $filter_ta : $periode['tahun_ajaran'], ENT_QUOTES) ?>">
+            <input type="hidden" id="svSemester" value="<?= htmlspecialchars($filter_sem !== '' ? $filter_sem : $periode['semester'], ENT_QUOTES) ?>">
             <input type="hidden" id="svHeadName" value="<?= htmlspecialchars($school_profile['nama_kepala'] ?? '-', ENT_QUOTES) ?>">
             <input type="hidden" id="svHeadNip" value="<?= htmlspecialchars($school_profile['nip_kepala'] ?? '-', ENT_QUOTES) ?>">
             <input type="hidden" id="svPrintPlace" value="<?= htmlspecialchars($school_profile['tempat_jadwal'] ?? 'Padang', ENT_QUOTES) ?>">
             <input type="hidden" id="svPrintDate" value="<?= date('d F Y') ?>">
 
+            <!-- Filter & Search Card -->
+            <div class="card mb-3">
+                <div class="card-body p-3">
+                    <form method="GET" id="form-sasaran-filter" class="form-row align-items-end">
+                        <div class="form-group col-12 col-md-3 mb-2 mb-md-0">
+                            <label class="small font-weight-bold">Tahun Ajaran</label>
+                            <select class="form-control form-control-sm" name="tahun_ajaran" onchange="this.form.submit()">
+                                <option value="semua" <?= $filter_ta === 'semua' ? 'selected' : '' ?>>Semua Tahun Ajaran</option>
+                                <?php foreach (sv_tahun_ajaran_options($pdo) as $ta): ?>
+                                    <option value="<?= htmlspecialchars($ta, ENT_QUOTES) ?>" <?= $ta === $filter_ta ? 'selected' : '' ?>><?= htmlspecialchars($ta) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-12 col-md-2 mb-2 mb-md-0">
+                            <label class="small font-weight-bold">Semester</label>
+                            <select class="form-control form-control-sm" name="semester" onchange="this.form.submit()">
+                                <option value="">Semua Semester</option>
+                                <?php foreach (sv_semester_options() as $s): ?>
+                                    <option value="<?= htmlspecialchars($s, ENT_QUOTES) ?>" <?= $s === $filter_sem ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-12 col-md-2 mb-2 mb-md-0">
+                            <label class="small font-weight-bold">Status</label>
+                            <select class="form-control form-control-sm" id="filter-status-card">
+                                <option value="">Semua Status</option>
+                                <option value="Sudah Disupervisi">Sudah Disupervisi</option>
+                                <option value="Belum Disupervisi">Belum Disupervisi</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-12 col-md-2 mb-2 mb-md-0">
+                            <label class="small font-weight-bold">Jenis</label>
+                            <select class="form-control form-control-sm" id="filter-jenis-card">
+                                <option value="">Semua Jenis</option>
+                                <option value="Akademik">Akademik</option>
+                                <option value="Administrasi">Administrasi</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-12 col-md-3 mb-0">
+                            <label class="small font-weight-bold">Cari Guru / Mapel</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="filter-search-sasaran" placeholder="Cari nama, NUPTK, mapel, kelas...">
+                                <div class="input-group-append">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Stats Chips -->
+            <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 8px;">
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-users text-primary mr-1"></i> Total: <strong id="sasaran-count-badge"><?= (int)$total_sasaran ?> Guru/PTK</strong>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-check-circle text-success mr-1"></i> Sudah Disupervisi: <strong><?= (int)$count_sudah ?></strong> <small class="text-success font-weight-bold">(<?= $persen_selesai ?>%)</small>
+                </span>
+                <span class="badge badge-light border text-dark px-3 py-2" style="border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-clock text-warning mr-1"></i> Belum Disupervisi: <strong><?= (int)$count_belum ?></strong>
+                </span>
+            </div>
+
             <div class="card">
                 <div class="card-header">
-                    <h4>Daftar Sasaran Supervisi <small class="text-muted">TA <?= htmlspecialchars($periode['tahun_ajaran'], ENT_QUOTES) ?> &bull; <?= htmlspecialchars($periode['semester'], ENT_QUOTES) ?></small></h4>
+                    <h4>Daftar Sasaran Supervisi <small class="text-muted"><?= $filter_ta !== 'semua' && $filter_ta !== '' ? 'TA ' . htmlspecialchars($filter_ta) : 'Semua Periode' ?><?= $filter_sem !== '' ? ' &bull; ' . htmlspecialchars($filter_sem) : '' ?></small></h4>
                     <div class="card-header-action">
                         <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
                         <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -285,57 +444,139 @@ include '../templates/sidebar.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="table-sasaran">
-                            <thead>
-                                <tr>
-                                    <th width="5%">No</th>
-                                    <th>Guru/PTK</th>
-                                    <th>NUPTK</th>
-                                    <th>Jabatan</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Kelas</th>
-                                    <th>Program</th>
-                                    <th>Jenis</th>
-                                    <th>Semester</th>
-                                    <th>Status</th>
-                                    <th>Supervisi Terakhir</th>
-                                    <th>Nilai Terakhir</th>
-                                    <?php if ($can_manage): ?><th width="10%">Aksi</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $r): ?>
-                                    <tr>
-                                        <td class="text-center"></td>
-                                        <td><?= htmlspecialchars($r['nama_guru']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['nip_npk']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['jabatan']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['mata_pelajaran']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['kelas']) ?></td>
-                                        <td><?= htmlspecialchars((string)$r['nama_program']) ?></td>
-                                        <td><span class="badge badge-info"><?= htmlspecialchars($r['jenis_supervisi']) ?></span></td>
-                                        <td><?= htmlspecialchars($r['semester']) ?></td>
-                                        <td>
-                                            <?php $isDone = $r['status_supervisi'] === 'Sudah Disupervisi'; ?>
-                                            <span class="badge badge-<?= $isDone ? 'success' : 'warning' ?>"><?= htmlspecialchars($r['status_supervisi']) ?></span>
-                                        </td>
-                                        <td><?= $r['supervisi_terakhir'] ? date('d/m/Y', strtotime($r['supervisi_terakhir'])) : '-' ?></td>
-                                        <td><?= $r['nilai_terakhir'] !== null ? htmlspecialchars(number_format((float)$r['nilai_terakhir'], 2)) : '-' ?></td>
-                                        <?php if ($can_manage): ?>
-                                        <td style="white-space:nowrap">
-                                            <div class="d-inline-flex align-items-center">
-                                            <button class="btn btn-warning btn-sm btn-edit mr-1" type="button"
-                                                data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>'><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-danger btn-sm btn-hapus" type="button" data-id="<?= (int)$r['id_sasaran'] ?>"><i class="fas fa-trash"></i></button>
+                    <?php if (empty($rows)): ?>
+                        <div class="alert alert-info text-center py-4">
+                            <i class="fas fa-info-circle fa-2x mb-2 d-block text-info"></i>
+                            Belum ada sasaran supervisi pada filter periode ini.
+                            <?php if ($can_manage): ?>
+                                <br><small class="text-muted">Klik tombol <strong>"Tambah dari Master PTK"</strong> untuk menetapkan sasaran baru.</small>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <div id="empty-search-msg" class="alert alert-warning text-center" style="display:none;">
+                            <i class="fas fa-search mr-1"></i> Tidak ada sasaran supervisi yang cocok dengan filter pencarian Anda.
+                        </div>
+                        <div class="row" id="sasaran-cards-container">
+                            <?php foreach ($rows as $r): ?>
+                                <?php
+                                $isDone = ($r['status_supervisi'] === 'Sudah Disupervisi');
+                                $statusBadge = $isDone ? 'success' : 'warning';
+                                $searchBlob = strtolower(implode(' ', [
+                                    $r['nama_guru'] ?? '',
+                                    $r['nip_npk'] ?? '',
+                                    $r['jabatan'] ?? '',
+                                    $r['mata_pelajaran'] ?? '',
+                                    $r['kelas'] ?? '',
+                                    $r['nama_program'] ?? '',
+                                    $r['jenis_supervisi'] ?? '',
+                                    $r['status_supervisi'] ?? ''
+                                ]));
+                                ?>
+                                <div class="col-12 col-md-6 col-lg-4 d-flex align-items-stretch mb-4 sasaran-card-col"
+                                     data-search="<?= htmlspecialchars($searchBlob, ENT_QUOTES) ?>"
+                                     data-status="<?= htmlspecialchars($r['status_supervisi'] ?? '', ENT_QUOTES) ?>"
+                                     data-jenis="<?= htmlspecialchars($r['jenis_supervisi'] ?? '', ENT_QUOTES) ?>">
+                                    <div class="card w-100 border-0 shadow-sm hover-shadow transition" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0 !important;">
+                                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <!-- Top Bar: Jenis & Status Supervisi -->
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge badge-info px-2 py-1 font-weight-bold" style="font-size: 11.5px; border-radius: 6px;">
+                                                        <i class="fas fa-clipboard-check mr-1"></i> <?= htmlspecialchars($r['jenis_supervisi']) ?>
+                                                    </span>
+                                                    <span class="badge badge-<?= $statusBadge ?> px-2 py-1 font-weight-bold" style="font-size: 11px; border-radius: 6px;">
+                                                        <i class="fas <?= $isDone ? 'fa-check-circle' : 'fa-clock' ?> mr-1"></i> <?= htmlspecialchars($r['status_supervisi']) ?>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Nama Guru & NUPTK/Jabatan -->
+                                                <h6 class="font-weight-bold text-dark mb-1" style="font-size: 15px; line-height: 1.4;">
+                                                    <?= htmlspecialchars($r['nama_guru']) ?>
+                                                </h6>
+                                                <div class="text-muted small mb-2 d-flex flex-wrap align-items-center" style="gap: 6px; font-size: 11.5px;">
+                                                    <span><i class="fas fa-id-card text-muted mr-1"></i> <?= htmlspecialchars((string)($r['nip_npk'] ?: '-')) ?></span>
+                                                    <span>&bull;</span>
+                                                    <span class="badge badge-light border text-dark font-weight-normal"><?= htmlspecialchars((string)($r['jabatan'] ?: 'Guru')) ?></span>
+                                                </div>
+
+                                                <!-- Academic Info Badges -->
+                                                <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 6px;">
+                                                    <?php if (!empty($r['mata_pelajaran'])): ?>
+                                                        <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 4px; font-size: 12px;">
+                                                            <i class="fas fa-book text-muted mr-1"></i> <?= htmlspecialchars($r['mata_pelajaran']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($r['kelas'])): ?>
+                                                        <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="border-radius: 4px; font-size: 12px;">
+                                                            <i class="fas fa-chalkboard-teacher text-muted mr-1"></i> Kls <?= htmlspecialchars($r['kelas']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                    <span class="badge badge-light border text-dark px-2 py-1" style="border-radius: 4px; font-size: 12px;">
+                                                        <i class="far fa-calendar-alt text-muted mr-1"></i> <?= htmlspecialchars($r['tahun_ajaran']) ?> (<?= htmlspecialchars($r['semester']) ?>)
+                                                    </span>
+                                                </div>
+
+                                                <!-- Program Supervisi Box -->
+                                                <div class="p-2 mb-3 rounded" style="background: #f8fafc; font-size: 12px; border: 1px dashed #cbd5e1; line-height: 1.4;">
+                                                    <small class="text-muted d-block font-weight-bold mb-1" style="font-size: 10.5px;"><i class="fas fa-project-diagram text-primary mr-1"></i> Program Supervisi:</small>
+                                                    <span class="text-dark font-weight-bold"><?= htmlspecialchars((string)($r['nama_program'] ?: 'Belum ditautkan ke program')) ?></span>
+                                                </div>
+
+                                                <!-- Riwayat Supervisi & Nilai Terakhir -->
+                                                <div class="row mb-2">
+                                                    <div class="col-6">
+                                                        <div class="text-center p-2 rounded" style="background: #f8fafc; height: 100%;">
+                                                            <small class="text-muted d-block mb-1" style="font-size: 11px;">Supervisi Terakhir</small>
+                                                            <span class="font-weight-bold text-dark" style="font-size: 12px;">
+                                                                <i class="far fa-calendar-check text-success mr-1"></i> <?= $r['supervisi_terakhir'] ? date('d/m/Y', strtotime($r['supervisi_terakhir'])) : '-' ?>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div class="text-center p-2 rounded" style="background: #f8fafc; height: 100%;">
+                                                            <small class="text-muted d-block mb-1" style="font-size: 11px;">Nilai Terakhir</small>
+                                                            <?php if ($r['nilai_terakhir'] !== null): ?>
+                                                                <h5 class="mb-0 text-primary font-weight-bold" style="font-size: 18px;"><?= number_format((float)$r['nilai_terakhir'], 2) ?></h5>
+                                                                <?php 
+                                                                $pred = sv_predikat($r['nilai_terakhir']);
+                                                                $predColor = 'info';
+                                                                if (stripos($pred, 'Sangat Baik') !== false || stripos($pred, 'Amat Baik') !== false || stripos($pred, 'A') === 0) {
+                                                                    $predColor = 'success';
+                                                                } elseif (stripos($pred, 'Baik') !== false || stripos($pred, 'B') === 0) {
+                                                                    $predColor = 'primary';
+                                                                } elseif (stripos($pred, 'Cukup') !== false || stripos($pred, 'C') === 0) {
+                                                                    $predColor = 'warning';
+                                                                } elseif (stripos($pred, 'Kurang') !== false || stripos($pred, 'D') === 0 || stripos($pred, 'E') === 0) {
+                                                                    $predColor = 'danger';
+                                                                }
+                                                                ?>
+                                                                <span class="badge badge-<?= $predColor ?> font-weight-bold mt-1" style="font-size: 11px; padding: 4px 10px; border-radius: 6px;"><?= htmlspecialchars($pred) ?></span>
+                                                            <?php else: ?>
+                                                                <span class="text-muted font-italic" style="font-size: 11.5px;">Belum dinilai</span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </td>
-                                        <?php endif; ?>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+
+                                            <!-- Footer: Aksi -->
+                                            <?php if ($can_manage): ?>
+                                            <div class="pt-3 mt-2 border-top d-flex justify-content-end" style="gap: 6px;">
+                                                <button class="btn btn-outline-warning btn-sm btn-edit px-3" type="button"
+                                                    data-row='<?= htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>' style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-edit mr-1"></i> Edit
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm btn-hapus px-3" type="button" data-id="<?= (int)$r['id_sasaran'] ?>" style="border-radius: 6px; font-size: 12px;">
+                                                    <i class="fas fa-trash mr-1"></i> Hapus
+                                                </button>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

@@ -205,6 +205,17 @@ $(document).ready(function () {
         var q = $('form[method=GET]').serialize(); 
         window.open('cetak_supervisi.php?page=laporan&' + q, '_blank'); 
     });
+
+    $('#btn-laporan-lengkap').on('click', function () {
+        // Kirim hanya tahun_ajaran dan jenis — TANPA semester,
+        // supaya laporan mencakup seluruh TA yang dilaporkan (bukan terkunci semester aktif).
+        var params = new URLSearchParams();
+        var ta = $('select[name="tahun_ajaran"]').val() || '';
+        var jenis = $('select[name="jenis"]').val() || '';
+        if (ta) params.set('tahun_ajaran', ta);
+        if (jenis) params.set('jenis', jenis);
+        window.open('cetak_laporan_supervisi_lengkap.php?' + params.toString(), '_blank');
+    });
     
     $('.btn-pdf-single').on('click', function(e) {
         e.preventDefault();
@@ -301,6 +312,8 @@ include '../templates/sidebar.php';
                 <div class="card-header">
                     <h4>Daftar Laporan Supervisi</h4>
                     <div class="card-header-action">
+                        <a href="pengaturan_laporan_supervisi.php" class="btn btn-secondary" title="Edit latar belakang, landasan hukum, tujuan"><i class="fas fa-cog"></i> Pengaturan Laporan</a>
+                        <button class="btn btn-primary" id="btn-laporan-lengkap" type="button"><i class="fas fa-book"></i> Laporan Lengkap</button>
                         <button class="btn btn-success" id="btn-excel" type="button"><i class="fas fa-file-excel"></i> Excel</button>
                         <button class="btn btn-warning" id="btn-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
                     </div>
