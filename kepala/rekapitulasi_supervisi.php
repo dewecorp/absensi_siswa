@@ -483,15 +483,17 @@ include '../templates/sidebar.php';
 
                                                 <!-- Highlight Rekomendasi/Prioritas -->
                                                 <?php if (!empty($k['rekomendasi']) || !empty($k['prioritas_perbaikan'])): ?>
-                                                    <div class="p-2 rounded mb-2" style="background: #fffdf5; border: 1px solid #fef08a; font-size: 11.5px; line-height: 1.35;">
+                                                    <div class="p-2 rounded mb-2" style="background: #fffdf5; border: 1px solid #fef08a; font-size: 11.5px; line-height: 1.5;">
                                                         <?php if (!empty($k['rekomendasi'])): ?>
-                                                            <div class="text-truncate text-dark mb-1">
-                                                                <strong class="text-warning"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong> <?= htmlspecialchars($k['rekomendasi']) ?>
+                                                            <div class="text-dark mb-1">
+                                                                <strong class="text-warning d-block mb-1"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi:</strong>
+                                                                <?= nl2br(htmlspecialchars($k['rekomendasi'])) ?>
                                                             </div>
                                                         <?php endif; ?>
                                                         <?php if (!empty($k['prioritas_perbaikan'])): ?>
-                                                            <div class="text-truncate text-muted">
-                                                                <strong><i class="fas fa-flag mr-1 text-danger"></i> Prioritas:</strong> <?= htmlspecialchars($k['prioritas_perbaikan']) ?>
+                                                            <div class="text-dark <?= !empty($k['rekomendasi']) ? 'mt-2 pt-2 border-top' : '' ?>">
+                                                                <strong class="d-block mb-1"><i class="fas fa-flag mr-1 text-danger"></i> Prioritas:</strong>
+                                                                <span class="text-muted"><?= nl2br(htmlspecialchars($k['prioritas_perbaikan'])) ?></span>
                                                             </div>
                                                         <?php endif; ?>
                                                     </div>

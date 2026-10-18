@@ -651,13 +651,15 @@ $count_aktif = count(array_filter($rows, fn($r) => ($r['status'] ?? '') === 'Akt
                                                 <!-- Fokus Supervisi Tags -->
                                                 <?php if (!empty($r['_fokus_arr'])): ?>
                                                     <div class="mb-2">
-                                                        <small class="text-muted font-weight-bold d-block mb-1" style="font-size: 11px;"><i class="fas fa-crosshairs mr-1"></i> Fokus Supervisi:</small>
-                                                        <div class="d-flex flex-wrap" style="gap: 4px;">
+                                                        <div class="font-weight-bold text-dark mb-1" style="font-size: 11.5px;">
+                                                            <i class="fas fa-crosshairs mr-1" style="color: #4f46e5;"></i> Fokus Supervisi:
+                                                        </div>
+                                                        <div class="d-flex flex-wrap" style="gap: 5px;">
                                                             <?php foreach (array_slice($r['_fokus_arr'], 0, 3) as $fokus): ?>
-                                                                <span class="badge badge-light border text-secondary px-2 py-1" style="font-size: 11px; border-radius: 4px;"><?= htmlspecialchars($fokus) ?></span>
+                                                                <span class="badge" style="background: #eef2ff; color: #312e81; border: 1px solid #c7d2fe; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; letter-spacing: 0.1px;"><?= htmlspecialchars($fokus) ?></span>
                                                             <?php endforeach; ?>
                                                             <?php if (count($r['_fokus_arr']) > 3): ?>
-                                                                <span class="badge badge-secondary px-1 py-1" style="font-size: 10px; border-radius: 4px;">+<?= count($r['_fokus_arr']) - 3 ?> lainnya</span>
+                                                                <span class="badge" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 10.5px; font-weight: 700; padding: 4px 7px; border-radius: 6px;">+<?= count($r['_fokus_arr']) - 3 ?> lainnya</span>
                                                             <?php endif; ?>
                                                         </div>
                                                     </div>
