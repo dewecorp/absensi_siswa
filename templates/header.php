@@ -279,6 +279,7 @@ if (getUserLevel() === 'siswa' && isset($_SESSION['user_id'])) {
     $_att_sc_v = is_readable($_att_sc_path) ? (string) filemtime($_att_sc_path) : '1';
     ?>
     <link rel="stylesheet" href="../assets/css/attendance-cards-semester.css?v=<?php echo htmlspecialchars($_att_sc_v, ENT_QUOTES, 'UTF-8'); ?>">
+    <noscript><style>table#semesterTable, table.semester-card-source, .att-semester-wrap-hidden { display: block !important; }</style></noscript>
     <!-- Attendance student detail (per siswa) cards CSS (mobile) -->
     <?php
     $_att_sd_path = __DIR__ . '/../assets/css/attendance-student-detail.css';

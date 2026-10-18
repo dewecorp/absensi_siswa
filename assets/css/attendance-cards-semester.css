@@ -14,15 +14,29 @@
     margin-top: 12px;
 }
 
-/* tabel asli disembunyikan di semua ukuran (diganti kartu) */
-.att-semester-wrap-hidden {
+/* tabel asli disembunyikan di semua ukuran (diganti kartu).
+   Selektor di bawah menyembunyikan tabel sumber SEJAK render pertama
+   supaya tidak terlihat "kedip" tabel lebar sebelum kartu dibuat oleh
+   assets/js/attendance-semester-cards.js (dulu tabel baru disembunyikan
+   setelah JS jalan, itu penyebab tabel muncul sekilas saat reload). */
+.att-semester-wrap-hidden,
+table#semesterTable,
+table.semester-card-source,
+.table-responsive:has(> table#semesterTable),
+.table-responsive:has(> table.semester-card-source) {
     display: none !important;
 }
 
 /* Saat dicetak, yang tampil tabelnya lagi (bukan kartu). */
 @media print {
-    .att-semester-wrap-hidden {
+    .att-semester-wrap-hidden,
+    .table-responsive:has(> table#semesterTable),
+    .table-responsive:has(> table.semester-card-source) {
         display: block !important;
+    }
+    table#semesterTable,
+    table.semester-card-source {
+        display: table !important;
     }
     .att-semester-grid {
         display: none !important;
