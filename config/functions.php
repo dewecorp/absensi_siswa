@@ -2008,12 +2008,120 @@ function get_current_user_key(): string {
     return 'guest';
 }
 
+// ============================================================
+// Notifikasi bertarget (audience)
+// tb_notifikasi.audience menyimpan token penerima:
+//   'admin_kepala'          -> admin & kepala madrasah saja
+//   'guru_wali'             -> semua guru & wali
+//   'guru_wali_kelas_<id>'  -> guru/wali pengampu kelas tsb
+// Baris tanpa audience (NULL/'') tetap terlihat oleh semua peran.
+// ============================================================
+if (!function_exists('simadEnsureNotifAudienceColumn')) {
+    function simadEnsureNotifAudienceColumn(PDO $pdo): bool {
+        static $checked = null;
+        if ($checked !== null) {
+            return $checked;
+        }
+        $checked = false;
+        try {
+            $has = function_exists('dbColumnExists') ? dbColumnExists($pdo, 'tb_notifikasi', 'audience') : null;
+            if ($has === null) {
+                $has = (bool)$pdo->query("SHOW COLUMNS FROM tb_notifikasi LIKE 'audience'")->fetchAll();
+            }
+            if (!$has) {
+                $pdo->exec("ALTER TABLE tb_notifikasi ADD COLUMN audience VARCHAR(64) NULL DEFAULT NULL");
+            }
+            $checked = true;
+        } catch (Throwable $e) {
+            $checked = false;
+        }
+        return $checked;
+    }
+}
+
+// Token audience yang boleh dilihat pengguna saat ini
+if (!function_exists('simadNotifAudienceTokens')) {
+    function simadNotifAudienceTokens(PDO $pdo): array {
+        $level  = function_exists('getUserLevel') ? getUserLevel() : strtolower(trim((string)($_SESSION['level'] ?? '')));
+        $tokens = [];
+        if (in_array($level, ['admin', 'kepala_madrasah'], true)) {
+            $tokens[] = 'admin_kepala';
+        }
+        if (in_array($level, ['guru', 'wali'], true)) {
+            $tokens[] = 'guru_wali';
+            $gid = function_exists('getCurrentGuruId') ? (int)getCurrentGuruId($pdo) : 0;
+            foreach (simadKelasIdsForGuru($pdo, $gid) as $kid) {
+                $tokens[] = 'guru_wali_kelas_' . (int)$kid;
+            }
+        }
+        return array_values(array_unique($tokens));
+    }
+}
+
+// Daftar id kelas yang diampu guru (wali kelas maupun pengajar mapel)
+if (!function_exists('simadKelasIdsForGuru')) {
+    function simadKelasIdsForGuru(PDO $pdo, int $guru_id): array {
+        if ($guru_id <= 0) {
+            return [];
+        }
+        $ids = [];
+        try {
+            $st = $pdo->prepare("SELECT nama_guru, mengajar FROM tb_guru WHERE id_guru = ? LIMIT 1");
+            $st->execute([$guru_id]);
+            $row  = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+            $nama = trim((string)($row['nama_guru'] ?? ''));
+            if ($nama !== '') {
+                $st2 = $pdo->prepare("SELECT id_kelas FROM tb_kelas WHERE wali_kelas = ?");
+                $st2->execute([$nama]);
+                foreach ($st2->fetchAll(PDO::FETCH_COLUMN) as $k) {
+                    $ids[] = (int)$k;
+                }
+            }
+            $mengajar = trim((string)($row['mengajar'] ?? ''));
+            if ($mengajar !== '') {
+                $decoded = json_decode($mengajar, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $k) {
+                        $ids[] = (int)(is_array($k) ? ($k['id_kelas'] ?? 0) : $k);
+                    }
+                } else {
+                    foreach (preg_split('/[^0-9]+/', $mengajar) as $k) {
+                        if ($k !== '') {
+                            $ids[] = (int)$k;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable $e) {}
+        return array_values(array_unique(array_filter($ids, function ($v) { return $v > 0; })));
+    }
+}
+
+// Notifikasi kehadiran (yang punya audience) untuk pengguna saat ini
+if (!function_exists('getAttendanceNotifications')) {
+    function getAttendanceNotifications(PDO $pdo): array {
+        $rows = function_exists('getNotifications') ? getNotifications($pdo) : [];
+        $out  = [];
+        foreach ($rows as $r) {
+            if (!empty($r['audience'])) {
+                $out[] = $r;
+            }
+        }
+        return $out;
+    }
+}
+
 // Function to create notification
-function createNotification(PDO $pdo, string $message, string $link, string $type = 'info', ?string $actor_key = null): bool {
+function createNotification(PDO $pdo, string $message, string $link, string $type = 'info', ?string $actor_key = null, ?string $audience = null): bool {
     if ($actor_key === null) {
         $actor_key = get_current_user_key();
     }
+    $hasAudience = simadEnsureNotifAudienceColumn($pdo);
     try {
+        if ($hasAudience) {
+            $stmt = $pdo->prepare("INSERT INTO tb_notifikasi (message, link, actor_key, audience, created_at) VALUES (?, ?, ?, ?, NOW())");
+            return $stmt->execute([$message, $link, $actor_key, $audience]);
+        }
         $stmt = $pdo->prepare("INSERT INTO tb_notifikasi (message, link, actor_key, created_at) VALUES (?, ?, ?, NOW())");
         return $stmt->execute([$message, $link, $actor_key]);
     } catch (Throwable $e) {
@@ -2029,16 +2137,27 @@ function getNotifications(PDO $pdo): array {
         $pdo->exec("DELETE FROM tb_notifikasi_read WHERE read_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
     } catch (Throwable $e) {}
 
-    $ukey = get_current_user_key();
+    $ukey   = get_current_user_key();
+    $tokens = function_exists('simadNotifAudienceTokens') ? simadNotifAudienceTokens($pdo) : [];
+
+    // Baris tanpa audience = notifikasi lama (semua peran). Baris ber-audience hanya
+    // untuk token yang cocok dengan peran pengguna.
+    $audSql = "(n.audience IS NULL OR n.audience = ''";
+    if (!empty($tokens)) {
+        $audSql .= " OR n.audience IN (" . implode(',', array_fill(0, count($tokens), '?')) . ")";
+    }
+    $audSql .= ")";
+
     try {
         $stmt = $pdo->prepare("
             SELECT n.*, (CASE WHEN r.notif_id IS NOT NULL THEN 1 ELSE 0 END) AS is_read
             FROM tb_notifikasi n
             LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
             WHERE (n.actor_key IS NULL OR n.actor_key != ?)
+              AND $audSql
             ORDER BY n.created_at DESC
         ");
-        $stmt->execute([$ukey, $ukey]);
+        $stmt->execute(array_merge([$ukey, $ukey], $tokens));
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
         $stmt = $pdo->prepare("SELECT * FROM tb_notifikasi ORDER BY created_at DESC");
@@ -2054,7 +2173,15 @@ function getUnreadNotifications(PDO $pdo): array {
         $pdo->exec("DELETE FROM tb_notifikasi_read WHERE read_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
     } catch (Throwable $e) {}
 
-    $ukey = get_current_user_key();
+    $ukey   = get_current_user_key();
+    $tokens = function_exists('simadNotifAudienceTokens') ? simadNotifAudienceTokens($pdo) : [];
+
+    $audSql = "(n.audience IS NULL OR n.audience = ''";
+    if (!empty($tokens)) {
+        $audSql .= " OR n.audience IN (" . implode(',', array_fill(0, count($tokens), '?')) . ")";
+    }
+    $audSql .= ")";
+
     try {
         $stmt = $pdo->prepare("
             SELECT n.*
@@ -2062,9 +2189,10 @@ function getUnreadNotifications(PDO $pdo): array {
             LEFT JOIN tb_notifikasi_read r ON r.notif_id = n.id AND r.user_key = ?
             WHERE r.notif_id IS NULL
               AND (n.actor_key IS NULL OR n.actor_key != ?)
+              AND $audSql
             ORDER BY n.created_at DESC
         ");
-        $stmt->execute([$ukey, $ukey]);
+        $stmt->execute(array_merge([$ukey, $ukey], $tokens));
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
         return getNotifications($pdo);
@@ -3816,6 +3944,263 @@ if (!function_exists('simadSaveSingleAttendance')) {
             return ['success' => false, 'error' => 'Konteks tidak dikenal.'];
         } catch (Throwable $e) {
             return ['success' => false, 'error' => 'Gagal menyimpan kehadiran: ' . $e->getMessage()];
+        }
+    }
+}
+
+// ============================================================
+// Label aktor penginput kehadiran harian (guru/wali/admin/kepala/tu)
+// ============================================================
+if (!function_exists('simadAktorKehadiranLabel')) {
+    function simadAktorKehadiranLabel(PDO $pdo, string $nama_kelas = ''): string {
+        $level = function_exists('getUserLevel') ? getUserLevel() : strtolower(trim((string)($_SESSION['level'] ?? '')));
+
+        if ($level === 'guru' || $level === 'wali') {
+            $peran = ($level === 'wali') ? 'Wali Kelas' : 'Guru Kelas';
+
+            $nama = '';
+            $gid = function_exists('getCurrentGuruId') ? (int)getCurrentGuruId($pdo) : 0;
+            if ($gid > 0) {
+                try {
+                    $s = $pdo->prepare("SELECT nama_guru FROM tb_guru WHERE id_guru = ? LIMIT 1");
+                    $s->execute([$gid]);
+                    $nama = trim((string)$s->fetchColumn());
+                } catch (Throwable $e) {}
+            }
+            if ($nama === '') {
+                $nama = trim((string)($_SESSION['nama_guru'] ?? ''));
+            }
+
+            $kelas = trim($nama_kelas);
+            // Wali: pakai kelas yang diampu wali tersebut
+            if ($level === 'wali' && $nama !== '') {
+                try {
+                    $s = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE wali_kelas = ? LIMIT 1");
+                    $s->execute([$nama]);
+                    $k = trim((string)$s->fetchColumn());
+                    if ($k !== '') {
+                        $kelas = $k;
+                    }
+                } catch (Throwable $e) {}
+            }
+
+            if ($nama === '') {
+                return $peran . ($kelas !== '' ? ' ' . $kelas : '');
+            }
+            return $nama . ' (' . $peran . ($kelas !== '' ? ' ' . $kelas : '') . ')';
+        }
+
+        if ($level === 'admin') {
+            return 'Admin';
+        }
+        if ($level === 'tata_usaha') {
+            return 'Tata Usaha';
+        }
+        if ($level === 'kepala_madrasah') {
+            return 'Kepala Madrasah';
+        }
+        return $level !== '' ? ucfirst($level) : 'Pengguna';
+    }
+}
+
+// ============================================================
+// Progres presensi harian per kelas (untuk notifikasi admin & kepala)
+// Mengembalikan: ['kelas' => nama, 'total' => n, 'terisi' => n, 'belum' => [nama kelas]]
+// ============================================================
+if (!function_exists('simadProgresPresensiHarian')) {
+    function simadProgresPresensiHarian(PDO $pdo, string $tanggal, int $id_kelas = 0): array {
+        $out = ['kelas' => '', 'total' => 0, 'terisi' => 0, 'belum' => []];
+        try {
+            $st = $pdo->prepare("
+                SELECT k.id_kelas, k.nama_kelas,
+                       (SELECT COUNT(*) FROM tb_siswa s WHERE s.id_kelas = k.id_kelas) AS total,
+                       (SELECT COUNT(*) FROM tb_absensi a
+                          JOIN tb_siswa s2 ON s2.id_siswa = a.id_siswa
+                         WHERE s2.id_kelas = k.id_kelas
+                           AND a.tanggal = ?
+                           AND a.keterangan IS NOT NULL
+                           AND a.keterangan <> '') AS terisi
+                FROM tb_kelas k
+                ORDER BY k.id_kelas
+            ");
+            $st->execute([$tanggal]);
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return $out;
+        }
+
+        foreach ($rows as $r) {
+            $total  = (int)($r['total'] ?? 0);
+            $terisi = (int)($r['terisi'] ?? 0);
+            $nama   = trim((string)($r['nama_kelas'] ?? ''));
+            if ($nama === '') {
+                $nama = 'Kelas #' . (int)$r['id_kelas'];
+            }
+            if ((int)$r['id_kelas'] === $id_kelas) {
+                $out['kelas']  = $nama;
+                $out['total']  = $total;
+                $out['terisi'] = $terisi;
+            }
+            if ($total > 0 && $terisi === 0) {
+                $label = (stripos($nama, 'kelas') === false) ? ('Kelas ' . $nama) : $nama;
+                $out['belum'][] = $label;
+            }
+        }
+        return $out;
+    }
+}
+
+// ============================================================
+// Kirim notifikasi perubahan kehadiran harian SATU siswa.
+// $source: 'siswa'  -> siswa mengisi sendiri dari dashboard
+//          'petugas'-> guru/wali/admin menginput kehadiran
+// Notifikasi bersifat global (semua peran melihat), aktor asal
+// tidak melihat notifikasinya sendiri.
+// ============================================================
+if (!function_exists('simadNotifKehadiranHarian')) {
+    function simadNotifKehadiranHarian(PDO $pdo, int $id_siswa, string $tanggal, string $status, string $source = 'petugas'): void {
+        $id_siswa = (int)$id_siswa;
+        $status   = trim($status);
+        if ($id_siswa <= 0 || $status === '') {
+            return;
+        }
+
+        $row = [];
+        try {
+            $st = $pdo->prepare("SELECT s.nama_siswa, s.nisn, s.id_kelas, k.nama_kelas
+                                 FROM tb_siswa s
+                                 LEFT JOIN tb_kelas k ON k.id_kelas = s.id_kelas
+                                 WHERE s.id_siswa = ? LIMIT 1");
+            $st->execute([$id_siswa]);
+            $row = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            $row = [];
+        }
+
+        $nama_siswa = trim((string)($row['nama_siswa'] ?? '')) ?: ('Siswa #' . $id_siswa);
+        $nama_kelas = trim((string)($row['nama_kelas'] ?? ''));
+        $nisn       = trim((string)($row['nisn'] ?? ''));
+        $id_kelas   = (int)($row['id_kelas'] ?? 0);
+
+        // Identitas memakai NISN (bukan NIS)
+        $identitas = $nama_siswa;
+        if ($nama_kelas !== '') {
+            $identitas .= " ($nama_kelas)";
+        }
+        if ($nisn !== '') {
+            $identitas .= " - NISN $nisn";
+        }
+
+        $ts          = strtotime($tanggal) ?: time();
+        $tanggal_txt = date('d-m-Y', $ts);
+        $jam         = date('H:i');
+        $status_txt  = ucfirst($status);
+
+        if ($source === 'siswa') {
+            // Siswa mengisi sendiri -> guru & wali perlu tahu
+            $message = "$identitas mengisi kehadiran sendiri: $status_txt pukul $jam WIB, $tanggal_txt";
+        } else {
+            // Input oleh guru/wali/admin -> admin & kepala perlu tahu
+            // sekaligus melihat kelas mana yang belum dipresensi
+            $aktor   = simadAktorKehadiranLabel($pdo, $nama_kelas);
+            $progres = simadProgresPresensiHarian($pdo, $tanggal, $id_kelas);
+            $message = "$aktor mengisi kehadiran $identitas: $status_txt pukul $jam WIB, $tanggal_txt.";
+            if ($progres['total'] > 0) {
+                $label = $progres['kelas'] !== '' ? $progres['kelas'] : 'kelas';
+                if (stripos($label, 'kelas') === false) {
+                    $label = 'Kelas ' . $label;
+                }
+                $message .= " Progres $label: " . $progres['terisi'] . '/' . $progres['total'] . ' siswa.';
+            }
+            if (!empty($progres['belum'])) {
+                $message .= ' Kelas belum dipresensi: ' . implode(', ', $progres['belum']) . '.';
+            } else {
+                $message .= ' Semua kelas sudah dipresensi.';
+            }
+        }
+
+        try {
+            // Hindari notifikasi kembar dalam 2 menit
+            $dup = $pdo->prepare("SELECT COUNT(*) FROM tb_notifikasi WHERE message = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)");
+            $dup->execute([$message]);
+            if ((int)$dup->fetchColumn() > 0) {
+                return;
+            }
+        } catch (Throwable $e) {
+            // Abaikan bila kolom/tabel tidak sesuai, lanjut kirim
+        }
+
+        // Penerima: siswa mengisi sendiri -> guru/wali kelas tsb.
+        //            input guru/wali/admin  -> admin & kepala madrasah.
+        $audience = ($source === 'siswa')
+            ? ($id_kelas > 0 ? 'guru_wali_kelas_' . $id_kelas : 'guru_wali')
+            : 'admin_kepala';
+
+        try {
+            createNotification($pdo, $message, 'rekap_absensi.php', 'absensi_siswa', null, $audience);
+        } catch (Throwable $e) {
+            // Notifikasi tidak boleh menggagalkan penyimpanan kehadiran
+        }
+    }
+}
+
+// ============================================================
+// Notifikasi SATU KALI per penyimpanan kehadiran satu kelas.
+// Dipakai guru/wali (tombol "Simpan Kehadiran Kelas").
+// Tujuannya: admin & kepala bisa melihat kelas mana yang
+// belum dipresensi, tanpa dibanjiri notif per siswa.
+// ============================================================
+if (!function_exists('simadNotifKehadiranKelas')) {
+    function simadNotifKehadiranKelas(PDO $pdo, int $id_kelas, string $tanggal, int $saved_count = 0): void {
+        $id_kelas = (int)$id_kelas;
+        if ($id_kelas <= 0) {
+            return;
+        }
+
+        $progres = simadProgresPresensiHarian($pdo, $tanggal, $id_kelas);
+
+        $nama_kelas = $progres['kelas'];
+        if ($nama_kelas === '') {
+            try {
+                $s = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ? LIMIT 1");
+                $s->execute([$id_kelas]);
+                $nama_kelas = trim((string)$s->fetchColumn());
+            } catch (Throwable $e) {}
+        }
+        if ($nama_kelas === '') {
+            $nama_kelas = 'Kelas #' . $id_kelas;
+        }
+
+        $aktor = simadAktorKehadiranLabel($pdo, $nama_kelas);
+
+        // Nama kelas tanpa awalan "Kelas" agar tidak dobel ("kelas kelas VI")
+        $raw_kelas = preg_replace('/^kelas\s+/i', '', $nama_kelas);
+
+        $jam         = date('H:i');
+        $tanggal_txt = date('d-m-Y', strtotime($tanggal) ?: time());
+
+        $message = "$aktor telah mengirim kehadiran kelas $raw_kelas pada pukul $jam WIB, $tanggal_txt.";
+
+        if (!empty($progres['belum'])) {
+            $message .= ' Kelas belum dipresensi: ' . implode(', ', $progres['belum']) . '.';
+        } else {
+            $message .= ' Semua kelas sudah dipresensi.';
+        }
+
+        // Hindari notifikasi kembar dalam 2 menit (mis. klik simpan ganda)
+        try {
+            $dup = $pdo->prepare("SELECT COUNT(*) FROM tb_notifikasi WHERE message = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)");
+            $dup->execute([$message]);
+            if ((int)$dup->fetchColumn() > 0) {
+                return;
+            }
+        } catch (Throwable $e) {}
+
+        // Penerima: admin & kepala madrasah (untuk cek kelas yang belum presensi)
+        try {
+            createNotification($pdo, $message, 'rekap_absensi.php', 'absensi_siswa', null, 'admin_kepala');
+        } catch (Throwable $e) {
+            // Notifikasi tidak boleh menggagalkan penyimpanan kehadiran
         }
     }
 }

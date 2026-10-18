@@ -103,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             ];
         } else {
             // Always allow update (INSERT or UPDATE)
+            $prev_status = $attendance ? (string)$attendance['keterangan'] : '';
             $jam_masuk = $attendance ? $attendance['jam_masuk'] : date('H:i:s');
             
             // Validasi keterlambatan: kehadiran dari dashboard siswa yang melebihi 07:15 dinyatakan terlambat
@@ -156,6 +157,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         'icon' => 'error'
                     ];
                 }
+            }
+
+            // Notifikasi kehadiran siswa mengisi sendiri -> guru & wali
+            if (!empty($swal_message['icon']) && $swal_message['icon'] === 'success'
+                && $status !== '' && $status !== $prev_status
+                && function_exists('simadNotifKehadiranHarian')) {
+                simadNotifKehadiranHarian($pdo, $id_siswa, $today, $status, 'siswa');
             }
         }
     } elseif (isset($_POST['submit_keterangan'])) {

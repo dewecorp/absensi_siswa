@@ -26,6 +26,13 @@ $unread_count_label_u = '0';
 if (in_array(getUserLevel(), ['guru', 'wali', 'tata_usaha'], true)) {
     $nav_guru_id_u = function_exists('getCurrentGuruId') ? getCurrentGuruId($pdo) : 0;
     $unread_notifs_u = getTeacherTaskNotifications($pdo, (int)$nav_guru_id_u);
+    // Gabung notifikasi kehadiran siswa (audience guru/wali kelas)
+    if (function_exists('getAttendanceNotifications')) {
+        $unread_notifs_u = array_merge($unread_notifs_u, getAttendanceNotifications($pdo));
+        usort($unread_notifs_u, function ($a, $b) {
+            return strtotime($b['created_at']) <=> strtotime($a['created_at']);
+        });
+    }
     foreach ($unread_notifs_u as $n) {
         if (!$n['is_read']) $unread_count_u++;
     }

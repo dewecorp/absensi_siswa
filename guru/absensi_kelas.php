@@ -110,24 +110,7 @@ if (count($classes) === 1 && (!isset($_GET['kelas']) || empty($_GET['kelas']))) 
     $_GET['kelas'] = $classes[0]['id_kelas'];
 }
 
-// Auto-save kehadiran satu siswa (tanpa tombol simpan)
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['single_absensi_siswa'])) {
-    header('Content-Type: application/json');
-    $tanggal_js = $_POST['tanggal'] ?? date('Y-m-d');
-    $holiday_js = isSchoolHoliday($pdo, $tanggal_js);
-    if ($holiday_js['is_holiday']) {
-        echo json_encode(['success' => false, 'error' => 'Hari libur: ' . $holiday_js['name'] . '. Kehadiran ditutup.']);
-        exit;
-    }
-    $now_hour_js = (int)date('H');
-    if ($now_hour_js < 7 || $now_hour_js >= 14) {
-        echo json_encode(['success' => false, 'error' => 'Kehadiran siswa hanya dapat diisi pukul 07:00 - 14:00 WIB.']);
-        exit;
-    }
-    $res = simadSaveSingleAttendance($pdo, 'harian', (int)($_POST['id_siswa'] ?? 0), $tanggal_js, (string)($_POST['status'] ?? ''), $_SESSION['user_id']);
-    echo json_encode($res);
-    exit;
-}
+// Kehadiran disimpan per kelas lewat tombol "Simpan Kehadiran Kelas" (bukan auto-save per siswa)
 
 // Handle form submission for attendance
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
@@ -191,21 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
         $message = ['type' => 'success', 'text' => "Data kehadiran berhasil disimpan untuk $saved_count siswa!"];
         logActivity($pdo, $teacher['nuptk'], 'Input Absensi', "Guru " . $teacher['nama_guru'] . " melakukan input absensi kelas ID: $id_kelas untuk $saved_count siswa");
 
-        // Send notification to admin if data was saved
-        if ($saved_count > 0) {
-            $nama_guru = $teacher['nama_guru'];
-            
-            // Get class name
-            $stmt_kelas = $pdo->prepare("SELECT nama_kelas FROM tb_kelas WHERE id_kelas = ?");
-            $stmt_kelas->execute([$id_kelas]);
-            $kelas_data = $stmt_kelas->fetch(PDO::FETCH_ASSOC);
-            $nama_kelas = $kelas_data ? $kelas_data['nama_kelas'] : 'Kelas ID ' . $id_kelas;
-            
-            $waktu = date('H:i');
-            $tanggal_notif = date('d-m-Y');
-            
-            $notif_msg = "$nama_guru telah mengirim kehadiran siswa kelas $nama_kelas pada pukul $waktu tanggal $tanggal_notif";
-            createNotification($pdo, $notif_msg, 'absensi_harian.php?kelas=' . $id_kelas . '&tanggal=' . $tanggal, 'absensi_siswa');
+        // Notifikasi satu kali per kelas (dibaca admin & kepala)
+        if ($saved_count > 0 && function_exists('simadNotifKehadiranKelas')) {
+            simadNotifKehadiranKelas($pdo, (int)$id_kelas, (string)$tanggal, (int)$saved_count);
         }
         }
     }
@@ -305,47 +276,32 @@ $(document).ready(function() {
 });
 ";
 
-// Tampilkan peringatan jika tanggal yang dipilih adalah hari libur
+// Peringatan hari libur (toastr)
 if (!empty($tanggal)) {
     $todayHoliday = isSchoolHoliday($pdo, $tanggal);
     if ($todayHoliday['is_holiday']) {
         $holiday_name = addslashes($todayHoliday['name']);
         $js_page[] = "
         document.addEventListener('DOMContentLoaded', function() {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Hari Libur',
-                text: 'Hari ini adalah hari libur: $holiday_name. Kehadiran siswa ditutup untuk tanggal ini.',
-                confirmButtonText: 'OK'
-            });
+            if (typeof toastr !== 'undefined') {
+                toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 5000 };
+                toastr.warning('Hari ini adalah hari libur: $holiday_name. Kehadiran siswa ditutup untuk tanggal ini.', 'Hari Libur');
+            }
         });
         ";
     }
 }
 
-// Add Toastr/SweetAlert if message exists
+// Notifikasi pesan memakai toastr
 if (isset($message)) {
-    if ($message['type'] === 'success') {
-        $js_page[] = "
+    $toast_fn = ($message['type'] === 'success') ? 'success' : (($message['type'] === 'warning') ? 'warning' : 'error');
+    $toast_title = ($message['type'] === 'success') ? 'Sukses!' : (($message['type'] === 'warning') ? 'Perhatian' : 'Gagal');
+    $js_page[] = "
         if (typeof toastr !== 'undefined') {
-            toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 2000 };
-            toastr.success('" . addslashes($message['text']) . "', 'Sukses!');
-        } else if (window.Swal) {
-            Swal.fire({ title: 'Sukses!', text: '" . addslashes($message['text']) . "', icon: 'success', timer: 1500, showConfirmButton: false });
+            toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 4000 };
+            toastr.$toast_fn('" . addslashes($message['text']) . "', '$toast_title');
         }
         ";
-    } else {
-        $js_page[] = "
-        Swal.fire({
-            title: 'Info!',
-            text: '" . addslashes($message['text']) . "',
-            icon: '" . $message['type'] . "',
-            timer: 5000,
-            timerProgressBar: true,
-            showConfirmButton: false
-        });
-        ";
-    }
 }
 
 // Add other page-specific functions
@@ -425,10 +381,6 @@ $(document).ready(function() {
         avatar.removeClass(function(i, c) { return (c.match(/att-avatar--\S+/g) || []).join(' '); });
         avatar.addClass('att-avatar--' + status.toLowerCase());
 
-        // Auto-save tanpa tombol simpan
-        if (typeof simadAutoSaveAttendance === 'function') {
-            simadAutoSaveAttendance(studentId, status);
-        }
     });
     
     // Handle form submission to ensure all inputs are sent
@@ -528,20 +480,7 @@ include '../templates/user_header.php';
             </div>
         </div>
 
-        <?php if (isset($message)): ?>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({
-                    title: '<?php echo $message['type'] === 'success' ? 'Sukses!' : 'Info!'; ?>',
-                    text: '<?php echo addslashes($message['text']); ?>',
-                    icon: '<?php echo $message['type']; ?>',
-                    timer: <?php echo $message['type'] === 'success' ? '3000' : '5000'; ?>,
-                    timerProgressBar: true,
-                    showConfirmButton: false
-                });
-            });
-        </script>
-        <?php endif; ?>
+        <?php /* Pesan sukses/gagal ditampilkan lewat toastr (lihat $js_page) */ ?>
 
         <div class="row">
             <div class="col-12">
@@ -646,7 +585,12 @@ include '../templates/user_header.php';
                                 <?php endforeach; ?>
                             </div>
                             
-                            <p class="text-center text-muted mb-0"><i class="fas fa-info-circle"></i> Perubahan tersimpan otomatis saat memilih status.</p>
+                            <div class="att-save-bar">
+                                <button type="submit" class="btn btn-primary btn-lg btn-block shadow-sm">
+                                    <i class="fas fa-save mr-2"></i> Simpan Kehadiran Kelas
+                                </button>
+                            </div>
+                            <p class="text-center text-muted mt-3 mb-0"><i class="fas fa-info-circle"></i> Pilih status setiap siswa, lalu klik <strong>Simpan Kehadiran Kelas</strong>.</p>
                         </form>
                         <?php elseif (isset($_GET['kelas']) && !empty($_GET['kelas'])): ?>
                         <div class="alert alert-info">

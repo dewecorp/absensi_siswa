@@ -55,6 +55,13 @@ if (in_array(getUserLevel(), ['admin', 'kepala_madrasah', 'tata_usaha'], true)) 
 } elseif (in_array(getUserLevel(), ['guru', 'wali'], true)) {
     $nav_guru_id = function_exists('getCurrentGuruId') ? getCurrentGuruId($pdo) : 0;
     $unread_notifs = getTeacherTaskNotifications($pdo, (int)$nav_guru_id);
+    // Gabung notifikasi kehadiran siswa (audience guru/wali kelas)
+    if (function_exists('getAttendanceNotifications')) {
+        $unread_notifs = array_merge($unread_notifs, getAttendanceNotifications($pdo));
+        usort($unread_notifs, function ($a, $b) {
+            return strtotime($b['created_at']) <=> strtotime($a['created_at']);
+        });
+    }
     foreach($unread_notifs as $n) {
         if(!$n['is_read']) $unread_count++;
     }
